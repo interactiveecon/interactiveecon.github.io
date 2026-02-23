@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Production Function Lab</title>
+
+  <link rel="stylesheet" href="/assets/site.css">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(', '\\)'], ['$', '$']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+  <style>
+    /* app-specific layout only; uses your shared variables */
+    .pf-grid{
+      display:grid;
+      grid-template-columns: 1.05fr 1.55fr;
+      gap: 18px;
+      align-items: start;
+      margin-top: 18px;
+    }
+    @media (max-width: 980px){ .pf-grid{ grid-template-columns: 1fr; } }
+
+    .tabs2{
+      display:flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 10px 0 12px 0;
+    }
+    .tab2{
+      border: 1px solid var(--line-2);
+      background: rgba(255,255,255,0.9);
+      color: var(--ink);
+      padding: 9px 12px;
+      border-radius: 999px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .tab2.active{
+      background: rgba(47,93,124,0.10);
+      border-color: rgba(47,93,124,0.35);
+      color: var(--accent);
+    }
+
+    .kv{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    @media (max-width: 650px){ .kv{ grid-template-columns: 1fr; } }
+
+    .metric{
+      background: rgba(246,242,234,0.55);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+    }
+    .metric .label{
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .metric .value{
+      margin-top: 6px;
+      font-size: 16px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 900;
+      color: var(--ink);
+    }
+
+    .field-row{
+      display:grid;
+      grid-template-columns: 1fr 90px;
+      gap: 10px;
+      align-items:center;
+      margin-top: 6px;
+    }
+    input[type="number"]{
+      width: 90px;
+      border: 1px solid var(--line-2);
+      border-radius: 12px;
+      padding: 8px 10px;
+      font-family: var(--font-sans);
+      color: var(--ink);
+      background: #fff;
+    }
+
+    .hint{
+      font-size: 13px;
+      color: var(--ink-2);
+      line-height: 1.55;
+      margin-top: 10px;
+    }
+
+    .panel-tight{ padding: 14px; }
+  </style>
+</head>
+
+<body>
+  <header class="page-header">
+    <div class="container">
+      <nav class="crumbbar">
+        <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
+      </nav>
+
+      <div class="header-inner">
+        <div class="title-block">
+          <div class="kicker">Macroeconomics Practice Lab</div>
+          <h1>Production Functions</h1>
+          <p class="sub">
+            Explore constant returns to scale, marginal products, diminishing marginal product, and optimal hiring:
+            hire until \(w/p = MPL\) (and in the short-run, choose \(L\) holding \(K\) fixed).
+          </p>
+
+          <details class="howto">
+            <summary>Model used in this lab</summary>
+            <div class="howto-body">
+              <ul>
+                <li>Production: \(Y = A K^{\alpha} L^{1-\alpha}\)</li>
+                <li>\(MPL = \frac{\partial Y}{\partial L} = (1-\alpha) A K^{\alpha} L^{-\alpha}\)</li>
+                <li>\(MPK = \frac{\partial Y}{\partial K} = \alpha A K^{\alpha-1} L^{1-\alpha}\)</li>
+                <li>Short-run hiring rule: choose \(L\) so \(w/p = MPL(K,\;L)\)</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+
+        <div class="controls-card panel-tight">
+          <div class="controls-top">
+            <div class="control">
+              <label for="mode">Mode</label>
+              <select id="mode">
+                <option value="mp" selected>Marginal Products</option>
+                <option value="crs">Constant Returns to Scale</option>
+                <option value="hire">Optimal Hiring (K fixed)</option>
+              </select>
+            </div>
+
+            <div class="control">
+              <label for="preset">Scenario</label>
+              <button id="presetBtn" class="btn primary">New Numbers</button>
+            </div>
+          </div>
+
+          <div class="status" id="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container pf-grid">
+    <!-- Left: Inputs -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Inputs</h2>
+        <p class="panel-sub">Adjust parameters and factor inputs.</p>
+      </div>
+
+      <div class="good-block">
+        <div class="good-title">Technology</div>
+
+        <div class="field">
+          <label for="A_r">Total factor productivity (A)</label>
+          <div class="field-row">
+            <input type="range" id="A_r" min="0.5" max="3.0" step="0.1">
+            <input type="number" id="A_n" min="0.5" max="3.0" step="0.1">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="alpha_r">Capital share (\(\alpha\))</label>
+          <div class="field-row">
+            <input type="range" id="alpha_r" min="0.1" max="0.9" step="0.05">
+            <input type="number" id="alpha_n" min="0.1" max="0.9" step="0.05">
+          </div>
+        </div>
+      </div>
+
+      <div class="good-block">
+        <div class="good-title">Factors</div>
+
+        <div class="field">
+          <label for="K_r">Capital (K)</label>
+          <div class="field-row">
+            <input type="range" id="K_r" min="1" max="200" step="1">
+            <input type="number" id="K_n" min="1" max="200" step="1">
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="L_r">Labor (L)</label>
+          <div class="field-row">
+            <input type="range" id="L_r" min="1" max="200" step="1">
+            <input type="number" id="L_n" min="1" max="200" step="1">
+          </div>
+        </div>
+      </div>
+
+      <div class="good-block" id="pricesBlock">
+        <div class="good-title">Real factor prices (short-run hiring)</div>
+
+        <div class="field">
+          <label for="w_r">Real wage \(w/p\)</label>
+          <div class="field-row">
+            <input type="range" id="w_r" min="0.1" max="50" step="0.1">
+            <input type="number" id="w_n" min="0.1" max="50" step="0.1">
+          </div>
+        </div>
+
+        <div class="hint">
+          In the hiring mode, K is treated as fixed and the app finds the \(L^\*\) that solves \(w/p = MPL(K,L)\).
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Outputs -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Outputs</h2>
+        <p class="panel-sub">Read the implied output and marginal products.</p>
+      </div>
+
+      <div class="kv">
+        <div class="metric">
+          <div class="label">Output (Y)</div>
+          <div class="value" id="Y_out">—</div>
+        </div>
+        <div class="metric">
+          <div class="label">CRS test \(F(tK,tL)\,/\,tF(K,L)\)</div>
+          <div class="value" id="crs_out">—</div>
+        </div>
+        <div class="metric">
+          <div class="label">MPL</div>
+          <div class="value" id="mpl_out">—</div>
+        </div>
+        <div class="metric">
+          <div class="label">MPK</div>
+          <div class="value" id="mpk_out">—</div>
+        </div>
+      </div>
+
+      <div class="good-block" style="margin-top:12px;">
+        <div class="good-title">Diminishing marginal product (visual)</div>
+        <div class="hint" id="chartHint">
+          The graph shows MPL as labor increases (holding K fixed). Diminishing marginal product means MPL falls as L rises.
+        </div>
+        <canvas id="mplChart"></canvas>
+      </div>
+
+      <div class="good-block" style="margin-top:12px;">
+        <div class="good-title">Optimal hiring (short run)</div>
+        <div class="hint" id="hireText">
+          Switch to “Optimal Hiring (K fixed)” to see the \(L^\*\) that solves \(w/p = MPL\).
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
