@@ -1,11 +1,10 @@
-/* Production Function Lab (static JS)
-   Model: Y = A K^α L^(1-α)
+/* Marginal Products Lab
+   Y = A K^α L^(1-α)
    MPL = (1-α) A K^α L^(-α)
    MPK = α A K^(α-1) L^(1-α)
 */
 
 const els = {
-  mode: document.getElementById("mode"),
   presetBtn: document.getElementById("presetBtn"),
   status: document.getElementById("status"),
 
@@ -17,45 +16,34 @@ const els = {
   K_n: document.getElementById("K_n"),
   L_r: document.getElementById("L_r"),
   L_n: document.getElementById("L_n"),
-  w_r: document.getElementById("w_r"),
-  w_n: document.getElementById("w_n"),
-
-  pricesBlock: document.getElementById("pricesBlock"),
 
   Y_out: document.getElementById("Y_out"),
-  crs_out: document.getElementById("crs_out"),
+  kl_out: document.getElementById("kl_out"),
   mpl_out: document.getElementById("mpl_out"),
   mpk_out: document.getElementById("mpk_out"),
-  chartHint: document.getElementById("chartHint"),
-  hireText: document.getElementById("hireText"),
 
-  mplChart: document.getElementById("mplChart")
+  mplChart: document.getElementById("mplChart"),
+  mpkChart: document.getElementById("mpkChart"),
+  mplHint: document.getElementById("mplHint"),
+  mpkHint: document.getElementById("mpkHint")
 };
 
-let chart = null;
+let mplChart = null;
+let mpkChart = null;
 
-function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
+function randInt(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
 
 function fmt(x){
   if (!isFinite(x)) return "—";
-  // compact, readable
   if (Math.abs(x) >= 1000) return x.toFixed(0);
   if (Math.abs(x) >= 100) return x.toFixed(1);
   if (Math.abs(x) >= 10) return x.toFixed(2);
   return x.toFixed(3);
 }
 
-function Y(A, K, L, alpha){
-  return A * Math.pow(K, alpha) * Math.pow(L, 1 - alpha);
-}
-
-function MPL(A, K, L, alpha){
-  return (1 - alpha) * A * Math.pow(K, alpha) * Math.pow(L, -alpha);
-}
-
-function MPK(A, K, L, alpha){
-  return alpha * A * Math.pow(K, alpha - 1) * Math.pow(L, 1 - alpha);
-}
+function Y(A, K, L, a){ return A * Math.pow(K, a) * Math.pow(L, 1 - a); }
+function MPL(A, K, L, a){ return (1 - a) * A * Math.pow(K, a) * Math.pow(L, -a); }
+function MPK(A, K, L, a){ return a * A * Math.pow(K, a - 1) * Math.pow(L, 1 - a); }
 
 function setStatus(msg){ els.status.textContent = msg; }
 
@@ -72,161 +60,130 @@ function bindPair(rangeEl, numberEl, onChange){
 
 function getState(){
   return {
-    mode: els.mode.value,
     A: Number(els.A_n.value),
-    alpha: Number(els.alpha_n.value),
+    a: Number(els.alpha_n.value),
     K: Number(els.K_n.value),
-    L: Number(els.L_n.value),
-    w: Number(els.w_n.value)
+    L: Number(els.L_n.value)
   };
 }
 
-// Solve w = MPL(K,L) for L, given A, K, alpha.
-// MPL = (1-α) A K^α L^(-α)
-// => L^α = ( (1-α) A K^α ) / w
-// => L = [ ((1-α) A K^α)/w ]^(1/α)
-function solveLstar(A, K, alpha, w){
-  const num = (1 - alpha) * A * Math.pow(K, alpha);
-  const ratio = num / w;
-  if (ratio <= 0) return NaN;
-  return Math.pow(ratio, 1 / alpha);
-}
-
-function updateVisibility(mode){
-  els.pricesBlock.style.display = (mode === "hire") ? "block" : "none";
-}
-
-function updateChart(A, K, alpha, w){
-  // Plot MPL(L) for L from 1..200 holding K fixed
-  const Lvals = [];
-  const mplVals = [];
-  for (let L = 1; L <= 200; L += 2) {
-    Lvals.push(L);
-    mplVals.push(MPL(A, K, L, alpha));
+function buildMPLSeries(A, a, K){
+  const x = [];
+  const y = [];
+  for (let L = 1; L <= 200; L += 2){
+    x.push(L);
+    y.push(MPL(A, K, L, a));
   }
+  return { x, y };
+}
 
-  if (!chart) {
-    chart = new Chart(els.mplChart, {
-      type: "line",
-      data: {
-        labels: Lvals,
-        datasets: [
-          { label: "MPL (holding K fixed)", data: mplVals }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        plugins: { legend: { display: true } },
-        scales: {
-          x: { grid: { display: false }, title: { display: true, text: "Labor (L)" } },
-          y: { grid: { display: true }, title: { display: true, text: "MPL" } }
-        }
+function buildMPKSeries(A, a, L){
+  const x = [];
+  const y = [];
+  for (let K = 1; K <= 200; K += 2){
+    x.push(K);
+    y.push(MPK(A, K, L, a));
+  }
+  return { x, y };
+}
+
+function makeLineChart(canvas, labels, data, xLabel, yLabel){
+  return new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{ label: yLabel, data }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, title: { display: true, text: xLabel } },
+        y: { grid: { display: true }, title: { display: true, text: yLabel } }
       }
-    });
-  } else {
-    chart.data.labels = Lvals;
-    chart.data.datasets[0].data = mplVals;
-    chart.update();
-  }
-
-  // If in hiring mode, show horizontal wage line via annotation-like dataset
-  // (Simpler: we’ll just update the hint text rather than draw a second line.)
+    }
+  });
 }
 
 function update(){
   const s = getState();
-  updateVisibility(s.mode);
 
-  // Core values
-  const y = Y(s.A, s.K, s.L, s.alpha);
-  const mpl = MPL(s.A, s.K, s.L, s.alpha);
-  const mpk = MPK(s.A, s.K, s.L, s.alpha);
+  const y = Y(s.A, s.K, s.L, s.a);
+  const mpl = MPL(s.A, s.K, s.L, s.a);
+  const mpk = MPK(s.A, s.K, s.L, s.a);
 
   els.Y_out.textContent = fmt(y);
+  els.kl_out.textContent = `K=${s.K}, L=${s.L}`;
   els.mpl_out.textContent = fmt(mpl);
   els.mpk_out.textContent = fmt(mpk);
 
-  // CRS test using a random-ish t (fixed for stability)
-  const t = 1.8;
-  const lhs = Y(s.A, t*s.K, t*s.L, s.alpha);
-  const rhs = t * Y(s.A, s.K, s.L, s.alpha);
-  const ratio = rhs === 0 ? NaN : lhs / rhs;
-  els.crs_out.textContent = isFinite(ratio) ? ratio.toFixed(3) : "—";
-
-  // Update chart
-  updateChart(s.A, s.K, s.alpha, s.w);
-
-  // Mode-specific guidance
-  if (s.mode === "crs") {
-    els.chartHint.textContent =
-      "CRS means if you scale both inputs by t, output scales by t. The CRS ratio should be ~1.000 for a CRS function.";
-    els.hireText.innerHTML =
-      "Try changing \\(K\\) and \\(L\\), then notice the CRS test stays near 1. This is constant returns to scale.";
-    setStatus("CRS mode: scale inputs and watch output scale proportionally.");
-  } else if (s.mode === "mp") {
-    els.chartHint.textContent =
-      "The curve shows MPL as L increases (holding K fixed). Diminishing marginal product means MPL falls as L rises.";
-    els.hireText.innerHTML =
-      "Interpretation: MPL is the extra output from one more unit of labor holding capital fixed.";
-    setStatus("Marginal products mode: change K and L and interpret MPL/MPK.");
+  // MPL chart (vary L holding current K fixed)
+  const mplSeries = buildMPLSeries(s.A, s.a, s.K);
+  if (!mplChart){
+    mplChart = makeLineChart(els.mplChart, mplSeries.x, mplSeries.y, "Labor (L)", "MPL");
   } else {
-    // hire mode
-    const Lstar = solveLstar(s.A, s.K, s.alpha, s.w);
-    const LstarClamped = clamp(Lstar, 1, 200);
-    const mplAtStar = MPL(s.A, s.K, LstarClamped, s.alpha);
-
-    els.hireText.innerHTML =
-      `Given \$begin:math:text$K\\$end:math:text$ fixed at <strong>${s.K}</strong> and \$begin:math:text$w\/p\\$end:math:text$=<strong>${fmt(s.w)}</strong>, the short-run optimal choice solves \$begin:math:text$w\/p \= MPL\\$end:math:text$.<br>` +
-      `Computed \$begin:math:text$L\^\*\\$end:math:text$ ≈ <strong>${fmt(Lstar)}</strong> (clamped to the slider range: <strong>${fmt(LstarClamped)}</strong>).<br>` +
-      `At that \$begin:math:text$L\\$end:math:text$, MPL ≈ <strong>${fmt(mplAtStar)}</strong>.`;
-
-    setStatus("Hiring mode: adjust w/p and K, and see the implied L* from w/p = MPL.");
-    // Typeset MathJax updates (safe)
-    if (window.MathJax && window.MathJax.typesetPromise) {
-      window.MathJax.typesetPromise();
-    }
+    mplChart.data.labels = mplSeries.x;
+    mplChart.data.datasets[0].data = mplSeries.y;
+    mplChart.update();
   }
+
+  // MPK chart (vary K holding current L fixed)
+  const mpkSeries = buildMPKSeries(s.A, s.a, s.L);
+  if (!mpkChart){
+    mpkChart = makeLineChart(els.mpkChart, mpkSeries.x, mpkSeries.y, "Capital (K)", "MPK");
+  } else {
+    mpkChart.data.labels = mpkSeries.x;
+    mpkChart.data.datasets[0].data = mpkSeries.y;
+    mpkChart.update();
+  }
+
+  // Diminishing MP text (simple check: MPL at L=10 vs L=150)
+  const mplLow = MPL(s.A, s.K, 10, s.a);
+  const mplHigh = MPL(s.A, s.K, 150, s.a);
+  els.mplHint.textContent =
+    `Holding K fixed at ${s.K}, MPL is ${fmt(mplLow)} at L=10 and ${fmt(mplHigh)} at L=150 (it falls as L rises).`;
+
+  const mpkLow = MPK(s.A, 10, s.L, s.a);
+  const mpkHigh = MPK(s.A, 150, s.L, s.a);
+  els.mpkHint.textContent =
+    `Holding L fixed at ${s.L}, MPK is ${fmt(mpkLow)} at K=10 and ${fmt(mpkHigh)} at K=150 (it falls as K rises).`;
+
+  setStatus("Try increasing L (holding K fixed) and watch MPL fall. Then increase K (holding L fixed) and watch MPK fall.");
 }
 
 function newPreset(){
-  // plausible random values
-  const A = (randInt(8, 24) / 10);         // 0.8–2.4
-  const alpha = [0.25, 0.30, 0.35, 0.40, 0.60][randInt(0,4)];
-  const K = randInt(30, 160);
-  const L = randInt(30, 160);
-  const w = (randInt(10, 250) / 10);       // 1.0–25.0
+  const A = randInt(8, 24) / 10;  // 0.8–2.4
+  const a = pickAlpha();
+  const K = randInt(30, 170);
+  const L = randInt(30, 170);
 
   els.A_r.value = els.A_n.value = A;
-  els.alpha_r.value = els.alpha_n.value = alpha;
+  els.alpha_r.value = els.alpha_n.value = a;
   els.K_r.value = els.K_n.value = K;
   els.L_r.value = els.L_n.value = L;
-  els.w_r.value = els.w_n.value = w;
 
   update();
 }
 
-function randInt(min, max){
-  return Math.floor(Math.random()*(max-min+1))+min;
+function pickAlpha(){
+  const vals = [0.25, 0.30, 0.35, 0.40, 0.60];
+  return vals[randInt(0, vals.length - 1)];
 }
 
-// Bind controls
+// bind sliders
 bindPair(els.A_r, els.A_n, update);
 bindPair(els.alpha_r, els.alpha_n, update);
 bindPair(els.K_r, els.K_n, update);
 bindPair(els.L_r, els.L_n, update);
-bindPair(els.w_r, els.w_n, update);
 
-els.mode.addEventListener("change", update);
 els.presetBtn.addEventListener("click", newPreset);
 
-// Initialize defaults
+// init
 (function init(){
   els.A_r.value = els.A_n.value = 1.2;
   els.alpha_r.value = els.alpha_n.value = 0.35;
   els.K_r.value = els.K_n.value = 90;
   els.L_r.value = els.L_n.value = 80;
-  els.w_r.value = els.w_n.value = 6.0;
-  updateVisibility(els.mode.value);
   update();
 })();
