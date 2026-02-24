@@ -10,55 +10,19 @@
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-  <!-- MathJax -->
-  <script>
-    window.MathJax = {
-      tex: { inlineMath: [['\\(', '\\)'], ['$', '$']] },
-      svg: { fontCache: 'global' }
-    };
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
-
   <style>
-    .pf-grid{
+    .mp-grid{
       display:grid;
       grid-template-columns: 1.05fr 1.55fr;
       gap: 18px;
-      align-items: start;
+      align-items:start;
       margin-top: 18px;
     }
-    @media (max-width: 980px){ .pf-grid{ grid-template-columns: 1fr; } }
-
-    .panel-tight{ padding: 14px; }
-
-    .kv{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 10px;
-    }
-    @media (max-width: 650px){ .kv{ grid-template-columns: 1fr; } }
-
-    .metric{
-      background: rgba(246,242,234,0.55);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 12px;
-    }
-    .metric .label{
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--muted);
-    }
-    .metric .value{
-      margin-top: 6px;
-      font-size: 16px;
-      font-variant-numeric: tabular-nums;
-      font-weight: 900;
-      color: var(--ink);
+    @media (max-width: 980px){
+      .mp-grid{ grid-template-columns: 1fr; }
     }
 
+    .controls-card .controls-top{ align-items: end; }
     .field-row{
       display:grid;
       grid-template-columns: 1fr 90px;
@@ -76,12 +40,16 @@
       background: #fff;
     }
 
-    .charts{
+    .quad{
       display:grid;
-      grid-template-columns: 1fr;
+      grid-template-columns: 1fr 1fr;
       gap: 12px;
-      margin-top: 12px;
+      margin-top: 10px;
     }
+    @media (max-width: 980px){
+      .quad{ grid-template-columns: 1fr; }
+    }
+
     .chart-card{
       border: 1px solid var(--line);
       border-radius: 16px;
@@ -92,13 +60,21 @@
       font-weight: 900;
       color: var(--accent);
       margin-bottom: 8px;
+      line-height: 1.2;
     }
-
-    .hint{
+    .chart-note{
+      margin-top: 8px;
       font-size: 13px;
       color: var(--ink-2);
-      line-height: 1.55;
-      margin-top: 10px;
+      line-height: 1.45;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .tiny{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.4;
+      margin-top: 8px;
     }
   </style>
 </head>
@@ -113,129 +89,100 @@
       <div class="header-inner">
         <div class="title-block">
           <div class="kicker">Macroeconomics Practice Lab</div>
-          <h1>Marginal Products</h1>
+          <h1>Marginal Product and Diminishing Marginal Product</h1>
           <p class="sub">
-            Explore <strong>MPL</strong>, <strong>MPK</strong>, and <strong>diminishing marginal product</strong>
-            using a Cobb–Douglas production function.
+            This lab uses <strong>discrete</strong> marginal products:
+            <strong>MPL = Y(K,L+1) − Y(K,L)</strong> and <strong>MPK = Y(K+1,L) − Y(K,L)</strong>.
+            The graphs show the two output points and the implied change in output.
           </p>
-
-          <details class="howto">
-            <summary>Model used in this lab</summary>
-            <div class="howto-body">
-              <ul>
-                <li>Production: \(Y = A K^{\alpha} L^{1-\alpha}\)</li>
-                <li>\(MPL = (1-\alpha)A K^{\alpha}L^{-\alpha}\)</li>
-                <li>\(MPK = \alpha A K^{\alpha-1}L^{1-\alpha}\)</li>
-              </ul>
-            </div>
-          </details>
         </div>
 
-        <div class="controls-card panel-tight">
+        <div class="controls-card">
           <div class="controls-top">
-            <div class="control">
-              <label>Scenario</label>
-              <button id="presetBtn" class="btn primary">New Numbers</button>
+            <div class="control" style="min-width: 220px;">
+              <label for="A_r">Technology level (A)</label>
+              <div class="field-row">
+                <input type="range" id="A_r" min="1" max="5" step="1">
+                <input type="number" id="A_n" min="1" max="5" step="1">
+              </div>
+            </div>
+
+            <div class="control" style="min-width: 220px;">
+              <label for="K_r">Capital (K)</label>
+              <div class="field-row">
+                <input type="range" id="K_r" min="1" max="10" step="1">
+                <input type="number" id="K_n" min="1" max="10" step="1">
+              </div>
+            </div>
+
+            <div class="control" style="min-width: 220px;">
+              <label for="L_r">Labor (L)</label>
+              <div class="field-row">
+                <input type="range" id="L_r" min="1" max="10" step="1">
+                <input type="number" id="L_n" min="1" max="10" step="1">
+              </div>
             </div>
           </div>
 
-          <div class="status" id="status" aria-live="polite"></div>
+          <div class="tiny">
+            Curves shift when A changes or when the “held-fixed” input changes. The previous curve remains faintly in the background.
+          </div>
+
+          <div id="status" class="status" aria-live="polite"></div>
         </div>
       </div>
     </div>
   </header>
 
-  <main class="container pf-grid">
-    <!-- Inputs -->
+  <main class="container mp-grid">
     <section class="panel">
       <div class="panel-head">
-        <h2>Inputs</h2>
-        <p class="panel-sub">Adjust parameters and factor inputs.</p>
+        <h2>What to look for</h2>
+        <p class="panel-sub">Make the graphs do the teaching.</p>
       </div>
 
-      <div class="good-block">
-        <div class="good-title">Technology</div>
-
-        <div class="field">
-          <label for="A_r">Total factor productivity (A)</label>
-          <div class="field-row">
-            <input type="range" id="A_r" min="0.5" max="3.0" step="0.1">
-            <input type="number" id="A_n" min="0.5" max="3.0" step="0.1">
-          </div>
-        </div>
-
-        <div class="field">
-          <label for="alpha_r">Capital share (\(\alpha\))</label>
-          <div class="field-row">
-            <input type="range" id="alpha_r" min="0.1" max="0.9" step="0.05">
-            <input type="number" id="alpha_n" min="0.1" max="0.9" step="0.05">
-          </div>
-        </div>
+      <div class="note">
+        <strong>Diminishing MPL:</strong> holding K fixed, the vertical gap
+        between \(Y(K,L)\) and \(Y(K,L+1)\) shrinks as L gets larger.<br><br>
+        <strong>Diminishing MPK:</strong> holding L fixed, the vertical gap
+        between \(Y(K,L)\) and \(Y(K+1,L)\) shrinks as K gets larger.
       </div>
 
-      <div class="good-block">
-        <div class="good-title">Factors</div>
-
-        <div class="field">
-          <label for="K_r">Capital (K)</label>
-          <div class="field-row">
-            <input type="range" id="K_r" min="1" max="200" step="1">
-            <input type="number" id="K_n" min="1" max="200" step="1">
-          </div>
-        </div>
-
-        <div class="field">
-          <label for="L_r">Labor (L)</label>
-          <div class="field-row">
-            <input type="range" id="L_r" min="1" max="200" step="1">
-            <input type="number" id="L_n" min="1" max="200" step="1">
-          </div>
-        </div>
-
-        <div class="hint">
-          Diminishing marginal product means: as you increase one input holding the other fixed, its marginal product falls.
-          Use the graphs to see this directly.
-        </div>
+      <div class="note">
+        <strong>Discrete marginal product:</strong> we are using “+1” changes, not derivatives.
+        That’s why the marked points and the displayed ΔY matter.
       </div>
     </section>
 
-    <!-- Outputs -->
     <section class="panel">
       <div class="panel-head">
-        <h2>Outputs</h2>
-        <p class="panel-sub">Read output and marginal products; see diminishing MPL/MPK in the graphs.</p>
+        <h2>Graphs</h2>
+        <p class="panel-sub">Top row: output levels. Bottom row: discrete marginal products.</p>
       </div>
 
-      <div class="kv">
-        <div class="metric">
-          <div class="label">Output (Y)</div>
-          <div class="value" id="Y_out">—</div>
-        </div>
-        <div class="metric">
-          <div class="label">Current (K, L)</div>
-          <div class="value" id="kl_out">—</div>
-        </div>
-        <div class="metric">
-          <div class="label">MPL (holding K fixed)</div>
-          <div class="value" id="mpl_out">—</div>
-        </div>
-        <div class="metric">
-          <div class="label">MPK (holding L fixed)</div>
-          <div class="value" id="mpk_out">—</div>
-        </div>
-      </div>
-
-      <div class="charts">
+      <div class="quad">
         <div class="chart-card">
-          <div class="chart-title">MPL as a function of Labor (K fixed at current K)</div>
-          <canvas id="mplChart"></canvas>
-          <div class="hint" id="mplHint"></div>
+          <div class="chart-title">Output vs Labor (K fixed at current K)</div>
+          <canvas id="chartYL"></canvas>
+          <div class="chart-note" id="noteYL"></div>
         </div>
 
         <div class="chart-card">
-          <div class="chart-title">MPK as a function of Capital (L fixed at current L)</div>
-          <canvas id="mpkChart"></canvas>
-          <div class="hint" id="mpkHint"></div>
+          <div class="chart-title">Output vs Capital (L fixed at current L)</div>
+          <canvas id="chartYK"></canvas>
+          <div class="chart-note" id="noteYK"></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title">MPL (discrete): Y(K,L+1) − Y(K,L)</div>
+          <canvas id="chartMPL"></canvas>
+          <div class="chart-note" id="noteMPL"></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title">MPK (discrete): Y(K+1,L) − Y(K,L)</div>
+          <canvas id="chartMPK"></canvas>
+          <div class="chart-note" id="noteMPK"></div>
         </div>
       </div>
     </section>
