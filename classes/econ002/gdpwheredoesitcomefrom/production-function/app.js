@@ -1,20 +1,48 @@
-/* Discrete marginal products (backward difference), graph-first.
-   Stylized concave production function for clarity:
-     Y = A * sqrt(K) * sqrt(L)
+/* Backward-difference marginal products + graph-first visuals.
 
-   Definitions (backward difference):
-     MPL(K,L) = F(K,L) - F(K,L-1)
-     MPK(K,L) = F(K,L) - F(K-1,L)
+   Production function (kept implicit; chosen for visible concavity):
+     F(A,K,L) = A * sqrt(K) * sqrt(L)
 
-   Baseline curves are fixed and always shown in grey.
-   Reset returns sliders to baseline.
-   Axes are fixed and curves start at 0.
-   Output charts show two points (current and previous step) and dashed projections to axes.
+   MPL(K,L) = F(K,L) - F(K,L-1)
+   MPK(K,L) = F(K,L) - F(K-1,L)
+
+   Requirements:
+   - Curves plotted as smooth/continuous (many points).
+   - Sliders move in steps of 1 (A,K,L integers).
+   - Dashed projections from highlighted points to BOTH axes.
+   - Dynamic y-axis; y-axis ticks ONLY at the y-values of the highlighted points.
 */
 
 const K_MIN = 0, K_MAX = 10;
 const L_MIN = 0, L_MAX = 10;
 const A_MIN = 1, A_MAX = 5;
+
+const BASE = { A: 2, K: 5, L: 5 };
+
+const els = {
+  A_r: document.getElementById("A_r"),
+  A_n: document.getElementById("A_n"),
+  K_r: document.getElementById("K_r"),
+  K_n: document.getElementById("K_n"),
+  L_r: document.getElementById("L_r"),
+  L_n: document.getElementById("L_n"),
+  resetBtn: document.getElementById("resetBtn"),
+  status: document.getElementById("status"),
+
+  tblY: document.getElementById("tblY"),
+  tblMPL: document.getElementById("tblMPL"),
+  tblMPK: document.getElementById("tblMPK"),
+
+  chartYL: document.getElementById("chartYL"),
+  chartYK: document.getElementById("chartYK"),
+  chartMPL: document.getElementById("chartMPL"),
+  chartMPK: document.getElementById("chartMPK"),
+
+  noteYL: document.getElementById("noteYL"),
+  noteYK: document.getElementById("noteYK"),
+  noteMPL: document.getElementById("noteMPL"),
+  noteMPK: document.getElementById("noteMPK"),
+};
 
 function F(A, K, L) {
   if (K <= 0 || L <= 0) return 0;
@@ -28,37 +56,6 @@ function fmt(x) {
   if (Math.abs(x) >= 10) return x.toFixed(2);
   return x.toFixed(3);
 }
-
-const els = {
-  A_r: document.getElementById("A_r"),
-  A_n: document.getElementById("A_n"),
-  K_r: document.getElementById("K_r"),
-  K_n: document.getElementById("K_n"),
-  L_r: document.getElementById("L_r"),
-  L_n: document.getElementById("L_n"),
-  resetBtn: document.getElementById("resetBtn"),
-  status: document.getElementById("status"),
-
-  chartYL: document.getElementById("chartYL"),
-  chartYK: document.getElementById("chartYK"),
-  chartMPL: document.getElementById("chartMPL"),
-  chartMPK: document.getElementById("chartMPK"),
-
-  noteYL: document.getElementById("noteYL"),
-  noteYK: document.getElementById("noteYK"),
-  noteMPL: document.getElementById("noteMPL"),
-  noteMPK: document.getElementById("noteMPK"),
-};
-
-// Baseline values (fixed reference curves)
-const BASE = { A: 2, K: 5, L: 5 };
-
-let chYL = null, chYK = null, chMPL = null, chMPK = null;
-
-// Fixed axes for clarity
-const Y_MAX = F(A_MAX, K_MAX, L_MAX);         // = 50
-const Y_AXIS_MAX = 50;                        // fixed, clean
-const MP_AXIS_MAX = 10;                       // fixed, clean (fits this stylized function well)
 
 function setStatus(msg) { els.status.textContent = msg; }
 
@@ -81,65 +78,113 @@ function state() {
   };
 }
 
-// Build line series as {x,y} for linear axis
-function seriesYvsL(A, K) {
-  const pts = [];
-  for (let L = L_MIN; L <= L_MAX; L++) pts.push({ x: L, y: F(A, K, L) });
-  return pts;
-}
-function seriesYvsK(A, L) {
-  const pts = [];
-  for (let K = K_MIN; K <= K_MAX; K++) pts.push({ x: K, y: F(A, K, L) });
-  return pts;
+// Smooth curves: many points
+function linspace(min, max, step) {
+  const xs = [];
+  for (let x = min; x <= max + 1e-9; x += step) xs.push(Number(x.toFixed(3)));
+  return xs;
 }
 
-// Backward-difference MPL and MPK as functions
-function seriesMPL(A, K) {
+// Build datasets as {x,y} so x-axis is linear
+function curveYvsL(A, K) {
+  const xs = linspace(0, 10, 0.05);
+  return xs.map(L => ({ x: L, y: F(A, K, L) }));
+}
+function curveYvsK(A, L) {
+  const xs = linspace(0, 10, 0.05);
+  return xs.map(K => ({ x: K, y: F(A, K, L) }));
+}
+
+// MPL/MPK curves: also smooth (use “continuous x” but backward-diff defined on integers)
+// We’ll plot MPL at integer L only (since it’s a discrete concept), but connect with a line.
+// Same for MPK at integer K.
+function mplSeries(A, K) {
   const pts = [];
-  for (let L = L_MIN; L <= L_MAX; L++) {
+  for (let L = 0; L <= 10; L++) {
     if (L === 0) pts.push({ x: L, y: null });
     else pts.push({ x: L, y: F(A, K, L) - F(A, K, L - 1) });
   }
   return pts;
 }
-function seriesMPK(A, L) {
+function mpkSeries(A, L) {
   const pts = [];
-  for (let K = K_MIN; K <= K_MAX; K++) {
+  for (let K = 0; K <= 10; K++) {
     if (K === 0) pts.push({ x: K, y: null });
     else pts.push({ x: K, y: F(A, K, L) - F(A, K - 1, L) });
   }
   return pts;
 }
 
-// Chart factory (linear x)
-function makeChart(canvas, xLabel, yLabel, yMin, yMax) {
+// Projection “L” shape to axes
+function projectionData(p) {
+  return [
+    { x: p.x, y: 0 },
+    { x: p.x, y: p.y },
+    { x: NaN, y: NaN },
+    { x: 0, y: p.y },
+    { x: p.x, y: p.y }
+  ];
+}
+
+// Plugin: replace y-ticks with ONLY point y-values (unique, sorted)
+const tickOnlyPointsPlugin = {
+  id: "tickOnlyPoints",
+  afterBuildTicks(chart, args, opts) {
+    if (!opts || !opts.enabled) return;
+    const y = chart.scales.y;
+    if (!y) return;
+
+    const vals = (opts.values || []).filter(v => isFinite(v));
+    if (!vals.length) return;
+
+    // Unique + sorted
+    const uniq = Array.from(new Set(vals.map(v => Number(v.toFixed(6))))).sort((a,b)=>a-b);
+
+    // If y-axis is dynamic, ensure min/max contain ticks with a bit of padding
+    const pad = opts.pad ?? 0.08;
+    const lo = uniq[0], hi = uniq[uniq.length - 1];
+    const span = Math.max(hi - lo, 1e-6);
+
+    y.options.min = Math.max(0, lo - pad * span);
+    y.options.max = hi + pad * span;
+
+    y.ticks = uniq.map(v => ({ value: v }));
+  }
+};
+
+Chart.register(tickOnlyPointsPlugin);
+
+function makeChart(canvas, xLabel, yLabel, pluginKey) {
   return new Chart(canvas, {
     type: "line",
     data: {
       datasets: [
-        // 0 baseline curve (grey)
+        // 0 baseline (grey dashed)
         { data: [], borderWidth: 2, pointRadius: 0 },
-        // 1 current curve
+        // 1 current (solid)
         { data: [], borderWidth: 3, pointRadius: 0 },
 
-        // 2 segment connecting the two highlighted points
+        // 2 segment between two highlighted points
         { data: [], borderWidth: 3, pointRadius: 0 },
 
-        // 3 highlighted points (2 points)
+        // 3 highlighted points
         { data: [], showLine: false, pointRadius: 5 },
 
-        // 4 dashed projection lines for point A (to axes): vertical + horizontal in one dataset via 2 segments
+        // 4 projections for point A
         { data: [], borderWidth: 2, pointRadius: 0 },
 
-        // 5 dashed projection lines for point B (to axes)
+        // 5 projections for point B
         { data: [], borderWidth: 2, pointRadius: 0 }
       ]
     },
     options: {
       responsive: true,
-      maintainAspectRatio: true,
-      plugins: { legend: { display: false } },
+      maintainAspectRatio: false,
       parsing: false,
+      plugins: {
+        legend: { display: false },
+        tickOnlyPoints: { enabled: false, values: [], pad: 0.12 }
+      },
       scales: {
         x: {
           type: "linear",
@@ -150,8 +195,7 @@ function makeChart(canvas, xLabel, yLabel, yMin, yMax) {
           title: { display: true, text: xLabel }
         },
         y: {
-          min: yMin,
-          max: yMax,
+          // dynamic y; plugin may override min/max
           grid: { display: true },
           title: { display: true, text: yLabel }
         }
@@ -160,175 +204,154 @@ function makeChart(canvas, xLabel, yLabel, yMin, yMax) {
   });
 }
 
-function styleDatasets(ch) {
-  // baseline grey dashed
+function styleChart(ch) {
   ch.data.datasets[0].borderColor = "rgba(0,0,0,0.25)";
   ch.data.datasets[0].borderDash = [6, 6];
 
-  // current solid (default color)
-  ch.data.datasets[1].borderDash = [];
-
-  // connecting segment dotted
   ch.data.datasets[2].borderDash = [2, 4];
 
-  // points
-  ch.data.datasets[3].pointHoverRadius = 6;
-
-  // projection lines dashed, faint
   ch.data.datasets[4].borderColor = "rgba(0,0,0,0.25)";
   ch.data.datasets[4].borderDash = [4, 4];
-
   ch.data.datasets[5].borderColor = "rgba(0,0,0,0.25)";
   ch.data.datasets[5].borderDash = [4, 4];
 }
 
-// Build projection "L" shape (to axes) using NaN to break line between segments
-function projectionData(p) {
-  // vertical: (x,0) -> (x,y); break; horizontal: (0,y) -> (x,y)
-  return [
-    { x: p.x, y: 0 },
-    { x: p.x, y: p.y },
-    { x: NaN, y: NaN }, // break
-    { x: 0, y: p.y },
-    { x: p.x, y: p.y }
-  ];
-}
+let chYL = null, chYK = null, chMPL = null, chMPK = null;
 
-function updateCharts() {
+function update() {
   const s = state();
   const A = s.A, K = s.K, L = s.L;
 
+  // Compute core values
+  const y = F(A, K, L);
+  const mpl = (L > 0) ? (F(A, K, L) - F(A, K, L - 1)) : NaN;
+  const mpk = (K > 0) ? (F(A, K, L) - F(A, K - 1, L)) : NaN;
+
+  els.tblY.textContent = fmt(y);
+  els.tblMPL.textContent = (isFinite(mpl) ? fmt(mpl) : "—");
+  els.tblMPK.textContent = (isFinite(mpk) ? fmt(mpk) : "—");
+
   // Baseline curves (fixed)
-  const baseYL  = seriesYvsL(BASE.A, BASE.K);
-  const baseYK  = seriesYvsK(BASE.A, BASE.L);
-  const baseMPL = seriesMPL(BASE.A, BASE.K);
-  const baseMPK = seriesMPK(BASE.A, BASE.L);
+  const baseYL = curveYvsL(BASE.A, BASE.K);
+  const baseYK = curveYvsK(BASE.A, BASE.L);
+  const baseMPL = mplSeries(BASE.A, BASE.K);
+  const baseMPK = mpkSeries(BASE.A, BASE.L);
 
   // Current curves
-  const curYL  = seriesYvsL(A, K);
-  const curYK  = seriesYvsK(A, L);
-  const curMPL = seriesMPL(A, K);
-  const curMPK = seriesMPK(A, L);
+  const curYL = curveYvsL(A, K);
+  const curYK = curveYvsK(A, L);
+  const curMPL = mplSeries(A, K);
+  const curMPK = mpkSeries(A, L);
 
-  // Points for backward difference:
-  // Output vs L: compare (L, Y) and (L-1, Yprev) at fixed K.
-  const L0 = L;
-  const Lm1 = (L0 > 0) ? (L0 - 1) : null;
+  // Highlighted points for backward differences (current and previous)
+  const pYL_now = { x: L, y: F(A, K, L) };
+  const pYL_prev = (L > 0) ? { x: L - 1, y: F(A, K, L - 1) } : null;
 
-  const yL0  = F(A, K, L0);
-  const yLm1 = (Lm1 !== null) ? F(A, K, Lm1) : null;
-  const dY_L = (Lm1 !== null) ? (yL0 - yLm1) : null; // MPL
+  const pYK_now = { x: K, y: F(A, K, L) };
+  const pYK_prev = (K > 0) ? { x: K - 1, y: F(A, K - 1, L) } : null;
 
-  // Output vs K: compare (K, Y) and (K-1, Yprev) at fixed L.
-  const K0 = K;
-  const Km1 = (K0 > 0) ? (K0 - 1) : null;
-
-  const yK0  = F(A, K0, L);
-  const yKm1 = (Km1 !== null) ? F(A, Km1, L) : null;
-  const dY_K = (Km1 !== null) ? (yK0 - yKm1) : null; // MPK
+  // MP points
+  const pMPL = (L > 0) ? { x: L, y: mpl } : null;
+  const pMPK = (K > 0) ? { x: K, y: mpk } : null;
 
   // Create charts once
   if (!chYL) {
-    chYL  = makeChart(els.chartYL,  "Labor (L)",   "Output (Y)", 0, Y_AXIS_MAX);
-    chYK  = makeChart(els.chartYK,  "Capital (K)", "Output (Y)", 0, Y_AXIS_MAX);
-    chMPL = makeChart(els.chartMPL, "Labor (L)",   "MPL (ΔY from −1 step)", 0, MP_AXIS_MAX);
-    chMPK = makeChart(els.chartMPK, "Capital (K)", "MPK (ΔY from −1 step)", 0, MP_AXIS_MAX);
-    [chYL, chYK, chMPL, chMPK].forEach(styleDatasets);
+    chYL = makeChart(els.chartYL, "Labor (L)", "Output (Y)");
+    chYK = makeChart(els.chartYK, "Capital (K)", "Output (Y)");
+    chMPL = makeChart(els.chartMPL, "Labor (L)", "MPL");
+    chMPK = makeChart(els.chartMPK, "Capital (K)", "MPK");
+    [chYL, chYK, chMPL, chMPK].forEach(styleChart);
   }
 
-  function setCurve(ch, base, cur) {
+  // Helper to set curves
+  function setCurves(ch, base, cur) {
     ch.data.datasets[0].data = base;
     ch.data.datasets[1].data = cur;
   }
 
-  // --- Output vs L ---
-  setCurve(chYL, baseYL, curYL);
+  // OUTPUT vs L
+  setCurves(chYL, baseYL, curYL);
+  chYL.data.datasets[2].data = (pYL_prev) ? [pYL_prev, pYL_now] : [];
+  chYL.data.datasets[3].data = (pYL_prev) ? [pYL_prev, pYL_now] : [pYL_now];
+  chYL.data.datasets[4].data = (pYL_prev) ? projectionData(pYL_prev) : [];
+  chYL.data.datasets[5].data = projectionData(pYL_now);
 
-  // segment between the two output points
-  chYL.data.datasets[2].data = (Lm1 !== null)
-    ? [{ x: Lm1, y: yLm1 }, { x: L0, y: yL0 }]
-    : [];
-
-  // points dataset (two points if possible)
-  chYL.data.datasets[3].data = (Lm1 !== null)
-    ? [{ x: Lm1, y: yLm1 }, { x: L0, y: yL0 }]
-    : [{ x: L0, y: yL0 }];
-
-  // dashed projections for each point (if exists)
-  chYL.data.datasets[4].data = (Lm1 !== null) ? projectionData({ x: Lm1, y: yLm1 }) : [];
-  chYL.data.datasets[5].data = projectionData({ x: L0, y: yL0 });
+  // y ticks only at point y-values (prev and now)
+  const yTickValsYL = [pYL_now.y].concat(pYL_prev ? [pYL_prev.y] : []);
+  chYL.options.plugins.tickOnlyPoints.enabled = true;
+  chYL.options.plugins.tickOnlyPoints.values = yTickValsYL;
 
   chYL.update();
 
-  // --- Output vs K ---
-  setCurve(chYK, baseYK, curYK);
+  // OUTPUT vs K
+  setCurves(chYK, baseYK, curYK);
+  chYK.data.datasets[2].data = (pYK_prev) ? [pYK_prev, pYK_now] : [];
+  chYK.data.datasets[3].data = (pYK_prev) ? [pYK_prev, pYK_now] : [pYK_now];
+  chYK.data.datasets[4].data = (pYK_prev) ? projectionData(pYK_prev) : [];
+  chYK.data.datasets[5].data = projectionData(pYK_now);
 
-  chYK.data.datasets[2].data = (Km1 !== null)
-    ? [{ x: Km1, y: yKm1 }, { x: K0, y: yK0 }]
-    : [];
-
-  chYK.data.datasets[3].data = (Km1 !== null)
-    ? [{ x: Km1, y: yKm1 }, { x: K0, y: yK0 }]
-    : [{ x: K0, y: yK0 }];
-
-  chYK.data.datasets[4].data = (Km1 !== null) ? projectionData({ x: Km1, y: yKm1 }) : [];
-  chYK.data.datasets[5].data = projectionData({ x: K0, y: yK0 });
+  const yTickValsYK = [pYK_now.y].concat(pYK_prev ? [pYK_prev.y] : []);
+  chYK.options.plugins.tickOnlyPoints.enabled = true;
+  chYK.options.plugins.tickOnlyPoints.values = yTickValsYK;
 
   chYK.update();
 
-  // --- MPL ---
-  setCurve(chMPL, baseMPL, curMPL);
-
+  // MPL
+  setCurves(chMPL, baseMPL, curMPL);
   chMPL.data.datasets[2].data = [];
-  chMPL.data.datasets[3].data = (Lm1 !== null) ? [{ x: L0, y: dY_L }] : [];
-  // projections on MP charts for the MP point (use dataset[5])
+  chMPL.data.datasets[3].data = (pMPL) ? [pMPL] : [];
   chMPL.data.datasets[4].data = [];
-  chMPL.data.datasets[5].data = (Lm1 !== null) ? projectionData({ x: L0, y: dY_L }) : [];
+  chMPL.data.datasets[5].data = (pMPL) ? projectionData(pMPL) : [];
+
+  chMPL.options.plugins.tickOnlyPoints.enabled = true;
+  chMPL.options.plugins.tickOnlyPoints.values = (pMPL) ? [pMPL.y] : [];
 
   chMPL.update();
 
-  // --- MPK ---
-  setCurve(chMPK, baseMPK, curMPK);
-
+  // MPK
+  setCurves(chMPK, baseMPK, curMPK);
   chMPK.data.datasets[2].data = [];
-  chMPK.data.datasets[3].data = (Km1 !== null) ? [{ x: K0, y: dY_K }] : [];
+  chMPK.data.datasets[3].data = (pMPK) ? [pMPK] : [];
   chMPK.data.datasets[4].data = [];
-  chMPK.data.datasets[5].data = (Km1 !== null) ? projectionData({ x: K0, y: dY_K }) : [];
+  chMPK.data.datasets[5].data = (pMPK) ? projectionData(pMPK) : [];
+
+  chMPK.options.plugins.tickOnlyPoints.enabled = true;
+  chMPK.options.plugins.tickOnlyPoints.values = (pMPK) ? [pMPK.y] : [];
 
   chMPK.update();
 
   // Notes
-  els.noteYL.textContent = (Lm1 !== null)
-    ? `At K=${K}: Y at L=${L0} is ${fmt(yL0)} and at L=${Lm1} is ${fmt(yLm1)} → ΔY=${fmt(dY_L)} (MPL at L=${L0}).`
-    : `L=0 has no previous step. Increase L to compute MPL as Y(K,L)−Y(K,L−1).`;
+  els.noteYL.textContent = (pYL_prev)
+    ? `At K=${K}: Y(L=${L})=${fmt(pYL_now.y)} and Y(L=${L-1})=${fmt(pYL_prev.y)} → MPL=${fmt(mpl)}.`
+    : `At K=${K}: MPL is defined starting at L=1 (needs L−1).`;
 
-  els.noteYK.textContent = (Km1 !== null)
-    ? `At L=${L}: Y at K=${K0} is ${fmt(yK0)} and at K=${Km1} is ${fmt(yKm1)} → ΔY=${fmt(dY_K)} (MPK at K=${K0}).`
-    : `K=0 has no previous step. Increase K to compute MPK as Y(K,L)−Y(K−1,L).`;
+  els.noteYK.textContent = (pYK_prev)
+    ? `At L=${L}: Y(K=${K})=${fmt(pYK_now.y)} and Y(K=${K-1})=${fmt(pYK_prev.y)} → MPK=${fmt(mpk)}.`
+    : `At L=${L}: MPK is defined starting at K=1 (needs K−1).`;
 
-  els.noteMPL.textContent = (Lm1 !== null)
-    ? `MPL at L=${L0} equals ${fmt(dY_L)} — exactly the ΔY shown in the Output vs Labor graph.`
-    : `MPL is defined starting at L=1 in this backward-difference setup.`;
+  els.noteMPL.textContent = (pMPL)
+    ? `This MPL point equals the same ΔY shown on the Output vs Labor graph.`
+    : `Increase L to at least 1 to define MPL.`;
 
-  els.noteMPK.textContent = (Km1 !== null)
-    ? `MPK at K=${K0} equals ${fmt(dY_K)} — exactly the ΔY shown in the Output vs Capital graph.`
-    : `MPK is defined starting at K=1 in this backward-difference setup.`;
+  els.noteMPK.textContent = (pMPK)
+    ? `This MPK point equals the same ΔY shown on the Output vs Capital graph.`
+    : `Increase K to at least 1 to define MPK.`;
 
-  setStatus("Baseline curves are fixed in grey. Increase L (holding K) or increase K (holding L) and watch the ΔY gaps shrink (diminishing marginal product).");
+  setStatus("Look at the ΔY gaps: as L rises (holding K), MPL falls; as K rises (holding L), MPK falls.");
 }
 
 function resetToBaseline() {
   els.A_r.value = els.A_n.value = BASE.A;
   els.K_r.value = els.K_n.value = BASE.K;
   els.L_r.value = els.L_n.value = BASE.L;
-  updateCharts();
+  update();
 }
 
-bindPair(els.A_r, els.A_n, updateCharts);
-bindPair(els.K_r, els.K_n, updateCharts);
-bindPair(els.L_r, els.L_n, updateCharts);
+bindPair(els.A_r, els.A_n, update);
+bindPair(els.K_r, els.K_n, update);
+bindPair(els.L_r, els.L_n, update);
 
 els.resetBtn.addEventListener("click", resetToBaseline);
 
-// Init
+// init
 resetToBaseline();
