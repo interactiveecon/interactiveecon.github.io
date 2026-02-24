@@ -44,6 +44,30 @@ const els = {
   noteMPK: document.getElementById("noteMPK"),
 };
 
+function finiteYs(dataset) {
+  // dataset is [{x,y}, ...] possibly containing null/NaN
+  const ys = [];
+  for (const p of dataset) {
+    if (p && isFinite(p.y)) ys.push(p.y);
+  }
+  return ys;
+}
+
+function unionMinMax(d1, d2) {
+  const ys = finiteYs(d1).concat(finiteYs(d2));
+  if (!ys.length) return { min: 0, max: 1 };
+  let mn = ys[0], mx = ys[0];
+  for (const v of ys) { if (v < mn) mn = v; if (v > mx) mx = v; }
+  return { min: mn, max: mx };
+}
+
+function paddedRange(mn, mx, padFrac = 0.12) {
+  const span = Math.max(mx - mn, 1e-6);
+  const pad = padFrac * span;
+  return { min: Math.max(0, mn - pad), max: mx + pad };
+}
+
+
 function F(A, K, L) {
   if (K <= 0 || L <= 0) return 0;
   return A * Math.sqrt(K) * Math.sqrt(L);
@@ -183,7 +207,6 @@ function makeChart(canvas, xLabel, yLabel, pluginKey) {
       parsing: false,
       plugins: {
         legend: { display: false },
-        tickOnlyPoints: { enabled: false, values: [], pad: 0.12 }
       },
       scales: {
         x: {
@@ -242,6 +265,24 @@ function update() {
   const curYK = curveYvsK(A, L);
   const curMPL = mplSeries(A, K);
   const curMPK = mpkSeries(A, L);
+
+   const ylMM = unionMinMax(baseYL, curYL);
+   const ylR = paddedRange(ylMM.min, ylMM.max, 0.12);
+
+   const ykMM = unionMinMax(baseYK, curYK);
+   const ykR = paddedRange(ykMM.min, ykMM.max, 0.12);
+   chYK.options.scales.y.min = ykR.min;
+   chYK.options.scales.y.max = ykR.max;
+
+   const mplMM = unionMinMax(baseMPL, curMPL);
+   const mplR = paddedRange(mplMM.min, mplMM.max, 0.18);
+   chMPL.options.scales.y.min = mplR.min;
+   chMPL.options.scales.y.max = mplR.max;
+
+   const mpkMM = unionMinMax(baseMPK, curMPK);
+   const mpkR = paddedRange(mpkMM.min, mpkMM.max, 0.18);
+   chMPK.options.scales.y.min = mpkR.min;
+   chMPK.options.scales.y.max = mpkR.max;
 
   // Highlighted points for backward differences (current and previous)
   const pYL_now = { x: L, y: F(A, K, L) };
