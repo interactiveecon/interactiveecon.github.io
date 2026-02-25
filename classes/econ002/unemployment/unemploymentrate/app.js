@@ -1,5 +1,15 @@
+/*******************************************************
+ Unemployment Categories + Card-Specific Flow Moves
+ - Staging pile + E/U/N buckets
+ - Random sample of cards each round, random counts
+ - "Check categories" highlights correct/incorrect
+ - "Use these counts for move cards" enables story moves
+ - Move cards adjust specific source/destination cards
+   and therefore update counts + u + LFPR automatically.
+*******************************************************/
+
 const els = {
-  // sorting metrics
+  // metrics
   mE: document.getElementById("mE"),
   mU: document.getElementById("mU"),
   mN: document.getElementById("mN"),
@@ -14,6 +24,7 @@ const els = {
   zoneU: document.getElementById("zoneU"),
   zoneN: document.getElementById("zoneN"),
 
+  // actions
   checkBtn: document.getElementById("checkBtn"),
   useForMovesBtn: document.getElementById("useForMovesBtn"),
   checkMsg: document.getElementById("checkMsg"),
@@ -22,7 +33,7 @@ const els = {
   newSetBtn: document.getElementById("newSetBtn"),
   status: document.getElementById("status"),
 
-  // moves
+  // move cards
   snapshotBox: document.getElementById("snapshotBox"),
   moveDeck: document.getElementById("moveDeck"),
   predSel: document.getElementById("predSel"),
@@ -32,6 +43,7 @@ const els = {
 
 function fmtPct(x){ return (100*x).toFixed(2) + "%"; }
 function clampInt(x, lo=0){ return Math.max(lo, Math.floor(x)); }
+function setStatus(msg){ if (els.status) els.status.textContent = msg; }
 
 function rates(E,U,N){
   const LF = E + U;
@@ -41,6 +53,7 @@ function rates(E,U,N){
   return { LF, Pop, u, lfpr };
 }
 
+// Keep MathJax only for the header definitions; do NOT typeset dynamic result text
 function safeTypeset(nodes){
   if (!window.MathJax || !window.MathJax.typesetPromise) return;
   try { window.MathJax.typesetClear(nodes); } catch {}
@@ -48,75 +61,100 @@ function safeTypeset(nodes){
 }
 
 /* -----------------------
-   Part A: Sorting cards
+   Card Templates
+   Each template has a stable `type` used by move stories.
+   correct: E/U/N is the intended classification.
 ------------------------ */
 
-let cards = []; // {id, people, text, correct, zone, checked}
-let nextId = 1;
-
-// Many templates (you can keep adding)
 const CARD_TEMPLATES = [
-  // Employed
-  { text:"Worked part-time at a coffee shop this week.", correct:"E" },
-  { text:"Worked unpaid 10 hours in a family business.", correct:"E" },
-  { text:"Has a job but was temporarily absent (sick/vacation).", correct:"E" },
-  { text:"Did paid gig deliveries this week.", correct:"E" },
-  { text:"Worked for pay from home this week.", correct:"E" },
-  { text:"Worked one day this week (seasonal job).", correct:"E" },
+  // ---------- EMPLOYED ----------
+  { type:"emp_parttime",          correct:"E", text:"Worked part-time for pay during the reference week." },
+  { type:"emp_fulltime",          correct:"E", text:"Worked full-time for pay during the reference week." },
+  { type:"emp_gig",               correct:"E", text:"Did paid gig work (rideshare/deliveries) during the reference week." },
+  { type:"emp_family_unpaid",     correct:"E", text:"Worked unpaid in a family business during the reference week." },
+  { type:"emp_temp_absent",       correct:"E", text:"Has a job but was temporarily absent (sick/vacation) this week." },
+  { type:"emp_one_day",           correct:"E", text:"Worked one day this week (seasonal/irregular job)." },
+  { type:"emp_remote",            correct:"E", text:"Worked from home for pay during the reference week." },
 
-  // Unemployed
-  { text:"Not working and sent out job applications in the last 2 weeks.", correct:"U" },
-  { text:"Not working; interviewed last week; available to start.", correct:"U" },
-  { text:"Not working; starts a new job next week; available.", correct:"U" },
-  { text:"On temporary layoff and expects recall; available to work.", correct:"U" },
-  { text:"Not working; contacted employers; actively searching.", correct:"U" },
-  { text:"Not working; registered with an employment agency this week.", correct:"U" },
+  // ---------- UNEMPLOYED (ACTIVE SEARCH / TEMP LAYOFF) ----------
+  { type:"u_apps",                correct:"U", text:"Not working; sent out job applications in the last 2 weeks; available." },
+  { type:"u_interview",           correct:"U", text:"Not working; interviewed recently; available to start." },
+  { type:"u_contacted",           correct:"U", text:"Not working; contacted employers in the last 2 weeks; available." },
+  { type:"u_agency",              correct:"U", text:"Not working; registered with an employment agency; available." },
+  { type:"u_temp_layoff",         correct:"U", text:"On temporary layoff; expects recall; available to work." },
+  { type:"u_offer_startsoon",     correct:"U", text:"Not working; accepted a job offer; starts soon; available." },
 
-  // Not in labor force
-  { text:"Full-time student; not working; not looking for work.", correct:"N" },
-  { text:"Retired; not working; not looking for work.", correct:"N" },
-  { text:"Stay-at-home parent; not working; not actively searching.", correct:"N" },
-  { text:"Discouraged worker: wants a job but stopped searching.", correct:"N" },
-  { text:"Not working; would take a job, but hasn’t looked recently.", correct:"N" },
-  { text:"Taking care of a relative; not working; not searching.", correct:"N" },
-  { text:"Receiving disability benefits; not working; not searching.", correct:"N" },
+  // ---------- NOT IN LABOR FORCE ----------
+  { type:"n_student_fulltime",    correct:"N", text:"Full-time student; not working; not looking for work." },
+  { type:"n_student_parttime",    correct:"N", text:"Part-time student; not working; not actively searching." },
+  { type:"n_retired",             correct:"N", text:"Retired; not working; not looking for work." },
+  { type:"n_home_parent",         correct:"N", text:"Stay-at-home parent; not working; not actively searching." },
+  { type:"n_discouraged",         correct:"N", text:"Discouraged worker: wants a job but stopped searching." },
+  { type:"n_other_reason",        correct:"N", text:"Not working; not searching due to other reasons (e.g., transportation, caregiving)." },
+  { type:"n_disability",          correct:"N", text:"Not working due to disability; not searching." },
+
+  // ---------- INTENTIONALLY TRICKIER / BORDERLINE PHRASES ----------
+  // (Still mapped to a category according to the lab’s rule set.)
+  { type:"u_wait_recall",          correct:"U", text:"Not working; waiting to be recalled to a previous job; available." },
+  { type:"n_wants_job_no_search",  correct:"N", text:"Not working; would take a job, but hasn’t looked recently." },
 ];
 
-// random people count each draw
+const TEMPLATE_BY_TYPE = new Map(CARD_TEMPLATES.map(t => [t.type, t]));
+
+/* -----------------------
+   Round generation
+------------------------ */
+
+let cards = []; // {id,type,text,correct,zone,people,checked}
+let nextId = 1;
+
 function drawPeople(){
-  // 3..25 with mild skew upward
-  const base = 3 + Math.floor(Math.random()*23);
-  const bump = (Math.random() < 0.25) ? (5 + Math.floor(Math.random()*8)) : 0;
-  return Math.min(30, base + bump);
+  // Reasonable classroom numbers, varying each round.
+  // 4..26 with occasional bump
+  const base = 4 + Math.floor(Math.random()*23); // 4..26
+  const bump = (Math.random() < 0.20) ? (4 + Math.floor(Math.random()*8)) : 0;
+  return Math.min(35, base + bump);
 }
 
-function makeCard(tpl){
+function makeCardFromTemplate(tpl){
   return {
     id: "c" + (nextId++),
-    people: drawPeople(),
+    type: tpl.type,
     text: tpl.text,
-    correct: tpl.correct, // "E"|"U"|"N"
-    zone: "S",            // staging pile
+    correct: tpl.correct,
+    zone: "S",             // staging pile
+    people: drawPeople(),  // randomized each round
     checked: null
   };
 }
 
-function newRound(){
+function chooseRandomSample(){
   const pool = [...CARD_TEMPLATES].sort(()=>Math.random()-0.5);
 
-  // draw 10..14 each round
-  const n = 10 + Math.floor(Math.random()*5);
+  // sample size: 12..16
+  const n = 12 + Math.floor(Math.random()*5);
   const chosen = pool.slice(0, n);
 
-  cards = chosen.map(makeCard);
+  cards = chosen.map(makeCardFromTemplate);
 
-  els.checkMsg.textContent = "";
-  renderZones();
-  updateMetricsFromZones();
-  setStatus("New round loaded (random cards + random people counts).");
+  // clear moves state
+  snapshotSet = false;
+  moveCards = [];
+  if (els.moveDeck) els.moveDeck.innerHTML = `<div class="mini">Set a snapshot first.</div>`;
+  if (els.snapshotBox) els.snapshotBox.innerHTML = `<strong>Snapshot:</strong> not set yet (click “Use these counts for move cards”).`;
+  if (els.explainBox) els.explainBox.innerHTML = `Click <strong>Use these counts for move cards</strong>, then click a move card.`;
+  if (els.predSel) els.predSel.value = "";
+
+  if (els.checkMsg) els.checkMsg.textContent = "";
 }
 
+/* -----------------------
+   Rendering & Drag/Drop
+------------------------ */
+
 function renderZones(){
+  if (!els.zoneS) return;
+
   els.zoneS.innerHTML = "";
   els.zoneE.innerHTML = "";
   els.zoneU.innerHTML = "";
@@ -143,12 +181,12 @@ function renderZones(){
       ev.dataTransfer.effectAllowed = "move";
     });
 
-    const zone = (c.zone === "S") ? els.zoneS
-      : (c.zone === "E") ? els.zoneE
-      : (c.zone === "U") ? els.zoneU
+    const zoneEl = c.zone === "S" ? els.zoneS
+      : c.zone === "E" ? els.zoneE
+      : c.zone === "U" ? els.zoneU
       : els.zoneN;
 
-    zone.appendChild(el);
+    zoneEl.appendChild(el);
   }
 }
 
@@ -162,16 +200,25 @@ function setupDropzone(zoneEl){
     ev.preventDefault();
     zoneEl.classList.remove("dragover");
     const id = ev.dataTransfer.getData("text/plain");
-    const z = zoneEl.dataset.zone;
+    const zone = zoneEl.dataset.zone;
     const c = cards.find(x => x.id === id);
     if (!c) return;
-    c.zone = z;
-    c.checked = null;
-    els.checkMsg.textContent = "";
+
+    c.zone = zone;
+    c.checked = null; // classification changed
+    if (els.checkMsg) els.checkMsg.textContent = "";
     renderZones();
     updateMetricsFromZones();
+
+    // changing zones can make some story moves feasible now
+    if (snapshotSet) rerollMoves();
   });
 }
+
+/* -----------------------
+   Counts & metrics from placed cards
+   (staging pile doesn't count)
+------------------------ */
 
 function countsFromZones(){
   let E=0,U=0,N=0;
@@ -179,7 +226,6 @@ function countsFromZones(){
     if (c.zone === "E") E += c.people;
     else if (c.zone === "U") U += c.people;
     else if (c.zone === "N") N += c.people;
-    // staging pile doesn't count yet
   }
   return {E,U,N};
 }
@@ -197,117 +243,219 @@ function updateMetricsFromZones(){
   els.pillPop.textContent = Pop.toFixed(0);
 }
 
+/* -----------------------
+   Check classification (ignores staging)
+------------------------ */
+
 function checkCategories(){
   let correct = 0;
+  let placed = 0;
+
   for (const c of cards){
     if (c.zone === "S") { c.checked = null; continue; }
+    placed++;
     c.checked = (c.zone === c.correct);
     if (c.checked) correct++;
   }
+
   renderZones();
-  const placed = cards.filter(c => c.zone !== "S").length;
-  els.checkMsg.textContent = `${correct}/${placed} placed cards correctly classified.`;
-  setStatus("Checked categories (staging cards ignored).");
+  if (els.checkMsg){
+    els.checkMsg.textContent = placed === 0
+      ? "Place some cards first."
+      : `${correct}/${placed} placed cards correctly classified.`;
+  }
+  setStatus("Checked categories.");
 }
 
 /* -----------------------
-   Part B: Move cards
+   Move cards: story-specific and card-specific
 ------------------------ */
 
-let snapshot = null; // {E,U,N} used for moves
-let moveCards = [];  // {id, from, to, label, people, hint}
+let snapshotSet = false;
+let moveCards = []; // {id, templateId, text, fromType,fromZone,toType,toZone, people, disabled?}
 
-const MOVE_TYPES = [
-  { id:"E_to_U", label:"Employed → Unemployed", from:"E", to:"U", hint:"Job loss" },
-  { id:"U_to_E", label:"Unemployed → Employed", from:"U", to:"E", hint:"Finds a job" },
-  { id:"N_to_E", label:"Not in LF → Employed", from:"N", to:"E", hint:"Starts working" },
-  { id:"N_to_U", label:"Not in LF → Unemployed", from:"N", to:"U", hint:"Starts searching" },
-  { id:"E_to_N", label:"Employed → Not in LF", from:"E", to:"N", hint:"Leaves labor force" },
-  { id:"U_to_N", label:"Unemployed → Not in LF", from:"U", to:"N", hint:"Stops searching" },
+const MOVE_STORY_TEMPLATES = [
+  // N -> U (search begins)
+  {
+    id: "students_grad_search",
+    fromType: "n_student_fulltime", fromZone: "N",
+    toType: "u_apps", toZone: "U",
+    verb: "graduate and start looking for work",
+  },
+  {
+    id: "discouraged_start_search",
+    fromType: "n_discouraged", fromZone: "N",
+    toType: "u_contacted", toZone: "U",
+    verb: "start actively searching for work",
+  },
+  {
+    id: "retired_enter_search",
+    fromType: "n_retired", fromZone: "N",
+    toType: "u_agency", toZone: "U",
+    verb: "enter the labor force and start searching",
+  },
+  {
+    id: "home_parent_search",
+    fromType: "n_home_parent", fromZone: "N",
+    toType: "u_apps", toZone: "U",
+    verb: "start searching for work",
+  },
+
+  // U -> E (job found)
+  {
+    id: "apps_find_job",
+    fromType: "u_apps", fromZone: "U",
+    toType: "emp_parttime", toZone: "E",
+    verb: "find jobs and become employed",
+  },
+  {
+    id: "interview_find_job",
+    fromType: "u_interview", fromZone: "U",
+    toType: "emp_fulltime", toZone: "E",
+    verb: "get hired and become employed",
+  },
+  {
+    id: "temp_layoff_recalled",
+    fromType: "u_temp_layoff", fromZone: "U",
+    toType: "emp_temp_absent", toZone: "E",
+    verb: "are recalled and return to work",
+  },
+
+  // E -> U (job loss)
+  {
+    id: "layoff_emp_to_u",
+    fromType: "emp_fulltime", fromZone: "E",
+    toType: "u_apps", toZone: "U",
+    verb: "lose their jobs and start searching",
+  },
+
+  // U -> N (stop searching)
+  {
+    id: "stop_search",
+    fromType: "u_contacted", fromZone: "U",
+    toType: "n_discouraged", toZone: "N",
+    verb: "stop searching and become discouraged",
+  },
+  {
+    id: "u_to_school",
+    fromType: "u_apps", fromZone: "U",
+    toType: "n_student_fulltime", toZone: "N",
+    verb: "stop searching and return to school",
+  },
+
+  // E -> N (leave labor force)
+  {
+    id: "emp_to_school",
+    fromType: "emp_parttime", fromZone: "E",
+    toType: "n_student_fulltime", toZone: "N",
+    verb: "leave their jobs and go to school",
+  },
+  {
+    id: "emp_to_retired",
+    fromType: "emp_fulltime", fromZone: "E",
+    toType: "n_retired", toZone: "N",
+    verb: "retire and leave the labor force",
+  },
 ];
 
-function signArrow(x0, x1){
-  const eps = 1e-12;
-  if (x1 > x0 + eps) return "↑";
-  if (x1 < x0 - eps) return "↓";
-  return "↔";
+function cardLabelByType(type){
+  // For story text: short human label
+  const map = {
+    "n_student_fulltime": "full-time students",
+    "n_student_parttime": "part-time students",
+    "n_retired": "retirees",
+    "n_home_parent": "stay-at-home parents",
+    "n_discouraged": "discouraged workers",
+    "n_other_reason": "nonparticipants",
+    "n_disability": "nonparticipants",
+    "u_apps": "job seekers",
+    "u_interview": "job seekers",
+    "u_contacted": "job seekers",
+    "u_agency": "job seekers",
+    "u_temp_layoff": "workers on temporary layoff",
+    "u_offer_startsoon": "job offer recipients",
+    "emp_parttime": "workers",
+    "emp_fulltime": "workers",
+    "emp_gig": "gig workers",
+    "emp_family_unpaid": "family workers",
+    "emp_temp_absent": "workers",
+    "emp_one_day": "workers",
+    "emp_remote": "workers",
+    "u_wait_recall": "workers waiting for recall",
+    "n_wants_job_no_search": "nonparticipants",
+  };
+  return map[type] || "people";
 }
-function predKey(uArrow, lfArrow){
-  const uPart = (uArrow==="↑") ? "u_up" : (uArrow==="↓") ? "u_down" : "u_same";
-  const lPart = (lfArrow==="↑") ? "lfpr_up" : (lfArrow==="↓") ? "lfpr_down" : "lfpr_same";
-  return `${uPart}_${lPart}`;
+
+function findSourceCard(fromType, fromZone){
+  // Only use a card if it's in the specified zone AND has people > 0
+  return cards.find(c => c.type === fromType && c.zone === fromZone && c.people > 0);
 }
 
-function explainMove(move, xfer, before, after){
-  const rb = rates(before.E, before.U, before.N);
-  const ra = rates(after.E, after.U, after.N);
+function ensureDestCard(toType, toZone){
+  // If destination card exists in correct zone, use it.
+  let d = cards.find(c => c.type === toType && c.zone === toZone);
+  if (d) return d;
 
-  const uA  = signArrow(rb.u, ra.u);
-  const lfA = signArrow(rb.lfpr, ra.lfpr);
+  // Create a new instance if template exists
+  const tpl = TEMPLATE_BY_TYPE.get(toType);
+  if (!tpl) return null;
 
-  const parts = [];
-  parts.push(`<strong>Result:</strong> unemployment rate <strong>${uA}</strong>, LFPR <strong>${lfA}</strong>.`);
+  d = makeCardFromTemplate(tpl);
+  d.zone = toZone;
+  d.people = 0;
+  d.checked = null;
+  cards.push(d);
+  return d;
+}
 
-  const mech = [];
-  const LFb = rb.LF, LFa = ra.LF;
-  const Ub = before.U, Ua = after.U;
+function chooseTransferAmount(maxAvail){
+  // Prefer smaller chunks to keep changes interpretable
+  const cap = Math.min(10, maxAvail);
+  if (cap <= 0) return 0;
+  return 1 + Math.floor(Math.random()*cap);
+}
 
-  if (LFb === LFa){
-    if (Ua > Ub) mech.push(`Labor force is unchanged (E+U stays ${LFb}). U rises, so u = U/(E+U) rises.`);
-    else if (Ua < Ub) mech.push(`Labor force is unchanged (E+U stays ${LFb}). U falls, so u falls.`);
-    else mech.push(`Labor force and U are unchanged, so u is unchanged.`);
-  } else {
-    mech.push(`Labor force changes from ${LFb} to ${LFa}. Since u = U/(E+U), both U and E+U matter.`);
-    if (Ua > Ub) mech.push(`Here U rises (from ${Ub} to ${Ua}).`);
-    if (Ua < Ub) mech.push(`Here U falls (from ${Ub} to ${Ua}).`);
+function rollStoryMoveCard(){
+  // Try a few templates for feasibility
+  const shuffled = [...MOVE_STORY_TEMPLATES].sort(()=>Math.random()-0.5);
+
+  for (const t of shuffled){
+    const src = findSourceCard(t.fromType, t.fromZone);
+    if (!src) continue;
+
+    const k = chooseTransferAmount(src.people);
+    if (k <= 0) continue;
+
+    const who = cardLabelByType(t.fromType);
+    const text = `${k} ${who} ${t.verb}.`;
+
+    return {
+      id: "m" + Math.floor(Math.random()*1e9),
+      templateId: t.id,
+      fromType: t.fromType, fromZone: t.fromZone,
+      toType: t.toType, toZone: t.toZone,
+      people: k,
+      text
+    };
   }
-
-  if (LFa > LFb) mech.push(`LFPR rises because LF = E+U increases while population (E+U+N) stays fixed.`);
-  if (LFa < LFb) mech.push(`LFPR falls because LF = E+U decreases while population (E+U+N) stays fixed.`);
-  if (LFa === LFb) mech.push(`LFPR is unchanged because the labor force is unchanged.`);
-
-  parts.push(`<div style="margin-top:8px;">${mech.join(" ")}</div>`);
-
-  const p = els.predSel.value;
-  if (p){
-    const correct = predKey(uA, lfA);
-    if (p === correct){
-      parts.push(`<div style="margin-top:8px;"><strong>Prediction:</strong> ✅ correct.</div>`);
-    } else {
-      parts.push(`<div style="margin-top:8px;"><strong>Prediction:</strong> ❌ not quite. Correct is <strong>${uA}</strong> for unemployment and <strong>${lfA}</strong> for LFPR.</div>`);
-    }
-  }
-
-  return parts.join("");
-}
-
-// Create move cards with feasible amounts based on snapshot
-function rollMoveCard(){
-  const t = MOVE_TYPES[Math.floor(Math.random()*MOVE_TYPES.length)];
-  const available = snapshot ? snapshot[t.from] : 0;
-
-  // choose a random amount, but must be feasible
-  const raw = 3 + Math.floor(Math.random()*18); // 3..20
-  const people = snapshot ? Math.min(raw, Math.max(0, available)) : raw;
 
   return {
     id: "m" + Math.floor(Math.random()*1e9),
-    from: t.from,
-    to: t.to,
-    label: t.label,
-    hint: t.hint,
-    people
+    templateId: "none",
+    people: 0,
+    text: "No feasible move right now. (Place more cards into E/U/N, and ensure source cards are in the right bucket.)",
+    disabled: true
   };
 }
 
 function rerollMoves(){
-  if (!snapshot){
+  if (!snapshotSet){
     els.moveDeck.innerHTML = `<div class="mini">Set a snapshot first.</div>`;
     return;
   }
-  // create 4 move cards
   moveCards = [];
-  for (let i=0;i<4;i++) moveCards.push(rollMoveCard());
+  for (let i=0; i<4; i++) moveCards.push(rollStoryMoveCard());
   renderMoveDeck();
 }
 
@@ -317,13 +465,14 @@ function renderMoveDeck(){
     const div = document.createElement("div");
     div.className = "moveCard";
     div.dataset.moveId = mc.id;
+    if (mc.disabled) div.style.opacity = "0.65";
 
     div.innerHTML = `
       <div class="hdr">
-        <div class="title">${mc.label}</div>
-        <div class="amt">${mc.people} people</div>
+        <div class="title">${mc.text}</div>
+        <div class="amt">${mc.people ? mc.people + " ppl" : ""}</div>
       </div>
-      <div class="hint">${mc.hint}. Click to apply.</div>
+      <div class="hint">${mc.disabled ? "Adjust your sorting so a source card exists in the right bucket." : "Click to apply."}</div>
     `;
 
     div.addEventListener("click", () => applyMoveCard(mc.id));
@@ -331,108 +480,184 @@ function renderMoveDeck(){
   }
 }
 
-function useCountsForMoves(){
-  snapshot = countsFromZones();
-  const r = rates(snapshot.E, snapshot.U, snapshot.N);
+function predKey(uArrow, lfArrow){
+  const uPart = (uArrow==="↑") ? "u_up" : (uArrow==="↓") ? "u_down" : "u_same";
+  const lPart = (lfArrow==="↑") ? "lfpr_up" : (lfArrow==="↓") ? "lfpr_down" : "lfpr_same";
+  return `${uPart}_${lPart}`;
+}
+function signArrow(x0, x1){
+  const eps = 1e-12;
+  if (x1 > x0 + eps) return "↑";
+  if (x1 < x0 - eps) return "↓";
+  return "↔";
+}
 
-  els.snapshotBox.innerHTML = `
-    <strong>Snapshot:</strong>
-    E=${snapshot.E}, U=${snapshot.U}, N=${snapshot.N}
-    (Pop=${r.Pop}, LF=${r.LF}, u=${fmtPct(r.u)}, LFPR=${fmtPct(r.lfpr)})
-  `;
+function explainDelta(beforeCounts, afterCounts){
+  const rb = rates(beforeCounts.E, beforeCounts.U, beforeCounts.N);
+  const ra = rates(afterCounts.E, afterCounts.U, afterCounts.N);
+
+  const uA = signArrow(rb.u, ra.u);
+  const lfA = signArrow(rb.lfpr, ra.lfpr);
+
+  const lines = [];
+  lines.push(`<strong>Result:</strong> u ${uA}, LFPR ${lfA}.`);
+  lines.push(`<div style="margin-top:8px;">`);
+  lines.push(`u = U/(E+U). LFPR = (E+U)/(E+U+N).`);
+  lines.push(`Labor force: ${rb.LF} → ${ra.LF}. U: ${beforeCounts.U} → ${afterCounts.U}.`);
+  lines.push(`</div>`);
+
+  const p = els.predSel.value;
+  if (p){
+    const correct = predKey(uA, lfA);
+    lines.push(`<div style="margin-top:8px;"><strong>Prediction:</strong> ${p === correct ? "✅ correct" : "❌ not quite"}</div>`);
+  }
+
+  return lines.join("");
+}
+
+function useForMoves(){
+  // Snapshot is simply: "moves are enabled and operate on cards currently placed"
+  snapshotSet = true;
+
+  const c = countsFromZones();
+  const r = rates(c.E, c.U, c.N);
+
+  els.snapshotBox.innerHTML =
+    `<strong>Snapshot:</strong> Using your current placed cards.
+     E=${c.E}, U=${c.U}, N=${c.N} (LF=${r.LF}, Pop=${r.Pop}, u=${fmtPct(r.u)}, LFPR=${fmtPct(r.lfpr)}).`;
 
   els.explainBox.innerHTML = `Click a move card to apply it.`;
   els.predSel.value = "";
-  setStatus("Snapshot set. Move cards rolled.");
 
   rerollMoves();
-  safeTypeset([els.explainBox]);
+  setStatus("Move cards enabled (they will now update specific cards and the top counts/rates).");
 }
 
 function applyMoveCard(moveId){
-  if (!snapshot) return;
+  if (!snapshotSet) return;
 
   const idx = moveCards.findIndex(m => m.id === moveId);
   if (idx < 0) return;
   const mc = moveCards[idx];
+  if (mc.disabled) return;
 
-  // if not feasible, reroll that card
-  const available = snapshot[mc.from];
-  if (available <= 0 || mc.people <= 0){
-    moveCards[idx] = rollMoveCard();
+  // MUST have source card in correct zone
+  const src = findSourceCard(mc.fromType, mc.fromZone);
+  if (!src){
+    setStatus("That move isn't feasible: source card not found in the required bucket.");
+    // reroll this card
+    moveCards[idx] = rollStoryMoveCard();
     renderMoveDeck();
-    setStatus("That move wasn’t feasible; rerolled a new move card.");
     return;
   }
 
-  const xfer = Math.min(mc.people, available);
+  const beforeCounts = countsFromZones();
 
-  const before = {...snapshot};
-  snapshot[mc.from] -= xfer;
-  snapshot[mc.to] += xfer;
-  const after = {...snapshot};
+  const k = Math.min(mc.people, src.people);
+  if (k <= 0){
+    moveCards[idx] = rollStoryMoveCard();
+    renderMoveDeck();
+    return;
+  }
+
+  // Subtract from source
+  src.people -= k;
+  src.checked = null;
+
+  // Add to destination card in correct bucket (create if missing)
+  const dest = ensureDestCard(mc.toType, mc.toZone);
+  if (!dest){
+    setStatus("Internal: destination card template missing.");
+    return;
+  }
+  dest.people += k;
+  dest.checked = null;
+
+  // Re-render, update top metrics
+  renderZones();
+  updateMetricsFromZones();
+
+  const afterCounts = countsFromZones();
 
   // Explain
-  els.explainBox.innerHTML = explainMove(mc, xfer, before, after);
-  safeTypeset([els.explainBox]);
-
-  // Replace this move card with a new one (numbers “correspond to moves” each time)
-  moveCards[idx] = rollMoveCard();
-  renderMoveDeck();
+  els.explainBox.innerHTML =
+    `<strong>Applied move:</strong> ${mc.text}<br>` +
+    `<div style="margin-top:8px;">${explainDelta(beforeCounts, afterCounts)}</div>`;
 
   // Update snapshot display
-  const r = rates(snapshot.E, snapshot.U, snapshot.N);
-  els.snapshotBox.innerHTML = `
-    <strong>Snapshot:</strong>
-    E=${snapshot.E}, U=${snapshot.U}, N=${snapshot.N}
-    (Pop=${r.Pop}, LF=${r.LF}, u=${fmtPct(r.u)}, LFPR=${fmtPct(r.lfpr)})
-  `;
+  const r = rates(afterCounts.E, afterCounts.U, afterCounts.N);
+  els.snapshotBox.innerHTML =
+    `<strong>Snapshot:</strong> Using your current placed cards.
+     E=${afterCounts.E}, U=${afterCounts.U}, N=${afterCounts.N} (LF=${r.LF}, Pop=${r.Pop}, u=${fmtPct(r.u)}, LFPR=${fmtPct(r.lfpr)}).`;
 
+  // Reroll used move card (new text + new amount based on current board)
+  moveCards[idx] = rollStoryMoveCard();
+  renderMoveDeck();
+
+  // reset prediction
   els.predSel.value = "";
-  setStatus(`Applied move: ${xfer} from ${mc.from} to ${mc.to}.`);
+
+  setStatus(`Moved ${k} people from ${mc.fromZone} to ${mc.toZone}.`);
+
+  // No MathJax typesetting here (dynamic text is plain)
 }
 
 /* -----------------------
-   Misc
+   Reset / Init
 ------------------------ */
 
-function setStatus(msg){ els.status.textContent = msg; }
-
 function resetAll(){
-  snapshot = null;
+  snapshotSet = false;
   moveCards = [];
-  els.moveDeck.innerHTML = `<div class="mini">Set a snapshot first.</div>`;
-  els.snapshotBox.innerHTML = `<strong>Snapshot:</strong> not set yet (click “Use these counts for move cards”).`;
-  els.explainBox.innerHTML = `Click <strong>Use these counts for move cards</strong>, then click a move card. This box will explain the change in \$begin:math:text$u\\$end:math:text$ and LFPR.`;
-  safeTypeset([els.explainBox, document.getElementById("mathBoxTop")]);
 
-  newRound();
+  if (els.moveDeck) els.moveDeck.innerHTML = `<div class="mini">Set a snapshot first.</div>`;
+  if (els.snapshotBox) els.snapshotBox.innerHTML = `<strong>Snapshot:</strong> not set yet (click “Use these counts for move cards”).`;
+  if (els.explainBox) els.explainBox.innerHTML =
+    `Click <strong>Use these counts for move cards</strong>, then click a move card. This box will explain the change in u and LFPR.`;
+  if (els.predSel) els.predSel.value = "";
+  if (els.checkMsg) els.checkMsg.textContent = "";
+
+  chooseRandomSample();
+  renderZones();
   updateMetricsFromZones();
   setStatus("Reset.");
+
+  // typeset header definitions only
+  const top = document.getElementById("mathBoxTop");
+  if (top) safeTypeset([top]);
 }
 
-// init dropzones
+/* -----------------------
+   Wire up events
+------------------------ */
+
 setupDropzone(els.zoneS);
 setupDropzone(els.zoneE);
 setupDropzone(els.zoneU);
 setupDropzone(els.zoneN);
 
-// buttons
 els.checkBtn.addEventListener("click", checkCategories);
-els.useForMovesBtn.addEventListener("click", useCountsForMoves);
+els.useForMovesBtn.addEventListener("click", useForMoves);
+els.rerollMovesBtn.addEventListener("click", rerollMoves);
+
 els.resetBtn.addEventListener("click", resetAll);
 els.newSetBtn.addEventListener("click", () => {
-  snapshot = null;
+  snapshotSet = false;
   moveCards = [];
-  els.moveDeck.innerHTML = `<div class="mini">Set a snapshot first.</div>`;
-  els.snapshotBox.innerHTML = `<strong>Snapshot:</strong> not set yet (click “Use these counts for move cards”).`;
-  els.explainBox.innerHTML = `Click <strong>Use these counts for move cards</strong>, then click a move card.`;
-  els.predSel.value = "";
-  newRound();
+  if (els.moveDeck) els.moveDeck.innerHTML = `<div class="mini">Set a snapshot first.</div>`;
+  if (els.snapshotBox) els.snapshotBox.innerHTML = `<strong>Snapshot:</strong> not set yet (click “Use these counts for move cards”).`;
+  if (els.explainBox) els.explainBox.innerHTML = `Click <strong>Use these counts for move cards</strong>, then click a move card.`;
+  if (els.predSel) els.predSel.value = "";
+  if (els.checkMsg) els.checkMsg.textContent = "";
+
+  chooseRandomSample();
+  renderZones();
   updateMetricsFromZones();
   setStatus("New round loaded.");
+
+  const top = document.getElementById("mathBoxTop");
+  if (top) safeTypeset([top]);
 });
-els.rerollMovesBtn.addEventListener("click", rerollMoves);
 
 // start
 resetAll();
