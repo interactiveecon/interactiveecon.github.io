@@ -374,11 +374,11 @@ function update() {
     : `MPK is defined starting at K=1 (needs K−1).`;
 
   els.noteMPL.textContent = pMPL
-    ? 
+    ? ` `
     : `Increase L to at least 1 to define MPL.`;
 
   els.noteMPK.textContent = pMPK
-    ? 
+    ? ` `
     : `Increase K to at least 1 to define MPK.`;
 
   setStatus("Axes start with a wide initial scale (K at max, A/L at initial), then expand if needed. They don’t shrink until Reset.");
