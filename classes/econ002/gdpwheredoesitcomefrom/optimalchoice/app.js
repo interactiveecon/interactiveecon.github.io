@@ -321,7 +321,7 @@ function makeQuestion(){
   selectedChoice = null;
 
   els.qText.innerHTML =
-    `<strong>Scenario:</strong> Starting from baseline (A=5, P=5, W=10, R=10), suppose <strong>${currentQ.label}</strong> while other variables stay fixed.
+    `<strong>Scenario:</strong> Starting from baseline, suppose <strong>${currentQ.label}</strong> while other variables stay fixed.
      After you adjust the slider(s), what happens to <strong>L*</strong> and <strong>K*</strong>?`;
 
   const choices = [
@@ -374,11 +374,33 @@ function submit(){
 
   const ok = (selectedChoice === correct);
 
-  let expl = "";
-  if (currentQ.var === "A") expl = "Higher A raises MPL and MPK, so the firm uses more inputs.";
-  if (currentQ.var === "P") expl = "Higher P lowers W/P and R/P (if W and R fixed), so the firm uses more inputs.";
-  if (currentQ.var === "W") expl = "Higher W raises W/P, making labor more expensive, so L* falls (often K* falls too).";
-  if (currentQ.var === "R") expl = "Higher R raises R/P, making capital more expensive, so K* falls (often L* falls too).";
+  // Build explanation that handles both increases and decreases.
+const isIncrease = currentQ.label.includes("increases");
+
+let expl = "";
+if (currentQ.var === "A") {
+  expl = isIncrease
+    ? "Higher A raises MPL and MPK, so the firm uses more inputs because they are more productive."
+    : "Lower A reduces MPL and MPK, so the firm uses fewer inputs because they are less productive.";
+}
+
+if (currentQ.var === "P") {
+  expl = isIncrease
+    ? "Higher P lowers W/P and R/P (if W and R are fixed), so the firm uses more inputs because they are cheaper in real terms."
+    : "Lower P raises W/P and R/P (if W and R are fixed), so the firm uses fewer inputs because they are more expensive in real terms.";
+}
+
+if (currentQ.var === "W") {
+  expl = isIncrease
+    ? "Higher W raises W/P, making labor more expensive, so L* falls. The falling L* makes capital less productive (MPK falls) because there are fewer workers to use the capital. So firms hire less capital at the same real rental rate."
+    : "Lower W reduces W/P, making labor cheaper, so L* rises. The rising L* makes capital more productive (MPK rises) because there are more workers to use the capital. So firms hire more capital at the same real rental rate.";
+}
+
+if (currentQ.var === "R") {
+  expl = isIncrease
+    ? "Higher R raises R/P, making capital more expensive, so K* falls. The falling K* makes labor less productive (MPL falls) because workers have less capital to use. So firms hire less labor at the same real wage."
+    : "Lower R reduces R/P, making capital cheaper, so K* rises. The rising K* makes labor more productive (MPL rises) because workers have more capital to use. So firms hire more labor at the same real wage.";
+}
 
   const w0 = BASELINE.W / BASELINE.P, r0 = BASELINE.R / BASELINE.P;
   const w1 = now.W / now.P, r1 = now.R / now.P;
