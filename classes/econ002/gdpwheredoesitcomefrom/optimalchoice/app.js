@@ -169,10 +169,10 @@ function makeMarketChart(canvas, xLabel, yLabel){
         { data: [], borderWidth: 3, pointRadius: 0, borderColor: COL_BLUE },                     // current MP
 
         // 2 baseline real price (grey dashed)
-        { data: [], borderWidth: 2, pointRadius: 0, borderDash: [6,6], borderColor: COL_GREY },
+        { data: [], borderWidth: 1, pointRadius: 0, borderDash: [6,6], borderColor: COL_GREY },
 
         // 3 current real price (blue SOLID + thicker for visibility)
-        { data: [], borderWidth: 4, pointRadius: 0, borderDash: [], borderColor: COL_BLUE },
+        { data: [], borderWidth: 2, pointRadius: 0, borderDash: [], borderColor: COL_BLUE },
 
         { data: [], showLine: false, pointRadius: 5, borderColor: COL_GREY, backgroundColor: COL_GREY }, // baseline point
         { data: [], showLine: false, pointRadius: 5, borderColor: COL_BLUE, backgroundColor: COL_BLUE }, // current point
