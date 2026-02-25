@@ -52,6 +52,19 @@ window.addEventListener("DOMContentLoaded", () => {
   let cards = [];
   let nextId = 1;
 
+  const empSlider = document.getElementById("empSlider");
+const empVal = document.getElementById("empVal");
+
+const m_u = document.getElementById("m_u");
+const m_ustar = document.getElementById("m_ustar");
+const m_ucyc = document.getElementById("m_ucyc");
+const m_U = document.getElementById("m_U");
+const m_LF = document.getElementById("m_LF");
+
+  function getE(){
+  return Number(empSlider?.value || 0);
+}
+
   // Templates
   const TEMPLATES = [
     // frictional
@@ -165,27 +178,39 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function updateDecomp(){
-    const {F,Sx,C,Pop} = countsFromZones();
-    if (Pop === 0){
-      els.mU.textContent = "—";
-      els.mUnat.textContent = "—";
-      els.mUcyc.textContent = "—";
-      els.mPop.textContent = "0";
-      els.decompNote.textContent = "Place some cards into F/S/C to see the decomposition.";
-      return;
-    }
+  const {F,Sx,C,Pop} = countsFromZones();
+  const U = F + Sx + C;
+  const E = getE();
+  const LF = E + U;
 
-    const uStar = (F+Sx)/Pop;
-    const uCyc = C/Pop;
+  if (empVal) empVal.textContent = String(E);
 
-    els.mU.textContent = "100.00%";
-    els.mUnat.textContent = fmtPct(uStar);
-    els.mUcyc.textContent = fmtPct(uCyc);
-    els.mPop.textContent = Pop.toFixed(0);
-
-    els.decompNote.textContent =
-      `Totals: F=${F}, S=${Sx}, C=${C}. Natural share=${(100*uStar).toFixed(2)}%, cyclical share=${(100*uCyc).toFixed(2)}%.`;
+  if (LF === 0){
+    m_u.textContent = "—";
+    m_ustar.textContent = "—";
+    m_ucyc.textContent = "—";
+    m_U.textContent = "0";
+    m_LF.textContent = "0";
+    els.decompNote.textContent = "Set E and place some cards into F/S/C to see u, u*, and cyclical unemployment.";
+    return;
   }
+
+  const u = U / LF;
+  const uStar = (F + Sx) / LF;
+  const uCyc = C / LF;
+
+  m_u.textContent = fmtPct(u);
+  m_ustar.textContent = fmtPct(uStar);
+  m_ucyc.textContent = fmtPct(uCyc);
+  m_U.textContent = String(U);
+  m_LF.textContent = String(LF);
+
+  els.decompNote.textContent =
+    `Totals: F=${F}, S=${Sx}, C=${C}, U=${U}, E=${E}. ` +
+    `u=${(100*u).toFixed(2)}%, u*=${(100*uStar).toFixed(2)}%, cyclical=${(100*uCyc).toFixed(2)}%.`;
+}
+
+  empSlider.addEventListener("input", updateDecomp);
 
   // ---- Actions ----
   function newRound(){
