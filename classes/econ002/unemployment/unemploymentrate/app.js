@@ -253,17 +253,17 @@ function explainMove(move, xfer, before, after){
   const Ub = before.U, Ua = after.U;
 
   if (LFb === LFa){
-    if (Ua > Ub) mech.push(`Labor force is unchanged (\$begin:math:text$E\+U\\$end:math:text$ stays ${LFb}). \$begin:math:text$U\\$end:math:text$ rises, so \$begin:math:text$u\=U\/\(E\+U\)\\$end:math:text$ rises.`);
-    else if (Ua < Ub) mech.push(`Labor force is unchanged (\$begin:math:text$E\+U\\$end:math:text$ stays ${LFb}). \$begin:math:text$U\\$end:math:text$ falls, so \$begin:math:text$u\\$end:math:text$ falls.`);
-    else mech.push(`Labor force and \$begin:math:text$U\\$end:math:text$ are unchanged, so \$begin:math:text$u\\$end:math:text$ is unchanged.`);
+    if (Ua > Ub) mech.push(`Labor force is unchanged (E+U stays ${LFb}). U rises, so u = U/(E+U) rises.`);
+    else if (Ua < Ub) mech.push(`Labor force is unchanged (E+U stays ${LFb}). U falls, so u falls.`);
+    else mech.push(`Labor force and U are unchanged, so u is unchanged.`);
   } else {
-    mech.push(`Labor force changes from ${LFb} to ${LFa}. Since \$begin:math:text$u\=U\/\(E\+U\)\\$end:math:text$, both \$begin:math:text$U\\$end:math:text$ and \$begin:math:text$E\+U\\$end:math:text$ matter.`);
-    if (Ua > Ub) mech.push(`Here \$begin:math:text$U\\$end:math:text$ rises (from ${Ub} to ${Ua}).`);
-    if (Ua < Ub) mech.push(`Here \$begin:math:text$U\\$end:math:text$ falls (from ${Ub} to ${Ua}).`);
+    mech.push(`Labor force changes from ${LFb} to ${LFa}. Since u = U/(E+U), both U and E+U matter.`);
+    if (Ua > Ub) mech.push(`Here U rises (from ${Ub} to ${Ua}).`);
+    if (Ua < Ub) mech.push(`Here U falls (from ${Ub} to ${Ua}).`);
   }
 
-  if (LFa > LFb) mech.push(`LFPR rises because \$begin:math:text$LF\=E\+U\\$end:math:text$ increases while population \$begin:math:text$E\+U\+N\\$end:math:text$ stays fixed.`);
-  if (LFa < LFb) mech.push(`LFPR falls because \$begin:math:text$LF\=E\+U\\$end:math:text$ decreases while population \$begin:math:text$E\+U\+N\\$end:math:text$ stays fixed.`);
+  if (LFa > LFb) mech.push(`LFPR rises because LF = E+U increases while population (E+U+N) stays fixed.`);
+  if (LFa < LFb) mech.push(`LFPR falls because LF = E+U decreases while population (E+U+N) stays fixed.`);
   if (LFa === LFb) mech.push(`LFPR is unchanged because the labor force is unchanged.`);
 
   parts.push(`<div style="margin-top:8px;">${mech.join(" ")}</div>`);
