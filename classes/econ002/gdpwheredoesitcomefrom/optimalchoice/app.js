@@ -1,9 +1,6 @@
 // Fixed baseline curves + current curves (DRS), continuous sliders, normal ticks.
-// Production: Y = A K^α L^β with α+β<1
-// MPL = β A K^α L^(β-1); MPK = α A K^(α-1) L^β
-// FOCs: MPL = W/P, MPK = R/P
-//
-// Baseline (grey) is ALWAYS from BASELINE values, independent of sliders.
+// Baseline is ALWAYS BASELINE = {A=5,P=5,W=10,R=10}
+// Y-axes fixed to 0..20 (both charts).
 
 const alpha = 0.35;
 const beta  = 0.55; // alpha+beta < 1
@@ -11,29 +8,10 @@ const beta  = 0.55; // alpha+beta < 1
 const XMAX = 10;
 const EPS = 0.05;
 
-// Fixed baseline requested by you:
 const BASELINE = { A: 5.0, P: 5.0, W: 10.0, R: 10.0 };
 
-// Accessible colors
-const COL_BLUE = "#1f77b4";         // colorblind-friendly blue
+const COL_BLUE = "#1f77b4";
 const COL_GREY = "rgba(0,0,0,0.28)";
-
-// Conservative y-axis maxima (static)
-const A_AXIS = 7.0; // since A now runs 3..7
-function MPL(A, K, L){
-  if (K <= 0 || L <= 0) return NaN;
-  return beta * A * Math.pow(K, alpha) * Math.pow(L, beta - 1);
-}
-function MPK(A, K, L){
-  if (K <= 0 || L <= 0) return NaN;
-  return alpha * A * Math.pow(K, alpha - 1) * Math.pow(L, beta);
-}
-function computeAxisMaxima(){
-  const mplMax = MPL(A_AXIS, XMAX, EPS) || 0;
-  const mpkMax = MPK(A_AXIS, EPS, XMAX) || 0;
-  return { mplYMax: mplMax * 1.15, mpkYMax: mpkMax * 1.15 };
-}
-const AX = computeAxisMaxima();
 
 function fmt2(x){
   if (!isFinite(x)) return "—";
@@ -55,11 +33,19 @@ function F(A, K, L){
   if (K <= 0 || L <= 0) return 0;
   return A * Math.pow(K, alpha) * Math.pow(L, beta);
 }
+function MPL(A, K, L){
+  if (K <= 0 || L <= 0) return NaN;
+  return beta * A * Math.pow(K, alpha) * Math.pow(L, beta - 1);
+}
+function MPK(A, K, L){
+  if (K <= 0 || L <= 0) return NaN;
+  return alpha * A * Math.pow(K, alpha - 1) * Math.pow(L, beta);
+}
 function profit(A, P, W, R, K, L){
   return P * F(A, K, L) - W * L - R * K;
 }
 
-// Closed-form optimum (safe); fallback numeric if needed.
+// closed-form optimum (safe); fallback numeric
 function solveClosedForm(A, W, R, P){
   const w = W / P;
   const r = R / P;
@@ -174,30 +160,22 @@ function setState(s){
 let chLabor = null;
 let chCapital = null;
 
-function makeMarketChart(canvas, xLabel, yLabel, yMax){
+function makeMarketChart(canvas, xLabel, yLabel){
   return new Chart(canvas, {
     type: "line",
     data: {
       datasets: [
-        // 0 baseline MP curve (grey dashed)
-        { data: [], borderWidth: 2, pointRadius: 0, borderDash: [6,6], borderColor: COL_GREY },
-        // 1 current MP curve (blue solid)
-        { data: [], borderWidth: 3, pointRadius: 0, borderColor: COL_BLUE },
+        { data: [], borderWidth: 2, pointRadius: 0, borderDash: [6,6], borderColor: COL_GREY }, // baseline MP
+        { data: [], borderWidth: 3, pointRadius: 0, borderColor: COL_BLUE },                     // current MP
 
-        // 2 baseline real price (grey dotted)
-        { data: [], borderWidth: 2, pointRadius: 0, borderDash: [2,6], borderColor: COL_GREY },
-        // 3 current real price (blue dotted)
-        { data: [], borderWidth: 2, pointRadius: 0, borderDash: [2,6], borderColor: COL_BLUE },
+        { data: [], borderWidth: 2, pointRadius: 0, borderDash: [2,6], borderColor: COL_GREY },  // baseline price
+        { data: [], borderWidth: 2, pointRadius: 0, borderDash: [2,6], borderColor: COL_BLUE },  // current price
 
-        // 4 baseline optimum point (grey)
-        { data: [], showLine: false, pointRadius: 5, borderColor: COL_GREY, backgroundColor: COL_GREY },
-        // 5 current optimum point (blue)
-        { data: [], showLine: false, pointRadius: 5, borderColor: COL_BLUE, backgroundColor: COL_BLUE },
+        { data: [], showLine: false, pointRadius: 5, borderColor: COL_GREY, backgroundColor: COL_GREY }, // baseline point
+        { data: [], showLine: false, pointRadius: 5, borderColor: COL_BLUE, backgroundColor: COL_BLUE }, // current point
 
-        // 6 baseline drop line
-        { data: [], borderWidth: 2, pointRadius: 0, borderDash: [4,4], borderColor: COL_GREY },
-        // 7 current drop line
-        { data: [], borderWidth: 2, pointRadius: 0, borderDash: [4,4], borderColor: COL_BLUE },
+        { data: [], borderWidth: 2, pointRadius: 0, borderDash: [4,4], borderColor: COL_GREY },  // baseline drop
+        { data: [], borderWidth: 2, pointRadius: 0, borderDash: [4,4], borderColor: COL_BLUE },  // current drop
       ]
     },
     options: {
@@ -215,7 +193,7 @@ function makeMarketChart(canvas, xLabel, yLabel, yMax){
         },
         y: {
           min: 0,
-          max: yMax,
+          max: 20, // FIXED per your request
           grid: { display: true },
           title: { display: true, text: yLabel }
         }
@@ -238,7 +216,6 @@ function buildMPKCurve(A, Lfix){
 function update(){
   const s = getState();
   const solCur = solveOptimal(s.A, s.W, s.R, s.P);
-
   const solBase = solveOptimal(BASELINE.A, BASELINE.W, BASELINE.R, BASELINE.P);
 
   // clamp to graph bounds
@@ -247,64 +224,63 @@ function update(){
   const Lb = clamp(solBase.Lstar, 0, XMAX);
   const Kb = clamp(solBase.Kstar, 0, XMAX);
 
-  // metrics (current only)
   els.m_wp.textContent = fmt2(solCur.w);
   els.m_rp.textContent = fmt2(solCur.r);
   els.m_L.textContent  = fmt2(solCur.Lstar);
   els.m_K.textContent  = fmt2(solCur.Kstar);
 
   if (!chLabor){
-    chLabor = makeMarketChart(els.chartLabor, "Labor (L)", "MPL and W/P", AX.mplYMax);
-    chCapital = makeMarketChart(els.chartCapital, "Capital (K)", "MPK and R/P", AX.mpkYMax);
+    chLabor = makeMarketChart(els.chartLabor, "Labor (L)", "MPL and W/P");
+    chCapital = makeMarketChart(els.chartCapital, "Capital (K)", "MPK and R/P");
   }
 
-  // Labor chart
+  // Labor market
   const mplBase = buildMPLCurve(BASELINE.A, solBase.Kstar);
   const mplCur  = buildMPLCurve(s.A, solCur.Kstar);
-
-  chLabor.data.datasets[0].data = mplBase;
-  chLabor.data.datasets[1].data = mplCur;
 
   const wBase = solBase.w;
   const wCur  = solCur.w;
 
+  chLabor.data.datasets[0].data = mplBase;
+  chLabor.data.datasets[1].data = mplCur;
+
   chLabor.data.datasets[2].data = [{ x: 0, y: wBase }, { x: XMAX, y: wBase }];
-  chLabor.data.datasets[3].data = [{ x: 0, y: wCur },  { x: XMAX, y: wCur }];
+  chLabor.data.datasets[3].data = [{ x: 0, y: wCur  }, { x: XMAX, y: wCur  }];
 
   chLabor.data.datasets[4].data = [{ x: Lb, y: wBase }];
-  chLabor.data.datasets[5].data = [{ x: Lc, y: wCur }];
+  chLabor.data.datasets[5].data = [{ x: Lc, y: wCur  }];
 
   chLabor.data.datasets[6].data = [{ x: Lb, y: 0 }, { x: Lb, y: wBase }];
-  chLabor.data.datasets[7].data = [{ x: Lc, y: 0 }, { x: Lc, y: wCur }];
+  chLabor.data.datasets[7].data = [{ x: Lc, y: 0 }, { x: Lc, y: wCur  }];
 
   chLabor.update();
 
-  // Capital chart
+  // Capital market
   const mpkBase = buildMPKCurve(BASELINE.A, solBase.Lstar);
   const mpkCur  = buildMPKCurve(s.A, solCur.Lstar);
-
-  chCapital.data.datasets[0].data = mpkBase;
-  chCapital.data.datasets[1].data = mpkCur;
 
   const rBase = solBase.r;
   const rCur  = solCur.r;
 
+  chCapital.data.datasets[0].data = mpkBase;
+  chCapital.data.datasets[1].data = mpkCur;
+
   chCapital.data.datasets[2].data = [{ x: 0, y: rBase }, { x: XMAX, y: rBase }];
-  chCapital.data.datasets[3].data = [{ x: 0, y: rCur },  { x: XMAX, y: rCur }];
+  chCapital.data.datasets[3].data = [{ x: 0, y: rCur  }, { x: XMAX, y: rCur  }];
 
   chCapital.data.datasets[4].data = [{ x: Kb, y: rBase }];
-  chCapital.data.datasets[5].data = [{ x: Kc, y: rCur }];
+  chCapital.data.datasets[5].data = [{ x: Kc, y: rCur  }];
 
   chCapital.data.datasets[6].data = [{ x: Kb, y: 0 }, { x: Kb, y: rBase }];
-  chCapital.data.datasets[7].data = [{ x: Kc, y: 0 }, { x: Kc, y: rCur }];
+  chCapital.data.datasets[7].data = [{ x: Kc, y: 0 }, { x: Kc, y: rCur  }];
 
   chCapital.update();
 
   els.noteLabor.textContent =
-    `Baseline is fixed at A=5, P=5, W=10, R=10. Grey point: L*=${fmt2(solBase.Lstar)}. Blue point: L*=${fmt2(solCur.Lstar)}.`;
+    `Baseline fixed (A=5, P=5, W=10, R=10): L*=${fmt2(solBase.Lstar)}, W/P=${fmt2(wBase)}. Current: L*=${fmt2(solCur.Lstar)}, W/P=${fmt2(wCur)}.`;
 
   els.noteCapital.textContent =
-    `Baseline is fixed at A=5, P=5, W=10, R=10. Grey point: K*=${fmt2(solBase.Kstar)}. Blue point: K*=${fmt2(solCur.Kstar)}.`;
+    `Baseline fixed (A=5, P=5, W=10, R=10): K*=${fmt2(solBase.Kstar)}, R/P=${fmt2(rBase)}. Current: K*=${fmt2(solCur.Kstar)}, R/P=${fmt2(rCur)}.`;
 
   els.status.textContent =
     currentQ ? `Scenario: ${currentQ.label}. Adjust sliders accordingly, then submit.` :
@@ -345,7 +321,7 @@ function makeQuestion(){
   selectedChoice = null;
 
   els.qText.innerHTML =
-    `<strong>Scenario:</strong> Starting from the baseline (A=5, P=5, W=10, R=10), suppose <strong>${currentQ.label}</strong> while other variables stay fixed.
+    `<strong>Scenario:</strong> Starting from baseline (A=5, P=5, W=10, R=10), suppose <strong>${currentQ.label}</strong> while other variables stay fixed.
      After you adjust the slider(s), what happens to <strong>L*</strong> and <strong>K*</strong>?`;
 
   const choices = [
