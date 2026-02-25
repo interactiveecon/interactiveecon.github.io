@@ -1,5 +1,5 @@
 const els = {
-  // metrics (from cards)
+  // sorting metrics
   mE: document.getElementById("mE"),
   mU: document.getElementById("mU"),
   mN: document.getElementById("mN"),
@@ -7,33 +7,33 @@ const els = {
   mLFPR: document.getElementById("mLFPR"),
   pillLF: document.getElementById("pillLF"),
   pillPop: document.getElementById("pillPop"),
-  checkBtn: document.getElementById("checkBtn"),
-  useForMovesBtn: document.getElementById("useForMovesBtn"),
-  checkMsg: document.getElementById("checkMsg"),
 
   // zones
+  zoneS: document.getElementById("zoneS"),
   zoneE: document.getElementById("zoneE"),
   zoneU: document.getElementById("zoneU"),
   zoneN: document.getElementById("zoneN"),
 
-  // top controls
+  checkBtn: document.getElementById("checkBtn"),
+  useForMovesBtn: document.getElementById("useForMovesBtn"),
+  checkMsg: document.getElementById("checkMsg"),
+
   resetBtn: document.getElementById("resetBtn"),
   newSetBtn: document.getElementById("newSetBtn"),
   status: document.getElementById("status"),
 
-  // move sim
-  moveSel: document.getElementById("moveSel"),
-  amt: document.getElementById("amt"),
-  predSel: document.getElementById("predSel"),
-  applyMoveBtn: document.getElementById("applyMoveBtn"),
-  explainBox: document.getElementById("explainBox"),
+  // moves
   snapshotBox: document.getElementById("snapshotBox"),
+  moveDeck: document.getElementById("moveDeck"),
+  predSel: document.getElementById("predSel"),
+  rerollMovesBtn: document.getElementById("rerollMovesBtn"),
+  explainBox: document.getElementById("explainBox"),
 };
 
 function fmtPct(x){ return (100*x).toFixed(2) + "%"; }
 function clampInt(x, lo=0){ return Math.max(lo, Math.floor(x)); }
 
-function ratesFromCounts(E,U,N){
+function rates(E,U,N){
   const LF = E + U;
   const Pop = E + U + N;
   const u = (LF>0) ? (U / LF) : 0;
@@ -41,59 +41,83 @@ function ratesFromCounts(E,U,N){
   return { LF, Pop, u, lfpr };
 }
 
-/* ---------------------------
-   Part A: Card classification
----------------------------- */
+function safeTypeset(nodes){
+  if (!window.MathJax || !window.MathJax.typesetPromise) return;
+  try { window.MathJax.typesetClear(nodes); } catch {}
+  window.MathJax.typesetPromise(nodes).catch(()=>{});
+}
 
-let cards = []; // {id, people, text, correct, zone}
+/* -----------------------
+   Part A: Sorting cards
+------------------------ */
+
+let cards = []; // {id, people, text, correct, zone, checked}
 let nextId = 1;
 
-function makeCard({people, text, correct}){
+// Many templates (you can keep adding)
+const CARD_TEMPLATES = [
+  // Employed
+  { text:"Worked part-time at a coffee shop this week.", correct:"E" },
+  { text:"Worked unpaid 10 hours in a family business.", correct:"E" },
+  { text:"Has a job but was temporarily absent (sick/vacation).", correct:"E" },
+  { text:"Did paid gig deliveries this week.", correct:"E" },
+  { text:"Worked for pay from home this week.", correct:"E" },
+  { text:"Worked one day this week (seasonal job).", correct:"E" },
+
+  // Unemployed
+  { text:"Not working and sent out job applications in the last 2 weeks.", correct:"U" },
+  { text:"Not working; interviewed last week; available to start.", correct:"U" },
+  { text:"Not working; starts a new job next week; available.", correct:"U" },
+  { text:"On temporary layoff and expects recall; available to work.", correct:"U" },
+  { text:"Not working; contacted employers; actively searching.", correct:"U" },
+  { text:"Not working; registered with an employment agency this week.", correct:"U" },
+
+  // Not in labor force
+  { text:"Full-time student; not working; not looking for work.", correct:"N" },
+  { text:"Retired; not working; not looking for work.", correct:"N" },
+  { text:"Stay-at-home parent; not working; not actively searching.", correct:"N" },
+  { text:"Discouraged worker: wants a job but stopped searching.", correct:"N" },
+  { text:"Not working; would take a job, but hasn’t looked recently.", correct:"N" },
+  { text:"Taking care of a relative; not working; not searching.", correct:"N" },
+  { text:"Receiving disability benefits; not working; not searching.", correct:"N" },
+];
+
+// random people count each draw
+function drawPeople(){
+  // 3..25 with mild skew upward
+  const base = 3 + Math.floor(Math.random()*23);
+  const bump = (Math.random() < 0.25) ? (5 + Math.floor(Math.random()*8)) : 0;
+  return Math.min(30, base + bump);
+}
+
+function makeCard(tpl){
   return {
     id: "c" + (nextId++),
-    people,
-    text,
-    correct,   // "E" | "U" | "N"
-    zone: "N", // start them in N by default to force sorting; you can change to "E"
+    people: drawPeople(),
+    text: tpl.text,
+    correct: tpl.correct, // "E"|"U"|"N"
+    zone: "S",            // staging pile
     checked: null
   };
 }
 
-// A bank of ambiguous-but-teachable cards
-const CARD_BANK = [
-  { people: 12, text: "Worked part-time at a coffee shop this week.", correct: "E" },
-  { people: 8, text: "Worked unpaid 10 hours in a family business.", correct: "E" },
-  { people: 15, text: "Has a job but was temporarily absent (sick/vacation).", correct: "E" },
-  { people: 10, text: "Not working and sent out job applications in the last 2 weeks.", correct: "U" },
-  { people: 6, text: "Not working; interviewed for a job last week; available to start.", correct: "U" },
-  { people: 9, text: "Not working but starts a new job next week (already accepted) and is available.", correct: "U" },
-  { people: 14, text: "Full-time student; not working; not looking for work.", correct: "N" },
-  { people: 7, text: "Retired; not working; not looking for work.", correct: "N" },
-  { people: 5, text: "Stay-at-home parent; not working; not actively searching.", correct: "N" },
-  { people: 11, text: "Discouraged worker: wants a job but stopped searching.", correct: "N" },
-  { people: 9, text: "Not working and waiting to be recalled; not searching this week.", correct: "U" }, // common wrinkle; we treat as U
-  { people: 8, text: "Gig worker who did paid deliveries this week.", correct: "E" },
-];
+function newRound(){
+  const pool = [...CARD_TEMPLATES].sort(()=>Math.random()-0.5);
 
-// Choose a random subset
-function newCardSet(){
-  // pick 9–12 cards
-  const n = 10 + Math.floor(Math.random()*3); // 10..12
-  const pool = [...CARD_BANK].sort(()=>Math.random()-0.5);
+  // draw 10..14 each round
+  const n = 10 + Math.floor(Math.random()*5);
   const chosen = pool.slice(0, n);
 
-  cards = chosen.map(c => makeCard(c));
-
-  // start all cards in a “staging” approach: place them in N by default
-  for (const c of cards) c.zone = "N";
+  cards = chosen.map(makeCard);
 
   els.checkMsg.textContent = "";
   renderZones();
   updateMetricsFromZones();
-  setStatus("New card set loaded.");
+  setStatus("New round loaded (random cards + random people counts).");
 }
 
 function renderZones(){
+  els.zoneS.innerHTML = "";
   els.zoneE.innerHTML = "";
   els.zoneU.innerHTML = "";
   els.zoneN.innerHTML = "";
@@ -103,6 +127,7 @@ function renderZones(){
     el.className = "card";
     if (c.checked === true) el.classList.add("ok");
     if (c.checked === false) el.classList.add("bad");
+
     el.draggable = true;
     el.dataset.cardId = c.id;
 
@@ -118,7 +143,11 @@ function renderZones(){
       ev.dataTransfer.effectAllowed = "move";
     });
 
-    const zone = (c.zone === "E") ? els.zoneE : (c.zone === "U") ? els.zoneU : els.zoneN;
+    const zone = (c.zone === "S") ? els.zoneS
+      : (c.zone === "E") ? els.zoneE
+      : (c.zone === "U") ? els.zoneU
+      : els.zoneN;
+
     zone.appendChild(el);
   }
 }
@@ -149,14 +178,15 @@ function countsFromZones(){
   for (const c of cards){
     if (c.zone === "E") E += c.people;
     else if (c.zone === "U") U += c.people;
-    else N += c.people;
+    else if (c.zone === "N") N += c.people;
+    // staging pile doesn't count yet
   }
   return {E,U,N};
 }
 
 function updateMetricsFromZones(){
   const {E,U,N} = countsFromZones();
-  const {LF,Pop,u,lfpr} = ratesFromCounts(E,U,N);
+  const {LF,Pop,u,lfpr} = rates(E,U,N);
 
   els.mE.textContent = E.toFixed(0);
   els.mU.textContent = U.toFixed(0);
@@ -165,45 +195,36 @@ function updateMetricsFromZones(){
   els.mLFPR.textContent = fmtPct(lfpr);
   els.pillLF.textContent = LF.toFixed(0);
   els.pillPop.textContent = Pop.toFixed(0);
-
-  // typeset only the header math (once) is fine; no need to typeset everything repeatedly.
 }
 
 function checkCategories(){
   let correct = 0;
   for (const c of cards){
+    if (c.zone === "S") { c.checked = null; continue; }
     c.checked = (c.zone === c.correct);
     if (c.checked) correct++;
   }
   renderZones();
-  els.checkMsg.textContent = `${correct}/${cards.length} cards correctly classified.`;
-  setStatus("Checked categories.");
+  const placed = cards.filter(c => c.zone !== "S").length;
+  els.checkMsg.textContent = `${correct}/${placed} placed cards correctly classified.`;
+  setStatus("Checked categories (staging cards ignored).");
 }
 
-/* ---------------------------
-   Part B: Move simulator
----------------------------- */
+/* -----------------------
+   Part B: Move cards
+------------------------ */
 
 let snapshot = null; // {E,U,N} used for moves
+let moveCards = [];  // {id, from, to, label, people, hint}
 
-const MOVES = [
-  { id:"E_to_U", label:"Employed → Unemployed (job loss)", from:"E", to:"U" },
-  { id:"U_to_E", label:"Unemployed → Employed (finds job)", from:"U", to:"E" },
-  { id:"N_to_E", label:"Not in LF → Employed (starts working)", from:"N", to:"E" },
-  { id:"N_to_U", label:"Not in LF → Unemployed (starts job search)", from:"N", to:"U" },
-  { id:"E_to_N", label:"Employed → Not in LF (leaves job, stops searching)", from:"E", to:"N" },
-  { id:"U_to_N", label:"Unemployed → Not in LF (stop searching)", from:"U", to:"N" },
+const MOVE_TYPES = [
+  { id:"E_to_U", label:"Employed → Unemployed", from:"E", to:"U", hint:"Job loss" },
+  { id:"U_to_E", label:"Unemployed → Employed", from:"U", to:"E", hint:"Finds a job" },
+  { id:"N_to_E", label:"Not in LF → Employed", from:"N", to:"E", hint:"Starts working" },
+  { id:"N_to_U", label:"Not in LF → Unemployed", from:"N", to:"U", hint:"Starts searching" },
+  { id:"E_to_N", label:"Employed → Not in LF", from:"E", to:"N", hint:"Leaves labor force" },
+  { id:"U_to_N", label:"Unemployed → Not in LF", from:"U", to:"N", hint:"Stops searching" },
 ];
-
-function populateMoves(){
-  els.moveSel.innerHTML = "";
-  for (const m of MOVES){
-    const opt = document.createElement("option");
-    opt.value = m.id;
-    opt.textContent = m.label;
-    els.moveSel.appendChild(opt);
-  }
-}
 
 function signArrow(x0, x1){
   const eps = 1e-12;
@@ -217,11 +238,9 @@ function predKey(uArrow, lfArrow){
   return `${uPart}_${lPart}`;
 }
 
-// This is where MathJax was failing earlier:
-// Use \\( \\) inside JS strings AND typeset only this box after setting innerHTML.
 function explainMove(move, xfer, before, after){
-  const rb = ratesFromCounts(before.E, before.U, before.N);
-  const ra = ratesFromCounts(after.E, after.U, after.N);
+  const rb = rates(before.E, before.U, before.N);
+  const ra = rates(after.E, after.U, after.N);
 
   const uA  = signArrow(rb.u, ra.u);
   const lfA = signArrow(rb.lfpr, ra.lfpr);
@@ -262,109 +281,158 @@ function explainMove(move, xfer, before, after){
   return parts.join("");
 }
 
-function useCountsForMoves(){
-  snapshot = countsFromZones();
-  const r = ratesFromCounts(snapshot.E, snapshot.U, snapshot.N);
+// Create move cards with feasible amounts based on snapshot
+function rollMoveCard(){
+  const t = MOVE_TYPES[Math.floor(Math.random()*MOVE_TYPES.length)];
+  const available = snapshot ? snapshot[t.from] : 0;
 
-  els.snapshotBox.innerHTML = `
-    <strong>Snapshot used for moves</strong><br>
-    <span class="mini">
-      E=${snapshot.E}, U=${snapshot.U}, N=${snapshot.N} (Pop=${r.Pop}, LF=${r.LF})<br>
-      u=${fmtPct(r.u)}, LFPR=${fmtPct(r.lfpr)}
-    </span>
-  `;
-  els.explainBox.innerHTML = `Choose a transition and click <strong>Apply move</strong>.`;
-  els.predSel.value = "";
-  setStatus("Snapshot saved. Now try transitions.");
+  // choose a random amount, but must be feasible
+  const raw = 3 + Math.floor(Math.random()*18); // 3..20
+  const people = snapshot ? Math.min(raw, Math.max(0, available)) : raw;
 
-  // typeset just the snapshot box (in case MathJax is present there later)
-  safeTypeset([els.snapshotBox]);
+  return {
+    id: "m" + Math.floor(Math.random()*1e9),
+    from: t.from,
+    to: t.to,
+    label: t.label,
+    hint: t.hint,
+    people
+  };
 }
 
-function applyMove(){
+function rerollMoves(){
   if (!snapshot){
-    setStatus("Click “Use these counts for moves” first.");
+    els.moveDeck.innerHTML = `<div class="mini">Set a snapshot first.</div>`;
     return;
   }
+  // create 4 move cards
+  moveCards = [];
+  for (let i=0;i<4;i++) moveCards.push(rollMoveCard());
+  renderMoveDeck();
+}
 
-  const moveId = els.moveSel.value;
-  const move = MOVES.find(m => m.id === moveId);
-  if (!move) return;
+function renderMoveDeck(){
+  els.moveDeck.innerHTML = "";
+  for (const mc of moveCards){
+    const div = document.createElement("div");
+    div.className = "moveCard";
+    div.dataset.moveId = mc.id;
 
-  const amt = clampInt(Number(els.amt.value || 0), 0);
-  if (amt <= 0){
-    setStatus("Enter a positive number of people to move.");
-    return;
+    div.innerHTML = `
+      <div class="hdr">
+        <div class="title">${mc.label}</div>
+        <div class="amt">${mc.people} people</div>
+      </div>
+      <div class="hint">${mc.hint}. Click to apply.</div>
+    `;
+
+    div.addEventListener("click", () => applyMoveCard(mc.id));
+    els.moveDeck.appendChild(div);
   }
+}
 
-  const before = {...snapshot};
-  const available = snapshot[move.from];
-  const xfer = Math.min(amt, available);
+function useCountsForMoves(){
+  snapshot = countsFromZones();
+  const r = rates(snapshot.E, snapshot.U, snapshot.N);
 
-  snapshot[move.from] -= xfer;
-  snapshot[move.to] += xfer;
+  els.snapshotBox.innerHTML = `
+    <strong>Snapshot:</strong>
+    E=${snapshot.E}, U=${snapshot.U}, N=${snapshot.N}
+    (Pop=${r.Pop}, LF=${r.LF}, u=${fmtPct(r.u)}, LFPR=${fmtPct(r.lfpr)})
+  `;
 
-  const after = {...snapshot};
-  els.explainBox.innerHTML = explainMove(move, xfer, before, after);
-  setStatus(`Moved ${xfer} from ${move.from} to ${move.to}.`);
-
+  els.explainBox.innerHTML = `Click a move card to apply it.`;
   els.predSel.value = "";
+  setStatus("Snapshot set. Move cards rolled.");
 
-  // typeset ONLY the explain box (this is the key fix)
+  rerollMoves();
   safeTypeset([els.explainBox]);
 }
 
-function safeTypeset(nodes){
-  if (!window.MathJax || !window.MathJax.typesetPromise) return;
-  // Clear previous typesetting only for those nodes
-  try { window.MathJax.typesetClear(nodes); } catch {}
-  window.MathJax.typesetPromise(nodes).catch(()=>{});
+function applyMoveCard(moveId){
+  if (!snapshot) return;
+
+  const idx = moveCards.findIndex(m => m.id === moveId);
+  if (idx < 0) return;
+  const mc = moveCards[idx];
+
+  // if not feasible, reroll that card
+  const available = snapshot[mc.from];
+  if (available <= 0 || mc.people <= 0){
+    moveCards[idx] = rollMoveCard();
+    renderMoveDeck();
+    setStatus("That move wasn’t feasible; rerolled a new move card.");
+    return;
+  }
+
+  const xfer = Math.min(mc.people, available);
+
+  const before = {...snapshot};
+  snapshot[mc.from] -= xfer;
+  snapshot[mc.to] += xfer;
+  const after = {...snapshot};
+
+  // Explain
+  els.explainBox.innerHTML = explainMove(mc, xfer, before, after);
+  safeTypeset([els.explainBox]);
+
+  // Replace this move card with a new one (numbers “correspond to moves” each time)
+  moveCards[idx] = rollMoveCard();
+  renderMoveDeck();
+
+  // Update snapshot display
+  const r = rates(snapshot.E, snapshot.U, snapshot.N);
+  els.snapshotBox.innerHTML = `
+    <strong>Snapshot:</strong>
+    E=${snapshot.E}, U=${snapshot.U}, N=${snapshot.N}
+    (Pop=${r.Pop}, LF=${r.LF}, u=${fmtPct(r.u)}, LFPR=${fmtPct(r.lfpr)})
+  `;
+
+  els.predSel.value = "";
+  setStatus(`Applied move: ${xfer} from ${mc.from} to ${mc.to}.`);
 }
 
-/* ---------------------------
+/* -----------------------
    Misc
----------------------------- */
+------------------------ */
 
 function setStatus(msg){ els.status.textContent = msg; }
 
 function resetAll(){
-  // start with a deterministic set
-  cards = CARD_BANK.slice(0, 10).map(c => makeCard(c));
-  for (const c of cards) c.zone = "N";
   snapshot = null;
+  moveCards = [];
+  els.moveDeck.innerHTML = `<div class="mini">Set a snapshot first.</div>`;
+  els.snapshotBox.innerHTML = `<strong>Snapshot:</strong> not set yet (click “Use these counts for move cards”).`;
+  els.explainBox.innerHTML = `Click <strong>Use these counts for move cards</strong>, then click a move card. This box will explain the change in \$begin:math:text$u\\$end:math:text$ and LFPR.`;
+  safeTypeset([els.explainBox, document.getElementById("mathBoxTop")]);
 
-  els.checkMsg.textContent = "";
-  els.predSel.value = "";
-  els.explainBox.innerHTML = `Click <strong>Use these counts for moves</strong> first, then try transitions here.`;
-  els.snapshotBox.innerHTML = `<strong>Snapshot used for moves</strong><br><span class="mini">Not set yet.</span>`;
-
-  renderZones();
+  newRound();
   updateMetricsFromZones();
-  populateMoves();
   setStatus("Reset.");
-
-  // typeset top definitions once
-  safeTypeset([document.getElementById("mathBoxTop")]);
 }
 
-function newSet(){
-  newCardSet();
-  snapshot = null;
-  els.snapshotBox.innerHTML = `<strong>Snapshot used for moves</strong><br><span class="mini">Not set yet.</span>`;
-  els.explainBox.innerHTML = `Click <strong>Use these counts for moves</strong> first, then try transitions here.`;
-  safeTypeset([document.getElementById("mathBoxTop")]);
-}
-
-// init
+// init dropzones
+setupDropzone(els.zoneS);
 setupDropzone(els.zoneE);
 setupDropzone(els.zoneU);
 setupDropzone(els.zoneN);
 
+// buttons
 els.checkBtn.addEventListener("click", checkCategories);
 els.useForMovesBtn.addEventListener("click", useCountsForMoves);
-els.applyMoveBtn.addEventListener("click", applyMove);
-
 els.resetBtn.addEventListener("click", resetAll);
-els.newSetBtn.addEventListener("click", newSet);
+els.newSetBtn.addEventListener("click", () => {
+  snapshot = null;
+  moveCards = [];
+  els.moveDeck.innerHTML = `<div class="mini">Set a snapshot first.</div>`;
+  els.snapshotBox.innerHTML = `<strong>Snapshot:</strong> not set yet (click “Use these counts for move cards”).`;
+  els.explainBox.innerHTML = `Click <strong>Use these counts for move cards</strong>, then click a move card.`;
+  els.predSel.value = "";
+  newRound();
+  updateMetricsFromZones();
+  setStatus("New round loaded.");
+});
+els.rerollMovesBtn.addEventListener("click", rerollMoves);
 
+// start
 resetAll();
