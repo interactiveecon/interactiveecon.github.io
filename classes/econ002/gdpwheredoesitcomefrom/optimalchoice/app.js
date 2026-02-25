@@ -1,22 +1,39 @@
-// Optimal K & L (DRS) with baseline vs current curves and TWO optimal points per graph.
-// Production (DRS): Y = A K^α L^β, α+β<1
+// Fixed baseline curves + current curves (DRS), continuous sliders, normal ticks.
+// Production: Y = A K^α L^β with α+β<1
 // MPL = β A K^α L^(β-1); MPK = α A K^(α-1) L^β
 // FOCs: MPL = W/P, MPK = R/P
 //
-// Sliders are continuous. Charts have normal ticks.
-// Baseline MPL/MPK are grey dashed, current are blue (accessible).
-// Each chart shows TWO optimal points: baseline (grey) and current (blue).
+// Baseline (grey) is ALWAYS from BASELINE values, independent of sliders.
 
 const alpha = 0.35;
-const beta  = 0.55; // alpha+beta < 1 (decreasing returns)
+const beta  = 0.55; // alpha+beta < 1
 
 const XMAX = 10;
-const A_AXIS = 5.0;
 const EPS = 0.05;
 
+// Fixed baseline requested by you:
+const BASELINE = { A: 5.0, P: 5.0, W: 10.0, R: 10.0 };
+
 // Accessible colors
-const COL_BLUE = "#1f77b4";         // colorblind-friendly blue (Okabe/Ito-ish)
+const COL_BLUE = "#1f77b4";         // colorblind-friendly blue
 const COL_GREY = "rgba(0,0,0,0.28)";
+
+// Conservative y-axis maxima (static)
+const A_AXIS = 7.0; // since A now runs 3..7
+function MPL(A, K, L){
+  if (K <= 0 || L <= 0) return NaN;
+  return beta * A * Math.pow(K, alpha) * Math.pow(L, beta - 1);
+}
+function MPK(A, K, L){
+  if (K <= 0 || L <= 0) return NaN;
+  return alpha * A * Math.pow(K, alpha - 1) * Math.pow(L, beta);
+}
+function computeAxisMaxima(){
+  const mplMax = MPL(A_AXIS, XMAX, EPS) || 0;
+  const mpkMax = MPK(A_AXIS, EPS, XMAX) || 0;
+  return { mplYMax: mplMax * 1.15, mpkYMax: mpkMax * 1.15 };
+}
+const AX = computeAxisMaxima();
 
 function fmt2(x){
   if (!isFinite(x)) return "—";
@@ -38,20 +55,11 @@ function F(A, K, L){
   if (K <= 0 || L <= 0) return 0;
   return A * Math.pow(K, alpha) * Math.pow(L, beta);
 }
-function MPL(A, K, L){
-  if (K <= 0 || L <= 0) return NaN;
-  return beta * A * Math.pow(K, alpha) * Math.pow(L, beta - 1);
-}
-function MPK(A, K, L){
-  if (K <= 0 || L <= 0) return NaN;
-  return alpha * A * Math.pow(K, alpha - 1) * Math.pow(L, beta);
-}
-
 function profit(A, P, W, R, K, L){
   return P * F(A, K, L) - W * L - R * K;
 }
 
-// Safe closed-form optimum; returns null if invalid.
+// Closed-form optimum (safe); fallback numeric if needed.
 function solveClosedForm(A, W, R, P){
   const w = W / P;
   const r = R / P;
@@ -74,7 +82,6 @@ function solveClosedForm(A, W, R, P){
   return { w, r, Lstar, Kstar };
 }
 
-// Numeric fallback (bounded box) to avoid NaNs
 function solveNumeric(A, P, W, R){
   let best = { K: 0, L: 0, pi: -Infinity };
 
@@ -99,9 +106,8 @@ function solveNumeric(A, P, W, R){
 
 function solveOptimal(A, W, R, P){
   const cf = solveClosedForm(A, W, R, P);
-  if (cf){
-    return { w: cf.w, r: cf.r, Lstar: cf.Lstar, Kstar: cf.Kstar, method:"closed" };
-  }
+  if (cf) return { ...cf, method:"closed" };
+
   const w = W / P;
   const r = R / P;
   const num = solveNumeric(A, P, W, R);
@@ -117,15 +123,7 @@ function linspace(min, max, n){
   return out;
 }
 
-// Static y-axis maxima (conservative)
-function computeAxisMaxima(){
-  const mplMax = MPL(A_AXIS, XMAX, EPS) || 0;
-  const mpkMax = MPK(A_AXIS, EPS, XMAX) || 0;
-  return { mplYMax: mplMax * 1.15, mpkYMax: mpkMax * 1.15 };
-}
-const AX = computeAxisMaxima();
-
-// --- UI elements ---
+// --- UI ---
 const els = {
   A_r: document.getElementById("A_r"),
   A_n: document.getElementById("A_n"),
@@ -171,11 +169,6 @@ function setState(s){
   els.R_r.value = els.R_n.value = s.R;
   update();
 }
-
-// --- Baseline stored for ghost curves + MCQ baseline ---
-let baseline = null;
-let currentQ = null;
-let selectedChoice = null;
 
 // --- Charts ---
 let chLabor = null;
@@ -246,38 +239,34 @@ function update(){
   const s = getState();
   const solCur = solveOptimal(s.A, s.W, s.R, s.P);
 
-  // establish a baseline if none exists (so grey curve is always visible)
-  const baseS = baseline ? baseline : s;
-  const solBase = solveOptimal(baseS.A, baseS.W, baseS.R, baseS.P);
+  const solBase = solveOptimal(BASELINE.A, BASELINE.W, BASELINE.R, BASELINE.P);
 
-  // clamp for graph display (axes 0..10)
+  // clamp to graph bounds
   const Lc = clamp(solCur.Lstar, 0, XMAX);
   const Kc = clamp(solCur.Kstar, 0, XMAX);
   const Lb = clamp(solBase.Lstar, 0, XMAX);
   const Kb = clamp(solBase.Kstar, 0, XMAX);
 
-  // metrics
+  // metrics (current only)
   els.m_wp.textContent = fmt2(solCur.w);
   els.m_rp.textContent = fmt2(solCur.r);
   els.m_L.textContent  = fmt2(solCur.Lstar);
   els.m_K.textContent  = fmt2(solCur.Kstar);
 
-  // init charts
   if (!chLabor){
     chLabor = makeMarketChart(els.chartLabor, "Labor (L)", "MPL and W/P", AX.mplYMax);
     chCapital = makeMarketChart(els.chartCapital, "Capital (K)", "MPK and R/P", AX.mpkYMax);
   }
 
-  // ---- Labor market ----
-  const mplBase = buildMPLCurve(baseS.A, solBase.Kstar);
+  // Labor chart
+  const mplBase = buildMPLCurve(BASELINE.A, solBase.Kstar);
   const mplCur  = buildMPLCurve(s.A, solCur.Kstar);
-
-  // real wage lines
-  const wBase = solBase.w;
-  const wCur  = solCur.w;
 
   chLabor.data.datasets[0].data = mplBase;
   chLabor.data.datasets[1].data = mplCur;
+
+  const wBase = solBase.w;
+  const wCur  = solCur.w;
 
   chLabor.data.datasets[2].data = [{ x: 0, y: wBase }, { x: XMAX, y: wBase }];
   chLabor.data.datasets[3].data = [{ x: 0, y: wCur },  { x: XMAX, y: wCur }];
@@ -290,18 +279,15 @@ function update(){
 
   chLabor.update();
 
-  els.noteLabor.textContent =
-    `Grey = baseline (L*=${fmt2(solBase.Lstar)}, W/P=${fmt2(wBase)}). Blue = current (L*=${fmt2(solCur.Lstar)}, W/P=${fmt2(wCur)}).`;
-
-  // ---- Capital market ----
-  const mpkBase = buildMPKCurve(baseS.A, solBase.Lstar);
+  // Capital chart
+  const mpkBase = buildMPKCurve(BASELINE.A, solBase.Lstar);
   const mpkCur  = buildMPKCurve(s.A, solCur.Lstar);
-
-  const rBase = solBase.r;
-  const rCur  = solCur.r;
 
   chCapital.data.datasets[0].data = mpkBase;
   chCapital.data.datasets[1].data = mpkCur;
+
+  const rBase = solBase.r;
+  const rCur  = solCur.r;
 
   chCapital.data.datasets[2].data = [{ x: 0, y: rBase }, { x: XMAX, y: rBase }];
   chCapital.data.datasets[3].data = [{ x: 0, y: rCur },  { x: XMAX, y: rCur }];
@@ -314,20 +300,25 @@ function update(){
 
   chCapital.update();
 
+  els.noteLabor.textContent =
+    `Baseline is fixed at A=5, P=5, W=10, R=10. Grey point: L*=${fmt2(solBase.Lstar)}. Blue point: L*=${fmt2(solCur.Lstar)}.`;
+
   els.noteCapital.textContent =
-    `Grey = baseline (K*=${fmt2(solBase.Kstar)}, R/P=${fmt2(rBase)}). Blue = current (K*=${fmt2(solCur.Kstar)}, R/P=${fmt2(rCur)}).`;
+    `Baseline is fixed at A=5, P=5, W=10, R=10. Grey point: K*=${fmt2(solBase.Kstar)}. Blue point: K*=${fmt2(solCur.Kstar)}.`;
 
-  els.status.textContent = currentQ
-    ? `Baseline stored. Adjust sliders to match: ${currentQ.label}. Then answer.`
-    : `Move sliders. Click “New Question” to lock in a baseline for comparison.`;
+  els.status.textContent =
+    currentQ ? `Scenario: ${currentQ.label}. Adjust sliders accordingly, then submit.` :
+    `Grey curves/points are fixed baseline. Blue curves/points update with sliders.`;
 
-  // MathJax typeset (safe)
   if (window.MathJax && window.MathJax.typesetPromise) {
     window.MathJax.typesetPromise();
   }
 }
 
 // ---- MCQ ----
+let currentQ = null;
+let selectedChoice = null;
+
 const SHOCKS = [
   { var:"P", label:"P increases" },
   { var:"P", label:"P decreases" },
@@ -347,12 +338,14 @@ function signDiff(newVal, oldVal){
 }
 
 function makeQuestion(){
-  baseline = getState(); // lock baseline when question starts
+  // Always start from baseline values
+  setState({ ...BASELINE });
+
   currentQ = SHOCKS[Math.floor(Math.random()*SHOCKS.length)];
   selectedChoice = null;
 
   els.qText.innerHTML =
-    `<strong>Scenario:</strong> Starting from the baseline (now locked in), suppose <strong>${currentQ.label}</strong> while other variables stay fixed.
+    `<strong>Scenario:</strong> Starting from the baseline (A=5, P=5, W=10, R=10), suppose <strong>${currentQ.label}</strong> while other variables stay fixed.
      After you adjust the slider(s), what happens to <strong>L*</strong> and <strong>K*</strong>?`;
 
   const choices = [
@@ -373,7 +366,7 @@ function makeQuestion(){
   }
 
   els.feedback.innerHTML =
-    `<strong>Baseline locked.</strong><br>
+    `<strong>Baseline loaded.</strong><br>
      Now use sliders to implement the scenario and submit.`;
 
   update();
@@ -390,7 +383,7 @@ function submit(){
   }
 
   const now = getState();
-  const opt0 = solveOptimal(baseline.A, baseline.W, baseline.R, baseline.P);
+  const opt0 = solveOptimal(BASELINE.A, BASELINE.W, BASELINE.R, BASELINE.P);
   const opt1 = solveOptimal(now.A, now.W, now.R, now.P);
 
   const dL = signDiff(opt1.Lstar, opt0.Lstar);
@@ -411,7 +404,7 @@ function submit(){
   if (currentQ.var === "W") expl = "Higher W raises W/P, making labor more expensive, so L* falls (often K* falls too).";
   if (currentQ.var === "R") expl = "Higher R raises R/P, making capital more expensive, so K* falls (often L* falls too).";
 
-  const w0 = baseline.W / baseline.P, r0 = baseline.R / baseline.P;
+  const w0 = BASELINE.W / BASELINE.P, r0 = BASELINE.R / BASELINE.P;
   const w1 = now.W / now.P, r1 = now.R / now.P;
 
   els.feedback.innerHTML =
@@ -428,8 +421,7 @@ function submit(){
 }
 
 function resetToBaseline(){
-  setState({ A: 2.0, P: 5.0, W: 10.0, R: 10.0 });
-  baseline = null;
+  setState({ ...BASELINE });
   currentQ = null;
   selectedChoice = null;
 
@@ -437,7 +429,7 @@ function resetToBaseline(){
   els.choices.innerHTML = "";
   els.feedback.innerHTML =
     `<strong>How to use this:</strong><br>
-     1) Click <strong>New Question</strong> (baseline is locked).<br>
+     1) Click <strong>New Question</strong> (baseline is loaded).<br>
      2) Use sliders to implement the scenario.<br>
      3) Use graphs/metrics, then submit.`;
 
