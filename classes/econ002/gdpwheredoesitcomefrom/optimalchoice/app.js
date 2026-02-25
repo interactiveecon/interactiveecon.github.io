@@ -1,11 +1,23 @@
-// Optimal K and L lab
-// Production function: Y = A * K^α * L^β, with α+β<1 for a unique interior optimum.
-// Profit: π = P*Y - W*L - R*K. Equivalent real profit: Y - (W/P)L - (R/P)K.
-// FOCs: MPL = W/P, MPK = R/P.
+// Optimal K & L app (CRS, static axes, single ticks, dashed drop lines, MathJax typeset)
+//
+// CRS production: Y = A K^α L^(1-α)
+// MPL = (1-α) A K^α L^(-α)
+// MPK = α A K^(α-1) L^(1-α)
+//
+// We compute (K*,L*) by maximizing profit over a bounded box K,L in [0,10] (fine grid).
+// This avoids CRS scale indeterminacy while still showing the comparative statics clearly.
 
 const alpha = 0.35;
-const beta  = 0.55; // alpha+beta = 0.90 < 1 (decreasing returns => finite optimum)
+const K_MAX = 10;
+const L_MAX = 10;
 
+// “Static axes” ranges chosen once from max values so graphs are comparable.
+// We compute maxima for MPL/MPK over the domain under the most “intense” settings to avoid clipping.
+const A_AXIS = 5;
+const K_AXIS = 10;
+const L_AXIS = 10;
+
+// UI
 const els = {
   A_r: document.getElementById("A_r"),
   A_n: document.getElementById("A_n"),
@@ -18,8 +30,8 @@ const els = {
 
   m_wp: document.getElementById("m_wp"),
   m_rp: document.getElementById("m_rp"),
-  m_L:  document.getElementById("m_L"),
-  m_K:  document.getElementById("m_K"),
+  m_L: document.getElementById("m_L"),
+  m_K: document.getElementById("m_K"),
 
   chartLabor: document.getElementById("chartLabor"),
   chartCapital: document.getElementById("chartCapital"),
@@ -27,8 +39,7 @@ const els = {
   noteCapital: document.getElementById("noteCapital"),
 
   newQBtn: document.getElementById("newQBtn"),
-  applyShockBtn: document.getElementById("applyShockBtn"),
-  resetBaselineBtn: document.getElementById("resetBaselineBtn"),
+  resetBtn: document.getElementById("resetBtn"),
   status: document.getElementById("status"),
 
   qText: document.getElementById("qText"),
@@ -55,77 +66,39 @@ function bindPair(r, n, onChange){
 
 function F(A, K, L){
   if (K <= 0 || L <= 0) return 0;
-  return A * Math.pow(K, alpha) * Math.pow(L, beta);
+  return A * Math.pow(K, alpha) * Math.pow(L, 1 - alpha);
 }
 
 function MPL(A, K, L){
   if (K <= 0 || L <= 0) return NaN;
-  return beta * A * Math.pow(K, alpha) * Math.pow(L, beta - 1);
+  return (1 - alpha) * A * Math.pow(K, alpha) * Math.pow(L, -alpha);
 }
 
 function MPK(A, K, L){
   if (K <= 0 || L <= 0) return NaN;
-  return alpha * A * Math.pow(K, alpha - 1) * Math.pow(L, beta);
+  return alpha * A * Math.pow(K, alpha - 1) * Math.pow(L, 1 - alpha);
 }
 
-// Solve FOCs analytically for Cobb–Douglas with decreasing returns
-// Using ratio: K/L = (α/β)*(w/r) where w=W/P and r=R/P (P cancels => w/r = W/R)
-function solveOptimal(A, W, R, P){
-  const w = W / P;
-  const r = R / P;
-
-  // m = K/L
-  const m = (alpha / beta) * (w / r); // = (alpha/beta)*(W/R)
-
-  // MPL condition: beta*A*(mL)^alpha * L^(beta-1) = w
-  // => beta*A*m^alpha * L^(alpha+beta-1) = w
-  const expo = (alpha + beta - 1); // negative
-  const denom = beta * A * Math.pow(m, alpha);
-  const rhs = w / denom;
-
-  // L = rhs^(1/expo)
-  const Lstar = Math.pow(rhs, 1 / expo);
-  const Kstar = m * Lstar;
-
-  return { w, r, Lstar, Kstar };
+function profit(A, P, W, R, K, L){
+  return P * F(A, K, L) - W * L - R * K;
 }
 
-// Charts
-let chLabor = null;
-let chCapital = null;
+// Grid-search optimizer on [0,10]x[0,10]
+function solveOpt(A, P, W, R){
+  let best = { K: 0, L: 0, pi: -Infinity };
 
-function makeChart(canvas, xLabel, yLabel){
-  return new Chart(canvas, {
-    type: "line",
-    data: {
-      datasets: [
-        { label: "Marginal product", data: [], borderWidth: 3, pointRadius: 0 },
-        { label: "Real price", data: [], borderWidth: 3, pointRadius: 0, borderDash: [6,6] },
-        { label: "Marker", data: [], showLine: false, pointRadius: 5 }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      parsing: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { type:"linear", grid:{display:false}, title:{display:true,text:xLabel} },
-        y: {
-          grid:{display:true},
-          title:{display:true,text:yLabel},
-          ticks:{ callback:(v)=>Number(v).toFixed(2) }
-        }
+  // step: 0.05 gives smooth results, still fast
+  const step = 0.05;
+
+  for (let K = 0; K <= K_MAX + 1e-9; K += step){
+    for (let L = 0; L <= L_MAX + 1e-9; L += step){
+      const pi = profit(A, P, W, R, K, L);
+      if (pi > best.pi){
+        best = { K, L, pi };
       }
     }
-  });
-}
-
-function linspace(min, max, n){
-  const out = [];
-  const step = (max - min) / (n - 1);
-  for (let i=0;i<n;i++) out.push(min + i*step);
-  return out;
+  }
+  return best;
 }
 
 function getState(){
@@ -145,148 +118,225 @@ function setState(s){
   update();
 }
 
-// Baseline + shock for MCQ
+// Chart tick plugin to force a single tick
+const singleTickPlugin = {
+  id: "singleTick",
+  afterBuildTicks(chart, args, opts){
+    if (!opts || !opts.enabled) return;
+    const axis = chart.scales[opts.axis];
+    if (!axis) return;
+    const v = opts.value;
+    if (!isFinite(v)) return;
+    axis.ticks = [{ value: v }];
+  }
+};
+Chart.register(singleTickPlugin);
+
+function linspace(min, max, n){
+  const out = [];
+  const step = (max - min) / (n - 1);
+  for (let i=0; i<n; i++) out.push(min + i*step);
+  return out;
+}
+
+let chLabor = null;
+let chCapital = null;
+
+// Precompute static y-axis maxima with high A and corner values
+function computeAxisMaxima(){
+  // MPL is largest at high K and very small L -> use L=0.05 to avoid infinity
+  const mplMax = MPL(A_AXIS, K_AXIS, 0.05) || 0;
+  // MPK is largest at very small K and high L -> use K=0.05
+  const mpkMax = MPK(A_AXIS, 0.05, L_AXIS) || 0;
+  // Add headroom
+  return {
+    mplYMax: mplMax * 1.1,
+    mpkYMax: mpkMax * 1.1,
+  };
+}
+const AX = computeAxisMaxima();
+
+function makeMarketChart(canvas, xLabel, yLabel, yMax){
+  return new Chart(canvas, {
+    type: "line",
+    data: {
+      datasets: [
+        { data: [], borderWidth: 3, pointRadius: 0 },                 // MP curve
+        { data: [], borderWidth: 3, pointRadius: 0, borderDash: [6,6] }, // real price line
+        { data: [], showLine: false, pointRadius: 5 },                // optimal point marker
+        { data: [], borderWidth: 2, pointRadius: 0, borderDash: [4,4] }  // dashed drop line to x-axis
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      parsing: false,
+      plugins: {
+        legend: { display: false },
+        singleTick: { enabled: true, axis: "x", value: 0 } // updated each render
+      },
+      scales: {
+        x: {
+          type: "linear",
+          min: 0,
+          max: 10,
+          grid: { display: false },
+          title: { display: true, text: xLabel },
+          ticks: {
+            callback: (v) => Number(v).toFixed(2)
+          }
+        },
+        y: {
+          min: 0,
+          max: yMax, // static
+          grid: { display: true },
+          title: { display: true, text: yLabel },
+          ticks: {
+            // We will force a single y tick using the plugin on 'y' by calling it with axis='y' via options update
+            callback: (v) => Number(v).toFixed(2)
+          }
+        }
+      }
+    }
+  });
+}
+
+// baseline for MCQ
 let baseline = null;
-let shock = null;
 let currentQ = null;
 let selectedChoice = null;
 
-function update(){
-  const s = getState();
-  const sol = solveOptimal(s.A, s.W, s.R, s.P);
-
-  // Metrics
-  els.m_wp.textContent = fmt2(sol.w);
-  els.m_rp.textContent = fmt2(sol.r);
-  els.m_L.textContent  = fmt2(sol.Lstar);
-  els.m_K.textContent  = fmt2(sol.Kstar);
-
-  // Charts init
-  if (!chLabor){
-    chLabor = makeChart(els.chartLabor, "Labor (L)", "MPL / W/P");
-    chCapital = makeChart(els.chartCapital, "Capital (K)", "MPK / R/P");
-  }
-
-  // Build MPL curve holding K at K* (to visualize the labor condition)
-  const Kfix = sol.Kstar;
-  const Lgrid = linspace(0.1, Math.max(0.5, sol.Lstar*2.2), 200);
-  const mplCurve = Lgrid.map(L => ({ x: L, y: MPL(s.A, Kfix, L) }));
-  const wLine = [
-    { x: Lgrid[0], y: sol.w },
-    { x: Lgrid[Lgrid.length-1], y: sol.w }
-  ];
-
-  // MPK curve holding L at L*
-  const Lfix = sol.Lstar;
-  const Kgrid = linspace(0.1, Math.max(0.5, sol.Kstar*2.2), 200);
-  const mpkCurve = Kgrid.map(K => ({ x: K, y: MPK(s.A, K, Lfix) }));
-  const rLine = [
-    { x: Kgrid[0], y: sol.r },
-    { x: Kgrid[Kgrid.length-1], y: sol.r }
-  ];
-
-  // Update labor chart
-  chLabor.data.datasets[0].data = mplCurve;
-  chLabor.data.datasets[1].data = wLine;
-  chLabor.data.datasets[2].data = [{ x: sol.Lstar, y: sol.w }];
-
-  // Dynamic y-range that includes both curves
-  const mplYs = mplCurve.map(p=>p.y).filter(v=>isFinite(v));
-  const yMinL = Math.max(0, Math.min(...mplYs, sol.w) * 0.85);
-  const yMaxL = Math.max(...mplYs, sol.w) * 1.15;
-  chLabor.options.scales.y.min = yMinL;
-  chLabor.options.scales.y.max = yMaxL;
-  chLabor.options.scales.x.min = 0;
-  chLabor.options.scales.x.max = Lgrid[Lgrid.length-1];
-  chLabor.update();
-
-  els.noteLabor.textContent =
-    `At K*= ${fmt2(sol.Kstar)}, the firm chooses L* so MPL = W/P. Here, W/P = ${fmt2(sol.w)} and L* = ${fmt2(sol.Lstar)}.`;
-
-  // Update capital chart
-  chCapital.data.datasets[0].data = mpkCurve;
-  chCapital.data.datasets[1].data = rLine;
-  chCapital.data.datasets[2].data = [{ x: sol.Kstar, y: sol.r }];
-
-  const mpkYs = mpkCurve.map(p=>p.y).filter(v=>isFinite(v));
-  const yMinK = Math.max(0, Math.min(...mpkYs, sol.r) * 0.85);
-  const yMaxK = Math.max(...mpkYs, sol.r) * 1.15;
-  chCapital.options.scales.y.min = yMinK;
-  chCapital.options.scales.y.max = yMaxK;
-  chCapital.options.scales.x.min = 0;
-  chCapital.options.scales.x.max = Kgrid[Kgrid.length-1];
-  chCapital.update();
-
-  els.noteCapital.textContent =
-    `At L*= ${fmt2(sol.Lstar)}, the firm chooses K* so MPK = R/P. Here, R/P = ${fmt2(sol.r)} and K* = ${fmt2(sol.Kstar)}.`;
-
-  // Status
-  els.status.textContent = currentQ
-    ? `Baseline stored. Use “Apply Shock” or sliders to match the scenario, then answer.`
-    : `Move A, P, W, R to see how real prices and optimal K*, L* change.`;
-}
-
-// ---- MCQ logic ----
-
 const SHOCKS = [
-  { var: "P", label: "P increases", dir: +1 },
-  { var: "P", label: "P decreases", dir: -1 },
-  { var: "A", label: "A increases", dir: +1 },
-  { var: "A", label: "A decreases", dir: -1 },
-  { var: "W", label: "W increases", dir: +1 },
-  { var: "W", label: "W decreases", dir: -1 },
-  { var: "R", label: "R increases", dir: +1 },
-  { var: "R", label: "R decreases", dir: -1 },
+  { var: "P", label: "P increases", dir: +1, step: 2 },
+  { var: "P", label: "P decreases", dir: -1, step: 2 },
+  { var: "A", label: "A increases", dir: +1, step: 1 },
+  { var: "A", label: "A decreases", dir: -1, step: 1 },
+  { var: "W", label: "W increases", dir: +1, step: 2 },
+  { var: "W", label: "W decreases", dir: -1, step: 2 },
+  { var: "R", label: "R increases", dir: +1, step: 2 },
+  { var: "R", label: "R decreases", dir: -1, step: 2 },
 ];
 
+function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
+
 function signDiff(newVal, oldVal){
-  const eps = 1e-9;
+  const eps = 1e-6;
   if (newVal > oldVal + eps) return "up";
   if (newVal < oldVal - eps) return "down";
   return "same";
 }
 
+function update(){
+  const s = getState();
+  const wReal = s.W / s.P;
+  const rReal = s.R / s.P;
+
+  // solve optimum on bounded box
+  const opt = solveOpt(s.A, s.P, s.W, s.R);
+
+  els.m_wp.textContent = fmt2(wReal);
+  els.m_rp.textContent = fmt2(rReal);
+  els.m_L.textContent  = fmt2(opt.L);
+  els.m_K.textContent  = fmt2(opt.K);
+
+  // init charts
+  if (!chLabor){
+    chLabor = makeMarketChart(els.chartLabor, "Labor (L)", "MPL and W/P", AX.mplYMax);
+    chCapital = makeMarketChart(els.chartCapital, "Capital (K)", "MPK and R/P", AX.mpkYMax);
+  }
+
+  // Labor market: MPL(L; K fixed at K*)
+  const Kfix = Math.max(opt.K, 0.05);
+  const Lgrid = linspace(0.05, 10, 300);
+  const mplCurve = Lgrid.map(L => ({ x: L, y: MPL(s.A, Kfix, L) }));
+  const wLine = [{ x: 0, y: wReal }, { x: 10, y: wReal }];
+  const Lstar = opt.L;
+  const mplAtStar = MPL(s.A, Kfix, Math.max(Lstar, 0.05));
+
+  // datasets
+  chLabor.data.datasets[0].data = mplCurve;
+  chLabor.data.datasets[1].data = wLine;
+  chLabor.data.datasets[2].data = [{ x: Lstar, y: wReal }];
+  // dashed drop line to x-axis from the optimal point
+  chLabor.data.datasets[3].data = [{ x: Lstar, y: 0 }, { x: Lstar, y: wReal }];
+
+  // Single ticks
+  chLabor.options.plugins.singleTick = { enabled:true, axis:"x", value: Lstar };
+  // Force single y tick at W/P via plugin by reusing it with axis y
+  chLabor.options.plugins.singleTickY = { enabled:true, axis:"y", value: wReal };
+  // Chart.js only knows registered plugins by id; so we reuse the same plugin by setting options under its id and switching axis dynamically
+  // We'll apply y tick by temporarily setting and then flipping in plugin call:
+  // easiest: call the plugin twice by registering a second id:
+  // (we do that below)
+
+  // Capital market: MPK(K; L fixed at L*)
+  const Lfix = Math.max(opt.L, 0.05);
+  const Kgrid = linspace(0.05, 10, 300);
+  const mpkCurve = Kgrid.map(K => ({ x: K, y: MPK(s.A, K, Lfix) }));
+  const rLine = [{ x: 0, y: rReal }, { x: 10, y: rReal }];
+  const Kstar = opt.K;
+  const mpkAtStar = MPK(s.A, Math.max(Kstar,0.05), Lfix);
+
+  chCapital.data.datasets[0].data = mpkCurve;
+  chCapital.data.datasets[1].data = rLine;
+  chCapital.data.datasets[2].data = [{ x: Kstar, y: rReal }];
+  chCapital.data.datasets[3].data = [{ x: Kstar, y: 0 }, { x: Kstar, y: rReal }];
+
+  chCapital.options.plugins.singleTick = { enabled:true, axis:"x", value: Kstar };
+
+  // Force single y tick at R/P using a second plugin id
+  // We'll configure it below after creating the second plugin.
+
+  // Notes
+  els.noteLabor.textContent =
+    `At K*=${fmt2(opt.K)}, the MPL curve is compared to the real wage W/P=${fmt2(wReal)}. The optimal labor is L*=${fmt2(Lstar)}.`;
+
+  els.noteCapital.textContent =
+    `At L*=${fmt2(opt.L)}, the MPK curve is compared to the real rental rate R/P=${fmt2(rReal)}. The optimal capital is K*=${fmt2(Kstar)}.`;
+
+  // Set y tick plugin configs
+  chLabor.options.plugins.singleTickY = { enabled:true, axis:"y", value: wReal };
+  chCapital.options.plugins.singleTickY = { enabled:true, axis:"y", value: rReal };
+
+  chLabor.update();
+  chCapital.update();
+
+  els.status.textContent = currentQ
+    ? `Baseline stored. Adjust sliders to match the scenario, then answer.`
+    : `Move A, P, W, R and watch W/P, R/P, L*, and K* change.`;
+
+  // typeset any math (safe)
+  if (window.MathJax && window.MathJax.typesetPromise) {
+    window.MathJax.typesetPromise();
+  }
+}
+
+// Register a second “single tick” plugin for y-axis by cloning the logic under a different id
+const singleTickYPlugin = {
+  id: "singleTickY",
+  afterBuildTicks(chart, args, opts){
+    if (!opts || !opts.enabled) return;
+    const axis = chart.scales[opts.axis]; // expect 'y'
+    if (!axis) return;
+    const v = opts.value;
+    if (!isFinite(v)) return;
+    axis.ticks = [{ value: v }];
+  }
+};
+Chart.register(singleTickYPlugin);
+
+// ---- MCQ ----
 function makeQuestion(){
-  // baseline from current sliders
   baseline = getState();
 
-  // choose a shock
   const sh = SHOCKS[Math.floor(Math.random()*SHOCKS.length)];
-  const shocked = { ...baseline };
-
-  // apply a discrete change
-  const step = (sh.var === "P") ? 2 : 1; // make P shocks more visible
-  shocked[sh.var] = Math.max(
-    (sh.var==="P")?1:1,
-    Math.min(
-      (sh.var==="P")?10:(sh.var==="A"?5:20),
-      baseline[sh.var] + sh.dir*step
-    )
-  );
-
-  shock = shocked;
   currentQ = sh;
 
-  // compute correct direction by comparing optima baseline vs shocked
-  const sol0 = solveOptimal(baseline.A, baseline.W, baseline.R, baseline.P);
-  const sol1 = solveOptimal(shock.A, shock.W, shock.R, shock.P);
-
-  const dL = signDiff(sol1.Lstar, sol0.Lstar);
-  const dK = signDiff(sol1.Kstar, sol0.Kstar);
-
-  const correct = (
-    dL==="up" && dK==="up" ? "A" :
-    dL==="down" && dK==="down" ? "B" :
-    dL==="up" && dK==="down" ? "C" :
-    dL==="down" && dK==="up" ? "D" : "E"
-  );
-
-  // build question text
+  // Build question
   els.qText.innerHTML =
     `<strong>Scenario:</strong> Starting from the baseline shown on the sliders, suppose <strong>${sh.label}</strong> while the other variables stay fixed.
-     What happens to the firm’s <strong>optimal</strong> choices of <strong>labor (L*)</strong> and <strong>capital (K*)</strong>?`;
+     What happens to the firm’s <strong>optimal</strong> choices of <strong>L*</strong> and <strong>K*</strong>?`;
 
-  // choices
   const choices = [
     { key:"A", text:"L* increases and K* increases" },
     { key:"B", text:"L* decreases and K* decreases" },
@@ -301,41 +351,16 @@ function makeQuestion(){
   for (const c of choices){
     const div = document.createElement("label");
     div.className = "choice";
-    div.innerHTML = `
-      <input type="radio" name="mcq" value="${c.key}">
-      <div><strong>${c.key}.</strong> ${c.text}</div>
-    `;
-    div.addEventListener("click", () => {
-      selectedChoice = c.key;
-    });
+    div.innerHTML = `<input type="radio" name="mcq" value="${c.key}"><div><strong>${c.key}.</strong> ${c.text}</div>`;
+    div.addEventListener("click", () => { selectedChoice = c.key; });
     els.choices.appendChild(div);
   }
 
-  // store correct + explanation ingredients
-  currentQ.correct = correct;
-  currentQ.dL = dL;
-  currentQ.dK = dK;
-
   els.feedback.innerHTML =
     `<strong>Baseline stored.</strong><br>
-     Click <strong>Apply Shock</strong> to jump to the scenario (or move the slider yourself), then answer.`;
+     Now use the sliders to implement the scenario, then answer.`;
+
   update();
-}
-
-function applyShock(){
-  if (!shock){
-    els.status.textContent = "Click “New Question” first.";
-    return;
-  }
-  setState(shock);
-}
-
-function resetBaseline(){
-  if (!baseline){
-    els.status.textContent = "No baseline yet. Click “New Question” first.";
-    return;
-  }
-  setState(baseline);
 }
 
 function submit(){
@@ -348,40 +373,67 @@ function submit(){
     return;
   }
 
-  const correct = currentQ.correct;
+  // Compare current state to baseline by recomputing optima
+  const now = getState();
+  const opt0 = solveOpt(baseline.A, baseline.P, baseline.W, baseline.R);
+  const opt1 = solveOpt(now.A, now.P, now.W, now.R);
+
+  const dL = signDiff(opt1.L, opt0.L);
+  const dK = signDiff(opt1.K, opt0.K);
+
+  const correct = (
+    dL==="up" && dK==="up" ? "A" :
+    dL==="down" && dK==="down" ? "B" :
+    dL==="up" && dK==="down" ? "C" :
+    dL==="down" && dK==="up" ? "D" : "E"
+  );
+
   const ok = (selectedChoice === correct);
 
-  // Explanation (brief, variable-based)
-  const sh = currentQ;
-  const base = baseline;
-  const shoc = shock;
+  const w0 = baseline.W / baseline.P;
+  const r0 = baseline.R / baseline.P;
+  const w1 = now.W / now.P;
+  const r1 = now.R / now.P;
 
-  const sol0 = solveOptimal(base.A, base.W, base.R, base.P);
-  const sol1 = solveOptimal(shoc.A, shoc.W, shoc.R, shoc.P);
-
-  const w0 = sol0.w, r0 = sol0.r;
-  const w1 = sol1.w, r1 = sol1.r;
-
-  // short explanation templates
+  // brief explanation based on which variable was shocked
   let expl = "";
-  if (sh.var === "A") {
-    expl = `Higher productivity raises marginal products. To restore $begin:math:text$MPL\=W\/P$end:math:text$ and $begin:math:text$MPK\=R\/P$end:math:text$, the firm uses more inputs.`;
-  } else if (sh.var === "P") {
-    expl = `With W and R fixed, a higher P lowers both $begin:math:text$W\/P$end:math:text$ and $begin:math:text$R\/P$end:math:text$. Lower real input costs push the firm to use more inputs.`;
-  } else if (sh.var === "W") {
-    expl = `With P fixed, a higher W raises $begin:math:text$W\/P$end:math:text$. Labor becomes more expensive in real terms, so the firm reduces labor. With diminishing returns, optimal scale falls and K* also falls.`;
-  } else if (sh.var === "R") {
-    expl = `With P fixed, a higher R raises $begin:math:text$R\/P$end:math:text$. Capital becomes more expensive in real terms, so the firm reduces capital. With diminishing returns, optimal scale falls and L* also falls.`;
+  if (currentQ.var === "A") {
+    expl = "Higher A raises MPL and MPK (the marginal benefit of inputs), so the firm uses more inputs.";
+  } else if (currentQ.var === "P") {
+    expl = "If W and R are fixed, higher P lowers W/P and R/P (inputs are cheaper in real terms), so the firm uses more inputs.";
+  } else if (currentQ.var === "W") {
+    expl = "Higher W raises W/P, making labor more expensive in real terms, so the firm reduces labor and typically reduces scale.";
+  } else if (currentQ.var === "R") {
+    expl = "Higher R raises R/P, making capital more expensive in real terms, so the firm reduces capital and typically reduces scale.";
   }
 
   els.feedback.innerHTML =
     (ok ? `<strong>Correct.</strong>` : `<strong>Not quite.</strong> The correct answer is <strong>${correct}</strong>.`) +
     `<br><br>
-     <strong>What changed:</strong> ${sh.label}.<br>
-     <strong>Real wage:</strong> ${w0.toFixed(2)} → ${w1.toFixed(2)}. &nbsp;
-     <strong>Real rental:</strong> ${r0.toFixed(2)} → ${r1.toFixed(2)}.<br><br>
+     <strong>Real wage:</strong> ${fmt2(w0)} → ${fmt2(w1)}<br>
+     <strong>Real rental:</strong> ${fmt2(r0)} → ${fmt2(r1)}<br><br>
      ${expl}<br>
-     <strong>Result:</strong> L* goes <strong>${sh.dL}</strong>, K* goes <strong>${sh.dK}</strong>.`;
+     <strong>Result:</strong> L* goes <strong>${dL}</strong>, K* goes <strong>${dK}</strong>.`;
+
+  if (window.MathJax && window.MathJax.typesetPromise) {
+    window.MathJax.typesetPromise();
+  }
+}
+
+function resetToBaseline(){
+  // Default baseline values
+  setState({ A: 2, P: 5, W: 10, R: 10 });
+  baseline = null;
+  currentQ = null;
+  selectedChoice = null;
+  els.qText.textContent = "Click “New Question”.";
+  els.choices.innerHTML = "";
+  els.feedback.innerHTML =
+    `<strong>How to use this:</strong><br>
+     1) Click <strong>New Question</strong> (baseline is stored).<br>
+     2) Use sliders to implement the scenario.<br>
+     3) Use graphs/metrics, then submit.`;
+  update();
 }
 
 // Bind UI
@@ -391,11 +443,8 @@ bindPair(els.W_r, els.W_n, update);
 bindPair(els.R_r, els.R_n, update);
 
 els.newQBtn.addEventListener("click", makeQuestion);
-els.applyShockBtn.addEventListener("click", applyShock);
-els.resetBaselineBtn.addEventListener("click", resetBaseline);
 els.submitBtn.addEventListener("click", submit);
+els.resetBtn.addEventListener("click", resetToBaseline);
 
-// Initialize
-(function init(){
-  setState({ A: 2, P: 5, W: 10, R: 10 });
-})();
+// init
+resetToBaseline();
