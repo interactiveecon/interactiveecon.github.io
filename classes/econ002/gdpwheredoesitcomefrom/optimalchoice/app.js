@@ -10,8 +10,9 @@ const EPS = 0.05;
 
 const BASELINE = { A: 5.0, P: 5.0, W: 10.0, R: 10.0 };
 
-const COL_BLUE = "#1f77b4";
-const COL_GREY = "rgba(0,0,0,0.28)";
+const COL_BLUE = "#1f77b4";          // current MPL/MPK
+const COL_ORANGE = "#E69F00";        // current W/P and R/P (Okabe–Ito)
+const COL_GREY = "rgba(0,0,0,0.28)"; // baseline curves/lines
 
 function fmt2(x){
   if (!isFinite(x)) return "—";
@@ -172,7 +173,7 @@ function makeMarketChart(canvas, xLabel, yLabel){
         { data: [], borderWidth: 1, pointRadius: 0, borderDash: [6,6], borderColor: COL_GREY },
 
         // 3 current real price (blue SOLID + thicker for visibility)
-        { data: [], borderWidth: 2, pointRadius: 0, borderDash: [], borderColor: COL_BLUE },
+        { data: [], borderWidth: 2, pointRadius: 0, borderDash: [], borderColor: COL_ORANGE },
 
         { data: [], showLine: false, pointRadius: 5, borderColor: COL_GREY, backgroundColor: COL_GREY }, // baseline point
         { data: [], showLine: false, pointRadius: 5, borderColor: COL_BLUE, backgroundColor: COL_BLUE }, // current point
