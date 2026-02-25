@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Unemployment Flows Lab</title>
+
+  <link rel="stylesheet" href="/assets/style.css">
+
+  <!-- MathJax -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(', '\\)'], ['$', '$']] },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+  <style>
+    .stack{ display:grid; gap:14px; margin-top:18px; }
+
+    .grid2{ display:grid; grid-template-columns: 1.1fr 0.9fr; gap:12px; align-items:start; }
+    @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
+
+    .kv{
+      display:grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap:12px;
+      margin-top:10px;
+    }
+    @media (max-width: 980px){ .kv{ grid-template-columns: 1fr; } }
+
+    .metric{
+      background: rgba(246,242,234,0.55);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+    }
+    .metric .label{
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .metric .value{
+      margin-top: 6px;
+      font-size: 18px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 900;
+      color: var(--accent);
+    }
+
+    .panel-tight{ padding-top: 8px; }
+
+    .flow-box{
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(246,242,234,0.35);
+      padding: 12px;
+    }
+    .row{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; align-items:end; }
+    @media (max-width: 980px){ .row{ grid-template-columns:1fr; } }
+
+    .control label{
+      display:block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    select, input[type="number"]{
+      width:100%;
+      border:1px solid var(--line-2);
+      border-radius: 12px;
+      padding: 10px 10px;
+      background:#fff;
+      font-family: var(--font-sans);
+      color: var(--ink);
+    }
+
+    .explain{
+      margin-top: 10px;
+      border:1px solid var(--line);
+      border-radius:16px;
+      background: rgba(246,242,234,0.35);
+      padding: 12px;
+      color: var(--ink-2);
+      line-height: 1.5;
+      font-size: 13px;
+    }
+
+    .mini{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+      margin-top: 8px;
+    }
+
+    .pill{
+      display:inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.75);
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="page-header">
+    <div class="container">
+      <nav class="crumbbar">
+        <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
+      </nav>
+
+      <div class="header-inner">
+        <div class="title-block">
+          <div class="kicker">Macroeconomics Practice Lab</div>
+          <h1>Unemployment Categories and Flows</h1>
+          <p class="sub">
+            Track how people moving between <strong>Employed</strong>, <strong>Unemployed</strong>, and
+            <strong>Not in the Labor Force</strong> affects the <strong>unemployment rate</strong> and
+            <strong>labor force participation rate</strong>.
+          </p>
+
+          <details class="howto">
+            <summary>Key definitions</summary>
+            <div class="howto-body">
+              <ul>
+                <li><strong>Labor force</strong>: \(LF = E + U\)</li>
+                <li><strong>Unemployment rate</strong>: \(u = \dfrac{U}{E+U}\)</li>
+                <li><strong>LFPR</strong>: \(LFPR = \dfrac{E+U}{E+U+N}\)</li>
+                <li><strong>Population</strong> (in this lab): \(Pop = E+U+N\)</li>
+              </ul>
+              <p class="mini">
+                In this lab, “Not in labor force” includes students, retirees, discouraged workers, etc.
+              </p>
+            </div>
+          </details>
+        </div>
+
+        <div class="controls-card">
+          <div class="controls-actions">
+            <button id="resetBtn" class="btn subtle">Reset</button>
+            <button id="randomBtn" class="btn">Randomize counts</button>
+          </div>
+          <div id="status" class="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container stack">
+    <section class="panel panel-tight">
+      <div class="panel-head">
+        <h2>Current counts and rates</h2>
+        <p class="panel-sub">All values update after each move.</p>
+      </div>
+
+      <div class="kv">
+        <div class="metric">
+          <div class="label">Employed (E)</div>
+          <div class="value" id="mE">—</div>
+        </div>
+        <div class="metric">
+          <div class="label">Unemployed (U)</div>
+          <div class="value" id="mU">—</div>
+        </div>
+        <div class="metric">
+          <div class="label">Not in LF (N)</div>
+          <div class="value" id="mN">—</div>
+        </div>
+        <div class="metric">
+          <div class="label">Unemployment rate u</div>
+          <div class="value" id="mUR">—</div>
+        </div>
+        <div class="metric">
+          <div class="label">LFPR</div>
+          <div class="value" id="mLFPR">—</div>
+        </div>
+      </div>
+
+      <div class="mini">
+        Labor force: <span class="pill" id="pillLF">—</span>
+        &nbsp; Population: <span class="pill" id="pillPop">—</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Make a move</h2>
+        <p class="panel-sub">Choose a transition, predict what happens, then apply it.</p>
+      </div>
+
+      <div class="grid2">
+        <div class="flow-box">
+          <div class="row">
+            <div class="control">
+              <label for="moveSel">Transition</label>
+              <select id="moveSel"></select>
+            </div>
+            <div class="control">
+              <label for="amt">Number of people</label>
+              <input id="amt" type="number" min="1" step="1" value="10" />
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <div class="control">
+              <label for="predSel">Predict first (optional)</label>
+              <select id="predSel">
+                <option value="">— Choose a prediction —</option>
+                <option value="u_up_lfpr_up">u ↑, LFPR ↑</option>
+                <option value="u_up_lfpr_down">u ↑, LFPR ↓</option>
+                <option value="u_down_lfpr_up">u ↓, LFPR ↑</option>
+                <option value="u_down_lfpr_down">u ↓, LFPR ↓</option>
+                <option value="u_up_lfpr_same">u ↑, LFPR ↔</option>
+                <option value="u_down_lfpr_same">u ↓, LFPR ↔</option>
+                <option value="u_same_lfpr_up">u ↔, LFPR ↑</option>
+                <option value="u_same_lfpr_down">u ↔, LFPR ↓</option>
+                <option value="u_same_lfpr_same">u ↔, LFPR ↔</option>
+              </select>
+            </div>
+
+            <div class="controls-actions">
+              <button id="applyBtn" class="btn primary">Apply move</button>
+            </div>
+          </div>
+
+          <div class="explain" id="explainBox">
+            Choose a transition and click <strong>Apply move</strong>. The app will explain what happened to the rates.
+          </div>
+        </div>
+
+        <div class="flow-box">
+          <div class="mini">
+            <strong>Tip:</strong> The unemployment rate only uses the <em>labor force</em>:
+            \(u=\frac{U}{E+U}\). So flows into/out of <strong>N</strong> can move LFPR a lot without directly
+            changing the numerator \(U\).
+          </div>
+
+          <div class="explain" id="historyBox">
+            <strong>History</strong><br>
+            <span class="mini">Your last 5 moves will appear here.</span>
+            <div id="historyList" class="mini" style="margin-top:8px;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
