@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Unemployment Flows Lab</title>
+  <title>Unemployment Categories Lab</title>
 
   <link rel="stylesheet" href="/assets/style.css">
 
@@ -17,10 +17,10 @@
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
 
   <style>
-    .stack{ display:grid; gap:14px; margin-top:18px; }
+    /* Keep MathJax from blowing up */
+    .mjx-container { font-size: 1em !important; }
 
-    .grid2{ display:grid; grid-template-columns: 1.1fr 0.9fr; gap:12px; align-items:start; }
-    @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
+    .stack{ display:grid; gap:14px; margin-top:18px; }
 
     .kv{
       display:grid;
@@ -50,8 +50,110 @@
       color: var(--accent);
     }
 
-    .panel-tight{ padding-top: 8px; }
+    .pill{
+      display:inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.75);
+      font-variant-numeric: tabular-nums;
+    }
 
+    .mini{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+      margin-top: 8px;
+    }
+
+    .grid2{ display:grid; grid-template-columns: 1.1fr 0.9fr; gap:12px; align-items:start; }
+    @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
+
+    /* Card sorting */
+    .board{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+      align-items:start;
+    }
+    @media (max-width: 980px){ .board{ grid-template-columns: 1fr; } }
+
+    .bucket{
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(246,242,234,0.35);
+      padding: 10px;
+      min-height: 230px;
+    }
+    .bucket h3{
+      margin: 0 0 6px 0;
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 900;
+    }
+    .bucket .sub{
+      margin: 0 0 10px 0;
+      color: var(--ink-2);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .dropzone{
+      display:grid;
+      gap: 8px;
+      min-height: 150px;
+    }
+    .dropzone.dragover{
+      outline: 2px dashed rgba(0,0,0,0.25);
+      outline-offset: 6px;
+      border-radius: 14px;
+    }
+
+    .card{
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.85);
+      padding: 10px 10px;
+      cursor: grab;
+      user-select: none;
+    }
+    .card:active{ cursor: grabbing; }
+    .card .top{
+      display:flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+    }
+    .badge{
+      display:inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(246,242,234,0.65);
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .card .desc{
+      margin-top: 6px;
+      color: var(--ink-2);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .card.ok{ border-color: rgba(34,139,34,0.45); }
+    .card.bad{ border-color: rgba(178,34,34,0.55); }
+
+    .panel-actions{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items:center;
+      margin-top: 10px;
+    }
+
+    /* Move simulator */
     .flow-box{
       border: 1px solid var(--line);
       border-radius: 16px;
@@ -89,65 +191,6 @@
       line-height: 1.5;
       font-size: 13px;
     }
-
-    .mini{
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.45;
-      margin-top: 8px;
-    }
-
-    .pill{
-      display:inline-block;
-      padding: 2px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,.75);
-      font-variant-numeric: tabular-nums;
-    }
-
-    /* Animation diagram */
-    .diagram{
-      border:1px solid var(--line);
-      border-radius:16px;
-      background: rgba(255,255,255,0.65);
-      padding: 10px;
-    }
-    svg{ width:100%; height:auto; display:block; }
-    .node{
-      fill: rgba(246,242,234,0.9);
-      stroke: rgba(0,0,0,0.25);
-      stroke-width: 1.2;
-    }
-    .nodeLabel{
-      font-weight: 900;
-      fill: rgba(0,0,0,0.78);
-      font-size: 13px;
-    }
-    .nodeCount{
-      fill: rgba(0,0,0,0.60);
-      font-size: 12px;
-      font-variant-numeric: tabular-nums;
-    }
-    .arrow{
-      stroke: rgba(0,0,0,0.20);
-      stroke-width: 2;
-      fill: none;
-      marker-end: url(#arrowHead);
-    }
-    .token{
-      fill: rgba(31,119,180,0.95);
-      stroke: rgba(0,0,0,0.25);
-      stroke-width: 1;
-    }
-    .tokenText{
-      fill: white;
-      font-size: 11px;
-      font-weight: 900;
-      text-anchor: middle;
-      dominant-baseline: middle;
-      font-variant-numeric: tabular-nums;
-    }
   </style>
 </head>
 
@@ -163,23 +206,20 @@
           <div class="kicker">Macroeconomics Practice Lab</div>
           <h1>Unemployment Categories and Flows</h1>
           <p class="sub">
-            Track how people moving between <strong>Employed</strong>, <strong>Unemployed</strong>, and
-            <strong>Not in the Labor Force</strong> affects the <strong>unemployment rate</strong> and
-            <strong>labor force participation rate</strong>.
+            First, classify people into <strong>Employed</strong>, <strong>Unemployed</strong>, or
+            <strong>Not in the Labor Force</strong>. Then use the flow simulator to see how
+            \(u\) and LFPR change when people move between categories.
           </p>
 
           <details class="howto">
             <summary>Key definitions</summary>
-            <div class="howto-body">
+            <div class="howto-body" id="mathBoxTop">
               <ul>
                 <li><strong>Labor force</strong>: \(LF = E + U\)</li>
                 <li><strong>Unemployment rate</strong>: \(u = \dfrac{U}{E+U}\)</li>
                 <li><strong>LFPR</strong>: \(LFPR = \dfrac{E+U}{E+U+N}\)</li>
                 <li><strong>Population</strong> (in this lab): \(Pop = E+U+N\)</li>
               </ul>
-              <p class="mini">
-                In this lab, “Not in labor force” includes students, retirees, discouraged workers, etc.
-              </p>
             </div>
           </details>
         </div>
@@ -187,7 +227,7 @@
         <div class="controls-card">
           <div class="controls-actions">
             <button id="resetBtn" class="btn subtle">Reset</button>
-            <button id="randomBtn" class="btn">Randomize counts</button>
+            <button id="newSetBtn" class="btn">New card set</button>
           </div>
           <div id="status" class="status" aria-live="polite"></div>
         </div>
@@ -196,45 +236,67 @@
   </header>
 
   <main class="container stack">
-    <section class="panel panel-tight">
+
+    <!-- Counts & rates (from cards) -->
+    <section class="panel">
       <div class="panel-head">
-        <h2>Current counts and rates</h2>
-        <p class="panel-sub">All values update after each move.</p>
+        <h2>Counts and rates (from your classification)</h2>
+        <p class="panel-sub">As you move cards, counts and rates update.</p>
       </div>
 
       <div class="kv">
-        <div class="metric">
-          <div class="label">Employed (E)</div>
-          <div class="value" id="mE">—</div>
-        </div>
-        <div class="metric">
-          <div class="label">Unemployed (U)</div>
-          <div class="value" id="mU">—</div>
-        </div>
-        <div class="metric">
-          <div class="label">Not in LF (N)</div>
-          <div class="value" id="mN">—</div>
-        </div>
-        <div class="metric">
-          <div class="label">Unemployment rate u</div>
-          <div class="value" id="mUR">—</div>
-        </div>
-        <div class="metric">
-          <div class="label">LFPR</div>
-          <div class="value" id="mLFPR">—</div>
-        </div>
+        <div class="metric"><div class="label">Employed (E)</div><div class="value" id="mE">—</div></div>
+        <div class="metric"><div class="label">Unemployed (U)</div><div class="value" id="mU">—</div></div>
+        <div class="metric"><div class="label">Not in LF (N)</div><div class="value" id="mN">—</div></div>
+        <div class="metric"><div class="label">Unemployment rate u</div><div class="value" id="mUR">—</div></div>
+        <div class="metric"><div class="label">LFPR</div><div class="value" id="mLFPR">—</div></div>
       </div>
 
       <div class="mini">
         Labor force: <span class="pill" id="pillLF">—</span>
         &nbsp; Population: <span class="pill" id="pillPop">—</span>
       </div>
+
+      <div class="panel-actions">
+        <button id="checkBtn" class="btn">Check categories</button>
+        <button id="useForMovesBtn" class="btn primary">Use these counts for moves</button>
+        <div class="mini" id="checkMsg"></div>
+      </div>
     </section>
 
+    <!-- Card sorting board -->
     <section class="panel">
       <div class="panel-head">
-        <h2>Make a move</h2>
-        <p class="panel-sub">Choose a transition, predict what happens, then apply it.</p>
+        <h2>Classify the cards</h2>
+        <p class="panel-sub">Drag cards into the correct category.</p>
+      </div>
+
+      <div class="board">
+        <div class="bucket">
+          <h3>Employed (E)</h3>
+          <p class="sub">Worked for pay (or in a family business) during the reference period.</p>
+          <div class="dropzone" id="zoneE" data-zone="E"></div>
+        </div>
+
+        <div class="bucket">
+          <h3>Unemployed (U)</h3>
+          <p class="sub">Not working, <strong>available</strong>, and <strong>actively searching</strong>.</p>
+          <div class="dropzone" id="zoneU" data-zone="U"></div>
+        </div>
+
+        <div class="bucket">
+          <h3>Not in the labor force (N)</h3>
+          <p class="sub">Not working and <strong>not actively searching</strong> (students, retirees, discouraged, etc.).</p>
+          <div class="dropzone" id="zoneN" data-zone="N"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Move simulator -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>What happens when people move between categories?</h2>
+        <p class="panel-sub">This uses the snapshot you set with “Use these counts for moves”.</p>
       </div>
 
       <div class="grid2">
@@ -268,64 +330,28 @@
             </div>
 
             <div class="controls-actions">
-              <button id="applyBtn" class="btn primary">Apply move</button>
+              <button id="applyMoveBtn" class="btn primary">Apply move</button>
             </div>
           </div>
 
           <div class="explain" id="explainBox">
-            Choose a transition and click <strong>Apply move</strong>. The app will explain what happened to the rates.
+            Click <strong>Use these counts for moves</strong> first, then try transitions here.
           </div>
         </div>
 
         <div class="flow-box">
-          <div class="diagram">
-            <svg id="flowSvg" viewBox="0 0 360 220" role="img" aria-label="Flow diagram">
-              <defs>
-                <marker id="arrowHead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
-                  <path d="M0,0 L10,4 L0,8 Z" fill="rgba(0,0,0,0.25)"></path>
-                </marker>
-              </defs>
-
-              <!-- arrows -->
-              <path class="arrow" id="path_EU" d="M120 65 C170 35, 190 35, 240 65"></path>
-              <path class="arrow" id="path_UE" d="M240 85 C190 115, 170 115, 120 85"></path>
-
-              <path class="arrow" id="path_EN" d="M120 85 C150 150, 210 150, 240 85"></path>
-              <path class="arrow" id="path_NE" d="M240 105 C210 170, 150 170, 120 105"></path>
-
-              <path class="arrow" id="path_UN" d="M270 95 C310 130, 310 150, 270 185"></path>
-              <path class="arrow" id="path_NU" d="M250 185 C210 150, 210 130, 250 95"></path>
-
-              <!-- nodes -->
-              <rect class="node" x="40" y="50" width="110" height="70" rx="14"></rect>
-              <text class="nodeLabel" x="95" y="78" text-anchor="middle">E</text>
-              <text class="nodeCount" id="nodeE" x="95" y="100" text-anchor="middle">—</text>
-
-              <rect class="node" x="210" y="50" width="110" height="70" rx="14"></rect>
-              <text class="nodeLabel" x="265" y="78" text-anchor="middle">U</text>
-              <text class="nodeCount" id="nodeU" x="265" y="100" text-anchor="middle">—</text>
-
-              <rect class="node" x="125" y="160" width="110" height="55" rx="14"></rect>
-              <text class="nodeLabel" x="180" y="187" text-anchor="middle">N</text>
-              <text class="nodeCount" id="nodeN" x="180" y="205" text-anchor="middle">—</text>
-
-              <!-- animated token gets inserted here -->
-              <g id="tokenLayer"></g>
-            </svg>
-          </div>
-
-          <div class="explain" id="historyBox">
-            <strong>History</strong><br>
-            <span class="mini">Your last 5 moves will appear here.</span>
-            <div id="historyList" class="mini" style="margin-top:8px;"></div>
+          <div class="explain" id="snapshotBox">
+            <strong>Snapshot used for moves</strong><br>
+            <span class="mini">Not set yet.</span>
           </div>
 
           <div class="mini">
-            <strong>Tip:</strong> \(u=\frac{U}{E+U}\) uses the <em>labor force</em>, while \(LFPR=\frac{E+U}{E+U+N}\) uses the whole population.
+            Tip: \(u=\frac{U}{E+U}\) uses the labor force. LFPR uses the whole population \(E+U+N\).
           </div>
         </div>
       </div>
     </section>
+
   </main>
 
   <script src="app.js"></script>
