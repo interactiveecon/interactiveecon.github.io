@@ -190,9 +190,9 @@ function computeInitialRanges() {
   const L0 = BASE.L;
 
   const refYL  = curveYvsL(A0, 10);
-  const refYK  = curveYvsK(A0, L0);
+  const refYK  = curveYvsK(A0, 10);
   const refMPL = curveMPL(A0, 10);
-  const refMPK = curveMPK(A0, L0);
+  const refMPK = curveMPK(A0, 10);
 
   // Also include baseline curves so baseline is definitely in frame initially
   const baseYL  = curveYvsL(BASE.A, BASE.K);
