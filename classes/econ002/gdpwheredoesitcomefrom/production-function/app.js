@@ -1,18 +1,21 @@
-/* Marginal Product Lab — continuous MP curves + point-only y ticks + sticky y-axis
+/* Marginal Product Lab — full integrated version (2-dec rounding + initial y-scale + continuous MP curves)
 
-   F(A,K,L) = A * sqrt(K) * sqrt(L)   (stylized concavity)
+   Production function (stylized concavity):
+     F(A,K,L) = A * sqrt(K) * sqrt(L)
 
-   Backward-difference definitions:
+   Backward-difference marginal products:
      MPL(K,L) = F(K,L) - F(K,L-1)
      MPK(K,L) = F(K,L) - F(K-1,L)
 
-   Changes in this version:
-   - MPL and MPK plotted as smooth curves by evaluating the backward difference at real-valued x:
-       MPL(L) = F(K,L) - F(K,L-1) for L in [1,10]
-       MPK(K) = F(K,L) - F(K-1,L) for K in [1,10]
-   - Y-axis ticks show ONLY the y-values of highlighted points (per chart).
-   - “Sticky” dynamic y-axis: y-range expands as needed but does not shrink (until Reset),
-     preventing the baseline from looking like it moved when the axis rescales.
+   Features:
+   - Baseline curves fixed (grey dashed)
+   - Current curves solid
+   - Projection lines to BOTH axes from highlighted points
+   - Output curves smooth (dense sampling)
+   - MPL/MPK curves smooth by evaluating backward-difference at real x
+   - Y-axis ticks ONLY at highlighted point y-values, formatted to 2 decimals
+   - Sticky y-axes: expand but don’t shrink until Reset
+   - Initial y-scale set using K=max, A/L at initial (baseline) values
 */
 
 const A_MIN = 1, A_MAX = 5;
@@ -51,12 +54,9 @@ function F(A, K, L) {
   return A * Math.sqrt(K) * Math.sqrt(L);
 }
 
-function fmt(x) {
+function fmt2(x) {
   if (!isFinite(x)) return "—";
-  if (Math.abs(x) >= 1000) return x.toFixed(0);
-  if (Math.abs(x) >= 100) return x.toFixed(1);
-  if (Math.abs(x) >= 10) return x.toFixed(2);
-  return x.toFixed(3);
+  return x.toFixed(2);
 }
 
 function setStatus(msg) { els.status.textContent = msg; }
@@ -86,7 +86,7 @@ function linspace(min, max, step) {
   return xs;
 }
 
-// Smooth output curves
+/* Curves */
 function curveYvsL(A, K) {
   const xs = linspace(0, 10, 0.02);
   return xs.map(L => ({ x: L, y: F(A, K, L) }));
@@ -96,7 +96,7 @@ function curveYvsK(A, L) {
   return xs.map(K => ({ x: K, y: F(A, K, L) }));
 }
 
-// Smooth MPL/MPK curves using backward difference evaluated at real x
+// “Continuous-looking” backward difference evaluated for real x
 function curveMPL(A, K) {
   const xs = linspace(0, 10, 0.02);
   return xs.map(L => {
@@ -112,9 +112,8 @@ function curveMPK(A, L) {
   });
 }
 
-// Highlighted points (integer K,L current and previous step)
+/* Projections */
 function projectionData(p) {
-  // vertical to x-axis + horizontal to y-axis
   return [
     { x: p.x, y: 0 },
     { x: p.x, y: p.y },
@@ -124,6 +123,7 @@ function projectionData(p) {
   ];
 }
 
+/* Range helpers */
 function finiteYs(dataset) {
   const ys = [];
   for (const p of dataset) {
@@ -144,8 +144,7 @@ function paddedRange(mn, mx, padFrac = 0.12) {
   return { min: Math.max(0, mn - pad), max: mx + pad };
 }
 
-// Plugin: force y ticks to only show specified values (labels only).
-// IMPORTANT: does NOT change min/max; it only sets tick positions.
+/* Plugin: y ticks only at highlighted point y-values (formatted to hundredths) */
 const pointTicksPlugin = {
   id: "pointTicks",
   afterBuildTicks(chart, args, opts) {
@@ -162,13 +161,8 @@ const pointTicksPlugin = {
 };
 Chart.register(pointTicksPlugin);
 
-// Sticky ranges (per chart). Expand but never shrink until reset.
-const sticky = {
-  YL: null,
-  YK: null,
-  MPL: null,
-  MPK: null
-};
+/* Sticky axis ranges per chart (expand, don’t shrink) */
+const sticky = { YL: null, YK: null, MPL: null, MPK: null };
 
 function stickyUpdate(key, desiredMin, desiredMax) {
   if (!sticky[key]) sticky[key] = { min: desiredMin, max: desiredMax };
@@ -177,11 +171,44 @@ function stickyUpdate(key, desiredMin, desiredMax) {
   return sticky[key];
 }
 
-function stickyReset() {
-  sticky.YL = sticky.YK = sticky.MPL = sticky.MPK = null;
+function stickySetInitial(initialRanges) {
+  sticky.YL = { ...initialRanges.YL };
+  sticky.YK = { ...initialRanges.YK };
+  sticky.MPL = { ...initialRanges.MPL };
+  sticky.MPK = { ...initialRanges.MPK };
 }
 
-// Charts
+/* Initial y-axis scales:
+   "what it would be if K=max but A and L are at initial values"
+   - For Y vs L: use A=BASE.A, K=10 (max), vary L
+   - For Y vs K: use A=BASE.A, L=BASE.L (initial), vary K (includes K max)
+   - For MPL:    use A=BASE.A, K=10 (max), vary L
+   - For MPK:    use A=BASE.A, L=BASE.L (initial), vary K
+*/
+function computeInitialRanges() {
+  const A0 = BASE.A;
+  const L0 = BASE.L;
+
+  const refYL  = curveYvsL(A0, 10);
+  const refYK  = curveYvsK(A0, L0);
+  const refMPL = curveMPL(A0, 10);
+  const refMPK = curveMPK(A0, L0);
+
+  // Also include baseline curves so baseline is definitely in frame initially
+  const baseYL  = curveYvsL(BASE.A, BASE.K);
+  const baseYK  = curveYvsK(BASE.A, BASE.L);
+  const baseMPL = curveMPL(BASE.A, BASE.K);
+  const baseMPK = curveMPK(BASE.A, BASE.L);
+
+  const rYL  = paddedRange(...Object.values(unionMinMax(refYL,  baseYL)),  0.12);
+  const rYK  = paddedRange(...Object.values(unionMinMax(refYK,  baseYK)),  0.12);
+  const rMPL = paddedRange(...Object.values(unionMinMax(refMPL, baseMPL)), 0.18);
+  const rMPK = paddedRange(...Object.values(unionMinMax(refMPK, baseMPK)), 0.18);
+
+  return { YL: rYL, YK: rYK, MPL: rMPL, MPK: rMPK };
+}
+
+/* Charts */
 let chYL = null, chYK = null, chMPL = null, chMPK = null;
 
 function makeChart(canvas, xLabel, yLabel) {
@@ -189,18 +216,12 @@ function makeChart(canvas, xLabel, yLabel) {
     type: "line",
     data: {
       datasets: [
-        // 0 baseline curve
-        { data: [], borderWidth: 2, pointRadius: 0 },
-        // 1 current curve
-        { data: [], borderWidth: 3, pointRadius: 0 },
-        // 2 segment between two highlighted points (output charts)
-        { data: [], borderWidth: 3, pointRadius: 0 },
-        // 3 highlighted points
-        { data: [], showLine: false, pointRadius: 5 },
-        // 4 projections for point A
-        { data: [], borderWidth: 2, pointRadius: 0 },
-        // 5 projections for point B
-        { data: [], borderWidth: 2, pointRadius: 0 },
+        { data: [], borderWidth: 2, pointRadius: 0 },          // baseline
+        { data: [], borderWidth: 3, pointRadius: 0 },          // current
+        { data: [], borderWidth: 3, pointRadius: 0 },          // segment (output)
+        { data: [], showLine: false, pointRadius: 5 },         // points
+        { data: [], borderWidth: 2, pointRadius: 0 },          // projections A
+        { data: [], borderWidth: 2, pointRadius: 0 },          // projections B
       ]
     },
     options: {
@@ -222,7 +243,10 @@ function makeChart(canvas, xLabel, yLabel) {
         },
         y: {
           grid: { display: true },
-          title: { display: true, text: yLabel }
+          title: { display: true, text: yLabel },
+          ticks: {
+            callback: (value) => Number(value).toFixed(2)
+          }
         }
       }
     }
@@ -230,14 +254,9 @@ function makeChart(canvas, xLabel, yLabel) {
 }
 
 function styleChart(ch) {
-  // baseline grey dashed
   ch.data.datasets[0].borderColor = "rgba(0,0,0,0.25)";
   ch.data.datasets[0].borderDash = [6, 6];
-
-  // segment dotted
   ch.data.datasets[2].borderDash = [2, 4];
-
-  // projection lines dashed grey
   ch.data.datasets[4].borderColor = "rgba(0,0,0,0.25)";
   ch.data.datasets[4].borderDash = [4, 4];
   ch.data.datasets[5].borderColor = "rgba(0,0,0,0.25)";
@@ -258,14 +277,14 @@ function update() {
   const s = state();
   const A = s.A, K = s.K, L = s.L;
 
-  // Table values
+  // Values for metrics
   const y = F(A, K, L);
   const mpl = (L > 0) ? (F(A, K, L) - F(A, K, L - 1)) : NaN;
   const mpk = (K > 0) ? (F(A, K, L) - F(A, K - 1, L)) : NaN;
 
-  els.tblY.textContent = fmt(y);
-  els.tblMPL.textContent = isFinite(mpl) ? fmt(mpl) : "—";
-  els.tblMPK.textContent = isFinite(mpk) ? fmt(mpk) : "—";
+  els.tblY.textContent   = fmt2(y);
+  els.tblMPL.textContent = isFinite(mpl) ? fmt2(mpl) : "—";
+  els.tblMPK.textContent = isFinite(mpk) ? fmt2(mpk) : "—";
 
   // Baseline + current curves
   const baseYL  = curveYvsL(BASE.A, BASE.K);
@@ -280,14 +299,13 @@ function update() {
   const baseMPK = curveMPK(BASE.A, BASE.L);
   const curMPK  = curveMPK(A, L);
 
-  // Highlight points and projections (output)
+  // Highlight points (integer current and previous step)
   const pYL_now = { x: L, y: F(A, K, L) };
   const pYL_prev = (L > 0) ? { x: L - 1, y: F(A, K, L - 1) } : null;
 
   const pYK_now = { x: K, y: F(A, K, L) };
   const pYK_prev = (K > 0) ? { x: K - 1, y: F(A, K - 1, L) } : null;
 
-  // MP points (at integer x)
   const pMPL = (L > 0) ? { x: L, y: mpl } : null;
   const pMPK = (K > 0) ? { x: K, y: mpk } : null;
 
@@ -295,15 +313,14 @@ function update() {
     ch.data.datasets[0].data = base;
     ch.data.datasets[1].data = cur;
 
-    // y-range: include full baseline + current, and keep it sticky
+    // axis range includes full baseline + current, sticky
     const mm = unionMinMax(base, cur);
     const rr = paddedRange(mm.min, mm.max, 0.12);
     const stick = stickyUpdate(key, rr.min, rr.max);
     ch.options.scales.y.min = stick.min;
     ch.options.scales.y.max = stick.max;
 
-    // y ticks: ONLY values for the highlighted points (unique)
-    ch.options.plugins.pointTicks.enabled = true;
+    // tick values (points only)
     ch.options.plugins.pointTicks.values = tickVals.filter(v => isFinite(v));
   }
 
@@ -347,32 +364,36 @@ function update() {
   chMPK.data.datasets[5].data = pMPK ? projectionData(pMPK) : [];
   chMPK.update();
 
-  // Notes
+  // Notes (rounded to hundredths)
   els.noteYL.textContent = pYL_prev
-    ? `At K=${K}: Y(L=${L})=${fmt(pYL_now.y)} and Y(L=${L-1})=${fmt(pYL_prev.y)} → MPL=${fmt(mpl)}.`
+    ? `At K=${K}: Y(L=${L})=${fmt2(pYL_now.y)} and Y(L=${L-1})=${fmt2(pYL_prev.y)} → MPL=${fmt2(mpl)}.`
     : `MPL is defined starting at L=1 (needs L−1).`;
 
   els.noteYK.textContent = pYK_prev
-    ? `At L=${L}: Y(K=${K})=${fmt(pYK_now.y)} and Y(K=${K-1})=${fmt(pYK_prev.y)} → MPK=${fmt(mpk)}.`
+    ? `At L=${L}: Y(K=${K})=${fmt2(pYK_now.y)} and Y(K=${K-1})=${fmt2(pYK_prev.y)} → MPK=${fmt2(mpk)}.`
     : `MPK is defined starting at K=1 (needs K−1).`;
 
   els.noteMPL.textContent = pMPL
-    ? `The MPL curve is smooth here because we evaluate F(K,L)−F(K,L−1) for real-valued L. The highlighted point is at your integer L.`
+    ? `The MPL curve is smooth because we evaluate F(K,L)−F(K,L−1) for real-valued L. Highlighted point uses your integer L.`
     : `Increase L to at least 1 to define MPL.`;
 
   els.noteMPK.textContent = pMPK
-    ? `The MPK curve is smooth here because we evaluate F(K,L)−F(K−1,L) for real-valued K. The highlighted point is at your integer K.`
+    ? `The MPK curve is smooth because we evaluate F(K,L)−F(K−1,L) for real-valued K. Highlighted point uses your integer K.`
     : `Increase K to at least 1 to define MPK.`;
 
-  setStatus("Axes expand as needed but do not shrink until Reset, so the baseline curve won’t appear to move when you shift the current curve.");
+  setStatus("Axes start with a wide initial scale (K at max, A/L at initial), then expand if needed. They don’t shrink until Reset.");
 }
 
 function resetToBaseline() {
+  // set sliders
   els.A_r.value = els.A_n.value = BASE.A;
   els.K_r.value = els.K_n.value = BASE.K;
   els.L_r.value = els.L_n.value = BASE.L;
 
-  stickyReset();
+  // initialize sticky ranges per your requested initial scale
+  const initRanges = computeInitialRanges();
+  stickySetInitial(initRanges);
+
   update();
 
   if (window.MathJax && window.MathJax.typesetPromise) {
@@ -383,7 +404,6 @@ function resetToBaseline() {
 bindPair(els.A_r, els.A_n, update);
 bindPair(els.K_r, els.K_n, update);
 bindPair(els.L_r, els.L_n, update);
-
 els.resetBtn.addEventListener("click", resetToBaseline);
 
 // init
