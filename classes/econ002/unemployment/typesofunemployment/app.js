@@ -1,6 +1,6 @@
 window.addEventListener("DOMContentLoaded", () => {
-  // ---- Helpers ----
   const $ = (id) => document.getElementById(id);
+  const missing = [];
 
   function must(id){
     const el = $(id);
@@ -8,33 +8,33 @@ window.addEventListener("DOMContentLoaded", () => {
     return el;
   }
 
-  function setStatus(msg){
-    if (els.status) els.status.textContent = msg;
-    else console.warn(msg);
-  }
-
-  function fmtPct(x){ return (100*x).toFixed(2) + "%"; }
-
-  // ---- Grab required elements (and validate) ----
-  const missing = [];
   const els = {
-    zoneS: must("zoneS"),
-    zoneF: must("zoneF"),
-    zoneSx: must("zoneSx"),
-    zoneC: must("zoneC"),
+    // zones
+    zoneStaging: must("zoneStaging"),
+    zoneFrictional: must("zoneFrictional"),
+    zoneStructural: must("zoneStructural"),
+    zoneCyclical: must("zoneCyclical"),
 
+    // controls
     newRoundBtn: must("newRoundBtn"),
     resetBtn: must("resetBtn"),
     status: must("status"),
-
     checkBtn: must("checkBtn"),
     checkMsg: must("checkMsg"),
 
-    mU: must("mU"),
-    mUnat: must("mUnat"),
-    mUcyc: must("mUcyc"),
-    mPop: must("mPop"),
+    // employed controls
+    empSlider: must("empSlider"),
+    empNumber: must("empNumber"),
+    empVal: must("empVal"),
 
+    // metrics
+    m_u: must("m_u"),
+    m_ustar: must("m_ustar"),
+    m_ucyc: must("m_ucyc"),
+    m_U: must("m_U"),
+    m_LF: must("m_LF"),
+
+    // mcq
     mcq1: must("mcq1"),
     mcq2: must("mcq2"),
     submitBtn: must("submitBtn"),
@@ -42,52 +42,47 @@ window.addEventListener("DOMContentLoaded", () => {
     decompNote: must("decompNote"),
   };
 
+  function setStatus(msg){
+    if (els.status) els.status.textContent = msg;
+  }
+
+  function fmtPct(x){ return (100*x).toFixed(2) + "%"; }
+
   if (missing.length){
+    console.error("Missing element IDs:", missing);
     setStatus(`Missing element IDs in HTML: ${missing.join(", ")}`);
-    console.error("Types of Unemployment Lab: missing IDs:", missing);
     return;
   }
 
-  // ---- State ----
-  let cards = [];
-  let nextId = 1;
-
-  const empSlider = document.getElementById("empSlider");
-const empVal = document.getElementById("empVal");
-
-const m_u = document.getElementById("m_u");
-const m_ustar = document.getElementById("m_ustar");
-const m_ucyc = document.getElementById("m_ucyc");
-const m_U = document.getElementById("m_U");
-const m_LF = document.getElementById("m_LF");
-
-  function getE(){
-  return Number(empSlider?.value || 0);
-}
-
-  // Templates
+  // Types: FRIC, STRU, CYC
   const TEMPLATES = [
     // frictional
-    { type:"F", text:"Quit a job to search for a better match in the same city.", exp:"Frictional: job-to-job search/matching." },
-    { type:"F", text:"Recent graduate searching for a first job.", exp:"Frictional: new entrant searching." },
-    { type:"F", text:"Moved to a new city and is searching for work.", exp:"Frictional: search after relocation." },
-    { type:"F", text:"Seasonal worker between seasonal jobs and actively searching.", exp:"Frictional: short-term transition/search." },
-    { type:"F", text:"Left a job and is comparing offers/interviewing.", exp:"Frictional: matching process." },
+    { type:"FRIC", text:"Quit a job to search for a better match in the same city.", exp:"Frictional: job-to-job search/matching." },
+    { type:"FRIC", text:"Recent graduate searching for a first job.", exp:"Frictional: new entrant searching." },
+    { type:"FRIC", text:"Moved to a new city and is searching for work.", exp:"Frictional: search after relocation." },
+    { type:"FRIC", text:"Seasonal worker between seasonal jobs and actively searching.", exp:"Frictional: short transition/search." },
+    { type:"FRIC", text:"Left a job and is comparing offers/interviewing.", exp:"Frictional: matching process." },
+    { type:"FRIC", text:"Quit a job because of a poor fit; actively looking for a new one.", exp:"Frictional: search/matching." },
 
     // structural
-    { type:"Sx", text:"Factory closes due to automation; workers need new skills.", exp:"Structural: skills mismatch after technology change." },
-    { type:"Sx", text:"Coal industry declines; workers must retrain for other sectors.", exp:"Structural: industry shift/mismatch." },
-    { type:"Sx", text:"Demand shifts from retail to e-commerce; store workers displaced.", exp:"Structural: sectoral reallocation." },
-    { type:"Sx", text:"Workers in a shrinking region struggle to find local jobs.", exp:"Structural: geographic mismatch." },
-    { type:"Sx", text:"Licensing requirements prevent switching into a growing occupation.", exp:"Structural: institutional barrier/mismatch." },
+    { type:"STRU", text:"Factory closes due to automation; workers need new skills.", exp:"Structural: skills mismatch after tech change." },
+    { type:"STRU", text:"Coal industry declines; workers must retrain for other sectors.", exp:"Structural: industry shift/mismatch." },
+    { type:"STRU", text:"Demand shifts from retail to e-commerce; store workers displaced.", exp:"Structural: sectoral reallocation." },
+    { type:"STRU", text:"Workers in a shrinking region struggle to find local jobs.", exp:"Structural: geographic mismatch." },
+    { type:"STRU", text:"Licensing requirements block switching into a growing occupation.", exp:"Structural: institutional barrier/mismatch." },
+    { type:"STRU", text:"New technology changes tasks; workers need retraining.", exp:"Structural: skills mismatch." },
 
     // cyclical
-    { type:"C", text:"Recession causes falling sales; firms lay off workers broadly.", exp:"Cyclical: weak demand in a downturn." },
-    { type:"C", text:"Construction employment drops because interest rates rise and spending falls.", exp:"Cyclical: demand-sensitive layoffs." },
-    { type:"C", text:"Restaurants cut staff after a sharp decline in consumer spending.", exp:"Cyclical: aggregate demand fall." },
-    { type:"C", text:"A downturn reduces exports; manufacturers lay off workers.", exp:"Cyclical: demand shock." },
-    { type:"C", text:"Hiring freezes spread during a recession.", exp:"Cyclical: economy-wide weakness." },
+    { type:"CYC", text:"Recession causes falling sales; firms lay off workers broadly.", exp:"Cyclical: weak demand in a downturn." },
+    { type:"CYC", text:"Restaurants cut staff after a sharp decline in consumer spending.", exp:"Cyclical: aggregate demand fall." },
+    { type:"CYC", text:"A downturn reduces exports; manufacturers lay off workers.", exp:"Cyclical: demand shock." },
+    { type:"CYC", text:"Hiring freezes spread during a recession.", exp:"Cyclical: economy-wide weakness." },
+    { type:"CYC", text:"Construction employment drops when spending falls sharply.", exp:"Cyclical: demand-sensitive layoffs." },
+    { type:"CYC", text:"Firms reduce hours and lay off workers after orders collapse.", exp:"Cyclical: demand collapse." },
   ];
+
+  let cards = [];
+  let nextId = 1;
 
   function drawPeople(){
     return 4 + Math.floor(Math.random()*25); // 4..28
@@ -98,14 +93,13 @@ const m_LF = document.getElementById("m_LF");
       id: "c" + (nextId++),
       people: drawPeople(),
       text: tpl.text,
-      correct: tpl.type,  // F | Sx | C
+      correct: tpl.type,
       exp: tpl.exp,
-      zone: "S",
+      zone: "STAGE",
       checked: null
     };
   }
 
-  // ---- Drag/drop ----
   function setupDropzone(zoneEl){
     zoneEl.addEventListener("dragover", (ev) => {
       ev.preventDefault();
@@ -123,21 +117,20 @@ const m_LF = document.getElementById("m_LF");
       c.checked = null;
       els.checkMsg.textContent = "";
       renderZones();
-      updateDecomp();
+      updateDashboard();
     });
   }
 
-  setupDropzone(els.zoneS);
-  setupDropzone(els.zoneF);
-  setupDropzone(els.zoneSx);
-  setupDropzone(els.zoneC);
+  setupDropzone(els.zoneStaging);
+  setupDropzone(els.zoneFrictional);
+  setupDropzone(els.zoneStructural);
+  setupDropzone(els.zoneCyclical);
 
-  // ---- Rendering ----
   function renderZones(){
-    els.zoneS.innerHTML = "";
-    els.zoneF.innerHTML = "";
-    els.zoneSx.innerHTML = "";
-    els.zoneC.innerHTML = "";
+    els.zoneStaging.innerHTML = "";
+    els.zoneFrictional.innerHTML = "";
+    els.zoneStructural.innerHTML = "";
+    els.zoneCyclical.innerHTML = "";
 
     for (const c of cards){
       const el = document.createElement("div");
@@ -158,85 +151,89 @@ const m_LF = document.getElementById("m_LF");
         ev.dataTransfer.effectAllowed = "move";
       });
 
-      const zoneEl = (c.zone === "S") ? els.zoneS :
-                     (c.zone === "F") ? els.zoneF :
-                     (c.zone === "Sx") ? els.zoneSx : els.zoneC;
+      const zoneEl =
+        (c.zone === "STAGE") ? els.zoneStaging :
+        (c.zone === "FRIC") ? els.zoneFrictional :
+        (c.zone === "STRU") ? els.zoneStructural :
+        els.zoneCyclical;
 
       zoneEl.appendChild(el);
     }
   }
 
-  function countsFromZones(){
-    let F=0,Sx=0,C=0;
+  function counts(){
+    let F=0,S=0,C=0;
     for (const c of cards){
-      if (c.zone === "F") F += c.people;
-      else if (c.zone === "Sx") Sx += c.people;
-      else if (c.zone === "C") C += c.people;
+      if (c.zone === "FRIC") F += c.people;
+      else if (c.zone === "STRU") S += c.people;
+      else if (c.zone === "CYC") C += c.people;
     }
-    const Pop = F + Sx + C;
-    return {F,Sx,C,Pop};
+    return {F,S,C, U: F+S+C};
   }
 
-  function updateDecomp(){
-  const {F,Sx,C,Pop} = countsFromZones();
-  const U = F + Sx + C;
-  const E = getE();
-  const LF = E + U;
-
-  if (empVal) empVal.textContent = String(E);
-
-  if (LF === 0){
-    m_u.textContent = "—";
-    m_ustar.textContent = "—";
-    m_ucyc.textContent = "—";
-    m_U.textContent = "0";
-    m_LF.textContent = "0";
-    els.decompNote.textContent = "Set E and place some cards into F/S/C to see u, u*, and cyclical unemployment.";
-    return;
+  function getE(){
+    return Number(els.empSlider.value || 0);
   }
 
-  const u = U / LF;
-  const uStar = (F + Sx) / LF;
-  const uCyc = C / LF;
+  function updateDashboard(){
+    // sync slider + number input + pill
+    els.empNumber.value = els.empSlider.value;
+    els.empVal.textContent = String(getE());
 
-  m_u.textContent = fmtPct(u);
-  m_ustar.textContent = fmtPct(uStar);
-  m_ucyc.textContent = fmtPct(uCyc);
-  m_U.textContent = String(U);
-  m_LF.textContent = String(LF);
+    const {F,S,C,U} = counts();
+    const E = getE();
+    const LF = E + U;
 
-  els.decompNote.textContent =
-    `Totals: F=${F}, S=${Sx}, C=${C}, U=${U}, E=${E}. ` +
-    `u=${(100*u).toFixed(2)}%, u*=${(100*uStar).toFixed(2)}%, cyclical=${(100*uCyc).toFixed(2)}%.`;
-}
+    if (LF === 0){
+      els.m_u.textContent = "—";
+      els.m_ustar.textContent = "—";
+      els.m_ucyc.textContent = "—";
+      els.m_U.textContent = "0";
+      els.m_LF.textContent = "0";
+      els.decompNote.textContent = "Place some cards into the buckets (and set E) to see u, u*, and cyclical unemployment.";
+      return;
+    }
 
-  empSlider.addEventListener("input", updateDecomp);
+    const u = U / LF;
+    const uStar = (F + S) / LF;
+    const uCyc = C / LF;
 
-  // ---- Actions ----
+    els.m_u.textContent = fmtPct(u);
+    els.m_ustar.textContent = fmtPct(uStar);
+    els.m_ucyc.textContent = fmtPct(uCyc);
+    els.m_U.textContent = String(U);
+    els.m_LF.textContent = String(LF);
+
+    els.decompNote.textContent =
+      `From your placed cards: F=${F}, S=${S}, C=${C} (so U=${U}). With E=${E}, LF=${LF}.`;
+  }
+
   function newRound(){
+    nextId = 1;
     const pool = [...TEMPLATES].sort(()=>Math.random()-0.5);
     const n = 10 + Math.floor(Math.random()*5); // 10..14
     cards = pool.slice(0, n).map(makeCard);
 
     els.checkMsg.textContent = "";
-    els.feedback.textContent = "Answer the questions and submit. (This uses your current sorting.)";
+    els.feedback.textContent = "Answer the questions and submit.";
     els.mcq1.value = "";
     els.mcq2.value = "";
 
     renderZones();
-    updateDecomp();
+    updateDashboard();
     setStatus("New round loaded.");
   }
 
   function reset(){
-    nextId = 1;
+    // keep E as-is; reset cards
     newRound();
+    setStatus("Reset.");
   }
 
   function check(){
     let correct = 0, placed = 0;
     for (const c of cards){
-      if (c.zone === "S") { c.checked = null; continue; }
+      if (c.zone === "STAGE") { c.checked = null; continue; }
       placed++;
       c.checked = (c.zone === c.correct);
       if (c.checked) correct++;
@@ -246,35 +243,49 @@ const m_LF = document.getElementById("m_LF");
   }
 
   function submit(){
-    const {F,Sx,C,Pop} = countsFromZones();
-    if (Pop === 0){
-      els.feedback.textContent = "Place some cards into the buckets first.";
+    const {F,S,C,U} = counts();
+    const E = getE();
+    const LF = E + U;
+
+    if (U === 0){
+      els.feedback.innerHTML = "Place at least one card into a bucket first.";
       return;
     }
 
-    const uCyc = C/Pop;
-    const cycTruth = (uCyc > 0.0001) ? "pos" : "zero";
+    const uCyc = (LF>0) ? (C/LF) : 0;
 
-    const ok1 = els.mcq1.value === cycTruth;
-    const ok2 = els.mcq2.value === "cyc";
+    const ok1 = els.mcq1.value === "cyc";
+    const ok2 = els.mcq2.value === "struct";
 
     els.feedback.innerHTML =
       `<strong>Answer check:</strong><br>` +
-      `Cyclical unemployment is <strong>${uCyc > 0.0001 ? "positive" : "about zero"}</strong> because cyclical share = ${(100*uCyc).toFixed(2)}%. ${ok1 ? "✅" : "❌"}<br>` +
-      `When a recession ends, <strong>cyclical unemployment</strong> typically falls the most. ${ok2 ? "✅" : "❌"}<br><br>` +
-      `<strong>Interpretation:</strong> frictional + structural make up the “natural” component (u*). Cyclical is the business-cycle part.`;
+      `In a recession, <strong>cyclical</strong> unemployment typically rises the most. ${ok1 ? "✅" : "❌"}<br>` +
+      `A retraining program mainly reduces <strong>structural</strong> unemployment. ${ok2 ? "✅" : "❌"}<br><br>` +
+      `<strong>Numbers right now:</strong> U=${U}, E=${E}, LF=${LF}. Cyclical rate = ${(100*uCyc).toFixed(2)}%.`;
   }
 
-  // ---- Wire up ----
+  // Wire slider input (keep them synced)
+  els.empSlider.addEventListener("input", updateDashboard);
+  els.empNumber.addEventListener("input", () => {
+    const v = Number(els.empNumber.value);
+    if (!Number.isFinite(v)) return;
+    // clamp to slider range + step
+    const min = Number(els.empSlider.min), max = Number(els.empSlider.max);
+    const step = Number(els.empSlider.step) || 1;
+    const clamped = Math.max(min, Math.min(max, Math.round(v/step)*step));
+    els.empSlider.value = String(clamped);
+    updateDashboard();
+  });
+
   els.newRoundBtn.addEventListener("click", newRound);
   els.resetBtn.addEventListener("click", reset);
   els.checkBtn.addEventListener("click", check);
   els.submitBtn.addEventListener("click", submit);
 
-  // typeset header once (optional)
+  // typeset header once
   const top = document.getElementById("mathTop");
   if (top && window.MathJax?.typesetPromise) window.MathJax.typesetPromise([top]);
 
   // Start
-  reset();
+  newRound();
 });
