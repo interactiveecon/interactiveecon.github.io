@@ -374,11 +374,11 @@ function update() {
     : `MPK is defined starting at K=1 (needs K−1).`;
 
   els.noteMPL.textContent = pMPL
-    ? `The MPL curve is smooth because we evaluate F(K,L)−F(K,L−1) for real-valued L. Highlighted point uses your integer L.`
+    ? 
     : `Increase L to at least 1 to define MPL.`;
 
   els.noteMPK.textContent = pMPK
-    ? `The MPK curve is smooth because we evaluate F(K,L)−F(K−1,L) for real-valued K. Highlighted point uses your integer K.`
+    ? 
     : `Increase K to at least 1 to define MPK.`;
 
   setStatus("Axes start with a wide initial scale (K at max, A/L at initial), then expand if needed. They don’t shrink until Reset.");
