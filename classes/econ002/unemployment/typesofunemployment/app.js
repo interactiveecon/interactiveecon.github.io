@@ -15,7 +15,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
     checkBtn: must("checkBtn"),
     checkMsg: must("checkMsg"),
-    explainBox: must("explainBox"),
 
     m_LF: must("m_LF"),
     m_E: must("m_E"),
