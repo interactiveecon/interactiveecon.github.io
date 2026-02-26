@@ -17,35 +17,33 @@ window.addEventListener("DOMContentLoaded", () => {
     checkMsg: must("checkMsg"),
     explainBox: must("explainBox"),
 
-    // metrics
+    m_LF: must("m_LF"),
     m_E: must("m_E"),
     m_U: must("m_U"),
-    m_LF: must("m_LF"),
     m_u: must("m_u"),
     m_ustar: must("m_ustar"),
     m_ucyc: must("m_ucyc"),
 
-    // business cycle
-    gapChart: must("gapChart"),
+    growthChart: must("growthChart"),
     qSlider: must("qSlider"),
     qLabel: must("qLabel"),
-    gapVal: must("gapVal"),
+    gVal: must("gVal"),
     recessionBtn: must("recessionBtn"),
-    recoveryBtn: must("recoveryBtn"),
+    expansionBtn: must("expansionBtn"),
     resetCycleBtn: must("resetCycleBtn"),
     cycleNote: must("cycleNote"),
   };
 
-  function setStatus(msg){ if (els.status) els.status.textContent = msg; }
+  function setStatus(msg){ els.status.textContent = msg; }
   function fmtPct(x){ return (100*x).toFixed(2) + "%"; }
 
   if (missing.length){
     console.error("Missing element IDs:", missing);
-    if (els.status) els.status.textContent = `Missing element IDs: ${missing.join(", ")}`;
+    if (els.status) els.status.textContent = `Missing IDs: ${missing.join(", ")}`;
     return;
   }
 
-  // ---- Card templates (expand freely) ----
+  // --- Card templates (expand freely) ---
   const TEMPLATES = [
     // frictional
     { type:"FRIC", text:"Quit a job to search for a better match in the same city." },
@@ -61,35 +59,32 @@ window.addEventListener("DOMContentLoaded", () => {
     { type:"STRU", text:"Workers in a shrinking region struggle to find local jobs." },
     { type:"STRU", text:"Licensing requirements block switching into a growing occupation." },
 
-    // cyclical (these cards represent demand-driven unemployment; their counts will be adjusted by the cycle)
-    { type:"CYC", text:"Sales fall in a recession; firms lay off workers broadly." },
+    // cyclical examples (classification practice)
+    { type:"CYC", text:"Sales fall; firms lay off workers broadly." },
     { type:"CYC", text:"Restaurants cut staff after a decline in consumer spending." },
     { type:"CYC", text:"A downturn reduces exports; manufacturers lay off workers." },
     { type:"CYC", text:"Hiring freezes spread during a recession." },
     { type:"CYC", text:"Construction layoffs rise when spending falls sharply." },
   ];
 
-  // ---- State ----
+  // --- State ---
   let cards = [];
   let nextId = 1;
 
-  // Employed workers E: random each round
-  let E = 900;
+  // Fixed labor force each round
+  let LF = 1200;
 
-  // Business cycle: 12 quarters
+  // Business cycle series: growth rate of output (%)
   const T = 12;
-  let gapBase = new Array(T).fill(0);
-  let gap = new Array(T).fill(0);
+  let gBase = new Array(T).fill(0);
+  let g = new Array(T).fill(0);
   let tCur = 0;
 
-  // Mapping parameters
-  // gap is in percent (e.g., -4.0 means output 4% below potential)
-  // cyclical rate = max(0, kappa * (-gap))
-  const KAPPA = 0.010; // -4% gap -> 4% cyclical rate
+  // Trend growth rate and mapping strength
+  const G_STAR = 2.0;     // trend growth (%)
+  const KAPPA = 0.015;    // (growth below trend by 2pp) -> cyclical rate +3%
 
-  // ---- Helpers ----
   function drawPeople(){
-    // baseline people on a card (will be adjusted if cyclical & placed)
     return 4 + Math.floor(Math.random()*25); // 4..28
   }
 
@@ -100,10 +95,26 @@ window.addEventListener("DOMContentLoaded", () => {
       text: tpl.text,
       correct: tpl.type,  // FRIC | STRU | CYC
       zone: "STAGE",
-      checked: null,
-      // For cyclical cards, store a baseline weight for distributing C_target
-      weight: (tpl.type === "CYC") ? 1 : 0
+      checked: null
     };
+  }
+
+  // Special signed cyclical card that represents net cyclical effect (can be negative)
+  function ensureNetCycCard(){
+    let c = cards.find(x => x.isNetCyc === true);
+    if (c) return c;
+
+    c = {
+      id: "c" + (nextId++),
+      people: 0, // signed
+      text: "Net cyclical effect (business cycle).",
+      correct: "CYC",
+      zone: "CYC",
+      checked: null,
+      isNetCyc: true
+    };
+    cards.push(c);
+    return c;
   }
 
   function setupDropzone(zoneEl){
@@ -123,7 +134,6 @@ window.addEventListener("DOMContentLoaded", () => {
       c.checked = null;
       els.checkMsg.textContent = "";
       renderZones();
-      // Changing placement can change counts
       recomputeAll();
     });
   }
@@ -148,8 +158,10 @@ window.addEventListener("DOMContentLoaded", () => {
       el.draggable = true;
       el.dataset.cardId = c.id;
 
+      const isNeg = (c.zone === "CYC" && c.isNetCyc && c.people < 0);
+
       el.innerHTML = `
-        <div class="badge">${c.people} people</div>
+        <div class="badge ${isNeg ? "neg" : ""}">${c.people} people</div>
         <div class="desc">${c.text}</div>
       `;
 
@@ -168,125 +180,25 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function countsPlaced(){
+  function placedCounts(){
     let F=0,S=0,C=0;
     for (const c of cards){
       if (c.zone === "FRIC") F += c.people;
       else if (c.zone === "STRU") S += c.people;
-      else if (c.zone === "CYC") C += c.people;
+      else if (c.zone === "CYC" && !c.isNetCyc) C += c.people;
     }
-    return {F,S,C, U: F+S+C};
+    return {F,S,C};
   }
 
-  // Ensure there is at least one cyclical card placed when we need to allocate C_target
-  function ensureCyclicalCarrierCard(){
-    // If there is already at least one cyc card in CYC bucket, do nothing.
-    const hasCycPlaced = cards.some(c => c.correct === "CYC" && c.zone === "CYC");
-    if (hasCycPlaced) return;
-
-    // If target cyclical is positive, create a carrier card in CYC bucket
-    const carrier = {
-      id: "c" + (nextId++),
-      people: 0,
-      text: "Economy-wide layoffs due to weak demand in a recession.",
-      correct: "CYC",
-      zone: "CYC",
-      checked: null,
-      weight: 1
-    };
-    cards.push(carrier);
+  function cycRateFromGrowth(growth){
+    // cyclical rate is positive when growth < trend; negative when growth > trend
+    return -KAPPA * (growth - G_STAR);
   }
 
-  function cyclicalRateFromGap(g){
-    return Math.max(0, KAPPA * (-g));
-  }
-
-  function targetCycCount(LF, g){
-    const ucyc = cyclicalRateFromGap(g);
-    return Math.max(0, Math.round(LF * ucyc));
-  }
-
-  // Adjust people counts on cards in the cyclical bucket so they sum to C_target.
-  // We distribute across placed cyclical cards proportionally to their weights.
-  function adjustCyclicalCounts(C_target){
-    // Collect cyc cards placed in cyc bucket
-    let cycCards = cards.filter(c => c.correct === "CYC" && c.zone === "CYC");
-
-    if (C_target > 0 && cycCards.length === 0){
-      ensureCyclicalCarrierCard();
-      cycCards = cards.filter(c => c.correct === "CYC" && c.zone === "CYC");
-    }
-
-    // If still none (shouldn't happen), return.
-    if (cycCards.length === 0){
-      return;
-    }
-
-    const totalW = cycCards.reduce((s,c)=>s + (c.weight || 1), 0) || cycCards.length;
-
-    // Allocate integer counts that sum exactly to C_target
-    let assigned = 0;
-    const allocations = cycCards.map((c, i) => {
-      const raw = C_target * ((c.weight || 1) / totalW);
-      const v = (i === cycCards.length - 1) ? (C_target - assigned) : Math.floor(raw);
-      assigned += v;
-      return v;
-    });
-
-    // If rounding error made last negative, fix by simple redistribution
-    if (allocations[allocations.length - 1] < 0){
-      // fallback: set all but last to 0 and last to C_target
-      for (let i=0;i<allocations.length;i++) allocations[i] = 0;
-      allocations[allocations.length - 1] = C_target;
-    }
-
-    // Apply allocations
-    for (let i=0;i<cycCards.length;i++){
-      cycCards[i].people = allocations[i];
-    }
-
-    // Also: if there are cyc cards in staging or wrong bucket, leave them unchanged.
-  }
-
-  function updateMetricsAndText(){
-    const {F,S,C,U} = countsPlaced();
-    const LF = E + U;
-
-    els.m_E.textContent = String(E);
-    els.m_U.textContent = String(U);
-    els.m_LF.textContent = String(LF);
-
-    if (LF === 0){
-      els.m_u.textContent = "—";
-      els.m_ustar.textContent = "—";
-      els.m_ucyc.textContent = "—";
-      return;
-    }
-
-    const u = U / LF;
-    const uStar = (F + S) / LF;
-    const uCyc = C / LF;
-
-    els.m_u.textContent = fmtPct(u);
-    els.m_ustar.textContent = fmtPct(uStar);
-    els.m_ucyc.textContent = fmtPct(uCyc);
-
-    // Update cycle readouts
-    els.qLabel.textContent = `Q${tCur+1}`;
-    const g = gap[tCur];
-    els.gapVal.textContent = g.toFixed(2);
-
-    const cycRate = cyclicalRateFromGap(g);
-    els.cycleNote.textContent =
-      `At Q${tCur+1}, gap=${g.toFixed(2)}%. This implies cyclical rate ≈ ${(100*cycRate).toFixed(2)}% (κ=${KAPPA.toFixed(3)}).`;
-  }
-
-  // ---- Business cycle chart drawing ----
-  function drawChart(){
-    const canvas = els.gapChart;
+  function drawCycle(){
+    const canvas = els.growthChart;
     const ctx = canvas.getContext("2d");
 
-    // scale for device pixel ratio
     const dpr = window.devicePixelRatio || 1;
     const w = canvas.clientWidth * dpr;
     const h = canvas.clientHeight * dpr;
@@ -296,31 +208,24 @@ window.addEventListener("DOMContentLoaded", () => {
 
     ctx.clearRect(0,0,w,h);
 
-    // bounds
-    const padding = {l: 40*dpr, r: 12*dpr, t: 14*dpr, b: 28*dpr};
-    const X0 = padding.l, X1 = w - padding.r;
-    const Y0 = padding.t, Y1 = h - padding.b;
+    const pad = {l: 44*dpr, r: 12*dpr, t: 14*dpr, b: 28*dpr};
+    const X0 = pad.l, X1 = w - pad.r;
+    const Y0 = pad.t, Y1 = h - pad.b;
 
-    // y-range fixed for clarity
-    const yMin = -6, yMax = 4;
+    // fixed y-range for clarity (growth %)
+    const yMin = -4, yMax = 6;
     const yToPix = (y) => Y0 + (yMax - y) * (Y1 - Y0) / (yMax - yMin);
     const xToPix = (i) => X0 + i * (X1 - X0) / (T-1);
 
-    // gridlines & axis
+    // grid + y ticks
+    const ticks = [-4,-2,0,2,4,6];
     ctx.strokeStyle = "rgba(0,0,0,0.10)";
     ctx.lineWidth = 1*dpr;
-
-    // horizontal grid at y = -6,-4,-2,0,2,4
-    const ticks = [-6,-4,-2,0,2,4];
     for (const y of ticks){
       const py = yToPix(y);
-      ctx.beginPath();
-      ctx.moveTo(X0, py);
-      ctx.lineTo(X1, py);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(X0,py); ctx.lineTo(X1,py); ctx.stroke();
     }
 
-    // axis labels
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "right";
@@ -329,28 +234,27 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.fillText(String(y), X0 - 8*dpr, yToPix(y));
     }
 
-    // x labels Q1..Q12 (sparse)
+    // x labels sparse
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     for (let i=0;i<T;i+=2){
       ctx.fillText(`Q${i+1}`, xToPix(i), Y1 + 6*dpr);
     }
 
-    // zero line thicker
+    // draw trend line at g*
     ctx.strokeStyle = "rgba(0,0,0,0.18)";
     ctx.lineWidth = 2*dpr;
     ctx.beginPath();
-    ctx.moveTo(X0, yToPix(0));
-    ctx.lineTo(X1, yToPix(0));
+    ctx.moveTo(X0, yToPix(G_STAR));
+    ctx.lineTo(X1, yToPix(G_STAR));
     ctx.stroke();
 
-    // series line
+    // series
     ctx.strokeStyle = "rgba(31,119,180,0.85)";
     ctx.lineWidth = 3*dpr;
     ctx.beginPath();
     for (let i=0;i<T;i++){
-      const px = xToPix(i);
-      const py = yToPix(gap[i]);
+      const px = xToPix(i), py = yToPix(g[i]);
       if (i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
     }
     ctx.stroke();
@@ -358,97 +262,103 @@ window.addEventListener("DOMContentLoaded", () => {
     // points
     ctx.fillStyle = "rgba(31,119,180,0.85)";
     for (let i=0;i<T;i++){
-      const px = xToPix(i);
-      const py = yToPix(gap[i]);
-      ctx.beginPath();
-      ctx.arc(px, py, 3.5*dpr, 0, Math.PI*2);
-      ctx.fill();
+      const px = xToPix(i), py = yToPix(g[i]);
+      ctx.beginPath(); ctx.arc(px,py,3.5*dpr,0,Math.PI*2); ctx.fill();
     }
 
     // highlight current quarter
-    const hx = xToPix(tCur);
-    const hy = yToPix(gap[tCur]);
+    const hx = xToPix(tCur), hy = yToPix(g[tCur]);
     ctx.fillStyle = "rgba(230,159,0,0.95)";
-    ctx.beginPath();
-    ctx.arc(hx, hy, 6.5*dpr, 0, Math.PI*2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(hx,hy,6.5*dpr,0,Math.PI*2); ctx.fill();
 
     // title
     ctx.fillStyle = "rgba(0,0,0,0.70)";
     ctx.font = `${13*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
-    ctx.fillText("Output gap (%)", X0, 0);
+    ctx.fillText("Growth rate of output (%)", X0, 0);
   }
 
-  // ---- Cycle generation & shocks ----
   function resetCycle(){
-    // gentle baseline noise around 0
-    gapBase = new Array(T).fill(0).map(() => (Math.random()*1.2 - 0.6)); // [-0.6,0.6]
-    gap = gapBase.slice();
+    // baseline around trend with mild noise
+    gBase = new Array(T).fill(0).map(() => G_STAR + (Math.random()*1.2 - 0.6)); // g* +/- 0.6
+    g = gBase.slice();
     tCur = 0;
     els.qSlider.value = "0";
-    drawChart();
+    drawCycle();
   }
 
   function applyShock(kind){
-    // kind: "recession" or "recovery"
-    // apply a smooth bump starting at tCur for ~5 quarters
-    const amp = (kind === "recession") ? -(1.8 + Math.random()*2.2) : (1.2 + Math.random()*1.6); // recession stronger
+    const amp = (kind === "recession")
+      ? -(1.8 + Math.random()*2.0)   // negative shock to growth
+      : +(1.2 + Math.random()*1.6);  // positive shock to growth
     const len = 5;
     for (let j=0;j<len;j++){
       const t = tCur + j;
       if (t >= T) break;
-      // smooth hump shape
       const w = Math.sin((Math.PI * (j+1)) / (len+1));
-      gap[t] += amp * w;
+      g[t] += amp * w;
     }
-    // clamp
-    gap = gap.map(x => Math.max(-6, Math.min(4, x)));
-    drawChart();
+    // clamp growth range
+    g = g.map(x => Math.max(-4, Math.min(6, x)));
+    drawCycle();
   }
 
-  // ---- Core recompute pipeline ----
+  function updateMetrics(){
+    const {F,S,C: C_examples} = placedCounts();
+
+    // Natural unemployed count (from frictional + structural cards)
+    const U_star = F + S;
+
+    // cyclical rate from current growth
+    const growth = g[tCur];
+    const u_cyc = cycRateFromGrowth(growth); // can be negative
+
+    // cyclical unemployed count (signed)
+    const C_net = Math.round(LF * u_cyc);
+
+    // Total unemployed count (can be < U_star in expansions)
+    const U = U_star + C_net;
+
+    // Employment adjusts one-for-one (LF fixed)
+    const E = LF - U;
+
+    // Rates
+    const u = U / LF;
+    const u_star = U_star / LF;
+    const u_minus_ustar = u - u_star; // equals C_net/LF
+
+    // Show values
+    els.m_LF.textContent = String(LF);
+    els.m_E.textContent = String(E);
+    els.m_U.textContent = String(U);
+
+    els.m_u.textContent = fmtPct(u);
+    els.m_ustar.textContent = fmtPct(u_star);
+    els.m_ucyc.textContent = fmtPct(u_minus_ustar);
+
+    // Update cycle readouts
+    els.qLabel.textContent = `Q${tCur+1}`;
+    els.gVal.textContent = growth.toFixed(2);
+
+    els.cycleNote.textContent =
+      `Trend growth is ${G_STAR.toFixed(1)}%. When growth is below trend, cyclical unemployment is positive; when growth is above trend, cyclical unemployment is negative.`;
+    
+    // Ensure / set net cyclical card in cyclical bucket
+    const netCard = ensureNetCycCard();
+    netCard.people = C_net;
+
+    // Also keep the example cyclical cards as classification practice (they don't affect C_net directly)
+    // (We leave their people counts alone.)
+  }
+
   function recomputeAll(){
-    // First: adjust cyclical counts according to business cycle
-    // We need LF, but LF depends on U, and U includes C (cyclical). This is a fixed-point.
-    // We solve by:
-    // 1) compute natural unemployment from F+S
-    // 2) start with current C from cards
-    // 3) compute LF and target C
-    // 4) set C to target and recompute once (stable enough for teaching)
-
-    // Step A: compute natural counts from placed cards (F+S)
-    let F=0,S=0;
-    for (const c of cards){
-      if (c.zone === "FRIC") F += c.people;
-      else if (c.zone === "STRU") S += c.people;
-    }
-    const U_nat = F + S;
-
-    // Step B: initial guess of LF using C=0
-    const LF0 = E + U_nat;
-    const C_target0 = targetCycCount(LF0, gap[tCur]);
-
-    // Apply cyc counts
-    adjustCyclicalCounts(C_target0);
-
-    // Step C: recompute LF using updated C
-    const {U} = countsPlaced();
-    const LF1 = E + U;
-    const C_target1 = targetCycCount(LF1, gap[tCur]);
-
-    // If target changed, adjust once more
-    if (C_target1 !== C_target0){
-      adjustCyclicalCounts(C_target1);
-    }
-
-    // render + metrics
+    // Keep net cyclical card in cyc bucket so students can always “see” it
+    ensureNetCycCard();
+    updateMetrics();
     renderZones();
-    updateMetricsAndText();
   }
 
-  // ---- User actions ----
   function check(){
     let correct = 0, placed = 0;
     for (const c of cards){
@@ -464,23 +374,21 @@ window.addEventListener("DOMContentLoaded", () => {
   function newRound(){
     nextId = 1;
 
-    // Randomize employed each round
-    // (kept moderate; you can change range)
-    E = 700 + Math.floor(Math.random()*701); // 700..1400
+    // Random LF each round
+    LF = 900 + Math.floor(Math.random()*701); // 900..1600
 
-    // Draw 10..14 random cards
     const pool = [...TEMPLATES].sort(()=>Math.random()-0.5);
-    const n = 10 + Math.floor(Math.random()*5);
+    const n = 10 + Math.floor(Math.random()*5); // 10..14
     cards = pool.slice(0, n).map(makeCard);
 
-    // Reset cycle too so each round feels fresh
+    // Add the net cyclical card immediately (so it’s always visible in CYC bucket)
+    ensureNetCycCard();
+
     resetCycle();
 
     els.checkMsg.textContent = "";
-    els.explainBox.textContent = "Tip: frictional + structural form the “natural” component. Cyclical fluctuates with the business cycle.";
     setStatus("New round loaded.");
 
-    renderZones();
     recomputeAll();
   }
 
@@ -489,14 +397,14 @@ window.addEventListener("DOMContentLoaded", () => {
     setStatus("Reset.");
   }
 
-  // ---- Wire up ----
+  // Wire up
   els.checkBtn.addEventListener("click", check);
   els.newRoundBtn.addEventListener("click", newRound);
   els.resetBtn.addEventListener("click", reset);
 
   els.qSlider.addEventListener("input", () => {
     tCur = Number(els.qSlider.value);
-    drawChart();
+    drawCycle();
     recomputeAll();
   });
 
@@ -506,10 +414,10 @@ window.addEventListener("DOMContentLoaded", () => {
     setStatus(`Applied recession shock starting at Q${tCur+1}.`);
   });
 
-  els.recoveryBtn.addEventListener("click", () => {
-    applyShock("recovery");
+  els.expansionBtn.addEventListener("click", () => {
+    applyShock("expansion");
     recomputeAll();
-    setStatus(`Applied recovery shock starting at Q${tCur+1}.`);
+    setStatus(`Applied expansion shock starting at Q${tCur+1}.`);
   });
 
   els.resetCycleBtn.addEventListener("click", () => {
@@ -522,6 +430,6 @@ window.addEventListener("DOMContentLoaded", () => {
   const top = document.getElementById("mathTop");
   if (top && window.MathJax?.typesetPromise) window.MathJax.typesetPromise([top]);
 
-  // Initial load
+  // Start
   newRound();
 });
