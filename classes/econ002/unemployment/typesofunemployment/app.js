@@ -1,12 +1,7 @@
 window.addEventListener("DOMContentLoaded", () => {
   const $ = (id) => document.getElementById(id);
   const missing = [];
-
-  function must(id){
-    const el = $(id);
-    if (!el) missing.push(id);
-    return el;
-  }
+  const must = (id) => { const el = $(id); if (!el) missing.push(id); return el; };
 
   const els = {
     // zones
@@ -42,15 +37,12 @@ window.addEventListener("DOMContentLoaded", () => {
     decompNote: must("decompNote"),
   };
 
-  function setStatus(msg){
-    if (els.status) els.status.textContent = msg;
-  }
-
+  function setStatus(msg){ els.status.textContent = msg; }
   function fmtPct(x){ return (100*x).toFixed(2) + "%"; }
 
   if (missing.length){
     console.error("Missing element IDs:", missing);
-    setStatus(`Missing element IDs in HTML: ${missing.join(", ")}`);
+    if (els.status) els.status.textContent = `Missing element IDs in HTML: ${missing.join(", ")}`;
     return;
   }
 
@@ -84,9 +76,7 @@ window.addEventListener("DOMContentLoaded", () => {
   let cards = [];
   let nextId = 1;
 
-  function drawPeople(){
-    return 4 + Math.floor(Math.random()*25); // 4..28
-  }
+  function drawPeople(){ return 4 + Math.floor(Math.random()*25); } // 4..28
 
   function makeCard(tpl){
     return {
@@ -168,17 +158,19 @@ window.addEventListener("DOMContentLoaded", () => {
       else if (c.zone === "STRU") S += c.people;
       else if (c.zone === "CYC") C += c.people;
     }
-    return {F,S,C, U: F+S+C};
+    return {F,S,C,U: F+S+C};
   }
 
-  function getE(){
-    return Number(els.empSlider.value || 0);
+  function getE(){ return Number(els.empSlider.value || 0); }
+
+  function syncEUI(){
+    // keep slider, number, and display aligned
+    els.empNumber.value = els.empSlider.value;
+    els.empVal.textContent = String(getE());
   }
 
   function updateDashboard(){
-    // sync slider + number input + pill
-    els.empNumber.value = els.empSlider.value;
-    els.empVal.textContent = String(getE());
+    syncEUI();
 
     const {F,S,C,U} = counts();
     const E = getE();
@@ -190,7 +182,7 @@ window.addEventListener("DOMContentLoaded", () => {
       els.m_ucyc.textContent = "—";
       els.m_U.textContent = "0";
       els.m_LF.textContent = "0";
-      els.decompNote.textContent = "Place some cards into the buckets (and set E) to see u, u*, and cyclical unemployment.";
+      els.decompNote.textContent = "Place cards into the buckets (and set E) to see u, u*, and cyclical unemployment.";
       return;
     }
 
@@ -225,7 +217,6 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function reset(){
-    // keep E as-is; reset cards
     newRound();
     setStatus("Reset.");
   }
@@ -243,16 +234,11 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function submit(){
-    const {F,S,C,U} = counts();
-    const E = getE();
-    const LF = E + U;
-
+    const {U} = counts();
     if (U === 0){
       els.feedback.innerHTML = "Place at least one card into a bucket first.";
       return;
     }
-
-    const uCyc = (LF>0) ? (C/LF) : 0;
 
     const ok1 = els.mcq1.value === "cyc";
     const ok2 = els.mcq2.value === "struct";
@@ -260,16 +246,14 @@ window.addEventListener("DOMContentLoaded", () => {
     els.feedback.innerHTML =
       `<strong>Answer check:</strong><br>` +
       `In a recession, <strong>cyclical</strong> unemployment typically rises the most. ${ok1 ? "✅" : "❌"}<br>` +
-      `A retraining program mainly reduces <strong>structural</strong> unemployment. ${ok2 ? "✅" : "❌"}<br><br>` +
-      `<strong>Numbers right now:</strong> U=${U}, E=${E}, LF=${LF}. Cyclical rate = ${(100*uCyc).toFixed(2)}%.`;
+      `A retraining program mainly reduces <strong>structural</strong> unemployment. ${ok2 ? "✅" : "❌"}`;
   }
 
-  // Wire slider input (keep them synced)
+  // Wire E controls
   els.empSlider.addEventListener("input", updateDashboard);
   els.empNumber.addEventListener("input", () => {
     const v = Number(els.empNumber.value);
     if (!Number.isFinite(v)) return;
-    // clamp to slider range + step
     const min = Number(els.empSlider.min), max = Number(els.empSlider.max);
     const step = Number(els.empSlider.step) || 1;
     const clamped = Math.max(min, Math.min(max, Math.round(v/step)*step));
@@ -277,6 +261,7 @@ window.addEventListener("DOMContentLoaded", () => {
     updateDashboard();
   });
 
+  // Wire buttons
   els.newRoundBtn.addEventListener("click", newRound);
   els.resetBtn.addEventListener("click", reset);
   els.checkBtn.addEventListener("click", check);
