@@ -43,7 +43,7 @@ window.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  // --- Card templates (expand freely) ---
+  // --- Templates (expand freely) ---
   const TEMPLATES = [
     // frictional
     { type:"FRIC", text:"Quit a job to search for a better match in the same city." },
@@ -59,7 +59,7 @@ window.addEventListener("DOMContentLoaded", () => {
     { type:"STRU", text:"Workers in a shrinking region struggle to find local jobs." },
     { type:"STRU", text:"Licensing requirements block switching into a growing occupation." },
 
-    // cyclical examples (classification practice)
+    // cyclical
     { type:"CYC", text:"Sales fall; firms lay off workers broadly." },
     { type:"CYC", text:"Restaurants cut staff after a decline in consumer spending." },
     { type:"CYC", text:"A downturn reduces exports; manufacturers lay off workers." },
@@ -74,47 +74,48 @@ window.addEventListener("DOMContentLoaded", () => {
   // Fixed labor force each round
   let LF = 1200;
 
-  // Business cycle series: growth rate of output (%)
+  // Business cycle: growth rate of output (%)
   const T = 12;
-  let gBase = new Array(T).fill(0);
-  let g = new Array(T).fill(0);
+  let g = new Array(T).fill(2.0); // start neutral at 2
   let tCur = 0;
 
-  // Trend growth rate and mapping strength
-  const G_STAR = 2.0;     // trend growth (%)
-  const KAPPA = 0.015;    // (growth below trend by 2pp) -> cyclical rate +3%
+  const G_STAR = 2.0;
 
-  function drawPeople(){
-    return 4 + Math.floor(Math.random()*25); // 4..28
-  }
+  // Mapping strengths
+  const KAPPA_REC = 0.020; // recession: (2 - g)=2pp -> cyclical rate 4%
+  const KAPPA_EXP = 0.015; // expansion: (g - 2)=2pp -> absorb 3% of LF from frictional
+
+  function drawPeople(){ return 6 + Math.floor(Math.random()*23); } // 6..28
 
   function makeCard(tpl){
+    const base = (tpl.type === "CYC") ? 0 : drawPeople(); // cyc cards start 0 at neutral
     return {
       id: "c" + (nextId++),
-      people: drawPeople(),
       text: tpl.text,
-      correct: tpl.type,  // FRIC | STRU | CYC
+      correct: tpl.type,    // FRIC | STRU | CYC
       zone: "STAGE",
-      checked: null
+      checked: null,
+      baselinePeople: base, // fixed from sorting (baseline)
+      people: base          // current observed (for frictional), or current cyc count
     };
   }
 
-  // Special signed cyclical card that represents net cyclical effect (can be negative)
-  function ensureNetCycCard(){
-    let c = cards.find(x => x.isNetCyc === true);
-    if (c) return c;
+  // Ensure at least one cyclical card in CYC bucket to hold cyclical unemployment when recession hits
+  function ensureCycCarrierPlaced(){
+    const hasCycPlaced = cards.some(c => c.correct === "CYC" && c.zone === "CYC");
+    if (hasCycPlaced) return;
 
-    c = {
+    // Create a carrier card (only appears when needed, but we can create now with 0)
+    const carrier = {
       id: "c" + (nextId++),
-      people: 0, // signed
-      text: "Net cyclical effect (business cycle).",
+      text: "Economy-wide layoffs due to weak demand (cycle).",
       correct: "CYC",
       zone: "CYC",
       checked: null,
-      isNetCyc: true
+      baselinePeople: 0,
+      people: 0
     };
-    cards.push(c);
-    return c;
+    cards.push(carrier);
   }
 
   function setupDropzone(zoneEl){
@@ -158,10 +159,13 @@ window.addEventListener("DOMContentLoaded", () => {
       el.draggable = true;
       el.dataset.cardId = c.id;
 
-      const isNeg = (c.zone === "CYC" && c.isNetCyc && c.people < 0);
+      const showBaselineLine = (c.zone === "FRIC"); // show baseline/current only for frictional cards (in frictional bucket)
+      const badgeText = `${c.people} people`;
+      const baselineLine = showBaselineLine ? `<div class="baselineLine">baseline: ${c.baselinePeople}</div>` : "";
 
       el.innerHTML = `
-        <div class="badge ${isNeg ? "neg" : ""}">${c.people} people</div>
+        <div class="badge">${badgeText}</div>
+        ${baselineLine}
         <div class="desc">${c.text}</div>
       `;
 
@@ -180,21 +184,74 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function placedCounts(){
-  let F=0,S=0,Ccards=0;
+  // Sums of baseline (not current) for F and S define natural unemployment
+  function baselineFSPlaced(){
+    let F0 = 0, S0 = 0;
+    const fricCards = [];
+    const struCards = [];
 
-  for (const c of cards){
-    if (c.zone === "FRIC") F += c.people;
-    else if (c.zone === "STRU") S += c.people;
-    else if (c.zone === "CYC" && !c.isNetCyc) Ccards += c.people; // <-- include normal cyc cards
+    for (const c of cards){
+      if (c.zone === "FRIC" && c.correct === "FRIC"){
+        F0 += c.baselinePeople;
+        fricCards.push(c);
+      } else if (c.zone === "STRU" && c.correct === "STRU"){
+        S0 += c.baselinePeople;
+        struCards.push(c);
+      }
+    }
+    return {F0, S0, fricCards, struCards};
   }
-  return {F,S,Ccards};
-}
 
-  function cycRateFromGrowth(growth){
-    // cyclical rate is positive when growth < trend; negative when growth > trend
-    return -KAPPA * (growth - G_STAR);
+  // Allocate integer counts proportional to baseline
+  function allocateProportional(cardsList, total, getW){
+    const out = new Map();
+    if (cardsList.length === 0) return out;
+    const W = cardsList.reduce((s,c)=> s + getW(c), 0);
+    if (W <= 0){
+      // put all on last
+      for (let i=0;i<cardsList.length;i++) out.set(cardsList[i].id, 0);
+      out.set(cardsList[cardsList.length-1].id, total);
+      return out;
+    }
+
+    let assigned = 0;
+    for (let i=0;i<cardsList.length;i++){
+      const c = cardsList[i];
+      let v;
+      if (i === cardsList.length - 1){
+        v = total - assigned;
+      } else {
+        v = Math.floor(total * (getW(c)/W));
+      }
+      assigned += v;
+      out.set(c.id, v);
+    }
+    return out;
   }
+
+  function resetCycle(){
+    g = new Array(T).fill(G_STAR); // neutral everywhere
+    tCur = 0;
+    els.qSlider.value = "0";
+    drawCycle();
+  }
+
+  function applyShock(kind){
+    const amp = (kind === "recession")
+      ? -(1.4 + Math.random()*2.0)   // push growth down
+      : +(1.0 + Math.random()*1.8);  // push growth up
+    const len = 5;
+
+    for (let j=0;j<len;j++){
+      const t = tCur + j;
+      if (t >= T) break;
+      const w = Math.sin((Math.PI * (j+1)) / (len+1));
+      g[t] = clamp(g[t] + amp*w, -4, 6);
+    }
+    drawCycle();
+  }
+
+  function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
 
   function drawCycle(){
     const canvas = els.growthChart;
@@ -213,7 +270,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const X0 = pad.l, X1 = w - pad.r;
     const Y0 = pad.t, Y1 = h - pad.b;
 
-    // fixed y-range for clarity (growth %)
     const yMin = -4, yMax = 6;
     const yToPix = (y) => Y0 + (yMax - y) * (Y1 - Y0) / (yMax - yMin);
     const xToPix = (i) => X0 + i * (X1 - X0) / (T-1);
@@ -242,7 +298,7 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.fillText(`Q${i+1}`, xToPix(i), Y1 + 6*dpr);
     }
 
-    // draw trend line at g*
+    // trend line at 2%
     ctx.strokeStyle = "rgba(0,0,0,0.18)";
     ctx.lineWidth = 2*dpr;
     ctx.beginPath();
@@ -280,83 +336,98 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.fillText("Growth rate of output (%)", X0, 0);
   }
 
-  function resetCycle(){
-    // baseline around trend with mild noise
-    gBase = new Array(T).fill(0).map(() => G_STAR + (Math.random()*1.2 - 0.6)); // g* +/- 0.6
-    g = gBase.slice();
-    tCur = 0;
-    els.qSlider.value = "0";
-    drawCycle();
-  }
-
-  function applyShock(kind){
-    const amp = (kind === "recession")
-      ? -(1.8 + Math.random()*2.0)   // negative shock to growth
-      : +(1.2 + Math.random()*1.6);  // positive shock to growth
-    const len = 5;
-    for (let j=0;j<len;j++){
-      const t = tCur + j;
-      if (t >= T) break;
-      const w = Math.sin((Math.PI * (j+1)) / (len+1));
-      g[t] += amp * w;
-    }
-    // clamp growth range
-    g = g.map(x => Math.max(-4, Math.min(6, x)));
-    drawCycle();
-  }
-
-function updateMetrics(){
-  const {F,S,Ccards} = placedCounts();
-
-  // Natural unemployed (from frictional + structural)
-  const U_star = F + S;
-
-  // Business-cycle net effect (signed)
-  const growth = g[tCur];
-  const u_cyc_net = cycRateFromGrowth(growth);     // can be negative
-  const C_net = Math.round(LF * u_cyc_net);        // signed
-
-  // Total unemployed from cards + net cyclical effect
-  const U_raw = (F + S + Ccards) + C_net;
-
-  // Clamp so counts/rates stay meaningful
-  const U = Math.max(0, Math.min(LF, U_raw));
-  const E = LF - U;
-
-  // Rates
-  const u = U / LF;
-  const u_star = U_star / LF;
-
-  // cyclical component = (cyclical cards + net cycle effect) / LF
-  // but if clamping occurred, the exact decomposition is distorted; keep the displayed cyclical rate consistent with displayed u - u*
-  const u_minus_ustar = u - u_star;
-
-  // Display counts
-  els.m_LF.textContent = String(LF);
-  els.m_E.textContent  = String(E);
-  els.m_U.textContent  = String(U);
-
-  // Display rates
-  els.m_u.textContent     = fmtPct(u);
-  els.m_ustar.textContent = fmtPct(u_star);
-  els.m_ucyc.textContent  = fmtPct(u_minus_ustar);
-
-  // Cycle readouts
-  els.qLabel.textContent = `Q${tCur+1}`;
-  els.gVal.textContent = growth.toFixed(2);
-
-  els.cycleNote.textContent =
-    `Trend growth is ${G_STAR.toFixed(1)}%. Growth below trend → cyclical unemployment rises; above trend → cyclical unemployment can be negative.`;
-
-  // Update the net cyclical card (shows signed business-cycle effect only)
-  const netCard = ensureNetCycCard();
-  netCard.people = C_net;
-}
-
   function recomputeAll(){
-    // Keep net cyclical card in cyc bucket so students can always “see” it
-    ensureNetCycCard();
-    updateMetrics();
+    // Always ensure we have a cyclical place-holder to carry recession counts once needed
+    ensureCycCarrierPlaced();
+
+    const {F0, S0, fricCards, struCards} = baselineFSPlaced();
+
+    // Structural is fixed: set current = baseline on structural cards (placed)
+    for (const c of struCards){
+      c.people = c.baselinePeople;
+    }
+
+    // Determine current growth
+    const growth = g[tCur];
+
+    // Step 1: cyclical cards are 0 in expansions and at neutral
+    let C_total = 0;
+
+    if (growth < G_STAR){
+      // recession: cyclical increases with depth
+      const depth = (G_STAR - growth); // >0
+      const uC = KAPPA_REC * depth;     // rate
+      C_total = Math.round(LF * uC);
+    } else {
+      // neutral or expansion: cyclical is zero
+      C_total = 0;
+    }
+
+    // Distribute C_total across placed cyclical cards (excluding cyc in staging)
+    // If none placed, carrier card will hold it (it is placed by default in CYC).
+    const cycPlaced = cards.filter(c => c.correct === "CYC" && c.zone === "CYC");
+    const allocC = allocateProportional(cycPlaced, C_total, (c)=> Math.max(1, c.baselinePeople || 1));
+    for (const c of cycPlaced){
+      c.people = allocC.get(c.id) ?? 0;
+    }
+
+    // Step 2: frictional behavior
+    // - In recessions (growth < 2): frictional returns to baseline
+    // - At neutral (growth = 2): frictional baseline
+    // - In expansions (growth > 2): frictional falls below baseline after cyclical is already zero (it is)
+    let F_cur_total = F0;
+    if (growth > G_STAR){
+      const strength = (growth - G_STAR);        // >0
+      const absorbRate = KAPPA_EXP * strength;   // rate
+      const absorb = Math.round(LF * absorbRate);
+
+      // Only reduce frictional (not structural), and can’t reduce below zero
+      F_cur_total = Math.max(0, F0 - Math.min(absorb, F0));
+    } else {
+      // recession or neutral
+      F_cur_total = F0;
+    }
+
+    // Distribute current frictional totals across frictional cards proportionally to baseline
+    const allocF = allocateProportional(fricCards, F_cur_total, (c)=> c.baselinePeople);
+    for (const c of fricCards){
+      c.people = allocF.get(c.id) ?? 0;
+    }
+
+    // Step 3: compute unemployment and employment
+    const U = F_cur_total + S0 + C_total;
+    const E = LF - U;
+
+    // Natural unemployment uses baseline F0+S0 (as requested structural fixed, frictional baseline)
+    const U_star = F0 + S0;
+
+    // Rates
+    const u = U / LF;
+    const u_star = U_star / LF;
+    const u_cyc = u - u_star;
+
+    // Update metrics
+    els.m_LF.textContent = String(LF);
+    els.m_E.textContent = String(E);
+    els.m_U.textContent = String(U);
+
+    els.m_u.textContent = fmtPct(u);
+    els.m_ustar.textContent = fmtPct(u_star);
+    els.m_ucyc.textContent = fmtPct(u_cyc);
+
+    // Cycle labels
+    els.qLabel.textContent = `Q${tCur+1}`;
+    els.gVal.textContent = growth.toFixed(2);
+
+    // Cycle note
+    if (growth === G_STAR){
+      els.cycleNote.textContent = `Neutral: growth = ${G_STAR.toFixed(1)}%. Cyclical = 0 and frictional = baseline.`;
+    } else if (growth > G_STAR){
+      els.cycleNote.textContent = `Expansion: growth above ${G_STAR.toFixed(1)}%. Cyclical stays at 0; frictional falls below baseline.`;
+    } else {
+      els.cycleNote.textContent = `Recession: growth below ${G_STAR.toFixed(1)}%. Frictional returns to baseline; cyclical increases.`;
+    }
+
     renderZones();
   }
 
@@ -378,17 +449,19 @@ function updateMetrics(){
     // Random LF each round
     LF = 900 + Math.floor(Math.random()*701); // 900..1600
 
+    // Random cards
     const pool = [...TEMPLATES].sort(()=>Math.random()-0.5);
     const n = 10 + Math.floor(Math.random()*5); // 10..14
     cards = pool.slice(0, n).map(makeCard);
 
-    // Add the net cyclical card immediately (so it’s always visible in CYC bucket)
-    ensureNetCycCard();
+    // Put a cyc carrier in CYC bucket now (0 at neutral)
+    ensureCycCarrierPlaced();
 
+    // Start cycle neutral everywhere
     resetCycle();
 
     els.checkMsg.textContent = "";
-    setStatus("New round loaded.");
+    setStatus("New round loaded (neutral start: growth=2%).");
 
     recomputeAll();
   }
@@ -398,7 +471,7 @@ function updateMetrics(){
     setStatus("Reset.");
   }
 
-  // Wire up
+  // Wire up UI
   els.checkBtn.addEventListener("click", check);
   els.newRoundBtn.addEventListener("click", newRound);
   els.resetBtn.addEventListener("click", reset);
@@ -424,7 +497,7 @@ function updateMetrics(){
   els.resetCycleBtn.addEventListener("click", () => {
     resetCycle();
     recomputeAll();
-    setStatus("Cycle reset.");
+    setStatus("Cycle reset (neutral everywhere).");
   });
 
   // typeset header once
