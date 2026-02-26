@@ -77,6 +77,11 @@
       font-size: 12px;
       white-space: nowrap;
     }
+    .badge.neg{
+      background: rgba(255, 241, 241, 0.85);
+      border-color: rgba(178,34,34,0.35);
+      color: rgba(120,0,0,0.85);
+    }
     .desc{
       margin-top: 6px;
       color: var(--ink-2);
@@ -129,25 +134,21 @@
       color: var(--accent);
     }
 
-    /* Business cycle panel */
-    .grid2{ display:grid; grid-template-columns: 1.1fr 0.9fr; gap:12px; align-items:start; }
-    @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
-
+    /* Business cycle: full width chart */
     .box{
       border: 1px solid var(--line);
       border-radius: 16px;
       background: rgba(246,242,234,0.35);
       padding: 12px;
     }
-
-    .chartWrap{ position: relative; height: 220px; }
+    .chartWrap{ position: relative; height: 260px; }
     canvas{ width:100%; height:100%; display:block; }
 
     .row2{
       display:grid;
-      grid-template-columns: 1fr 120px;
-      gap:10px;
-      align-items:center;
+      grid-template-columns: 1fr 180px;
+      gap:12px;
+      align-items:end;
       margin-top:10px;
     }
     @media (max-width: 980px){ .row2{ grid-template-columns: 1fr; } }
@@ -188,7 +189,7 @@
           <h1>Types of Unemployment</h1>
           <p class="sub">
             Sort scenario cards into <strong>frictional</strong>, <strong>structural</strong>, or <strong>cyclical</strong>.
-            Then see how <strong>cyclical unemployment</strong> moves with the business cycle.
+            Then see how <strong>cyclical unemployment</strong> changes over the business cycle.
           </p>
 
           <details class="howto">
@@ -197,8 +198,8 @@
               <ul>
                 <li><strong>Frictional</strong>: search/matching</li>
                 <li><strong>Structural</strong>: mismatch (skills/location/industry changes)</li>
-                <li><strong>Cyclical</strong>: weak demand in recessions</li>
-                <li><strong>Natural rate</strong>: \(u^* = u_f + u_s\)</li>
+                <li><strong>Cyclical</strong>: weak demand in recessions (can be negative in expansions)</li>
+                <li><strong>Natural rate</strong>: \(u^* = \frac{U^*}{LF}\), where \(U^*=F+S\)</li>
                 <li><strong>Cyclical rate</strong>: \(u-u^*\)</li>
               </ul>
             </div>
@@ -245,7 +246,7 @@
 
         <div class="bucket">
           <h3>Cyclical</h3>
-          <p class="sub">Demand-driven (recession).</p>
+          <p class="sub">Demand-driven (cycle).</p>
           <div class="dropzone" id="zoneCyclical" data-zone="CYC"></div>
         </div>
       </div>
@@ -256,24 +257,22 @@
       </div>
 
       <div class="explain" id="explainBox">
-        Tip: frictional + structural form the “natural” component. Cyclical fluctuates with the business cycle.
+        Cyclical is represented as a <strong>net cyclical effect</strong> card (can be positive or negative). When cyclical rises, employment falls one-for-one because the labor force is fixed.
       </div>
     </section>
 
     <section class="panel">
       <div class="panel-head">
         <h2>Natural vs cyclical unemployment</h2>
-        <p class="panel-sub">Employed (E) is randomly set each round. Cyclical adjusts with the business cycle.</p>
+        <p class="panel-sub">Labor force is fixed each round. Employment adjusts when unemployment changes.</p>
       </div>
 
-      <!-- Top row -->
       <div class="kv3">
+        <div class="metric"><div class="label">Labor force (LF)</div><div class="value" id="m_LF">—</div></div>
         <div class="metric"><div class="label">Employed (E)</div><div class="value" id="m_E">—</div></div>
         <div class="metric"><div class="label">Unemployed (U)</div><div class="value" id="m_U">—</div></div>
-        <div class="metric"><div class="label">Labor force (LF)</div><div class="value" id="m_LF">—</div></div>
       </div>
 
-      <!-- Bottom row -->
       <div class="kv3">
         <div class="metric"><div class="label">Unemployment rate u</div><div class="value" id="m_u">—</div></div>
         <div class="metric"><div class="label">Natural rate u*</div><div class="value" id="m_ustar">—</div></div>
@@ -284,49 +283,37 @@
     <section class="panel">
       <div class="panel-head">
         <h2>Business cycle</h2>
-        <p class="panel-sub">Move through quarters and apply shocks. Cyclical unemployment responds to the output gap.</p>
+        <p class="panel-sub">Growth rate of output varies by quarter; cyclical unemployment responds.</p>
       </div>
 
-      <div class="grid2">
-        <div class="box">
-          <div class="chartWrap">
-            <canvas id="gapChart" width="900" height="300"></canvas>
-          </div>
-
-          <div class="row2">
-            <div>
-              <label class="mini" for="qSlider" style="display:block;">Quarter</label>
-              <input id="qSlider" type="range" min="0" max="11" step="1" value="0">
-              <div class="mini">Selected: <span class="pill" id="qLabel">Q1</span></div>
-            </div>
-            <div>
-              <div class="mini">Output gap</div>
-              <div class="metric" style="padding:10px; margin-top:6px;">
-                <div class="label">gap (%)</div>
-                <div class="value" id="gapVal">—</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="actions">
-            <button id="recessionBtn" class="btn">Recession shock</button>
-            <button id="recoveryBtn" class="btn">Recovery shock</button>
-            <button id="resetCycleBtn" class="btn subtle">Reset cycle</button>
-          </div>
-
-          <div class="mini" id="cycleNote"></div>
+      <div class="box">
+        <div class="chartWrap">
+          <canvas id="growthChart"></canvas>
         </div>
 
-        <div class="box">
-          <div class="mini"><strong>How cyclical unemployment is generated</strong></div>
-          <div class="mini">
-            We map output gap to a cyclical unemployment rate using a simple rule:
-            <br><span class="pill">cyclical rate = max(0, κ · (−gap))</span>
-            <br>Then we convert that rate into a cyclical unemployed count:
-            <br><span class="pill">C_target = round(LF · cyclical rate)</span>
-            <br><br>The app adjusts the people counts on cards in the <strong>Cyclical</strong> bucket so they sum to <strong>C_target</strong>.
+        <div class="row2">
+          <div>
+            <label class="mini" for="qSlider" style="display:block;">Quarter</label>
+            <input id="qSlider" type="range" min="0" max="11" step="1" value="0">
+            <div class="mini">Selected: <span class="pill" id="qLabel">Q1</span></div>
+          </div>
+
+          <div>
+            <div class="mini">Growth rate of output</div>
+            <div class="metric" style="padding:10px; margin-top:6px;">
+              <div class="label">growth (%)</div>
+              <div class="value" id="gVal">—</div>
+            </div>
           </div>
         </div>
+
+        <div class="actions">
+          <button id="recessionBtn" class="btn">Recession shock</button>
+          <button id="expansionBtn" class="btn">Expansion shock</button>
+          <button id="resetCycleBtn" class="btn subtle">Reset cycle</button>
+        </div>
+
+        <div class="mini" id="cycleNote"></div>
       </div>
     </section>
 
