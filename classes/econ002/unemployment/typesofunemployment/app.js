@@ -181,14 +181,15 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function placedCounts(){
-    let F=0,S=0,C=0;
-    for (const c of cards){
-      if (c.zone === "FRIC") F += c.people;
-      else if (c.zone === "STRU") S += c.people;
-      else if (c.zone === "CYC" && !c.isNetCyc) C += c.people;
-    }
-    return {F,S,C};
+  let F=0,S=0,Ccards=0;
+
+  for (const c of cards){
+    if (c.zone === "FRIC") F += c.people;
+    else if (c.zone === "STRU") S += c.people;
+    else if (c.zone === "CYC" && !c.isNetCyc) Ccards += c.people; // <-- include normal cyc cards
   }
+  return {F,S,Ccards};
+}
 
   function cycRateFromGrowth(growth){
     // cyclical rate is positive when growth < trend; negative when growth > trend
@@ -304,53 +305,53 @@ window.addEventListener("DOMContentLoaded", () => {
     drawCycle();
   }
 
-  function updateMetrics(){
-    const {F,S,C: C_examples} = placedCounts();
+function updateMetrics(){
+  const {F,S,Ccards} = placedCounts();
 
-    // Natural unemployed count (from frictional + structural cards)
-    const U_star = F + S;
+  // Natural unemployed (from frictional + structural)
+  const U_star = F + S;
 
-    // cyclical rate from current growth
-    const growth = g[tCur];
-    const u_cyc = cycRateFromGrowth(growth); // can be negative
+  // Business-cycle net effect (signed)
+  const growth = g[tCur];
+  const u_cyc_net = cycRateFromGrowth(growth);     // can be negative
+  const C_net = Math.round(LF * u_cyc_net);        // signed
 
-    // cyclical unemployed count (signed)
-    const C_net = Math.round(LF * u_cyc);
+  // Total unemployed from cards + net cyclical effect
+  const U_raw = (F + S + Ccards) + C_net;
 
-    // Total unemployed count (can be < U_star in expansions)
-    const U = U_star + C_net;
+  // Clamp so counts/rates stay meaningful
+  const U = Math.max(0, Math.min(LF, U_raw));
+  const E = LF - U;
 
-    // Employment adjusts one-for-one (LF fixed)
-    const E = LF - U;
+  // Rates
+  const u = U / LF;
+  const u_star = U_star / LF;
 
-    // Rates
-    const u = U / LF;
-    const u_star = U_star / LF;
-    const u_minus_ustar = u - u_star; // equals C_net/LF
+  // cyclical component = (cyclical cards + net cycle effect) / LF
+  // but if clamping occurred, the exact decomposition is distorted; keep the displayed cyclical rate consistent with displayed u - u*
+  const u_minus_ustar = u - u_star;
 
-    // Show values
-    els.m_LF.textContent = String(LF);
-    els.m_E.textContent = String(E);
-    els.m_U.textContent = String(U);
+  // Display counts
+  els.m_LF.textContent = String(LF);
+  els.m_E.textContent  = String(E);
+  els.m_U.textContent  = String(U);
 
-    els.m_u.textContent = fmtPct(u);
-    els.m_ustar.textContent = fmtPct(u_star);
-    els.m_ucyc.textContent = fmtPct(u_minus_ustar);
+  // Display rates
+  els.m_u.textContent     = fmtPct(u);
+  els.m_ustar.textContent = fmtPct(u_star);
+  els.m_ucyc.textContent  = fmtPct(u_minus_ustar);
 
-    // Update cycle readouts
-    els.qLabel.textContent = `Q${tCur+1}`;
-    els.gVal.textContent = growth.toFixed(2);
+  // Cycle readouts
+  els.qLabel.textContent = `Q${tCur+1}`;
+  els.gVal.textContent = growth.toFixed(2);
 
-    els.cycleNote.textContent =
-      `Trend growth is ${G_STAR.toFixed(1)}%. When growth is below trend, cyclical unemployment is positive; when growth is above trend, cyclical unemployment is negative.`;
-    
-    // Ensure / set net cyclical card in cyclical bucket
-    const netCard = ensureNetCycCard();
-    netCard.people = C_net;
+  els.cycleNote.textContent =
+    `Trend growth is ${G_STAR.toFixed(1)}%. Growth below trend → cyclical unemployment rises; above trend → cyclical unemployment can be negative.`;
 
-    // Also keep the example cyclical cards as classification practice (they don't affect C_net directly)
-    // (We leave their people counts alone.)
-  }
+  // Update the net cyclical card (shows signed business-cycle effect only)
+  const netCard = ensureNetCycCard();
+  netCard.people = C_net;
+}
 
   function recomputeAll(){
     // Keep net cyclical card in cyc bucket so students can always “see” it
