@@ -101,22 +101,23 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // Ensure at least one cyclical card in CYC bucket to hold cyclical unemployment when recession hits
-  function ensureCycCarrierPlaced(){
-    const hasCycPlaced = cards.some(c => c.correct === "CYC" && c.zone === "CYC");
-    if (hasCycPlaced) return;
+function ensureCycCarrierExists(){
+  let carrier = cards.find(c => c.isCycleCarrier === true);
+  if (carrier) return carrier;
 
-    // Create a carrier card (only appears when needed, but we can create now with 0)
-    const carrier = {
-      id: "c" + (nextId++),
-      text: "Economy-wide layoffs due to weak demand (cycle).",
-      correct: "CYC",
-      zone: "CYC",
-      checked: null,
-      baselinePeople: 0,
-      people: 0
-    };
-    cards.push(carrier);
-  }
+  carrier = {
+    id: "c" + (nextId++),
+    text: "Economy-wide layoffs due to weak demand (cycle).",
+    correct: "CYC",
+    zone: "STAGE",          // <-- start in staging
+    checked: null,
+    baselinePeople: 0,
+    people: 0,
+    isCycleCarrier: true
+  };
+  cards.push(carrier);
+  return carrier;
+}
 
   function setupDropzone(zoneEl){
     zoneEl.addEventListener("dragover", (ev) => {
@@ -338,7 +339,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function recomputeAll(){
     // Always ensure we have a cyclical place-holder to carry recession counts once needed
-    ensureCycCarrierPlaced();
+    ensureCycCarrierExists();;
 
     const {F0, S0, fricCards, struCards} = baselineFSPlaced();
 
@@ -362,6 +363,16 @@ window.addEventListener("DOMContentLoaded", () => {
       // neutral or expansion: cyclical is zero
       C_total = 0;
     }
+
+    // If recession implies cyclical > 0 but no cyclical cards are placed,
+// automatically place the cycle carrier into the CYC bucket so the numbers show up.
+if (C_total > 0){
+  const anyCycPlaced = cards.some(c => c.correct === "CYC" && c.zone === "CYC");
+  if (!anyCycPlaced){
+    const carrier = ensureCycCarrierExists();
+    carrier.zone = "CYC";
+  }
+}
 
     // Distribute C_total across placed cyclical cards (excluding cyc in staging)
     // If none placed, carrier card will hold it (it is placed by default in CYC).
@@ -455,7 +466,7 @@ window.addEventListener("DOMContentLoaded", () => {
     cards = pool.slice(0, n).map(makeCard);
 
     // Put a cyc carrier in CYC bucket now (0 at neutral)
-    ensureCycCarrierPlaced();
+    ensureCycCarrierExists();;
 
     // Start cycle neutral everywhere
     resetCycle();
