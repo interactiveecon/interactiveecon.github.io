@@ -87,18 +87,22 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function drawPeople(){ return 6 + Math.floor(Math.random()*23); } // 6..28
 
-  function makeCard(tpl){
-    const base = (tpl.type === "CYC") ? 0 : drawPeople(); // cyc cards start 0 at neutral
-    return {
-      id: "c" + (nextId++),
-      text: tpl.text,
-      correct: tpl.type,    // FRIC | STRU | CYC
-      zone: "STAGE",
-      checked: null,
-      baselinePeople: base, // fixed from sorting (baseline)
-      people: base          // current observed (for frictional), or current cyc count
-    };
-  }
+function makeCard(tpl){
+  const base = (tpl.type === "CYC") ? 0 : drawPeople();
+
+  return {
+    id: "c" + (nextId++),
+    text: tpl.text,
+    correct: tpl.type,
+    zone: "STAGE",
+    checked: null,
+    baselinePeople: base,
+    people: base,
+
+    // NEW: per-round weight to distribute recession layoffs across cyc cards
+    cycWeight: (tpl.type === "CYC") ? (0.6 + Math.random()*1.8) : 0
+  };
+}
 
   // Ensure at least one cyclical card in CYC bucket to hold cyclical unemployment when recession hits
 function ensureCycCarrierExists(){
@@ -377,7 +381,11 @@ if (C_total > 0){
     // Distribute C_total across placed cyclical cards (excluding cyc in staging)
     // If none placed, carrier card will hold it (it is placed by default in CYC).
     const cycPlaced = cards.filter(c => c.correct === "CYC" && c.zone === "CYC");
-    const allocC = allocateProportional(cycPlaced, C_total, (c)=> Math.max(1, c.baselinePeople || 1));
+    const allocC = allocateProportional(
+      cycPlaced,
+      C_total,
+      (c) => Math.max(0.05, c.cycWeight || 1)   // NEW: use cycWeight
+    );
     for (const c of cycPlaced){
       c.people = allocC.get(c.id) ?? 0;
     }
