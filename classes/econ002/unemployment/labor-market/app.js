@@ -34,22 +34,24 @@ window.addEventListener("DOMContentLoaded", () => {
   const b = 0.25; // demand slope
   const d = 0.20; // supply slope
 
-  // Baseline parameters (grey dashed)
+  // Baseline (initial) parameters
   const baseline = {
     a: 3.0, // demand intercept
     c: 0.8  // supply intercept
   };
 
+  // High-water mark for dashed "old demand"
+  // (only moves up if demand is pushed above previous best level)
+  let aRef = baseline.a;
+
   // State
   let state = {
     a: baseline.a,
     c: baseline.c,
-    mode: "cyc",     // "cyc" or "str"
+    mode: "cyc",        // "cyc" or "str"
     wbar: 0,
-    wStickyDown: null // baseline wage level to stick to after negative shocks (cyc mode)
+    wStickyDown: null   // real wage that is sticky downward in cyclical mode
   };
-
-  let demandRefA = baseline.a; // dashed “old” demand line
 
   function setStatus(msg){ els.status.textContent = msg; }
   function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
@@ -66,23 +68,19 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function currentEquilibrium(){ return equilibrium(state.a, state.c); }
-  function baselineEquilibrium(){ return equilibrium(baseline.a, baseline.c); }
 
+  // Actual real wage depends on the selected mode
   function actualRealWage(){
     const eq = currentEquilibrium();
     const wEq = eq.w;
 
     if (state.mode === "str") {
-      // Structural: wage pinned at floor (rigidity in real wage)
+      // Structural: real wage cannot fall below wbar
       return Math.max(wEq, state.wbar);
     }
 
     // Cyclical: downward sticky, upward flexible
-    // If wStickyDown is null (initial), start at equilibrium
     if (state.wStickyDown == null) state.wStickyDown = wEq;
-
-    // If current equilibrium wage is higher than sticky level, wage rises (upward flexible)
-    // If current equilibrium wage is lower, wage does NOT fall (downward sticky)
     return Math.max(wEq, state.wStickyDown);
   }
 
@@ -102,7 +100,6 @@ window.addEventListener("DOMContentLoaded", () => {
       LAct = Math.max(0, LdVal);
       U = Math.max(0, LsVal - LdVal);
     } else {
-      // clears at equilibrium (or very close)
       LAct = LEq;
       U = 0;
     }
@@ -127,14 +124,16 @@ window.addEventListener("DOMContentLoaded", () => {
     const Lmin = 0, Lmax = 12;
     const wmin = 0, wmax = 4.2;
 
-    const pad = { l: 52*dpr, r: 16*dpr, t: 18*dpr, b: 44*dpr };
+    // Increase left padding a bit so tick labels have room
+    // and move x-label up so it doesn't get clipped.
+    const pad = { l: 58*dpr, r: 16*dpr, t: 18*dpr, b: 48*dpr };
     const X0 = pad.l, X1 = W - pad.r;
     const Y0 = pad.t, Y1 = H - pad.b;
 
     const xToPix = (L) => X0 + (L - Lmin) * (X1 - X0) / (Lmax - Lmin);
     const yToPix = (w) => Y0 + (wmax - w) * (Y1 - Y0) / (wmax - wmin);
 
-    // Grid
+    // Grid (keep it light)
     ctx.strokeStyle = "rgba(0,0,0,0.10)";
     ctx.lineWidth = 1*dpr;
     for (let i=0;i<=6;i++){
@@ -158,8 +157,9 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.font = `${13*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "center";
     ctx.fillText("Employment (L)", (X0+X1)/2, Y1 + 22*dpr);
+
     ctx.save();
-    ctx.translate(X0 - 60*dpr, (Y0+Y1)/2);
+    ctx.translate(X0 - 64*dpr, (Y0+Y1)/2); // move farther left so it doesn't cover tick
     ctx.rotate(-Math.PI/2);
     ctx.fillText("Real wage (w)", 0, 0);
     ctx.restore();
@@ -182,36 +182,36 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.setLineDash([]);
     }
 
-    // Baseline (grey dashed)
-    plotLine((L)=> demandRefA - b*L, "rgba(0,0,0,0.25)", 2, true);
+    // Baseline / old curves (grey dashed)
+    // Demand uses aRef (high-water mark), not baseline.a
+    plotLine((L)=> aRef - b*L, "rgba(0,0,0,0.25)", 2, true);
     plotLine((L)=> baseline.c + d*L, "rgba(0,0,0,0.25)", 2, true);
 
-    // Current (blue)
+    // Current curves (blue)
     plotLine((L)=> state.a - b*L, "rgba(31,119,180,0.90)", 3, false);
     plotLine((L)=> state.c + d*L, "rgba(31,119,180,0.60)", 3, false);
 
     // Outcome
     const { eq, wEq, wAct, LAct, U } = outcome();
 
+    // y-tick: show the sticky reference wage in cyclical mode
     const wTick = (state.mode === "cyc" && state.wStickyDown != null) ? state.wStickyDown : wEq;
+    const yTick = yToPix(wTick);
 
-    // ---- y-axis: label equilibrium real wage w* ----
-const yTick = yToPix(wTick);
+    // faint guide line at tick
+    ctx.strokeStyle = "rgba(0,0,0,0.18)";
+    ctx.lineWidth = 2*dpr;
+    ctx.beginPath();
+    ctx.moveTo(X0, yTick);
+    ctx.lineTo(X1, yTick);
+    ctx.stroke();
 
-// faint guide line
-ctx.strokeStyle = "rgba(0,0,0,0.18)";
-ctx.lineWidth = 2*dpr;
-ctx.beginPath();
-ctx.moveTo(X0, yTick);
-ctx.lineTo(X1, yTick);
-ctx.stroke();
-
-// tick label
-ctx.fillStyle = "rgba(0,0,0,0.65)";
-ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
-ctx.textAlign = "right";
-ctx.textBaseline = "middle";
-ctx.fillText(wTick.toFixed(2), X0 - 10*dpr, yTick);
+    // tick label
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillText(wTick.toFixed(2), X0 - 10*dpr, yTick);
 
     // Wage line (orange)
     ctx.strokeStyle = "rgba(230,159,0,0.90)";
@@ -227,7 +227,7 @@ ctx.fillText(wTick.toFixed(2), X0 - 10*dpr, yTick);
     ctx.fillStyle = "rgba(0,0,0,0.45)";
     ctx.beginPath(); ctx.arc(xEq, yEq, 6*dpr, 0, Math.PI*2); ctx.fill();
 
-    // Actual point (employment on demand at wAct)
+    // Actual point (employment on demand at wAct if unemployment exists)
     const xA = xToPix(LAct);
     const yA = yToPix(wAct);
     ctx.fillStyle = "rgba(230,159,0,0.95)";
@@ -265,7 +265,7 @@ ctx.fillText(wTick.toFixed(2), X0 - 10*dpr, yTick);
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.fillText("Blue: current supply & demand", X0, Y0);
-    ctx.fillText("Grey dashed: baseline", X0, Y0 + 16*dpr);
+    ctx.fillText("Grey dashed: reference demand & baseline supply", X0, Y0 + 16*dpr);
     ctx.fillText("Orange: actual real wage", X0, Y0 + 32*dpr);
 
     // Metrics
@@ -280,21 +280,21 @@ ctx.fillText(wTick.toFixed(2), X0 - 10*dpr, yTick);
     } else if (state.mode === "cyc") {
       expl = `Cyclical unemployment: a negative demand shock lowers the market-clearing wage, but the real wage does not fall (downward sticky). Firms reduce hiring to labor demand, creating unemployment.`;
     } else {
-      expl = `Structural unemployment: the real wage is held above the market-clearing level by the wage floor \(\bar w\). Employment is demand-determined at that wage, creating persistent unemployment.`;
+      expl = `Structural unemployment: the real wage is held above the market-clearing level by the wage floor \$begin:math:text$\\\\bar w\\$end:math:text$. Employment is demand-determined at that wage, creating persistent unemployment.`;
     }
 
     els.explainBox.innerHTML =
       `<strong>Numbers:</strong> equilibrium w*=${wEq.toFixed(2)}, actual w=${wAct.toFixed(2)}.<br>` +
       `<strong>Interpretation:</strong> ${expl}`;
 
-    
+    // Remove old helper sentence under chart
+    els.chartNote.textContent = "";
   }
 
   // ----- Mode & controls -----
   function syncModeUI(){
     const isStr = state.mode === "str";
     els.wbarBlock.classList.toggle("disabled", !isStr);
-    // keep controls visually consistent
     els.wbar.disabled = !isStr;
     els.wbarNum.disabled = !isStr;
   }
@@ -312,8 +312,12 @@ ctx.fillText(wTick.toFixed(2), X0 - 10*dpr, yTick);
     state.c = baseline.c;
     state.mode = "cyc";
     state.wbar = 0;
-    state.wStickyDown = null;
-    demandRefA = baseline.a;
+
+    // sticky reference starts at equilibrium
+    state.wStickyDown = currentEquilibrium().w;
+
+    // reset reference demand line
+    aRef = baseline.a;
 
     els.modeCyc.checked = true;
     els.modeStr.checked = false;
@@ -328,42 +332,41 @@ ctx.fillText(wTick.toFixed(2), X0 - 10*dpr, yTick);
   }
 
   function applyDemandShock(sign){
-    // demand intercept shifts
     const delta = (sign < 0) ? -0.55 : +0.55;
     state.a = clamp(state.a + delta, 1.5, 4.0);
-    if (sign > 0) demandRefA = state.a; // dashed line moves up only on positive shocks
 
-    // For cyclical mode: ensure downward stickiness reference is set at the *pre-shock* wage if not set.
-    // But after a positive shock, sticky reference should update upward (w rises).
+    // Update dashed reference demand only if we surpass the prior reference level
+    if (sign > 0 && state.a > aRef + 1e-12) {
+      aRef = state.a;
+    }
+    // Negative shocks do not move aRef.
+
+    // Cyclical mode wage behavior:
+    // - negative: wage doesn't fall -> keep sticky reference unchanged
+    // - positive: wage rises -> update sticky reference upward if needed
     if (state.mode === "cyc") {
-      const eqNow = currentEquilibrium();
-      if (state.wStickyDown == null) state.wStickyDown = eqNow.w;
-
-      // If the shock is positive, allow wage to rise (update sticky reference upward)
-      if (sign > 0) {
-        state.wStickyDown = Math.max(state.wStickyDown, eqNow.w);
-      }
-      // If the shock is negative, keep sticky reference unchanged (so wage won’t fall).
+      const wEqNow = currentEquilibrium().w;
+      if (state.wStickyDown == null) state.wStickyDown = wEqNow;
+      if (sign > 0) state.wStickyDown = Math.max(state.wStickyDown, wEqNow);
     }
 
     draw();
     setStatus(sign < 0 ? "Negative labor demand shock applied." : "Positive labor demand shock applied.");
   }
 
-  // Radio handlers
   function setMode(mode){
     state.mode = mode;
 
-    // When switching to cyclical: set sticky reference to current equilibrium wage (start in equilibrium)
     if (mode === "cyc") {
-      const eq = currentEquilibrium();
-      state.wStickyDown = eq.w;
+      // set sticky reference to current equilibrium (start in equilibrium)
+      state.wStickyDown = currentEquilibrium().w;
     }
 
     syncModeUI();
     draw();
   }
 
+  // Radio handlers
   els.modeCyc.addEventListener("change", () => { if (els.modeCyc.checked) setMode("cyc"); });
   els.modeStr.addEventListener("change", () => { if (els.modeStr.checked) setMode("str"); });
 
