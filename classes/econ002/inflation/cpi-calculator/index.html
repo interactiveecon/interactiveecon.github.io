@@ -27,13 +27,6 @@
       padding: 12px;
     }
 
-    .actions{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-    }
-
     table{
       width:100%;
       border-collapse: separate;
@@ -53,6 +46,9 @@
       padding: 10px 10px;
       text-align:left;
       white-space: nowrap;
+    }
+    thead tr:first-child th{
+      border-bottom: 1px solid rgba(0,0,0,0.10);
     }
     tbody td{
       padding: 10px 10px;
@@ -80,19 +76,23 @@
       line-height: 1.4;
     }
 
-    .kv3{
+    .kvCPI{
       display:grid;
-      grid-template-columns: repeat(3, 1fr);
+      grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
       gap:12px;
       margin-top:10px;
+      align-items: stretch;
     }
-    @media (max-width: 980px){ .kv3{ grid-template-columns: 1fr; } }
+    @media (max-width: 980px){
+      .kvCPI{ grid-template-columns: 1fr; }
+    }
 
     .metric{
       background: rgba(246,242,234,0.55);
       border: 1px solid var(--line);
       border-radius: 16px;
       padding: 12px;
+      min-height: 74px;
     }
     .metric .label{
       font-size: 11px;
@@ -107,24 +107,25 @@
       font-weight: 900;
       color: var(--accent);
     }
-
-    .toggle{
+    .between{
       display:flex;
-      gap:10px;
-      align-items:flex-start;
-      padding:10px;
-      border:1px solid var(--line);
-      border-radius: 14px;
-      background: rgba(255,255,255,0.70);
-      margin-top: 10px;
+      align-items:center;
+      justify-content:center;
+      text-align:center;
     }
-    .toggle input{ margin-top: 2px; }
-    .toggle .ttext{
-      font-size: 13px;
-      color: var(--ink-2);
-      line-height: 1.35;
+    .between .label{
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
     }
-    .toggle .ttext strong{ color: var(--ink); }
+    .between .value{
+      margin-top: 6px;
+      font-size: 18px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 900;
+      color: var(--accent);
+    }
 
     .chartWrap{
       height: 240px;
@@ -141,6 +142,15 @@
       font-size: 12px;
       color: var(--ink-2);
     }
+
+    .pill{
+      display:inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.75);
+      font-variant-numeric: tabular-nums;
+    }
   </style>
 </head>
 
@@ -156,17 +166,26 @@
           <div class="kicker">Macroeconomics Practice Lab</div>
           <h1>CPI Basket Builder</h1>
           <p class="sub">
-            Build a base-year basket and compute the CPI (base year = 100) and inflation.
+            Load a random basket of goods and compute the CPI (base year = 100) and inflation.
           </p>
 
-          <details class="howto">
-            <summary>Key formulas</summary>
+          <details class="howto" open>
+            <summary>How this app works</summary>
             <div class="howto-body" id="mathTop">
-              <ul>
-                <li>Basket cost in year \(t\): \(\;\sum_i P_{i,t}Q_{i,0}\)</li>
-                <li>CPI in year \(t\): \(\;\text{CPI}_t = 100 \cdot \dfrac{\sum_i P_{i,t}Q_{i,0}}{\sum_i P_{i,0}Q_{i,0}}\)</li>
-                <li>Inflation from year \(t-1\) to \(t\): \(\;\pi_t = \dfrac{\text{CPI}_t-\text{CPI}_{t-1}}{\text{CPI}_{t-1}}\)</li>
-              </ul>
+              <ol>
+                <li>Click <span class="pill">Load example</span> to draw <strong>3 random goods</strong> and randomize the <strong>basket</strong> and <strong>prices</strong>.</li>
+                <li>The <strong>Basket</strong> column is the fixed consumption basket used to compute CPI (it stays fixed across years).</li>
+                <li>Enter or edit prices for <strong>Year 1</strong>, <strong>Year 2</strong>, and <strong>Year 3</strong>.</li>
+                <li>The app computes basket costs each year:
+                  \(\;\sum_i P_{i,t}\cdot \text{Basket}_i\).</li>
+                <li>The CPI uses <strong>Year 1 as the base year</strong>:
+                  \(\text{CPI}_1=100\) and
+                  \(\text{CPI}_t = 100 \cdot \dfrac{\text{Cost}_t}{\text{Cost}_1}\).</li>
+                <li>Inflation is the <strong>one-year percent change</strong> in CPI:
+                  \(\pi_{1\to2}=\dfrac{\text{CPI}_2-\text{CPI}_1}{\text{CPI}_1}\),
+                  \(\pi_{2\to3}=\dfrac{\text{CPI}_3-\text{CPI}_2}{\text{CPI}_2}\).</li>
+                <li>Click <span class="pill">Add good</span> to add another random good to the basket.</li>
+              </ol>
             </div>
           </details>
         </div>
@@ -174,7 +193,7 @@
         <div class="controls-card">
           <div class="controls-actions">
             <button id="addRowBtn" class="btn">Add good</button>
-            <button id="exampleBtn" class="btn">Load example</button>
+            <button id="exampleBtn" class="btn primary">Load example</button>
             <button id="resetBtn" class="btn subtle">Reset</button>
           </div>
           <div id="status" class="status" aria-live="polite"></div>
@@ -187,40 +206,26 @@
     <section class="panel">
       <div class="panel-head">
         <h2>Basket inputs</h2>
-        <p class="panel-sub">Enter base-year quantities \(Q_0\) and prices in each year.</p>
+        <p class="panel-sub">Basket is fixed; prices vary by year.</p>
       </div>
 
       <div class="box">
         <table aria-label="CPI basket table">
           <thead>
             <tr>
-              <th style="width:26%;">Good</th>
-              <th style="width:12%;">Q0</th>
-              <th style="width:14%;">P0</th>
-              <th style="width:14%;">P1</th>
-              <th style="width:14%;">P2</th>
-              <th style="width:20%;">Actions</th>
+              <th rowspan="2" style="width:30%;">Good</th>
+              <th rowspan="2" style="width:14%;">Basket</th>
+              <th colspan="3" style="width:36%; text-align:center;">Prices</th>
+              <th rowspan="2" style="width:20%;">Actions</th>
+            </tr>
+            <tr>
+              <th style="width:12%;">Year 1</th>
+              <th style="width:12%;">Year 2</th>
+              <th style="width:12%;">Year 3</th>
             </tr>
           </thead>
           <tbody id="basketBody"></tbody>
         </table>
-
-        <div class="toggle">
-          <input id="subToggle" type="checkbox">
-          <div class="ttext">
-            <strong>Show substitution (optional):</strong> enter Year 2 quantities \(Q_2\) to compare a fixed basket index vs a “current basket” index.
-            This illustrates why fixed baskets can overstate cost-of-living changes when people substitute.
-          </div>
-        </div>
-
-        <div id="subSection" class="box" style="display:none; margin-top:10px;">
-          <div class="muted">
-            Enter Year 2 quantities \(Q_2\). We compute:
-            <br>• Fixed basket (Laspeyres-style): uses \(Q_0\)
-            <br>• Current basket (Paasche-style): uses \(Q_2\)
-          </div>
-          <div id="subTableWrap" style="margin-top:10px;"></div>
-        </div>
 
         <div class="warn" id="warn"></div>
       </div>
@@ -229,37 +234,42 @@
     <section class="panel">
       <div class="panel-head">
         <h2>Results</h2>
-        <p class="panel-sub">Computed from your inputs (updates automatically).</p>
+        <p class="panel-sub">Updates automatically.</p>
       </div>
 
       <div class="grid2">
         <div class="box">
-          <div class="kv3">
-            <div class="metric"><div class="label">Basket cost (Year 0)</div><div class="value" id="cost0">—</div></div>
-            <div class="metric"><div class="label">Basket cost (Year 1)</div><div class="value" id="cost1">—</div></div>
-            <div class="metric"><div class="label">Basket cost (Year 2)</div><div class="value" id="cost2">—</div></div>
-          </div>
-
-          <div class="kv3">
-            <div class="metric"><div class="label">CPI (Year 0)</div><div class="value" id="cpi0">—</div></div>
-            <div class="metric"><div class="label">CPI (Year 1)</div><div class="value" id="cpi1">—</div></div>
-            <div class="metric"><div class="label">CPI (Year 2)</div><div class="value" id="cpi2">—</div></div>
-          </div>
-
-          <div class="kv3">
-            <div class="metric"><div class="label">Inflation (0→1)</div><div class="value" id="pi01">—</div></div>
-            <div class="metric"><div class="label">Inflation (1→2)</div><div class="value" id="pi12">—</div></div>
-            <div class="metric"><div class="label">Inflation (0→2)</div><div class="value" id="pi02">—</div></div>
-          </div>
-
-          <div id="subResults" style="display:none; margin-top:12px;">
-            <div class="kv3">
-              <div class="metric"><div class="label">Current basket index (P2 vs P0)</div><div class="value" id="paasche20">—</div></div>
-              <div class="metric"><div class="label">Fixed basket index (P2 vs P0)</div><div class="value" id="lasp20">—</div></div>
-              <div class="metric"><div class="label">Difference</div><div class="value" id="diff20">—</div></div>
+          <div class="kvCPI">
+            <div class="metric">
+              <div class="label">CPI (Year 1)</div>
+              <div class="value" id="cpi1">—</div>
+              <div class="muted" id="cost1">Basket cost: —</div>
             </div>
-            <div class="muted" style="margin-top:8px;">
-              “Current basket” uses \(Q_2\). If consumers substitute toward cheaper goods, the current-basket index is often smaller than the fixed-basket CPI.
+
+            <div class="between">
+              <div>
+                <div class="label">Inflation (1→2)</div>
+                <div class="value" id="pi12">—</div>
+              </div>
+            </div>
+
+            <div class="metric">
+              <div class="label">CPI (Year 2)</div>
+              <div class="value" id="cpi2">—</div>
+              <div class="muted" id="cost2">Basket cost: —</div>
+            </div>
+
+            <div class="between">
+              <div>
+                <div class="label">Inflation (2→3)</div>
+                <div class="value" id="pi23">—</div>
+              </div>
+            </div>
+
+            <div class="metric">
+              <div class="label">CPI (Year 3)</div>
+              <div class="value" id="cpi3">—</div>
+              <div class="muted" id="cost3">Basket cost: —</div>
             </div>
           </div>
         </div>
@@ -269,7 +279,7 @@
             <canvas id="chart" width="900" height="300"></canvas>
           </div>
           <div class="muted" style="margin-top:8px;">
-            The chart plots CPI across years (base year = 100).
+            CPI across Year 1–3 (base year = 100).
           </div>
         </div>
       </div>
