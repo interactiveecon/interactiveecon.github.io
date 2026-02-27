@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Labor Market: Cyclical vs Structural Unemployment</title>
+
+  <link rel="stylesheet" href="/assets/style.css">
+
+  <!-- MathJax (header only) -->
+  <script>
+    window.MathJax = { tex: { inlineMath: [['\\(', '\\)'], ['$', '$']] }, svg: { fontCache: 'global' } };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+  <style>
+    .mjx-container { font-size: 1em !important; }
+    .stack{ display:grid; gap:14px; margin-top:18px; }
+
+    .grid2{ display:grid; grid-template-columns: 1.05fr 0.95fr; gap:12px; align-items:start; }
+    @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
+
+    .box{
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(246,242,234,0.35);
+      padding: 12px;
+    }
+
+    .chartWrap{ height: 440px; }
+    canvas{ width:100%; height:100%; display:block; }
+
+    .controls{
+      display:grid;
+      gap:10px;
+    }
+    .row2{
+      display:grid;
+      grid-template-columns: 1fr 120px;
+      gap:10px;
+      align-items:center;
+    }
+    .row3{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      align-items:center;
+    }
+    @media (max-width: 980px){
+      .row2{ grid-template-columns: 1fr; }
+      .row3{ grid-template-columns: 1fr; }
+    }
+
+    .control label{
+      display:block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    input[type="range"]{ width:100%; }
+    input[type="number"]{
+      width: 120px;
+      border:1px solid var(--line-2);
+      border-radius: 12px;
+      padding: 8px 10px;
+      background:#fff;
+      font-family: var(--font-sans);
+      color: var(--ink);
+    }
+
+    .toggle{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      padding:10px;
+      border:1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.70);
+    }
+    .toggle input{ margin-top: 2px; }
+    .toggle .ttext{
+      font-size: 13px;
+      color: var(--ink-2);
+      line-height: 1.35;
+    }
+    .toggle .ttext strong{ color: var(--ink); }
+
+    .kv3{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:12px;
+      margin-top:10px;
+    }
+    @media (max-width: 980px){ .kv3{ grid-template-columns: 1fr; } }
+
+    .metric{
+      background: rgba(246,242,234,0.55);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+    }
+    .metric .label{
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .metric .value{
+      margin-top: 6px;
+      font-size: 18px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 900;
+      color: var(--accent);
+    }
+
+    .explain{
+      margin-top: 10px;
+      border:1px solid var(--line);
+      border-radius:16px;
+      background: rgba(246,242,234,0.35);
+      padding: 12px;
+      color: var(--ink-2);
+      line-height: 1.5;
+      font-size: 13px;
+    }
+    .mini{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="page-header">
+    <div class="container">
+      <nav class="crumbbar">
+        <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
+      </nav>
+
+      <div class="header-inner">
+        <div class="title-block">
+          <div class="kicker">Macroeconomics Practice Lab</div>
+          <h1>Labor Market: Cyclical vs Structural Unemployment</h1>
+          <p class="sub">
+            Use the labor market graph to see how unemployment can arise from (i) <strong>sticky nominal wages</strong> + <strong>labor demand shocks</strong> (cyclical),
+            or (ii) a <strong>real-wage rigidity</strong> (structural).
+          </p>
+
+          <details class="howto">
+            <summary>Key relationships</summary>
+            <div class="howto-body">
+              <ul>
+                <li>Axes: real wage \(w = W/P\) vs employment \(L\)</li>
+                <li>Labor demand: \(w = a - bL\)</li>
+                <li>Labor supply: \(w = c + dL\)</li>
+                <li>If the actual real wage is above equilibrium, employment is demand-determined and unemployment is \(L_s - L_d\).</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+
+        <div class="controls-card">
+          <div class="controls-actions">
+            <button id="resetBtn" class="btn subtle">Reset</button>
+            <button id="shockNegBtn" class="btn">Negative demand shock</button>
+            <button id="shockPosBtn" class="btn">Positive demand shock</button>
+          </div>
+          <div id="status" class="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container stack">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Graph and controls</h2>
+        <p class="panel-sub">Grey = baseline. Blue = current. Unemployment is shaded when it exists.</p>
+      </div>
+
+      <div class="grid2">
+        <div class="box">
+          <div class="chartWrap">
+            <canvas id="lmChart"></canvas>
+          </div>
+          <div class="mini" id="chartNote"></div>
+        </div>
+
+        <div class="box">
+          <div class="controls">
+
+            <div class="toggle">
+              <input id="stickyW" type="checkbox" checked>
+              <div class="ttext">
+                <strong>Cyclical mechanism:</strong> sticky nominal wage \(W\).<br>
+                When a demand shock hits, \(W\) does not adjust quickly, so \(w=W/P\) can be “too high.”
+              </div>
+            </div>
+
+            <div class="toggle">
+              <input id="realRigidity" type="checkbox">
+              <div class="ttext">
+                <strong>Structural mechanism:</strong> real-wage floor \( \bar{w} \).<br>
+                The real wage cannot fall below \( \bar{w} \) (e.g., minimum wage / unions / efficiency wages).
+              </div>
+            </div>
+
+            <div class="row3">
+              <div class="control">
+                <label for="W">Nominal wage (W)</label>
+                <input id="W" type="range" min="6" max="14" step="0.1" value="10">
+                <div class="mini">W = <span id="Wv">10.0</span></div>
+              </div>
+              <div class="control">
+                <label for="P">Price level (P)</label>
+                <input id="P" type="range" min="4" max="14" step="0.1" value="10">
+                <div class="mini">P = <span id="Pv">10.0</span></div>
+              </div>
+            </div>
+
+            <div class="row2">
+              <div class="control">
+                <label for="wbar">Real wage floor (w̄)</label>
+                <input id="wbar" type="range" min="0" max="2.5" step="0.05" value="0">
+              </div>
+              <input id="wbarNum" type="number" min="0" max="2.5" step="0.05" value="0">
+            </div>
+
+            <div class="row3">
+              <div class="control">
+                <label for="a">Labor demand intercept (a)</label>
+                <input id="a" type="range" min="1.5" max="4.0" step="0.05" value="3.0">
+                <div class="mini">a = <span id="av">3.00</span></div>
+              </div>
+              <div class="control">
+                <label for="c">Labor supply intercept (c)</label>
+                <input id="c" type="range" min="0.1" max="2.0" step="0.05" value="0.8">
+                <div class="mini">c = <span id="cv">0.80</span></div>
+              </div>
+            </div>
+
+            <div class="mini">
+              In this app, slopes are fixed for clarity: demand slope \(b\) and supply slope \(d\) are constant.
+            </div>
+
+            <div class="kv3">
+              <div class="metric"><div class="label">Equilibrium employment</div><div class="value" id="Lstar">—</div></div>
+              <div class="metric"><div class="label">Actual employment</div><div class="value" id="Lact">—</div></div>
+              <div class="metric"><div class="label">Unemployment</div><div class="value" id="Unemp">—</div></div>
+            </div>
+
+            <div class="explain" id="explainBox"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
