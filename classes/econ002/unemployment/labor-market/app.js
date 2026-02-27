@@ -191,6 +191,24 @@ window.addEventListener("DOMContentLoaded", () => {
     // Outcome
     const { eq, wEq, wAct, LAct, U } = outcome();
 
+    // ---- y-axis: label equilibrium real wage w* ----
+const yStar = yToPix(wEq);
+
+// optional faint guide line at w*
+ctx.strokeStyle = "rgba(0,0,0,0.18)";
+ctx.lineWidth = 2*dpr;
+ctx.beginPath();
+ctx.moveTo(X0, yStar);
+ctx.lineTo(X1, yStar);
+ctx.stroke();
+
+// tick label at w*
+ctx.fillStyle = "rgba(0,0,0,0.65)";
+ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+ctx.textAlign = "right";
+ctx.textBaseline = "middle";
+ctx.fillText(wEq.toFixed(2), X0 - 8*dpr, yStar);
+
     // Wage line (orange)
     ctx.strokeStyle = "rgba(230,159,0,0.90)";
     ctx.lineWidth = 3*dpr;
@@ -265,8 +283,7 @@ window.addEventListener("DOMContentLoaded", () => {
       `<strong>Numbers:</strong> equilibrium w*=${wEq.toFixed(2)}, actual w=${wAct.toFixed(2)}.<br>` +
       `<strong>Interpretation:</strong> ${expl}`;
 
-    els.chartNote.textContent =
-      `If w is above w*, employment falls to Ld(w) and unemployment is Ls(w) − Ld(w).`;
+    
   }
 
   // ----- Mode & controls -----
