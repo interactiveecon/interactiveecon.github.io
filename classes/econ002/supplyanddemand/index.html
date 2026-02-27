@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Supply & Demand: Move Along vs Shift</title>
+  <title>Supply & Demand: Along vs Shift</title>
 
   <link rel="stylesheet" href="/assets/style.css">
 
-  <!-- MathJax (light use in header only) -->
+  <!-- MathJax (header only) -->
   <script>
     window.MathJax = { tex: { inlineMath: [['\\(', '\\)'], ['$', '$']] }, svg: { fontCache: 'global' } };
   </script>
@@ -26,7 +26,7 @@
     }
 
     .chartCard{
-      height: 420px;
+      height: 460px;
       border:1px solid rgba(0,0,0,0.08);
       border-radius: 14px;
       background: rgba(255,255,255,0.75);
@@ -48,19 +48,36 @@
       line-height: 1.45;
     }
 
-    .qgrid{
+    .predWrap{ display:grid; gap:12px; margin-top: 12px; }
+    .predGrid2{
       display:grid;
-      gap: 10px;
-      margin-top: 12px;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      align-items:start;
+    }
+    @media (max-width: 700px){ .predGrid2{ grid-template-columns: 1fr; } }
+
+    .predCol{
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.70);
+      padding: 10px;
+    }
+    .predCol h4{
+      margin: 0 0 8px 0;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
     }
 
+    .control{ display:grid; gap:6px; margin-bottom: 10px; }
     .control label{
       display:block;
       font-size: 11px;
       text-transform: uppercase;
       letter-spacing: .08em;
       color: var(--muted);
-      margin-bottom: 6px;
     }
     select{
       width: 100%;
@@ -73,12 +90,12 @@
       font-variant-numeric: tabular-nums;
     }
 
-    .actions{
+    .actionsRow{
       display:flex;
       gap:10px;
       flex-wrap:wrap;
       align-items:center;
-      margin-top: 12px;
+      margin-top: 6px;
     }
 
     .feedback{
@@ -119,6 +136,7 @@
       border-radius: 14px;
       background: rgba(255,255,255,0.72);
       padding: 10px;
+      display:none;
     }
     .whyRow{
       display:grid;
@@ -167,19 +185,18 @@
       <div class="header-inner">
         <div class="title-block">
           <div class="kicker">Microeconomics Practice Lab</div>
-          <h1>Move Along vs Shift (Supply & Demand)</h1>
+          <h1>Along vs Shift (Supply & Demand)</h1>
           <p class="sub">
-            Decide whether a scenario causes a <strong>movement along</strong> a curve or a <strong>shift</strong> of a curve.
-            Then use the <strong>Why?</strong> panel to connect the scenario to the correct shifter.
+            Predict what the scenario does (along vs shift), then predict the market outcome (excess demand/supply, price, quantity).
           </p>
 
           <details class="howto">
             <summary>Key rule</summary>
             <div class="howto-body" id="howTo">
               <ul>
-                <li>If the scenario changes the <strong>price of the good itself</strong> → <strong>movement along</strong> the existing curve.</li>
-                <li>If the scenario changes <strong>anything else</strong> → a <strong>shift</strong> (demand or supply changes).</li>
-                <li>After you answer, the graph shows a dashed “before” curve and the new curve (or a movement along).</li>
+                <li><strong>Price of the good changes</strong> → <strong>movement along</strong> curves.</li>
+                <li><strong>Anything else</strong> → a <strong>shift</strong> (demand or supply changes).</li>
+                <li>In this lab you must first classify the scenario correctly, then predict the outcome before the graph reveals everything.</li>
               </ul>
             </div>
           </details>
@@ -189,7 +206,6 @@
           <div class="controls-actions">
             <button id="newBtn" class="btn primary">New Scenario</button>
             <button id="resetBtn" class="btn subtle">Reset</button>
-            <button id="submitBtn" class="btn">Check</button>
           </div>
           <div id="status" class="status" aria-live="polite"></div>
         </div>
@@ -200,8 +216,8 @@
   <main class="container stack">
     <section class="panel">
       <div class="panel-head">
-        <h2>Scenario</h2>
-        <p class="panel-sub">Answer the three questions, then check your reasoning.</p>
+        <h2>Scenario and predictions</h2>
+        <p class="panel-sub">Stage 1: classify what changes. Stage 2: predict the outcome.</p>
       </div>
 
       <div class="grid2">
@@ -209,65 +225,144 @@
           <p class="scenarioTitle" id="scTitle">—</p>
           <p class="scenarioDesc" id="scDesc">Click “New Scenario” to begin.</p>
 
-          <div class="qgrid">
-            <div class="control">
-              <label for="qCurve">1) Which curve is affected?</label>
-              <select id="qCurve">
-                <option value="" selected>Select…</option>
-                <option value="D">Demand</option>
-                <option value="S">Supply</option>
-                <option value="N">Neither (price change only)</option>
-              </select>
-            </div>
+          <!-- Stage 1 predictions -->
+          <div class="predWrap">
+            <div class="predGrid2">
+              <div class="predCol">
+                <h4>Demand prediction</h4>
 
-            <div class="control">
-              <label for="qType">2) Move along or shift?</label>
-              <select id="qType">
-                <option value="" selected>Select…</option>
-                <option value="ALONG">Movement along</option>
-                <option value="SHIFT">Shift</option>
-              </select>
-            </div>
+                <div class="control">
+                  <label for="dAction">Action</label>
+                  <select id="dAction">
+                    <option value="" selected>Select…</option>
+                    <option value="NONE">No change</option>
+                    <option value="ALONG">Movement along</option>
+                    <option value="SHIFT">Shift</option>
+                  </select>
+                </div>
 
-            <div class="control">
-              <label for="qDir">3) Direction (if applicable)</label>
-              <select id="qDir">
-                <option value="" selected>Select…</option>
-                <option value="R">Right (increase)</option>
-                <option value="L">Left (decrease)</option>
-                <option value="NA">Not applicable</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="actions">
-            <button id="whyToggle" class="btn subtle">Why?</button>
-            <div class="mini" id="hint">Tip: If only the price of the good changes → movement along.</div>
-          </div>
-
-          <div class="whyBox" id="whyBox" style="display:none;">
-            <div class="whyRow">
-              <div class="whyCol">
-                <h4>Demand shifters</h4>
-                <ul id="whyDemand"></ul>
+                <div class="control">
+                  <label for="dDir">Direction</label>
+                  <select id="dDir">
+                    <option value="" selected>Select…</option>
+                    <option value="UP">Up (higher price)</option>
+                    <option value="DOWN">Down (lower price)</option>
+                    <option value="R">Right (increase)</option>
+                    <option value="L">Left (decrease)</option>
+                    <option value="NA">Not applicable</option>
+                  </select>
+                </div>
               </div>
-              <div class="whyCol">
-                <h4>Supply shifters</h4>
-                <ul id="whySupply"></ul>
+
+              <div class="predCol">
+                <h4>Supply prediction</h4>
+
+                <div class="control">
+                  <label for="sAction">Action</label>
+                  <select id="sAction">
+                    <option value="" selected>Select…</option>
+                    <option value="NONE">No change</option>
+                    <option value="ALONG">Movement along</option>
+                    <option value="SHIFT">Shift</option>
+                  </select>
+                </div>
+
+                <div class="control">
+                  <label for="sDir">Direction</label>
+                  <select id="sDir">
+                    <option value="" selected>Select…</option>
+                    <option value="UP">Up (higher price)</option>
+                    <option value="DOWN">Down (lower price)</option>
+                    <option value="R">Right (increase)</option>
+                    <option value="L">Left (decrease)</option>
+                    <option value="NA">Not applicable</option>
+                  </select>
+                </div>
               </div>
             </div>
-            <div class="mini" id="whyNote">After you click “Check,” the app will highlight which factor changed.</div>
-          </div>
 
-          <div class="feedback" id="fb"></div>
+            <div class="actionsRow">
+              <button id="check1Btn" class="btn">Check predictions</button>
+              <button id="whyBtn" class="btn subtle">Why?</button>
+              <div class="mini" id="stageHint">Stage 1: classify what the scenario changes.</div>
+            </div>
+
+            <div class="whyBox" id="whyBox">
+              <div class="whyRow">
+                <div class="whyCol">
+                  <h4>Demand shifters</h4>
+                  <ul id="whyDemand"></ul>
+                </div>
+                <div class="whyCol">
+                  <h4>Supply shifters</h4>
+                  <ul id="whySupply"></ul>
+                </div>
+              </div>
+              <div class="mini" id="whyNote">After you pass Stage 1, the app highlights what changed.</div>
+            </div>
+
+            <div class="feedback" id="fb1"></div>
+
+            <!-- Stage 2 predictions (hidden until Stage 1 correct) -->
+            <div id="stage2" style="display:none;">
+              <div class="predCol" style="margin-top:12px;">
+                <h4>Market outcome prediction (after the change)</h4>
+
+                <div class="predGrid2">
+                  <div class="control">
+                    <label for="excess">At the original price \(P_1\), is there…</label>
+                    <select id="excess">
+                      <option value="" selected>Select…</option>
+                      <option value="ED">Excess demand (shortage)</option>
+                      <option value="ES">Excess supply (surplus)</option>
+                      <option value="NONE">No imbalance</option>
+                    </select>
+                  </div>
+
+                  <div class="control">
+                    <label for="pMove">Price will…</label>
+                    <select id="pMove">
+                      <option value="" selected>Select…</option>
+                      <option value="UP">Rise</option>
+                      <option value="DOWN">Fall</option>
+                      <option value="NONE">Stay the same</option>
+                    </select>
+                  </div>
+
+                  <div class="control">
+                    <label for="qMove">Quantity (output) will…</label>
+                    <select id="qMove">
+                      <option value="" selected>Select…</option>
+                      <option value="UP">Rise</option>
+                      <option value="DOWN">Fall</option>
+                      <option value="AMB">Be ambiguous</option>
+                      <option value="NONE">Stay the same</option>
+                    </select>
+                  </div>
+
+                  <div class="control">
+                    <label>&nbsp;</label>
+                    <div class="mini">Tip: with both curves shifting, quantity can be ambiguous.</div>
+                  </div>
+                </div>
+
+                <div class="actionsRow">
+                  <button id="check2Btn" class="btn">Check outcome</button>
+                  <div class="mini" id="stage2Hint">Stage 2: predict excess demand/supply and the direction of price and quantity.</div>
+                </div>
+
+                <div class="feedback" id="fb2"></div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="box">
           <div class="chartCard">
-            <canvas id="chart" width="980" height="560"></canvas>
+            <canvas id="chart" width="980" height="620"></canvas>
           </div>
           <div class="mini">
-            Solid curves = current. Dashed curves = original (before the scenario).
+            Dashed curves = original. Solid curves = revealed changes. Dashed guide lines mark \(P_1,Q_1\) (and later \(P_2,Q_2\)).
           </div>
         </div>
       </div>
