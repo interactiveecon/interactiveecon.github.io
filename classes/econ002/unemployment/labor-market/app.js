@@ -155,9 +155,9 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.fillStyle = "rgba(0,0,0,0.75)";
     ctx.font = `${13*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "center";
-    ctx.fillText("Employment (L)", (X0+X1)/2, Y1 + 32*dpr);
+    ctx.fillText("Employment (L)", (X0+X1)/2, Y1 + 22*dpr);
     ctx.save();
-    ctx.translate(X0 - 36*dpr, (Y0+Y1)/2);
+    ctx.translate(X0 - 60*dpr, (Y0+Y1)/2);
     ctx.rotate(-Math.PI/2);
     ctx.fillText("Real wage (w)", 0, 0);
     ctx.restore();
@@ -191,23 +191,25 @@ window.addEventListener("DOMContentLoaded", () => {
     // Outcome
     const { eq, wEq, wAct, LAct, U } = outcome();
 
-    // ---- y-axis: label equilibrium real wage w* ----
-const yStar = yToPix(wEq);
+    const wTick = (state.mode === "cyc" && state.wStickyDown != null) ? state.wStickyDown : wEq;
 
-// optional faint guide line at w*
+    // ---- y-axis: label equilibrium real wage w* ----
+const yTick = yToPix(wTick);
+
+// faint guide line
 ctx.strokeStyle = "rgba(0,0,0,0.18)";
 ctx.lineWidth = 2*dpr;
 ctx.beginPath();
-ctx.moveTo(X0, yStar);
-ctx.lineTo(X1, yStar);
+ctx.moveTo(X0, yTick);
+ctx.lineTo(X1, yTick);
 ctx.stroke();
 
-// tick label at w*
+// tick label
 ctx.fillStyle = "rgba(0,0,0,0.65)";
 ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
 ctx.textAlign = "right";
 ctx.textBaseline = "middle";
-ctx.fillText(wEq.toFixed(2), X0 - 8*dpr, yStar);
+ctx.fillText(wTick.toFixed(2), X0 - 10*dpr, yTick);
 
     // Wage line (orange)
     ctx.strokeStyle = "rgba(230,159,0,0.90)";
@@ -276,7 +278,7 @@ ctx.fillText(wEq.toFixed(2), X0 - 8*dpr, yStar);
     } else if (state.mode === "cyc") {
       expl = `Cyclical unemployment: a negative demand shock lowers the market-clearing wage, but the real wage does not fall (downward sticky). Firms reduce hiring to labor demand, creating unemployment.`;
     } else {
-      expl = `Structural unemployment: the real wage is held above the market-clearing level by the wage floor \$begin:math:text$\\\\bar w\\$end:math:text$. Employment is demand-determined at that wage, creating persistent unemployment.`;
+      expl = `Structural unemployment: the real wage is held above the market-clearing level by the wage floor \(\bar w\). Employment is demand-determined at that wage, creating persistent unemployment.`;
     }
 
     els.explainBox.innerHTML =
