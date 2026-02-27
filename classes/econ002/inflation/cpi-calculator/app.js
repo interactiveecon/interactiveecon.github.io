@@ -20,6 +20,11 @@ window.addEventListener("DOMContentLoaded", () => {
 
     cpiChart: $("cpiChart"),
     piChart: $("piChart"),
+
+    mcqMeta: $("mcqMeta"),
+    mcqList: $("mcqList"),
+    newQsBtn: $("newQsBtn"),
+    submitQsBtn: $("submitQsBtn"),
   };
 
   function setStatus(msg){ els.status.textContent = msg; }
@@ -114,18 +119,51 @@ window.addEventListener("DOMContentLoaded", () => {
   function setPercentStep(inputEl){
     const v = num(inputEl.value);
     const abs = Number.isFinite(v) ? Math.abs(v) : 0;
-    let step = abs * 0.01;                 // 1% of current value
+    let step = abs * 0.01;
     if (!Number.isFinite(step) || step <= 0) step = 0.01;
-    step = Math.max(0.01, round2(step));   // minimum 0.01
+    step = Math.max(0.01, round2(step));
     inputEl.step = String(step);
   }
 
   // ---- Baseline snapshot control ----
-  function deepCopyRows(arr){
-    return arr.map(r => ({...r}));
-  }
+  function deepCopyRows(arr){ return arr.map(r => ({...r})); }
   function updateBaselineToCurrent(){
     baselineSnapshot = deepCopyRows(rows);
+  }
+
+  // ---- Computation helpers ----
+  function sumCost(srcRows, priceKey){
+    let s = 0;
+    for (const r of srcRows){
+      const q = r.basket;
+      const p = r[priceKey];
+      if (!Number.isFinite(q) || !Number.isFinite(p)) return NaN;
+      s += q*p;
+    }
+    return s;
+  }
+
+  function computeSeries(srcRows){
+    const cost1 = sumCost(srcRows, "p1");
+    const cost2 = sumCost(srcRows, "p2");
+    const cost3 = sumCost(srcRows, "p3");
+
+    const cpi1 = Number.isFinite(cost1) && cost1 !== 0 ? 100 : NaN;
+    const cpi2 = Number.isFinite(cost1) && cost1 !== 0 ? 100 * cost2 / cost1 : NaN;
+    const cpi3 = Number.isFinite(cost1) && cost1 !== 0 ? 100 * cost3 / cost1 : NaN;
+
+    const pi12 = (Number.isFinite(cpi2) && Number.isFinite(cpi1) && cpi1 !== 0) ? (cpi2 - cpi1)/cpi1 : NaN;
+    const pi23 = (Number.isFinite(cpi3) && Number.isFinite(cpi2) && cpi2 !== 0) ? (cpi3 - cpi2)/cpi2 : NaN;
+
+    return { cost1, cost2, cost3, cpi: [cpi1, cpi2, cpi3], pi: [NaN, pi12, pi23] };
+  }
+
+  function currentAndBaselineSeries(){
+    if (!baselineSnapshot) updateBaselineToCurrent();
+    return {
+      cur: computeSeries(rows),
+      base: computeSeries(baselineSnapshot),
+    };
   }
 
   // ---- Row operations ----
@@ -141,9 +179,10 @@ window.addEventListener("DOMContentLoaded", () => {
     rows = [];
     resetUnused();
     for (let i=0;i<3;i++) addRandomRow();
-    updateBaselineToCurrent(); // baseline should match the initial loaded values
+    updateBaselineToCurrent();
     render();
     compute();
+    regenerateQuestions(true);
     setStatus("Loaded a random example basket (3 goods).");
   }
 
@@ -153,17 +192,19 @@ window.addEventListener("DOMContentLoaded", () => {
     resetUnused();
     render();
     compute();
+    clearQuestions();
     setStatus("Click “Load example” to begin.");
   }
 
   function removeRow(id){
     rows = rows.filter(r => r.id !== id);
-    updateBaselineToCurrent();   // basket changed => baseline updates
+    updateBaselineToCurrent();
     render();
     compute();
+    regenerateQuestions(true);
   }
 
-  // ---- Rendering ----
+  // ---- Rendering table ----
   function escapeHtml(s){
     return String(s ?? "")
       .replaceAll("&","&amp;")
@@ -201,7 +242,6 @@ window.addEventListener("DOMContentLoaded", () => {
       els.basketBody.appendChild(tr);
     }
 
-    // inputs
     els.basketBody.querySelectorAll("input[data-id]").forEach(inp => {
       if (inp.classList.contains("price")) {
         setPercentStep(inp);
@@ -215,58 +255,27 @@ window.addEventListener("DOMContentLoaded", () => {
         const row = rows.find(x => x.id === id);
         if (!row) return;
 
-        if (k === "name") {
-          row[k] = inp.value;
-        } else {
-          row[k] = num(inp.value);
-        }
+        if (k === "name") row[k] = inp.value;
+        else row[k] = num(inp.value);
 
-        // Basket change => baseline should update to current basket/prices
         if (inp.classList.contains("basket")) {
-          updateBaselineToCurrent();
+          updateBaselineToCurrent();     // basket change resets baseline
+          regenerateQuestions(true);
         }
 
-        if (inp.classList.contains("price")) {
-          setPercentStep(inp);
-        }
+        if (inp.classList.contains("price")) setPercentStep(inp);
 
         compute();
+        // prices change -> questions stay valid, but regenerate on demand
       });
     });
 
-    // remove
     els.basketBody.querySelectorAll("button[data-del]").forEach(btn => {
       btn.addEventListener("click", () => removeRow(btn.dataset.del));
     });
   }
 
-  // ---- Computation ----
-  function sumCost(srcRows, priceKey){
-    let s = 0;
-    for (const r of srcRows){
-      const q = r.basket;
-      const p = r[priceKey];
-      if (!Number.isFinite(q) || !Number.isFinite(p)) return NaN;
-      s += q*p;
-    }
-    return s;
-  }
-
-  function computeSeries(srcRows){
-    const cost1 = sumCost(srcRows, "p1");
-    const cost2 = sumCost(srcRows, "p2");
-    const cost3 = sumCost(srcRows, "p3");
-
-    const cpi1 = Number.isFinite(cost1) && cost1 !== 0 ? 100 : NaN;
-    const cpi2 = Number.isFinite(cost1) && cost1 !== 0 ? 100 * cost2 / cost1 : NaN;
-    const cpi3 = Number.isFinite(cost1) && cost1 !== 0 ? 100 * cost3 / cost1 : NaN;
-
-    const pi12 = (Number.isFinite(cpi2) && Number.isFinite(cpi1) && cpi1 !== 0) ? (cpi2 - cpi1)/cpi1 : NaN;
-    const pi23 = (Number.isFinite(cpi3) && Number.isFinite(cpi2) && cpi2 !== 0) ? (cpi3 - cpi2)/cpi2 : NaN;
-
-    return { cost1, cost2, cost3, cpi: [cpi1, cpi2, cpi3], pi: [NaN, pi12, pi23] };
-  }
-
+  // ---- Compute + update UI ----
   function setOutputsNa(){
     els.cost1Val.textContent = "—";
     els.cost2Val.textContent = "—";
@@ -292,11 +301,9 @@ window.addEventListener("DOMContentLoaded", () => {
     );
     els.warn.textContent = bad ? "Some entries are missing or invalid. Results may show —." : "";
 
-    // Ensure we have a baseline snapshot once basket exists
     if (!baselineSnapshot) updateBaselineToCurrent();
 
-    const cur = computeSeries(rows);
-    const base = computeSeries(baselineSnapshot);
+    const { cur, base } = currentAndBaselineSeries();
 
     els.cost1Val.textContent = fmtMoney(cur.cost1);
     els.cost2Val.textContent = fmtMoney(cur.cost2);
@@ -332,7 +339,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const pad = { l: 44*dpr, r: 16*dpr, t: 14*dpr, b: 34*dpr };
     const X0 = pad.l, X1 = W - pad.r;
     const Y0 = pad.t, Y1 = H - pad.b;
-
     const xToPix = (i) => X0 + i * (X1 - X0) / 2;
 
     const vals = []
@@ -342,10 +348,8 @@ window.addEventListener("DOMContentLoaded", () => {
 
     const yMin = 90;
     const yMax = vals.length ? Math.max(110, Math.max(...vals) + 10) : 120;
-
     const yToPix = (y) => Y0 + (yMax - y) * (Y1 - Y0) / (yMax - yMin);
 
-    // grid
     ctx.strokeStyle = "rgba(0,0,0,0.10)";
     ctx.lineWidth = 1*dpr;
     for (let k=0;k<=5;k++){
@@ -354,7 +358,6 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.beginPath(); ctx.moveTo(X0,py); ctx.lineTo(X1,py); ctx.stroke();
     }
 
-    // y labels
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "right";
@@ -364,21 +367,18 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.fillText(y.toFixed(0), X0 - 8*dpr, yToPix(y));
     }
 
-    // x labels
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ["Year 1","Year 2","Year 3"].forEach((lab,i)=>{
       ctx.fillText(lab, xToPix(i), Y1 + 8*dpr);
     });
 
-    // title
     ctx.fillStyle = "rgba(0,0,0,0.70)";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.font = `${13*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.fillText("CPI (base year = 100)", X0, 0);
 
-    // baseline (dashed)
     if (baseCpi && baseCpi.every(Number.isFinite)){
       ctx.strokeStyle = "rgba(0,0,0,0.35)";
       ctx.lineWidth = 2*dpr;
@@ -400,7 +400,6 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // current (solid)
     if (curCpi && curCpi.every(Number.isFinite)){
       ctx.strokeStyle = "rgba(31,119,180,0.85)";
       ctx.lineWidth = 3*dpr;
@@ -427,24 +426,18 @@ window.addEventListener("DOMContentLoaded", () => {
     const pad = { l: 44*dpr, r: 16*dpr, t: 14*dpr, b: 34*dpr };
     const X0 = pad.l, X1 = W - pad.r;
     const Y0 = pad.t, Y1 = H - pad.b;
-
     const xToPix = (i) => X0 + i * (X1 - X0) / 2;
 
-    // Inflation series has meaningful values at indices 1 and 2 (1->2 and 2->3).
-    // We'll plot points at Year 2 (index 1) and Year 3 (index 2), and include a 0 line.
     const vals = []
       .concat(basePi || [])
       .concat(curPi || [])
       .filter(Number.isFinite);
 
-    // Choose a symmetric-ish range around 0 for readability
     const maxAbs = vals.length ? Math.max(...vals.map(v => Math.abs(v))) : 0.05;
     const yMax = Math.max(0.06, maxAbs + 0.02);
     const yMin = -yMax;
-
     const yToPix = (y) => Y0 + (yMax - y) * (Y1 - Y0) / (yMax - yMin);
 
-    // grid
     ctx.strokeStyle = "rgba(0,0,0,0.10)";
     ctx.lineWidth = 1*dpr;
     for (let k=0;k<=6;k++){
@@ -453,12 +446,10 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.beginPath(); ctx.moveTo(X0,py); ctx.lineTo(X1,py); ctx.stroke();
     }
 
-    // 0 line
     ctx.strokeStyle = "rgba(0,0,0,0.18)";
     ctx.lineWidth = 2*dpr;
     ctx.beginPath(); ctx.moveTo(X0, yToPix(0)); ctx.lineTo(X1, yToPix(0)); ctx.stroke();
 
-    // y labels (in %)
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "right";
@@ -468,24 +459,20 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.fillText(`${(100*y).toFixed(0)}%`, X0 - 8*dpr, yToPix(y));
     }
 
-    // x labels (still Year 1..3 for alignment)
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ["Year 1","Year 2","Year 3"].forEach((lab,i)=>{
       ctx.fillText(lab, xToPix(i), Y1 + 8*dpr);
     });
 
-    // title
     ctx.fillStyle = "rgba(0,0,0,0.70)";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.font = `${13*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.fillText("Inflation (one-year % change in CPI)", X0, 0);
 
-    // helper to plot only points at i=1,2 and connect them
     function plotPiSeries(series, strokeStyle, pointStyle, dashed){
       if (!series || !Number.isFinite(series[1]) || !Number.isFinite(series[2])) return;
-
       ctx.strokeStyle = strokeStyle;
       ctx.lineWidth = 3*dpr;
       ctx.setLineDash(dashed ? [6*dpr, 6*dpr] : []);
@@ -503,10 +490,267 @@ window.addEventListener("DOMContentLoaded", () => {
       });
     }
 
-    // baseline dashed grey
     plotPiSeries(basePi, "rgba(0,0,0,0.35)", "rgba(0,0,0,0.35)", true);
-    // current solid blue
     plotPiSeries(curPi, "rgba(31,119,180,0.85)", "rgba(31,119,180,0.85)", false);
+  }
+
+  // =========================
+  // MCQ GENERATION (A,B,C,D,E,H)
+  // =========================
+  let currentQs = []; // {id, prompt, choices:[{key,text}], correctKey, explain}
+
+  function clearQuestions(){
+    currentQs = [];
+    els.mcqMeta.textContent = "Load an example to generate questions.";
+    els.mcqList.innerHTML = "";
+  }
+
+  function regenerateQuestions(force=false){
+    if (rows.length === 0){
+      clearQuestions();
+      return;
+    }
+    // If not force and questions already exist, keep them
+    if (!force && currentQs.length) return;
+
+    const { cur } = currentAndBaselineSeries();
+
+    // Build a pool of generators; then sample 5 distinct ones
+    const gens = [
+      genA_Driver_12,
+      genA_Driver_23,
+      genB_PercentVsContribution,
+      genC_OnePriceChange,
+      genD_BaseYearDenominator,
+      genE_WhichStatsChange_Y3,
+      genH_LargestWeight
+    ];
+
+    const picked = sampleWithoutReplacement(gens, Math.min(5, gens.length));
+    currentQs = picked.map((fn, idx) => {
+      const q = fn(cur);
+      return { id: "q" + (idx+1), ...q };
+    });
+
+    renderQuestions();
+  }
+
+  function renderQuestions(){
+    els.mcqList.innerHTML = "";
+    els.mcqMeta.textContent = `Questions are based on your current basket (${rows.length} good${rows.length===1?"":"s"}).`;
+
+    currentQs.forEach((q, qi) => {
+      const wrap = document.createElement("div");
+      wrap.className = "qcard";
+      wrap.innerHTML = `
+        <div class="qtitle">${qi+1}. ${escapeHtml(q.prompt)}</div>
+        <div class="choices" role="radiogroup" aria-label="Question ${qi+1}">
+          ${q.choices.map(ch => `
+            <label class="choice">
+              <input type="radio" name="${q.id}" value="${escapeHtml(ch.key)}">
+              <div>${escapeHtml(ch.text)}</div>
+            </label>
+          `).join("")}
+        </div>
+        <div class="feedback" id="${q.id}_fb"></div>
+      `;
+      els.mcqList.appendChild(wrap);
+    });
+  }
+
+  function submitQuestions(){
+    if (!currentQs.length) return;
+
+    currentQs.forEach(q => {
+      const sel = els.mcqList.querySelector(`input[name="${q.id}"]:checked`);
+      const fb = document.getElementById(`${q.id}_fb`);
+      const chosen = sel ? sel.value : null;
+
+      const ok = (chosen === q.correctKey);
+      fb.style.display = "block";
+      fb.innerHTML = `
+        ${ok ? `<span class="tagOK">Correct</span>` : `<span class="tagBad">Not quite</span>`}
+        <strong>Answer:</strong> ${escapeHtml(choiceText(q, q.correctKey))}<br>
+        <strong>Why:</strong> ${escapeHtml(q.explain)}
+      `;
+    });
+  }
+
+  function choiceText(q, key){
+    const hit = q.choices.find(c => c.key === key);
+    return hit ? hit.text : "(missing)";
+  }
+
+  // ---- Generators ----
+
+  // A (1->2): biggest basket-weighted price increase ΔCi = basket*(p2-p1)
+  function genA_Driver_12(){
+    const contribs = rows.map(r => ({
+      name: r.name,
+      dC: r.basket * (r.p2 - r.p1)
+    }));
+    const best = maxBy(contribs, x => x.dC);
+    const distractors = topK(contribs.filter(x => x.name !== best.name), 3, x => x.dC);
+    const choices = shuffleCopy([best, ...distractors]).map(x => ({ key: x.name, text: x.name }));
+
+    return {
+      prompt: `From Year 1 → Year 2, which good contributes the most to the change in CPI?`,
+      choices,
+      correctKey: best.name,
+      explain: `CPI uses a fixed basket. The biggest driver is the largest basket-weighted price change: Basket × (P2 − P1).`
+    };
+  }
+
+  // A (2->3)
+  function genA_Driver_23(){
+    const contribs = rows.map(r => ({
+      name: r.name,
+      dC: r.basket * (r.p3 - r.p2)
+    }));
+    const best = maxBy(contribs, x => x.dC);
+    const distractors = topK(contribs.filter(x => x.name !== best.name), 3, x => x.dC);
+    const choices = shuffleCopy([best, ...distractors]).map(x => ({ key: x.name, text: x.name }));
+
+    return {
+      prompt: `From Year 2 → Year 3, which good contributes the most to the change in CPI?`,
+      choices,
+      correctKey: best.name,
+      explain: `The biggest impact comes from the largest basket-weighted price change: Basket × (P3 − P2).`
+    };
+  }
+
+  // B: percent change misconception (always B is correct)
+  function genB_PercentVsContribution(){
+    // pick a good with largest % increase from 1->2 (if possible)
+    const pct = rows.map(r => ({
+      name: r.name,
+      pct: (r.p1 !== 0) ? (r.p2 - r.p1)/r.p1 : 0
+    }));
+    const best = maxBy(pct, x => x.pct);
+
+    return {
+      prompt: `The price of “${best.name}” rose by the largest percent from Year 1 → Year 2. Does that guarantee it raised CPI the most?`,
+      choices: [
+        { key:"A", text:"Yes—largest percent increase always matters most" },
+        { key:"B", text:"No—CPI impact depends on Basket × dollar price change" },
+        { key:"C", text:"No—CPI ignores price changes for individual goods" },
+        { key:"D", text:"Yes—but only if the basket is fixed" }
+      ],
+      correctKey: "B",
+      explain: `CPI is based on the dollar cost of the fixed basket. A large percent change on a tiny basket item may matter less than a moderate change on a heavily weighted item.`
+    };
+  }
+
+  // C: if only Year-2 price of a good increases, CPI2 and inflation 1→2 rise (unless basket=0)
+  function genC_OnePriceChange(){
+    const r = rows[Math.floor(Math.random()*rows.length)];
+    const basketZero = !Number.isFinite(r.basket) || r.basket === 0;
+
+    const correct = basketZero ? "D" : "A";
+    return {
+      prompt: `Suppose only the Year 2 price of “${r.name}” increases (everything else unchanged). What happens to CPI (Year 2) and inflation (1→2)?`,
+      choices: [
+        { key:"A", text:"CPI (Year 2) rises; inflation (1→2) rises" },
+        { key:"B", text:"CPI (Year 2) falls; inflation (1→2) rises" },
+        { key:"C", text:"CPI (Year 2) rises; inflation (1→2) falls" },
+        { key:"D", text:"CPI (Year 2) doesn’t change; inflation (1→2) doesn’t change" }
+      ],
+      correctKey: correct,
+      explain: basketZero
+        ? `Because the basket amount for that good is zero, changing its price does not change the basket cost, so CPI and inflation do not change.`
+        : `Raising any included Year-2 price increases the Year-2 basket cost, which raises CPI (Year 2) and the 1→2 inflation rate.`
+    };
+  }
+
+  // D: increase a base-year (Year 1) price -> CPI2 falls (denominator bigger), holding Year2 fixed
+  function genD_BaseYearDenominator(){
+    const r = rows[Math.floor(Math.random()*rows.length)];
+    return {
+      prompt: `If we increase the Year 1 price of “${r.name}” (holding all Year 2 prices fixed), what happens to CPI (Year 2)?`,
+      choices: [
+        { key:"A", text:"CPI (Year 2) rises" },
+        { key:"B", text:"CPI (Year 2) falls" },
+        { key:"C", text:"CPI (Year 2) stays the same" },
+        { key:"D", text:"Not enough information" }
+      ],
+      correctKey: "B",
+      explain: `CPI(Year 2) = 100 × Cost2 / Cost1. Increasing a Year-1 price raises Cost1 (the denominator), so the ratio falls if Cost2 is unchanged.`
+    };
+  }
+
+  // E: only a Year-3 price increases -> CPI3 and inflation 2→3 change
+  function genE_WhichStatsChange_Y3(){
+    const r = rows[Math.floor(Math.random()*rows.length)];
+    return {
+      prompt: `The only change is that the Year 3 price of “${r.name}” increases. Which statistic(s) change?`,
+      choices: [
+        { key:"A", text:"CPI (Year 2) and inflation (1→2)" },
+        { key:"B", text:"CPI (Year 3) and inflation (2→3)" },
+        { key:"C", text:"CPI (Year 1) and inflation (1→2)" },
+        { key:"D", text:"All CPI values and both inflation rates" }
+      ],
+      correctKey: "B",
+      explain: `Year-3 prices affect only the Year-3 basket cost, so CPI (Year 3) changes and the 2→3 inflation rate changes.`
+    };
+  }
+
+  // H: largest weight based on base-year spending share ~ basket * p1
+  function genH_LargestWeight(){
+    const weights = rows.map(r => ({
+      name: r.name,
+      w: r.basket * r.p1
+    }));
+    const best = maxBy(weights, x => x.w);
+    const distractors = topK(weights.filter(x => x.name !== best.name), 3, x => x.w);
+    const choices = shuffleCopy([best, ...distractors]).map(x => ({ key: x.name, text: x.name }));
+
+    return {
+      prompt: `Which good has the largest weight in the CPI basket (based on Year 1 spending)?`,
+      choices,
+      correctKey: best.name,
+      explain: `CPI weights reflect base-year spending shares. A larger Basket × Year-1 price implies a larger weight.`
+    };
+  }
+
+  // ---- MCQ utilities ----
+  function sampleWithoutReplacement(arr, k){
+    const copy = arr.slice();
+    shuffle(copy);
+    return copy.slice(0, k);
+  }
+  function shuffleCopy(arr){
+    const copy = arr.slice();
+    shuffle(copy);
+    return copy;
+  }
+  function maxBy(arr, fn){
+    let best = arr[0];
+    let bestVal = fn(best);
+    for (let i=1;i<arr.length;i++){
+      const v = fn(arr[i]);
+      if (v > bestVal){
+        best = arr[i];
+        bestVal = v;
+      }
+    }
+    return best;
+  }
+  function topK(arr, k, fn){
+    return arr
+      .slice()
+      .sort((a,b) => fn(b) - fn(a))
+      .slice(0, Math.min(k, arr.length));
+  }
+
+  // ---- MCQ event wiring ----
+  els.newQsBtn.addEventListener("click", () => regenerateQuestions(true));
+  els.submitQsBtn.addEventListener("click", submitQuestions);
+
+  // ---- Charts + MCQs should update on basket changes; prices update compute only ----
+  function afterBasketStructureChange(){
+    updateBaselineToCurrent();
+    compute();
+    regenerateQuestions(true);
   }
 
   // ---- Events ----
@@ -516,19 +760,18 @@ window.addEventListener("DOMContentLoaded", () => {
       return;
     }
     addRandomRow();
-    updateBaselineToCurrent(); // basket changed => baseline updates to current
+    afterBasketStructureChange();
     render();
-    compute();
     setStatus("Added a random good (baseline updated).");
   });
 
   els.exampleBtn.addEventListener("click", loadExample);
   els.resetBtn.addEventListener("click", reset);
 
-  // Typeset header formulas once
+  // Typeset header once
   const top = document.getElementById("mathTop");
   if (top && window.MathJax?.typesetPromise) window.MathJax.typesetPromise([top]);
 
-  // Start
+  // ---- Init ----
   reset();
 });
