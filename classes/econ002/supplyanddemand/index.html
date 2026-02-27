@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Supply & Demand: Move Along vs Shift</title>
+
+  <link rel="stylesheet" href="/assets/style.css">
+
+  <!-- MathJax (light use in header only) -->
+  <script>
+    window.MathJax = { tex: { inlineMath: [['\\(', '\\)'], ['$', '$']] }, svg: { fontCache: 'global' } };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+  <style>
+    .stack{ display:grid; gap:14px; margin-top:18px; }
+    .grid2{ display:grid; grid-template-columns: 1.05fr 0.95fr; gap:12px; align-items:start; }
+    @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
+
+    .box{
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(246,242,234,0.35);
+      padding: 12px;
+    }
+
+    .chartCard{
+      height: 420px;
+      border:1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.75);
+      padding: 10px;
+    }
+    canvas{ width:100%; height:100%; display:block; }
+
+    .scenarioTitle{
+      font-weight: 900;
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.25;
+      margin: 0;
+    }
+    .scenarioDesc{
+      margin-top: 6px;
+      color: var(--ink-2);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .qgrid{
+      display:grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .control label{
+      display:block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    select{
+      width: 100%;
+      border:1px solid var(--line-2);
+      border-radius: 12px;
+      padding: 10px 10px;
+      background:#fff;
+      font-family: var(--font-sans);
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      margin-top: 12px;
+    }
+
+    .feedback{
+      margin-top: 10px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+      padding-top: 10px;
+      display:none;
+      color: var(--ink-2);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .tagOK{
+      display:inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(34,139,34,0.12);
+      border: 1px solid rgba(34,139,34,0.25);
+      color: rgba(34,120,34,1);
+      font-weight: 800;
+      font-size: 12px;
+      margin-right: 8px;
+    }
+    .tagBad{
+      display:inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(178,34,34,0.10);
+      border: 1px solid rgba(178,34,34,0.25);
+      color: rgba(140,0,0,0.95);
+      font-weight: 800;
+      font-size: 12px;
+      margin-right: 8px;
+    }
+
+    .whyBox{
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.72);
+      padding: 10px;
+    }
+    .whyRow{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    @media (max-width: 980px){ .whyRow{ grid-template-columns: 1fr; } }
+    .whyCol h4{
+      margin: 0 0 6px 0;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+    }
+    .whyCol ul{
+      margin: 0;
+      padding-left: 18px;
+      color: var(--ink-2);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .whyHi{
+      font-weight: 900;
+      color: var(--accent);
+    }
+
+    .mini{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+      margin-top: 6px;
+    }
+  </style>
+
+  <script defer src="data.js"></script>
+  <script defer src="app.js"></script>
+</head>
+
+<body>
+  <header class="page-header">
+    <div class="container">
+      <nav class="crumbbar">
+        <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
+      </nav>
+
+      <div class="header-inner">
+        <div class="title-block">
+          <div class="kicker">Microeconomics Practice Lab</div>
+          <h1>Move Along vs Shift (Supply & Demand)</h1>
+          <p class="sub">
+            Decide whether a scenario causes a <strong>movement along</strong> a curve or a <strong>shift</strong> of a curve.
+            Then use the <strong>Why?</strong> panel to connect the scenario to the correct shifter.
+          </p>
+
+          <details class="howto">
+            <summary>Key rule</summary>
+            <div class="howto-body" id="howTo">
+              <ul>
+                <li>If the scenario changes the <strong>price of the good itself</strong> → <strong>movement along</strong> the existing curve.</li>
+                <li>If the scenario changes <strong>anything else</strong> → a <strong>shift</strong> (demand or supply changes).</li>
+                <li>After you answer, the graph shows a dashed “before” curve and the new curve (or a movement along).</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+
+        <div class="controls-card">
+          <div class="controls-actions">
+            <button id="newBtn" class="btn primary">New Scenario</button>
+            <button id="resetBtn" class="btn subtle">Reset</button>
+            <button id="submitBtn" class="btn">Check</button>
+          </div>
+          <div id="status" class="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container stack">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Scenario</h2>
+        <p class="panel-sub">Answer the three questions, then check your reasoning.</p>
+      </div>
+
+      <div class="grid2">
+        <div class="box">
+          <p class="scenarioTitle" id="scTitle">—</p>
+          <p class="scenarioDesc" id="scDesc">Click “New Scenario” to begin.</p>
+
+          <div class="qgrid">
+            <div class="control">
+              <label for="qCurve">1) Which curve is affected?</label>
+              <select id="qCurve">
+                <option value="" selected>Select…</option>
+                <option value="D">Demand</option>
+                <option value="S">Supply</option>
+                <option value="N">Neither (price change only)</option>
+              </select>
+            </div>
+
+            <div class="control">
+              <label for="qType">2) Move along or shift?</label>
+              <select id="qType">
+                <option value="" selected>Select…</option>
+                <option value="ALONG">Movement along</option>
+                <option value="SHIFT">Shift</option>
+              </select>
+            </div>
+
+            <div class="control">
+              <label for="qDir">3) Direction (if applicable)</label>
+              <select id="qDir">
+                <option value="" selected>Select…</option>
+                <option value="R">Right (increase)</option>
+                <option value="L">Left (decrease)</option>
+                <option value="NA">Not applicable</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="whyToggle" class="btn subtle">Why?</button>
+            <div class="mini" id="hint">Tip: If only the price of the good changes → movement along.</div>
+          </div>
+
+          <div class="whyBox" id="whyBox" style="display:none;">
+            <div class="whyRow">
+              <div class="whyCol">
+                <h4>Demand shifters</h4>
+                <ul id="whyDemand"></ul>
+              </div>
+              <div class="whyCol">
+                <h4>Supply shifters</h4>
+                <ul id="whySupply"></ul>
+              </div>
+            </div>
+            <div class="mini" id="whyNote">After you click “Check,” the app will highlight which factor changed.</div>
+          </div>
+
+          <div class="feedback" id="fb"></div>
+        </div>
+
+        <div class="box">
+          <div class="chartCard">
+            <canvas id="chart" width="980" height="560"></canvas>
+          </div>
+          <div class="mini">
+            Solid curves = current. Dashed curves = original (before the scenario).
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
