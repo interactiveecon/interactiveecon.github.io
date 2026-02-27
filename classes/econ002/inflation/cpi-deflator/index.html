@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CPI vs GDP Deflator (with PCE)</title>
+
+  <link rel="stylesheet" href="/assets/style.css">
+
+  <!-- MathJax (header only) -->
+  <script>
+    window.MathJax = { tex: { inlineMath: [['\\(', '\\)'], ['$', '$']] }, svg: { fontCache: 'global' } };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+  <style>
+    .mjx-container { font-size: 1em !important; }
+    .stack{ display:grid; gap:14px; margin-top:18px; }
+
+    .board{
+      display:grid;
+      grid-template-columns: 1.1fr 1fr 1fr 1fr 1fr;
+      gap: 12px;
+      align-items:start;
+    }
+    @media (max-width: 1100px){ .board{ grid-template-columns: 1fr; } }
+
+    .bucket{
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(246,242,234,0.35);
+      padding: 10px;
+      min-height: 240px;
+    }
+    .bucket h3{
+      margin: 0 0 6px 0;
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: 900;
+    }
+    .bucket .sub{
+      margin: 0 0 10px 0;
+      color: var(--ink-2);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .dropzone{ display:grid; gap: 8px; min-height: 170px; }
+    .dropzone.dragover{
+      outline: 2px dashed rgba(0,0,0,0.25);
+      outline-offset: 6px;
+      border-radius: 14px;
+    }
+
+    .card{
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.85);
+      padding: 10px;
+      cursor: grab;
+      user-select: none;
+    }
+    .card:active{ cursor: grabbing; }
+    .card.ok{ border-color: rgba(34,139,34,0.45); }
+    .card.bad{ border-color: rgba(178,34,34,0.55); }
+
+    .ctitle{
+      font-weight: 900;
+      color: var(--ink);
+      font-size: 13px;
+      line-height: 1.25;
+    }
+    .cdesc{
+      margin-top: 6px;
+      color: var(--ink-2);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .actions{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items:center;
+      margin-top: 10px;
+    }
+    .mini{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+      margin-top: 6px;
+    }
+
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+      align-items:start;
+    }
+    @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
+
+    .box{
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(246,242,234,0.35);
+      padding: 12px;
+    }
+
+    .kv3{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:12px;
+      margin-top:10px;
+    }
+    @media (max-width: 980px){ .kv3{ grid-template-columns: 1fr; } }
+
+    .metric{
+      background: rgba(246,242,234,0.55);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+    }
+    .metric .label{
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .metric .value{
+      margin-top: 6px;
+      font-size: 18px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 900;
+      color: var(--accent);
+    }
+
+    .chartCard{
+      height: 280px;
+      border:1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.75);
+      padding: 10px;
+    }
+    canvas{ width:100%; height:100%; display:block; }
+
+    /* MCQs */
+    .mcqList{ display:grid; gap:10px; margin-top: 10px; }
+    .qcard{
+      background: rgba(255,255,255,0.78);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px;
+    }
+    .qtitle{
+      font-weight: 900;
+      color: var(--ink);
+      margin: 0 0 8px 0;
+      line-height: 1.35;
+    }
+    .choices{ display:grid; gap:6px; margin-top:8px; }
+    .choice{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      padding: 8px 10px;
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 12px;
+      background: rgba(246,242,234,0.35);
+    }
+    .choice input{ margin-top: 2px; }
+    .feedback{
+      margin-top: 8px;
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--ink-2);
+      display:none;
+      border-top: 1px solid rgba(0,0,0,0.08);
+      padding-top: 8px;
+    }
+    .tagOK{
+      display:inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(34,139,34,0.12);
+      border: 1px solid rgba(34,139,34,0.25);
+      color: rgba(34,120,34,1);
+      font-weight: 800;
+      font-size: 12px;
+      margin-right: 8px;
+    }
+    .tagBad{
+      display:inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(178,34,34,0.10);
+      border: 1px solid rgba(178,34,34,0.25);
+      color: rgba(140,0,0,0.95);
+      font-weight: 800;
+      font-size: 12px;
+      margin-right: 8px;
+    }
+  </style>
+
+  <script src="data.js"></script>
+</head>
+
+<body>
+  <header class="page-header">
+    <div class="container">
+      <nav class="crumbbar">
+        <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
+      </nav>
+
+      <div class="header-inner">
+        <div class="title-block">
+          <div class="kicker">Macroeconomics Practice Lab</div>
+          <h1>CPI vs GDP Deflator (with PCE notes)</h1>
+          <p class="sub">
+            Sort scenarios into buckets. Then simulate a shock and compare how CPI inflation, GDP deflator inflation, and PCE inflation respond.
+          </p>
+
+          <details class="howto">
+            <summary>How this works</summary>
+            <div class="howto-body" id="mathTop">
+              <ul>
+                <li><strong>CPI</strong>: prices faced by consumers (includes <em>imports</em>; excludes most investment goods).</li>
+                <li><strong>GDP deflator</strong>: prices of <em>domestic production</em> (includes investment, government purchases, exports; excludes imports).</li>
+                <li><strong>PCE</strong> (notes in explanations): also consumer-focused, but uses different weights and allows more substitution (often smoother than CPI).</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+
+        <div class="controls-card">
+          <div class="controls-actions">
+            <button id="newRoundBtn" class="btn primary">New Round</button>
+            <button id="resetBtn" class="btn subtle">Reset</button>
+            <button id="checkBtn" class="btn">Check</button>
+          </div>
+          <div id="status" class="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container stack">
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Sort the scenarios</h2>
+        <p class="panel-sub">Drag from staging into the correct bucket.</p>
+      </div>
+
+      <div class="board">
+        <div class="bucket">
+          <h3>Staging</h3>
+          <p class="sub">Unsorted cards.</p>
+          <div class="dropzone" id="zoneStage" data-zone="STAGE"></div>
+        </div>
+
+        <div class="bucket">
+          <h3>CPI</h3>
+          <p class="sub">Consumer prices (includes imports).</p>
+          <div class="dropzone" id="zoneCPI" data-zone="CPI"></div>
+        </div>
+
+        <div class="bucket">
+          <h3>GDP Deflator</h3>
+          <p class="sub">Domestic production prices.</p>
+          <div class="dropzone" id="zoneDEF" data-zone="DEF"></div>
+        </div>
+
+        <div class="bucket">
+          <h3>Both</h3>
+          <p class="sub">Affects both similarly.</p>
+          <div class="dropzone" id="zoneBOTH" data-zone="BOTH"></div>
+        </div>
+
+        <div class="bucket">
+          <h3>Neither</h3>
+          <p class="sub">Doesn’t enter either measure directly.</p>
+          <div class="dropzone" id="zoneNEI" data-zone="NEI"></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <div class="mini" id="progressMsg"></div>
+        <div class="mini" id="checkMsg"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Shock simulation</h2>
+        <p class="panel-sub">Pick a shock. The chart shows inflation over 6 quarters for CPI, GDP deflator, and PCE.</p>
+      </div>
+
+      <div class="grid2">
+        <div class="box">
+          <div class="actions">
+            <button class="btn" id="shockImports">Imports price shock</button>
+            <button class="btn" id="shockInvestment">Investment boom</button>
+            <button class="btn" id="shockExports">Export demand surge</button>
+            <button class="btn" id="shockOil">Energy price spike</button>
+            <button class="btn subtle" id="shockReset">Reset shock</button>
+          </div>
+
+          <div class="kv3">
+            <div class="metric"><div class="label">Selected shock</div><div class="value" id="shockName">—</div></div>
+            <div class="metric"><div class="label">Largest mover</div><div class="value" id="shockWinner">—</div></div>
+            <div class="metric"><div class="label">Why</div><div class="value" id="shockWhy">—</div></div>
+          </div>
+
+          <div class="mcqList" id="simQs"></div>
+          <div class="actions">
+            <button class="btn primary" id="submitSimQs">Submit</button>
+          </div>
+        </div>
+
+        <div class="box">
+          <div class="chartCard">
+            <canvas id="simChart" width="1000" height="400"></canvas>
+          </div>
+          <div class="mini" id="chartNote">
+            Solid lines are the simulated inflation paths. (Axes are fixed for easy comparison.)
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
