@@ -49,6 +49,8 @@ window.addEventListener("DOMContentLoaded", () => {
     wStickyDown: null // baseline wage level to stick to after negative shocks (cyc mode)
   };
 
+  let demandRefA = baseline.a; // dashed “old” demand line
+
   function setStatus(msg){ els.status.textContent = msg; }
   function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
 
@@ -181,7 +183,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 
     // Baseline (grey dashed)
-    plotLine((L)=> baseline.a - b*L, "rgba(0,0,0,0.25)", 2, true);
+    plotLine((L)=> demandRefA - b*L, "rgba(0,0,0,0.25)", 2, true);
     plotLine((L)=> baseline.c + d*L, "rgba(0,0,0,0.25)", 2, true);
 
     // Current (blue)
@@ -311,6 +313,7 @@ ctx.fillText(wTick.toFixed(2), X0 - 10*dpr, yTick);
     state.mode = "cyc";
     state.wbar = 0;
     state.wStickyDown = null;
+    demandRefA = baseline.a;
 
     els.modeCyc.checked = true;
     els.modeStr.checked = false;
@@ -328,6 +331,7 @@ ctx.fillText(wTick.toFixed(2), X0 - 10*dpr, yTick);
     // demand intercept shifts
     const delta = (sign < 0) ? -0.55 : +0.55;
     state.a = clamp(state.a + delta, 1.5, 4.0);
+    if (sign > 0) demandRefA = state.a; // dashed line moves up only on positive shocks
 
     // For cyclical mode: ensure downward stickiness reference is set at the *pre-shock* wage if not set.
     // But after a positive shock, sticky reference should update upward (w rises).
