@@ -7,38 +7,48 @@ window.addEventListener("DOMContentLoaded", () => {
     exampleBtn: $("exampleBtn"),
     resetBtn: $("resetBtn"),
     status: $("status"),
-
-    subToggle: $("subToggle"),
-    subSection: $("subSection"),
-    subTableWrap: $("subTableWrap"),
-    subResults: $("subResults"),
-
     warn: $("warn"),
 
-    cost0: $("cost0"),
-    cost1: $("cost1"),
-    cost2: $("cost2"),
-    cpi0: $("cpi0"),
     cpi1: $("cpi1"),
     cpi2: $("cpi2"),
-    pi01: $("pi01"),
+    cpi3: $("cpi3"),
     pi12: $("pi12"),
-    pi02: $("pi02"),
-
-    paasche20: $("paasche20"),
-    lasp20: $("lasp20"),
-    diff20: $("diff20"),
+    pi23: $("pi23"),
+    cost1: $("cost1"),
+    cost2: $("cost2"),
+    cost3: $("cost3"),
 
     chart: $("chart"),
   };
 
   function setStatus(msg){ els.status.textContent = msg; }
 
-  // Data model
-  let rows = [];
-  let subQ2 = {}; // id -> q2
+  // ---- Goods databank (expand anytime) ----
+  const GOODS_BANK = [
+    "Bread (loaf)", "Milk (gallon)", "Eggs (dozen)", "Chicken (lb)", "Rice (lb)",
+    "Coffee (bag)", "Gasoline (gallon)", "Electricity (kWh)", "Rent (month)",
+    "Movie ticket", "Haircut", "Gym membership (month)", "Phone plan (month)",
+    "Laptop", "Smartphone", "Shoes", "T-shirt", "Toothpaste", "Laundry detergent",
+    "Bus fare", "Airline ticket", "Hotel night", "Doctor visit", "Prescription copay",
+    "Car insurance (month)", "Streaming subscription (month)", "Restaurant meal",
+    "Apples (lb)", "Bananas (lb)", "Orange juice", "Cereal (box)", "Cheese (lb)"
+  ];
+
+  // pool of unused goods for random selection
+  let unused = [];
+  function resetUnused(){
+    unused = GOODS_BANK.slice();
+    shuffle(unused);
+  }
+
+  // ---- Data model ----
+  let rows = []; // {id, name, basket, p1, p2, p3}
 
   function uid(){ return "g" + Math.random().toString(16).slice(2,10); }
+  function num(v){
+    const x = Number(v);
+    return Number.isFinite(x) ? x : NaN;
+  }
 
   function fmtMoney(x){
     if (!Number.isFinite(x)) return "—";
@@ -53,54 +63,123 @@ window.addEventListener("DOMContentLoaded", () => {
     return (100*x).toFixed(2) + "%";
   }
 
-  function num(v){
-    const x = Number(v);
-    return Number.isFinite(x) ? x : NaN;
+  // ---- Randomization helpers ----
+  function shuffle(a){
+    for (let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
   }
 
-  function addRow(initial = { name:"", q0:1, p0:1, p1:1, p2:1 }){
-    const id = uid();
-    rows.push({ id, ...initial });
-    if (!(id in subQ2)) subQ2[id] = initial.q0 ?? 1;
-    render();
-    compute();
+  // Reasonable randomization for “principles”:
+  // basket quantities: small integers (1..12)
+  // prices: positive, with some dispersion across goods
+  function randBasketQty(){
+    return 1 + Math.floor(Math.random()*12);
   }
 
-  function removeRow(id){
-    rows = rows.filter(r => r.id !== id);
-    delete subQ2[id];
+  function randBasePriceForGood(name){
+    // rough price tiers by keyword to make examples feel realistic
+    const n = name.toLowerCase();
+    if (n.includes("rent")) return randBetween(1200, 2400, 10);
+    if (n.includes("laptop")) return randBetween(700, 1300, 10);
+    if (n.includes("smartphone")) return randBetween(600, 1100, 10);
+    if (n.includes("airline")) return randBetween(180, 520, 5);
+    if (n.includes("hotel")) return randBetween(120, 320, 5);
+    if (n.includes("doctor")) return randBetween(80, 220, 5);
+    if (n.includes("insurance")) return randBetween(90, 220, 1);
+    if (n.includes("phone plan")) return randBetween(35, 95, 1);
+    if (n.includes("gym")) return randBetween(25, 90, 1);
+    if (n.includes("streaming")) return randBetween(8, 22, 0.5);
+    if (n.includes("gasoline")) return randBetween(2.8, 5.2, 0.05);
+    if (n.includes("electricity")) return randBetween(0.12, 0.35, 0.01);
+    if (n.includes("movie")) return randBetween(10, 20, 0.5);
+    if (n.includes("haircut")) return randBetween(18, 55, 1);
+    if (n.includes("restaurant")) return randBetween(12, 35, 1);
+    // groceries / small items
+    return randBetween(1.2, 12.0, 0.1);
+  }
+
+  function randBetween(lo, hi, step){
+    const n = Math.floor((hi - lo) / step);
+    const k = Math.floor(Math.random()*(n+1));
+    const v = lo + k*step;
+    return Math.round(v * 100) / 100;
+  }
+
+  // Generate prices across years with moderate inflation/deflation noise
+  function randPrices(p1){
+    // year-to-year multipliers around ~ -3% to +10%
+    const m12 = randBetween(0.97, 1.10, 0.01);
+    const m23 = randBetween(0.97, 1.10, 0.01);
+    const p2 = round2(p1 * m12);
+    const p3 = round2(p2 * m23);
+    return { p1: round2(p1), p2, p3 };
+  }
+
+  function round2(x){ return Math.round(x*100)/100; }
+
+  function pickRandomGood(){
+    if (unused.length === 0) resetUnused();
+    return unused.pop();
+  }
+
+  // ---- Row operations ----
+  function addRandomRow(){
+    const name = pickRandomGood();
+    const basket = randBasketQty();
+    const p1 = randBasePriceForGood(name);
+    const prices = randPrices(p1);
+    rows.push({ id: uid(), name, basket, p1: prices.p1, p2: prices.p2, p3: prices.p3 });
     render();
     compute();
   }
 
   function loadExample(){
     rows = [];
-    subQ2 = {};
-    // A simple “apples + cars” style example; edit freely
-    addRow({ name:"Apples", q0: 10, p0: 1.00, p1: 1.20, p2: 1.10 });
-    addRow({ name:"Haircuts", q0: 2, p0: 20.00, p1: 22.00, p2: 24.00 });
-    addRow({ name:"Used laptop", q0: 1, p0: 500.00, p1: 520.00, p2: 480.00 });
-    setStatus("Example loaded.");
+    resetUnused();
+    for (let i=0;i<3;i++) addRandomRow();
+    setStatus("Loaded a random example basket (3 goods).");
   }
 
   function reset(){
     rows = [];
-    subQ2 = {};
-    addRow({ name:"Good A", q0: 5, p0: 2.00, p1: 2.20, p2: 2.40 });
-    addRow({ name:"Good B", q0: 3, p0: 10.00, p1: 9.50, p2: 11.00 });
-    setStatus("Reset.");
+    resetUnused();
+    // start with an empty table; prompt to load example
+    render();
+    compute();
+    setStatus("Click “Load example” to begin.");
   }
 
+  function removeRow(id){
+    rows = rows.filter(r => r.id !== id);
+    render();
+    compute();
+  }
+
+  // ---- Rendering ----
   function render(){
     els.basketBody.innerHTML = "";
+
+    if (rows.length === 0){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td colspan="6" class="muted" style="padding:14px;">
+          No goods yet. Click <strong>Load example</strong> or <strong>Add good</strong>.
+        </td>
+      `;
+      els.basketBody.appendChild(tr);
+      return;
+    }
+
     for (const r of rows){
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td><input class="tinput" data-k="name" data-id="${r.id}" value="${escapeHtml(r.name)}" placeholder="e.g., Bread"></td>
-        <td><input class="tinput small center" data-k="q0" data-id="${r.id}" type="number" step="0.01" value="${r.q0}"></td>
-        <td><input class="tinput small center" data-k="p0" data-id="${r.id}" type="number" step="0.01" value="${r.p0}"></td>
-        <td><input class="tinput small center" data-k="p1" data-id="${r.id}" type="number" step="0.01" value="${r.p1}"></td>
-        <td><input class="tinput small center" data-k="p2" data-id="${r.id}" type="number" step="0.01" value="${r.p2}"></td>
+        <td><input class="tinput" data-k="name" data-id="${r.id}" value="${escapeHtml(r.name)}"></td>
+        <td><input class="tinput small center" data-k="basket" data-id="${r.id}" type="number" step="1" min="0" value="${r.basket}"></td>
+        <td><input class="tinput small center" data-k="p1" data-id="${r.id}" type="number" step="0.01" min="0" value="${r.p1}"></td>
+        <td><input class="tinput small center" data-k="p2" data-id="${r.id}" type="number" step="0.01" min="0" value="${r.p2}"></td>
+        <td><input class="tinput small center" data-k="p3" data-id="${r.id}" type="number" step="0.01" min="0" value="${r.p3}"></td>
         <td>
           <button class="btn subtle" data-del="${r.id}" type="button">Remove</button>
         </td>
@@ -108,7 +187,6 @@ window.addEventListener("DOMContentLoaded", () => {
       els.basketBody.appendChild(tr);
     }
 
-    // wire inputs
     els.basketBody.querySelectorAll("input[data-id]").forEach(inp => {
       inp.addEventListener("input", () => {
         const id = inp.dataset.id;
@@ -117,8 +195,6 @@ window.addEventListener("DOMContentLoaded", () => {
         if (!row) return;
         if (k === "name") row[k] = inp.value;
         else row[k] = num(inp.value);
-        // keep sub Q2 default aligned when toggled on
-        if (!(id in subQ2) || !Number.isFinite(subQ2[id])) subQ2[id] = row.q0;
         compute();
       });
     });
@@ -126,118 +202,71 @@ window.addEventListener("DOMContentLoaded", () => {
     els.basketBody.querySelectorAll("button[data-del]").forEach(btn => {
       btn.addEventListener("click", () => removeRow(btn.dataset.del));
     });
-
-    renderSubTable();
   }
 
-  function renderSubTable(){
-    els.subTableWrap.innerHTML = "";
-    if (!els.subToggle.checked) return;
-
-    const wrap = document.createElement("div");
-    wrap.innerHTML = `
-      <table aria-label="Year 2 quantities table">
-        <thead>
-          <tr>
-            <th style="width:45%;">Good</th>
-            <th style="width:25%;">Q0 (base)</th>
-            <th style="width:30%;">Q2 (current)</th>
-          </tr>
-        </thead>
-        <tbody id="q2Body"></tbody>
-      </table>
-    `;
-    els.subTableWrap.appendChild(wrap);
-
-    const q2Body = wrap.querySelector("#q2Body");
-    for (const r of rows){
-      if (!(r.id in subQ2)) subQ2[r.id] = r.q0;
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${escapeHtml(r.name || "Untitled")}</td>
-        <td><span class="muted">${Number.isFinite(r.q0) ? r.q0 : "—"}</span></td>
-        <td><input class="tinput small center" data-q2="${r.id}" type="number" step="0.01" value="${subQ2[r.id]}"></td>
-      `;
-      q2Body.appendChild(tr);
-    }
-
-    q2Body.querySelectorAll("input[data-q2]").forEach(inp => {
-      inp.addEventListener("input", () => {
-        const id = inp.dataset.q2;
-        subQ2[id] = num(inp.value);
-        compute();
-      });
-    });
-  }
-
-  function compute(){
-    // validate
-    if (rows.length === 0){
-      els.warn.textContent = "Add at least one good.";
-      return;
-    }
-
-    const bad = rows.some(r => !(Number.isFinite(r.q0) && Number.isFinite(r.p0) && Number.isFinite(r.p1) && Number.isFinite(r.p2)));
-    els.warn.textContent = bad ? "Some entries are missing or invalid. Results may show —." : "";
-
-    const cost0 = sumCost(rows, (r)=>r.p0, (r)=>r.q0);
-    const cost1 = sumCost(rows, (r)=>r.p1, (r)=>r.q0);
-    const cost2 = sumCost(rows, (r)=>r.p2, (r)=>r.q0);
-
-    const cpi0 = Number.isFinite(cost0) && cost0 !== 0 ? 100 : NaN;
-    const cpi1 = Number.isFinite(cost0) && cost0 !== 0 ? 100 * cost1 / cost0 : NaN;
-    const cpi2 = Number.isFinite(cost0) && cost0 !== 0 ? 100 * cost2 / cost0 : NaN;
-
-    els.cost0.textContent = fmtMoney(cost0);
-    els.cost1.textContent = fmtMoney(cost1);
-    els.cost2.textContent = fmtMoney(cost2);
-
-    els.cpi0.textContent = fmtIndex(cpi0);
-    els.cpi1.textContent = fmtIndex(cpi1);
-    els.cpi2.textContent = fmtIndex(cpi2);
-
-    els.pi01.textContent = (Number.isFinite(cpi1) && cpi0 !== 0) ? fmtPct((cpi1 - cpi0)/cpi0) : "—";
-    els.pi12.textContent = (Number.isFinite(cpi2) && Number.isFinite(cpi1) && cpi1 !== 0) ? fmtPct((cpi2 - cpi1)/cpi1) : "—";
-    els.pi02.textContent = (Number.isFinite(cpi2) && cpi0 !== 0) ? fmtPct((cpi2 - cpi0)/cpi0) : "—";
-
-    // substitution panel
-    if (els.subToggle.checked){
-      els.subResults.style.display = "";
-      const cost0_q0 = cost0;
-      const cost2_q0 = cost2;
-
-      const cost0_q2 = sumCost(rows, (r)=>r.p0, (r)=>subQ2[r.id]);
-      const cost2_q2 = sumCost(rows, (r)=>r.p2, (r)=>subQ2[r.id]);
-
-      const lasp20 = (Number.isFinite(cost0_q0) && cost0_q0 !== 0) ? 100 * cost2_q0 / cost0_q0 : NaN; // fixed basket
-      const paasche20 = (Number.isFinite(cost0_q2) && cost0_q2 !== 0) ? 100 * cost2_q2 / cost0_q2 : NaN; // current basket (Paasche-style)
-
-      els.lasp20.textContent = fmtIndex(lasp20);
-      els.paasche20.textContent = fmtIndex(paasche20);
-
-      if (Number.isFinite(lasp20) && Number.isFinite(paasche20)){
-        els.diff20.textContent = (lasp20 - paasche20).toFixed(2);
-      } else {
-        els.diff20.textContent = "—";
-      }
-    } else {
-      els.subResults.style.display = "none";
-    }
-
-    drawChart([cpi0, cpi1, cpi2]);
-  }
-
-  function sumCost(rows, priceFn, qtyFn){
+  // ---- Computation ----
+  function sumCost(priceKey){
     let s = 0;
     for (const r of rows){
-      const p = priceFn(r);
-      const q = qtyFn(r);
-      if (!Number.isFinite(p) || !Number.isFinite(q)) return NaN;
-      s += p*q;
+      const q = r.basket;
+      const p = r[priceKey];
+      if (!Number.isFinite(q) || !Number.isFinite(p)) return NaN;
+      s += q*p;
     }
     return s;
   }
 
+  function compute(){
+    if (rows.length === 0){
+      els.warn.textContent = "";
+      setOutputsNa();
+      drawChart([NaN,NaN,NaN]);
+      return;
+    }
+
+    const bad = rows.some(r =>
+      !(Number.isFinite(r.basket) && Number.isFinite(r.p1) && Number.isFinite(r.p2) && Number.isFinite(r.p3))
+    );
+    els.warn.textContent = bad ? "Some entries are missing or invalid. Results may show —." : "";
+
+    const cost1 = sumCost("p1");
+    const cost2 = sumCost("p2");
+    const cost3 = sumCost("p3");
+
+    // Base year is Year 1
+    const cpi1 = Number.isFinite(cost1) && cost1 !== 0 ? 100 : NaN;
+    const cpi2 = Number.isFinite(cost1) && cost1 !== 0 ? 100 * cost2 / cost1 : NaN;
+    const cpi3 = Number.isFinite(cost1) && cost1 !== 0 ? 100 * cost3 / cost1 : NaN;
+
+    els.cost1.textContent = `Basket cost: ${fmtMoney(cost1)}`;
+    els.cost2.textContent = `Basket cost: ${fmtMoney(cost2)}`;
+    els.cost3.textContent = `Basket cost: ${fmtMoney(cost3)}`;
+
+    els.cpi1.textContent = fmtIndex(cpi1);
+    els.cpi2.textContent = fmtIndex(cpi2);
+    els.cpi3.textContent = fmtIndex(cpi3);
+
+    els.pi12.textContent = (Number.isFinite(cpi2) && Number.isFinite(cpi1) && cpi1 !== 0)
+      ? fmtPct((cpi2 - cpi1)/cpi1) : "—";
+
+    els.pi23.textContent = (Number.isFinite(cpi3) && Number.isFinite(cpi2) && cpi2 !== 0)
+      ? fmtPct((cpi3 - cpi2)/cpi2) : "—";
+
+    drawChart([cpi1, cpi2, cpi3]);
+  }
+
+  function setOutputsNa(){
+    els.cost1.textContent = "Basket cost: —";
+    els.cost2.textContent = "Basket cost: —";
+    els.cost3.textContent = "Basket cost: —";
+    els.cpi1.textContent = "—";
+    els.cpi2.textContent = "—";
+    els.cpi3.textContent = "—";
+    els.pi12.textContent = "—";
+    els.pi23.textContent = "—";
+  }
+
+  // ---- Chart ----
   function drawChart(cpi){
     const canvas = els.chart;
     const ctx = canvas.getContext("2d");
@@ -256,6 +285,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
     const xToPix = (i) => X0 + i * (X1 - X0) / 2;
 
+    const ok = cpi.every(Number.isFinite);
     const vals = cpi.filter(Number.isFinite);
     const yMin = 90;
     const yMax = vals.length ? Math.max(110, Math.max(...vals) + 10) : 120;
@@ -284,14 +314,13 @@ window.addEventListener("DOMContentLoaded", () => {
     // x labels
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ["Year 0","Year 1","Year 2"].forEach((lab,i)=>{
+    ["Year 1","Year 2","Year 3"].forEach((lab,i)=>{
       ctx.fillText(lab, xToPix(i), Y1 + 8*dpr);
     });
 
-    // line
-    const ok = cpi.every(Number.isFinite);
     if (!ok) return;
 
+    // line
     ctx.strokeStyle = "rgba(31,119,180,0.85)";
     ctx.lineWidth = 3*dpr;
     ctx.beginPath();
@@ -319,18 +348,21 @@ window.addEventListener("DOMContentLoaded", () => {
       .replaceAll('"',"&quot;");
   }
 
-  // Events
-  els.addRowBtn.addEventListener("click", () => addRow());
-  els.exampleBtn.addEventListener("click", loadExample);
-  els.resetBtn.addEventListener("click", reset);
-
-  els.subToggle.addEventListener("change", () => {
-    els.subSection.style.display = els.subToggle.checked ? "" : "none";
-    renderSubTable();
-    compute();
+  // ---- Events ----
+  els.addRowBtn.addEventListener("click", () => {
+    if (rows.length >= GOODS_BANK.length){
+      setStatus("No more unique goods available.");
+      return;
+    }
+    addRandomRow();
+    setStatus("Added a random good.");
   });
 
-  // Typeset formulas once
+  els.exampleBtn.addEventListener("click", loadExample);
+
+  els.resetBtn.addEventListener("click", reset);
+
+  // Typeset header formulas once
   const top = document.getElementById("mathTop");
   if (top && window.MathJax?.typesetPromise) window.MathJax.typesetPromise([top]);
 
