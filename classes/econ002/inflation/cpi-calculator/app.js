@@ -9,21 +9,21 @@ window.addEventListener("DOMContentLoaded", () => {
     status: $("status"),
     warn: $("warn"),
 
+    cost1Val: $("cost1Val"),
+    cost2Val: $("cost2Val"),
+    cost3Val: $("cost3Val"),
     cpi1: $("cpi1"),
     cpi2: $("cpi2"),
     cpi3: $("cpi3"),
     pi12: $("pi12"),
     pi23: $("pi23"),
-    cost1: $("cost1"),
-    cost2: $("cost2"),
-    cost3: $("cost3"),
 
     chart: $("chart"),
   };
 
   function setStatus(msg){ els.status.textContent = msg; }
 
-  // ---- Goods databank (expand anytime) ----
+  // ---- Goods databank ----
   const GOODS_BANK = [
     "Bread (loaf)", "Milk (gallon)", "Eggs (dozen)", "Chicken (lb)", "Rice (lb)",
     "Coffee (bag)", "Gasoline (gallon)", "Electricity (kWh)", "Rent (month)",
@@ -34,17 +34,26 @@ window.addEventListener("DOMContentLoaded", () => {
     "Apples (lb)", "Bananas (lb)", "Orange juice", "Cereal (box)", "Cheese (lb)"
   ];
 
-  // pool of unused goods for random selection
   let unused = [];
+  function shuffle(a){
+    for (let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+  }
   function resetUnused(){
     unused = GOODS_BANK.slice();
     shuffle(unused);
   }
+  function pickRandomGood(){
+    if (unused.length === 0) resetUnused();
+    return unused.pop();
+  }
 
   // ---- Data model ----
   let rows = []; // {id, name, basket, p1, p2, p3}
-
   function uid(){ return "g" + Math.random().toString(16).slice(2,10); }
+
   function num(v){
     const x = Number(v);
     return Number.isFinite(x) ? x : NaN;
@@ -62,24 +71,19 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!Number.isFinite(x)) return "—";
     return (100*x).toFixed(2) + "%";
   }
+  function round2(x){ return Math.round(x*100)/100; }
 
-  // ---- Randomization helpers ----
-  function shuffle(a){
-    for (let i=a.length-1;i>0;i--){
-      const j = Math.floor(Math.random()*(i+1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
+  // ---- Randomization ----
+  function randBetween(lo, hi, step){
+    const n = Math.floor((hi - lo) / step);
+    const k = Math.floor(Math.random()*(n+1));
+    const v = lo + k*step;
+    return round2(v);
   }
 
-  // Reasonable randomization for “principles”:
-  // basket quantities: small integers (1..12)
-  // prices: positive, with some dispersion across goods
-  function randBasketQty(){
-    return 1 + Math.floor(Math.random()*12);
-  }
+  function randBasketQty(){ return 1 + Math.floor(Math.random()*12); } // 1..12
 
   function randBasePriceForGood(name){
-    // rough price tiers by keyword to make examples feel realistic
     const n = name.toLowerCase();
     if (n.includes("rent")) return randBetween(1200, 2400, 10);
     if (n.includes("laptop")) return randBetween(700, 1300, 10);
@@ -96,20 +100,10 @@ window.addEventListener("DOMContentLoaded", () => {
     if (n.includes("movie")) return randBetween(10, 20, 0.5);
     if (n.includes("haircut")) return randBetween(18, 55, 1);
     if (n.includes("restaurant")) return randBetween(12, 35, 1);
-    // groceries / small items
     return randBetween(1.2, 12.0, 0.1);
   }
 
-  function randBetween(lo, hi, step){
-    const n = Math.floor((hi - lo) / step);
-    const k = Math.floor(Math.random()*(n+1));
-    const v = lo + k*step;
-    return Math.round(v * 100) / 100;
-  }
-
-  // Generate prices across years with moderate inflation/deflation noise
   function randPrices(p1){
-    // year-to-year multipliers around ~ -3% to +10%
     const m12 = randBetween(0.97, 1.10, 0.01);
     const m23 = randBetween(0.97, 1.10, 0.01);
     const p2 = round2(p1 * m12);
@@ -117,11 +111,14 @@ window.addEventListener("DOMContentLoaded", () => {
     return { p1: round2(p1), p2, p3 };
   }
 
-  function round2(x){ return Math.round(x*100)/100; }
-
-  function pickRandomGood(){
-    if (unused.length === 0) resetUnused();
-    return unused.pop();
+  // ---- Dynamic 1% step for number inputs ----
+  function setPercentStep(inputEl){
+    const v = num(inputEl.value);
+    const abs = Number.isFinite(v) ? Math.abs(v) : 0;
+    let step = abs * 0.01;             // 1% of current value
+    if (!Number.isFinite(step) || step <= 0) step = 0.01;
+    step = Math.max(0.01, round2(step)); // minimum 0.01
+    inputEl.step = String(step);
   }
 
   // ---- Row operations ----
@@ -145,7 +142,6 @@ window.addEventListener("DOMContentLoaded", () => {
   function reset(){
     rows = [];
     resetUnused();
-    // start with an empty table; prompt to load example
     render();
     compute();
     setStatus("Click “Load example” to begin.");
@@ -158,6 +154,14 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // ---- Rendering ----
+  function escapeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;");
+  }
+
   function render(){
     els.basketBody.innerHTML = "";
 
@@ -177,9 +181,9 @@ window.addEventListener("DOMContentLoaded", () => {
       tr.innerHTML = `
         <td><input class="tinput" data-k="name" data-id="${r.id}" value="${escapeHtml(r.name)}"></td>
         <td><input class="tinput small center" data-k="basket" data-id="${r.id}" type="number" step="1" min="0" value="${r.basket}"></td>
-        <td><input class="tinput small center" data-k="p1" data-id="${r.id}" type="number" step="0.01" min="0" value="${r.p1}"></td>
-        <td><input class="tinput small center" data-k="p2" data-id="${r.id}" type="number" step="0.01" min="0" value="${r.p2}"></td>
-        <td><input class="tinput small center" data-k="p3" data-id="${r.id}" type="number" step="0.01" min="0" value="${r.p3}"></td>
+        <td><input class="tinput small center price" data-k="p1" data-id="${r.id}" type="number" min="0" value="${r.p1}"></td>
+        <td><input class="tinput small center price" data-k="p2" data-id="${r.id}" type="number" min="0" value="${r.p2}"></td>
+        <td><input class="tinput small center price" data-k="p3" data-id="${r.id}" type="number" min="0" value="${r.p3}"></td>
         <td>
           <button class="btn subtle" data-del="${r.id}" type="button">Remove</button>
         </td>
@@ -187,18 +191,32 @@ window.addEventListener("DOMContentLoaded", () => {
       els.basketBody.appendChild(tr);
     }
 
+    // inputs
     els.basketBody.querySelectorAll("input[data-id]").forEach(inp => {
+      // set % step on price inputs
+      if (inp.classList.contains("price")) {
+        setPercentStep(inp);
+        inp.addEventListener("focus", () => setPercentStep(inp));
+        inp.addEventListener("pointerdown", () => setPercentStep(inp));
+      }
+
       inp.addEventListener("input", () => {
         const id = inp.dataset.id;
         const k = inp.dataset.k;
         const row = rows.find(x => x.id === id);
         if (!row) return;
+
         if (k === "name") row[k] = inp.value;
         else row[k] = num(inp.value);
+
+        // after value changes, update step for the next spinner click
+        if (inp.classList.contains("price")) setPercentStep(inp);
+
         compute();
       });
     });
 
+    // remove
     els.basketBody.querySelectorAll("button[data-del]").forEach(btn => {
       btn.addEventListener("click", () => removeRow(btn.dataset.del));
     });
@@ -214,6 +232,17 @@ window.addEventListener("DOMContentLoaded", () => {
       s += q*p;
     }
     return s;
+  }
+
+  function setOutputsNa(){
+    els.cost1Val.textContent = "—";
+    els.cost2Val.textContent = "—";
+    els.cost3Val.textContent = "—";
+    els.cpi1.textContent = "—";
+    els.cpi2.textContent = "—";
+    els.cpi3.textContent = "—";
+    els.pi12.textContent = "—";
+    els.pi23.textContent = "—";
   }
 
   function compute(){
@@ -233,14 +262,13 @@ window.addEventListener("DOMContentLoaded", () => {
     const cost2 = sumCost("p2");
     const cost3 = sumCost("p3");
 
-    // Base year is Year 1
     const cpi1 = Number.isFinite(cost1) && cost1 !== 0 ? 100 : NaN;
     const cpi2 = Number.isFinite(cost1) && cost1 !== 0 ? 100 * cost2 / cost1 : NaN;
     const cpi3 = Number.isFinite(cost1) && cost1 !== 0 ? 100 * cost3 / cost1 : NaN;
 
-    els.cost1.textContent = `Basket cost: ${fmtMoney(cost1)}`;
-    els.cost2.textContent = `Basket cost: ${fmtMoney(cost2)}`;
-    els.cost3.textContent = `Basket cost: ${fmtMoney(cost3)}`;
+    els.cost1Val.textContent = fmtMoney(cost1);
+    els.cost2Val.textContent = fmtMoney(cost2);
+    els.cost3Val.textContent = fmtMoney(cost3);
 
     els.cpi1.textContent = fmtIndex(cpi1);
     els.cpi2.textContent = fmtIndex(cpi2);
@@ -253,17 +281,6 @@ window.addEventListener("DOMContentLoaded", () => {
       ? fmtPct((cpi3 - cpi2)/cpi2) : "—";
 
     drawChart([cpi1, cpi2, cpi3]);
-  }
-
-  function setOutputsNa(){
-    els.cost1.textContent = "Basket cost: —";
-    els.cost2.textContent = "Basket cost: —";
-    els.cost3.textContent = "Basket cost: —";
-    els.cpi1.textContent = "—";
-    els.cpi2.textContent = "—";
-    els.cpi3.textContent = "—";
-    els.pi12.textContent = "—";
-    els.pi23.textContent = "—";
   }
 
   // ---- Chart ----
@@ -292,7 +309,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
     const yToPix = (y) => Y0 + (yMax - y) * (Y1 - Y0) / (yMax - yMin);
 
-    // grid
     ctx.strokeStyle = "rgba(0,0,0,0.10)";
     ctx.lineWidth = 1*dpr;
     for (let k=0;k<=5;k++){
@@ -301,7 +317,6 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.beginPath(); ctx.moveTo(X0,py); ctx.lineTo(X1,py); ctx.stroke();
     }
 
-    // y labels
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "right";
@@ -311,7 +326,6 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.fillText(y.toFixed(0), X0 - 8*dpr, yToPix(y));
     }
 
-    // x labels
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ["Year 1","Year 2","Year 3"].forEach((lab,i)=>{
@@ -320,7 +334,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
     if (!ok) return;
 
-    // line
     ctx.strokeStyle = "rgba(31,119,180,0.85)";
     ctx.lineWidth = 3*dpr;
     ctx.beginPath();
@@ -331,21 +344,12 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     ctx.stroke();
 
-    // points
     ctx.fillStyle = "rgba(31,119,180,0.85)";
     for (let i=0;i<3;i++){
       const x = xToPix(i);
       const y = yToPix(cpi[i]);
       ctx.beginPath(); ctx.arc(x,y,5*dpr,0,Math.PI*2); ctx.fill();
     }
-  }
-
-  function escapeHtml(s){
-    return String(s ?? "")
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;");
   }
 
   // ---- Events ----
@@ -359,7 +363,6 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   els.exampleBtn.addEventListener("click", loadExample);
-
   els.resetBtn.addEventListener("click", reset);
 
   // Typeset header formulas once
