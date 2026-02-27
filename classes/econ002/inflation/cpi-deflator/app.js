@@ -4,10 +4,11 @@ window.addEventListener("DOMContentLoaded", () => {
 
   const els = {
     zoneStage: $("zoneStage"),
-    zoneCPI: $("zoneCPI"),
-    zoneDEF: $("zoneDEF"),
-    zoneBOTH: $("zoneBOTH"),
-    zoneNEI: $("zoneNEI"),
+    zoneCPIPCE: $("zoneCPIPCE"),
+    zonePCEDP: $("zonePCEDP"),
+    zoneGDPONLY: $("zoneGDPONLY"),
+    zoneALL: $("zoneALL"),
+    zoneNONE: $("zoneNONE"),
 
     newRoundBtn: $("newRoundBtn"),
     resetBtn: $("resetBtn"),
@@ -17,9 +18,9 @@ window.addEventListener("DOMContentLoaded", () => {
     checkMsg: $("checkMsg"),
 
     shockImports: $("shockImports"),
+    shockSubst: $("shockSubst"),
     shockInvestment: $("shockInvestment"),
     shockExports: $("shockExports"),
-    shockOil: $("shockOil"),
     shockReset: $("shockReset"),
     shockName: $("shockName"),
     shockWinner: $("shockWinner"),
@@ -39,16 +40,15 @@ window.addEventListener("DOMContentLoaded", () => {
       .replaceAll('"',"&quot;");
   }
 
-  // --------- HARD GUARD: data.js must load ----------
-  if (!window.CPIDEF_DATA || !Array.isArray(window.CPIDEF_DATA.cards)) {
-    setStatus("ERROR: data.js did not load (CPIDEF_DATA is missing). Make sure data.js is in the same folder as index.html and app.js, and that index.html uses <script defer src=\"data.js\"></script> before app.js.");
+  // Data guard
+  if (!window.INFL_MEASURES_DATA || !Array.isArray(window.INFL_MEASURES_DATA.cards)) {
+    setStatus("ERROR: data.js did not load. Ensure data.js is in the same folder and loads before app.js (both should be 'defer').");
     return;
   }
 
-  const ALL = window.CPIDEF_DATA.cards;
-  const SHOCKS = window.CPIDEF_DATA.shocks;
+  const ALL = window.INFL_MEASURES_DATA.cards;
+  const SHOCKS = window.INFL_MEASURES_DATA.shocks;
 
-  // ---------- CARD SORT ----------
   let cards = [];
   let currentShockKey = "NONE";
   let currentSimQs = [];
@@ -60,6 +60,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Dropzone wiring
   function setupDropzone(zoneEl){
     zoneEl.addEventListener("dragover", (ev) => {
       ev.preventDefault();
@@ -80,14 +81,17 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  [els.zoneStage, els.zoneCPI, els.zoneDEF, els.zoneBOTH, els.zoneNEI].forEach(setupDropzone);
+  [
+    els.zoneStage, els.zoneCPIPCE, els.zonePCEDP, els.zoneGDPONLY, els.zoneALL, els.zoneNONE
+  ].forEach(setupDropzone);
 
   function renderBoard(){
     els.zoneStage.innerHTML = "";
-    els.zoneCPI.innerHTML = "";
-    els.zoneDEF.innerHTML = "";
-    els.zoneBOTH.innerHTML = "";
-    els.zoneNEI.innerHTML = "";
+    els.zoneCPIPCE.innerHTML = "";
+    els.zonePCEDP.innerHTML = "";
+    els.zoneGDPONLY.innerHTML = "";
+    els.zoneALL.innerHTML = "";
+    els.zoneNONE.innerHTML = "";
 
     if (!cards.length){
       const msg = document.createElement("div");
@@ -115,11 +119,12 @@ window.addEventListener("DOMContentLoaded", () => {
       });
 
       const zoneEl =
-        (c.zone === "STAGE") ? els.zoneStage :
-        (c.zone === "CPI")   ? els.zoneCPI :
-        (c.zone === "DEF")   ? els.zoneDEF :
-        (c.zone === "BOTH")  ? els.zoneBOTH :
-        els.zoneNEI;
+        (c.zone === "STAGE")   ? els.zoneStage :
+        (c.zone === "CPIPCE")  ? els.zoneCPIPCE :
+        (c.zone === "PCEDP")   ? els.zonePCEDP :
+        (c.zone === "GDPONLY") ? els.zoneGDPONLY :
+        (c.zone === "ALL")     ? els.zoneALL :
+        els.zoneNONE;
 
       zoneEl.appendChild(el);
     }
@@ -184,7 +189,7 @@ window.addEventListener("DOMContentLoaded", () => {
     updateProgress();
   }
 
-  // ---------- SIMULATION ----------
+  // ---------------- Simulation ----------------
   function setShock(key){
     currentShockKey = key;
     const s = SHOCKS[key];
@@ -197,10 +202,8 @@ window.addEventListener("DOMContentLoaded", () => {
     renderSimQuestions();
   }
 
-  function drawSimChart(path){
-    const canvas = els.simChart;
+  function prepareCanvas(canvas){
     const ctx = canvas.getContext("2d");
-
     const dpr = window.devicePixelRatio || 1;
     const W = canvas.clientWidth * dpr;
     const H = canvas.clientHeight * dpr;
@@ -208,6 +211,11 @@ window.addEventListener("DOMContentLoaded", () => {
       canvas.width = W; canvas.height = H;
     }
     ctx.clearRect(0,0,W,H);
+    return { ctx, dpr, W, H };
+  }
+
+  function drawSimChart(path){
+    const { ctx, dpr, W, H } = prepareCanvas(els.simChart);
 
     const pad = { l: 52*dpr, r: 14*dpr, t: 18*dpr, b: 42*dpr };
     const X0 = pad.l, X1 = W - pad.r;
@@ -216,9 +224,11 @@ window.addEventListener("DOMContentLoaded", () => {
     const T = 6;
     const xToPix = (i) => X0 + i * (X1 - X0) / (T-1);
 
+    // fixed axis
     const yMin = -2, yMax = 8;
     const yToPix = (y) => Y0 + (yMax - y) * (Y1 - Y0) / (yMax - yMin);
 
+    // grid
     ctx.strokeStyle = "rgba(0,0,0,0.10)";
     ctx.lineWidth = 1*dpr;
     for (let k=0;k<=5;k++){
@@ -227,6 +237,7 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.beginPath(); ctx.moveTo(X0,py); ctx.lineTo(X1,py); ctx.stroke();
     }
 
+    // y labels
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "right";
@@ -236,17 +247,19 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.fillText(`${y.toFixed(0)}%`, X0 - 8*dpr, yToPix(y));
     }
 
+    // x labels
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     for (let i=0;i<T;i++){
       ctx.fillText(`Q${i+1}`, xToPix(i), Y1 + 10*dpr);
     }
 
+    // title
     ctx.fillStyle = "rgba(0,0,0,0.70)";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.font = `${13*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
-    ctx.fillText("Inflation paths (CPI vs GDP deflator vs PCE)", X0, 0);
+    ctx.fillText("Inflation paths: CPI vs PCE vs GDP deflator", X0, 0);
 
     function plot(series, strokeStyle, width){
       ctx.strokeStyle = strokeStyle;
@@ -267,14 +280,16 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    // Colors: blue (CPI), gray (PCE), orange (GDP)
     plot(path.cpi, "rgba(31,119,180,0.90)", 3);
-    plot(path.def, "rgba(230,159,0,0.95)", 3);
     plot(path.pce, "rgba(0,0,0,0.55)", 3);
+    plot(path.gdp, "rgba(230,159,0,0.95)", 3);
 
+    // Legend
     const legend = [
       { name:"CPI", col:"rgba(31,119,180,0.90)" },
-      { name:"GDP deflator", col:"rgba(230,159,0,0.95)" },
-      { name:"PCE", col:"rgba(0,0,0,0.55)" }
+      { name:"PCE", col:"rgba(0,0,0,0.55)" },
+      { name:"GDP deflator", col:"rgba(230,159,0,0.95)" }
     ];
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
@@ -288,7 +303,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ---------- SIM MCQs ----------
+  // ---------------- Simulation MCQs ----------------
   function shuffleChoices(arr){
     const c = arr.slice();
     shuffle(c);
@@ -297,21 +312,20 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function generateSimQuestions(shockKey){
     const s = SHOCKS[shockKey];
-    const peakIdx = 1;
-
+    const peakIdx = 1; // Q2
     const v = [
       { key:"CPI", label:"CPI inflation", val: s.path.cpi[peakIdx] },
-      { key:"DEF", label:"GDP deflator inflation", val: s.path.def[peakIdx] },
-      { key:"PCE", label:"PCE inflation", val: s.path.pce[peakIdx] }
+      { key:"PCE", label:"PCE inflation", val: s.path.pce[peakIdx] },
+      { key:"GDP", label:"GDP deflator inflation", val: s.path.gdp[peakIdx] }
     ].sort((a,b)=>b.val-a.val);
 
     const q1 = {
       id: "simq1",
-      prompt: `In the first quarter after the shock (Q2), which measure rises the most?`,
+      prompt: "In the first quarter after the shock (Q2), which measure moves the most?",
       choices: shuffleChoices([
         { key:"CPI", text:"CPI inflation" },
-        { key:"DEF", text:"GDP deflator inflation" },
-        { key:"PCE", text:"PCE inflation" }
+        { key:"PCE", text:"PCE inflation" },
+        { key:"GDP", text:"GDP deflator inflation" }
       ]),
       correctKey: v[0].key,
       explain: s.why
@@ -325,70 +339,70 @@ window.addEventListener("DOMContentLoaded", () => {
     if (shockKey === "IMPORTS"){
       return {
         id:"simq2",
-        prompt:"Why is the GDP deflator response smaller than CPI/PCE in this scenario?",
+        prompt:"Why is the GDP deflator response smaller than CPI/PCE?",
         choices: [
-          { key:"A", text:"Because imports are excluded from the GDP deflator (domestic production measure)" },
-          { key:"B", text:"Because CPI excludes imports but the deflator includes them" },
-          { key:"C", text:"Because the deflator only includes services" },
-          { key:"D", text:"Because CPI measures producer prices" }
+          { key:"A", text:"Imports affect consumer prices but are excluded from the GDP deflator" },
+          { key:"B", text:"CPI excludes imports but the GDP deflator includes them" },
+          { key:"C", text:"The GDP deflator only includes services" },
+          { key:"D", text:"PCE excludes consumer goods" }
         ],
         correctKey:"A",
-        explain:"GDP deflator is based on domestic production and excludes imports. CPI/PCE track consumer prices and include imported consumer goods."
+        explain:"GDP deflator measures prices of domestic production and excludes imports. CPI and PCE include imported consumer goods."
+      };
+    }
+    if (shockKey === "SUBST"){
+      return {
+        id:"simq2",
+        prompt:"Why do PCE and the GDP deflator move more than CPI here?",
+        choices: [
+          { key:"A", text:"PCE and the GDP deflator adjust weights more (chain-weighting/substitution), while CPI is more fixed-basket" },
+          { key:"B", text:"Because CPI includes investment and the others do not" },
+          { key:"C", text:"Because CPI measures producer prices" },
+          { key:"D", text:"Because the GDP deflator includes imports" }
+        ],
+        correctKey:"A",
+        explain:"Substitution/composition shifts affect flexible-weight measures more. CPI is more fixed-basket in a principles-level treatment."
       };
     }
     if (shockKey === "INVEST"){
       return {
         id:"simq2",
-        prompt:"Why does the GDP deflator react more than CPI/PCE here?",
+        prompt:"Why does the GDP deflator react more than CPI/PCE?",
         choices: [
-          { key:"A", text:"Investment goods are part of GDP (domestic production) but not a major direct component of consumer price indexes" },
-          { key:"B", text:"Because CPI includes exports but the deflator does not" },
-          { key:"C", text:"Because CPI is based on producer costs" },
-          { key:"D", text:"Because the deflator excludes government purchases" }
+          { key:"A", text:"Investment goods are part of GDP (domestic production), but not central to consumer inflation measures" },
+          { key:"B", text:"Because CPI includes exports but the GDP deflator does not" },
+          { key:"C", text:"Because CPI excludes services" },
+          { key:"D", text:"Because PCE only tracks imports" }
         ],
         correctKey:"A",
-        explain:"Deflator includes prices of domestically produced investment goods. CPI/PCE focus on consumer purchases."
+        explain:"The deflator includes investment goods. CPI/PCE focus on consumer purchases."
       };
     }
     if (shockKey === "EXPORTS"){
       return {
         id:"simq2",
-        prompt:"What explains a stronger GDP deflator response than CPI/PCE?",
+        prompt:"Why does an export surge move the GDP deflator more?",
         choices: [
-          { key:"A", text:"Exports are domestic production and included in the deflator, but not in consumer price indexes" },
-          { key:"B", text:"CPI includes exports directly" },
-          { key:"C", text:"Deflator excludes exports" },
-          { key:"D", text:"PCE excludes consumer spending" }
+          { key:"A", text:"Exports are domestic production and included in the GDP deflator, but not in consumer inflation measures" },
+          { key:"B", text:"Because CPI includes exports directly" },
+          { key:"C", text:"Because the deflator excludes exports" },
+          { key:"D", text:"Because PCE excludes consumer spending" }
         ],
         correctKey:"A",
-        explain:"Exports are produced domestically and included in GDP/deflator. CPI and PCE track prices faced by consumers."
-      };
-    }
-    if (shockKey === "OIL"){
-      return {
-        id:"simq2",
-        prompt:"Why do CPI/PCE rise when energy prices spike?",
-        choices: [
-          { key:"A", text:"Energy is a consumer purchase, so it enters CPI/PCE directly" },
-          { key:"B", text:"Energy prices are excluded from CPI by construction" },
-          { key:"C", text:"Because CPI only tracks wages" },
-          { key:"D", text:"Because PCE excludes services" }
-        ],
-        correctKey:"A",
-        explain:"Energy is part of consumer spending, so CPI/PCE respond. The deflator can also respond because energy is part of domestic production and input costs."
+        explain:"Exports are part of GDP and affect domestic production prices, so they affect the deflator."
       };
     }
     return {
       id:"simq2",
-      prompt:"With no shock, what should happen to the three inflation series?",
+      prompt:"With no shock, what should happen to CPI, PCE, and GDP deflator inflation?",
       choices: [
-        { key:"A", text:"They should stay near baseline and be similar" },
-        { key:"B", text:"CPI should fall while the deflator rises" },
-        { key:"C", text:"Only PCE should move" },
-        { key:"D", text:"All three should be zero always" }
+        { key:"A", text:"They stay near baseline and are similar" },
+        { key:"B", text:"CPI must be zero while GDP deflator is positive" },
+        { key:"C", text:"Only PCE changes" },
+        { key:"D", text:"All three must move in opposite directions" }
       ],
       correctKey:"A",
-      explain:"In the baseline case, we hold inflation around 2% in each measure."
+      explain:"In the baseline case, we keep inflation around 2% in all measures."
     };
   }
 
@@ -434,24 +448,20 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ---------- EVENTS ----------
+  // Events
   els.newRoundBtn.addEventListener("click", newRound);
   els.resetBtn.addEventListener("click", resetBoard);
   els.checkBtn.addEventListener("click", check);
 
   els.shockImports.addEventListener("click", () => setShock("IMPORTS"));
+  els.shockSubst.addEventListener("click", () => setShock("SUBST"));
   els.shockInvestment.addEventListener("click", () => setShock("INVEST"));
   els.shockExports.addEventListener("click", () => setShock("EXPORTS"));
-  els.shockOil.addEventListener("click", () => setShock("OIL"));
   els.shockReset.addEventListener("click", () => setShock("NONE"));
 
   els.submitSimQs.addEventListener("click", submitSimQuestions);
 
-  // Typeset header once
-  const top = document.getElementById("mathTop");
-  if (top && window.MathJax?.typesetPromise) window.MathJax.typesetPromise([top]);
-
-  // ---------- INIT ----------
+  // Init
   renderBoard();
   newRound();
 });
