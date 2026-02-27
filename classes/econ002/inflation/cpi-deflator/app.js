@@ -50,7 +50,6 @@ window.addEventListener("DOMContentLoaded", () => {
   const SHOCKS = window.INFL_MEASURES_DATA.shocks;
 
   let cards = [];
-  let currentShockKey = "NONE";
   let currentSimQs = [];
 
   function shuffle(a){
@@ -60,7 +59,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Dropzone wiring
+  // Dropzones
   function setupDropzone(zoneEl){
     zoneEl.addEventListener("dragover", (ev) => {
       ev.preventDefault();
@@ -81,9 +80,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  [
-    els.zoneStage, els.zoneCPIPCE, els.zonePCEDP, els.zoneGDPONLY, els.zoneALL, els.zoneNONE
-  ].forEach(setupDropzone);
+  [els.zoneStage, els.zoneCPIPCE, els.zonePCEDP, els.zoneGDPONLY, els.zoneALL, els.zoneNONE].forEach(setupDropzone);
 
   function renderBoard(){
     els.zoneStage.innerHTML = "";
@@ -167,7 +164,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const shuffled = ALL.slice();
     shuffle(shuffled);
 
-    const n = Math.min(10, shuffled.length);
+    const n = Math.min(12, shuffled.length); // slightly bigger round now
     cards = shuffled.slice(0, n).map(c => ({ ...c, zone: "STAGE", checked: null }));
 
     els.checkMsg.textContent = "";
@@ -191,11 +188,10 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // ---------------- Simulation ----------------
   function setShock(key){
-    currentShockKey = key;
     const s = SHOCKS[key];
-    els.shockName.textContent = s.name;
-    els.shockWinner.textContent = s.winner;
-    els.shockWhy.textContent = s.why;
+    $("shockName").textContent = s.name;
+    $("shockWinner").textContent = s.winner;
+    $("shockWhy").textContent = s.why;
 
     drawSimChart(s.path);
     generateSimQuestions(key);
@@ -224,11 +220,9 @@ window.addEventListener("DOMContentLoaded", () => {
     const T = 6;
     const xToPix = (i) => X0 + i * (X1 - X0) / (T-1);
 
-    // fixed axis
     const yMin = -2, yMax = 8;
     const yToPix = (y) => Y0 + (yMax - y) * (Y1 - Y0) / (yMax - yMin);
 
-    // grid
     ctx.strokeStyle = "rgba(0,0,0,0.10)";
     ctx.lineWidth = 1*dpr;
     for (let k=0;k<=5;k++){
@@ -237,7 +231,6 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.beginPath(); ctx.moveTo(X0,py); ctx.lineTo(X1,py); ctx.stroke();
     }
 
-    // y labels
     ctx.fillStyle = "rgba(0,0,0,0.55)";
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "right";
@@ -247,14 +240,12 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.fillText(`${y.toFixed(0)}%`, X0 - 8*dpr, yToPix(y));
     }
 
-    // x labels
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     for (let i=0;i<T;i++){
       ctx.fillText(`Q${i+1}`, xToPix(i), Y1 + 10*dpr);
     }
 
-    // title
     ctx.fillStyle = "rgba(0,0,0,0.70)";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
@@ -280,12 +271,10 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // Colors: blue (CPI), gray (PCE), orange (GDP)
     plot(path.cpi, "rgba(31,119,180,0.90)", 3);
     plot(path.pce, "rgba(0,0,0,0.55)", 3);
     plot(path.gdp, "rgba(230,159,0,0.95)", 3);
 
-    // Legend
     const legend = [
       { name:"CPI", col:"rgba(31,119,180,0.90)" },
       { name:"PCE", col:"rgba(0,0,0,0.55)" },
@@ -310,14 +299,20 @@ window.addEventListener("DOMContentLoaded", () => {
     return c;
   }
 
+  // FIX: grade “moves the most” by absolute change from baseline (Q1)
+  function maxMoverKey(path){
+    const baseCPI = path.cpi[0], basePCE = path.pce[0], baseGDP = path.gdp[0];
+    const q2 = 1;
+    const deltas = [
+      { key:"CPI", label:"CPI inflation", d: Math.abs(path.cpi[q2] - baseCPI) },
+      { key:"PCE", label:"PCE inflation", d: Math.abs(path.pce[q2] - basePCE) },
+      { key:"GDP", label:"GDP deflator inflation", d: Math.abs(path.gdp[q2] - baseGDP) }
+    ].sort((a,b)=>b.d-a.d);
+    return deltas[0].key;
+  }
+
   function generateSimQuestions(shockKey){
     const s = SHOCKS[shockKey];
-    const peakIdx = 1; // Q2
-    const v = [
-      { key:"CPI", label:"CPI inflation", val: s.path.cpi[peakIdx] },
-      { key:"PCE", label:"PCE inflation", val: s.path.pce[peakIdx] },
-      { key:"GDP", label:"GDP deflator inflation", val: s.path.gdp[peakIdx] }
-    ].sort((a,b)=>b.val-a.val);
 
     const q1 = {
       id: "simq1",
@@ -327,7 +322,7 @@ window.addEventListener("DOMContentLoaded", () => {
         { key:"PCE", text:"PCE inflation" },
         { key:"GDP", text:"GDP deflator inflation" }
       ]),
-      correctKey: v[0].key,
+      correctKey: maxMoverKey(s.path),
       explain: s.why
     };
 
@@ -355,7 +350,7 @@ window.addEventListener("DOMContentLoaded", () => {
         id:"simq2",
         prompt:"Why do PCE and the GDP deflator move more than CPI here?",
         choices: [
-          { key:"A", text:"PCE and the GDP deflator adjust weights more (chain-weighting/substitution), while CPI is more fixed-basket" },
+          { key:"A", text:"PCE and the GDP deflator adjust weights more (substitution/chain-weighting), while CPI is more fixed-basket" },
           { key:"B", text:"Because CPI includes investment and the others do not" },
           { key:"C", text:"Because CPI measures producer prices" },
           { key:"D", text:"Because the GDP deflator includes imports" }
