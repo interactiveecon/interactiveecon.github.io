@@ -8,6 +8,7 @@ window.addEventListener("DOMContentLoaded", () => {
     resetBtn: $("resetBtn"),
     status: $("status"),
     warn: $("warn"),
+    resetToBaseBtn: $("resetToBaseBtn"),
 
     cost1Val: $("cost1Val"),
     cost2Val: $("cost2Val"),
@@ -581,6 +582,25 @@ window.addEventListener("DOMContentLoaded", () => {
     return hit ? hit.text : "(missing)";
   }
 
+  function resetPricesToBaseline(){
+  if (!baselineSnapshot || rows.length === 0) return;
+
+  // Match rows by name (stable) first; fallback by index if needed.
+  const baseByName = new Map(baselineSnapshot.map(r => [r.name, r]));
+
+  rows.forEach((r, i) => {
+    const b = baseByName.get(r.name) || baselineSnapshot[i];
+    if (!b) return;
+    r.p1 = b.p1;
+    r.p2 = b.p2;
+    r.p3 = b.p3;
+  });
+
+  render();   // refresh table inputs
+  compute();  // recompute CPI/inflation + redraw charts
+  setStatus("Prices reset to baseline (dashed) values.");
+}
+
   // ---- Generators ----
 
   // A (1->2): biggest basket-weighted price increase ΔCi = basket*(p2-p1)
@@ -745,6 +765,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // ---- MCQ event wiring ----
   els.newQsBtn.addEventListener("click", () => regenerateQuestions(true));
   els.submitQsBtn.addEventListener("click", submitQuestions);
+  els.resetToBaseBtn.addEventListener("click", resetPricesToBaseline);
 
   // ---- Charts + MCQs should update on basket changes; prices update compute only ----
   function afterBasketStructureChange(){
