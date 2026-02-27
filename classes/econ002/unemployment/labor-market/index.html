@@ -27,29 +27,35 @@
       padding: 12px;
     }
 
-    .chartWrap{ height: 440px; }
+    .chartWrap{ height: 460px; }
     canvas{ width:100%; height:100%; display:block; }
 
-    .controls{
-      display:grid;
+    .controls{ display:grid; gap:12px; }
+
+    .radioCard{
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.75);
+      padding: 10px;
+      display:flex;
       gap:10px;
+      align-items:flex-start;
     }
+    .radioCard input{ margin-top: 2px; }
+    .radioCard .txt{
+      font-size: 13px;
+      color: var(--ink-2);
+      line-height: 1.35;
+    }
+    .radioCard .txt strong{ color: var(--ink); }
+
     .row2{
       display:grid;
       grid-template-columns: 1fr 120px;
       gap:10px;
       align-items:center;
     }
-    .row3{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:10px;
-      align-items:center;
-    }
-    @media (max-width: 980px){
-      .row2{ grid-template-columns: 1fr; }
-      .row3{ grid-template-columns: 1fr; }
-    }
+    @media (max-width: 980px){ .row2{ grid-template-columns: 1fr; } }
 
     .control label{
       display:block;
@@ -69,23 +75,6 @@
       font-family: var(--font-sans);
       color: var(--ink);
     }
-
-    .toggle{
-      display:flex;
-      gap:10px;
-      align-items:flex-start;
-      padding:10px;
-      border:1px solid var(--line);
-      border-radius: 14px;
-      background: rgba(255,255,255,0.70);
-    }
-    .toggle input{ margin-top: 2px; }
-    .toggle .ttext{
-      font-size: 13px;
-      color: var(--ink-2);
-      line-height: 1.35;
-    }
-    .toggle .ttext strong{ color: var(--ink); }
 
     .kv3{
       display:grid;
@@ -131,6 +120,10 @@
       line-height: 1.45;
       margin-top: 6px;
     }
+    .disabled{
+      opacity: .55;
+      pointer-events: none;
+    }
   </style>
 </head>
 
@@ -146,17 +139,18 @@
           <div class="kicker">Macroeconomics Practice Lab</div>
           <h1>Labor Market: Cyclical vs Structural Unemployment</h1>
           <p class="sub">
-            Use the labor market graph to see how unemployment can arise from (i) <strong>sticky nominal wages</strong> + <strong>labor demand shocks</strong> (cyclical),
-            or (ii) a <strong>real-wage rigidity</strong> (structural).
+            Start in equilibrium. Then compare unemployment from a <strong>negative labor demand shock</strong> with
+            (i) a <strong>sticky real wage</strong> (cyclical) versus (ii) a <strong>real-wage floor</strong> (structural).
           </p>
 
           <details class="howto">
-            <summary>Key relationships</summary>
+            <summary>How to use this</summary>
             <div class="howto-body">
               <ul>
-                <li>Axes: real wage \(w = W/P\) vs employment \(L\)</li>
-                <li>Labor demand: \(w = a - bL\)</li>
-                <li>Labor supply: \(w = c + dL\)</li>
+                <li>Pick <strong>cyclical unemployment</strong> or <strong>structural unemployment</strong>.</li>
+                <li>Use demand shock buttons to shift labor demand.</li>
+                <li><strong>Cyclical</strong>: the real wage is <em>downward sticky</em> (won’t fall after a negative shock) but can rise after a positive shock.</li>
+                <li><strong>Structural</strong>: the real wage is pinned by a floor \( \bar w \).</li>
                 <li>If the actual real wage is above equilibrium, employment is demand-determined and unemployment is \(L_s - L_d\).</li>
               </ul>
             </div>
@@ -179,7 +173,7 @@
     <section class="panel">
       <div class="panel-head">
         <h2>Graph and controls</h2>
-        <p class="panel-sub">Grey = baseline. Blue = current. Unemployment is shaded when it exists.</p>
+        <p class="panel-sub">Grey dashed = baseline. Blue = current. Orange line = actual real wage. Unemployment is shaded when it exists.</p>
       </div>
 
       <div class="grid2">
@@ -192,59 +186,36 @@
 
         <div class="box">
           <div class="controls">
-
-            <div class="toggle">
-              <input id="stickyW" type="checkbox" checked>
-              <div class="ttext">
-                <strong>Cyclical mechanism:</strong> sticky nominal wage \(W\).<br>
-                When a demand shock hits, \(W\) does not adjust quickly, so \(w=W/P\) can be “too high.”
+            <div class="radioCard">
+              <input type="radio" id="modeCyc" name="mode" value="cyc" checked>
+              <div class="txt">
+                <strong>Cyclical unemployment</strong><br>
+                Demand shocks move labor demand. After a negative shock, the real wage doesn’t fall (sticky downward), so unemployment appears.
+                After a positive shock, the real wage rises.
               </div>
             </div>
 
-            <div class="toggle">
-              <input id="realRigidity" type="checkbox">
-              <div class="ttext">
-                <strong>Structural mechanism:</strong> real-wage floor \( \bar{w} \).<br>
-                The real wage cannot fall below \( \bar{w} \) (e.g., minimum wage / unions / efficiency wages).
+            <div class="radioCard">
+              <input type="radio" id="modeStr" name="mode" value="str">
+              <div class="txt">
+                <strong>Structural unemployment</strong><br>
+                A real-wage rigidity pins the wage at a floor \( \bar w \). If \( \bar w \) is above equilibrium, unemployment persists.
               </div>
             </div>
 
-            <div class="row3">
-              <div class="control">
-                <label for="W">Nominal wage (W)</label>
-                <input id="W" type="range" min="6" max="14" step="0.1" value="10">
-                <div class="mini">W = <span id="Wv">10.0</span></div>
-              </div>
-              <div class="control">
-                <label for="P">Price level (P)</label>
-                <input id="P" type="range" min="4" max="14" step="0.1" value="10">
-                <div class="mini">P = <span id="Pv">10.0</span></div>
-              </div>
-            </div>
-
-            <div class="row2">
+            <div id="wbarBlock">
               <div class="control">
                 <label for="wbar">Real wage floor (w̄)</label>
-                <input id="wbar" type="range" min="0" max="2.5" step="0.05" value="0">
+                <input id="wbar" type="range" min="0" max="3.5" step="0.05" value="0">
               </div>
-              <input id="wbarNum" type="number" min="0" max="2.5" step="0.05" value="0">
-            </div>
-
-            <div class="row3">
-              <div class="control">
-                <label for="a">Labor demand intercept (a)</label>
-                <input id="a" type="range" min="1.5" max="4.0" step="0.05" value="3.0">
-                <div class="mini">a = <span id="av">3.00</span></div>
-              </div>
-              <div class="control">
-                <label for="c">Labor supply intercept (c)</label>
-                <input id="c" type="range" min="0.1" max="2.0" step="0.05" value="0.8">
-                <div class="mini">c = <span id="cv">0.80</span></div>
+              <div class="row2">
+                <div class="mini">w̄ = <span id="wbarVal">0.00</span></div>
+                <input id="wbarNum" type="number" min="0" max="3.5" step="0.05" value="0">
               </div>
             </div>
 
             <div class="mini">
-              In this app, slopes are fixed for clarity: demand slope \(b\) and supply slope \(d\) are constant.
+              The underlying curve shapes are fixed for clarity; shocks move labor demand.
             </div>
 
             <div class="kv3">
