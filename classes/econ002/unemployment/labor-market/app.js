@@ -4,23 +4,18 @@ window.addEventListener("DOMContentLoaded", () => {
   const els = {
     lmChart: $("lmChart"),
     chartNote: $("chartNote"),
-
     resetBtn: $("resetBtn"),
     shockNegBtn: $("shockNegBtn"),
     shockPosBtn: $("shockPosBtn"),
     status: $("status"),
 
-    stickyW: $("stickyW"),
-    realRigidity: $("realRigidity"),
+    modeCyc: $("modeCyc"),
+    modeStr: $("modeStr"),
 
-    W: $("W"), Wv: $("Wv"),
-    P: $("P"), Pv: $("Pv"),
-
+    wbarBlock: $("wbarBlock"),
     wbar: $("wbar"),
     wbarNum: $("wbarNum"),
-
-    a: $("a"), av: $("av"),
-    c: $("c"), cv: $("cv"),
+    wbarVal: $("wbarVal"),
 
     Lstar: $("Lstar"),
     Lact: $("Lact"),
@@ -28,97 +23,89 @@ window.addEventListener("DOMContentLoaded", () => {
     explainBox: $("explainBox"),
   };
 
-  // Validate required elements
-  const required = Object.entries(els).filter(([k,v]) => v == null).map(([k]) => k);
-  if (required.length) {
-    console.error("Missing elements:", required);
-    if (els.status) els.status.textContent = `Missing elements: ${required.join(", ")}`;
+  const missing = Object.entries(els).filter(([k,v]) => v == null).map(([k]) => k);
+  if (missing.length) {
+    console.error("Missing elements:", missing);
+    if (els.status) els.status.textContent = `Missing elements: ${missing.join(", ")}`;
     return;
   }
 
-  // Fixed slopes (clarity)
+  // Fixed slopes for clarity
   const b = 0.25; // demand slope
   const d = 0.20; // supply slope
 
-  // Baseline parameters (for grey curves)
+  // Baseline parameters (grey dashed)
   const baseline = {
-    a: 3.0,
-    c: 0.8,
-    W: 10,
-    P: 10,
-    wbar: 0,
+    a: 3.0, // demand intercept
+    c: 0.8  // supply intercept
   };
 
   // State
   let state = {
     a: baseline.a,
     c: baseline.c,
-    W: baseline.W,
-    P: baseline.P,
-    wbar: baseline.wbar,
-    stickyW: true,
-    realRigidity: false,
+    mode: "cyc",     // "cyc" or "str"
+    wbar: 0,
+    wStickyDown: null // baseline wage level to stick to after negative shocks (cyc mode)
   };
 
   function setStatus(msg){ els.status.textContent = msg; }
-
   function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
 
-  function wReal(W, P){ return W / P; }
-
-  // Demand: w = a - bL  => Ld(w) = (a - w)/b
+  // Demand: w = a - bL
   function Ld(a, w){ return (a - w) / b; }
-
-  // Supply: w = c + dL  => Ls(w) = (w - c)/d
+  // Supply: w = c + dL
   function Ls(c, w){ return (w - c) / d; }
 
   function equilibrium(a, c){
-    // solve a - bL = c + dL => L* = (a - c)/(b+d), w* = a - bL*
     const L = (a - c) / (b + d);
     const w = a - b * L;
     return { L, w };
   }
 
-  function actualOutcome(){
-    const { a, c, W, P, wbar, stickyW, realRigidity } = state;
+  function currentEquilibrium(){ return equilibrium(state.a, state.c); }
+  function baselineEquilibrium(){ return equilibrium(baseline.a, baseline.c); }
 
-    const eq = equilibrium(a, c);
-    const w_eq = eq.w;
-    const L_eq = eq.L;
+  function actualRealWage(){
+    const eq = currentEquilibrium();
+    const wEq = eq.w;
 
-    // Candidate real wage from W/P
-    let w_candidate = wReal(W, P);
-
-    // Apply real rigidity floor if enabled
-    if (realRigidity) w_candidate = Math.max(w_candidate, wbar);
-
-    // If stickyW is OFF, assume W can adjust so that w = max(w_eq, wbar if rigidity)
-    // (i.e., wage is flexible unless real rigidity binds)
-    if (!stickyW) {
-      w_candidate = realRigidity ? Math.max(w_eq, wbar) : w_eq;
+    if (state.mode === "str") {
+      // Structural: wage pinned at floor (rigidity in real wage)
+      return Math.max(wEq, state.wbar);
     }
 
-    // Given real wage w_actual, employment is min(Ld, Ls) but in standard model with wage above eq,
-    // employment is demand-determined (Ld). If wage below eq, employment is supply-determined? Typically wage floors create unemployment;
-    // we’ll treat market clearing when w_actual <= w_eq (no unemployment): L = L_eq.
-    const w_actual = w_candidate;
+    // Cyclical: downward sticky, upward flexible
+    // If wStickyDown is null (initial), start at equilibrium
+    if (state.wStickyDown == null) state.wStickyDown = wEq;
 
-    // Determine employment + unemployment
-    let L_actual = L_eq;
+    // If current equilibrium wage is higher than sticky level, wage rises (upward flexible)
+    // If current equilibrium wage is lower, wage does NOT fall (downward sticky)
+    return Math.max(wEq, state.wStickyDown);
+  }
+
+  function outcome(){
+    const eq = currentEquilibrium();
+    const wEq = eq.w;
+    const LEq = eq.L;
+
+    const wAct = actualRealWage();
+
+    let LAct = LEq;
     let U = 0;
 
-    if (w_actual > w_eq + 1e-9) {
-      const Ld_val = Ld(a, w_actual);
-      const Ls_val = Ls(c, w_actual);
-      L_actual = Math.max(0, Ld_val);
-      U = Math.max(0, Ls_val - Ld_val);
+    if (wAct > wEq + 1e-9) {
+      const LdVal = Ld(state.a, wAct);
+      const LsVal = Ls(state.c, wAct);
+      LAct = Math.max(0, LdVal);
+      U = Math.max(0, LsVal - LdVal);
     } else {
-      // wage not above eq -> market clears
-      L_actual = L_eq;
+      // clears at equilibrium (or very close)
+      LAct = LEq;
       U = 0;
     }
 
-    return { eq, w_actual, L_actual, U };
+    return { eq, wEq, wAct, LAct, U };
   }
 
   // ----- Drawing -----
@@ -126,25 +113,24 @@ window.addEventListener("DOMContentLoaded", () => {
     const canvas = els.lmChart;
     const ctx = canvas.getContext("2d");
 
-    // DPR sizing
     const dpr = window.devicePixelRatio || 1;
-    const w = canvas.clientWidth * dpr;
-    const h = canvas.clientHeight * dpr;
-    if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w; canvas.height = h;
+    const W = canvas.clientWidth * dpr;
+    const H = canvas.clientHeight * dpr;
+    if (canvas.width !== W || canvas.height !== H) {
+      canvas.width = W; canvas.height = H;
     }
-    ctx.clearRect(0,0,w,h);
+    ctx.clearRect(0,0,W,H);
 
     // Fixed axes
     const Lmin = 0, Lmax = 12;
     const wmin = 0, wmax = 4.2;
 
     const pad = { l: 52*dpr, r: 16*dpr, t: 18*dpr, b: 44*dpr };
-    const X0 = pad.l, X1 = w - pad.r;
-    const Y0 = pad.t, Y1 = h - pad.b;
+    const X0 = pad.l, X1 = W - pad.r;
+    const Y0 = pad.t, Y1 = H - pad.b;
 
     const xToPix = (L) => X0 + (L - Lmin) * (X1 - X0) / (Lmax - Lmin);
-    const yToPix = (wr) => Y0 + (wmax - wr) * (Y1 - Y0) / (wmax - wmin);
+    const yToPix = (w) => Y0 + (wmax - w) * (Y1 - Y0) / (wmax - wmin);
 
     // Grid
     ctx.strokeStyle = "rgba(0,0,0,0.10)";
@@ -155,8 +141,8 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.beginPath(); ctx.moveTo(x,Y0); ctx.lineTo(x,Y1); ctx.stroke();
     }
     for (let j=0;j<=6;j++){
-      const wr = wmin + j*(wmax-wmin)/6;
-      const y = yToPix(wr);
+      const w = wmin + j*(wmax-wmin)/6;
+      const y = yToPix(w);
       ctx.beginPath(); ctx.moveTo(X0,y); ctx.lineTo(X1,y); ctx.stroke();
     }
 
@@ -173,44 +159,44 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.save();
     ctx.translate(X0 - 36*dpr, (Y0+Y1)/2);
     ctx.rotate(-Math.PI/2);
-    ctx.fillText("Real wage (w = W/P)", 0, 0);
+    ctx.fillText("Real wage (w)", 0, 0);
     ctx.restore();
 
-    // Helper: plot a line wr(L)
+    // Plot helper
     function plotLine(fn, strokeStyle, width, dashed=false){
       ctx.strokeStyle = strokeStyle;
       ctx.lineWidth = width*dpr;
-      if (dashed) ctx.setLineDash([6*dpr, 6*dpr]); else ctx.setLineDash([]);
+      ctx.setLineDash(dashed ? [6*dpr, 6*dpr] : []);
       ctx.beginPath();
       const N = 220;
       for (let i=0;i<=N;i++){
         const L = Lmin + (Lmax-Lmin)*i/N;
-        const wr = fn(L);
+        const w = fn(L);
         const x = xToPix(L);
-        const y = yToPix(wr);
+        const y = yToPix(w);
         if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
       }
       ctx.stroke();
       ctx.setLineDash([]);
     }
 
-    // Baseline curves (grey)
+    // Baseline (grey dashed)
     plotLine((L)=> baseline.a - b*L, "rgba(0,0,0,0.25)", 2, true);
     plotLine((L)=> baseline.c + d*L, "rgba(0,0,0,0.25)", 2, true);
 
-    // Current curves (blue)
+    // Current (blue)
     plotLine((L)=> state.a - b*L, "rgba(31,119,180,0.90)", 3, false);
     plotLine((L)=> state.c + d*L, "rgba(31,119,180,0.60)", 3, false);
 
-    // Compute outcomes
-    const { eq, w_actual, L_actual, U } = actualOutcome();
+    // Outcome
+    const { eq, wEq, wAct, LAct, U } = outcome();
 
-    // Draw wage line w_actual
+    // Wage line (orange)
     ctx.strokeStyle = "rgba(230,159,0,0.90)";
     ctx.lineWidth = 3*dpr;
     ctx.beginPath();
-    ctx.moveTo(X0, yToPix(w_actual));
-    ctx.lineTo(X1, yToPix(w_actual));
+    ctx.moveTo(X0, yToPix(wAct));
+    ctx.lineTo(X1, yToPix(wAct));
     ctx.stroke();
 
     // Equilibrium point
@@ -219,13 +205,13 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.fillStyle = "rgba(0,0,0,0.45)";
     ctx.beginPath(); ctx.arc(xEq, yEq, 6*dpr, 0, Math.PI*2); ctx.fill();
 
-    // Actual employment point at intersection of wage line with demand
-    const xA = xToPix(L_actual);
-    const yA = yToPix(w_actual);
+    // Actual point (employment on demand at wAct)
+    const xA = xToPix(LAct);
+    const yA = yToPix(wAct);
     ctx.fillStyle = "rgba(230,159,0,0.95)";
     ctx.beginPath(); ctx.arc(xA, yA, 7*dpr, 0, Math.PI*2); ctx.fill();
 
-    // Dashed guides to axes for actual point
+    // Dashed guides
     ctx.strokeStyle = "rgba(0,0,0,0.25)";
     ctx.lineWidth = 2*dpr;
     ctx.setLineDash([6*dpr, 6*dpr]);
@@ -233,18 +219,17 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.beginPath(); ctx.moveTo(xA, yA); ctx.lineTo(X0, yA); ctx.stroke();
     ctx.setLineDash([]);
 
-    // Shade unemployment if any: from Ld to Ls at wage w_actual
+    // Shade unemployment region if U>0
     if (U > 1e-9) {
-      const Ld_val = Ld(state.a, w_actual);
-      const Ls_val = Ls(state.c, w_actual);
-      const x1 = xToPix(clamp(Ld_val, Lmin, Lmax));
-      const x2 = xToPix(clamp(Ls_val, Lmin, Lmax));
-      const y = yToPix(w_actual);
+      const LdVal = Ld(state.a, wAct);
+      const LsVal = Ls(state.c, wAct);
+      const x1 = xToPix(clamp(LdVal, Lmin, Lmax));
+      const x2 = xToPix(clamp(LsVal, Lmin, Lmax));
+      const y = yToPix(wAct);
 
       ctx.fillStyle = "rgba(230,159,0,0.18)";
       ctx.fillRect(Math.min(x1,x2), y, Math.abs(x2-x1), Y1 - y);
 
-      // label unemployment
       ctx.fillStyle = "rgba(0,0,0,0.70)";
       ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
       ctx.textAlign = "left";
@@ -252,155 +237,130 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.fillText("Unemployment (excess supply)", Math.min(x1,x2) + 6*dpr, y + 6*dpr);
     }
 
-    // Legend-like notes
+    // Legend
     ctx.fillStyle = "rgba(0,0,0,0.60)";
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.fillText("Blue: current supply & demand", X0, Y0);
     ctx.fillText("Grey dashed: baseline", X0, Y0 + 16*dpr);
-    ctx.fillText("Orange: real wage (actual)", X0, Y0 + 32*dpr);
+    ctx.fillText("Orange: actual real wage", X0, Y0 + 32*dpr);
 
-    // Update metrics + explanation
+    // Metrics
     els.Lstar.textContent = eq.L.toFixed(2);
-    els.Lact.textContent  = L_actual.toFixed(2);
+    els.Lact.textContent  = LAct.toFixed(2);
     els.Unemp.textContent = U.toFixed(2);
 
-    const wEq = eq.w;
-    const wRealNow = wReal(state.W, state.P);
-    const rigidityOn = state.realRigidity && state.wbar > 0;
-
+    // Explanation
     let expl = "";
     if (U <= 1e-9) {
-      expl = `No unemployment. The market clears at the equilibrium real wage.`;
-      if (state.realRigidity && state.wbar > wEq + 1e-9) {
-        expl = `Real-wage floor binds above equilibrium, which would normally create unemployment—but sticky wage is off and wage is set at the floor; check settings.`;
-      }
+      expl = `No unemployment: the real wage equals (or is below) the market-clearing level.`;
+    } else if (state.mode === "cyc") {
+      expl = `Cyclical unemployment: a negative demand shock lowers the market-clearing wage, but the real wage does not fall (downward sticky). Firms reduce hiring to labor demand, creating unemployment.`;
     } else {
-      // diagnose source
-      if (state.stickyW && !state.realRigidity) {
-        expl =
-          `Cyclical unemployment mechanism: wages are sticky. A demand shock can reduce labor demand, but nominal wage W does not adjust quickly. ` +
-          `With P fixed, the real wage w=W/P stays high, so firms hire fewer workers (employment falls to labor demand).`;
-      } else if (state.realRigidity) {
-        expl =
-          `Structural unemployment mechanism: a real-wage rigidity keeps the real wage from falling below w̄. ` +
-          `If w̄ (or W/P) is above the market-clearing wage, firms hire fewer workers, generating unemployment even without a temporary demand shock.`;
-      } else {
-        expl =
-          `Unemployment exists because the chosen real wage is above the market-clearing level. Employment is demand-determined at this wage.`;
-      }
+      expl = `Structural unemployment: the real wage is held above the market-clearing level by the wage floor \$begin:math:text$\\\\bar w\\$end:math:text$. Employment is demand-determined at that wage, creating persistent unemployment.`;
     }
 
-    const wActualShown = w_actual.toFixed(2);
-    const wEqShown = wEq.toFixed(2);
-    const wNowShown = wRealNow.toFixed(2);
-    const wbarShown = Number(state.wbar).toFixed(2);
-
     els.explainBox.innerHTML =
-      `<strong>Numbers:</strong> equilibrium w*=${wEqShown}, actual w=${wActualShown} (W/P=${wNowShown}${rigidityOn ? `, w̄=${wbarShown}` : ""}).<br>` +
+      `<strong>Numbers:</strong> equilibrium w*=${wEq.toFixed(2)}, actual w=${wAct.toFixed(2)}.<br>` +
       `<strong>Interpretation:</strong> ${expl}`;
 
-    // Note under chart
     els.chartNote.textContent =
       `If w is above w*, employment falls to Ld(w) and unemployment is Ls(w) − Ld(w).`;
   }
 
-  // ----- UI wiring -----
-  function syncUI(){
-    els.W.value = String(state.W);
-    els.P.value = String(state.P);
-    els.a.value = String(state.a);
-    els.c.value = String(state.c);
-    els.wbar.value = String(state.wbar);
-    els.wbarNum.value = String(state.wbar);
-
-    els.stickyW.checked = state.stickyW;
-    els.realRigidity.checked = state.realRigidity;
-
-    els.Wv.textContent = Number(state.W).toFixed(1);
-    els.Pv.textContent = Number(state.P).toFixed(1);
-    els.av.textContent = Number(state.a).toFixed(2);
-    els.cv.textContent = Number(state.c).toFixed(2);
+  // ----- Mode & controls -----
+  function syncModeUI(){
+    const isStr = state.mode === "str";
+    els.wbarBlock.classList.toggle("disabled", !isStr);
+    // keep controls visually consistent
+    els.wbar.disabled = !isStr;
+    els.wbarNum.disabled = !isStr;
   }
 
-  function setFromControls(){
-    state.stickyW = els.stickyW.checked;
-    state.realRigidity = els.realRigidity.checked;
-
-    state.W = Number(els.W.value);
-    state.P = Number(els.P.value);
-    state.a = Number(els.a.value);
-    state.c = Number(els.c.value);
-
-    const wb = Number(els.wbarNum.value);
-    state.wbar = clamp(isFinite(wb) ? wb : Number(els.wbar.value), 0, 2.5);
-
-    // keep sliders synced
+  function setWbarFromUI(){
+    const v = Number(els.wbarNum.value);
+    state.wbar = clamp(Number.isFinite(v) ? v : Number(els.wbar.value), 0, 3.5);
     els.wbar.value = String(state.wbar);
     els.wbarNum.value = String(state.wbar);
-
-    els.Wv.textContent = Number(state.W).toFixed(1);
-    els.Pv.textContent = Number(state.P).toFixed(1);
-    els.av.textContent = Number(state.a).toFixed(2);
-    els.cv.textContent = Number(state.c).toFixed(2);
+    els.wbarVal.textContent = state.wbar.toFixed(2);
   }
 
   function reset(){
-    state = {
-      a: baseline.a,
-      c: baseline.c,
-      W: baseline.W,
-      P: baseline.P,
-      wbar: baseline.wbar,
-      stickyW: true,
-      realRigidity: false,
-    };
-    syncUI();
+    state.a = baseline.a;
+    state.c = baseline.c;
+    state.mode = "cyc";
+    state.wbar = 0;
+    state.wStickyDown = null;
+
+    els.modeCyc.checked = true;
+    els.modeStr.checked = false;
+
+    els.wbar.value = "0";
+    els.wbarNum.value = "0";
+    els.wbarVal.textContent = "0.00";
+
+    syncModeUI();
     draw();
-    setStatus("Reset.");
+    setStatus("Reset to baseline equilibrium.");
   }
 
-  function demandShock(sign){
-    // negative shock reduces a; positive increases a
-    const delta = (sign < 0) ? -0.50 : +0.50;
+  function applyDemandShock(sign){
+    // demand intercept shifts
+    const delta = (sign < 0) ? -0.55 : +0.55;
     state.a = clamp(state.a + delta, 1.5, 4.0);
 
-    // if stickyW is on, keep W fixed; if not sticky, W adjusts to equilibrium (we implement by not forcing W here)
-    // refresh UI sliders
-    els.a.value = String(state.a);
-    els.av.textContent = Number(state.a).toFixed(2);
+    // For cyclical mode: ensure downward stickiness reference is set at the *pre-shock* wage if not set.
+    // But after a positive shock, sticky reference should update upward (w rises).
+    if (state.mode === "cyc") {
+      const eqNow = currentEquilibrium();
+      if (state.wStickyDown == null) state.wStickyDown = eqNow.w;
+
+      // If the shock is positive, allow wage to rise (update sticky reference upward)
+      if (sign > 0) {
+        state.wStickyDown = Math.max(state.wStickyDown, eqNow.w);
+      }
+      // If the shock is negative, keep sticky reference unchanged (so wage won’t fall).
+    }
 
     draw();
     setStatus(sign < 0 ? "Negative labor demand shock applied." : "Positive labor demand shock applied.");
   }
 
-  // Event listeners
-  const rerender = () => { setFromControls(); draw(); };
+  // Radio handlers
+  function setMode(mode){
+    state.mode = mode;
 
-  els.stickyW.addEventListener("change", rerender);
-  els.realRigidity.addEventListener("change", rerender);
+    // When switching to cyclical: set sticky reference to current equilibrium wage (start in equilibrium)
+    if (mode === "cyc") {
+      const eq = currentEquilibrium();
+      state.wStickyDown = eq.w;
+    }
 
-  els.W.addEventListener("input", rerender);
-  els.P.addEventListener("input", rerender);
-  els.a.addEventListener("input", rerender);
-  els.c.addEventListener("input", rerender);
+    syncModeUI();
+    draw();
+  }
 
+  els.modeCyc.addEventListener("change", () => { if (els.modeCyc.checked) setMode("cyc"); });
+  els.modeStr.addEventListener("change", () => { if (els.modeStr.checked) setMode("str"); });
+
+  // wbar controls
   els.wbar.addEventListener("input", () => {
     els.wbarNum.value = els.wbar.value;
-    rerender();
+    setWbarFromUI();
+    draw();
   });
   els.wbarNum.addEventListener("input", () => {
     els.wbar.value = els.wbarNum.value;
-    rerender();
+    setWbarFromUI();
+    draw();
   });
 
+  // Buttons
   els.resetBtn.addEventListener("click", reset);
-  els.shockNegBtn.addEventListener("click", () => demandShock(-1));
-  els.shockPosBtn.addEventListener("click", () => demandShock(+1));
+  els.shockNegBtn.addEventListener("click", () => applyDemandShock(-1));
+  els.shockPosBtn.addEventListener("click", () => applyDemandShock(+1));
 
-  // Initial draw
-  syncUI();
-  draw();
-  setStatus("Ready.");
+  // Init
+  reset();
 });
