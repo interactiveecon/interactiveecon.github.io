@@ -274,7 +274,7 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   els.randomBtn.addEventListener("click", () => {
-    const i = (Math.random()*14 - 2);      // -2 to 12
+    const i = (Math.random()*15);      // -2 to 12
     const pie = (Math.random()*12 - 2);   // -2 to 10
     // actual inflation can deviate from expected
     const pi = pie + (Math.random()*6 - 3); // surprise -3..+3
