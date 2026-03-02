@@ -11,14 +11,7 @@ window.addEventListener("DOMContentLoaded", () => {
     scTitle: $("scTitle"),
     scDesc: $("scDesc"),
 
-    qVal: $("qVal"),
-    mbVal: $("mbVal"),
-    mcVal: $("mcVal"),
-    tbVal: $("tbVal"),
-    tcVal: $("tcVal"),
-    cnbVal: $("cnbVal"),
     stepVal: $("stepVal"),
-
     lessBtn: $("lessBtn"),
     moreBtn: $("moreBtn"),
     qSlider: $("qSlider"),
@@ -26,13 +19,14 @@ window.addEventListener("DOMContentLoaded", () => {
     tableBody: $("tableBody"),
     feedback: $("feedback"),
 
-    chart1: $("chart1"),
-    chart2: $("chart2"),
-    chart3: $("chart3"),
+    chart1: $("chart1"), // MB/MC
+    chart2: $("chart2"), // CNB
+    chart3: $("chart3"), // TB/TC
   };
 
   function setStatus(msg){ els.status.textContent = msg; }
   function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
+  function fmt(x){ return (Number.isFinite(x) ? x.toFixed(2) : "—"); }
 
   if (!window.MARGINALISM_CONT || !Array.isArray(window.MARGINALISM_CONT.scenarios)) {
     setStatus("ERROR: data.js did not load (MARGINALISM_CONT missing).");
@@ -66,14 +60,11 @@ window.addEventListener("DOMContentLoaded", () => {
     return ALL[Math.floor(Math.random()*ALL.length)];
   }
 
-  function fmt(x){ return (Number.isFinite(x) ? x.toFixed(2) : "—"); }
-
-  // Step size: move halfway toward q*, capped. Snap rule: if step < 0.25, snap to q*.
+  // Step size: move halfway toward q*, capped. Snap if step < 0.25.
   function computeStep(){
     const target = qStar();
     const dist = Math.abs(target - q);
-    const step = Math.max(0.01, Math.min(0.75, dist/2));
-    return step;
+    return Math.max(0.01, Math.min(0.75, dist/2));
   }
 
   function setQ(newQ){
@@ -86,15 +77,9 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function stepToward(dir){
     const target = qStar();
-    const dist = target - q;
     const step = computeStep();
 
-    // ✅ snap when step < 0.25
-    if (step < 0.25) {
-      setQ(target);
-      return;
-    }
-
+    if (step < 0.25) { setQ(target); return; }
     if (dir === "more") setQ(q + step);
     else setQ(q - step);
   }
@@ -110,12 +95,11 @@ window.addEventListener("DOMContentLoaded", () => {
     els.qSlider.max = sc.qMax;
     els.qSlider.step = 0.01;
 
-    // ✅ randomly start below or above q*
+    // start randomly above/below q*
     const qs = qStar();
-    const startDist = 2.0 + Math.random()*2.0; // between 2 and 4 away
+    const startDist = 2.0 + Math.random()*2.0;
     const startBelow = Math.random() < 0.5;
-    const startQ = startBelow ? (qs - startDist) : (qs + startDist);
-    q = clamp(startQ, 0, sc.qMax);
+    q = clamp(startBelow ? (qs - startDist) : (qs + startDist), 0, sc.qMax);
     els.qSlider.value = String(q);
 
     els.feedback.style.display = "none";
@@ -125,27 +109,20 @@ window.addEventListener("DOMContentLoaded", () => {
     renderAll();
   }
 
-  function renderKPIs(){
-    els.qVal.textContent = fmt(q);
-    els.mbVal.textContent = fmt(MB(q));
-    els.mcVal.textContent = fmt(MC(q));
-    els.tbVal.textContent = fmt(TB(q));
-    els.tcVal.textContent = fmt(TC(q));
-    els.cnbVal.textContent = fmt(CNB(q));
+  function renderStep(){
     els.stepVal.textContent = fmt(computeStep());
   }
 
   function renderTable(){
     const qs = qStar();
-    // ✅ previous/next use q-1 and q+1 (clamped)
-    const prev = clamp(q - 1, 0, cur.qMax);
-    const next = clamp(q + 1, 0, cur.qMax);
+    const qMinus = clamp(q - 1, 0, cur.qMax);
+    const qPlus  = clamp(q + 1, 0, cur.qMax);
 
     const rows = [
-      { label:"Previous", q: prev },
-      { label:"Current",  q: q },
-      { label:"Next",     q: next },
-      { label:"Optimal",  q: qs }
+      { label:"Current − 1", q: qMinus },
+      { label:"Current",     q: q },
+      { label:"Current + 1", q: qPlus },
+      { label:"Optimal",     q: qs }
     ];
 
     els.tableBody.innerHTML = rows.map(r => {
@@ -165,7 +142,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }).join("");
   }
 
-  // Canvas helpers
+  // ----- Canvas helpers -----
   function setupCanvas(canvas){
     const ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
@@ -240,25 +217,113 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.setLineDash([]);
   }
 
+  // NEW: dashed horizontal line from dot to y-axis
+  function drawHToYAxis(ctx, xDot, yDot, xAxisLeft, dpr){
+    ctx.strokeStyle = "rgba(0,0,0,0.30)";
+    ctx.lineWidth = 2*dpr;
+    ctx.setLineDash([4*dpr, 6*dpr]);
+    ctx.beginPath();
+    ctx.moveTo(xAxisLeft, yDot);
+    ctx.lineTo(xDot, yDot);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // NEW: legend box
+  function drawLegend(ctx, X0, Y0, dpr, items){
+    // items: [{label, color}]
+    const pad = 8*dpr;
+    const lineW = 18*dpr;
+    const lineH = 16*dpr;
+
+    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    const widths = items.map(it => ctx.measureText(it.label).width);
+    const boxW = pad*2 + lineW + 8*dpr + Math.max(...widths);
+    const boxH = pad*2 + items.length*lineH;
+
+    // box
+    ctx.fillStyle = "rgba(255,255,255,0.78)";
+    ctx.strokeStyle = "rgba(0,0,0,0.10)";
+    ctx.lineWidth = 1*dpr;
+    ctx.beginPath();
+    ctx.roundRect(X0 + 6*dpr, Y0 + 6*dpr, boxW, boxH, 10*dpr);
+    ctx.fill();
+    ctx.stroke();
+
+    // items
+    let y = Y0 + 6*dpr + pad + 2*dpr;
+    for (const it of items){
+      const x = X0 + 6*dpr + pad;
+      ctx.strokeStyle = it.color;
+      ctx.lineWidth = 3*dpr;
+      ctx.beginPath();
+      ctx.moveTo(x, y + 5*dpr);
+      ctx.lineTo(x + lineW, y + 5*dpr);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(0,0,0,0.75)";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(it.label, x + lineW + 8*dpr, y + 5*dpr);
+      y += lineH;
+    }
+  }
+
+  // roundRect polyfill for older canvas contexts
+  if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+      const rr = Math.min(r, w/2, h/2);
+      this.beginPath();
+      this.moveTo(x+rr, y);
+      this.arcTo(x+w, y, x+w, y+h, rr);
+      this.arcTo(x+w, y+h, x, y+h, rr);
+      this.arcTo(x, y+h, x, y, rr);
+      this.arcTo(x, y, x+w, y, rr);
+      this.closePath();
+      return this;
+    };
+  }
+
   function drawCharts(){
     const qs = qStar();
 
-    // Chart 1: MB & MC
+    // Chart 1: MB & MC (with legend + dashed y guides for dots)
     {
       const { ctx, W, H, dpr } = setupCanvas(els.chart1);
       ctx.clearRect(0,0,W,H);
       const { X0,X1,Y0,Y1 } = drawAxes(ctx,W,H,dpr, "q", "Marginal value");
 
-      let yMin = Math.min(MB(cur.qMax), MC(0), 0);
-      let yMax = Math.max(MB(0), MC(cur.qMax)) * 1.10;
+      const yMin = Math.min(MB(cur.qMax), MC(0), 0);
+      const yMax = Math.max(MB(0), MC(cur.qMax)) * 1.10;
 
-      const mbMap = drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, yMin,yMax, MB, "rgba(31,119,180,0.90)", dpr);
-      drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, yMin,yMax, MC, "rgba(230,159,0,0.95)", dpr);
+      const mbColor = "rgba(31,119,180,0.90)";
+      const mcColor = "rgba(230,159,0,0.95)";
+
+      const mbMap = drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, yMin,yMax, MB, mbColor, dpr);
+      drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, yMin,yMax, MC, mcColor, dpr);
+
+      // legend
+      drawLegend(ctx, X0, Y0, dpr, [
+        { label:"MB", color: mbColor },
+        { label:"MC", color: mcColor }
+      ]);
 
       const xTo = mbMap.xTo, yTo = mbMap.yTo;
+
+      // vertical at q
       drawVLine(ctx, xTo(q), Y0, Y1, dpr);
-      drawMarker(ctx, xTo(q), yTo(MB(q)), "rgba(31,119,180,0.90)", dpr);
-      drawMarker(ctx, xTo(q), yTo(MC(q)), "rgba(230,159,0,0.95)", dpr);
+
+      // dots
+      const mbDotY = yTo(MB(q));
+      const mcDotY = yTo(MC(q));
+      const xDot = xTo(q);
+
+      // dashed horizontal guides to y-axis
+      drawHToYAxis(ctx, xDot, mbDotY, X0, dpr);
+      drawHToYAxis(ctx, xDot, mcDotY, X0, dpr);
+
+      drawMarker(ctx, xDot, mbDotY, mbColor, dpr);
+      drawMarker(ctx, xDot, mcDotY, mcColor, dpr);
 
       if (checked){
         drawMarker(ctx, xTo(qs), yTo(MB(qs)), "rgba(34,120,34,0.95)", dpr);
@@ -269,7 +334,7 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // Chart 3: TB & TC
+    // Chart 3: TB & TC (with legend + dashed y guides for dots)
     {
       const { ctx, W, H, dpr } = setupCanvas(els.chart3);
       ctx.clearRect(0,0,W,H);
@@ -277,19 +342,36 @@ window.addEventListener("DOMContentLoaded", () => {
 
       const yMax = Math.max(TB(cur.qMax), TC(cur.qMax)) * 1.05 + 1e-9;
 
-      const tbMap = drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, 0,yMax, TB, "rgba(31,119,180,0.90)", dpr);
-      drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, 0,yMax, TC, "rgba(230,159,0,0.95)", dpr);
+      const tbColor = "rgba(31,119,180,0.90)";
+      const tcColor = "rgba(230,159,0,0.95)";
+
+      const tbMap = drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, 0,yMax, TB, tbColor, dpr);
+      drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, 0,yMax, TC, tcColor, dpr);
+
+      drawLegend(ctx, X0, Y0, dpr, [
+        { label:"TB", color: tbColor },
+        { label:"TC", color: tcColor }
+      ]);
 
       const xTo = tbMap.xTo, yTo = tbMap.yTo;
       drawVLine(ctx, xTo(q), Y0, Y1, dpr);
-      drawMarker(ctx, xTo(q), yTo(TB(q)), "rgba(31,119,180,0.90)", dpr);
-      drawMarker(ctx, xTo(q), yTo(TC(q)), "rgba(230,159,0,0.95)", dpr);
+
+      const xDot = xTo(q);
+      const tbDotY = yTo(TB(q));
+      const tcDotY = yTo(TC(q));
+
+      drawHToYAxis(ctx, xDot, tbDotY, X0, dpr);
+      drawHToYAxis(ctx, xDot, tcDotY, X0, dpr);
+
+      drawMarker(ctx, xDot, tbDotY, tbColor, dpr);
+      drawMarker(ctx, xDot, tcDotY, tcColor, dpr);
+
       if (checked){
         drawMarker(ctx, xTo(qs), yTo(TB(qs)), "rgba(34,120,34,0.95)", dpr);
       }
     }
 
-    // Chart 2: CNB
+    // Chart 2: CNB (leave as-is)
     {
       const { ctx, W, H, dpr } = setupCanvas(els.chart2);
       ctx.clearRect(0,0,W,H);
@@ -323,7 +405,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function renderAll(){
     if (!cur) return;
-    renderKPIs();
+    renderStep();
     renderTable();
     drawCharts();
   }
@@ -332,7 +414,6 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!cur) return;
     checked = false;
 
-    // randomize around q* on reset too
     const qs = qStar();
     const startDist = 2.0 + Math.random()*2.0;
     const startBelow = Math.random() < 0.5;
