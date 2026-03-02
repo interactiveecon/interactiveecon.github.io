@@ -267,17 +267,17 @@ window.addEventListener("DOMContentLoaded", () => {
       labelAtXAxis(ctx, xT, Y1, "Trough", dpr);
     }
 
-    // User markers — remove "Your"
-    if (placedPeakIdx != null){
-      const x = xTo(placedPeakIdx), y = yTo(gdp[placedPeakIdx]);
-      drawMarker(ctx, x, y, "rgba(31,119,180,0.90)", dpr);
-      labelAtXAxis(ctx, x, Y1, "Peak", dpr);
-    }
-    if (placedTroughIdx != null){
-      const x = xTo(placedTroughIdx), y = yTo(gdp[placedTroughIdx]);
-      drawMarker(ctx, x, y, "rgba(31,119,180,0.90)", dpr);
-      labelAtXAxis(ctx, x, Y1, "Trough", dpr);
-    }
+    // User markers — after Check, keep dots but don't label (avoids duplicate Peak/Trough text)
+if (placedPeakIdx != null){
+  const x = xTo(placedPeakIdx), y = yTo(gdp[placedPeakIdx]);
+  drawMarker(ctx, x, y, "rgba(31,119,180,0.90)", dpr);
+  if (!checked) labelAtXAxis(ctx, x, Y1, "Peak", dpr);
+}
+if (placedTroughIdx != null){
+  const x = xTo(placedTroughIdx), y = yTo(gdp[placedTroughIdx]);
+  drawMarker(ctx, x, y, "rgba(31,119,180,0.90)", dpr);
+  if (!checked) labelAtXAxis(ctx, x, Y1, "Trough", dpr);
+}
   }
 
   function drawUnemp(){
