@@ -56,6 +56,34 @@
   let R = R_base;
   let ior = ior_base;
 
+  function typesetLater(el){
+  if (!el) return;
+
+  // If MathJax hasn't loaded yet, retry briefly.
+  if (!window.MathJax) {
+    setTimeout(() => typesetLater(el), 50);
+    return;
+  }
+
+  // If MathJax v3 startup promise exists, wait for it.
+  const startup = window.MathJax.startup;
+  if (startup?.promise) {
+    startup.promise.then(() => {
+      if (window.MathJax.typesetPromise) {
+        window.MathJax.typesetClear([el]);
+        window.MathJax.typesetPromise([el]);
+      }
+    });
+    return;
+  }
+
+  // Fallback
+  if (window.MathJax.typesetPromise) {
+    window.MathJax.typesetClear([el]);
+    window.MathJax.typesetPromise([el]);
+  }
+}
+
   // Scenario state
   let scenario = null;      // { kind:"OMO"|"IOR", dir:"up"|"down", dR, dIOR }
   let appliedOnce = false;
@@ -63,7 +91,7 @@
   function setStatus(msg){ els.status.textContent = msg; }
   function fmt2(x){ return Number.isFinite(x) ? x.toFixed(2) : "—"; }
   function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
-  function showPredFeedback(html){
+ function showPredFeedback(html){
   if (!html){
     els.predFeedback.style.display = "none";
     els.predFeedback.innerHTML = "";
@@ -72,9 +100,8 @@
   els.predFeedback.style.display = "block";
   els.predFeedback.innerHTML = html;
 
-  if (window.MathJax?.typesetPromise){
-    window.MathJax.typesetPromise([els.predFeedback]);
-  }
+  // IMPORTANT: wait for MathJax startup, then typeset this node
+  typesetLater(els.predFeedback);
 }
 
   function typeset(el){
