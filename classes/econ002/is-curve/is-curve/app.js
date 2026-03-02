@@ -441,8 +441,8 @@ window.addEventListener("DOMContentLoaded", () => {
     line(ctx, xTo(Ymin), yTo(PEc0), xTo(Ymax), yTo(PEc1), ORANGE, 3, dpr);
 
     // Equilibria
-    const Y0 = Ystar(BASE.r, BASE.G, BASE.T);
-    const Y1v = Ystar(r,G,T);
+    const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
+    const Y1eq = Ystar(r, G, T);
 
     // baseline point
     dot(ctx, xTo(Y0), yTo(Y0), BLUE, dpr);
@@ -506,8 +506,8 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.stroke();
 
     // Equilibrium points at current r
-    const Y0 = Ystar(BASE.r, BASE.G, BASE.T);
-    const Y1v = Ystar(r,G,T);
+    const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
+    const Y1eq = Ystar(r, G, T);
 
     // Baseline point (at baseline r)
     dot(ctx, xTo(Y0), yTo(BASE.r), BLUE, dpr);
