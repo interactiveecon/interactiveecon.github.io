@@ -64,29 +64,42 @@
   function fmt2(x){ return Number.isFinite(x) ? x.toFixed(2) : "—"; }
   function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
   function showPredFeedback(html){
-    if (!html){
-      els.predFeedback.style.display = "none";
-      els.predFeedback.innerHTML = "";
-      return;
-    }
-    els.predFeedback.style.display = "block";
-    els.predFeedback.innerHTML = html;
+  if (!html){
+    els.predFeedback.style.display = "none";
+    els.predFeedback.innerHTML = "";
+    return;
   }
+  els.predFeedback.style.display = "block";
+  els.predFeedback.innerHTML = html;
+
+  if (window.MathJax?.typesetPromise){
+    window.MathJax.typesetPromise([els.predFeedback]);
+  }
+}
+
+  function typeset(el){
+  if (window.MathJax?.typesetPromise && el){
+    window.MathJax.typesetPromise([el]);
+  }
+}
 
   function pinnedNoteHTML(Rqty, iorVal){
   const idisc = BASE.idisc;
   const iFree = (D.demand.a - Rqty) / D.demand.b;
 
-  if (iFree < iorVal){
-    return `<span class="tagOK">Pinned at IOR</span> The equilibrium is on the <strong>floor</strong>: $begin:math:text$i\_\{ff\}\=IOR$end:math:text$.
-    Small changes in reserves won’t change $begin:math:text$i\_\{ff\}$end:math:text$ or $begin:math:text$M$end:math:text$ unless reserves move far enough to leave the floor.`;
-  }
-  if (iFree > idisc){
-    return `<span class="tagOK">Pinned at discount rate</span> The equilibrium is on the <strong>ceiling</strong>: $begin:math:text$i\_\{ff\}\=i\_\{disc\}$end:math:text$.
-    Small changes in reserves won’t change $begin:math:text$i\_\{ff\}$end:math:text$ or $begin:math:text$M$end:math:text$ unless reserves move far enough to leave the ceiling.`;
-  }
-  return `<span class="tagOK">Middle region</span> The equilibrium is on the <strong>sloped</strong> section.
-  Changes in reserves (OMO) or demand shifts can change $begin:math:text$i\_\{ff\}$end:math:text$, and then $begin:math:text$M$end:math:text$.`;
+if (iFree < iorVal){
+  return `<span class="tagOK">Pinned at IOR</span>
+  The equilibrium is on the <strong>floor</strong>: \$begin:math:text$ i\_\{ff\}\=IOR \\$end:math:text$.
+  Small changes in reserves won’t change \$begin:math:text$ i\_\{ff\} \\$end:math:text$ or \$begin:math:text$ M \\$end:math:text$ unless reserves move far enough to leave the floor.`;
+}
+if (iFree > idisc){
+  return `<span class="tagOK">Pinned at discount rate</span>
+  The equilibrium is on the <strong>ceiling</strong>: \$begin:math:text$ i\_\{ff\}\=i\_\{disc\} \\$end:math:text$.
+  Small changes in reserves won’t change \$begin:math:text$ i\_\{ff\} \\$end:math:text$ or \$begin:math:text$ M \\$end:math:text$ unless reserves move far enough to leave the ceiling.`;
+}
+return `<span class="tagOK">Middle region</span>
+The equilibrium is on the <strong>sloped</strong> section.
+Changes in reserves (OMO) or demand shifts can change \$begin:math:text$ i\_\{ff\} \\$end:math:text$, and then \$begin:math:text$ M \\$end:math:text$.`;
 }
 
   function enableControls(on){
@@ -287,11 +300,11 @@
     const M1 = moneySupply(Rshock, iorshock);
 
     let shift = "none";
-    if (scenario.kind === "OMO"){
-      shift = scenario.dir==="up" ? "S_right" : "S_left";
-    } else {
-      shift = scenario.dir==="up" ? "D_right" : "D_left";
-    }
+if (scenario.kind === "OMO"){
+  shift = scenario.dir==="up" ? "S_more" : "S_less";
+} else {
+  shift = scenario.dir==="up" ? "D_more" : "D_less";
+}
 
     const rate = (Math.abs(i1 - i0) < 1e-9) ? "same" : (i1 > i0 ? "up" : "down");
     const money = (Math.abs(M1 - M0) < 1e-9) ? "same" : (M1 > M0 ? "up" : "down");
