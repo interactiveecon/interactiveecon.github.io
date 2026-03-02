@@ -5,7 +5,7 @@
   if (!D) return;
 
   const els = {
-    // top buttons
+    // header buttons
     newScenarioBtn: $("newScenarioBtn"),
     resetBtn: $("resetBtn"),
     applyBtn: $("applyBtn"),
@@ -23,7 +23,7 @@
     iorSlider: $("iorSlider"),
     iorVal: $("iorVal"),
 
-    // stats pills
+    // stats
     R0: $("R0"),
     R1: $("R1"),
     i0: $("i0"),
@@ -44,48 +44,52 @@
     moneyCanvas: $("moneyCanvas")
   };
 
-  const BLUE = "rgba(31,119,180,0.92)";
+  const BLUE   = "rgba(31,119,180,0.92)";
   const ORANGE = "rgba(230,159,0,0.95)";
-  const GREY = "rgba(0,0,0,0.18)";
-  const INK = "rgba(0,0,0,0.70)";
-  const DASH = "rgba(0,0,0,0.30)";
+  const GREY   = "rgba(0,0,0,0.18)";
+  const INK    = "rgba(0,0,0,0.70)";
+  const DASH   = "rgba(0,0,0,0.30)";
 
   const BASE = { ...D.baseline };
+  if (typeof BASE.idisc !== "number") BASE.idisc = 4.0; // safe default
 
   // current state
   let R = BASE.R;
   let ior = BASE.ior;
 
-  // active scenario (does not auto-apply)
-  // { kind: "OMO"|"IOR", dir: "up"|"down", dR, dIOR }
+  // scenario state (not auto-applied)
+  // { kind:"OMO"|"IOR", dir:"up"|"down", dR:number, dIOR:number }
   let scenario = null;
 
-  let controlsUnlocked = false;
+  // allow “Apply Shock” once per scenario for clarity
+  let appliedOnce = false;
 
   function setStatus(msg){ els.status.textContent = msg; }
-
   function fmt2(x){ return Number.isFinite(x) ? x.toFixed(2) : "—"; }
+  function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
 
-  // ----- economics -----
+  // ---------------- ECONOMICS ----------------
+  // Middle (sloped) reserve demand in corridor region: Rd(i) = a - b*i
   function Rd(i){ return D.demand.a - D.demand.b * i; }
 
+  // Corridor equilibrium: i_ff = clamp(iFree, [IOR, idisc])
   function iStar(Rqty, iorVal){
-  // corridor: floor at IOR, ceiling at discount rate
-  const idisc = BASE.idisc;
-  const iFree = (D.demand.a - Rqty) / D.demand.b;
+    const idisc = BASE.idisc;
+    const iFree = (D.demand.a - Rqty) / D.demand.b;
+    if (iFree < iorVal) return iorVal;
+    if (iFree > idisc)  return idisc;
+    return iFree;
+  }
 
-  if (iFree < iorVal) return iorVal;   // floor binds
-  if (iFree > idisc)  return idisc;    // ceiling binds
-  return iFree;                         // middle region
-}
-
+  // Effective multiplier decreases with higher IOR (more excess reserves)
   function effectiveMultiplier(iorVal){
     const rr = BASE.rr;
     const er0 = D.excessReserves.er0;
-    const k = D.excessReserves.k;
-    const i0 = D.excessReserves.ior0;
+    const k   = D.excessReserves.k;
+    const i0  = D.excessReserves.ior0;
+
     const er = Math.max(0, er0 + k*(iorVal - i0));
-    const rEff = rr + er;         // simple effective reserve ratio
+    const rEff = rr + er;
     return 1 / rEff;
   }
 
@@ -93,15 +97,7 @@
     return effectiveMultiplier(iorVal) * Rqty;
   }
 
-  // ----- UI helpers -----
-  function enableControls(on){
-  // keep these always interactive once scenario starts
-  els.applyBtn.disabled = !on;
-  els.omoBuyBtn.disabled = !on;
-  els.omoSellBtn.disabled = !on;
-  els.iorSlider.disabled = !on;
-}
-
+  // ---------------- UI ----------------
   function showPredFeedback(html){
     if (!html){
       els.predFeedback.style.display = "none";
@@ -112,80 +108,93 @@
     els.predFeedback.innerHTML = html;
   }
 
-  // ----- scenario generation -----
+  function enableControls(on){
+    // We keep the slider & buttons usable when scenario exists (and off when none)
+    els.applyBtn.disabled  = !on;
+    els.omoBuyBtn.disabled = !on;
+    els.omoSellBtn.disabled= !on;
+    els.iorSlider.disabled = !on;
+  }
+
+  function clearPredictions(){
+    els.predShift.value = "";
+    els.predRate.value  = "";
+    els.predMoney.value = "";
+    showPredFeedback("");
+  }
+
+  // ---------------- SCENARIO ----------------
   function newScenario(){
-    // reset to baseline values each new scenario
+    // reset to baseline
     R = BASE.R;
     ior = BASE.ior;
     els.iorSlider.value = String(ior);
+    els.iorVal.textContent = `${fmt2(ior)}%`;
 
-    // lock controls until correct prediction
-    enableControls(false);
+    appliedOnce = false;
 
     // clear predictions
-    els.predShift.value = "";
-    els.predRate.value = "";
-    els.predMoney.value = "";
-    showPredFeedback("");
+    clearPredictions();
 
-    // choose scenario type
+    // choose scenario
     const pick = Math.random();
     if (pick < 0.5){
-      // OMO scenario
       const dR = D.shocks.OMO[Math.floor(Math.random()*D.shocks.OMO.length)];
-      const dir = Math.random() < 0.5 ? "up" : "down"; // purchase increases R, sale decreases R
-      scenario = { kind: "OMO", dir, dR, dIOR: 0 };
+      const dir = Math.random() < 0.5 ? "up" : "down"; // up = purchase
+      scenario = { kind:"OMO", dir, dR, dIOR: 0 };
+
       els.scenarioTitle.textContent = "Scenario";
       els.scenarioDesc.textContent =
         `Open market operations:\n` +
         `The Fed ${dir==="up" ? "purchases" : "sells"} bonds.\n` +
-        `This changes reserves by ${dir==="up" ? "+" : "−"}${dR}.\n\n` +
+        `Reserves change by ${dir==="up" ? "+" : "−"}${dR}.\n\n` +
         `Make predictions, then apply the shock.`;
+
       els.dRVal.textContent = `${dir==="up" ? "+" : "−"}${dR}`;
     } else {
-      // IOR scenario
       const dIOR = D.shocks.IOR[Math.floor(Math.random()*D.shocks.IOR.length)];
       const dir = Math.random() < 0.5 ? "up" : "down";
-      scenario = { kind: "IOR", dir, dR: 0, dIOR };
+      scenario = { kind:"IOR", dir, dR: 0, dIOR };
+
       els.scenarioTitle.textContent = "Scenario";
       els.scenarioDesc.textContent =
         `Interest on reserves (IOR):\n` +
         `The Fed moves IOR ${dir==="up" ? "up" : "down"} by ${dIOR}.\n\n` +
         `Make predictions, then apply the shock.`;
+
       els.dRVal.textContent = "0";
     }
 
-    setStatus("Scenario ready. Make predictions to unlock controls.");
+    enableControls(true);
+    setStatus("Scenario ready. (Controls enabled.)");
     renderAll();
   }
 
   function resetAll(){
     scenario = null;
+    appliedOnce = false;
+
     R = BASE.R;
     ior = BASE.ior;
-    els.iorSlider.value = String(ior);
 
-    enableControls(false);
+    els.iorSlider.value = String(ior);
+    els.iorVal.textContent = `${fmt2(ior)}%`;
 
     els.scenarioTitle.textContent = "Scenario";
     els.scenarioDesc.textContent = "Click “New Scenario” to start.";
     els.dRVal.textContent = "—";
 
-    els.predShift.value = "";
-    els.predRate.value = "";
-    els.predMoney.value = "";
-    showPredFeedback("");
-
+    clearPredictions();
+    enableControls(false);
     setStatus("Reset.");
+
     renderAll();
   }
 
-  // ----- prediction logic -----
+  // ---------------- PREDICTIONS ----------------
   function expectedPredictions(){
-    // returns {shift, rate, money} for current scenario
     if (!scenario) return null;
 
-    // baseline vs post-shock comparisons (holding other tool fixed)
     const R0 = BASE.R;
     const ior0 = BASE.ior;
 
@@ -205,20 +214,17 @@
     const M0 = moneySupply(R0, ior0);
     const M1 = moneySupply(Rshock, iorshock);
 
-    // shift type
     let shift = "none";
     if (scenario.kind === "OMO"){
       shift = scenario.dir==="up" ? "S_right" : "S_left";
     } else {
-      // higher IOR increases reserve demand (right); lower IOR left
       shift = scenario.dir==="up" ? "D_right" : "D_left";
     }
 
-    // directions
     const rate = (Math.abs(i1 - i0) < 1e-9) ? "same" : (i1 > i0 ? "up" : "down");
     const money = (Math.abs(M1 - M0) < 1e-9) ? "same" : (M1 > M0 ? "up" : "down");
 
-    return { shift, rate, money, i0, i1, M0, M1, Rshock, iorshock };
+    return { shift, rate, money };
   }
 
   function checkPredictions(){
@@ -238,11 +244,10 @@
 
     const ok = (a===exp.shift && b===exp.rate && c===exp.money);
     if (ok){
-      enableControls(true);
-      showPredFeedback(`<span class="tagOK">Correct</span> Controls unlocked. Now apply the policy tool and watch the graphs update.`);
-      setStatus("Predictions correct. Apply the shock.");
+      showPredFeedback(`<span class="tagOK">Correct</span> Now apply the policy tool and watch both graphs.`);
+      setStatus("Predictions correct.");
     } else {
-      showPredFeedback(`<span class="tagBad">Not quite</span> Try again. Use the reserves market logic: OMO shifts supply; IOR shifts demand and can act like a floor.`);
+      showPredFeedback(`<span class="tagBad">Not quite</span> Remember: OMO shifts <strong>supply</strong> of reserves; IOR shifts <strong>demand</strong> and sets a floor.`);
       setStatus("Predictions incorrect. Try again.");
     }
   }
@@ -252,27 +257,30 @@
       showPredFeedback(`<span class="tagBad">No scenario</span> Click <strong>New Scenario</strong> first.`);
       return;
     }
-    const exp = expectedPredictions();
-
     let text = "";
     if (scenario.kind === "OMO"){
-      text = `OMO changes the <strong>supply of reserves</strong>. A purchase increases reserves (supply shifts right), pushing the federal funds rate down. A sale decreases reserves (supply shifts left), pushing the federal funds rate up. Money supply changes because $begin:math:text$M \= m\\\\cdot R$end:math:text$.`;
+      text = `OMO changes the <strong>supply of reserves</strong> (vertical line).
+A purchase increases reserves (supply right) → $begin:math:text$i\_\{ff\}$end:math:text$ falls.
+A sale decreases reserves (supply left) → $begin:math:text$i\_\{ff\}$end:math:text$ rises.
+Money supply changes because $begin:math:text$M \= m\\\\cdot R$end:math:text$.`;
     } else {
-      text = `IOR changes banks’ incentives to hold reserves. Higher IOR makes reserves more attractive, shifting <strong>demand for reserves</strong> right and raising the federal funds rate (and it creates a floor at IOR). Higher IOR also lowers the effective money multiplier (banks hold more reserves), reducing money supply for a given $begin:math:text$R$end:math:text$.`;
+      text = `IOR changes banks’ incentives to hold reserves (demand shifts).
+Higher IOR shifts reserve demand right and raises $begin:math:text$i\_\{ff\}$end:math:text$ (and creates a floor).
+Higher IOR also lowers the effective multiplier $begin:math:text$m$end:math:text$, reducing $begin:math:text$M$end:math:text$ for a given $begin:math:text$R$end:math:text$.`;
     }
-
-    showPredFeedback(
-      `<span class="tagOK">Why</span> ${text}`
-    );
+    showPredFeedback(`<span class="tagOK">Why</span> ${text}`);
+    if (window.MathJax?.typesetPromise) window.MathJax.typesetPromise();
   }
 
-  // ----- apply shock -----
+  // ---------------- APPLY SHOCK + CONTROLS ----------------
   function applyShock(){
     if (!scenario) return;
-    if (!controlsUnlocked){
-      setStatus("Make correct predictions first.");
+
+    if (appliedOnce){
+      setStatus("Shock already applied. Use controls to explore further.");
       return;
     }
+
     if (scenario.kind === "OMO"){
       const d = (scenario.dir==="up" ? scenario.dR : -scenario.dR);
       R = clamp(R + d, D.chart.Rmin, D.chart.Rmax);
@@ -280,29 +288,37 @@
       const d = (scenario.dir==="up" ? scenario.dIOR : -scenario.dIOR);
       ior = clamp(ior + d, 0, 5);
       els.iorSlider.value = String(ior);
+      els.iorVal.textContent = `${fmt2(ior)}%`;
     }
+
+    appliedOnce = true;
     setStatus("Shock applied. Explore with controls.");
     renderAll();
   }
 
-  // direct control handlers
   function omoPurchase(){
-    if (!controlsUnlocked) return;
-    R = clamp(R + scenario?.dR || 20, D.chart.Rmin, D.chart.Rmax);
+    if (!scenario) return;
+    // use scenario magnitude if OMO scenario, otherwise a default
+    const step = (scenario.kind==="OMO" ? scenario.dR : D.shocks.OMO[0]);
+    R = clamp(R + step, D.chart.Rmin, D.chart.Rmax);
     renderAll();
   }
-  function omoSale(){
-    if (!controlsUnlocked) return;
-    R = clamp(R - (scenario?.dR || 20), D.chart.Rmin, D.chart.Rmax);
-    renderAll();
-  }
-  function iorChange(){
-  ior = Number(els.iorSlider.value);
-  els.iorVal.textContent = `${fmt2(ior)}%`;
-  renderAll();
-}
 
-  // ----- drawing -----
+  function omoSale(){
+    if (!scenario) return;
+    const step = (scenario.kind==="OMO" ? scenario.dR : D.shocks.OMO[0]);
+    R = clamp(R - step, D.chart.Rmin, D.chart.Rmax);
+    renderAll();
+  }
+
+  function iorChange(){
+    if (!scenario) return;
+    ior = clamp(Number(els.iorSlider.value), 0, 5);
+    els.iorVal.textContent = `${fmt2(ior)}%`;
+    renderAll();
+  }
+
+  // ---------------- DRAWING ----------------
   function setupCanvas(canvas){
     const ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
@@ -389,58 +405,58 @@
     const xTo = (Rv) => X0 + (Rv-Rmin)/(Rmax-Rmin)*(X1-X0);
     const yTo = (iv) => Y0 + (imax-iv)/(imax-imin)*(Y1-Y0);
 
-    // baseline curves
     const R0 = BASE.R;
     const ior0 = BASE.ior;
+    const idisc = BASE.idisc;
 
-    // supply vertical at R0
+    // Supply lines (vertical)
     line(ctx, xTo(R0), yTo(imin), xTo(R0), yTo(imax), BLUE, 3, dpr);
+    line(ctx, xTo(R),  yTo(imin), xTo(R),  yTo(imax), ORANGE, 3, dpr);
 
-    // demand: piecewise with floor at ior (flat segment below ior)
-   function drawDemandCorridor(color, iorVal){
-  const idisc = BASE.idisc;
+    // 3-piece corridor demand:
+    function drawDemandCorridor(color, iorVal){
+      const R_floor = Rd(iorVal); // kink where middle meets floor
+      const R_ceil  = Rd(idisc);  // kink where middle meets ceiling
 
-  // Breakpoints in quantity space for the middle linear segment
-  const R_floor = Rd(iorVal);   // where middle meets floor
-  const R_ceil  = Rd(idisc);    // where middle meets ceiling
+      const Rf = clamp(R_floor, Rmin, Rmax);
+      const Rc = clamp(R_ceil,  Rmin, Rmax);
 
-  // Clamp to plot window
-  const Rf = Math.max(Rmin, Math.min(Rmax, R_floor));
-  const Rc = Math.max(Rmin, Math.min(Rmax, R_ceil));
+      // Ceiling segment at idisc from Rmin to Rc (low reserves)
+      line(ctx, xTo(Rmin), yTo(idisc), xTo(Rc), yTo(idisc), color, 3, dpr);
 
-  // 1) Ceiling: horizontal at idisc on the LEFT (low reserves)
-  //    from Rmin to Rc
-  line(ctx, xTo(Rmin), yTo(idisc), xTo(Rc), yTo(idisc), color, 3, dpr);
+      // Middle downward segment from (Rc,idisc) to (Rf,ior)
+      line(ctx, xTo(Rc), yTo(idisc), xTo(Rf), yTo(iorVal), color, 3, dpr);
 
-  // 2) Middle: downward sloping between (Rc, idisc) and (Rf, ior)
-  line(ctx, xTo(Rc), yTo(idisc), xTo(Rf), yTo(iorVal), color, 3, dpr);
+      // Floor segment at IOR from Rf to Rmax (high reserves)
+      line(ctx, xTo(Rf), yTo(iorVal), xTo(Rmax), yTo(iorVal), color, 3, dpr);
+    }
 
-  // 3) Floor: horizontal at ior on the RIGHT (high reserves)
-  //    from Rf to Rmax
-  line(ctx, xTo(Rf), yTo(iorVal), xTo(Rmax), yTo(iorVal), color, 3, dpr);
-}
     drawDemandCorridor(BLUE, ior0);
-drawDemandCorridor(ORANGE, ior);
+    drawDemandCorridor(ORANGE, ior);
 
-    // current curves (orange)
-    drawDemand(ORANGE, ior);
-    line(ctx, xTo(R), yTo(imin), xTo(R), yTo(imax), ORANGE, 3, dpr);
+    // Reference lines for floor/ceiling
+    line(ctx, xTo(Rmin), yTo(ior),   xTo(Rmax), yTo(ior),   GREY, 2, dpr, [3,6]);
+    line(ctx, xTo(Rmin), yTo(idisc), xTo(Rmax), yTo(idisc), GREY, 2, dpr, [3,6]);
 
-    // equilibrium points
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.font = `${12*dpr}px system-ui`;
+    ctx.textAlign = "left"; ctx.textBaseline = "bottom";
+    ctx.fillText("IOR", xTo(Rmin) + 6*dpr, yTo(ior) - 4*dpr);
+    ctx.fillText("Discount rate", xTo(Rmin) + 6*dpr, yTo(idisc) - 4*dpr);
+
+    // Equilibrium points (baseline and current)
     const i0 = iStar(R0, ior0);
     const i1 = iStar(R, ior);
 
     const x0 = xTo(R0), y0p = yTo(i0);
     const x1 = xTo(R),  y1p = yTo(i1);
 
-    // baseline equilibrium point + dashed to both axes + ticks
     dot(ctx, x0, y0p, BLUE, dpr);
     line(ctx, x0, y0p, x0, Y1, DASH, 2, dpr, [4,6]);
     line(ctx, x0, y0p, X0, y0p, DASH, 2, dpr, [4,6]);
     xTick(ctx, x0, Y1, "R₀", dpr);
     yTick(ctx, X0, y0p, "i₀", dpr);
 
-    // current equilibrium point
     if (Math.abs(R-R0) > 1e-9 || Math.abs(ior-ior0) > 1e-9){
       dot(ctx, x1, y1p, ORANGE, dpr);
       line(ctx, x1, y1p, x1, Y1, DASH, 2, dpr, [4,6]);
@@ -448,20 +464,6 @@ drawDemandCorridor(ORANGE, ior);
       xTick(ctx, x1, Y1, "R₁", dpr);
       yTick(ctx, X0, y1p, "i₁", dpr);
     }
-
-    // draw IOR line faintly
-    // IOR floor
-line(ctx, xTo(Rmin), yTo(ior), xTo(Rmax), yTo(ior), GREY, 2, dpr, [3,6]);
-
-// Discount rate ceiling
-line(ctx, xTo(Rmin), yTo(BASE.idisc), xTo(Rmax), yTo(BASE.idisc), GREY, 2, dpr, [3,6]);
-ctx.fillStyle = "rgba(0,0,0,0.45)";
-ctx.font = `${12*dpr}px system-ui`;
-ctx.textAlign="left"; ctx.textBaseline="bottom";
-ctx.fillText("Discount rate", xTo(Rmin) + 6*dpr, yTo(BASE.idisc) - 4*dpr);
-
-ctx.textBaseline="bottom";
-ctx.fillText("IOR", xTo(Rmin) + 6*dpr, yTo(ior) - 4*dpr);
   }
 
   function drawMoney(){
@@ -479,9 +481,8 @@ ctx.fillText("IOR", xTo(Rmin) + 6*dpr, yTo(ior) - 4*dpr);
     const m0 = effectiveMultiplier(BASE.ior);
     const m1 = effectiveMultiplier(ior);
 
-    // baseline M line
+    // draw baseline and current money supply lines: M = m*R
     line(ctx, xTo(Rmin), yTo(m0*Rmin), xTo(Rmax), yTo(m0*Rmax), BLUE, 3, dpr);
-    // current M line
     line(ctx, xTo(Rmin), yTo(m1*Rmin), xTo(Rmax), yTo(m1*Rmax), ORANGE, 3, dpr);
 
     // points
@@ -504,9 +505,16 @@ ctx.fillText("IOR", xTo(Rmin) + 6*dpr, yTo(ior) - 4*dpr);
       xTick(ctx, x1, Y1, "R₁", dpr);
       yTick(ctx, X0, y1p, "M₁", dpr);
     }
+
+    // small legend labels (optional clarity)
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.font = `${12*dpr}px system-ui`;
+    ctx.textAlign="left"; ctx.textBaseline="top";
+    ctx.fillText("Baseline: M = m₀·R", X0 + 6*dpr, Y0 + 6*dpr);
+    ctx.fillText("Current:  M = m₁·R", X0 + 6*dpr, Y0 + 24*dpr);
   }
 
-  // ----- render -----
+  // ---------------- RENDER ----------------
   function renderStats(){
     const i0 = iStar(BASE.R, BASE.ior);
     const i1 = iStar(R, ior);
@@ -531,19 +539,21 @@ ctx.fillText("IOR", xTo(Rmin) + 6*dpr, yTo(ior) - 4*dpr);
     if (window.MathJax?.typesetPromise) window.MathJax.typesetPromise();
   }
 
-  // ----- init -----
+  // ---------------- INIT ----------------
   function init(){
     els.iorSlider.value = String(ior);
     els.iorVal.textContent = `${fmt2(ior)}%`;
     els.dRVal.textContent = "—";
 
+    els.scenarioTitle.textContent = "Scenario";
+    els.scenarioDesc.textContent = "Click “New Scenario” to start.";
+
     enableControls(false);
     setStatus("Ready.");
-
     renderAll();
   }
 
-  // ----- events -----
+  // ---------------- EVENTS ----------------
   els.newScenarioBtn.addEventListener("click", newScenario);
   els.resetBtn.addEventListener("click", resetAll);
   els.applyBtn.addEventListener("click", applyShock);
