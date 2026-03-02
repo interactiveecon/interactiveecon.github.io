@@ -310,7 +310,7 @@ Changes in reserves (OMO) or demand shifts can change the Federal Funds Rate and
       showPredFeedback(`<span class="tagOK">Correct</span> Now apply the policy tool and watch both graphs.`);
       setStatus("Predictions correct.");
     } else {
-      showPredFeedback(`<span class="tagBad">Not quite</span> IOR only matters when the floor binds. Money changes only when \$begin:math:text$i\_\{ff\}\\$end:math:text$ changes.`);
+      showPredFeedback(`<span class="tagBad">Not quite</span> IOR only matters when the floor binds. Money changes only when the Federal Funds Rate changes.`);
       setStatus("Predictions incorrect. Try again.");
     }
   }
@@ -322,9 +322,9 @@ Changes in reserves (OMO) or demand shifts can change the Federal Funds Rate and
     }
     let extra = "";
     if (scenario.kind === "IOR"){
-      extra = `IOR changes the <strong>floor</strong>. If equilibrium is in the middle region, changing IOR won’t move \$begin:math:text$i\_\{ff\}\\$end:math:text$.`;
+      extra = `IOR changes the <strong>floor</strong>. If equilibrium is in the middle region, changing IOR won’t move the Federal Funds Rate.`;
     } else {
-      extra = `OMO shifts the <strong>supply</strong> of reserves. \$begin:math:text$M\\$end:math:text$ changes only if that shift moves \$begin:math:text$i\_\{ff\}\\$end:math:text$.`;
+      extra = `OMO shifts the <strong>supply</strong> of reserves. \$begin:math:text$M\\$end:math:text$ changes only if that shift moves the Federal Funds Rate.`;
     }
     showPredFeedback(extra);
   }
