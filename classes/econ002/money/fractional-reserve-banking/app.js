@@ -46,6 +46,7 @@
     const n = Math.round((b-a)/step);
     return a + rndInt(0,n)*step;
   }
+  function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); } // <-- FIX
 
   // KaTeX render
   function typeset(el){
@@ -65,8 +66,8 @@
     });
   }
 
-  let reserveRatio = 0.10;      // current slider value
-  let rrMin = 0.10;             // scenario’s required reserve ratio (lower bound for slider)
+  let reserveRatio = 0.10;
+  let rrMin = 0.10;
   let dR = 0;
   let step = 0;
   let running = false;
@@ -79,7 +80,6 @@
   function resetUI(){
     els.stepBtn.disabled = true;
     els.runBtn.disabled = true;
-
     els.rrSlider.disabled = true;
 
     els.scenarioTitle.textContent = "Scenario";
@@ -141,6 +141,7 @@
     els.mImpl.textContent = fmt(mImpl);
   }
 
+  // “wow” deposit split bar
   function renderBar(deposit, reqRes, loan){
     if (!Number.isFinite(deposit) || deposit <= 0){
       els.splitLeft.textContent = "Required reserves: —";
@@ -161,7 +162,6 @@
     els.segReq.style.width = `${reqPct}%`;
     els.segLoan.style.width = `${loanPct}%`;
 
-    // Only label if segment is wide enough (avoids cramped text)
     els.segReq.textContent = reqPct >= 18 ? "RR" : "";
     els.segLoan.textContent = loanPct >= 18 ? "Loan" : "";
   }
@@ -184,7 +184,6 @@
     els.stepSummary.textContent =
       `A deposit arrives at ${last.bank}. The bank keeps required reserves and makes a new loan.`;
 
-    // WOW bar
     renderBar(last.deposit, last.reqRes, last.loan);
 
     // T-account lines
@@ -196,11 +195,11 @@
     els.liabsCell.textContent =
       `+ Deposits (money): ${fmt(last.deposit)}`;
 
-    // Explanation below T-account
+    // “What happened?” (below the T-account)
     els.explainLog.textContent =
 `Deposit: ${fmt(last.deposit)}
 Required reserves: reserve ratio · deposit = ${fmt(reserveRatio)} · ${fmt(last.deposit)} = ${fmt(last.reqRes)}
-New loan (excess reserves): ${fmt(last.loan)}
+New loan: ${fmt(last.loan)}
 That loan becomes the next bank’s deposit in the next step.`;
 
     typeset(els.explainLog);
@@ -265,11 +264,9 @@ That loan becomes the next bank’s deposit in the next step.`;
     step = 0;
     running = false;
 
-    // draw required reserve ratio (minimum slider value)
     rrMin = rndStep(D.rrRange[0], D.rrRange[1], 0.01);
     reserveRatio = rrMin;
 
-    // set slider range rrMin -> 1.00
     els.rrSlider.disabled = false;
     els.rrSlider.min = String(rrMin);
     els.rrSlider.max = "1.00";
@@ -315,7 +312,6 @@ That loan becomes the next bank’s deposit in the next step.`;
     reserveRatio = Number(els.rrSlider.value);
     els.rrVal.textContent = fmt(reserveRatio);
 
-    // reset steps so the chain reflects the new reserve ratio
     history.length = 0;
     step = 0;
 
