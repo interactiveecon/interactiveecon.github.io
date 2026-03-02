@@ -173,7 +173,7 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.fillText(xLabel, (X0+X1)/2, Y1 + 18*dpr);
 
     ctx.save();
-    ctx.translate(X0 - 50*dpr, (Y0+Y1)/2);
+    ctx.translate(X0 - 56*dpr, (Y0+Y1)/2);
     ctx.rotate(-Math.PI/2);
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillText(yLabel, 0, 0);
