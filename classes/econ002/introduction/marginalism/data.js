@@ -3,6 +3,7 @@
 // Constructed so the optimal stopping point has MB(q*) = MC(q*)
 // and MB(q*+1) < MC(q*+1).
 
+
 window.MARGINALISM_DATA = {
   scenarios: [
     {
