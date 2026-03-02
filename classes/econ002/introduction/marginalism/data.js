@@ -1,64 +1,57 @@
 // data.js
-// NOTE: Values use small decimals so that at the optimum unit q*,
-// MB and MC ROUND to the same integer in your table, but MB is
-// slightly larger than MC. This creates a UNIQUE maximum for
-// cumulative net benefit at q* (no ties), and the next unit has MB < MC.
+// Each scenario defines continuous MB(q) and MC(q) and integrates to TB/TC.
+// We use simple linear marginals so MB=MC has a clean exact solution.
 
-window.MARGINALISM_DATA = {
+window.MARGINALISM_CONT = {
   scenarios: [
     {
-      id:"study",
-      title:"Studying for an exam",
-      desc:"Each additional hour helps, but by less and less.\nThe cost rises as you get tired and give up other activities.",
-      units: 10,
-      // Unique peak at q*=6 (MB6≈MC6 in display; MB7 < MC7)
-      mb: [18,16,14,12,10, 8.49, 6,4,3,2],
-      mc: [ 4, 5, 6, 7, 8, 8.45, 9,10,11,12]
+      id: "study",
+      title: "Studying (hours)",
+      desc:
+        "Choose how many hours to study.\n" +
+        "Marginal benefit falls (each extra hour helps less).\n" +
+        "Marginal cost rises (fatigue and giving up other activities).",
+      unitLabel: "hours",
+      qMax: 10,
+      // MB(q)=a-bq, MC(q)=c+dq
+      mb: { a: 18, b: 1.6 },
+      mc: { c: 4,  d: 0.8 }
     },
     {
-      id:"overtime",
-      title:"Working overtime",
-      desc:"Extra hours pay about the same, but the personal cost rises as fatigue sets in.",
-      units: 10,
-      // Unique peak at q*=8 (MB8≈MC8; MB9 < MC9)
-      mb: [14,14,14,14,14,14,14,13.51,12,10],
-      mc: [ 3, 4, 5, 6, 7, 9,11,13.49,15,16]
+      id: "overtime",
+      title: "Working overtime (hours)",
+      desc:
+        "Choose how many overtime hours to work.\n" +
+        "Marginal benefit is the extra pay (falls slightly due to taxes/effort).\n" +
+        "Marginal cost rises with fatigue and giving up leisure.",
+      unitLabel: "hours",
+      qMax: 10,
+      mb: { a: 16, b: 0.8 },
+      mc: { c: 3,  d: 1.1 }
     },
     {
-      id:"practice",
-      title:"Extra practice problems",
-      desc:"Early practice helps a lot. Later problems help less.\nThe time cost rises as you get mentally fatigued.",
-      units: 10,
-      // Unique peak at q*=5 (MB5≈MC5; MB6 < MC6)
-      mb: [20,17,14,12,10.49, 8,6,5,4,3],
-      mc: [ 3, 5, 7, 9,10.45,11,12,13,14,15]
+      id: "practice",
+      title: "Practice problems (dozens)",
+      desc:
+        "Choose how many dozens of practice problems to do.\n" +
+        "Early practice helps a lot; later practice helps less.\n" +
+        "Marginal cost rises as you get mentally tired.",
+      unitLabel: "dozens",
+      qMax: 10,
+      mb: { a: 22, b: 1.9 },
+      mc: { c: 2,  d: 1.0 }
     },
     {
-      id:"jobapps",
-      title:"Submitting job applications",
-      desc:"The first few applications help a lot. Later ones help less.\nThe time cost rises as you search more broadly.",
-      units: 10,
-      // Unique peak at q*=6 (MB6≈MC6; MB7 < MC7)
-      mb: [22,18,15,12,10, 8.49, 6,5,4,3],
-      mc: [ 3, 4, 5, 6, 7, 8.45, 9,10,11,12]
-    },
-    {
-      id:"cleaning",
-      title:"Cleaning your apartment",
-      desc:"The first hour makes a big difference. Later hours are smaller improvements.\nThe cost rises as you get tired.",
-      units: 10,
-      // Unique peak at q*=6 (MB6≈MC6; MB7 < MC7)
-      mb: [16,14,12,10, 8, 6.49,5,4,3,2],
-      mc: [ 1, 2, 3, 4, 5, 6.45,7,8,9,10]
-    },
-    {
-      id:"marketing",
-      title:"Small business advertising",
-      desc:"Early ads reach easy customers. Later ads have smaller impact.\nMarginal cost rises as you target harder-to-reach customers.",
-      units: 10,
-      // Unique peak at q*=5 (MB5≈MC5; MB6 < MC6)
-      mb: [24,20,16,13,11.49, 9,7,6,5,4],
-      mc: [ 6, 7, 8,10,11.45,12,13,14,15,16]
+      id: "ads",
+      title: "Advertising (hundreds of dollars)",
+      desc:
+        "Choose how much to spend on advertising.\n" +
+        "Early spending reaches easy customers; later spending has lower impact.\n" +
+        "Marginal cost rises as you reach harder-to-reach customers.",
+      unitLabel: "$100s",
+      qMax: 10,
+      mb: { a: 24, b: 1.7 },
+      mc: { c: 5,  d: 0.9 }
     }
   ]
 };
