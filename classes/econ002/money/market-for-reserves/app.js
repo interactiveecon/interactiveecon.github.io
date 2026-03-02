@@ -44,113 +44,49 @@
   const INK    = "rgba(0,0,0,0.70)";
   const DASH   = "rgba(0,0,0,0.30)";
 
-  // Use data baseline for parameters; R baseline will be randomized each scenario.
   const BASE = { ...D.baseline };
   if (typeof BASE.idisc !== "number") BASE.idisc = 4.0;
 
-  // Randomized baseline each scenario
-  let R_base = BASE.R;   // baseline reserves for this round
+  // Per-round baseline (randomized R)
+  let R_base = BASE.R;
   let ior_base = BASE.ior;
 
-  // current state
+  // Current
   let R = R_base;
   let ior = ior_base;
 
-  function typesetNow(el){
-  if (!el) return;
+  let scenario = null; // { kind:"OMO"|"IOR", dir:"up"|"down", dR, dIOR }
+  let appliedOnce = false;
 
-  // MathJax v3
-  if (window.MathJax?.startup?.promise && window.MathJax.typesetPromise){
-    window.MathJax.startup.promise.then(() => {
-      window.MathJax.typesetClear([el]);
-      window.MathJax.typesetPromise([el]);
-    });
-    return;
-  }
+  function fmt2(x){ return Number.isFinite(x) ? x.toFixed(2) : "—"; }
+  function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
+  function setStatus(msg){ els.status.textContent = msg; }
 
-  // KaTeX fallback
-  if (window.renderMathInElement){
+  // ---------- KaTeX auto-render ----------
+  function typeset(el){
+    if (!el) return;
+    if (!window.renderMathInElement) return;
     window.renderMathInElement(el, {
       delimiters: [
         {left: "\\(", right: "\\)", display: false},
         {left: "$", right: "$", display: false},
         {left: "\\[", right: "\\]", display: true},
         {left: "$$", right: "$$", display: true},
-      ]
+      ],
+      throwOnError: false
     });
   }
-}
 
-  function typesetLater(el){
-  if (!el) return;
-
-  // If MathJax hasn't loaded yet, retry briefly.
-  if (!window.MathJax) {
-    setTimeout(() => typesetLater(el), 50);
-    return;
+  function showPredFeedback(html){
+    if (!html){
+      els.predFeedback.style.display = "none";
+      els.predFeedback.innerHTML = "";
+      return;
+    }
+    els.predFeedback.style.display = "block";
+    els.predFeedback.innerHTML = html;
+    typeset(els.predFeedback);
   }
-
-  // If MathJax v3 startup promise exists, wait for it.
-  const startup = window.MathJax.startup;
-  if (startup?.promise) {
-    startup.promise.then(() => {
-      if (window.MathJax.typesetPromise) {
-        window.MathJax.typesetClear([el]);
-        window.MathJax.typesetPromise([el]);
-      }
-    });
-    return;
-  }
-
-  // Fallback
-  if (window.MathJax.typesetPromise) {
-    window.MathJax.typesetClear([el]);
-    window.MathJax.typesetPromise([el]);
-  }
-}
-
-  // Scenario state
-  let scenario = null;      // { kind:"OMO"|"IOR", dir:"up"|"down", dR, dIOR }
-  let appliedOnce = false;
-
-  function setStatus(msg){ els.status.textContent = msg; }
-  function fmt2(x){ return Number.isFinite(x) ? x.toFixed(2) : "—"; }
-  function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
- function showPredFeedback(html){
-  if (!html){
-    els.predFeedback.style.display = "none";
-    els.predFeedback.innerHTML = "";
-    return;
-  }
-  els.predFeedback.style.display = "block";
-  els.predFeedback.innerHTML = html;
-  typesetNow(els.predFeedback);
-}
-
-  function typeset(el){
-  if (window.MathJax?.typesetPromise && el){
-    window.MathJax.typesetPromise([el]);
-  }
-}
-
-  function pinnedNoteHTML(Rqty, iorVal){
-  const idisc = BASE.idisc;
-  const iFree = (D.demand.a - Rqty) / D.demand.b;
-
-if (iFree < iorVal){
-  return `<span class="tagOK">Pinned at IOR</span>
-  The equilibrium is on the <strong>floor</strong>: \$begin:math:text$ i\_\{ff\}\=IOR \\$end:math:text$.
-  Small changes in reserves won’t change \$begin:math:text$ i\_\{ff\} \\$end:math:text$ or \$begin:math:text$ M \\$end:math:text$ unless reserves move far enough to leave the floor.`;
-}
-if (iFree > idisc){
-  return `<span class="tagOK">Pinned at discount rate</span>
-  The equilibrium is on the <strong>ceiling</strong>: \$begin:math:text$ i\_\{ff\}\=i\_\{disc\} \\$end:math:text$.
-  Small changes in reserves won’t change \$begin:math:text$ i\_\{ff\} \\$end:math:text$ or \$begin:math:text$ M \\$end:math:text$ unless reserves move far enough to leave the ceiling.`;
-}
-return `<span class="tagOK">Middle region</span>
-The equilibrium is on the <strong>sloped</strong> section.
-Changes in reserves (OMO) or demand shifts can change \$begin:math:text$ i\_\{ff\} \\$end:math:text$, and then \$begin:math:text$ M \\$end:math:text$.`;
-}
 
   function enableControls(on){
     els.applyBtn.disabled   = !on;
@@ -161,124 +97,116 @@ Changes in reserves (OMO) or demand shifts can change \$begin:math:text$ i\_\{ff
 
   function clearPredictions(){
     els.predShift.value = "";
-    els.predRate.value  = "";
+    els.predRate.value = "";
     els.predMoney.value = "";
     showPredFeedback("");
   }
 
-  // ---------------- RESERVES MARKET (3-piece) ----------------
-  // Middle linear section: Rd(i) = a - b*i
+  // ---------- Reserves market (corridor) ----------
   function Rd(i){ return D.demand.a - D.demand.b * i; }
 
-  // Corridor equilibrium i_ff from intersection, then clamped to [IOR, idisc].
   function iStar(Rqty, iorVal){
     const idisc = BASE.idisc;
     const iFree = (D.demand.a - Rqty) / D.demand.b;
-    if (iFree < iorVal) return iorVal; // floor binds
-    if (iFree > idisc)  return idisc;  // ceiling binds
-    return iFree;                      // middle
+    if (iFree < iorVal) return iorVal;
+    if (iFree > idisc)  return idisc;
+    return iFree;
   }
 
-  // Helper: is the floor binding at given (R, IOR)?
-  function floorBinds(Rqty, iorVal){
+  function region(Rqty, iorVal){
+    const idisc = BASE.idisc;
     const iFree = (D.demand.a - Rqty) / D.demand.b;
-    return iFree < iorVal;
+    if (iFree < iorVal) return "floor";
+    if (iFree > idisc)  return "ceiling";
+    return "middle";
   }
 
-  // ---------------- MONEY SUPPLY (depends ONLY on i_ff) ----------------
-  // Requirement: M changes ONLY if i_ff changes.
-  //
-  // Implement a simple mapping: M(i) = M0 + gamma*(i0 - i).
-  // So lower i_ff -> higher money supply, higher i_ff -> lower money supply.
-  // This makes:
-  // - On a flat segment (i pinned), changing R does NOT change M.
-  // - IOR changes only matter when floor binds (because only then i changes with IOR).
-  const GAMMA = 120; // sensitivity (tune feel); in "money units per 1% rate change"
+  // ---------- Money supply rule (only changes when i_ff changes) ----------
+  // Anchor: baseline money level = (1/rr)*R_base, but changes only via i_ff.
+  const GAMMA = 120; // money units per 1% change in i_ff
 
-  function M_of_i(i, M0, i0){
+  function baseline_i0(){ return iStar(R_base, ior_base); }
+  function baseline_M0(){ return (1/BASE.rr) * R_base; }
+
+  function M_of_i(i){
+    const i0 = baseline_i0();
+    const M0 = baseline_M0();
     return Math.max(0, M0 + GAMMA*(i0 - i));
   }
 
-  // Baseline reference level (for this round)
-  function baseline_i0(){
-    return iStar(R_base, ior_base);
-  }
-  function baseline_M0(){
-    // Use your old baseline m*R as a level anchor, but changes only happen through i.
-    const m = 1 / BASE.rr;
-    return m * R_base;
-  }
-
   function moneySupply(Rqty, iorVal){
-    const i0 = baseline_i0();
-    const M0 = baseline_M0();
     const i = iStar(Rqty, iorVal);
-    return M_of_i(i, M0, i0);
+    return M_of_i(i);
   }
 
-  // Display a “multiplier” stat as a *derived* effective multiplier for intuition:
-  // m_eff = M / R (only meaningful when R>0).
   function displayedMultiplier(Rqty, iorVal){
     const M = moneySupply(Rqty, iorVal);
     return (Rqty > 0) ? (M / Rqty) : 0;
   }
 
-  // ---------------- SCENARIOS ----------------
+  // ---------- Randomize initial reserves (often on IOR floor) ----------
   function randomizeInitialReserves(){
-  const Rmin = D.chart.Rmin, Rmax = D.chart.Rmax;
+    const Rmin = D.chart.Rmin, Rmax = D.chart.Rmax;
 
-  // Kinks given current baseline IOR / discount rate
-  const R_floor_kink = Rd(ior_base);     // if R > this, floor binds (i_ff = IOR)
-  const R_ceil_kink  = Rd(BASE.idisc);   // if R < this, ceiling binds (i_ff = idisc)
+    const R_floor_kink = Rd(ior_base);
+    const R_ceil_kink  = Rd(BASE.idisc);
 
-  // Clamp kinks to plot bounds
-  const Rf = clamp(R_floor_kink, Rmin, Rmax);
-  const Rc = clamp(R_ceil_kink,  Rmin, Rmax);
+    const Rf = clamp(R_floor_kink, Rmin, Rmax);
+    const Rc = clamp(R_ceil_kink,  Rmin, Rmax);
 
-  const u = Math.random();
+    const u = Math.random();
 
-  // 55%: start in floor region (pinned at IOR)
-  if (u < 0.5){
-    const lo = Math.min(Rmax, Rf + 5);
-    const hi = Rmax;
-    R_base = Math.floor(lo + Math.random()*(hi - lo + 1));
-  }
-  // 35%: start in sloped region
-  else if (u < 1.0){
-    const lo = Math.max(Rmin, Rc + 5);
-    const hi = Math.min(Rmax, Rf - 5);
-    // if the window collapses (rare), fall back to center
-    if (hi <= lo){
-      R_base = Math.floor((Rmin + Rmax)/2);
+    if (u < 0.60){
+      // floor region (pinned at IOR)
+      const lo = Math.min(Rmax, Rf + 5);
+      const hi = Rmax;
+      R_base = Math.floor(lo + Math.random()*(hi - lo + 1));
+    } else if (u < 0.90){
+      // middle
+      const lo = Math.max(Rmin, Rc + 5);
+      const hi = Math.min(Rmax, Rf - 5);
+      R_base = (hi <= lo) ? Math.floor((Rmin + Rmax)/2) : Math.floor(lo + Math.random()*(hi - lo + 1));
     } else {
+      // ceiling
+      const lo = Rmin;
+      const hi = Math.max(Rmin, Rc - 5);
       R_base = Math.floor(lo + Math.random()*(hi - lo + 1));
     }
-  }
-  // 10%: start in ceiling region (pinned at discount rate)
-  else {
-    const lo = Rmin;
-    const hi = Math.max(Rmin, Rc - 5);
-    R_base = Math.floor(lo + Math.random()*(hi - lo + 1));
+
+    R = R_base;
   }
 
-  R = R_base;
-}
+  // ---------- Pinned note ----------
+  function pinnedNoteHTML(){
+    const reg = region(R, ior);
+    if (reg === "floor"){
+      return `<span class="tagOK">Pinned at IOR</span>
+      The equilibrium is on the <strong>floor</strong>: \$begin:math:text$ i\_\{ff\} \= IOR \\$end:math:text$.
+      Small changes in reserves won’t change \$begin:math:text$ i\_\{ff\} \\$end:math:text$ or \$begin:math:text$ M \\$end:math:text$ unless reserves fall enough to leave the floor.`;
+    }
+    if (reg === "ceiling"){
+      return `<span class="tagOK">Pinned at discount rate</span>
+      The equilibrium is on the <strong>ceiling</strong>: \$begin:math:text$ i\_\{ff\} \= i\_\{disc\} \\$end:math:text$.
+      Small changes in reserves won’t change \$begin:math:text$ i\_\{ff\} \\$end:math:text$ or \$begin:math:text$ M \\$end:math:text$ unless reserves rise enough to leave the ceiling.`;
+    }
+    return `<span class="tagOK">Middle region</span>
+    The equilibrium is on the <strong>sloped</strong> section.
+    Changes in reserves (OMO) or demand shifts can change \$begin:math:text$ i\_\{ff\} \\$end:math:text$, and then \$begin:math:text$ M \\$end:math:text$.`;
+  }
 
+  // ---------- Scenario ----------
   function newScenario(){
-    // Randomize baseline reserves each round
-    randomizeInitialReserves();
-
-    // Reset IOR to baseline each round
+    // baseline for this round
     ior_base = BASE.ior;
     ior = ior_base;
-
     els.iorSlider.value = String(ior);
     els.iorVal.textContent = `${fmt2(ior)}%`;
+
+    randomizeInitialReserves();
 
     appliedOnce = false;
     clearPredictions();
 
-    // choose scenario
     const pick = Math.random();
     if (pick < 0.5){
       const dR = D.shocks.OMO[Math.floor(Math.random()*D.shocks.OMO.length)];
@@ -300,7 +228,7 @@ Changes in reserves (OMO) or demand shifts can change \$begin:math:text$ i\_\{ff
     }
 
     enableControls(true);
-    setStatus("Scenario ready. Initial reserves randomized for this round.");
+    setStatus("Scenario ready. Initial reserves randomized.");
     renderAll();
   }
 
@@ -326,7 +254,7 @@ Changes in reserves (OMO) or demand shifts can change \$begin:math:text$ i\_\{ff
     renderAll();
   }
 
-  // ---------------- PREDICTIONS ----------------
+  // ---------- Predictions ----------
   function expectedPredictions(){
     if (!scenario) return null;
 
@@ -336,11 +264,13 @@ Changes in reserves (OMO) or demand shifts can change \$begin:math:text$ i\_\{ff
     let Rshock = R0;
     let iorshock = ior0;
 
+    let shift = "none";
     if (scenario.kind === "OMO"){
+      shift = scenario.dir==="up" ? "S_more" : "S_less";
       Rshock = R0 + (scenario.dir==="up" ? scenario.dR : -scenario.dR);
     } else {
-      iorshock = ior0 + (scenario.dir==="up" ? scenario.dIOR : -scenario.dIOR);
-      iorshock = Math.max(0, iorshock);
+      shift = scenario.dir==="up" ? "D_more" : "D_less";
+      iorshock = Math.max(0, ior0 + (scenario.dir==="up" ? scenario.dIOR : -scenario.dIOR));
     }
 
     const i0 = iStar(R0, ior0);
@@ -348,13 +278,6 @@ Changes in reserves (OMO) or demand shifts can change \$begin:math:text$ i\_\{ff
 
     const M0 = moneySupply(R0, ior0);
     const M1 = moneySupply(Rshock, iorshock);
-
-    let shift = "none";
-if (scenario.kind === "OMO"){
-  shift = scenario.dir==="up" ? "S_more" : "S_less";
-} else {
-  shift = scenario.dir==="up" ? "D_more" : "D_less";
-}
 
     const rate = (Math.abs(i1 - i0) < 1e-9) ? "same" : (i1 > i0 ? "up" : "down");
     const money = (Math.abs(M1 - M0) < 1e-9) ? "same" : (M1 > M0 ? "up" : "down");
@@ -382,11 +305,7 @@ if (scenario.kind === "OMO"){
       showPredFeedback(`<span class="tagOK">Correct</span> Now apply the policy tool and watch both graphs.`);
       setStatus("Predictions correct.");
     } else {
-      showPredFeedback(
-        `<span class="tagBad">Not quite</span>
-         Remember: IOR only changes $begin:math:text$i\_\{ff\}$end:math:text$ if the floor binds. Money supply changes only when $begin:math:text$i\_\{ff\}$end:math:text$ changes.`
-      );
-      if (window.MathJax?.typesetPromise) window.MathJax.typesetPromise();
+      showPredFeedback(`<span class="tagBad">Not quite</span> IOR only matters when the floor binds. Money changes only when \$begin:math:text$i\_\{ff\}\\$end:math:text$ changes.`);
       setStatus("Predictions incorrect. Try again.");
     }
   }
@@ -396,49 +315,33 @@ if (scenario.kind === "OMO"){
       showPredFeedback(`<span class="tagBad">No scenario</span> Click <strong>New Scenario</strong> first.`);
       return;
     }
+    const reg = region(R, ior);
+    const baseNote = pinnedNoteHTML();
 
-    const binds0 = floorBinds(R_base, ior_base);
-    let text = "";
-
+    let extra = "";
     if (scenario.kind === "IOR"){
-      text =
-        `IOR sets the <strong>floor</strong> in the reserves market. ` +
-        `If the economy is on the <strong>sloped</strong> part, changing IOR does <em>not</em> move $begin:math:text$i\_\{ff\}$end:math:text$. ` +
-        `IOR only changes $begin:math:text$i\_\{ff\}$end:math:text$ when the floor is binding (when $begin:math:text$i\_\{ff\} \= IOR$end:math:text$). ` +
-        `In this lab, money supply changes only when $begin:math:text$i\_\{ff\}$end:math:text$ changes.`;
-      text += binds0
-        ? ` Right now, the floor <strong>is binding</strong> at baseline.`
-        : ` Right now, the floor is <strong>not binding</strong> at baseline.`;
+      extra = `IOR changes the <strong>floor</strong>. If the equilibrium is in the middle region, changing IOR won’t move \$begin:math:text$i\_\{ff\}\\$end:math:text$.`;
     } else {
-      text =
-        `OMO shifts the <strong>supply of reserves</strong> (vertical line). ` +
-        `But money supply changes only if OMO changes $begin:math:text$i\_\{ff\}$end:math:text$. ` +
-        `If you are on a flat segment (floor or ceiling), small changes in reserves may not change $begin:math:text$i\_\{ff\}$end:math:text$, so money supply won’t change either.`;
+      extra = `OMO shifts the <strong>supply</strong> of reserves. \$begin:math:text$M\\$end:math:text$ changes only if that shift moves \$begin:math:text$i\_\{ff\}\\$end:math:text$.`;
     }
 
-    showPredFeedback(`<span class="tagOK">Why</span> ${text}`);
-    if (window.MathJax?.typesetPromise) window.MathJax.typesetPromise();
+    showPredFeedback(`${baseNote}<br><br>${extra}`);
   }
 
-  // ---------------- APPLY / CONTROLS ----------------
+  // ---------- Apply shock / controls ----------
   function applyShock(){
     if (!scenario) return;
-
     if (appliedOnce){
       setStatus("Shock already applied. Use controls to explore further.");
       return;
     }
-
     if (scenario.kind === "OMO"){
-      const d = (scenario.dir==="up" ? scenario.dR : -scenario.dR);
-      R = clamp(R + d, D.chart.Rmin, D.chart.Rmax);
+      R = clamp(R + (scenario.dir==="up" ? scenario.dR : -scenario.dR), D.chart.Rmin, D.chart.Rmax);
     } else {
-      const d = (scenario.dir==="up" ? scenario.dIOR : -scenario.dIOR);
-      ior = clamp(ior + d, 0, 5);
+      ior = clamp(ior + (scenario.dir==="up" ? scenario.dIOR : -scenario.dIOR), 0, 5);
       els.iorSlider.value = String(ior);
       els.iorVal.textContent = `${fmt2(ior)}%`;
     }
-
     appliedOnce = true;
     setStatus("Shock applied. Explore with controls.");
     renderAll();
@@ -465,7 +368,7 @@ if (scenario.kind === "OMO"){
     renderAll();
   }
 
-  // ---------------- DRAWING ----------------
+  // ---------- Drawing helpers ----------
   function setupCanvas(canvas){
     const ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
@@ -514,12 +417,10 @@ if (scenario.kind === "OMO"){
     ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
     ctx.setLineDash([]);
   }
-
   function dot(ctx, x,y, color, dpr){
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(x,y,5*dpr,0,Math.PI*2); ctx.fill();
   }
-
   function xTick(ctx, x, Y1, label, dpr){
     ctx.strokeStyle = "rgba(0,0,0,0.35)";
     ctx.lineWidth = 2*dpr;
@@ -529,7 +430,6 @@ if (scenario.kind === "OMO"){
     ctx.textAlign="center"; ctx.textBaseline="top";
     ctx.fillText(label, x, Y1 + 8*dpr);
   }
-
   function yTick(ctx, X0, y, label, dpr){
     ctx.strokeStyle = "rgba(0,0,0,0.35)";
     ctx.lineWidth = 2*dpr;
@@ -554,34 +454,31 @@ if (scenario.kind === "OMO"){
 
     const idisc = BASE.idisc;
 
-    // supply lines
+    // Supply lines
     line(ctx, xTo(R_base), yTo(imin), xTo(R_base), yTo(imax), BLUE, 3, dpr);
     line(ctx, xTo(R),      yTo(imin), xTo(R),      yTo(imax), ORANGE, 3, dpr);
 
-    // corridor demand curves
-    function drawDemandCorridor(color, iorVal){
+    // Demand (3-piece): ceiling flat, middle down, floor flat
+    function drawDemand(color, iorVal){
       const R_floor = Rd(iorVal);
       const R_ceil  = Rd(idisc);
 
       const Rf = clamp(R_floor, Rmin, Rmax);
       const Rc = clamp(R_ceil,  Rmin, Rmax);
 
-      // ceiling
       line(ctx, xTo(Rmin), yTo(idisc), xTo(Rc), yTo(idisc), color, 3, dpr);
-      // middle
       line(ctx, xTo(Rc), yTo(idisc), xTo(Rf), yTo(iorVal), color, 3, dpr);
-      // floor
       line(ctx, xTo(Rf), yTo(iorVal), xTo(Rmax), yTo(iorVal), color, 3, dpr);
     }
 
-    drawDemandCorridor(BLUE, ior_base);
-    drawDemandCorridor(ORANGE, ior);
+    drawDemand(BLUE, ior_base);
+    drawDemand(ORANGE, ior);
 
-    // reference floor/ceiling
+    // Floor/ceiling reference lines
     line(ctx, xTo(Rmin), yTo(ior),   xTo(Rmax), yTo(ior),   GREY, 2, dpr, [3,6]);
     line(ctx, xTo(Rmin), yTo(idisc), xTo(Rmax), yTo(idisc), GREY, 2, dpr, [3,6]);
 
-    // equilibrium points
+    // Equilibria
     const i0 = iStar(R_base, ior_base);
     const i1 = iStar(R, ior);
 
@@ -615,7 +512,7 @@ if (scenario.kind === "OMO"){
     const xTo = (Rv) => X0 + (Rv-Rmin)/(Rmax-Rmin)*(X1-X0);
     const yTo = (Mv) => Y0 + (Mmax-Mv)/(Mmax-Mmin)*(Y1-Y0);
 
-    // Plot M(R) implied by iStar(R, IOR): horizontal when i pinned.
+    // Plot implied M(R) via iStar: horizontal where i_ff pinned
     function drawMcurve(color, iorVal){
       const N = 240;
       ctx.strokeStyle = color;
@@ -633,7 +530,6 @@ if (scenario.kind === "OMO"){
     drawMcurve(BLUE, ior_base);
     drawMcurve(ORANGE, ior);
 
-    // baseline/current points
     const M0 = moneySupply(R_base, ior_base);
     const M1 = moneySupply(R, ior);
 
@@ -655,36 +551,33 @@ if (scenario.kind === "OMO"){
     }
   }
 
-  // ---------------- RENDER ----------------
   function renderStats(){
     const i0 = iStar(R_base, ior_base);
     const i1 = iStar(R, ior);
-
-    const M = moneySupply(R, ior);
-    const mDisp = displayedMultiplier(R, ior);
+    const M  = moneySupply(R, ior);
+    const mD = displayedMultiplier(R, ior);
 
     els.R0.textContent = fmt2(R_base);
     els.R1.textContent = fmt2(R);
     els.i0.textContent = fmt2(i0);
     els.i1.textContent = fmt2(i1);
     els.iorVal.textContent = `${fmt2(ior)}%`;
-    els.mVal.textContent = fmt2(mDisp);
+    els.mVal.textContent = fmt2(mD);
     els.MVal.textContent = fmt2(M);
   }
 
   function renderAll(){
-  renderStats();
-  requestAnimationFrame(() => {
-    drawReserves();
-    drawMoney();
-  });
+    renderStats();
+    requestAnimationFrame(() => {
+      drawReserves();
+      drawMoney();
+    });
 
-  // Always show the “pinned vs sloped” note
-  showPredFeedback(pinnedNoteHTML(R, ior));
+    // Always show pinned/sloped note
+    showPredFeedback(pinnedNoteHTML());
+  }
 
-  if (window.MathJax?.typesetPromise) window.MathJax.typesetPromise();
-}
-  // ---------------- INIT ----------------
+  // ---------- Init / events ----------
   function init(){
     els.iorSlider.value = String(ior);
     els.iorVal.textContent = `${fmt2(ior)}%`;
@@ -698,7 +591,6 @@ if (scenario.kind === "OMO"){
     renderAll();
   }
 
-  // ---------------- EVENTS ----------------
   els.newScenarioBtn.addEventListener("click", newScenario);
   els.resetBtn.addEventListener("click", resetAll);
   els.applyBtn.addEventListener("click", applyShock);
@@ -712,5 +604,12 @@ if (scenario.kind === "OMO"){
 
   window.addEventListener("resize", renderAll);
 
-  init();
+  // KaTeX scripts load deferred; render after DOM is ready and after KaTeX loads
+  window.addEventListener("load", () => {
+    // give auto-render a moment to become available
+    setTimeout(() => {
+      typeset(document.body);
+      init();
+    }, 50);
+  });
 })();
