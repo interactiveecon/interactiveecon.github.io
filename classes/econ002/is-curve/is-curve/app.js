@@ -50,6 +50,7 @@
   const BLUE = "rgba(31,119,180,0.92)";
   const ORANGE = "rgba(230,159,0,0.95)";
   const INK = "rgba(0,0,0,0.65)";
+  const DASH = "rgba(0,0,0,0.30)";
 
   // ----- Model -----
   function Iof(rr){ return P.I0 - P.b * rr; }
@@ -74,10 +75,6 @@
     const pad = { l: 60*dpr, r: 14*dpr, t: 14*dpr, b: 52*dpr };
     const X0 = pad.l, X1 = W - pad.r;
     const Y0 = pad.t, Y1 = H - pad.b;
-
-    // background
-    ctx.fillStyle = "rgba(255,255,255,0.0)";
-    ctx.fillRect(0,0,W,H);
 
     // grid
     ctx.strokeStyle = "rgba(0,0,0,0.10)";
@@ -107,15 +104,19 @@
     return { X0,X1,Y0,Y1 };
   }
 
-  function drawLine(ctx, x1,y1,x2,y2, stroke, lw, dpr){
+  function drawLine(ctx, x1,y1,x2,y2, stroke, lw, dpr, dash=null){
     ctx.strokeStyle = stroke;
     ctx.lineWidth = lw*dpr;
+    if (dash) ctx.setLineDash(dash.map(v=>v*dpr)); else ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    ctx.setLineDash([]);
   }
+
   function drawDot(ctx, x,y, color, dpr){
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(x,y,5*dpr,0,Math.PI*2); ctx.fill();
   }
+
   function xTick(ctx, x, Y1, label, dpr){
     ctx.strokeStyle = "rgba(0,0,0,0.35)";
     ctx.lineWidth = 2*dpr;
@@ -125,6 +126,7 @@
     ctx.textAlign="center"; ctx.textBaseline="top";
     ctx.fillText(label, x, Y1 + 8*dpr);
   }
+
   function yTick(ctx, X0, y, label, dpr){
     ctx.strokeStyle = "rgba(0,0,0,0.35)";
     ctx.lineWidth = 2*dpr;
@@ -142,12 +144,6 @@
 
     const { X0,X1,Y0,Y1 } = axes(ctx,W,H,dpr,"Output (Y)","Planned Expenditure (PE)");
 
-    // watermark to prove function ran
-    ctx.fillStyle = "rgba(0,0,0,0.20)";
-    ctx.font = `${12*dpr}px system-ui`;
-    ctx.textAlign="left"; ctx.textBaseline="top";
-    ctx.fillText("KC", 6*dpr, 6*dpr);
-
     const Ymin = 0, Ymax = 900;
     const xTo = (Yv) => X0 + (Yv-Ymin)/(Ymax-Ymin)*(X1-X0);
     const yTo = (PEv) => Y0 + (Ymax-PEv)/(Ymax-Ymin)*(Y1-Y0);
@@ -155,7 +151,7 @@
     // 45-degree
     drawLine(ctx, xTo(Ymin), yTo(Ymin), xTo(Ymax), yTo(Ymax), INK, 3, dpr);
 
-    // PE lines: PE = A + MPC*Y
+    // PE lines
     const Ab = P.C0 - P.MPC*BASE.T + Iof(BASE.r) + BASE.G;
     const Ac = P.C0 - P.MPC*T + Iof(r) + G;
 
@@ -165,12 +161,18 @@
     const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
     const Y1eq = Ystar(r, G, T);
 
-    drawDot(ctx, xTo(Y0eq), yTo(Y0eq), BLUE, dpr);
-    xTick(ctx, xTo(Y0eq), Y1, "Y₀", dpr);
+    // baseline point + dashed to x-axis + tick
+    const x0 = xTo(Y0eq), y0 = yTo(Y0eq);
+    drawDot(ctx, x0, y0, BLUE, dpr);
+    drawLine(ctx, x0, y0, x0, Y1, DASH, 2, dpr, [4,6]);
+    xTick(ctx, x0, Y1, "Y₀", dpr);
 
+    // current point + dashed to x-axis + tick
     if (Math.abs(Y1eq - Y0eq) > 1e-6){
-      drawDot(ctx, xTo(Y1eq), yTo(Y1eq), ORANGE, dpr);
-      xTick(ctx, xTo(Y1eq), Y1, "Y₁", dpr);
+      const x1 = xTo(Y1eq), y1 = yTo(Y1eq);
+      drawDot(ctx, x1, y1, ORANGE, dpr);
+      drawLine(ctx, x1, y1, x1, Y1, DASH, 2, dpr, [4,6]);
+      xTick(ctx, x1, Y1, "Y₁", dpr);
     }
   }
 
@@ -181,12 +183,6 @@
 
     const { X0,X1,Y0,Y1 } = axes(ctx,W,H,dpr,"Output (Y)","Interest rate (r)");
 
-    // watermark to prove function ran
-    ctx.fillStyle = "rgba(0,0,0,0.20)";
-    ctx.font = `${12*dpr}px system-ui`;
-    ctx.textAlign="left"; ctx.textBaseline="top";
-    ctx.fillText("IS", 6*dpr, 6*dpr);
-
     const rMin = DATA.ranges?.r?.min ?? 0;
     const rMax = DATA.ranges?.r?.max ?? 10;
 
@@ -194,11 +190,7 @@
     const xTo = (Yv) => X0 + (Yv-Ymin)/(Ymax-Ymin)*(X1-X0);
     const yTo = (rv) => Y0 + (rMax-rv)/(rMax-rMin)*(Y1-Y0);
 
-    // r ticks
-    [0,2,4,6,8,10].forEach(rr => {
-      if (rr >= rMin && rr <= rMax) yTick(ctx, X0, yTo(rr), String(rr), dpr);
-    });
-
+    // Draw curves
     const N = 240;
     function curve(color, GG, TT){
       ctx.strokeStyle = color;
@@ -207,25 +199,34 @@
       for (let i=0;i<=N;i++){
         const rr = rMin + (i/N)*(rMax-rMin);
         const YY = Yis(rr, GG, TT);
-        const x = xTo(YY);
-        const y = yTo(rr);
+        const x = xTo(YY), y = yTo(rr);
         if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
       }
       ctx.stroke();
     }
-
     curve(BLUE, BASE.G, BASE.T);
     curve(ORANGE, G, T);
 
+    // Equilibrium points
     const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
     const Y1eq = Ystar(r, G, T);
 
-    drawDot(ctx, xTo(Y0eq), yTo(BASE.r), BLUE, dpr);
-    xTick(ctx, xTo(Y0eq), Y1, "Y₀", dpr);
+    // Baseline point and dashed to both axes
+    const xb = xTo(Y0eq), yb = yTo(BASE.r);
+    drawDot(ctx, xb, yb, BLUE, dpr);
+    drawLine(ctx, xb, yb, xb, Y1, DASH, 2, dpr, [4,6]);   // to x-axis
+    drawLine(ctx, xb, yb, X0, yb, DASH, 2, dpr, [4,6]);   // to y-axis
+    xTick(ctx, xb, Y1, "Y₀", dpr);
+    yTick(ctx, X0, yb, "r₀", dpr);
 
+    // Current point and dashed to both axes
     if (Math.abs(Y1eq - Y0eq) > 1e-6 || Math.abs(r - BASE.r) > 1e-6){
-      drawDot(ctx, xTo(Y1eq), yTo(r), ORANGE, dpr);
-      xTick(ctx, xTo(Y1eq), Y1, "Y₁", dpr);
+      const xc = xTo(Y1eq), yc = yTo(r);
+      drawDot(ctx, xc, yc, ORANGE, dpr);
+      drawLine(ctx, xc, yc, xc, Y1, DASH, 2, dpr, [4,6]);
+      drawLine(ctx, xc, yc, X0, yc, DASH, 2, dpr, [4,6]);
+      xTick(ctx, xc, Y1, "Y₁", dpr);
+      yTick(ctx, X0, yc, "r₁", dpr);
     }
   }
 
@@ -241,7 +242,7 @@
     });
   }
 
-  // ----- Mechanism (14 cards only, slots show only “drop”) -----
+  // ----- Mechanism (14 cards, slots just say drop) -----
   const CARDS = [
     { id:"r_up", text:"r ↑", var:"r", dir:"↑" },
     { id:"r_dn", text:"r ↓", var:"r", dir:"↓" },
@@ -261,7 +262,7 @@
 
   function chainVars(v){
     if (v === "r") return ["r","I","PE","INV","Y"];
-    if (v === "T") return ["T","PE","INV","Y"]; // C folded into PE to keep 7-variable / 14-card constraint
+    if (v === "T") return ["T","PE","INV","Y"]; // keep 7 vars constraint
     return ["G","PE","INV","Y"];
   }
 
@@ -373,26 +374,29 @@
       }
     }
 
-    const wrong = [];
+    let ok = true;
     for (const s of slots){
       const varName = s.dataset.var;
       const cardId = chainState[s.dataset.slotIndex];
       const card = CARDS.find(c => c.id === cardId);
-
-      if (!need[varName] || !card || card.var !== varName || card.dir !== need[varName]){
-        wrong.push(varName);
+      if (!need[varName] || !card || card.var !== varName || card.dir !== need[varName]) {
+        ok = false; break;
       }
     }
 
-    if (!wrong.length){
+    if (ok){
       renderMechFeedback(`<span class="tagOK">Correct</span> Great — that mechanism matches the shock.`);
     } else {
       renderMechFeedback(`<span class="tagBad">Not quite</span> One or more links are incorrect. Try again.`);
     }
   }
 
-  // ----- Scenario (does NOT move sliders) -----
+  // ----- Scenario (resets sliders to baseline, then announces shock) -----
   function newScenario(){
+    // reset values to baseline
+    r = BASE.r; G = BASE.G; T = BASE.T;
+    syncSliders();
+
     clearChain();
     renderMechFeedback("");
 
@@ -401,16 +405,16 @@
     const delta = DATA.shocks[v][Math.floor(Math.random()*DATA.shocks[v].length)];
     shock = { var: v, delta };
 
-    const word = delta > 0 ? "increases" : "decreases";
+    const dir = delta > 0 ? "↑" : "↓";
     els.scenarioTitle.textContent = "Scenario shock";
     els.scenarioDesc.textContent =
-      `A policy variable changes:\n${v} ${word} (Δ${v} = ${delta}).\n\nSliders are still at baseline. Use sliders to apply the shock, then build the chain.`;
+      `A policy variable changes:\n${v} ${dir}\n\nUse sliders to apply the shock, then build the chain.`;
 
     els.mechPrompt.textContent = `Build the mechanism chain for the ${v}-shock.`;
     buildPile();
     buildChain(v);
 
-    setStatus("Scenario generated. Sliders still baseline — move them to apply the shock.");
+    setStatus("Scenario generated. Sliders reset to baseline.");
     drawAll();
   }
 
