@@ -60,28 +60,22 @@ window.addEventListener("DOMContentLoaded", () => {
   renderWhyLists(null);
 
   // ---------- Graph model ----------
-  // Price-Quantity space with fixed axes
   const AX = { qMin: 0, qMax: 100, pMin: 0, pMax: 100 };
 
-  // baseline curves: P = a - bQ (D), P = c + dQ (S)
   const base = {
     D: { a: 90, b: 0.8 },
     S: { c: 10, d: 0.7 }
   };
 
   function clone(x){ return JSON.parse(JSON.stringify(x)); }
+  function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
 
-  // app state machine:
-  // stage = 0: baseline only
-  // stage = 1: scenario loaded, no shifts shown yet (student predicts)
-  // stage = 2: shifts shown (but not new eq or excess), student predicts outcomes
-  // stage = 3: show shifts + excess + new equilibrium
-  let stage = 0;
+  let stage = 0;     // 0 baseline, 1 scenario loaded (no shift), 2 shifts shown, 3 show excess+new eq
   let scenario = null;
 
   let curves = {
-    D0: clone(base.D), S0: clone(base.S), // original dashed (always baseline)
-    D1: clone(base.D), S1: clone(base.S)  // "new" curves after shift (when revealed)
+    D0: clone(base.D), S0: clone(base.S),
+    D1: clone(base.D), S1: clone(base.S)
   };
 
   function solveEq(D, S){
@@ -90,18 +84,15 @@ window.addEventListener("DOMContentLoaded", () => {
     return { Q, P };
   }
 
-  const eq0 = solveEq(curves.D0, curves.S0); // baseline equilibrium constant
-  // eq1 computed once scenario shifts are applied
+  const eq0 = solveEq(curves.D0, curves.S0);
 
   function applyShifts(sc){
     curves.D1 = clone(base.D);
     curves.S1 = clone(base.S);
 
-    // Demand shift: adjust intercept a
     if (sc.demand.action === "SHIFT") {
       curves.D1.a += (sc.demand.dir === "R" ? 12 : -12);
     }
-    // Supply shift: adjust intercept c (right shift = lower c)
     if (sc.supply.action === "SHIFT") {
       curves.S1.c += (sc.supply.dir === "R" ? -12 : 12);
     }
@@ -111,7 +102,6 @@ window.addEventListener("DOMContentLoaded", () => {
   function qSupplyAtP(S, P){ return (P - S.c)/S.d; }
 
   function computeOutcome(sc){
-    // After shifts (curves D1/S1), what happens to excess at original price P1=eq0.P?
     const P1 = eq0.P;
     const Qd = qDemandAtP(curves.D1, P1);
     const Qs = qSupplyAtP(curves.S1, P1);
@@ -120,22 +110,16 @@ window.addEventListener("DOMContentLoaded", () => {
     if (Qd > Qs + 1e-6) excess = "ED";
     else if (Qs > Qd + 1e-6) excess = "ES";
 
-    // New equilibrium:
     const eq1 = solveEq(curves.D1, curves.S1);
 
-    // Price movement:
     let pMove = "NONE";
     if (eq1.P > P1 + 1e-6) pMove = "UP";
     else if (eq1.P < P1 - 1e-6) pMove = "DOWN";
 
-    // Quantity movement:
     let qMove = "NONE";
     if (eq1.Q > eq0.Q + 1e-6) qMove = "UP";
     else if (eq1.Q < eq0.Q - 1e-6) qMove = "DOWN";
 
-    // For completeness: if both curves could shift in opposite directions, quantity can be ambiguous.
-    // In this version, we only have single shifts OR price changes, so not ambiguous.
-    // Still, we’ll accept "AMB" only when both D and S shift and qMove depends (not used here).
     const bothShift = (sc.demand.action==="SHIFT" && sc.supply.action==="SHIFT");
     if (bothShift) qMove = "AMB";
 
@@ -207,39 +191,36 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // label
+      // ✅ label at the right end (standard look)
+      const qL = 96;
+      const pL = isDemand ? (params.a - params.b*qL) : (params.c + params.d*qL);
+
       ctx.fillStyle = style;
       ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
-      const qL = 70;
-      const pL = isDemand ? (params.a - params.b*qL) : (params.c + params.d*qL);
-      ctx.fillText(isDemand ? "D" : "S", qToX(qL)+6*dpr, pToY(pL));
+      ctx.fillText(isDemand ? "D" : "S", qToX(qL) + 6*dpr, pToY(pL));
     }
 
-    // Always draw baseline dashed curves
+    // baseline dashed
     drawCurve(true,  curves.D0, cDash, true);
     drawCurve(false, curves.S0, cDash, true);
 
-    // Draw current curves depending on stage
+    // current
     if (stage >= 2) {
       drawCurve(true,  curves.D1, cDemand, false);
       drawCurve(false, curves.S1, cSupply, false);
     } else {
-      // before reveal: show baseline as the “current” too (solid), so students see the market
       drawCurve(true,  curves.D0, cDemand, false);
       drawCurve(false, curves.S0, cSupply, false);
     }
 
-    // Helper: point + guide lines + custom tick labels
     function markEq(eq, labelP, labelQ, color){
-      // dot
       ctx.fillStyle = color;
       ctx.beginPath();
       ctx.arc(qToX(eq.Q), pToY(eq.P), 5*dpr, 0, Math.PI*2);
       ctx.fill();
 
-      // dashed guides to axes
       ctx.strokeStyle = "rgba(0,0,0,0.28)";
       ctx.lineWidth = 2*dpr;
       ctx.setLineDash([4*dpr, 6*dpr]);
@@ -247,38 +228,33 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.beginPath(); ctx.moveTo(qToX(eq.Q), pToY(eq.P)); ctx.lineTo(qToX(0), pToY(eq.P)); ctx.stroke();
       ctx.setLineDash([]);
 
-      // custom tick labels at those coordinates
       ctx.fillStyle = "rgba(0,0,0,0.70)";
       ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
 
-      // Q tick label
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
       ctx.fillText(labelQ, qToX(eq.Q), pToY(0) + 10*dpr);
 
-      // P tick label
       ctx.textAlign = "right";
       ctx.textBaseline = "middle";
       ctx.fillText(labelP, qToX(0) - 8*dpr, pToY(eq.P));
     }
 
-    // Mark initial equilibrium always
+    // mark initial equilibrium
     markEq(eq0, "P₁", "Q₁", "rgba(0,0,0,0.70)");
 
-    // Stage 3: show excess wedge at P1 and new equilibrium P2/Q2
+    // stage 3: show excess + new equilibrium
     if (stage >= 3 && scenario) {
       const out = computeOutcome(scenario);
       const P1 = eq0.P;
 
-      // Excess demand/supply at P1
       const Qd = out.Qd;
       const Qs = out.Qs;
 
-      // clamp
-      const qL = Math.max(AX.qMin, Math.min(AX.qMax, Math.min(Qd, Qs)));
-      const qR = Math.max(AX.qMin, Math.min(AX.qMax, Math.max(Qd, Qs)));
+      const qL = clamp(Math.min(Qd, Qs), AX.qMin, AX.qMax);
+      const qR = clamp(Math.max(Qd, Qs), AX.qMin, AX.qMax);
 
-      // vertical markers at Qd and Qs on price line
+      // vertical markers
       ctx.strokeStyle = "rgba(0,0,0,0.25)";
       ctx.lineWidth = 2*dpr;
       ctx.setLineDash([4*dpr, 6*dpr]);
@@ -286,7 +262,7 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.beginPath(); ctx.moveTo(qToX(Qs), pToY(P1)); ctx.lineTo(qToX(Qs), pToY(0)); ctx.stroke();
       ctx.setLineDash([]);
 
-      // shade wedge on price line between Qd and Qs
+      // highlight segment on price line
       ctx.fillStyle = out.excess === "ED" ? "rgba(31,119,180,0.12)" :
                       out.excess === "ES" ? "rgba(230,159,0,0.14)" :
                       "rgba(0,0,0,0.0)";
@@ -298,11 +274,18 @@ window.addEventListener("DOMContentLoaded", () => {
         ctx.fillStyle = "rgba(0,0,0,0.65)";
         ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
         ctx.textAlign = "center";
-        ctx.textBaseline = "bottom";
-        ctx.fillText(out.excess === "ED" ? "Excess demand" : "Excess supply", (qToX(qL)+qToX(qR))/2, pToY(P1) - 10*dpr);
+
+        // ✅ label position rule:
+        // ED -> below; ES -> above
+        if (out.excess === "ED") {
+          ctx.textBaseline = "top";
+          ctx.fillText("Excess demand", (qToX(qL)+qToX(qR))/2, pToY(P1) + 10*dpr);
+        } else {
+          ctx.textBaseline = "bottom";
+          ctx.fillText("Excess supply", (qToX(qL)+qToX(qR))/2, pToY(P1) - 10*dpr);
+        }
       }
 
-      // New equilibrium
       markEq(out.eq1, "P₂", "Q₂", "rgba(0,0,0,0.70)");
     }
   }
@@ -325,23 +308,18 @@ window.addEventListener("DOMContentLoaded", () => {
     els.scDesc.textContent = sc.desc;
     setStatus("Stage 1: classify demand and supply (along vs shift).");
 
-    // reset user inputs
     els.dAction.value = ""; els.dDir.value = "";
     els.sAction.value = ""; els.sDir.value = "";
     els.fb1.style.display = "none"; els.fb1.innerHTML = "";
 
-    // hide stage2
     els.stage2.style.display = "none";
     els.excess.value = ""; els.pMove.value = ""; els.qMove.value = "";
     els.fb2.style.display = "none"; els.fb2.innerHTML = "";
 
-    // reset why
     renderWhyLists(null);
     els.whyNote.textContent = "After you pass Stage 1, the app highlights what changed.";
-    // keep whyBox hidden until user opens
-    // curves prepared but not shown until stage 2
-    applyShifts(sc);
 
+    applyShifts(sc);
     draw();
   }
 
@@ -378,6 +356,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const sA = els.sAction.value, sD = els.sDir.value;
     if (!dA || !dD || !sA || !sD) { setStatus("Please complete all Stage 1 dropdowns."); return; }
 
+    // ✅ Now Stage 1 expects BOTH: the shift AND the movement along the other curve.
     const ok =
       dA === scenario.demand.action &&
       dD === scenario.demand.dir &&
@@ -387,20 +366,20 @@ window.addEventListener("DOMContentLoaded", () => {
     els.fb1.style.display = "block";
     els.fb1.innerHTML = ok
       ? `<span class="tagOK">Correct</span> Nice. Now predict the market outcome (Stage 2).`
-      : `<span class="tagBad">Not quite</span> Remember: price change → movement along; anything else → shift.`;
+      : `<span class="tagBad">Not quite</span> Remember: if one curve shifts, the new equilibrium price changes, which causes a movement along the other curve.`;
 
     if (ok) {
-      stage = 2; // reveal shifts (but not new eq)
+      stage = 2;
       els.stage2.style.display = "block";
 
-      // highlight why factor
       if (scenario.why?.side === "D" || scenario.why?.side === "S") {
         renderWhyLists({ side: scenario.why.side, factor: scenario.why.factor });
         els.whyNote.textContent = `Highlighted: ${scenario.why.side === "D" ? "Demand" : "Supply"} shifter → ${scenario.why.factor}.`;
       } else {
         renderWhyLists(null);
-        els.whyNote.textContent = "This scenario changes the price of the good → movement along.";
+        els.whyNote.textContent = "This scenario changes the price of the good → movement along both curves.";
       }
+
       draw();
       setStatus("Stage 2: predict excess demand/supply and what happens to price and quantity.");
     } else {
@@ -420,7 +399,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
     const okEx = ex === out.excess;
     const okP  = pM === out.pMove;
-    // accept AMB if our logic says ambiguous (not used here), else exact match
     const okQ  = (out.qMove === "AMB") ? (qM === "AMB") : (qM === out.qMove);
 
     const ok = okEx && okP && okQ;
@@ -428,10 +406,10 @@ window.addEventListener("DOMContentLoaded", () => {
     els.fb2.style.display = "block";
     els.fb2.innerHTML = ok
       ? `<span class="tagOK">Correct</span> Great — now the graph will reveal the imbalance and the new equilibrium.`
-      : `<span class="tagBad">Not quite</span> Think: at $begin:math:text$P\_1$end:math:text$, compare $begin:math:text$Q\_d$end:math:text$ and $begin:math:text$Q\_s$end:math:text$. Shortage → price rises; surplus → price falls.`;
+      : `<span class="tagBad">Not quite</span> At $begin:math:text$P\_1$end:math:text$, compare $begin:math:text$Q\_d$end:math:text$ and $begin:math:text$Q\_s$end:math:text$. Shortage → price rises; surplus → price falls.`;
 
     if (ok) {
-      stage = 3; // reveal everything
+      stage = 3;
       draw();
       setStatus("Revealed: excess demand/supply and new equilibrium.");
     } else {
@@ -450,7 +428,7 @@ window.addEventListener("DOMContentLoaded", () => {
   els.check1Btn.addEventListener("click", checkStage1);
   els.check2Btn.addEventListener("click", checkStage2);
 
-  // Typeset header once
+  // typeset header once
   const howTo = document.getElementById("howTo");
   if (howTo && window.MathJax?.typesetPromise) window.MathJax.typesetPromise([howTo]);
 
