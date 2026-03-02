@@ -56,6 +56,31 @@
   let R = R_base;
   let ior = ior_base;
 
+  function typesetNow(el){
+  if (!el) return;
+
+  // MathJax v3
+  if (window.MathJax?.startup?.promise && window.MathJax.typesetPromise){
+    window.MathJax.startup.promise.then(() => {
+      window.MathJax.typesetClear([el]);
+      window.MathJax.typesetPromise([el]);
+    });
+    return;
+  }
+
+  // KaTeX fallback
+  if (window.renderMathInElement){
+    window.renderMathInElement(el, {
+      delimiters: [
+        {left: "\\(", right: "\\)", display: false},
+        {left: "$", right: "$", display: false},
+        {left: "\\[", right: "\\]", display: true},
+        {left: "$$", right: "$$", display: true},
+      ]
+    });
+  }
+}
+
   function typesetLater(el){
   if (!el) return;
 
@@ -99,9 +124,7 @@
   }
   els.predFeedback.style.display = "block";
   els.predFeedback.innerHTML = html;
-
-  // IMPORTANT: wait for MathJax startup, then typeset this node
-  typesetLater(els.predFeedback);
+  typesetNow(els.predFeedback);
 }
 
   function typeset(el){
