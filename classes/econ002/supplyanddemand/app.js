@@ -1,3 +1,4 @@
+// app.js
 window.addEventListener("DOMContentLoaded", () => {
   const $ = (id) => document.getElementById(id);
 
@@ -41,6 +42,16 @@ window.addEventListener("DOMContentLoaded", () => {
       .replaceAll('"',"&quot;");
   }
 
+  // Ensure MathJax renders dynamic content:
+  function typeset(...nodes){
+    if (!window.MathJax?.typesetPromise) return;
+    const flat = nodes.flat().filter(Boolean);
+    // Clear previous MathJax typesetting in these nodes, then re-typeset
+    // This avoids partial rendering when content changes repeatedly.
+    window.MathJax.typesetClear(flat);
+    window.MathJax.typesetPromise(flat);
+  }
+
   if (!window.ALONG_SHIFT_DATA || !Array.isArray(window.ALONG_SHIFT_DATA.scenarios)) {
     setStatus("ERROR: data.js did not load. Ensure data.js is in the same folder and loads before app.js.");
     return;
@@ -58,76 +69,91 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   renderWhyLists(null);
 
-// ---------- Conditional direction dropdowns ----------
-function setDirOptions(selectEl, opts){
-  const cur = selectEl.value; // try to preserve
-  selectEl.innerHTML =
-    `<option value="" selected>Select…</option>` +
-    opts.map(o => `<option value="${o.value}">${o.label}</option>`).join("");
+  // ---------- Conditional direction dropdowns (no cross-reset) ----------
+  function setDirOptions(selectEl, opts){
+    const cur = selectEl.value;
+    selectEl.innerHTML =
+      `<option value="" selected>Select…</option>` +
+      opts.map(o => `<option value="${o.value}">${o.label}</option>`).join("");
 
-  // restore if still present
-  if ([...selectEl.options].some(o => o.value === cur)) selectEl.value = cur;
-}
+    if ([...selectEl.options].some(o => o.value === cur)) selectEl.value = cur;
+  }
 
-function updateDemandDirOptions(){
-  const dA = els.dAction.value;
-  if (dA === "NONE") {
-    setDirOptions(els.dDir, [{ value:"NA", label:"Not applicable" }]);
-    els.dDir.value = "NA";
-    return;
+  function updateDemandDirOptions(){
+    const dA = els.dAction.value;
+    if (dA === "NONE") {
+      setDirOptions(els.dDir, [{ value:"NA", label:"Not applicable" }]);
+      els.dDir.value = "NA";
+      return;
+    }
+    if (dA === "ALONG") {
+      setDirOptions(els.dDir, [
+        { value:"UP", label:"Higher price (move up along demand)" },
+        { value:"DOWN", label:"Lower price (move down along demand)" }
+      ]);
+      return;
+    }
+    if (dA === "SHIFT") {
+      setDirOptions(els.dDir, [
+        { value:"R", label:"Right (demand increases)" },
+        { value:"L", label:"Left (demand decreases)" }
+      ]);
+      return;
+    }
+    setDirOptions(els.dDir, []);
   }
-  if (dA === "ALONG") {
-    setDirOptions(els.dDir, [
-      { value:"UP", label:"Higher price (move up along demand)" },
-      { value:"DOWN", label:"Lower price (move down along demand)" }
-    ]);
-    return;
-  }
-  if (dA === "SHIFT") {
-    setDirOptions(els.dDir, [
-      { value:"R", label:"Right (demand increases)" },
-      { value:"L", label:"Left (demand decreases)" }
-    ]);
-    return;
-  }
-  setDirOptions(els.dDir, []);
-}
 
-function updateSupplyDirOptions(){
-  const sA = els.sAction.value;
-  if (sA === "NONE") {
-    setDirOptions(els.sDir, [{ value:"NA", label:"Not applicable" }]);
-    els.sDir.value = "NA";
-    return;
+  function updateSupplyDirOptions(){
+    const sA = els.sAction.value;
+    if (sA === "NONE") {
+      setDirOptions(els.sDir, [{ value:"NA", label:"Not applicable" }]);
+      els.sDir.value = "NA";
+      return;
+    }
+    if (sA === "ALONG") {
+      setDirOptions(els.sDir, [
+        { value:"UP", label:"Higher price (move up along supply)" },
+        { value:"DOWN", label:"Lower price (move down along supply)" }
+      ]);
+      return;
+    }
+    if (sA === "SHIFT") {
+      setDirOptions(els.sDir, [
+        { value:"UPSHIFT", label:"Up (supply decreases)" },
+        { value:"DOWNSHIFT", label:"Down (supply increases)" }
+      ]);
+      return;
+    }
+    setDirOptions(els.sDir, []);
   }
-  if (sA === "ALONG") {
-    setDirOptions(els.sDir, [
-      { value:"UP", label:"Higher price (move up along supply)" },
-      { value:"DOWN", label:"Lower price (move down along supply)" }
-    ]);
-    return;
-  }
-  if (sA === "SHIFT") {
-    // supply shift is presented as up/down for students
-    setDirOptions(els.sDir, [
-      { value:"UPSHIFT", label:"Up (supply decreases)" },
-      { value:"DOWNSHIFT", label:"Down (supply increases)" }
-    ]);
-    return;
-  }
-  setDirOptions(els.sDir, []);
-}
 
-els.dAction.addEventListener("change", () => updateDemandDirOptions());
-els.sAction.addEventListener("change", () => updateSupplyDirOptions());
+  els.dAction.addEventListener("change", updateDemandDirOptions);
+  els.sAction.addEventListener("change", updateSupplyDirOptions);
+
+  function normalizeSupplyShiftDirForCheck(val){
+    // Student sees UPSHIFT = supply decreases (maps to internal "L")
+    // Student sees DOWNSHIFT = supply increases (maps to internal "R")
+    if (val === "UPSHIFT") return "L";
+    if (val === "DOWNSHIFT") return "R";
+    return val;
+  }
 
   // ---------- Graph model ----------
   const AX = { qMin: 0, qMax: 100, pMin: 0, pMax: 100 };
-  const base = { D: { a: 90, b: 0.8 }, S: { c: 10, d: 0.7 } };
+
+  // baseline curves: P = a - bQ (D), P = c + dQ (S)
+  const base = {
+    D: { a: 90, b: 0.8 },
+    S: { c: 10, d: 0.7 }
+  };
 
   function clone(x){ return JSON.parse(JSON.stringify(x)); }
   function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
 
+  // stage = 0 baseline
+  // stage = 1 scenario loaded, no shifts shown
+  // stage = 2 shifts shown (no new eq)
+  // stage = 3 show excess + new eq
   let stage = 0;
   let scenario = null;
 
@@ -141,6 +167,7 @@ els.sAction.addEventListener("change", () => updateSupplyDirOptions());
     const P = S.c + S.d * Q;
     return { Q, P };
   }
+
   const eq0 = solveEq(curves.D0, curves.S0);
 
   function applyShifts(sc){
@@ -185,16 +212,16 @@ els.sAction.addEventListener("change", () => updateSupplyDirOptions());
 
   // ---------- Drawing ----------
   function drawArrow(ctx, x1,y1,x2,y2, dpr){
-    // line
     ctx.beginPath();
     ctx.moveTo(x1,y1);
     ctx.lineTo(x2,y2);
     ctx.stroke();
-    // arrow head
+
     const ang = Math.atan2(y2-y1, x2-x1);
     const len = 10*dpr;
     const a1 = ang + Math.PI*0.8;
     const a2 = ang - Math.PI*0.8;
+
     ctx.beginPath();
     ctx.moveTo(x2,y2);
     ctx.lineTo(x2 + len*Math.cos(a1), y2 + len*Math.sin(a1));
@@ -210,10 +237,12 @@ els.sAction.addEventListener("change", () => updateSupplyDirOptions());
     const dpr = window.devicePixelRatio || 1;
     const W = canvas.clientWidth * dpr;
     const H = canvas.clientHeight * dpr;
-    if (canvas.width !== W || canvas.height !== H){ canvas.width = W; canvas.height = H; }
+    if (canvas.width !== W || canvas.height !== H){
+      canvas.width = W; canvas.height = H;
+    }
     ctx.clearRect(0,0,W,H);
 
-    const pad = { l: 58*dpr, r: 18*dpr, t: 18*dpr, b: 58*dpr }; // extra bottom padding
+    const pad = { l: 58*dpr, r: 18*dpr, t: 18*dpr, b: 58*dpr };
     const X0 = pad.l, X1 = W - pad.r;
     const Y0 = pad.t, Y1 = H - pad.b;
 
@@ -239,7 +268,6 @@ els.sAction.addEventListener("change", () => updateSupplyDirOptions());
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    // ✅ move Quantity label lower so it doesn't cover Q₁/Q₂ ticks
     ctx.fillText("Quantity", (X0+X1)/2, Y1 + 26*dpr);
 
     ctx.save();
@@ -291,7 +319,6 @@ els.sAction.addEventListener("change", () => updateSupplyDirOptions());
       drawCurve(false, curves.S0, cSupply, false);
     }
 
-    // equilibrium marker with guides + labels
     function markEq(eq, labelP, labelQ, color){
       ctx.fillStyle = color;
       ctx.beginPath();
@@ -319,45 +346,40 @@ els.sAction.addEventListener("change", () => updateSupplyDirOptions());
 
     markEq(eq0, "P₁", "Q₁", "rgba(0,0,0,0.70)");
 
-    // ✅ shift arrows when revealed (stage >= 2)
-if (stage >= 2 && scenario) {
-  ctx.lineWidth = 2.5*dpr;
+    // shift arrows (from old curve to new curve)
+    if (stage >= 2 && scenario) {
+      ctx.lineWidth = 2.5*dpr;
 
-  // Demand shift arrow: at a fixed price level, show Q moving from old D to new D
-  if (scenario.demand.action === "SHIFT") {
-    const Pmid = 55; // nice mid-level price for a clean arrow
-    const Qold = (curves.D0.a - Pmid) / curves.D0.b;
-    const Qnew = (curves.D1.a - Pmid) / curves.D1.b;
+      if (scenario.demand.action === "SHIFT") {
+        const Pmid = 55;
+        const Qold = (curves.D0.a - Pmid) / curves.D0.b;
+        const Qnew = (curves.D1.a - Pmid) / curves.D1.b;
 
-    ctx.strokeStyle = cDemand;
-    ctx.fillStyle = cDemand;
+        ctx.strokeStyle = cDemand;
+        ctx.fillStyle = cDemand;
 
-    // clamp to chart bounds
-    const x1 = qToX(clamp(Qold, AX.qMin, AX.qMax));
-    const x2 = qToX(clamp(Qnew, AX.qMin, AX.qMax));
-    const y  = pToY(Pmid);
+        const x1 = qToX(clamp(Qold, AX.qMin, AX.qMax));
+        const x2 = qToX(clamp(Qnew, AX.qMin, AX.qMax));
+        const y  = pToY(Pmid);
+        drawArrow(ctx, x1, y, x2, y, dpr);
+      }
 
-    drawArrow(ctx, x1, y, x2, y, dpr);
-  }
+      if (scenario.supply.action === "SHIFT") {
+        const Qmid = 65;
+        const Pold = curves.S0.c + curves.S0.d * Qmid;
+        const Pnew = curves.S1.c + curves.S1.d * Qmid;
 
-  // Supply shift arrow: at a fixed quantity level, show P moving from old S to new S
-  if (scenario.supply.action === "SHIFT") {
-    const Qmid = 65; // mid-quantity for a clean arrow
-    const Pold = curves.S0.c + curves.S0.d * Qmid;
-    const Pnew = curves.S1.c + curves.S1.d * Qmid;
+        ctx.strokeStyle = cSupply;
+        ctx.fillStyle = cSupply;
 
-    ctx.strokeStyle = cSupply;
-    ctx.fillStyle = cSupply;
+        const x = qToX(Qmid);
+        const y1 = pToY(clamp(Pold, AX.pMin, AX.pMax));
+        const y2 = pToY(clamp(Pnew, AX.pMin, AX.pMax));
+        drawArrow(ctx, x, y1, x, y2, dpr);
+      }
+    }
 
-    const x = qToX(Qmid);
-    const y1 = pToY(clamp(Pold, AX.pMin, AX.pMax));
-    const y2 = pToY(clamp(Pnew, AX.pMin, AX.pMax));
-
-    drawArrow(ctx, x, y1, x, y2, dpr);
-  }
-}
-
-    // stage 3 extras
+    // stage 3: excess and new eq
     if (stage >= 3 && scenario) {
       const out = computeOutcome(scenario);
       const P1 = eq0.P;
@@ -368,7 +390,6 @@ if (stage >= 2 && scenario) {
       const qL = clamp(Math.min(Qd, Qs), AX.qMin, AX.qMax);
       const qR = clamp(Math.max(Qd, Qs), AX.qMin, AX.qMax);
 
-      // vertical markers at Qd/Qs
       ctx.strokeStyle = "rgba(0,0,0,0.25)";
       ctx.lineWidth = 2*dpr;
       ctx.setLineDash([4*dpr, 6*dpr]);
@@ -376,7 +397,6 @@ if (stage >= 2 && scenario) {
       ctx.beginPath(); ctx.moveTo(qToX(Qs), pToY(P1)); ctx.lineTo(qToX(Qs), pToY(0)); ctx.stroke();
       ctx.setLineDash([]);
 
-      // highlight segment on price line
       ctx.fillStyle = out.excess === "ED" ? "rgba(31,119,180,0.12)" :
                       out.excess === "ES" ? "rgba(230,159,0,0.14)" :
                       "rgba(0,0,0,0.0)";
@@ -389,7 +409,6 @@ if (stage >= 2 && scenario) {
         ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
         ctx.textAlign = "center";
 
-        // ✅ ED below; ES above
         if (out.excess === "ED") {
           ctx.textBaseline = "top";
           ctx.fillText("Excess demand", (qToX(qL)+qToX(qR))/2, pToY(P1) + 10*dpr);
@@ -473,14 +492,6 @@ if (stage >= 2 && scenario) {
   }
 
   // ---------- Stage checks ----------
-  function normalizeSupplyShiftDirForCheck(val){
-    // Student sees UPSHIFT = supply decreases (maps to internal "L")
-    // Student sees DOWNSHIFT = supply increases (maps to internal "R")
-    if (val === "UPSHIFT") return "L";
-    if (val === "DOWNSHIFT") return "R";
-    return val;
-  }
-
   function checkStage1(){
     if (!scenario) { setStatus("Click New Scenario first."); return; }
 
@@ -500,6 +511,7 @@ if (stage >= 2 && scenario) {
     els.fb1.innerHTML = ok
       ? `<span class="tagOK">Correct</span> Nice. Now predict the market outcome (Stage 2).`
       : `<span class="tagBad">Not quite</span> If one curve shifts, the equilibrium price changes, causing a movement along the other curve.`;
+    typeset(els.fb1);
 
     if (ok) {
       stage = 2;
@@ -539,12 +551,10 @@ if (stage >= 2 && scenario) {
     els.fb2.innerHTML = ok
       ? `<span class="tagOK">Correct</span> Great — now the graph will reveal the imbalance and the new equilibrium.`
       : `<span class="tagBad">Not quite</span>
-     At \$begin:math:text$P\_1\\$end:math:text$, compare \$begin:math:text$Q\_d\\$end:math:text$ and \$begin:math:text$Q\_s\\$end:math:text$.
-     Shortage \$begin:math:text$ \(Q\_d \> Q\_s\) \\$end:math:text$ → price rises; surplus \$begin:math:text$ \(Q\_s \> Q\_d\) \\$end:math:text$ → price falls.`;
+         At \$begin:math:text$P\_1\\$end:math:text$, compare \$begin:math:text$Q\_d\\$end:math:text$ and \$begin:math:text$Q\_s\\$end:math:text$.
+         Shortage \$begin:math:text$\(Q\_d \> Q\_s\)\\$end:math:text$ → price rises; surplus \$begin:math:text$\(Q\_s \> Q\_d\)\\$end:math:text$ → price falls.`;
 
-    if (window.MathJax?.typesetPromise) {
-      window.MathJax.typesetPromise([els.fb2]);
-    }
+    typeset(els.fb2);
 
     if (ok) {
       stage = 3;
@@ -568,7 +578,7 @@ if (stage >= 2 && scenario) {
 
   // Typeset header once
   const howTo = document.getElementById("howTo");
-  if (howTo && window.MathJax?.typesetPromise) window.MathJax.typesetPromise([howTo]);
+  typeset(howTo);
 
   // init
   reset();
