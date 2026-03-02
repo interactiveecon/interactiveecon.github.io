@@ -3,13 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Marginalism Lab: MB vs MC</title>
+  <title>Marginalism Lab (Continuous)</title>
 
   <link rel="stylesheet" href="/assets/style.css">
 
   <style>
     .stack{ display:grid; gap:14px; margin-top:18px; }
-
     .grid2{ display:grid; grid-template-columns: 1.05fr 0.95fr; gap:12px; align-items:start; }
     @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
 
@@ -43,20 +42,6 @@
       margin-top: 10px;
     }
 
-    .control{
-      display:grid;
-      gap:6px;
-      margin-top: 10px;
-    }
-    .control label{
-      display:block;
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      color: var(--muted);
-    }
-    input[type="range"]{ width: 100%; }
-
     .pill{
       display:inline-flex;
       align-items:center;
@@ -70,6 +55,16 @@
       font-weight: 800;
       font-size: 12px;
     }
+
+    .control{ display:grid; gap:6px; margin-top: 10px; }
+    .control label{
+      display:block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+    }
+    input[type="range"]{ width:100%; }
 
     table{
       width:100%;
@@ -97,12 +92,11 @@
       background: rgba(255,255,255,0.65);
     }
     th:first-child, td:first-child{ text-align:left; }
-    tr.sel{ background: rgba(0,0,0,0.04); }
+    tr.cur{ background: rgba(0,0,0,0.04); }
     tr.opt{ outline: 2px solid rgba(34,139,34,0.35); outline-offset: -2px; }
-    tr.badsel{ outline: 2px solid rgba(178,34,34,0.35); outline-offset: -2px; }
 
     .chartCard{
-      height: 320px;
+      height: 280px;
       border:1px solid rgba(0,0,0,0.08);
       border-radius: 14px;
       background: rgba(255,255,255,0.78);
@@ -141,13 +135,7 @@
       font-size: 12px;
       margin-right: 8px;
     }
-
-    .mini{
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.45;
-      margin-top: 6px;
-    }
+    .mini{ font-size: 12px; color: var(--muted); line-height: 1.45; margin-top: 6px; }
   </style>
 
   <script defer src="data.js"></script>
@@ -164,19 +152,21 @@
       <div class="header-inner">
         <div class="title-block">
           <div class="kicker">Macroeconomics Practice Lab</div>
-          <h1>Marginalism: Optimal Choice</h1>
+          <h1>Marginalism (Continuous): MB = MC</h1>
           <p class="sub">
-            Choose the quantity <em>q</em> that maximizes net benefit.
-            The rule: keep going while <strong>MB ≥ MC</strong>, stop when the next unit has <strong>MB &lt; MC</strong>.
+            Adjust quantity <em>q</em> a little more or a little less.
+            The optimal choice is where <strong>MB(q) = MC(q)</strong>, which also maximizes
+            <strong>CNB(q) = TB(q) − TC(q)</strong>.
           </p>
 
           <details class="howto">
             <summary>Instructions</summary>
             <div class="howto-body">
               <ol>
-                <li>Click <strong>New Scenario</strong> to load a context and a schedule of marginal benefits (MB) and marginal costs (MC).</li>
-                <li>Pick a quantity <em>q</em> (0–10). Think “Should I do one more unit?”</li>
-                <li>Click <strong>Check</strong>. The app highlights the <strong>optimal</strong> stopping point.</li>
+                <li>Click <strong>New Scenario</strong>.</li>
+                <li>Use <strong>A little more</strong> / <strong>A little less</strong> to adjust <em>q</em> (like hours of studying, hours worked, dollars spent, etc.).</li>
+                <li>The step size adapts so you can land exactly at the optimum.</li>
+                <li>Click <strong>Check</strong> to highlight the optimum and see the explanation.</li>
               </ol>
             </div>
           </details>
@@ -198,7 +188,7 @@
     <section class="panel">
       <div class="panel-head">
         <h2>Scenario</h2>
-        <p class="panel-sub">Pick the quantity where you stop.</p>
+        <p class="panel-sub">Move <em>q</em> toward MB = MC.</p>
       </div>
 
       <div class="grid2">
@@ -207,28 +197,38 @@
           <div class="scenarioDesc" id="scDesc">Click “New Scenario” to begin.</div>
 
           <div class="controlsRow" style="margin-top:12px;">
-            <span class="pill">Chosen quantity: <span id="qVal">0</span></span>
-            <span class="pill">Cumulative net benefit: <span id="cumVal">0</span></span>
-          </div>
-
-          <div class="control">
-            <label for="qSlider">Choose quantity <em>q</em></label>
-            <input id="qSlider" type="range" min="0" max="10" step="1" value="0">
+            <span class="pill">q: <span id="qVal">0.00</span></span>
+            <span class="pill">MB(q): <span id="mbVal">—</span></span>
+            <span class="pill">MC(q): <span id="mcVal">—</span></span>
           </div>
 
           <div class="controlsRow">
-            <button id="minusBtn" class="btn subtle">−1</button>
-            <button id="plusBtn" class="btn subtle">+1</button>
+            <span class="pill">TB(q): <span id="tbVal">—</span></span>
+            <span class="pill">TC(q): <span id="tcVal">—</span></span>
+            <span class="pill">CNB(q): <span id="cnbVal">—</span></span>
+          </div>
+
+          <div class="controlsRow" style="margin-top:10px;">
+            <button id="lessBtn" class="btn subtle">A little less</button>
+            <button id="moreBtn" class="btn subtle">A little more</button>
+            <span class="pill">Step: <span id="stepVal">—</span></span>
+          </div>
+
+          <div class="control">
+            <label for="qSlider">Adjust q (continuous)</label>
+            <input id="qSlider" type="range" min="0" max="10" step="0.01" value="0">
           </div>
 
           <table>
             <thead>
               <tr>
-                <th>Unit</th>
-                <th>MB</th>
-                <th>MC</th>
-                <th>MB−MC</th>
-                <th>Cumulative</th>
+                <th>Point</th>
+                <th>q</th>
+                <th>MB(q)</th>
+                <th>MC(q)</th>
+                <th>TB(q)</th>
+                <th>TC(q)</th>
+                <th>CNB(q)</th>
               </tr>
             </thead>
             <tbody id="tableBody"></tbody>
@@ -244,10 +244,8 @@
           <div class="mini" style="margin-top:12px;"><strong>Total benefit and total cost</strong></div>
           <div class="chartCard"><canvas id="chart3"></canvas></div>
 
-          <div class="mini" style="margin-top:12px;"><strong>Cumulative net benefit</strong></div>
+          <div class="mini" style="margin-top:12px;"><strong>Cumulative net benefit (TB − TC)</strong></div>
           <div class="chartCard"><canvas id="chart2"></canvas></div>
-
-          <div class="mini">Tip: the optimal <em>q</em> is where cumulative net benefit is highest.</div>
         </div>
       </div>
     </section>
