@@ -445,7 +445,7 @@ Changes in reserves (OMO) or demand shifts can change the Federal Funds Rate and
     const { ctx, W, H, dpr } = setupCanvas(els.resCanvas);
     ctx.clearRect(0,0,W,H);
 
-    const { X0,X1,Y0,Y1 } = drawAxes(ctx,W,H,dpr,"Reserves (R)","Federal funds rate (i_ff, %)");
+    const { X0,X1,Y0,Y1 } = drawAxes(ctx,W,H,dpr,"Reserves (R)","Federal funds rate (FF%)");
 
     const Rmin = D.chart.Rmin, Rmax = D.chart.Rmax;
     const imin = D.chart.imin, imax = D.chart.imax;
