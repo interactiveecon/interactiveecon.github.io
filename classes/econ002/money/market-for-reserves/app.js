@@ -158,12 +158,12 @@
 
     const u = Math.random();
 
-    if (u < 0.60){
+    if (u < 0.50){
       // floor region
       const lo = Math.min(Rmax, Rf + 5);
       const hi = Rmax;
       R_base = Math.floor(lo + Math.random()*(hi - lo + 1));
-    } else if (u < 0.90){
+    } else if (u < 1.0){
       // middle
       const lo = Math.max(Rmin, Rc + 5);
       const hi = Math.min(Rmax, Rf - 5);
