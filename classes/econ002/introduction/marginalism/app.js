@@ -45,22 +45,21 @@ window.addEventListener("DOMContentLoaded", () => {
   let checked = false;
 
   // MB(q)=a-bq, MC(q)=c+dq
-  const MB = (q) => cur.mb.a - cur.mb.b * q;
-  const MC = (q) => cur.mc.c + cur.mc.d * q;
+  const MB = (x) => cur.mb.a - cur.mb.b * x;
+  const MC = (x) => cur.mc.c + cur.mc.d * x;
 
   // TB(q)=∫0^q MB(x) dx = a q - (b/2) q^2
-  const TB = (q) => cur.mb.a * q - 0.5 * cur.mb.b * q * q;
+  const TB = (x) => cur.mb.a * x - 0.5 * cur.mb.b * x * x;
 
   // TC(q)=∫0^q MC(x) dx = c q + (d/2) q^2
-  const TC = (q) => cur.mc.c * q + 0.5 * cur.mc.d * q * q;
+  const TC = (x) => cur.mc.c * x + 0.5 * cur.mc.d * x * x;
 
-  const CNB = (q) => TB(q) - TC(q);
+  const CNB = (x) => TB(x) - TC(x);
 
-  // Optimal q*: MB(q*)=MC(q*) => a - b q* = c + d q* => q* = (a-c)/(b+d)
+  // Optimal q*: MB(q*)=MC(q*) => q*=(a-c)/(b+d)
   function qStar(){
     const a = cur.mb.a, b = cur.mb.b, c = cur.mc.c, d = cur.mc.d;
-    const qs = (a - c) / (b + d);
-    return clamp(qs, 0, cur.qMax);
+    return clamp((a - c) / (b + d), 0, cur.qMax);
   }
 
   function pickScenario(){
@@ -69,13 +68,12 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function fmt(x){ return (Number.isFinite(x) ? x.toFixed(2) : "—"); }
 
-  // Adaptive step: move halfway toward q*, but never smaller than 0.01
-  // If we are within 0.02 of q*, snap exactly to q* to “land” on it.
+  // Step size: move halfway toward q*, capped. Snap rule: if step < 0.25, snap to q*.
   function computeStep(){
     const target = qStar();
     const dist = Math.abs(target - q);
-    if (dist <= 0.02) return dist;            // snap range
-    return Math.max(0.01, Math.min(0.75, dist/2));
+    const step = Math.max(0.01, Math.min(0.75, dist/2));
+    return step;
   }
 
   function setQ(newQ){
@@ -91,8 +89,8 @@ window.addEventListener("DOMContentLoaded", () => {
     const dist = target - q;
     const step = computeStep();
 
-    // If close enough, snap
-    if (Math.abs(dist) <= 0.02) {
+    // ✅ snap when step < 0.25
+    if (step < 0.25) {
       setQ(target);
       return;
     }
@@ -112,8 +110,12 @@ window.addEventListener("DOMContentLoaded", () => {
     els.qSlider.max = sc.qMax;
     els.qSlider.step = 0.01;
 
-    // Start at a non-trivial point
-    q = clamp(sc.qMax * 0.25, 0, sc.qMax);
+    // ✅ randomly start below or above q*
+    const qs = qStar();
+    const startDist = 2.0 + Math.random()*2.0; // between 2 and 4 away
+    const startBelow = Math.random() < 0.5;
+    const startQ = startBelow ? (qs - startDist) : (qs + startDist);
+    q = clamp(startQ, 0, sc.qMax);
     els.qSlider.value = String(q);
 
     els.feedback.style.display = "none";
@@ -135,8 +137,9 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function renderTable(){
     const qs = qStar();
-    const prev = clamp(q - 0.25, 0, cur.qMax);
-    const next = clamp(q + 0.25, 0, cur.qMax);
+    // ✅ previous/next use q-1 and q+1 (clamped)
+    const prev = clamp(q - 1, 0, cur.qMax);
+    const next = clamp(q + 1, 0, cur.qMax);
 
     const rows = [
       { label:"Previous", q: prev },
@@ -146,7 +149,8 @@ window.addEventListener("DOMContentLoaded", () => {
     ];
 
     els.tableBody.innerHTML = rows.map(r => {
-      const cls = (Math.abs(r.q - q) < 1e-9) ? "cur" : (checked && r.label==="Optimal" ? "opt" : "");
+      const isCur = Math.abs(r.q - q) < 1e-9;
+      const cls = isCur ? "cur" : (checked && r.label==="Optimal" ? "opt" : "");
       return `
         <tr class="${cls}">
           <td>${r.label}</td>
@@ -218,7 +222,6 @@ window.addEventListener("DOMContentLoaded", () => {
       else ctx.lineTo(xTo(x), yTo(y));
     }
     ctx.stroke();
-
     return { xTo, yTo };
   }
 
@@ -246,18 +249,11 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.clearRect(0,0,W,H);
       const { X0,X1,Y0,Y1 } = drawAxes(ctx,W,H,dpr, "q", "Marginal value");
 
-      // y range
-      const samples = [0, cur.qMax, qs, q];
-      let yMin = Infinity, yMax = -Infinity;
-      for (const x of samples){
-        yMin = Math.min(yMin, MB(x), MC(x));
-        yMax = Math.max(yMax, MB(x), MC(x));
-      }
-      yMin = Math.min(yMin, 0);
-      yMax = yMax * 1.10;
+      let yMin = Math.min(MB(cur.qMax), MC(0), 0);
+      let yMax = Math.max(MB(0), MC(cur.qMax)) * 1.10;
 
       const mbMap = drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, yMin,yMax, MB, "rgba(31,119,180,0.90)", dpr);
-      const mcMap = drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, yMin,yMax, MC, "rgba(230,159,0,0.95)", dpr);
+      drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, yMin,yMax, MC, "rgba(230,159,0,0.95)", dpr);
 
       const xTo = mbMap.xTo, yTo = mbMap.yTo;
       drawVLine(ctx, xTo(q), Y0, Y1, dpr);
@@ -279,12 +275,10 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.clearRect(0,0,W,H);
       const { X0,X1,Y0,Y1 } = drawAxes(ctx,W,H,dpr, "q", "Total");
 
-      // y range
       const yMax = Math.max(TB(cur.qMax), TC(cur.qMax)) * 1.05 + 1e-9;
-      const yMin = 0;
 
-      const tbMap = drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, yMin,yMax, TB, "rgba(31,119,180,0.90)", dpr);
-      drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, yMin,yMax, TC, "rgba(230,159,0,0.95)", dpr);
+      const tbMap = drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, 0,yMax, TB, "rgba(31,119,180,0.90)", dpr);
+      drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, 0,yMax, TC, "rgba(230,159,0,0.95)", dpr);
 
       const xTo = tbMap.xTo, yTo = tbMap.yTo;
       drawVLine(ctx, xTo(q), Y0, Y1, dpr);
@@ -301,7 +295,6 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.clearRect(0,0,W,H);
       const { X0,X1,Y0,Y1 } = drawAxes(ctx,W,H,dpr, "q", "CNB");
 
-      // y range by sampling
       let ymin = Infinity, ymax = -Infinity;
       for (let i=0;i<=200;i++){
         const x = (i/200)*cur.qMax;
@@ -338,7 +331,13 @@ window.addEventListener("DOMContentLoaded", () => {
   function reset(){
     if (!cur) return;
     checked = false;
-    setQ(cur.qMax * 0.25);
+
+    // randomize around q* on reset too
+    const qs = qStar();
+    const startDist = 2.0 + Math.random()*2.0;
+    const startBelow = Math.random() < 0.5;
+    setQ(startBelow ? (qs - startDist) : (qs + startDist));
+
     els.feedback.style.display = "none";
     els.feedback.innerHTML = "";
     setStatus("Reset quantity. Move toward MB = MC.");
@@ -350,8 +349,8 @@ window.addEventListener("DOMContentLoaded", () => {
 
     const qs = qStar();
     const gap = Math.abs(MB(q) - MC(q));
+    const ok = gap <= 0.05;
 
-    const ok = gap <= 0.05; // within 5 cents (or 0.05 units)
     els.feedback.style.display = "block";
     els.feedback.innerHTML = `
       ${ok ? `<span class="tagOK">Close enough</span>` : `<span class="tagBad">Not yet</span>`}
