@@ -152,7 +152,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function drawAxes(ctx, W, H, dpr, xLabel, yLabel){
-    const pad = { l: 52*dpr, r: 14*dpr, t: 14*dpr, b: 38*dpr }; // slightly larger left/bottom for labels
+    const pad = { l: 52*dpr, r: 14*dpr, t: 14*dpr, b: 38*dpr };
     const X0 = pad.l, X1 = W - pad.r;
     const Y0 = pad.t, Y1 = H - pad.b;
 
@@ -170,10 +170,10 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.fillStyle = "rgba(0,0,0,0.70)";
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText(xLabel, (X0+X1)/2, Y1 + 12*dpr);
+    ctx.fillText(xLabel, (X0+X1)/2, Y1 + 18*dpr);
 
     ctx.save();
-    ctx.translate(X0 - 36*dpr, (Y0+Y1)/2);
+    ctx.translate(X0 - 42*dpr, (Y0+Y1)/2);
     ctx.rotate(-Math.PI/2);
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillText(yLabel, 0, 0);
@@ -227,13 +227,13 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.setLineDash([]);
   }
 
-  function drawValueAtYAxis(ctx, X0, yDot, text, dpr){
-    ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
-    ctx.textAlign = "right";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, X0 - 6*dpr, yDot);
-  }
+  function drawValueAtYAxis(ctx, X0, yDot, valueText, dpr){
+  ctx.fillStyle = "rgba(0,0,0,0.65)";
+  ctx.font = `${11*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`; // slightly smaller
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  ctx.fillText(valueText, X0 - 12*dpr, yDot); // farther left from axis
+}
 
   function drawXTick(ctx, x, Y1, label, dpr){
     ctx.strokeStyle = "rgba(0,0,0,0.35)";
@@ -303,7 +303,7 @@ window.addEventListener("DOMContentLoaded", () => {
   function drawCharts(){
     const qs = qStar();
 
-    // Chart 1: MB & MC + anchoring ticks (0 and current q)
+    // Chart 1: MB & MC
     {
       const { ctx, W, H, dpr } = setupCanvas(els.chart1);
       ctx.clearRect(0,0,W,H);
@@ -325,14 +325,11 @@ window.addEventListener("DOMContentLoaded", () => {
 
       const xTo = mbMap.xTo, yTo = mbMap.yTo;
 
-      // x-axis anchor ticks: 0 and current q
       drawXTick(ctx, xTo(0), Y1, "0", dpr);
       drawXTick(ctx, xTo(q), Y1, fmt(q), dpr);
 
-      // vertical at q
       drawVLine(ctx, xTo(q), Y0, Y1, dpr);
 
-      // dots and horizontal guides + y labels
       const xDot = xTo(q);
       const mbDotY = yTo(MB(q));
       const mcDotY = yTo(MC(q));
@@ -340,8 +337,8 @@ window.addEventListener("DOMContentLoaded", () => {
       drawHToYAxis(ctx, xDot, mbDotY, X0, dpr);
       drawHToYAxis(ctx, xDot, mcDotY, X0, dpr);
 
-      drawValueAtYAxis(ctx, X0, mbDotY, `MB=${fmt(MB(q))}`, dpr);
-      drawValueAtYAxis(ctx, X0, mcDotY, `MC=${fmt(MC(q))}`, dpr);
+      drawValueAtYAxis(ctx, X0, mbDotY, fmt(MB(q)), dpr);
+      drawValueAtYAxis(ctx, X0, mcDotY, fmt(MC(q)), dpr);
 
       drawMarker(ctx, xDot, mbDotY, mbColor, dpr);
       drawMarker(ctx, xDot, mcDotY, mcColor, dpr);
@@ -355,7 +352,7 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // Chart 3: TB & TC + anchoring ticks (0 and current q)
+    // Chart 3: TB & TC
     {
       const { ctx, W, H, dpr } = setupCanvas(els.chart3);
       ctx.clearRect(0,0,W,H);
@@ -388,8 +385,8 @@ window.addEventListener("DOMContentLoaded", () => {
       drawHToYAxis(ctx, xDot, tbDotY, X0, dpr);
       drawHToYAxis(ctx, xDot, tcDotY, X0, dpr);
 
-      drawValueAtYAxis(ctx, X0, tbDotY, `TB=${fmt(TB(q))}`, dpr);
-      drawValueAtYAxis(ctx, X0, tcDotY, `TC=${fmt(TC(q))}`, dpr);
+      drawValueAtYAxis(ctx, X0, tbDotY, fmt(TB(q)), dpr);
+      drawValueAtYAxis(ctx, X0, tcDotY, fmt(TC(q)), dpr);
 
       drawMarker(ctx, xDot, tbDotY, tbColor, dpr);
       drawMarker(ctx, xDot, tcDotY, tcColor, dpr);
@@ -399,7 +396,7 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // Chart 2: CNB (unchanged)
+    // Chart 2: CNB (NOW with 0/current q ticks + dashed y guide + y-axis label)
     {
       const { ctx, W, H, dpr } = setupCanvas(els.chart2);
       ctx.clearRect(0,0,W,H);
@@ -418,8 +415,19 @@ window.addEventListener("DOMContentLoaded", () => {
       const nbMap = drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, ymin,ymax, CNB, "rgba(0,0,0,0.75)", dpr);
       const xTo = nbMap.xTo, yTo = nbMap.yTo;
 
+      // x-axis anchor ticks
+      drawXTick(ctx, xTo(0), Y1, "0", dpr);
+      drawXTick(ctx, xTo(q), Y1, fmt(q), dpr);
+
+      // vertical at q
       drawVLine(ctx, xTo(q), Y0, Y1, dpr);
-      drawMarker(ctx, xTo(q), yTo(CNB(q)), "rgba(0,0,0,0.75)", dpr);
+
+      // dot + dashed horizontal to y-axis + label
+      const xDot = xTo(q);
+      const yDot = yTo(CNB(q));
+      drawHToYAxis(ctx, xDot, yDot, X0, dpr);
+      drawValueAtYAxis(ctx, X0, yDot, fmt(CNB(q)), dpr);
+      drawMarker(ctx, xDot, yDot, "rgba(0,0,0,0.75)", dpr);
 
       if (checked){
         drawMarker(ctx, xTo(qs), yTo(CNB(qs)), "rgba(34,120,34,0.95)", dpr);
