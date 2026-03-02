@@ -118,10 +118,10 @@ window.addEventListener("DOMContentLoaded", () => {
 
       tr.innerHTML = `
         <td>Unit ${q}</td>
-        <td>${mb[q-1].toFixed(0)}</td>
-        <td>${mc[q-1].toFixed(0)}</td>
-        <td>${nb.toFixed(0)}</td>
-        <td>${cum[q].toFixed(0)}</td>
+        <td>${mb[q-1].toFixed(2)}</td>
+        <td>${mc[q-1].toFixed(2)}</td>
+        <td>${nb.toFixed(2)}</td>
+        <td>${cum[q].toFixed(2)}</td>
       `;
       els.tableBody.appendChild(tr);
     }
