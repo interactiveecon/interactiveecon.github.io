@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Keynesian Cross & IS Mechanism Lab</title>
+
+  <link rel="stylesheet" href="/assets/style.css">
+
+  <style>
+    .stack{ display:grid; gap:14px; margin-top:18px; }
+    .grid2{ display:grid; grid-template-columns: 1.05fr 0.95fr; gap:12px; align-items:start; }
+    @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
+
+    .box{
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(246,242,234,0.35);
+      padding: 12px;
+    }
+
+    .scenarioTitle{
+      font-weight: 900;
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.25;
+      margin: 0;
+    }
+    .scenarioDesc{
+      margin-top: 8px;
+      color: var(--ink-2);
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-line;
+    }
+
+    .charts{
+      display:grid;
+      gap: 12px;
+    }
+    .chartCard{
+      height: 260px;
+      border:1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.78);
+      padding: 10px;
+    }
+    .chartCard.small{ height: 230px; }
+    canvas{ width:100%; height:100%; display:block; }
+
+    .mini{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+      margin-top: 6px;
+    }
+
+    .controlsGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    @media (max-width: 980px){ .controlsGrid{ grid-template-columns: 1fr; } }
+    .control{
+      border:1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.68);
+      padding: 10px;
+    }
+    .control label{
+      display:block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .control .row{
+      display:flex; justify-content:space-between; align-items:center;
+      gap: 10px;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+      font-weight: 800;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    input[type="range"]{ width: 100%; }
+
+    .pillRow{ display:flex; gap:10px; flex-wrap:wrap; margin-top: 10px; }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(255,255,255,0.75);
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    /* Mechanism */
+    .mechWrap{ margin-top: 12px; }
+    .mechTitle{ font-weight:900; color:var(--ink); font-size:14px; margin: 0 0 6px 0; }
+    .mechSub{ color: var(--ink-2); font-size: 12px; line-height: 1.45; margin:0 0 10px 0; }
+
+    .cardPile{
+      display:flex; flex-wrap:wrap; gap:8px;
+      padding: 10px;
+      border-radius: 14px;
+      border:1px solid rgba(0,0,0,0.08);
+      background: rgba(255,255,255,0.65);
+      margin-bottom: 10px;
+      min-height: 44px;
+    }
+    .mcard{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.12);
+      background: rgba(255,255,255,0.85);
+      cursor: grab;
+      user-select: none;
+      font-weight: 900;
+      color: var(--ink);
+      font-size: 12px;
+      min-width: 44px;
+    }
+    .mcard:active{ cursor: grabbing; }
+    .mcard.ok{ border-color: rgba(34,139,34,0.35); }
+    .mcard.bad{ border-color: rgba(178,34,34,0.40); }
+
+    .chain{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 14px;
+      border:1px solid rgba(0,0,0,0.08);
+      background: rgba(255,255,255,0.68);
+    }
+    .node{
+      display:flex; flex-direction:column; align-items:center; gap:6px;
+      min-width: 86px;
+    }
+    .node .lbl{
+      font-size: 12px;
+      color: var(--ink-2);
+      font-weight: 800;
+    }
+    .slot{
+      width: 76px;
+      height: 34px;
+      border-radius: 10px;
+      border: 2px dashed rgba(0,0,0,0.18);
+      background: rgba(255,255,255,0.75);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 900;
+      color: rgba(0,0,0,0.45);
+      font-size: 12px;
+    }
+    .slot.filled{
+      border-style: solid;
+      border-color: rgba(0,0,0,0.12);
+      color: var(--ink);
+    }
+    .slot.dragover{
+      outline: 2px dashed rgba(0,0,0,0.25);
+      outline-offset: 4px;
+    }
+    .arrow{
+      font-size: 16px;
+      color: rgba(0,0,0,0.45);
+      font-weight: 900;
+      margin-top: 14px;
+    }
+
+    .feedback{
+      margin-top: 12px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+      padding-top: 10px;
+      display:none;
+      color: var(--ink-2);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .tagOK{
+      display:inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(34,139,34,0.12);
+      border: 1px solid rgba(34,139,34,0.25);
+      color: rgba(34,120,34,1);
+      font-weight: 800;
+      font-size: 12px;
+      margin-right: 8px;
+    }
+    .tagBad{
+      display:inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(178,34,34,0.10);
+      border: 1px solid rgba(178,34,34,0.25);
+      color: rgba(140,0,0,0.95);
+      font-weight: 800;
+      font-size: 12px;
+      margin-right: 8px;
+    }
+  </style>
+
+  <script defer src="data.js"></script>
+  <script defer src="app.js"></script>
+</head>
+
+<body>
+  <header class="page-header">
+    <div class="container">
+      <nav class="crumbbar">
+        <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
+      </nav>
+
+      <div class="header-inner">
+        <div class="title-block">
+          <div class="kicker">Macroeconomics Practice Lab</div>
+          <h1>Keynesian Cross & IS: Mechanism</h1>
+          <p class="sub">
+            See how <strong>r</strong>, <strong>G</strong>, and <strong>T</strong> shift planned expenditure and move equilibrium output.
+            Then build the causal chain using drag-and-drop.
+          </p>
+
+          <details class="howto">
+            <summary>Instructions</summary>
+            <div class="howto-body">
+              <ol>
+                <li>Click <strong>New Scenario</strong> to get a shock to one variable (r, G, or T).</li>
+                <li>Use the sliders to match the new value and watch the graphs update.</li>
+                <li>Drag the cards (↑ / ↓ / no change) into the chain: <strong>r → I → PE → inventories → Y</strong>.</li>
+                <li>Click <strong>Check Mechanism</strong> for feedback.</li>
+              </ol>
+              <p class="howto-note">
+                Inventory logic: if <strong>PE &lt; Y</strong>, firms have an <strong>unplanned inventory increase</strong> and cut production (Y falls).
+                If <strong>PE &gt; Y</strong>, inventories fall unexpectedly and firms raise production (Y rises).
+              </p>
+            </div>
+          </details>
+        </div>
+
+        <div class="controls-card">
+          <div class="controls-actions">
+            <button id="newBtn" class="btn primary">New Scenario</button>
+            <button id="resetBtn" class="btn subtle">Reset</button>
+            <button id="checkMechBtn" class="btn">Check Mechanism</button>
+            <button id="clearMechBtn" class="btn subtle">Clear Chain</button>
+          </div>
+          <div id="status" class="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container stack">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Graphs + Mechanism</h2>
+        <p class="panel-sub">Keynesian Cross (top) and IS (bottom) update together.</p>
+      </div>
+
+      <div class="grid2">
+        <div class="box">
+          <p class="scenarioTitle" id="scenarioTitle">Scenario</p>
+          <div class="scenarioDesc" id="scenarioDesc">Click “New Scenario” to start.</div>
+
+          <div class="controlsGrid">
+            <div class="control">
+              <label for="rSlider">Interest rate (r)</label>
+              <div class="row"><span>r</span><span id="rVal">—</span></div>
+              <input id="rSlider" type="range" min="0" max="10" step="0.1" value="4">
+            </div>
+
+            <div class="control">
+              <label for="gSlider">Government purchases (G)</label>
+              <div class="row"><span>G</span><span id="gVal">—</span></div>
+              <input id="gSlider" type="range" min="50" max="250" step="5" value="150">
+            </div>
+
+            <div class="control">
+              <label for="tSlider">Taxes (T)</label>
+              <div class="row"><span>T</span><span id="tVal">—</span></div>
+              <input id="tSlider" type="range" min="50" max="250" step="5" value="150">
+            </div>
+          </div>
+
+          <div class="pillRow">
+            <span class="pill">Y* (KC): <span id="yStarKC">—</span></span>
+            <span class="pill">Y (IS at r): <span id="yStarIS">—</span></span>
+            <span class="pill">Planned Expenditure at Y*: <span id="peAtY">—</span></span>
+          </div>
+
+          <div class="mechWrap">
+            <p class="mechTitle">Build the mechanism</p>
+            <p class="mechSub">Drag cards into the blanks to show how the shock changes output.</p>
+
+            <div class="cardPile" id="pile"></div>
+
+            <div class="chain" id="chain">
+              <div class="node">
+                <div class="lbl">r</div>
+                <div class="slot" data-slot="r">drop</div>
+              </div>
+              <div class="arrow">→</div>
+              <div class="node">
+                <div class="lbl">I</div>
+                <div class="slot" data-slot="I">drop</div>
+              </div>
+              <div class="arrow">→</div>
+              <div class="node">
+                <div class="lbl">PE</div>
+                <div class="slot" data-slot="PE">drop</div>
+              </div>
+              <div class="arrow">→</div>
+              <div class="node">
+                <div class="lbl">Inventories</div>
+                <div class="slot" data-slot="INV">drop</div>
+              </div>
+              <div class="arrow">→</div>
+              <div class="node">
+                <div class="lbl">Y</div>
+                <div class="slot" data-slot="Y">drop</div>
+              </div>
+            </div>
+
+            <div class="feedback" id="mechFeedback"></div>
+          </div>
+        </div>
+
+        <div class="box">
+          <div class="charts">
+            <div class="mini"><strong>Keynesian Cross</strong></div>
+            <div class="chartCard"><canvas id="kcCanvas"></canvas></div>
+
+            <div class="mini"><strong>IS curve</strong></div>
+            <div class="chartCard small"><canvas id="isCanvas"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
