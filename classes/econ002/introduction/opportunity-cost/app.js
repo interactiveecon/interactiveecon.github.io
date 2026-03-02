@@ -3,18 +3,18 @@ window.addEventListener("DOMContentLoaded", () => {
   const $ = (id) => document.getElementById(id);
 
   const els = {
-    zoneStage: $("zoneStage"),
-    zoneEXP: $("zoneEXP"),
-    zoneIMP: $("zoneIMP"),
-    zoneNOT: $("zoneNOT"),
-
-    newRoundBtn: $("newRoundBtn"),
-    resetBtn: $("resetBtn"),
+    newBtn: $("newBtn"),
     checkBtn: $("checkBtn"),
-
+    resetBtn: $("resetBtn"),
+    whyBtn: $("whyBtn"),
     status: $("status"),
-    progressMsg: $("progressMsg"),
-    checkMsg: $("checkMsg"),
+
+    qTitle: $("qTitle"),
+    qDesc: $("qDesc"),
+    choices: $("choices"),
+    feedback: $("feedback"),
+    whyBox: $("whyBox"),
+    score: $("score"),
   };
 
   function setStatus(msg){ els.status.textContent = msg; }
@@ -26,166 +26,120 @@ window.addEventListener("DOMContentLoaded", () => {
       .replaceAll('"',"&quot;");
   }
 
-  if (!window.OPPCOST_DATA || !Array.isArray(window.OPPCOST_DATA.cards)) {
-    setStatus("ERROR: data.js did not load (OPPCOST_DATA missing).");
+  if (!window.OPPCOST_MCQ || !Array.isArray(window.OPPCOST_MCQ.scenarios)) {
+    setStatus("ERROR: data.js did not load (OPPCOST_MCQ missing).");
     return;
   }
 
-  const ALL = window.OPPCOST_DATA.cards;
-  let cards = [];
+  const ALL = window.OPPCOST_MCQ.scenarios;
+
+  let current = null;
+  let selected = null;
+  let attempted = 0;
+  let correct = 0;
 
   function shuffle(a){
-    for (let i=a.length-1;i>0;i--){
+    const b = a.slice();
+    for (let i=b.length-1;i>0;i--){
       const j = Math.floor(Math.random()*(i+1));
-      [a[i], a[j]] = [a[j], a[i]];
+      [b[i], b[j]] = [b[j], b[i]];
     }
+    return b;
   }
 
-  function setupDropzone(zoneEl){
-    zoneEl.addEventListener("dragover", (ev) => {
-      ev.preventDefault();
-      zoneEl.classList.add("dragover");
-    });
-    zoneEl.addEventListener("dragleave", () => zoneEl.classList.remove("dragover"));
-    zoneEl.addEventListener("drop", (ev) => {
-      ev.preventDefault();
-      zoneEl.classList.remove("dragover");
-      const id = ev.dataTransfer.getData("text/plain");
-      const z = zoneEl.dataset.zone;
-      const c = cards.find(x => x.id === id);
-      if (!c) return;
-
-      c.zone = z;
-      c.checked = null;
-      c.revealDesc = false;
-
-      renderBoard();
-      updateProgress();
-    });
+  function updateScore(){
+    els.score.textContent = `${correct} correct out of ${attempted} attempted`;
   }
 
-  [els.zoneStage, els.zoneEXP, els.zoneIMP, els.zoneNOT].forEach(setupDropzone);
+  function renderScenario(sc){
+    current = sc;
+    selected = null;
 
-  function renderCardHTML(c){
-    const showDesc = (c.revealDesc === true);
-    return `
-      <div class="ctitle">${escapeHtml(c.title)}</div>
-      ${showDesc ? `<div class="cdesc">${escapeHtml(c.desc)}</div>` : ``}
-    `;
+    els.qTitle.textContent = sc.title;
+    els.qDesc.textContent = sc.desc;
+
+    // Randomize option order but keep track of correct
+    const idxs = shuffle([0,1,2,3]);
+    const opts = idxs.map(i => ({ text: sc.options[i], origIndex: i }));
+    const correctPos = opts.findIndex(o => o.origIndex === sc.correct);
+
+    current._opts = opts;
+    current._correctPos = correctPos;
+
+    els.choices.innerHTML = opts.map((o, k) => `
+      <label class="choice">
+        <input type="radio" name="oc" value="${k}">
+        <div class="choiceText">${escapeHtml(o.text)}</div>
+      </label>
+    `).join("");
+
+    els.feedback.style.display = "none";
+    els.feedback.innerHTML = "";
+    els.whyBox.style.display = "none";
+
+    setStatus("Pick an answer, then click Check.");
   }
 
-  function renderBoard(){
-    els.zoneStage.innerHTML = "";
-    els.zoneEXP.innerHTML = "";
-    els.zoneIMP.innerHTML = "";
-    els.zoneNOT.innerHTML = "";
-
-    if (!cards.length){
-      const msg = document.createElement("div");
-      msg.className = "mini";
-      msg.textContent = "No cards loaded. Click New Round.";
-      els.zoneStage.appendChild(msg);
-      return;
-    }
-
-    for (const c of cards){
-      const el = document.createElement("div");
-      el.className = "card";
-      if (c.checked === true) el.classList.add("ok");
-      if (c.checked === false) el.classList.add("bad");
-      el.draggable = true;
-
-      el.innerHTML = renderCardHTML(c);
-
-      el.addEventListener("dragstart", (ev) => {
-        ev.dataTransfer.setData("text/plain", c.id);
-        ev.dataTransfer.effectAllowed = "move";
-      });
-
-      const zoneEl =
-        (c.zone === "STAGE") ? els.zoneStage :
-        (c.zone === "EXP")   ? els.zoneEXP :
-        (c.zone === "IMP")   ? els.zoneIMP :
-        els.zoneNOT;
-
-      zoneEl.appendChild(el);
-    }
+  function newScenario(){
+    const sc = ALL[Math.floor(Math.random()*ALL.length)];
+    renderScenario(sc);
   }
 
-  function updateProgress(){
-    const total = cards.length;
-    const placed = cards.filter(c => c.zone !== "STAGE").length;
-    els.progressMsg.textContent = `Progress: ${placed}/${total} placed.`;
+  function reset(){
+    selected = null;
+    els.feedback.style.display = "none";
+    els.feedback.innerHTML = "";
+    els.whyBox.style.display = "none";
+
+    // clear selection UI
+    const radios = els.choices.querySelectorAll('input[name="oc"]');
+    radios.forEach(r => r.checked = false);
+
+    setStatus("Selection cleared. Choose an answer and click Check.");
+  }
+
+  function getSelected(){
+    const sel = els.choices.querySelector('input[name="oc"]:checked');
+    return sel ? Number(sel.value) : null;
   }
 
   function check(){
-    let correct = 0, placed = 0;
-    const mistakes = [];
-
-    for (const c of cards){
-      if (c.zone === "STAGE"){
-        c.checked = null;
-        c.revealDesc = false;
-        continue;
-      }
-      placed++;
-      c.checked = (c.zone === c.correct);
-      c.revealDesc = (c.checked === false);
-      if (c.checked) correct++;
-      else mistakes.push(c);
+    if (!current){
+      setStatus("Click New Scenario first.");
+      return;
+    }
+    const sel = getSelected();
+    if (sel === null || !Number.isFinite(sel)){
+      setStatus("Please select an option first.");
+      return;
     }
 
-    renderBoard();
-    updateProgress();
+    attempted += 1;
+    const ok = (sel === current._correctPos);
+    if (ok) correct += 1;
+    updateScore();
 
-    els.checkMsg.textContent =
-      placed === 0 ? "Place some cards first."
-      : `${correct}/${placed} placed cards correct.`;
+    const correctText = current._opts[current._correctPos].text;
+    const chosenText = current._opts[sel].text;
 
-    if (mistakes.length){
-      const m = mistakes.slice(0,3)
-        .map(x => `• ${x.title}: ${x.explain}`)
-        .join("  ");
-      setStatus(`Explanations (first few): ${m}`);
-    } else if (placed > 0){
-      setStatus("Nice — everything placed correctly.");
-    }
+    els.feedback.style.display = "block";
+    els.feedback.innerHTML = `
+      ${ok ? `<span class="tagOK">Correct</span>` : `<span class="tagBad">Not quite</span>`}
+      <strong>Opportunity cost:</strong> ${escapeHtml(correctText)}<br>
+      ${ok ? `` : `<strong>You chose:</strong> ${escapeHtml(chosenText)}<br>`}
+      <strong>Explanation:</strong> ${escapeHtml(current.explain)}
+    `;
+
+    setStatus(ok ? "Nice." : "Review the explanation and try another scenario.");
   }
 
-  function newRound(){
-    const pool = ALL.slice();
-    shuffle(pool);
-
-    const n = Math.min(12, pool.length);
-    cards = pool.slice(0, n).map(c => ({
-      ...c,
-      zone:"STAGE",
-      checked:null,
-      revealDesc:false
-    }));
-
-    els.checkMsg.textContent = "";
-    setStatus("New round loaded.");
-    renderBoard();
-    updateProgress();
-  }
-
-  function resetBoard(){
-    for (const c of cards){
-      c.zone = "STAGE";
-      c.checked = null;
-      c.revealDesc = false;
-    }
-    els.checkMsg.textContent = "";
-    setStatus("Reset.");
-    renderBoard();
-    updateProgress();
-  }
-
-  els.newRoundBtn.addEventListener("click", newRound);
-  els.resetBtn.addEventListener("click", resetBoard);
+  els.newBtn.addEventListener("click", newScenario);
   els.checkBtn.addEventListener("click", check);
+  els.resetBtn.addEventListener("click", reset);
+  els.whyBtn.addEventListener("click", () => {
+    els.whyBox.style.display = (els.whyBox.style.display === "none") ? "block" : "none";
+  });
 
-  renderBoard();
-  newRound();
+  updateScore();
+  newScenario();
 });
