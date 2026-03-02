@@ -182,17 +182,17 @@
     const reg = region(R, ior);
 if (reg === "floor"){
   return `<span class="tagOK">Pinned at IOR</span>
-  The equilibrium is on the <strong>floor</strong>: \$begin:math:text$ i\_\{ff\} \= IOR \\$end:math:text$.
-  Small changes in reserves won’t change \$begin:math:text$ i\_\{ff\} \\$end:math:text$ or \$begin:math:text$ M \\$end:math:text$ unless reserves fall enough to leave the floor.`;
+  The equilibrium is on the <strong>floor</strong>: Federal Funds Rate equals the interest rate on reserves.
+  Small changes in reserves won’t change the Federal Funds Rate or Money Supply unless reserves fall enough to leave the floor.`;
 }
 if (reg === "ceiling"){
   return `<span class="tagOK">Pinned at discount rate</span>
-  The equilibrium is on the <strong>ceiling</strong>: \$begin:math:text$ i\_\{ff\} \= i\_\{disc\} \\$end:math:text$.
-  Small changes in reserves won’t change \$begin:math:text$ i\_\{ff\} \\$end:math:text$ or \$begin:math:text$ M \\$end:math:text$ unless reserves rise enough to leave the ceiling.`;
+  The equilibrium is on the <strong>ceiling</strong>: Federal Funds Rate equals the discount rate.
+  Small changes in reserves won’t change the Federal Funds Rate or the Money Supply unless reserves rise enough to leave the ceiling.`;
 }
 return `<span class="tagOK">Middle region</span>
 The equilibrium is on the <strong>sloped</strong> section.
-Changes in reserves (OMO) or demand shifts can change \$begin:math:text$ i\_\{ff\} \\$end:math:text$, and then \$begin:math:text$ M \\$end:math:text$.`;
+Changes in reserves (OMO) or demand shifts can change the Federal Funds Rate and the Money Supply`;
   }
 
   // ---------- Scenario ----------
