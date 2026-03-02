@@ -95,7 +95,6 @@ window.addEventListener("DOMContentLoaded", () => {
     els.qSlider.max = sc.qMax;
     els.qSlider.step = 0.01;
 
-    // start randomly above/below q*
     const qs = qStar();
     const startDist = 2.0 + Math.random()*2.0;
     const startBelow = Math.random() < 0.5;
@@ -153,7 +152,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function drawAxes(ctx, W, H, dpr, xLabel, yLabel){
-    const pad = { l: 46*dpr, r: 14*dpr, t: 14*dpr, b: 34*dpr };
+    const pad = { l: 52*dpr, r: 14*dpr, t: 14*dpr, b: 38*dpr }; // slightly larger left/bottom for labels
     const X0 = pad.l, X1 = W - pad.r;
     const Y0 = pad.t, Y1 = H - pad.b;
 
@@ -171,10 +170,10 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.fillStyle = "rgba(0,0,0,0.70)";
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText(xLabel, (X0+X1)/2, Y1 + 10*dpr);
+    ctx.fillText(xLabel, (X0+X1)/2, Y1 + 12*dpr);
 
     ctx.save();
-    ctx.translate(X0 - 32*dpr, (Y0+Y1)/2);
+    ctx.translate(X0 - 36*dpr, (Y0+Y1)/2);
     ctx.rotate(-Math.PI/2);
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillText(yLabel, 0, 0);
@@ -217,7 +216,6 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.setLineDash([]);
   }
 
-  // NEW: dashed horizontal line from dot to y-axis
   function drawHToYAxis(ctx, xDot, yDot, xAxisLeft, dpr){
     ctx.strokeStyle = "rgba(0,0,0,0.30)";
     ctx.lineWidth = 2*dpr;
@@ -229,9 +227,30 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.setLineDash([]);
   }
 
-  // NEW: legend box
+  function drawValueAtYAxis(ctx, X0, yDot, text, dpr){
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, X0 - 6*dpr, yDot);
+  }
+
+  function drawXTick(ctx, x, Y1, label, dpr){
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
+    ctx.lineWidth = 2*dpr;
+    ctx.beginPath();
+    ctx.moveTo(x, Y1);
+    ctx.lineTo(x, Y1 + 6*dpr);
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(label, x, Y1 + 8*dpr);
+  }
+
   function drawLegend(ctx, X0, Y0, dpr, items){
-    // items: [{label, color}]
     const pad = 8*dpr;
     const lineW = 18*dpr;
     const lineH = 16*dpr;
@@ -241,7 +260,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const boxW = pad*2 + lineW + 8*dpr + Math.max(...widths);
     const boxH = pad*2 + items.length*lineH;
 
-    // box
     ctx.fillStyle = "rgba(255,255,255,0.78)";
     ctx.strokeStyle = "rgba(0,0,0,0.10)";
     ctx.lineWidth = 1*dpr;
@@ -250,7 +268,6 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.fill();
     ctx.stroke();
 
-    // items
     let y = Y0 + 6*dpr + pad + 2*dpr;
     for (const it of items){
       const x = X0 + 6*dpr + pad;
@@ -269,7 +286,6 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // roundRect polyfill for older canvas contexts
   if (!CanvasRenderingContext2D.prototype.roundRect) {
     CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
       const rr = Math.min(r, w/2, h/2);
@@ -287,7 +303,7 @@ window.addEventListener("DOMContentLoaded", () => {
   function drawCharts(){
     const qs = qStar();
 
-    // Chart 1: MB & MC (with legend + dashed y guides for dots)
+    // Chart 1: MB & MC + anchoring ticks (0 and current q)
     {
       const { ctx, W, H, dpr } = setupCanvas(els.chart1);
       ctx.clearRect(0,0,W,H);
@@ -302,7 +318,6 @@ window.addEventListener("DOMContentLoaded", () => {
       const mbMap = drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, yMin,yMax, MB, mbColor, dpr);
       drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, yMin,yMax, MC, mcColor, dpr);
 
-      // legend
       drawLegend(ctx, X0, Y0, dpr, [
         { label:"MB", color: mbColor },
         { label:"MC", color: mcColor }
@@ -310,17 +325,23 @@ window.addEventListener("DOMContentLoaded", () => {
 
       const xTo = mbMap.xTo, yTo = mbMap.yTo;
 
+      // x-axis anchor ticks: 0 and current q
+      drawXTick(ctx, xTo(0), Y1, "0", dpr);
+      drawXTick(ctx, xTo(q), Y1, fmt(q), dpr);
+
       // vertical at q
       drawVLine(ctx, xTo(q), Y0, Y1, dpr);
 
-      // dots
+      // dots and horizontal guides + y labels
+      const xDot = xTo(q);
       const mbDotY = yTo(MB(q));
       const mcDotY = yTo(MC(q));
-      const xDot = xTo(q);
 
-      // dashed horizontal guides to y-axis
       drawHToYAxis(ctx, xDot, mbDotY, X0, dpr);
       drawHToYAxis(ctx, xDot, mcDotY, X0, dpr);
+
+      drawValueAtYAxis(ctx, X0, mbDotY, `MB=${fmt(MB(q))}`, dpr);
+      drawValueAtYAxis(ctx, X0, mcDotY, `MC=${fmt(MC(q))}`, dpr);
 
       drawMarker(ctx, xDot, mbDotY, mbColor, dpr);
       drawMarker(ctx, xDot, mcDotY, mcColor, dpr);
@@ -334,7 +355,7 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // Chart 3: TB & TC (with legend + dashed y guides for dots)
+    // Chart 3: TB & TC + anchoring ticks (0 and current q)
     {
       const { ctx, W, H, dpr } = setupCanvas(els.chart3);
       ctx.clearRect(0,0,W,H);
@@ -354,6 +375,10 @@ window.addEventListener("DOMContentLoaded", () => {
       ]);
 
       const xTo = tbMap.xTo, yTo = tbMap.yTo;
+
+      drawXTick(ctx, xTo(0), Y1, "0", dpr);
+      drawXTick(ctx, xTo(q), Y1, fmt(q), dpr);
+
       drawVLine(ctx, xTo(q), Y0, Y1, dpr);
 
       const xDot = xTo(q);
@@ -363,6 +388,9 @@ window.addEventListener("DOMContentLoaded", () => {
       drawHToYAxis(ctx, xDot, tbDotY, X0, dpr);
       drawHToYAxis(ctx, xDot, tcDotY, X0, dpr);
 
+      drawValueAtYAxis(ctx, X0, tbDotY, `TB=${fmt(TB(q))}`, dpr);
+      drawValueAtYAxis(ctx, X0, tcDotY, `TC=${fmt(TC(q))}`, dpr);
+
       drawMarker(ctx, xDot, tbDotY, tbColor, dpr);
       drawMarker(ctx, xDot, tcDotY, tcColor, dpr);
 
@@ -371,7 +399,7 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // Chart 2: CNB (leave as-is)
+    // Chart 2: CNB (unchanged)
     {
       const { ctx, W, H, dpr } = setupCanvas(els.chart2);
       ctx.clearRect(0,0,W,H);
