@@ -21,10 +21,20 @@
     // multiplier section
     newMultBtn: $("newMultBtn"),
     multPrompt: $("multPrompt"),
-    multPile: $("multPile"),
     multFeedback: $("multFeedback"),
-    checkMultBtn: $("checkMultBtn"),
-    clearMultBtn: $("clearMultBtn"),
+
+    // pools
+    pool1: $("pool1"),
+    pool2: $("pool2"),
+    pool3: $("pool3"),
+
+    // checks/clears
+    checkM1: $("checkM1"),
+    clearM1: $("clearM1"),
+    checkM2: $("checkM2"),
+    clearM2: $("clearM2"),
+    checkM3: $("checkM3"),
+    clearM3: $("clearM3"),
   };
 
   const DATA = window.SOLVER_DATA;
@@ -34,8 +44,8 @@
   let YstarVal = null;
 
   // Multiplier scenario state
-  let multScenario = null; 
-  // { type: "G"|"T"|"I", dG, dT, dI, dY, multType:"GI"|"TAX", multVal }
+  let multScenario = null;
+  // { type:"G"|"T"|"I", shockName, dShock, multType:"GI"|"TAX", multVal, dY }
 
   function setStatus(msg){ els.status.textContent = msg; }
   function rndInt(a,b){ return Math.floor(a + Math.random()*(b-a+1)); }
@@ -45,6 +55,7 @@
   }
   function fmt2(x){ return Number.isFinite(x) ? x.toFixed(2) : "—"; }
 
+  // -------------------- Problem generation --------------------
   function genProblem(){
     const R = DATA.ranges;
     p = {
@@ -64,12 +75,10 @@
     renderProblem();
     resetReveals();
 
-    // reset question UI
     els.ans.value = "";
     els.resultTag.textContent = "";
     setStatus("New problem loaded.");
 
-    // reset multiplier UI
     resetMultiplierUI();
   }
 
@@ -201,30 +210,32 @@ Y* = ${fmt2(YstarVal)}
     }
     const tol = 0.5;
     const ok = Math.abs(val - YstarVal) <= tol;
-
-    els.resultTag.innerHTML = ok
-      ? `<span class="tagOK">Correct</span>`
-      : `<span class="tagBad">Not quite</span>`;
+    els.resultTag.innerHTML = ok ? `<span class="tagOK">Correct</span>` : `<span class="tagBad">Not quite</span>`;
   }
 
   function revealAnswer(){
     els.resultTag.innerHTML = `<span class="tagOK">Y* = ${fmt2(YstarVal)}</span>`;
   }
 
-  // -------------------- Multiplier Practice --------------------
-  function mkCard(id, text, payload){
+  // -------------------- Multiplier Practice (3-step with separate pools) --------------------
+  function mkCard(text, payload){
     const el = document.createElement("div");
     el.className = "mcard";
     el.textContent = text;
     el.draggable = true;
-    el.dataset.cardId = id;
     el.dataset.payload = JSON.stringify(payload);
     el.addEventListener("dragstart", (ev) => {
-      ev.dataTransfer.setData("text/plain", id);
       ev.dataTransfer.setData("application/json", el.dataset.payload);
       ev.dataTransfer.effectAllowed = "move";
     });
     return el;
+  }
+
+  function setMultFeedback(html){
+    if (!els.multFeedback) return;
+    if (!html){ els.multFeedback.style.display="none"; els.multFeedback.innerHTML=""; return; }
+    els.multFeedback.style.display="block";
+    els.multFeedback.innerHTML = html;
   }
 
   function clearSlots(selector){
@@ -235,46 +246,55 @@ Y* = ${fmt2(YstarVal)}
     });
   }
 
-  function setMultFeedback(html){
-    if (!els.multFeedback) return;
-    if (!html){ els.multFeedback.style.display="none"; els.multFeedback.innerHTML=""; return; }
-    els.multFeedback.style.display="block";
-    els.multFeedback.innerHTML = html;
+  function resetMultiplierUI(){
+    multScenario = null;
+    if (els.multPrompt) els.multPrompt.textContent = "Click “New Multiplier Scenario” to begin.";
+    if (els.pool1) els.pool1.innerHTML = "";
+    if (els.pool2) els.pool2.innerHTML = "";
+    if (els.pool3) els.pool3.innerHTML = "";
+    clearSlots("[data-m1]");
+    clearSlots("[data-m2]");
+    clearSlots("[data-m3]");
+    setMultFeedback("");
   }
 
+  // Drag/drop setup for multiplier section
   function setupDropZones(){
-    const zones = document.querySelectorAll("[data-mslot],[data-vslot]");
+    const zones = document.querySelectorAll("[data-m1],[data-m2],[data-m3]");
     zones.forEach(z => {
       z.addEventListener("dragover", (ev) => { ev.preventDefault(); z.classList.add("dragover"); });
       z.addEventListener("dragleave", () => z.classList.remove("dragover"));
       z.addEventListener("drop", (ev) => {
         ev.preventDefault();
         z.classList.remove("dragover");
+        const raw = ev.dataTransfer.getData("application/json");
+        if (!raw) return;
+        const payload = JSON.parse(raw);
 
-        const payloadRaw = ev.dataTransfer.getData("application/json");
-        if (!payloadRaw) return;
-        const payload = JSON.parse(payloadRaw);
-
-        if (z.dataset.mslot === "mult" && payload.kind !== "mult") return;
-        if (z.dataset.mslot === "shock" && payload.kind !== "shock") return;
-        if (z.dataset.vslot && payload.kind !== "value") return;
+        // Type enforcement by step/slot
+        if (z.dataset.m1){
+          if (z.dataset.m1 === "mult" && payload.kind !== "multSym") return;
+          if (z.dataset.m1 === "shock" && payload.kind !== "shockSym") return;
+        }
+        if (z.dataset.m2){
+          if (payload.kind !== "num") return;
+        }
+        if (z.dataset.m3){
+          if (payload.kind !== "num") return;
+        }
 
         z.textContent = payload.label;
         z.classList.add("filled");
-        z.dataset.payload = payloadRaw;
-
+        z.dataset.payload = raw;
         setMultFeedback("");
       });
     });
   }
 
-  function resetMultiplierUI(){
-    multScenario = null;
-    if (els.multPrompt) els.multPrompt.textContent = "Click “New Multiplier Scenario” to begin.";
-    if (els.multPile) els.multPile.innerHTML = "";
-    clearSlots("[data-mslot]");
-    clearSlots("[data-vslot]");
-    setMultFeedback("");
+  function getPayload(sel){
+    const el = document.querySelector(sel);
+    if (!el || !el.dataset.payload) return null;
+    return JSON.parse(el.dataset.payload);
   }
 
   function newMultiplierScenario(){
@@ -287,106 +307,126 @@ Y* = ${fmt2(YstarVal)}
     const types = ["G","T","I"];
     const type = types[Math.floor(Math.random()*types.length)];
 
-    const shockSizes = [10, 15, 20, 25, 30];
-    const s = shockSizes[Math.floor(Math.random()*shockSizes.length)];
+    const sizes = [10, 15, 20, 25, 30];
+    const s = sizes[Math.floor(Math.random()*sizes.length)];
     const sign = Math.random() < 0.5 ? -1 : 1;
 
-    const dG = (type==="G") ? sign*s : 0;
-    const dT = (type==="T") ? sign*s : 0;
-    const dI = (type==="I") ? sign*s : 0;
+    const shockName = (type==="G") ? "ΔG" : (type==="T") ? "ΔT" : "ΔI";
+    const varName = (type==="G") ? "G" : (type==="T") ? "T" : "Investment (I)";
+    const dirWord = sign > 0 ? "increases" : "decreases";
+
+    const dShock = sign * s;
 
     const multType = (type==="T") ? "TAX" : "GI";
     const multVal = (multType==="TAX") ? multTax : multGI;
 
-    const dY = multVal * (type==="G" ? dG : type==="T" ? dT : dI);
+    const dY = multVal * dShock;
 
-    multScenario = { type, dG, dT, dI, dY, multType, multVal };
+    multScenario = { type, shockName, dShock, multType, multVal, dY };
 
-    const arrow = sign>0 ? "increases" : "decreases";
-    const varName = (type==="G") ? "G" : (type==="T") ? "T" : "Investment (I)";
-    els.multPrompt.textContent =
-      `Scenario: ${varName} ${arrow}. Build ΔY using the correct multiplier and the correct shock.`;
+    els.multPrompt.textContent = `Scenario: ${varName} ${dirWord} by ${Math.abs(dShock)}.`;
 
-    // Cards: multipliers (symbolic)
-    const multCards = [
-      mkCard("mult_gi", "1/(1−MPC)", { kind:"mult", label:"1/(1−MPC)", mult:"GI" }),
-      mkCard("mult_tax", "−MPC/(1−MPC)", { kind:"mult", label:"−MPC/(1−MPC)", mult:"TAX" }),
+    // ---------- Pool 1 (symbols only) ----------
+    const pool1Cards = [
+      mkCard("1/(1−MPC)", { kind:"multSym", label:"1/(1−MPC)", mult:"GI" }),
+      mkCard("−MPC/(1−MPC)", { kind:"multSym", label:"−MPC/(1−MPC)", mult:"TAX" }),
+      mkCard("ΔG", { kind:"shockSym", label:"ΔG", shock:"G" }),
+      mkCard("ΔT", { kind:"shockSym", label:"ΔT", shock:"T" }),
+      mkCard("ΔI", { kind:"shockSym", label:"ΔI", shock:"I" }),
     ];
+    pool1Cards.forEach(c => els.pool1.appendChild(c));
 
-    // Cards: shock symbols
-    const shockCards = [
-      mkCard("shock_dG", "ΔG", { kind:"shock", label:"ΔG", shock:"G" }),
-      mkCard("shock_dT", "ΔT", { kind:"shock", label:"ΔT", shock:"T" }),
-      mkCard("shock_dI", "ΔI", { kind:"shock", label:"ΔI", shock:"I" }),
+    // ---------- Pool 2 (numeric values) ----------
+    // Correct multiplier value and correct shock value, plus distractors
+    const multValR = Math.round(multVal*100)/100;
+    const shockVal = dShock;
+    const distractMults = [
+      Math.round(multGI*100)/100,
+      Math.round(multTax*100)/100,
+      Math.round((multVal*0.9)*100)/100,
+      Math.round((multVal*1.1)*100)/100
     ];
+    const distractShocks = [shockVal + 5*sign, shockVal - 5*sign, 0];
 
-    // Numeric value cards: include correct values + a couple distractors
-    const vals = new Set([dG, dT, dI, 0, sign*(s+5), sign*(s-5)]);
-    const valueCards = Array.from(vals).map((v,i) =>
-      mkCard(`val_${i}_${v}`, (v>=0?`+${v}`:`${v}`), { kind:"value", label:(v>=0?`+${v}`:`${v}`), value:v })
-    );
+    const pool2Nums = new Set([multValR, shockVal, ...distractMults, ...distractShocks]);
+    Array.from(pool2Nums).forEach(v => {
+      const lab = (v>=0 ? `+${v}` : `${v}`);
+      els.pool2.appendChild(mkCard(lab, { kind:"num", label: lab, value: v }));
+    });
 
-    // ΔY candidates: correct + distractors
-    const dYround = Math.round(dY*100)/100;
-    const cands = new Set([
-      dYround,
-      Math.round((dYround*0.8)*100)/100,
-      Math.round((dYround*1.2)*100)/100
+    // ---------- Pool 3 (ΔY numeric) ----------
+    const dYR = Math.round(dY*100)/100;
+    const pool3Nums = new Set([
+      dYR,
+      Math.round((dYR*0.8)*100)/100,
+      Math.round((dYR*1.2)*100)/100,
+      Math.round((dYR + 5*sign)*100)/100
     ]);
-    const dYCards = Array.from(cands).map((v,i) =>
-      mkCard(`dy_${i}_${v}`, (v>=0?`+${v}`:`${v}`), { kind:"value", label:(v>=0?`+${v}`:`${v}`), value:v, isDY:true })
-    );
-
-    [...multCards, ...shockCards, ...valueCards, ...dYCards].forEach(el => els.multPile.appendChild(el));
+    Array.from(pool3Nums).forEach(v => {
+      const lab = (v>=0 ? `+${v}` : `${v}`);
+      els.pool3.appendChild(mkCard(lab, { kind:"num", label: lab, value: v }));
+    });
   }
 
-  function valOf(slotSel){
-    const el = document.querySelector(slotSel);
-    if (!el || !el.dataset.payload) return null;
-    return JSON.parse(el.dataset.payload);
-  }
-
-  function checkMultiplier(){
+  // Step checks
+  function checkM1(){
     if (!multScenario){
       setMultFeedback(`<span class="tagBad">No scenario</span> Click <strong>New Multiplier Scenario</strong> first.`);
       return;
     }
+    const mult = getPayload('[data-m1="mult"]');
+    const shock = getPayload('[data-m1="shock"]');
 
-    const multPayload = valOf('[data-mslot="mult"]');
-    const shockPayload = valOf('[data-mslot="shock"]');
+    const ok = mult && shock && mult.kind==="multSym" && shock.kind==="shockSym"
+      && mult.mult === multScenario.multType
+      && shock.shock === multScenario.type;
 
-    const dGPayload = valOf('[data-vslot="dG"]');
-    const dTPayload = valOf('[data-vslot="dT"]');
-    const dIPayload = valOf('[data-vslot="dI"]');
-    const dYPayload = valOf('[data-vslot="dY"]');
+    setMultFeedback(ok
+      ? `<span class="tagOK">Correct</span> Formula uses the right multiplier and the right shock term.`
+      : `<span class="tagBad">Not quite</span> Check the multiplier type and which shock term belongs in the formula.`
+    );
+  }
 
-    const multOk = multPayload && multPayload.kind==="mult" && multPayload.mult === multScenario.multType;
-    const shockOk = shockPayload && shockPayload.kind==="shock" && shockPayload.shock === multScenario.type;
-
-    const dGok = dGPayload && dGPayload.kind==="value" && dGPayload.value === multScenario.dG;
-    const dTok = dTPayload && dTPayload.kind==="value" && dTPayload.value === multScenario.dT;
-    const dIok = dIPayload && dIPayload.kind==="value" && dIPayload.value === multScenario.dI;
-
-    const dyTarget = Math.round(multScenario.dY*100)/100;
-    const dyOk = dYPayload && dYPayload.kind==="value" && Math.abs(dYPayload.value - dyTarget) <= 0.01;
-
-    if (multOk && shockOk && dGok && dTok && dIok && dyOk){
-      setMultFeedback(`<span class="tagOK">Correct</span> Nice — you matched the multiplier, the shock, and the implied ΔY.`);
-    } else {
-      setMultFeedback(
-        `<span class="tagBad">Not quite</span>
-        Check: (i) the correct multiplier type, (ii) the correct shock term, and (iii) that only the shocked variable is nonzero.`
-      );
+  function checkM2(){
+    if (!multScenario){
+      setMultFeedback(`<span class="tagBad">No scenario</span> Click <strong>New Multiplier Scenario</strong> first.`);
+      return;
     }
+    const mv = getPayload('[data-m2="multVal"]');
+    const sv = getPayload('[data-m2="shockVal"]');
+
+    const multValR = Math.round(multScenario.multVal*100)/100;
+    const ok = mv && sv && mv.kind==="num" && sv.kind==="num"
+      && (Math.abs(mv.value - multValR) <= 0.01)
+      && (sv.value === multScenario.dShock);
+
+    setMultFeedback(ok
+      ? `<span class="tagOK">Correct</span> Great — you picked the correct multiplier value and the correct shock value.`
+      : `<span class="tagBad">Not quite</span> Make sure you used the correct multiplier (based on the type of shock) and the correct sign for the change.`
+    );
   }
 
-  function clearMultiplier(){
-    clearSlots("[data-mslot]");
-    clearSlots("[data-vslot]");
-    setMultFeedback("");
+  function checkM3(){
+    if (!multScenario){
+      setMultFeedback(`<span class="tagBad">No scenario</span> Click <strong>New Multiplier Scenario</strong> first.`);
+      return;
+    }
+    const dy = getPayload('[data-m3="dY"]');
+    const dYR = Math.round(multScenario.dY*100)/100;
+
+    const ok = dy && dy.kind==="num" && Math.abs(dy.value - dYR) <= 0.01;
+
+    setMultFeedback(ok
+      ? `<span class="tagOK">Correct</span> Nice — that is the implied ΔY.`
+      : `<span class="tagBad">Not quite</span> Re-check: ΔY = (multiplier) × (shock).`
+    );
   }
 
-  // Events
+  function clearM1(){ clearSlots("[data-m1]"); setMultFeedback(""); }
+  function clearM2(){ clearSlots("[data-m2]"); setMultFeedback(""); }
+  function clearM3(){ clearSlots("[data-m3]"); setMultFeedback(""); }
+
+  // -------------------- Events --------------------
   els.newBtn.addEventListener("click", genProblem);
   els.resetBtn.addEventListener("click", resetReveals);
 
@@ -396,11 +436,18 @@ Y* = ${fmt2(YstarVal)}
   els.checkBtn.addEventListener("click", checkAnswer);
   els.revealBtn.addEventListener("click", revealAnswer);
 
-  // multiplier events (only if multiplier block exists)
+  // multiplier events
   setupDropZones();
   els.newMultBtn.addEventListener("click", newMultiplierScenario);
-  els.checkMultBtn.addEventListener("click", checkMultiplier);
-  els.clearMultBtn.addEventListener("click", clearMultiplier);
+
+  els.checkM1.addEventListener("click", checkM1);
+  els.clearM1.addEventListener("click", clearM1);
+
+  els.checkM2.addEventListener("click", checkM2);
+  els.clearM2.addEventListener("click", clearM2);
+
+  els.checkM3.addEventListener("click", checkM3);
+  els.clearM3.addEventListener("click", clearM3);
 
   // init
   genProblem();
