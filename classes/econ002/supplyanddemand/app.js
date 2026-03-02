@@ -58,65 +58,68 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   renderWhyLists(null);
 
-  // ---------- Conditional direction dropdowns ----------
-  function setDirOptions(selectEl, opts){
-    selectEl.innerHTML = `<option value="" selected>Select…</option>` +
-      opts.map(o => `<option value="${o.value}">${o.label}</option>`).join("");
+// ---------- Conditional direction dropdowns ----------
+function setDirOptions(selectEl, opts){
+  const cur = selectEl.value; // try to preserve
+  selectEl.innerHTML =
+    `<option value="" selected>Select…</option>` +
+    opts.map(o => `<option value="${o.value}">${o.label}</option>`).join("");
+
+  // restore if still present
+  if ([...selectEl.options].some(o => o.value === cur)) selectEl.value = cur;
+}
+
+function updateDemandDirOptions(){
+  const dA = els.dAction.value;
+  if (dA === "NONE") {
+    setDirOptions(els.dDir, [{ value:"NA", label:"Not applicable" }]);
+    els.dDir.value = "NA";
+    return;
   }
-
-  function updateDirDropdowns(){
-    // Demand
-    const dA = els.dAction.value;
-    if (dA === "NONE") {
-      setDirOptions(els.dDir, [{ value:"NA", label:"Not applicable" }]);
-      els.dDir.value = "NA";
-    } else if (dA === "ALONG") {
-      setDirOptions(els.dDir, [
-        { value:"UP", label:"Higher price (move up along demand)" },
-        { value:"DOWN", label:"Lower price (move down along demand)" }
-      ]);
-    } else if (dA === "SHIFT") {
-      setDirOptions(els.dDir, [
-        { value:"R", label:"Right (demand increases)" },
-        { value:"L", label:"Left (demand decreases)" }
-      ]);
-    } else {
-      setDirOptions(els.dDir, []);
-    }
-
-    // Supply
-    const sA = els.sAction.value;
-    if (sA === "NONE") {
-      setDirOptions(els.sDir, [{ value:"NA", label:"Not applicable" }]);
-      els.sDir.value = "NA";
-    } else if (sA === "ALONG") {
-      setDirOptions(els.sDir, [
-        { value:"UP", label:"Higher price (move up along supply)" },
-        { value:"DOWN", label:"Lower price (move down along supply)" }
-      ]);
-    } else if (sA === "SHIFT") {
-      // You requested supply shift labeled up/down
-      setDirOptions(els.sDir, [
-        { value:"UPSHIFT", label:"Up (supply decreases)" },
-        { value:"DOWNSHIFT", label:"Down (supply increases)" }
-      ]);
-    } else {
-      setDirOptions(els.sDir, []);
-    }
+  if (dA === "ALONG") {
+    setDirOptions(els.dDir, [
+      { value:"UP", label:"Higher price (move up along demand)" },
+      { value:"DOWN", label:"Lower price (move down along demand)" }
+    ]);
+    return;
   }
+  if (dA === "SHIFT") {
+    setDirOptions(els.dDir, [
+      { value:"R", label:"Right (demand increases)" },
+      { value:"L", label:"Left (demand decreases)" }
+    ]);
+    return;
+  }
+  setDirOptions(els.dDir, []);
+}
 
-  els.dAction.addEventListener("change", () => {
-    const prev = els.dDir.value;
-    updateDirDropdowns();
-    // keep selection if still valid
-    if ([...els.dDir.options].some(o => o.value === prev)) els.dDir.value = prev;
-  });
+function updateSupplyDirOptions(){
+  const sA = els.sAction.value;
+  if (sA === "NONE") {
+    setDirOptions(els.sDir, [{ value:"NA", label:"Not applicable" }]);
+    els.sDir.value = "NA";
+    return;
+  }
+  if (sA === "ALONG") {
+    setDirOptions(els.sDir, [
+      { value:"UP", label:"Higher price (move up along supply)" },
+      { value:"DOWN", label:"Lower price (move down along supply)" }
+    ]);
+    return;
+  }
+  if (sA === "SHIFT") {
+    // supply shift is presented as up/down for students
+    setDirOptions(els.sDir, [
+      { value:"UPSHIFT", label:"Up (supply decreases)" },
+      { value:"DOWNSHIFT", label:"Down (supply increases)" }
+    ]);
+    return;
+  }
+  setDirOptions(els.sDir, []);
+}
 
-  els.sAction.addEventListener("change", () => {
-    const prev = els.sDir.value;
-    updateDirDropdowns();
-    if ([...els.sDir.options].some(o => o.value === prev)) els.sDir.value = prev;
-  });
+els.dAction.addEventListener("change", () => updateDemandDirOptions());
+els.sAction.addEventListener("change", () => updateSupplyDirOptions());
 
   // ---------- Graph model ----------
   const AX = { qMin: 0, qMax: 100, pMin: 0, pMax: 100 };
@@ -317,33 +320,42 @@ window.addEventListener("DOMContentLoaded", () => {
     markEq(eq0, "P₁", "Q₁", "rgba(0,0,0,0.70)");
 
     // ✅ shift arrows when revealed (stage >= 2)
-    if (stage >= 2 && scenario) {
-      ctx.lineWidth = 2.5*dpr;
+if (stage >= 2 && scenario) {
+  ctx.lineWidth = 2.5*dpr;
 
-      // Demand shift arrow: horizontal right/left near mid of curve
-      if (scenario.demand.action === "SHIFT") {
-        const dir = scenario.demand.dir; // R/L
-        ctx.strokeStyle = cDemand;
-        ctx.fillStyle = cDemand;
-        const y = pToY(55);
-        const xMid = qToX(55);
-        const dx = 22*dpr * (dir === "R" ? 1 : -1);
-        drawArrow(ctx, xMid - dx, y, xMid + dx, y, dpr);
-      }
+  // Demand shift arrow: at a fixed price level, show Q moving from old D to new D
+  if (scenario.demand.action === "SHIFT") {
+    const Pmid = 55; // nice mid-level price for a clean arrow
+    const Qold = (curves.D0.a - Pmid) / curves.D0.b;
+    const Qnew = (curves.D1.a - Pmid) / curves.D1.b;
 
-      // Supply shift arrow: up/down (as you want to teach it)
-      if (scenario.supply.action === "SHIFT") {
-        // In your dataset supply SHIFT uses dir R/L internally,
-        // but we want the arrow to point "down" for increase (R) and "up" for decrease (L)
-        const up = (scenario.supply.dir === "L"); // supply decreases -> up
-        ctx.strokeStyle = cSupply;
-        ctx.fillStyle = cSupply;
-        const x = qToX(65);
-        const yMid = pToY(45);
-        const dy = 22*dpr * (up ? -1 : 1);
-        drawArrow(ctx, x, yMid - dy, x, yMid + dy, dpr);
-      }
-    }
+    ctx.strokeStyle = cDemand;
+    ctx.fillStyle = cDemand;
+
+    // clamp to chart bounds
+    const x1 = qToX(clamp(Qold, AX.qMin, AX.qMax));
+    const x2 = qToX(clamp(Qnew, AX.qMin, AX.qMax));
+    const y  = pToY(Pmid);
+
+    drawArrow(ctx, x1, y, x2, y, dpr);
+  }
+
+  // Supply shift arrow: at a fixed quantity level, show P moving from old S to new S
+  if (scenario.supply.action === "SHIFT") {
+    const Qmid = 65; // mid-quantity for a clean arrow
+    const Pold = curves.S0.c + curves.S0.d * Qmid;
+    const Pnew = curves.S1.c + curves.S1.d * Qmid;
+
+    ctx.strokeStyle = cSupply;
+    ctx.fillStyle = cSupply;
+
+    const x = qToX(Qmid);
+    const y1 = pToY(clamp(Pold, AX.pMin, AX.pMax));
+    const y2 = pToY(clamp(Pnew, AX.pMin, AX.pMax));
+
+    drawArrow(ctx, x, y1, x, y2, dpr);
+  }
+}
 
     // stage 3 extras
     if (stage >= 3 && scenario) {
@@ -411,7 +423,8 @@ window.addEventListener("DOMContentLoaded", () => {
 
     els.dAction.value = "";
     els.sAction.value = "";
-    updateDirDropdowns();
+    updateDemandDirOptions();
+    updateSupplyDirOptions();
     els.dDir.value = "";
     els.sDir.value = "";
 
@@ -442,7 +455,8 @@ window.addEventListener("DOMContentLoaded", () => {
 
     els.dAction.value = "";
     els.sAction.value = "";
-    updateDirDropdowns();
+    updateDemandDirOptions();
+    updateSupplyDirOptions();
     els.dDir.value = "";
     els.sDir.value = "";
 
@@ -524,7 +538,13 @@ window.addEventListener("DOMContentLoaded", () => {
     els.fb2.style.display = "block";
     els.fb2.innerHTML = ok
       ? `<span class="tagOK">Correct</span> Great — now the graph will reveal the imbalance and the new equilibrium.`
-      : `<span class="tagBad">Not quite</span> At $begin:math:text$P\_1$end:math:text$, compare $begin:math:text$Q\_d$end:math:text$ and $begin:math:text$Q\_s$end:math:text$. Shortage → price rises; surplus → price falls.`;
+      : `<span class="tagBad">Not quite</span>
+     At \$begin:math:text$P\_1\\$end:math:text$, compare \$begin:math:text$Q\_d\\$end:math:text$ and \$begin:math:text$Q\_s\\$end:math:text$.
+     Shortage \$begin:math:text$ \(Q\_d \> Q\_s\) \\$end:math:text$ → price rises; surplus \$begin:math:text$ \(Q\_s \> Q\_d\) \\$end:math:text$ → price falls.`;
+
+    if (window.MathJax?.typesetPromise) {
+      window.MathJax.typesetPromise([els.fb2]);
+    }
 
     if (ok) {
       stage = 3;
