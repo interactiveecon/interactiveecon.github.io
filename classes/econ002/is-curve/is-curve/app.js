@@ -1,3 +1,4 @@
+// app.js (with Consumption added to mechanism; 16 pills total)
 (() => {
   const $ = (id) => document.getElementById(id);
 
@@ -32,7 +33,6 @@
 
   function setStatus(msg){ els.status.textContent = msg; }
   function fmt(x){ return Number.isFinite(x) ? x.toFixed(2) : "—"; }
-  function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
 
   const DATA = window.KCIS_DATA;
   if (!DATA) { setStatus("ERROR: KCIS_DATA missing (data.js not loaded)."); return; }
@@ -76,7 +76,6 @@
     const X0 = pad.l, X1 = W - pad.r;
     const Y0 = pad.t, Y1 = H - pad.b;
 
-    // grid
     ctx.strokeStyle = "rgba(0,0,0,0.10)";
     ctx.lineWidth = 1*dpr;
     for (let i=0;i<=5;i++){
@@ -88,7 +87,6 @@
       ctx.beginPath(); ctx.moveTo(X0,y); ctx.lineTo(X1,y); ctx.stroke();
     }
 
-    // labels
     ctx.fillStyle = "rgba(0,0,0,0.70)";
     ctx.font = `${12*dpr}px system-ui`;
     ctx.textAlign="center"; ctx.textBaseline="top";
@@ -151,7 +149,7 @@
     // 45-degree
     drawLine(ctx, xTo(Ymin), yTo(Ymin), xTo(Ymax), yTo(Ymax), INK, 3, dpr);
 
-    // PE lines
+    // PE lines: PE = A + MPC*Y
     const Ab = P.C0 - P.MPC*BASE.T + Iof(BASE.r) + BASE.G;
     const Ac = P.C0 - P.MPC*T + Iof(r) + G;
 
@@ -211,15 +209,15 @@
     const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
     const Y1eq = Ystar(r, G, T);
 
-    // Baseline point and dashed to both axes
+    // Baseline point and dashed to both axes + labeled ticks
     const xb = xTo(Y0eq), yb = yTo(BASE.r);
     drawDot(ctx, xb, yb, BLUE, dpr);
-    drawLine(ctx, xb, yb, xb, Y1, DASH, 2, dpr, [4,6]);   // to x-axis
-    drawLine(ctx, xb, yb, X0, yb, DASH, 2, dpr, [4,6]);   // to y-axis
+    drawLine(ctx, xb, yb, xb, Y1, DASH, 2, dpr, [4,6]);  // to x-axis
+    drawLine(ctx, xb, yb, X0, yb, DASH, 2, dpr, [4,6]);  // to y-axis
     xTick(ctx, xb, Y1, "Y₀", dpr);
     yTick(ctx, X0, yb, "r₀", dpr);
 
-    // Current point and dashed to both axes
+    // Current point and dashed to both axes + labeled ticks
     if (Math.abs(Y1eq - Y0eq) > 1e-6 || Math.abs(r - BASE.r) > 1e-6){
       const xc = xTo(Y1eq), yc = yTo(r);
       drawDot(ctx, xc, yc, ORANGE, dpr);
@@ -242,7 +240,7 @@
     });
   }
 
-  // ----- Mechanism (14 cards, slots just say drop) -----
+  // ----- Mechanism (16 cards now) -----
   const CARDS = [
     { id:"r_up", text:"r ↑", var:"r", dir:"↑" },
     { id:"r_dn", text:"r ↓", var:"r", dir:"↓" },
@@ -252,6 +250,8 @@
     { id:"G_dn", text:"G ↓", var:"G", dir:"↓" },
     { id:"T_up", text:"T ↑", var:"T", dir:"↑" },
     { id:"T_dn", text:"T ↓", var:"T", dir:"↓" },
+    { id:"C_up", text:"C ↑", var:"C", dir:"↑" },
+    { id:"C_dn", text:"C ↓", var:"C", dir:"↓" },
     { id:"PE_up", text:"PE ↑", var:"PE", dir:"↑" },
     { id:"PE_dn", text:"PE ↓", var:"PE", dir:"↓" },
     { id:"Y_up", text:"Y ↑", var:"Y", dir:"↑" },
@@ -262,7 +262,7 @@
 
   function chainVars(v){
     if (v === "r") return ["r","I","PE","INV","Y"];
-    if (v === "T") return ["T","PE","INV","Y"]; // keep 7 vars constraint
+    if (v === "T") return ["T","C","PE","INV","Y"];
     return ["G","PE","INV","Y"];
   }
 
@@ -274,8 +274,8 @@
     }
     if (v === "T"){
       return sign==="↑"
-        ? { T:"↑", PE:"↓", INV:"↑", Y:"↓" }
-        : { T:"↓", PE:"↑", INV:"↓", Y:"↑" };
+        ? { T:"↑", C:"↓", PE:"↓", INV:"↑", Y:"↓" }
+        : { T:"↓", C:"↑", PE:"↑", INV:"↓", Y:"↑" };
     }
     return sign==="↑"
       ? { G:"↑", PE:"↑", INV:"↓", Y:"↑" }
@@ -391,7 +391,7 @@
     }
   }
 
-  // ----- Scenario (resets sliders to baseline, then announces shock) -----
+  // ----- Scenario (resets to baseline, then announces shock direction only) -----
   function newScenario(){
     // reset values to baseline
     r = BASE.r; G = BASE.G; T = BASE.T;
