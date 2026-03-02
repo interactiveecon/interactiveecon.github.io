@@ -28,11 +28,38 @@ window.addEventListener("DOMContentLoaded", () => {
   function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
   function fmt(x){ return (Number.isFinite(x) ? x.toFixed(2) : "—"); }
 
-  if (!window.MARGINALISM_CONT || !Array.isArray(window.MARGINALISM_CONT.scenarios)) {
-    setStatus("ERROR: data.js did not load (MARGINALISM_CONT missing).");
-    return;
+  if (!window.MARGINALISM_CONT || !Array.isArray(window.MARGINALISM_CONT.templates)) {
+  setStatus("ERROR: data.js did not load (MARGINALISM_CONT.templates missing).");
+  return;
+}
+const TEMPLATES = window.MARGINALISM_CONT.templates;
+
+  function randUniform(lo, hi){ return lo + Math.random() * (hi - lo); }
+function randPick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+// Draw parameters and enforce an interior optimum q* in (0, qMax)
+function drawParamsForTemplate(t){
+  const { a:[a0,a1], b:[b0,b1], c:[c0,c1], d:[d0,d1] } = t.ranges;
+
+  for (let tries=0; tries<200; tries++){
+    const a = randUniform(a0,a1);
+    const b = randUniform(b0,b1);
+    const c = randUniform(c0,c1);
+    const d = randUniform(d0,d1);
+
+    const qs = (a - c) / (b + d);
+
+    // want a clear interior optimum (not too close to edges)
+    if (qs > 1.0 && qs < t.qMax - 1.0 && b > 0 && d > 0) {
+      return { a,b,c,d, qs };
+    }
   }
-  const ALL = window.MARGINALISM_CONT.scenarios;
+
+  // fallback (should be rare): just clamp
+  const a = (a0+a1)/2, b = (b0+b1)/2, c = (c0+c1)/2, d = (d0+d1)/2;
+  const qs = clamp((a - c)/(b + d), 0, t.qMax);
+  return { a,b,c,d, qs };
+}
 
   let cur = null;
   let q = 0;
@@ -57,8 +84,8 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function pickScenario(){
-    return ALL[Math.floor(Math.random()*ALL.length)];
-  }
+      return randPick(TEMPLATES);
+}
 
   // Step size: move halfway toward q*, capped. Snap if step < 0.25.
   function computeStep(){
@@ -86,6 +113,11 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function renderScenario(sc){
     cur = sc;
+    // Draw (a,b,c,d) fresh each round and attach to cur
+    const p = drawParamsForTemplate(sc);
+    cur.mb = { a: p.a, b: p.b };
+    cur.mc = { c: p.c, d: p.d };
+    
     checked = false;
 
     els.scTitle.textContent = sc.title;
