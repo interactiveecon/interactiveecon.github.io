@@ -1,58 +1,181 @@
 // data.js
-// Buckets: EXP (explicit), IMP (implicit/opportunity), NOT (not a cost for the decision)
+// Each scenario has 4 options (strings) and a correct index (0-3).
 
-window.OPPCOST_DATA = {
-  cards: [
-    // ---------- Explicit costs ----------
-    { id:"exp01", title:"You pay $40 for a textbook.", desc:"Out-of-pocket spending: explicit cost.", correct:"EXP", explain:"Explicit cost: you paid money." },
-    { id:"exp02", title:"You pay $3.50 for a bus ride to campus.", desc:"Out-of-pocket spending: explicit cost.", correct:"EXP", explain:"Explicit cost: you paid money." },
-    { id:"exp03", title:"A business pays $2,000 in monthly rent for a storefront.", desc:"Out-of-pocket spending: explicit cost.", correct:"EXP", explain:"Explicit cost: cash rent payment." },
-    { id:"exp04", title:"A café pays $900 for coffee beans.", desc:"Out-of-pocket input purchase.", correct:"EXP", explain:"Explicit cost: paying for inputs." },
-    { id:"exp05", title:"You pay $25 for a concert ticket.", desc:"Cash payment.", correct:"EXP", explain:"Explicit cost: out-of-pocket payment." },
-    { id:"exp06", title:"A firm pays $1,200 for electricity and utilities.", desc:"Cash expense.", correct:"EXP", explain:"Explicit cost: out-of-pocket." },
-    { id:"exp07", title:"You spend $60 on gas for a road trip.", desc:"Cash payment.", correct:"EXP", explain:"Explicit cost: out-of-pocket spending." },
-    { id:"exp08", title:"A student pays $15 for printing and supplies.", desc:"Cash expense.", correct:"EXP", explain:"Explicit cost." },
+window.OPPCOST_MCQ = {
+  scenarios: [
+    {
+      id: "s01",
+      title: "Studying vs working",
+      desc: "You can study for 3 hours tonight or work a shift that pays $90.\nYou choose to study.\n\nWhat is the opportunity cost of studying?",
+      options: [
+        "The $90 in wages you give up by not working",
+        "The price of your textbook",
+        "Your tuition payment for the semester",
+        "The money you spend on dinner tonight"
+      ],
+      correct: 0,
+      explain: "Opportunity cost is the value of the next best alternative. If the next best alternative is working for $90, then the opportunity cost of studying is the $90 you give up."
+    },
+    {
+      id: "s02",
+      title: "Going to the gym",
+      desc: "You can go to the gym for an hour or you can do paid tutoring for $25.\nYou choose the gym.\n\nWhat is the opportunity cost of going to the gym?",
+      options: [
+        "The $25 you could have earned tutoring",
+        "Your monthly gym membership fee (already paid)",
+        "The calories you burned",
+        "The cost of your gym shoes"
+      ],
+      correct: 0,
+      explain: "The opportunity cost is the best thing you give up—here, the $25 tutoring income."
+    },
+    {
+      id: "s03",
+      title: "Movie night",
+      desc: "You can go to a movie ($14 ticket) or stay home and work on a gig that would pay $60.\nYou choose the movie.\n\nWhat is the opportunity cost of going to the movie?",
+      options: [
+        "The $60 you give up by not doing the gig",
+        "The $14 ticket price",
+        "Both $60 and $14 (add them together)",
+        "Nothing, because movies are leisure"
+      ],
+      correct: 0,
+      explain: "The opportunity cost is the value of the next best alternative. If you would otherwise do the $60 gig, that forgone $60 is the opportunity cost. The ticket is an explicit cost, but the question asks specifically for opportunity cost."
+    },
+    {
+      id: "s04",
+      title: "Using your own building",
+      desc: "You own a small building. You can rent it out for $1,200/month or use it for your business.\nYou choose to use it for your business.\n\nWhat is the opportunity cost of using your own building?",
+      options: [
+        "The $1,200/month rent you give up",
+        "The property tax you pay on the building",
+        "The money you spent buying the building years ago",
+        "The utility bill for the building"
+      ],
+      correct: 0,
+      explain: "The opportunity cost is the next best alternative you give up—renting it out for $1,200/month."
+    },
+    {
+      id: "s05",
+      title: "College vs full-time job",
+      desc: "You choose to attend college this year instead of taking a full-time job paying $32,000.\n\nWhat is the opportunity cost of attending college this year?",
+      options: [
+        "The $32,000 salary you give up",
+        "Your tuition payment",
+        "The cost of textbooks",
+        "The interest rate on student loans"
+      ],
+      correct: 0,
+      explain: "Opportunity cost is the value of the best alternative forgone—here, the salary from the job you don’t take."
+    },
 
-    // ---------- Implicit costs (opportunity costs) ----------
-    { id:"imp01", title:"You give up a $120 shift to study for an exam.", desc:"Forgone wages are an implicit cost.", correct:"IMP", explain:"Implicit cost: the next best alternative is working for $120." },
-    { id:"imp02", title:"You use a building you own for your business instead of renting it out.", desc:"Forgone rent is an implicit cost.", correct:"IMP", explain:"Implicit cost: you gave up rental income." },
-    { id:"imp03", title:"You spend 3 hours commuting instead of doing paid tutoring.", desc:"Forgone earnings/time value is an implicit cost.", correct:"IMP", explain:"Implicit cost: value of your time/forgone earnings." },
-    { id:"imp04", title:"An owner works in their firm without paying themselves a salary.", desc:"Foregone salary is an implicit cost.", correct:"IMP", explain:"Implicit cost: owner labor has opportunity cost." },
-    { id:"imp05", title:"You invest $5,000 in your business instead of earning interest in a bank.", desc:"Forgone interest is an implicit cost.", correct:"IMP", explain:"Implicit cost: you gave up the interest you could have earned." },
-    { id:"imp06", title:"You take a class and give up leisure time you value.", desc:"Leisure forgone is an implicit cost.", correct:"IMP", explain:"Implicit cost: the value of the next best use of time." },
-    { id:"imp07", title:"You use your own car for deliveries instead of renting it out.", desc:"Forgone rental value is an implicit cost.", correct:"IMP", explain:"Implicit cost: using your own resource has opportunity cost." },
-    { id:"imp08", title:"You attend college instead of working full-time for $35,000/year.", desc:"Forgone wages are an implicit cost.", correct:"IMP", explain:"Implicit cost: wages you give up to attend school." },
-    { id:"imp09", title:"You spend an evening cooking to avoid paying for takeout.", desc:"Time cost is implicit.", correct:"IMP", explain:"Implicit cost: time could have been used elsewhere." },
-    { id:"imp10", title:"A firm uses cash reserves for a project instead of paying down interest-bearing debt.", desc:"Forgone interest savings is implicit.", correct:"IMP", explain:"Implicit cost: opportunity cost of funds." },
+    {
+      id: "s06",
+      title: "One more hour of sleep",
+      desc: "You can sleep one more hour or you can arrive early to work and earn an extra $18.\nYou choose to sleep.\n\nWhat is the opportunity cost of sleeping?",
+      options: [
+        "The extra $18 you give up by not working",
+        "Your rent payment",
+        "Your alarm clock",
+        "Your caffeine intake tomorrow"
+      ],
+      correct: 0,
+      explain: "The opportunity cost is the best alternative you give up: earning the extra $18."
+    },
+    {
+      id: "s07",
+      title: "Cooking vs takeout",
+      desc: "Cooking dinner takes 45 minutes. Ordering takeout costs $18.\nYou decide to cook.\nAssume the next best alternative is ordering takeout.\n\nWhat is the opportunity cost of cooking dinner?",
+      options: [
+        "The $18 you would have spent on takeout (the next best alternative)",
+        "The ingredients you already have in your kitchen",
+        "The enjoyment of cooking",
+        "Nothing, because cooking is at home"
+      ],
+      correct: 0,
+      explain: "If the next best alternative is takeout, the opportunity cost is what you give up—here, the $18 takeout option (and potentially the time, but the scenario defines the next best alternative as takeout)."
+    },
+    {
+      id: "s08",
+      title: "Choosing a class time",
+      desc: "A required class is only offered at 3pm. That time conflicts with a job shift that would pay $55.\nYou take the class.\n\nWhat is the opportunity cost of taking the class at 3pm?",
+      options: [
+        "The $55 wages from the job shift you give up",
+        "Your tuition payment for the course",
+        "The cost of parking on campus",
+        "The class grade you hope to earn"
+      ],
+      correct: 0,
+      explain: "The opportunity cost is the value of the best alternative forgone—working that $55 shift."
+    },
+    {
+      id: "s09",
+      title: "Business: use cash vs invest",
+      desc: "A small business uses $10,000 of its cash to buy equipment instead of investing that money in an account earning 5% per year.\n\nWhat is the opportunity cost of buying the equipment (from using cash)?",
+      options: [
+        "The interest the $10,000 would have earned at 5%",
+        "The price tag on the equipment (that’s the same $10,000)",
+        "The time spent purchasing the equipment",
+        "The depreciation of the equipment"
+      ],
+      correct: 0,
+      explain: "Opportunity cost is the return on the best alternative use of the funds—the interest earnings you give up."
+    },
+    {
+      id: "s10",
+      title: "Leisure vs overtime",
+      desc: "You can work overtime for $40 or take the evening off.\nYou take the evening off.\n\nWhat is the opportunity cost of taking the evening off?",
+      options: [
+        "The $40 you could have earned working overtime",
+        "Your regular paycheck",
+        "Your monthly bills",
+        "The enjoyment from relaxing"
+      ],
+      correct: 0,
+      explain: "The best alternative forgone is the $40 overtime pay."
+    },
 
-    // ---------- Not a cost (sunk / irrelevant) ----------
-    { id:"not01", title:"You already paid $200 for a nonrefundable ticket last week.", desc:"Sunk cost: not part of today’s decision.", correct:"NOT", explain:"Not a cost now: sunk cost already incurred." },
-    { id:"not02", title:"You spent 2 hours last month researching a purchase.", desc:"Past time is sunk.", correct:"NOT", explain:"Not a cost for the current decision: sunk time." },
-    { id:"not03", title:"A firm paid for a machine two years ago.", desc:"Past payment is sunk for current choices.", correct:"NOT", explain:"Not a cost now: sunk cost." },
-    { id:"not04", title:"You feel guilty about wasting food you already bought.", desc:"Emotions aren’t economic costs here.", correct:"NOT", explain:"Not an economic cost in the standard framework." },
-    { id:"not05", title:"You bought a gym membership last month and can’t refund it.", desc:"Already paid; sunk.", correct:"NOT", explain:"Not a cost now: sunk membership fee." },
-    { id:"not06", title:"A business’s logo redesign last year cost $800.", desc:"Past expense; sunk.", correct:"NOT", explain:"Not a cost for current production decisions." },
+    // ---- More: mix in non-money alternatives (still “value” of next best alt) ----
+    {
+      id: "s11",
+      title: "Studying vs social event",
+      desc: "You can study for an exam or attend a friend’s birthday dinner.\nYou choose to study.\nAssume the next best alternative is the birthday dinner.\n\nWhat is the opportunity cost of studying?",
+      options: [
+        "The value of attending the birthday dinner (the next best alternative)",
+        "The cost of the exam",
+        "The tuition you paid",
+        "Nothing, because studying is necessary"
+      ],
+      correct: 0,
+      explain: "Opportunity cost is the value of the next best alternative you give up—here, the birthday dinner."
+    },
+    {
+      id: "s12",
+      title: "Commute choice",
+      desc: "You can take a faster route that costs $6 in tolls, or a slower route with no toll.\nYou choose the faster route.\n\nWhat is the opportunity cost of taking the faster route?",
+      options: [
+        "The $6 toll (the value of what you give up to save time)",
+        "The time you saved (that’s a benefit, not a cost)",
+        "Your car payment",
+        "The gas you would have used either way"
+      ],
+      correct: 0,
+      explain: "Here the tradeoff is money for time. The opportunity cost of the faster route (relative to the free route) is the $6 toll you give up."
+    },
+    {
+      id: "s13",
+      title: "Free concert ticket",
+      desc: "You win a free concert ticket. You can go to the concert or work a shift for $80.\nYou go to the concert.\n\nWhat is the opportunity cost of going to the concert?",
+      options: [
+        "The $80 wages you give up by not working",
+        "The ticket price (it was free)",
+        "The money you spent on the ticket",
+        "Nothing, because it was free"
+      ],
+      correct: 0,
+      explain: "Even if the ticket is free, you give up the next best alternative—working for $80."
+    },
 
-    // ---------- Mixed / more realistic contexts ----------
-    { id:"mix01", title:"You drive to work and pay $6 for parking.", desc:"Parking fee is explicit.", correct:"EXP", explain:"Explicit cost: cash payment." },
-    { id:"mix02", title:"You drive to work and give up 30 minutes you could have spent studying.", desc:"Time is an implicit cost.", correct:"IMP", explain:"Implicit cost: value of time/next best alternative." },
-    { id:"mix03", title:"A shop owner uses $10,000 of their own savings to start a business.", desc:"Opportunity cost of savings.", correct:"IMP", explain:"Implicit cost: forgone interest/alternative investment return." },
-    { id:"mix04", title:"A student buys a laptop for $900 for school.", desc:"Out-of-pocket spending.", correct:"EXP", explain:"Explicit cost: cash purchase." },
-    { id:"mix05", title:"A student chooses a class schedule that prevents them from taking a part-time job.", desc:"Forgone wages.", correct:"IMP", explain:"Implicit cost: wages from the job you can’t take." },
-    { id:"mix06", title:"You already bought the ingredients; deciding whether to cook tonight.", desc:"Ingredients are sunk if already purchased.", correct:"NOT", explain:"If already paid and cannot be recovered, it’s sunk for tonight’s decision." },
-
-    // ---------- More variety (easy repetition reduction) ----------
-    { id:"exp09", title:"You pay $18 for a meal.", desc:"Out-of-pocket payment.", correct:"EXP", explain:"Explicit cost." },
-    { id:"exp10", title:"A firm pays $4,000 in worker wages this week.", desc:"Cash wages.", correct:"EXP", explain:"Explicit cost." },
-    { id:"exp11", title:"You pay $12 for a movie ticket.", desc:"Cash payment.", correct:"EXP", explain:"Explicit cost." },
-    { id:"exp12", title:"A business pays $300 for advertising this month.", desc:"Cash expense.", correct:"EXP", explain:"Explicit cost." },
-
-    { id:"imp11", title:"You choose to volunteer 4 hours instead of working for pay.", desc:"Forgone wages.", correct:"IMP", explain:"Implicit cost: opportunity cost of time." },
-    { id:"imp12", title:"You use your own tools for a job rather than renting them out.", desc:"Forgone rental income.", correct:"IMP", explain:"Implicit cost: opportunity cost of owned resources." },
-    { id:"imp13", title:"You take an unpaid internship instead of a paid job.", desc:"Forgone earnings.", correct:"IMP", explain:"Implicit cost: wages you give up." },
-    { id:"imp14", title:"A business owner keeps $50,000 in the firm instead of investing in index funds.", desc:"Forgone investment return.", correct:"IMP", explain:"Implicit cost: alternative return." },
-
-    { id:"not07", title:"You already drove halfway and can’t get your time back.", desc:"Past time is sunk.", correct:"NOT", explain:"Not a cost now: sunk time." },
-    { id:"not08", title:"A firm signed a non-cancellable contract last year; payment is unavoidable.", desc:"Not a marginal cost of current output.", correct:"NOT", explain:"If it cannot be changed, it’s not part of the marginal decision today." },
+    // Add many more in the same pattern…
   ]
 };
