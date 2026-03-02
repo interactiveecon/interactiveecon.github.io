@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Reserves Market Lab</title>
+
+  <link rel="stylesheet" href="/assets/style.css">
+
+  <!-- MathJax for formulas -->
+  <script>
+    window.MathJax = { tex: { inlineMath: [['\\(','\\)'], ['$', '$']] } };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+  <style>
+    .stack{ display:grid; gap:14px; margin-top:18px; }
+    .grid2{ display:grid; grid-template-columns: 1.05fr 0.95fr; gap:12px; align-items:start; }
+    @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
+
+    .box{
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(246,242,234,0.35);
+      padding: 12px;
+    }
+
+    .charts{ display:grid; gap: 12px; }
+    .chartCard{
+      height: 280px;
+      border:1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.78);
+      padding: 10px;
+    }
+    .chartCard.small{ height: 240px; }
+    canvas{ width:100%; height:100%; display:block; }
+
+    .mini{ font-size: 12px; color: var(--muted); line-height: 1.45; margin-top: 6px; }
+
+    .scenarioTitle{ font-weight: 900; color: var(--ink); font-size: 16px; margin: 0; }
+    .scenarioDesc{ margin-top: 8px; color: var(--ink-2); font-size: 13px; line-height: 1.5; white-space: pre-line; }
+
+    .controlsGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    @media (max-width: 980px){ .controlsGrid{ grid-template-columns: 1fr; } }
+
+    .control{
+      border:1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.68);
+      padding: 10px;
+    }
+    .control label{
+      display:block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .control .row{
+      display:flex; justify-content:space-between; align-items:center;
+      gap: 10px;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+      font-weight: 800;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    input[type="range"]{ width: 100%; }
+
+    .pillRow{ display:flex; gap:10px; flex-wrap:wrap; margin-top: 10px; }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(255,255,255,0.75);
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    .predCard{
+      border:1px solid rgba(0,0,0,0.08);
+      background: rgba(255,255,255,0.75);
+      border-radius: 14px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    .predGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    @media (max-width: 980px){ .predGrid{ grid-template-columns: 1fr; } }
+
+    .predItem{
+      border:1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.65);
+      padding: 10px;
+    }
+    .predItem .q{ font-weight: 900; color: var(--ink); font-size: 12px; margin-bottom: 6px; }
+    .predItem select{
+      width: 100%;
+      padding: 9px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.16);
+      background: rgba(255,255,255,0.9);
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .feedback{
+      margin-top: 12px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+      padding-top: 10px;
+      display:none;
+      color: var(--ink-2);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .tagOK{
+      display:inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(34,139,34,0.12);
+      border: 1px solid rgba(34,139,34,0.25);
+      color: rgba(34,120,34,1);
+      font-weight: 800;
+      font-size: 12px;
+      margin-right: 8px;
+    }
+    .tagBad{
+      display:inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(178,34,34,0.10);
+      border: 1px solid rgba(178,34,34,0.25);
+      color: rgba(140,0,0,0.95);
+      font-weight: 800;
+      font-size: 12px;
+      margin-right: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="page-header">
+    <div class="container">
+      <nav class="crumbbar">
+        <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
+      </nav>
+
+      <div class="header-inner">
+        <div class="title-block">
+          <div class="kicker">Macroeconomics Practice Lab</div>
+          <h1>Reserves Market: OMO & Interest on Reserves</h1>
+          <p class="sub">
+            Use <strong>OMO</strong> and <strong>IOR</strong> to see how the Fed changes the federal funds rate and the money supply.
+          </p>
+
+          <details class="howto">
+            <summary>Instructions</summary>
+            <div class="howto-body">
+              <ol>
+                <li>Click <strong>New Scenario</strong>. You’ll get a shock: OMO buy/sell or IOR up/down.</li>
+                <li>Make a prediction. Then click <strong>Check Predictions</strong>.</li>
+                <li>If correct, controls unlock. Use <strong>Apply OMO</strong> or the <strong>IOR slider</strong> to implement the shock.</li>
+                <li>Read the graphs:
+                  <ul>
+                    <li><strong>Reserves market:</strong> vertical supply of reserves, downward demand. IOR acts like a floor for the federal funds rate.</li>
+                    <li><strong>Money supply:</strong> \(M = m \cdot R\). When IOR rises, banks hold more reserves, so the effective multiplier \(m\) falls.</li>
+                  </ul>
+                </li>
+              </ol>
+            </div>
+          </details>
+        </div>
+
+        <div class="controls-card">
+          <div class="controls-actions">
+            <button id="newScenarioBtn" class="btn primary">New Scenario</button>
+            <button id="resetBtn" class="btn subtle">Reset</button>
+            <button id="applyBtn" class="btn" disabled>Apply Shock</button>
+          </div>
+          <div id="status" class="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container stack">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Reserves and Money Supply</h2>
+        <p class="panel-sub">Predict, then apply the policy tool.</p>
+      </div>
+
+      <div class="grid2">
+        <div class="box">
+          <p class="scenarioTitle" id="scenarioTitle">Scenario</p>
+          <div class="scenarioDesc" id="scenarioDesc">Click “New Scenario” to start.</div>
+
+          <div class="controlsGrid">
+            <div class="control">
+              <label>Open market operations (OMO)</label>
+              <div class="row"><span>ΔR from OMO</span><span id="dRVal">—</span></div>
+              <div class="controls-actions">
+                <button id="omoBuyBtn" class="btn primary" disabled>OMO Purchase</button>
+                <button id="omoSellBtn" class="btn" disabled>OMO Sale</button>
+              </div>
+              <div class="mini">OMO changes the <strong>supply of reserves</strong> (vertical line).</div>
+            </div>
+
+            <div class="control">
+              <label for="iorSlider">Interest on reserves (IOR)</label>
+              <div class="row"><span>IOR</span><span id="iorVal">—</span></div>
+              <input id="iorSlider" type="range" min="0" max="5" step="0.1" value="2" disabled>
+              <div class="mini">Higher IOR makes reserves more attractive → banks demand more reserves.</div>
+            </div>
+          </div>
+
+          <div class="pillRow">
+            <span class="pill">Baseline \(R_0\): <span id="R0">—</span></span>
+            <span class="pill">Current \(R_1\): <span id="R1">—</span></span>
+            <span class="pill">Baseline \(i_{ff,0}\): <span id="i0">—</span></span>
+            <span class="pill">Current \(i_{ff,1}\): <span id="i1">—</span></span>
+            <span class="pill">Multiplier \(m\): <span id="mVal">—</span></span>
+            <span class="pill">Money supply \(M\): <span id="MVal">—</span></span>
+          </div>
+
+          <div class="predCard">
+            <div class="mini"><strong>Predict first</strong> (controls unlock after correct predictions)</div>
+
+            <div class="predGrid">
+              <div class="predItem">
+                <div class="q">Reserves market: which curve shifts?</div>
+                <select id="predShift">
+                  <option value="">Select…</option>
+                  <option value="S_right">Supply right</option>
+                  <option value="S_left">Supply left</option>
+                  <option value="D_right">Demand right</option>
+                  <option value="D_left">Demand left</option>
+                  <option value="none">No shift</option>
+                </select>
+              </div>
+
+              <div class="predItem">
+                <div class="q">Federal funds rate \(i_{ff}\) changes:</div>
+                <select id="predRate">
+                  <option value="">Select…</option>
+                  <option value="up">Up</option>
+                  <option value="down">Down</option>
+                  <option value="same">Same</option>
+                </select>
+              </div>
+
+              <div class="predItem">
+                <div class="q">Money supply \(M\) changes:</div>
+                <select id="predMoney">
+                  <option value="">Select…</option>
+                  <option value="up">Up</option>
+                  <option value="down">Down</option>
+                  <option value="same">Same</option>
+                </select>
+              </div>
+
+              <div class="predItem">
+                <div class="q">Actions</div>
+                <div class="controls-actions">
+                  <button id="checkPredBtn" class="btn primary">Check Predictions</button>
+                  <button id="whyBtn" class="btn">Why?</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="feedback" id="predFeedback"></div>
+          </div>
+        </div>
+
+        <div class="box">
+          <div class="charts">
+            <div class="mini"><strong>Reserves market</strong></div>
+            <div class="chartCard"><canvas id="resCanvas"></canvas></div>
+
+            <div class="mini"><strong>Money supply</strong></div>
+            <div class="chartCard small"><canvas id="moneyCanvas"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="./data.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
