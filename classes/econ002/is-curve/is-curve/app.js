@@ -31,10 +31,39 @@ window.addEventListener("DOMContentLoaded", () => {
     isCanvas: $("isCanvas"),
   };
 
-  const DATA = window.KCIS_DATA;
-  if (!DATA) { els.status.textContent = "ERROR: data.js not loaded (KCIS_DATA missing)."; return; }
-  const P = DATA.params;
+  function setStatus(msg){ if (els.status) els.status.textContent = msg; }
+  function fmt(x){ return (Number.isFinite(x) ? x.toFixed(2) : "—"); }
+  function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
 
+  // If canvas exists, draw a quick line so we can tell rendering works even if data/model fails
+  function drawCanvasSmokeTest(canvas){
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.clientWidth * dpr;
+    const H = canvas.clientHeight * dpr;
+    if (W === 0 || H === 0) return;
+    canvas.width = W; canvas.height = H;
+    ctx.clearRect(0,0,W,H);
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
+    ctx.lineWidth = 2*dpr;
+    ctx.beginPath();
+    ctx.moveTo(10*dpr, H-10*dpr);
+    ctx.lineTo(W-10*dpr, 10*dpr);
+    ctx.stroke();
+  }
+
+  // Smoke test immediately (so you see *something* even if we error later)
+  drawCanvasSmokeTest(els.kcCanvas);
+  drawCanvasSmokeTest(els.isCanvas);
+
+  const DATA = window.KCIS_DATA;
+  if (!DATA || !DATA.params || !DATA.baseline) {
+    setStatus("ERROR: KCIS_DATA missing. Check ./data.js path/name and that it defines window.KCIS_DATA.");
+    return;
+  }
+
+  const P = DATA.params;
   const BASE = { ...DATA.baseline };
 
   let r = BASE.r, G = BASE.G, T = BASE.T;
@@ -42,10 +71,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
   const BLUE = "rgba(31,119,180,0.92)";
   const ORANGE = "rgba(230,159,0,0.95)";
-
-  function setStatus(msg){ els.status.textContent = msg; }
-  function fmt(x){ return (Number.isFinite(x) ? x.toFixed(2) : "—"); }
-  function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
 
   // ---------- Model ----------
   function Iof(rr){ return P.I0 - P.b * rr; }
@@ -63,6 +88,7 @@ window.addEventListener("DOMContentLoaded", () => {
     { id:"G_dn",  text:"G ↓",  var:"G", dir:"↓" },
     { id:"T_up",  text:"T ↑",  var:"T", dir:"↑" },
     { id:"T_dn",  text:"T ↓",  var:"T", dir:"↓" },
+
     { id:"I_up",  text:"I ↑",  var:"I", dir:"↑" },
     { id:"I_dn",  text:"I ↓",  var:"I", dir:"↓" },
     { id:"C_up",  text:"C ↑",  var:"C", dir:"↑" },
@@ -92,7 +118,6 @@ window.addEventListener("DOMContentLoaded", () => {
         ? { T:"↑", C:"↓", PE:"↓", INV:"↑", Y:"↓" }
         : { T:"↓", C:"↑", PE:"↑", INV:"↓", Y:"↑" };
     }
-    // G
     return sign==="↑"
       ? { G:"↑", PE:"↑", INV:"↓", Y:"↑" }
       : { G:"↓", PE:"↓", INV:"↑", Y:"↓" };
@@ -100,7 +125,15 @@ window.addEventListener("DOMContentLoaded", () => {
 
   const chainState = {}; // slot -> cardId
 
+  function shuffle(a){
+    for (let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+  }
+
   function buildPileForShock(v){
+    if (!els.pile) return;
     els.pile.innerHTML = "";
     const needed = new Set(chainForShock(v));
     const cards = CARD_BANK.filter(c => needed.has(c.var));
@@ -123,17 +156,19 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // ✅ No labels above slots — variable name lives inside slot as placeholder.
   function buildChainUI(v){
+    if (!els.chain) return;
     els.chain.innerHTML = "";
     for (const k of Object.keys(chainState)) delete chainState[k];
 
     const seq = chainForShock(v);
     seq.forEach((key, idx) => {
-      const node = document.createElement("div");
-      node.className = "node";
-      node.innerHTML = `<div class="lbl">${key==="INV" ? "Inventories" : key}</div>
-                        <div class="slot" data-slot="${key}">drop</div>`;
-      els.chain.appendChild(node);
+      const slot = document.createElement("div");
+      slot.className = "slot";
+      slot.dataset.slot = key;
+      slot.textContent = `drop ${key === "INV" ? "Inventories" : key}`;
+      els.chain.appendChild(slot);
 
       if (idx < seq.length-1){
         const arrow = document.createElement("div");
@@ -147,7 +182,9 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function setupSlots(){
-    const slots = els.chain.querySelectorAll(".slot");
+    const slots = els.chain?.querySelectorAll(".slot");
+    if (!slots) return;
+
     slots.forEach(slot => {
       slot.addEventListener("dragover", (ev) => { ev.preventDefault(); slot.classList.add("dragover"); });
       slot.addEventListener("dragleave", () => slot.classList.remove("dragover"));
@@ -171,14 +208,16 @@ window.addEventListener("DOMContentLoaded", () => {
 
   function clearChain(){
     for (const k of Object.keys(chainState)) delete chainState[k];
-    els.chain.querySelectorAll(".slot").forEach(s => {
-      s.textContent = "drop";
+    els.chain?.querySelectorAll(".slot").forEach(s => {
+      const k = s.dataset.slot;
+      s.textContent = `drop ${k === "INV" ? "Inventories" : k}`;
       s.classList.remove("filled");
     });
     renderMechFeedback("");
   }
 
   function renderMechFeedback(html){
+    if (!els.mechFeedback) return;
     if (!html){ els.mechFeedback.style.display="none"; els.mechFeedback.innerHTML=""; return; }
     els.mechFeedback.style.display="block";
     els.mechFeedback.innerHTML = html;
@@ -215,7 +254,7 @@ window.addEventListener("DOMContentLoaded", () => {
     renderMechFeedback(`<span class="tagBad">Not quite</span> ${msg}.`);
   }
 
-  // ---------- Scenarios ----------
+  // ---------- Scenario ----------
   function newScenario(){
     clearChain();
     renderMechFeedback("");
@@ -226,17 +265,15 @@ window.addEventListener("DOMContentLoaded", () => {
     currentShock = { var: v, delta, target: BASE[v] + delta };
 
     const word = delta > 0 ? "increases" : "decreases";
-    els.scenarioTitle.textContent = "Scenario shock";
-    els.scenarioDesc.textContent =
-      `A policy variable changes:\n` +
-      `${v} ${word} (Δ${v} = ${delta}).\n\n` +
-      `Sliders are still at baseline. Use sliders to apply the shock, then build the mechanism.`;
+    if (els.scenarioTitle) els.scenarioTitle.textContent = "Scenario shock";
+    if (els.scenarioDesc) els.scenarioDesc.textContent =
+      `A policy variable changes:\n${v} ${word} (Δ${v} = ${delta}).\n\nSliders are still at baseline. Use sliders to apply the shock, then build the mechanism.`;
 
     buildPileForShock(v);
     buildChainUI(v);
-    els.mechPrompt.textContent = `Fill the ${v}-shock mechanism chain using the cards.`;
+    if (els.mechPrompt) els.mechPrompt.textContent = `Fill the ${v}-shock mechanism chain using the cards.`;
 
-    setStatus("Sliders are baseline. Apply the shock with sliders, then check the chain.");
+    setStatus("Apply the shock with sliders. Then check the mechanism chain.");
     renderAll();
   }
 
@@ -246,30 +283,28 @@ window.addEventListener("DOMContentLoaded", () => {
     syncSliders();
     clearChain();
     renderMechFeedback("");
-
-    els.pile.innerHTML = "";
-    els.chain.innerHTML = "";
-    els.scenarioTitle.textContent = "Scenario";
-    els.scenarioDesc.textContent = "Click “New Scenario” to start.";
-    els.mechPrompt.textContent = "Click New Scenario to generate a shock.";
+    if (els.pile) els.pile.innerHTML = "";
+    if (els.chain) els.chain.innerHTML = "";
+    if (els.scenarioTitle) els.scenarioTitle.textContent = "Scenario";
+    if (els.scenarioDesc) els.scenarioDesc.textContent = "Click “New Scenario” to start.";
+    if (els.mechPrompt) els.mechPrompt.textContent = "Click New Scenario to generate a shock.";
     setStatus("Reset to baseline.");
     renderAll();
   }
 
   // ---------- Sliders ----------
   function syncSliders(){
-    els.rSlider.value = String(r);
-    els.gSlider.value = String(G);
-    els.tSlider.value = String(T);
-    els.rVal.textContent = fmt(r);
-    els.gVal.textContent = fmt(G);
-    els.tVal.textContent = fmt(T);
+    if (els.rSlider) els.rSlider.value = String(r);
+    if (els.gSlider) els.gSlider.value = String(G);
+    if (els.tSlider) els.tSlider.value = String(T);
+    if (els.rVal) els.rVal.textContent = fmt(r);
+    if (els.gVal) els.gVal.textContent = fmt(G);
+    if (els.tVal) els.tVal.textContent = fmt(T);
   }
-
   function onSlider(){
-    r = Number(els.rSlider.value);
-    G = Number(els.gSlider.value);
-    T = Number(els.tSlider.value);
+    r = Number(els.rSlider?.value ?? r);
+    G = Number(els.gSlider?.value ?? G);
+    T = Number(els.tSlider?.value ?? T);
     syncSliders();
     renderAll();
   }
@@ -280,8 +315,9 @@ window.addEventListener("DOMContentLoaded", () => {
     const dpr = window.devicePixelRatio || 1;
     const W = canvas.clientWidth * dpr;
     const H = canvas.clientHeight * dpr;
+    if (W === 0 || H === 0) return { ctx, W:0, H:0, dpr, ok:false };
     if (canvas.width !== W || canvas.height !== H){ canvas.width=W; canvas.height=H; }
-    return { ctx, W, H, dpr };
+    return { ctx, W, H, dpr, ok:true };
   }
 
   function drawAxes(ctx, W, H, dpr, xLabel, yLabel){
@@ -291,6 +327,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
     ctx.strokeStyle = "rgba(0,0,0,0.10)";
     ctx.lineWidth = 1*dpr;
+
     for (let i=0;i<=5;i++){
       const x = X0 + i*(X1-X0)/5;
       ctx.beginPath(); ctx.moveTo(x,Y0); ctx.lineTo(x,Y1); ctx.stroke();
@@ -315,43 +352,38 @@ window.addEventListener("DOMContentLoaded", () => {
     return { X0, X1, Y0, Y1 };
   }
 
-  function line(ctx, x1,y1,x2,y2, stroke, lw, dpr, dash=null){
+  function line(ctx, x1,y1,x2,y2, stroke, lw, dpr){
     ctx.strokeStyle = stroke;
     ctx.lineWidth = lw*dpr;
-    if (dash) ctx.setLineDash(dash.map(v=>v*dpr)); else ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-    ctx.setLineDash([]);
   }
-
   function dot(ctx, x,y, color, dpr){
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(x,y,5*dpr,0,Math.PI*2); ctx.fill();
   }
-
   function xTick(ctx, x, Y1, label, dpr){
     ctx.strokeStyle = "rgba(0,0,0,0.35)";
     ctx.lineWidth = 2*dpr;
     ctx.beginPath(); ctx.moveTo(x, Y1); ctx.lineTo(x, Y1 + 6*dpr); ctx.stroke();
-
     ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.font = `${12*dpr}px system-ui`;
     ctx.textAlign="center"; ctx.textBaseline="top";
     ctx.fillText(label, x, Y1 + 8*dpr);
   }
-
   function yTick(ctx, X0, y, label, dpr){
     ctx.strokeStyle = "rgba(0,0,0,0.35)";
     ctx.lineWidth = 2*dpr;
     ctx.beginPath(); ctx.moveTo(X0-6*dpr, y); ctx.lineTo(X0, y); ctx.stroke();
-
     ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.font = `${12*dpr}px system-ui`;
     ctx.textAlign="right"; ctx.textBaseline="middle";
     ctx.fillText(label, X0 - 10*dpr, y);
   }
 
   function drawKC(){
-    const { ctx, W, H, dpr } = setupCanvas(els.kcCanvas);
+    const pack = setupCanvas(els.kcCanvas);
+    if (!pack.ok) return;
+    const { ctx, W, H, dpr } = pack;
     ctx.clearRect(0,0,W,H);
 
     const { X0,X1,Y0p,Y1p } = drawAxes(ctx,W,H,dpr,"Output (Y)","Planned Expenditure (PE)");
@@ -363,54 +395,47 @@ window.addEventListener("DOMContentLoaded", () => {
     // 45 line
     line(ctx, xTo(Ymin), yTo(Ymin), xTo(Ymax), yTo(Ymax), "rgba(0,0,0,0.65)", 3, dpr);
 
-    // PE lines: PE = A + MPC*Y
     const Ab = P.C0 - P.MPC*BASE.T + Iof(BASE.r) + BASE.G;
     const Ac = P.C0 - P.MPC*T + Iof(r) + G;
 
+    // Baseline + Current PE
     line(ctx, xTo(Ymin), yTo(Ab + P.MPC*Ymin), xTo(Ymax), yTo(Ab + P.MPC*Ymax), BLUE, 3, dpr);
     line(ctx, xTo(Ymin), yTo(Ac + P.MPC*Ymin), xTo(Ymax), yTo(Ac + P.MPC*Ymax), ORANGE, 3, dpr);
 
     const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
     const Y1eq = Ystar(r, G, T);
 
-    // baseline equilibrium marker + x tick
     dot(ctx, xTo(Y0eq), yTo(Y0eq), BLUE, dpr);
     xTick(ctx, xTo(Y0eq), Y1p, "Y₀", dpr);
 
-    // new equilibrium marker + x tick + label (if changed)
-    const changed = (Math.abs(Y1eq - Y0eq) > 1e-6);
-    if (changed){
+    if (Math.abs(Y1eq - Y0eq) > 1e-6){
       dot(ctx, xTo(Y1eq), yTo(Y1eq), ORANGE, dpr);
       xTick(ctx, xTo(Y1eq), Y1p, "Y₁", dpr);
-
-      ctx.fillStyle = "rgba(0,0,0,0.70)";
-      ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
-      ctx.textAlign="left"; ctx.textBaseline="bottom";
-      ctx.fillText("New equilibrium", xTo(Y1eq)+8*dpr, yTo(Y1eq)-6*dpr);
     }
   }
 
   function drawIS(){
-    const { ctx, W, H, dpr } = setupCanvas(els.isCanvas);
+    const pack = setupCanvas(els.isCanvas);
+    if (!pack.ok) return;
+    const { ctx, W, H, dpr } = pack;
     ctx.clearRect(0,0,W,H);
 
     const { X0,X1,Y0p,Y1p } = drawAxes(ctx,W,H,dpr,"Output (Y)","Interest rate (r)");
 
-    const rMin = DATA.ranges.r.min;
-    const rMax = DATA.ranges.r.max;
+    const rMin = (DATA.ranges?.r?.min ?? 0);
+    const rMax = (DATA.ranges?.r?.max ?? 10);
     const Ymin = 0, Ymax = 900;
 
     const xTo = (Y) => X0 + (Y-Ymin)/(Ymax-Ymin)*(X1-X0);
     const yTo = (rr) => Y0p + (rMax-rr)/(rMax-rMin)*(Y1p-Y0p);
 
-    // y-axis labeled ticks for r
+    // label r ticks
     for (const rr of [0,2,4,6,8,10]){
-      yTick(ctx, X0, yTo(rr), rr.toString(), dpr);
+      if (rr >= rMin && rr <= rMax) yTick(ctx, X0, yTo(rr), String(rr), dpr);
     }
 
-    // Plot baseline IS (blue) and current IS (orange)
-    const N = 160;
-    function drawISCurve(color, GG, TT){
+    const N = 220; // higher resolution so it always looks like a curve
+    function drawCurve(color, GG, TT){
       ctx.strokeStyle = color;
       ctx.lineWidth = 3*dpr;
       ctx.beginPath();
@@ -424,70 +449,55 @@ window.addEventListener("DOMContentLoaded", () => {
       }
       ctx.stroke();
     }
-    drawISCurve(BLUE, BASE.G, BASE.T);
-    drawISCurve(ORANGE, G, T);
 
-    // Equilibrium points:
+    drawCurve(BLUE, BASE.G, BASE.T);
+    drawCurve(ORANGE, G, T);
+
+    // points
     const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
     const Y1eq = Ystar(r, G, T);
 
     dot(ctx, xTo(Y0eq), yTo(BASE.r), BLUE, dpr);
     xTick(ctx, xTo(Y0eq), Y1p, "Y₀", dpr);
 
-    const changed = (Math.abs(Y1eq - Y0eq) > 1e-6) || (Math.abs(r - BASE.r) > 1e-6);
-    if (changed){
+    if (Math.abs(Y1eq - Y0eq) > 1e-6 || Math.abs(r - BASE.r) > 1e-6){
       dot(ctx, xTo(Y1eq), yTo(r), ORANGE, dpr);
       xTick(ctx, xTo(Y1eq), Y1p, "Y₁", dpr);
-
-      ctx.fillStyle = "rgba(0,0,0,0.70)";
-      ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
-      ctx.textAlign="left"; ctx.textBaseline="bottom";
-      ctx.fillText("New equilibrium", xTo(Y1eq)+8*dpr, yTo(r)-6*dpr);
     }
   }
 
   function renderStats(){
     const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
     const Y1eq = Ystar(r, G, T);
-    els.y0.textContent = fmt(Y0eq);
-    els.y1.textContent = fmt(Y1eq);
+    if (els.y0) els.y0.textContent = fmt(Y0eq);
+    if (els.y1) els.y1.textContent = fmt(Y1eq);
   }
 
   function renderAll(){
-    renderStats();
-    drawKC();
-    drawIS();
-  }
-
-  // ---------- Utils ----------
-  function shuffle(a){
-    for (let i=a.length-1;i>0;i--){
-      const j = Math.floor(Math.random()*(i+1));
-      [a[i], a[j]] = [a[j], a[i]];
+    try{
+      renderStats();
+      drawKC();
+      drawIS();
+    } catch (e){
+      setStatus("JS error: " + (e?.message || "unknown error"));
     }
   }
 
-  // ---------- Init ----------
+  // ---------- Wire up ----------
   function init(){
-    // baseline slider values
-    r = BASE.r; G = BASE.G; T = BASE.T;
-    els.rSlider.value = String(r);
-    els.gSlider.value = String(G);
-    els.tSlider.value = String(T);
     syncSliders();
-
     renderAll();
     setStatus("Ready.");
   }
 
-  els.rSlider.addEventListener("input", onSlider);
-  els.gSlider.addEventListener("input", onSlider);
-  els.tSlider.addEventListener("input", onSlider);
+  els.rSlider?.addEventListener("input", onSlider);
+  els.gSlider?.addEventListener("input", onSlider);
+  els.tSlider?.addEventListener("input", onSlider);
 
-  els.newBtn.addEventListener("click", newScenario);
-  els.resetBtn.addEventListener("click", resetAll);
-  els.checkMechBtn.addEventListener("click", checkMechanism);
-  els.clearMechBtn.addEventListener("click", clearChain);
+  els.newBtn?.addEventListener("click", newScenario);
+  els.resetBtn?.addEventListener("click", resetAll);
+  els.checkMechBtn?.addEventListener("click", checkMechanism);
+  els.clearMechBtn?.addEventListener("click", clearChain);
 
   init();
 });
