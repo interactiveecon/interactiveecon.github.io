@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Equilibrium Output Solver Lab</title>
+
+  <link rel="stylesheet" href="/assets/style.css">
+
+  <style>
+    .stack{ display:grid; gap:14px; margin-top:18px; }
+    .box{
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(246,242,234,0.35);
+      padding: 12px;
+    }
+    .grid2{ display:grid; grid-template-columns: 1.1fr 0.9fr; gap:12px; align-items:start; }
+    @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
+
+    .equations{
+      border:1px solid rgba(0,0,0,0.08);
+      background: rgba(255,255,255,0.75);
+      border-radius: 14px;
+      padding: 10px;
+      font-variant-numeric: tabular-nums;
+    }
+    .eqline{ margin: 6px 0; color: var(--ink); }
+    .eqline code{ background: rgba(0,0,0,0.04); padding: 2px 6px; border-radius: 8px; }
+
+    .questionBox{
+      border:1px solid rgba(0,0,0,0.08);
+      background: rgba(255,255,255,0.75);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .qtitle{ font-weight: 900; color: var(--ink); margin:0; }
+    .qsub{ color: var(--ink-2); margin:6px 0 0 0; line-height:1.45; }
+
+    .answerRow{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+      margin-top: 10px;
+    }
+    .answerRow input{
+      width: 160px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.18);
+      background: rgba(255,255,255,0.9);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .steps{
+      display:grid;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .stepCard{
+      border:1px solid rgba(0,0,0,0.08);
+      background: rgba(255,255,255,0.75);
+      border-radius: 14px;
+      padding: 12px;
+    }
+    .stepHead{
+      display:flex; justify-content:space-between; align-items:center; gap:10px;
+      flex-wrap:wrap;
+    }
+    .stepHead h3{ margin:0; font-size: 14px; color: var(--ink); }
+    .stepHead .mini{ font-size: 12px; color: var(--ink-2); }
+
+    .sol{
+      display:none;
+      margin-top: 10px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+      padding-top: 10px;
+      color: var(--ink-2);
+      line-height: 1.55;
+      font-variant-numeric: tabular-nums;
+    }
+    .sol .math{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      background: rgba(0,0,0,0.04);
+      padding: 10px;
+      border-radius: 12px;
+      overflow-x:auto;
+      color: var(--ink);
+    }
+
+    .tagOK{
+      display:inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(34,139,34,0.12);
+      border: 1px solid rgba(34,139,34,0.25);
+      color: rgba(34,120,34,1);
+      font-weight: 800;
+      font-size: 12px;
+      margin-left: 8px;
+    }
+    .tagBad{
+      display:inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(178,34,34,0.10);
+      border: 1px solid rgba(178,34,34,0.25);
+      color: rgba(140,0,0,0.95);
+      font-weight: 800;
+      font-size: 12px;
+      margin-left: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="page-header">
+    <div class="container">
+      <nav class="crumbbar">
+        <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
+      </nav>
+
+      <div class="header-inner">
+        <div class="title-block">
+          <div class="kicker">Macroeconomics Practice Lab</div>
+          <h1>Equilibrium Output Solver</h1>
+          <p class="sub">
+            Use the equations and values to compute equilibrium output <strong>Y*</strong>.
+            Reveal solutions step-by-step.
+          </p>
+
+          <details class="howto">
+            <summary>Instructions</summary>
+            <div class="howto-body">
+              <ol>
+                <li>Read the equations and parameter values.</li>
+                <li>Try to compute equilibrium output <strong>Y*</strong> on your own.</li>
+                <li>Use <strong>Step 1</strong> to build the planned expenditure function <strong>PE(Y)</strong>.</li>
+                <li>Use <strong>Step 2</strong> to solve <strong>Y = PE(Y)</strong> for <strong>Y*</strong>.</li>
+              </ol>
+              <p class="howto-note">
+                In this lab: <strong>C = C0 + MPC·(Y − T)</strong> and <strong>I = I0 − b·r</strong>.
+                Planned expenditure is <strong>PE(Y) = C + I + G</strong>.
+              </p>
+            </div>
+          </details>
+        </div>
+
+        <div class="controls-card">
+          <div class="controls-actions">
+            <button id="newBtn" class="btn primary">New Problem</button>
+            <button id="resetBtn" class="btn subtle">Reset reveals</button>
+          </div>
+          <div id="status" class="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container stack">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Problem</h2>
+        <p class="panel-sub">Compute equilibrium output using the Keynesian Cross setup.</p>
+      </div>
+
+      <div class="grid2">
+        <div class="box">
+          <div class="equations" id="eqBox"></div>
+
+          <div class="steps">
+            <div class="stepCard">
+              <div class="stepHead">
+                <div>
+                  <h3>Step 1: Build planned expenditure</h3>
+                  <div class="mini">Compute PE(Y) = C + I + G using the given equations.</div>
+                </div>
+                <button id="show1" class="btn">Show solution</button>
+              </div>
+              <div id="sol1" class="sol"></div>
+            </div>
+
+            <div class="stepCard">
+              <div class="stepHead">
+                <div>
+                  <h3>Step 2: Find equilibrium output</h3>
+                  <div class="mini">Solve Y = PE(Y) to find Y*.</div>
+                </div>
+                <button id="show2" class="btn">Show solution</button>
+              </div>
+              <div id="sol2" class="sol"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="box">
+          <div class="questionBox">
+            <p class="qtitle">Question</p>
+            <p class="qsub">What is the equilibrium level of output <strong>Y*</strong>?</p>
+
+            <div class="answerRow">
+              <input id="ans" inputmode="decimal" placeholder="Enter Y*" />
+              <button id="checkBtn" class="btn primary">Check</button>
+              <button id="revealBtn" class="btn subtle">Reveal answer</button>
+              <span id="resultTag"></span>
+            </div>
+
+            <p class="qsub" style="margin-top:10px;">
+              Tip: Keep everything in terms of <strong>Y</strong> until the final step.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="./data.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
