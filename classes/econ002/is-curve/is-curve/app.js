@@ -1,4 +1,3 @@
-// app.js
 (() => {
   const $ = (id) => document.getElementById(id);
 
@@ -31,33 +30,28 @@
     isCanvas: $("isCanvas"),
   };
 
-  function setStatus(msg){ if (els.status) els.status.textContent = msg; }
+  function setStatus(msg){ els.status.textContent = msg; }
   function fmt(x){ return Number.isFinite(x) ? x.toFixed(2) : "—"; }
   function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
 
-  // Confirm script runs
-  setStatus("Loaded.");
-
   const DATA = window.KCIS_DATA;
-  if (!DATA || !DATA.params || !DATA.baseline) {
-    setStatus("ERROR: KCIS_DATA missing. Confirm data.js is in this folder and defines window.KCIS_DATA.");
-    return;
-  }
+  if (!DATA) { setStatus("ERROR: KCIS_DATA missing (data.js not loaded)."); return; }
 
   const P = DATA.params;
   const BASE = { ...DATA.baseline };
 
-  // Current (student-controlled)
+  // Current slider values
   let r = BASE.r, G = BASE.G, T = BASE.T;
 
-  // Scenario shock: does not change sliders
+  // Shock info (does NOT change sliders)
   let shock = null; // {var, delta}
 
   // Colors
   const BLUE = "rgba(31,119,180,0.92)";
   const ORANGE = "rgba(230,159,0,0.95)";
+  const INK = "rgba(0,0,0,0.65)";
 
-  // Model
+  // ----- Model -----
   function Iof(rr){ return P.I0 - P.b * rr; }
   function Ystar(rr, GG, TT){
     const num = P.C0 - P.MPC*TT + Iof(rr) + GG;
@@ -65,7 +59,189 @@
   }
   function Yis(rr, GG, TT){ return Ystar(rr, GG, TT); }
 
-  // ---------- Mechanism (14 cards only) ----------
+  // ----- Canvas helpers -----
+  function setupCanvas(canvas){
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const W = Math.max(2, Math.floor(rect.width * dpr));
+    const H = Math.max(2, Math.floor(rect.height * dpr));
+    if (canvas.width !== W || canvas.height !== H){ canvas.width = W; canvas.height = H; }
+    return { ctx, W, H, dpr };
+  }
+
+  function axes(ctx, W, H, dpr, xLabel, yLabel){
+    const pad = { l: 60*dpr, r: 14*dpr, t: 14*dpr, b: 52*dpr };
+    const X0 = pad.l, X1 = W - pad.r;
+    const Y0 = pad.t, Y1 = H - pad.b;
+
+    // background
+    ctx.fillStyle = "rgba(255,255,255,0.0)";
+    ctx.fillRect(0,0,W,H);
+
+    // grid
+    ctx.strokeStyle = "rgba(0,0,0,0.10)";
+    ctx.lineWidth = 1*dpr;
+    for (let i=0;i<=5;i++){
+      const x = X0 + i*(X1-X0)/5;
+      ctx.beginPath(); ctx.moveTo(x,Y0); ctx.lineTo(x,Y1); ctx.stroke();
+    }
+    for (let i=0;i<=4;i++){
+      const y = Y0 + i*(Y1-Y0)/4;
+      ctx.beginPath(); ctx.moveTo(X0,y); ctx.lineTo(X1,y); ctx.stroke();
+    }
+
+    // labels
+    ctx.fillStyle = "rgba(0,0,0,0.70)";
+    ctx.font = `${12*dpr}px system-ui`;
+    ctx.textAlign="center"; ctx.textBaseline="top";
+    ctx.fillText(xLabel, (X0+X1)/2, Y1 + 20*dpr);
+
+    ctx.save();
+    ctx.translate(X0 - 48*dpr, (Y0+Y1)/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.textAlign="center"; ctx.textBaseline="top";
+    ctx.fillText(yLabel, 0, 0);
+    ctx.restore();
+
+    return { X0,X1,Y0,Y1 };
+  }
+
+  function drawLine(ctx, x1,y1,x2,y2, stroke, lw, dpr){
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = lw*dpr;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  }
+  function drawDot(ctx, x,y, color, dpr){
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(x,y,5*dpr,0,Math.PI*2); ctx.fill();
+  }
+  function xTick(ctx, x, Y1, label, dpr){
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
+    ctx.lineWidth = 2*dpr;
+    ctx.beginPath(); ctx.moveTo(x, Y1); ctx.lineTo(x, Y1 + 6*dpr); ctx.stroke();
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.font = `${12*dpr}px system-ui`;
+    ctx.textAlign="center"; ctx.textBaseline="top";
+    ctx.fillText(label, x, Y1 + 8*dpr);
+  }
+  function yTick(ctx, X0, y, label, dpr){
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
+    ctx.lineWidth = 2*dpr;
+    ctx.beginPath(); ctx.moveTo(X0-6*dpr, y); ctx.lineTo(X0, y); ctx.stroke();
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.font = `${12*dpr}px system-ui`;
+    ctx.textAlign="right"; ctx.textBaseline="middle";
+    ctx.fillText(label, X0 - 10*dpr, y);
+  }
+
+  // ----- Draw KC -----
+  function drawKC(){
+    const { ctx, W, H, dpr } = setupCanvas(els.kcCanvas);
+    ctx.clearRect(0,0,W,H);
+
+    const { X0,X1,Y0,Y1 } = axes(ctx,W,H,dpr,"Output (Y)","Planned Expenditure (PE)");
+
+    // watermark to prove function ran
+    ctx.fillStyle = "rgba(0,0,0,0.20)";
+    ctx.font = `${12*dpr}px system-ui`;
+    ctx.textAlign="left"; ctx.textBaseline="top";
+    ctx.fillText("KC", 6*dpr, 6*dpr);
+
+    const Ymin = 0, Ymax = 900;
+    const xTo = (Yv) => X0 + (Yv-Ymin)/(Ymax-Ymin)*(X1-X0);
+    const yTo = (PEv) => Y0 + (Ymax-PEv)/(Ymax-Ymin)*(Y1-Y0);
+
+    // 45-degree
+    drawLine(ctx, xTo(Ymin), yTo(Ymin), xTo(Ymax), yTo(Ymax), INK, 3, dpr);
+
+    // PE lines: PE = A + MPC*Y
+    const Ab = P.C0 - P.MPC*BASE.T + Iof(BASE.r) + BASE.G;
+    const Ac = P.C0 - P.MPC*T + Iof(r) + G;
+
+    drawLine(ctx, xTo(Ymin), yTo(Ab + P.MPC*Ymin), xTo(Ymax), yTo(Ab + P.MPC*Ymax), BLUE, 3, dpr);
+    drawLine(ctx, xTo(Ymin), yTo(Ac + P.MPC*Ymin), xTo(Ymax), yTo(Ac + P.MPC*Ymax), ORANGE, 3, dpr);
+
+    const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
+    const Y1eq = Ystar(r, G, T);
+
+    drawDot(ctx, xTo(Y0eq), yTo(Y0eq), BLUE, dpr);
+    xTick(ctx, xTo(Y0eq), Y1, "Y₀", dpr);
+
+    if (Math.abs(Y1eq - Y0eq) > 1e-6){
+      drawDot(ctx, xTo(Y1eq), yTo(Y1eq), ORANGE, dpr);
+      xTick(ctx, xTo(Y1eq), Y1, "Y₁", dpr);
+    }
+  }
+
+  // ----- Draw IS -----
+  function drawIS(){
+    const { ctx, W, H, dpr } = setupCanvas(els.isCanvas);
+    ctx.clearRect(0,0,W,H);
+
+    const { X0,X1,Y0,Y1 } = axes(ctx,W,H,dpr,"Output (Y)","Interest rate (r)");
+
+    // watermark to prove function ran
+    ctx.fillStyle = "rgba(0,0,0,0.20)";
+    ctx.font = `${12*dpr}px system-ui`;
+    ctx.textAlign="left"; ctx.textBaseline="top";
+    ctx.fillText("IS", 6*dpr, 6*dpr);
+
+    const rMin = DATA.ranges?.r?.min ?? 0;
+    const rMax = DATA.ranges?.r?.max ?? 10;
+
+    const Ymin = 0, Ymax = 900;
+    const xTo = (Yv) => X0 + (Yv-Ymin)/(Ymax-Ymin)*(X1-X0);
+    const yTo = (rv) => Y0 + (rMax-rv)/(rMax-rMin)*(Y1-Y0);
+
+    // r ticks
+    [0,2,4,6,8,10].forEach(rr => {
+      if (rr >= rMin && rr <= rMax) yTick(ctx, X0, yTo(rr), String(rr), dpr);
+    });
+
+    const N = 240;
+    function curve(color, GG, TT){
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3*dpr;
+      ctx.beginPath();
+      for (let i=0;i<=N;i++){
+        const rr = rMin + (i/N)*(rMax-rMin);
+        const YY = Yis(rr, GG, TT);
+        const x = xTo(YY);
+        const y = yTo(rr);
+        if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+    }
+
+    curve(BLUE, BASE.G, BASE.T);
+    curve(ORANGE, G, T);
+
+    const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
+    const Y1eq = Ystar(r, G, T);
+
+    drawDot(ctx, xTo(Y0eq), yTo(BASE.r), BLUE, dpr);
+    xTick(ctx, xTo(Y0eq), Y1, "Y₀", dpr);
+
+    if (Math.abs(Y1eq - Y0eq) > 1e-6 || Math.abs(r - BASE.r) > 1e-6){
+      drawDot(ctx, xTo(Y1eq), yTo(r), ORANGE, dpr);
+      xTick(ctx, xTo(Y1eq), Y1, "Y₁", dpr);
+    }
+  }
+
+  function drawAll(){
+    const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
+    const Y1eq = Ystar(r, G, T);
+    els.y0.textContent = fmt(Y0eq);
+    els.y1.textContent = fmt(Y1eq);
+
+    requestAnimationFrame(() => {
+      drawKC();
+      drawIS();
+    });
+  }
+
+  // ----- Mechanism (14 cards only, slots show only “drop”) -----
   const CARDS = [
     { id:"r_up", text:"r ↑", var:"r", dir:"↑" },
     { id:"r_dn", text:"r ↓", var:"r", dir:"↓" },
@@ -83,14 +259,12 @@
     { id:"INV_dn", text:"Unplanned inventories ↓", var:"INV", dir:"↓" },
   ];
 
-  // Chains used depend on scenario
   function chainVars(v){
     if (v === "r") return ["r","I","PE","INV","Y"];
-    if (v === "T") return ["T","PE","INV","Y"]; // we’re not including C as a separate variable in the 14-card set
+    if (v === "T") return ["T","PE","INV","Y"]; // C folded into PE to keep 7-variable / 14-card constraint
     return ["G","PE","INV","Y"];
   }
 
-  // Expected directions (using your mechanisms; for T we fold C into PE)
   function expected(v, sign){
     if (v === "r"){
       return sign==="↑"
@@ -102,16 +276,14 @@
         ? { T:"↑", PE:"↓", INV:"↑", Y:"↓" }
         : { T:"↓", PE:"↑", INV:"↓", Y:"↑" };
     }
-    // G
     return sign==="↑"
       ? { G:"↑", PE:"↑", INV:"↓", Y:"↑" }
       : { G:"↓", PE:"↓", INV:"↑", Y:"↓" };
   }
 
-  const chainState = {}; // slot index -> cardId
+  const chainState = {}; // slotIndex -> cardId
 
   function renderMechFeedback(html){
-    if (!els.mechFeedback) return;
     if (!html){ els.mechFeedback.style.display="none"; els.mechFeedback.innerHTML=""; return; }
     els.mechFeedback.style.display="block";
     els.mechFeedback.innerHTML = html;
@@ -135,7 +307,7 @@
 
   function buildChain(v){
     els.chain.innerHTML = "";
-    for (const k of Object.keys(chainState)) delete chainState[k];
+    Object.keys(chainState).forEach(k => delete chainState[k]);
     const seq = chainVars(v);
 
     seq.forEach((varName, idx) => {
@@ -168,8 +340,7 @@
         const card = CARDS.find(c => c.id === id);
         if (!card) return;
 
-        const idx = slot.dataset.slotIndex;
-        chainState[idx] = id;
+        chainState[slot.dataset.slotIndex] = id;
         slot.textContent = card.text;
         slot.classList.add("filled");
         renderMechFeedback("");
@@ -178,7 +349,7 @@
   }
 
   function clearChain(){
-    for (const k of Object.keys(chainState)) delete chainState[k];
+    Object.keys(chainState).forEach(k => delete chainState[k]);
     els.chain.querySelectorAll(".slot").forEach(s => {
       s.textContent = "drop";
       s.classList.remove("filled");
@@ -191,11 +362,9 @@
       renderMechFeedback(`<span class="tagBad">No scenario</span> Click <strong>New Scenario</strong> first.`);
       return;
     }
-
     const sign = shock.delta > 0 ? "↑" : "↓";
     const need = expected(shock.var, sign);
 
-    // verify filled
     const slots = Array.from(els.chain.querySelectorAll(".slot"));
     for (const s of slots){
       if (!chainState[s.dataset.slotIndex]){
@@ -204,27 +373,25 @@
       }
     }
 
-    // check by reading what variable each slot is supposed to represent (hidden from students)
     const wrong = [];
     for (const s of slots){
       const varName = s.dataset.var;
-      const id = chainState[s.dataset.slotIndex];
-      const card = CARDS.find(c => c.id === id);
+      const cardId = chainState[s.dataset.slotIndex];
+      const card = CARDS.find(c => c.id === cardId);
 
-      if (!need[varName] || !card || card.var !== varName || card.dir !== need[varName]) {
+      if (!need[varName] || !card || card.var !== varName || card.dir !== need[varName]){
         wrong.push(varName);
       }
     }
 
     if (!wrong.length){
       renderMechFeedback(`<span class="tagOK">Correct</span> Great — that mechanism matches the shock.`);
-      return;
+    } else {
+      renderMechFeedback(`<span class="tagBad">Not quite</span> One or more links are incorrect. Try again.`);
     }
-
-    renderMechFeedback(`<span class="tagBad">Not quite</span> One or more links are incorrect. Try again.`);
   }
 
-  // ---------- Scenarios ----------
+  // ----- Scenario (does NOT move sliders) -----
   function newScenario(){
     clearChain();
     renderMechFeedback("");
@@ -262,7 +429,7 @@
     drawAll();
   }
 
-  // ---------- Sliders ----------
+  // ----- Sliders -----
   function syncSliders(){
     els.rSlider.value = String(r);
     els.gSlider.value = String(G);
@@ -271,6 +438,7 @@
     els.gVal.textContent = fmt(G);
     els.tVal.textContent = fmt(T);
   }
+
   function onSlider(){
     r = Number(els.rSlider.value);
     G = Number(els.gSlider.value);
@@ -279,193 +447,7 @@
     drawAll();
   }
 
-  // ---------- Canvas drawing ----------
-  function setupCanvas(canvas){
-  const ctx = canvas.getContext("2d");
-  const dpr = window.devicePixelRatio || 1;
-
-  // Sometimes the canvas rect reports 0×0; fall back to parent (.chartCard) size.
-  let rect = canvas.getBoundingClientRect();
-  if (rect.width < 2 || rect.height < 2) {
-    const p = canvas.parentElement?.getBoundingClientRect?.();
-    if (p && p.width > rect.width && p.height > rect.height) rect = p;
-  }
-
-  const W = Math.max(2, Math.floor(rect.width * dpr));
-  const H = Math.max(2, Math.floor(rect.height * dpr));
-
-  if (canvas.width !== W || canvas.height !== H){
-    canvas.width = W;
-    canvas.height = H;
-  }
-  return { ctx, W, H, dpr, cssW: rect.width, cssH: rect.height };
-}
-
-  function drawAxes(ctx, W, H, dpr, xLabel, yLabel){
-    const pad = { l: 60*dpr, r: 14*dpr, t: 14*dpr, b: 52*dpr };
-    const X0 = pad.l, X1 = W - pad.r;
-    const Y0 = pad.t, Y1 = H - pad.b;
-
-    ctx.strokeStyle = "rgba(0,0,0,0.10)";
-    ctx.lineWidth = 1*dpr;
-    for (let i=0;i<=5;i++){
-      const x = X0 + i*(X1-X0)/5;
-      ctx.beginPath(); ctx.moveTo(x,Y0); ctx.lineTo(x,Y1); ctx.stroke();
-    }
-    for (let i=0;i<=4;i++){
-      const y = Y0 + i*(Y1-Y0)/4;
-      ctx.beginPath(); ctx.moveTo(X0,y); ctx.lineTo(X1,y); ctx.stroke();
-    }
-
-    ctx.fillStyle = "rgba(0,0,0,0.70)";
-    ctx.font = `${12*dpr}px system-ui`;
-    ctx.textAlign="center"; ctx.textBaseline="top";
-    ctx.fillText(xLabel, (X0+X1)/2, Y1 + 20*dpr);
-
-    ctx.save();
-    ctx.translate(X0 - 48*dpr, (Y0+Y1)/2);
-    ctx.rotate(-Math.PI/2);
-    ctx.textAlign="center"; ctx.textBaseline="top";
-    ctx.fillText(yLabel, 0, 0);
-    ctx.restore();
-
-    return { X0, X1, Y0, Y1 };
-  }
-
-  function line(ctx, x1,y1,x2,y2, stroke, lw, dpr){
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = lw*dpr;
-    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-  }
-  function dot(ctx, x,y, color, dpr){
-    ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(x,y,5*dpr,0,Math.PI*2); ctx.fill();
-  }
-  function xTick(ctx, x, Y1, label, dpr){
-    ctx.strokeStyle = "rgba(0,0,0,0.35)";
-    ctx.lineWidth = 2*dpr;
-    ctx.beginPath(); ctx.moveTo(x, Y1); ctx.lineTo(x, Y1 + 6*dpr); ctx.stroke();
-    ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = `${12*dpr}px system-ui`;
-    ctx.textAlign="center"; ctx.textBaseline="top";
-    ctx.fillText(label, x, Y1 + 8*dpr);
-  }
-  function yTick(ctx, X0, y, label, dpr){
-    ctx.strokeStyle = "rgba(0,0,0,0.35)";
-    ctx.lineWidth = 2*dpr;
-    ctx.beginPath(); ctx.moveTo(X0-6*dpr, y); ctx.lineTo(X0, y); ctx.stroke();
-    ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = `${12*dpr}px system-ui`;
-    ctx.textAlign="right"; ctx.textBaseline="middle";
-    ctx.fillText(label, X0 - 10*dpr, y);
-  }
-
-  function drawKC(){
-    const { ctx, W, H, dpr } = setupCanvas(els.kcCanvas);
-    ctx.clearRect(0,0,W,H);
-    const { X0,X1,Y0p,Y1p } = drawAxes(ctx,W,H,dpr,"Output (Y)","Planned Expenditure (PE)");
-
-    const Ymin = 0, Ymax = 900;
-    const xTo = (Y) => X0 + (Y-Ymin)/(Ymax-Ymin)*(X1-X0);
-    const yTo = (PE) => Y0p + (Ymax-PE)/(Ymax-Ymin)*(Y1p-Y0p);
-
-    // 45 line
-    line(ctx, xTo(Ymin), yTo(Ymin), xTo(Ymax), yTo(Ymax), "rgba(0,0,0,0.65)", 3, dpr);
-
-    const Ab = P.C0 - P.MPC*BASE.T + Iof(BASE.r) + BASE.G;
-    const Ac = P.C0 - P.MPC*T + Iof(r) + G;
-
-    // baseline PE (blue) and current PE (orange)
-    line(ctx, xTo(Ymin), yTo(Ab + P.MPC*Ymin), xTo(Ymax), yTo(Ab + P.MPC*Ymax), BLUE, 3, dpr);
-    line(ctx, xTo(Ymin), yTo(Ac + P.MPC*Ymin), xTo(Ymax), yTo(Ac + P.MPC*Ymax), ORANGE, 3, dpr);
-
-    const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
-    const Y1eq = Ystar(r, G, T);
-
-    dot(ctx, xTo(Y0eq), yTo(Y0eq), BLUE, dpr);
-    xTick(ctx, xTo(Y0eq), Y1p, "Y₀", dpr);
-
-    if (Math.abs(Y1eq - Y0eq) > 1e-6){
-      dot(ctx, xTo(Y1eq), yTo(Y1eq), ORANGE, dpr);
-      xTick(ctx, xTo(Y1eq), Y1p, "Y₁", dpr);
-    }
-  }
-
-  function drawIS(){
-    const { ctx, W, H, dpr } = setupCanvas(els.isCanvas);
-    ctx.clearRect(0,0,W,H);
-    const { X0,X1,Y0p,Y1p } = drawAxes(ctx,W,H,dpr,"Output (Y)","Interest rate (r)");
-
-    const rMin = DATA.ranges?.r?.min ?? 0;
-    const rMax = DATA.ranges?.r?.max ?? 10;
-
-    const Ymin = 0, Ymax = 900;
-    const xTo = (Y) => X0 + (Y-Ymin)/(Ymax-Ymin)*(X1-X0);
-    const yTo = (rr) => Y0p + (rMax-rr)/(rMax-rMin)*(Y1p-Y0p);
-
-    // r ticks
-    [0,2,4,6,8,10].forEach(rr => {
-      if (rr >= rMin && rr <= rMax) yTick(ctx, X0, yTo(rr), String(rr), dpr);
-    });
-
-    const N = 240;
-    function drawCurve(color, GG, TT){
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 3*dpr;
-      ctx.beginPath();
-      for (let i=0;i<=N;i++){
-        const rr = rMin + (i/N)*(rMax-rMin);
-        const YY = Yis(rr, GG, TT);
-        const x = xTo(YY);
-        const y = yTo(rr);
-        if (i===0) ctx.moveTo(x,y);
-        else ctx.lineTo(x,y);
-      }
-      ctx.stroke();
-    }
-
-    drawCurve(BLUE, BASE.G, BASE.T);
-    drawCurve(ORANGE, G, T);
-
-    const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
-    const Y1eq = Ystar(r, G, T);
-
-    dot(ctx, xTo(Y0eq), yTo(BASE.r), BLUE, dpr);
-    xTick(ctx, xTo(Y0eq), Y1p, "Y₀", dpr);
-
-    if (Math.abs(Y1eq - Y0eq) > 1e-6 || Math.abs(r - BASE.r) > 1e-6){
-      dot(ctx, xTo(Y1eq), yTo(r), ORANGE, dpr);
-      xTick(ctx, xTo(Y1eq), Y1p, "Y₁", dpr);
-    }
-  }
-
-  function drawAll(){
-  const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
-  const Y1eq = Ystar(r, G, T);
-  els.y0.textContent = fmt(Y0eq);
-  els.y1.textContent = fmt(Y1eq);
-
-  requestAnimationFrame(() => {
-    // draw KC
-    {
-      const pack = setupCanvas(els.kcCanvas);
-      // show sizes in status (temporary debugging)
-      setStatus(`Ready. KC canvas: ${pack.cssW.toFixed(0)}×${pack.cssH.toFixed(0)} px`);
-
-      // draw a faint border so we know pixels are being painted
-      pack.ctx.clearRect(0,0,pack.W,pack.H);
-      pack.ctx.strokeStyle = "rgba(0,0,0,0.12)";
-      pack.ctx.lineWidth = 2*pack.dpr;
-      pack.ctx.strokeRect(1*pack.dpr, 1*pack.dpr, pack.W-2*pack.dpr, pack.H-2*pack.dpr);
-    }
-
-    // now run your normal draws
-    drawKC();
-    drawIS();
-  });
-}
-
-  // ---------- Wire up ----------
+  // Wire up
   els.rSlider.addEventListener("input", onSlider);
   els.gSlider.addEventListener("input", onSlider);
   els.tSlider.addEventListener("input", onSlider);
@@ -475,10 +457,10 @@
   els.checkMechBtn.addEventListener("click", checkMechanism);
   els.clearMechBtn.addEventListener("click", clearChain);
 
-  window.addEventListener("resize", () => drawAll());
+  window.addEventListener("resize", drawAll);
 
   // init
   syncSliders();
-  drawAll();
   setStatus("Ready.");
+  drawAll();
 })();
