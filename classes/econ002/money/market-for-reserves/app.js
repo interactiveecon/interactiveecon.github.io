@@ -487,14 +487,14 @@ Changes in reserves (OMO) or demand shifts can change the Federal Funds Rate and
     line(ctx, x0, y0p, x0, Y1, DASH, 2, dpr, [4,6]);
     line(ctx, x0, y0p, X0, y0p, DASH, 2, dpr, [4,6]);
     xTick(ctx, x0, Y1, "R₀", dpr);
-    yTick(ctx, X0, y0p, "i₀", dpr);
+    yTick(ctx, X0, y0p, "FF₀", dpr);
 
     if (Math.abs(R-R_base) > 1e-9 || Math.abs(ior-ior_base) > 1e-9){
       dot(ctx, x1, y1p, ORANGE, dpr);
       line(ctx, x1, y1p, x1, Y1, DASH, 2, dpr, [4,6]);
       line(ctx, x1, y1p, X0, y1p, DASH, 2, dpr, [4,6]);
       xTick(ctx, x1, Y1, "R₁", dpr);
-      yTick(ctx, X0, y1p, "i₁", dpr);
+      yTick(ctx, X0, y1p, "FF₁", dpr);
     }
   }
 
