@@ -34,7 +34,6 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   const ALL = window.POSNORM_DATA.cards;
-
   let cards = [];
 
   function shuffle(a){
@@ -57,16 +56,27 @@ window.addEventListener("DOMContentLoaded", () => {
       const z = zoneEl.dataset.zone;
       const c = cards.find(x => x.id === id);
       if (!c) return;
+
       c.zone = z;
+
+      // if they move a card after checking, reset feedback + hide the hint again
       c.checked = null;
+      c.revealDesc = false;
+
       renderBoard();
       updateProgress();
     });
   }
 
-  [
-    els.zoneStage, els.zonePOS, els.zoneEFF, els.zoneEQT, els.zoneGRW, els.zoneSTB
-  ].forEach(setupDropzone);
+  [els.zoneStage, els.zonePOS, els.zoneEFF, els.zoneEQT, els.zoneGRW, els.zoneSTB].forEach(setupDropzone);
+
+  function renderCardHTML(c){
+    const showDesc = (c.revealDesc === true); // only true for misplaced after check
+    return `
+      <div class="ctitle">${escapeHtml(c.title)}</div>
+      ${showDesc ? `<div class="cdesc">${escapeHtml(c.desc)}</div>` : ``}
+    `;
+  }
 
   function renderBoard(){
     els.zoneStage.innerHTML = "";
@@ -91,10 +101,7 @@ window.addEventListener("DOMContentLoaded", () => {
       if (c.checked === false) el.classList.add("bad");
       el.draggable = true;
 
-      el.innerHTML = `
-        <div class="ctitle">${escapeHtml(c.title)}</div>
-        <div class="cdesc">${escapeHtml(c.desc)}</div>
-      `;
+      el.innerHTML = renderCardHTML(c);
 
       el.addEventListener("dragstart", (ev) => {
         ev.dataTransfer.setData("text/plain", c.id);
@@ -124,9 +131,19 @@ window.addEventListener("DOMContentLoaded", () => {
     const mistakes = [];
 
     for (const c of cards){
-      if (c.zone === "STAGE"){ c.checked = null; continue; }
+      // never reveal staging hints
+      if (c.zone === "STAGE"){
+        c.checked = null;
+        c.revealDesc = false;
+        continue;
+      }
+
       placed++;
       c.checked = (c.zone === c.correct);
+
+      // ✅ reveal desc ONLY for misplaced cards
+      c.revealDesc = (c.checked === false);
+
       if (c.checked) correct++;
       else mistakes.push(c);
     }
@@ -153,7 +170,12 @@ window.addEventListener("DOMContentLoaded", () => {
     shuffle(pool);
 
     const n = Math.min(12, pool.length); // cards per round
-    cards = pool.slice(0, n).map(c => ({ ...c, zone:"STAGE", checked:null }));
+    cards = pool.slice(0, n).map(c => ({
+      ...c,
+      zone: "STAGE",
+      checked: null,
+      revealDesc: false
+    }));
 
     els.checkMsg.textContent = "";
     setStatus("New round loaded.");
@@ -165,6 +187,7 @@ window.addEventListener("DOMContentLoaded", () => {
     for (const c of cards){
       c.zone = "STAGE";
       c.checked = null;
+      c.revealDesc = false;
     }
     els.checkMsg.textContent = "";
     setStatus("Reset.");
