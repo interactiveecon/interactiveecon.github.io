@@ -73,6 +73,22 @@
     els.predFeedback.innerHTML = html;
   }
 
+  function pinnedNoteHTML(Rqty, iorVal){
+  const idisc = BASE.idisc;
+  const iFree = (D.demand.a - Rqty) / D.demand.b;
+
+  if (iFree < iorVal){
+    return `<span class="tagOK">Pinned at IOR</span> The equilibrium is on the <strong>floor</strong>: $begin:math:text$i\_\{ff\}\=IOR$end:math:text$.
+    Small changes in reserves won’t change $begin:math:text$i\_\{ff\}$end:math:text$ or $begin:math:text$M$end:math:text$ unless reserves move far enough to leave the floor.`;
+  }
+  if (iFree > idisc){
+    return `<span class="tagOK">Pinned at discount rate</span> The equilibrium is on the <strong>ceiling</strong>: $begin:math:text$i\_\{ff\}\=i\_\{disc\}$end:math:text$.
+    Small changes in reserves won’t change $begin:math:text$i\_\{ff\}$end:math:text$ or $begin:math:text$M$end:math:text$ unless reserves move far enough to leave the ceiling.`;
+  }
+  return `<span class="tagOK">Middle region</span> The equilibrium is on the <strong>sloped</strong> section.
+  Changes in reserves (OMO) or demand shifts can change $begin:math:text$i\_\{ff\}$end:math:text$, and then $begin:math:text$M$end:math:text$.`;
+}
+
   function enableControls(on){
     els.applyBtn.disabled   = !on;
     els.omoBuyBtn.disabled  = !on;
@@ -146,11 +162,44 @@
 
   // ---------------- SCENARIOS ----------------
   function randomizeInitialReserves(){
-    // Pick initial reserves for the round (baseline). You can tune the range.
-    const lo = 60, hi = 160;
-    R_base = Math.floor(lo + Math.random()*(hi-lo+1));
-    R = R_base;
+  const Rmin = D.chart.Rmin, Rmax = D.chart.Rmax;
+
+  // Kinks given current baseline IOR / discount rate
+  const R_floor_kink = Rd(ior_base);     // if R > this, floor binds (i_ff = IOR)
+  const R_ceil_kink  = Rd(BASE.idisc);   // if R < this, ceiling binds (i_ff = idisc)
+
+  // Clamp kinks to plot bounds
+  const Rf = clamp(R_floor_kink, Rmin, Rmax);
+  const Rc = clamp(R_ceil_kink,  Rmin, Rmax);
+
+  const u = Math.random();
+
+  // 55%: start in floor region (pinned at IOR)
+  if (u < 0.5){
+    const lo = Math.min(Rmax, Rf + 5);
+    const hi = Rmax;
+    R_base = Math.floor(lo + Math.random()*(hi - lo + 1));
   }
+  // 35%: start in sloped region
+  else if (u < 1.0){
+    const lo = Math.max(Rmin, Rc + 5);
+    const hi = Math.min(Rmax, Rf - 5);
+    // if the window collapses (rare), fall back to center
+    if (hi <= lo){
+      R_base = Math.floor((Rmin + Rmax)/2);
+    } else {
+      R_base = Math.floor(lo + Math.random()*(hi - lo + 1));
+    }
+  }
+  // 10%: start in ceiling region (pinned at discount rate)
+  else {
+    const lo = Rmin;
+    const hi = Math.max(Rmin, Rc - 5);
+    R_base = Math.floor(lo + Math.random()*(hi - lo + 1));
+  }
+
+  R = R_base;
+}
 
   function newScenario(){
     // Randomize baseline reserves each round
@@ -561,14 +610,17 @@
   }
 
   function renderAll(){
-    renderStats();
-    requestAnimationFrame(() => {
-      drawReserves();
-      drawMoney();
-    });
-    if (window.MathJax?.typesetPromise) window.MathJax.typesetPromise();
-  }
+  renderStats();
+  requestAnimationFrame(() => {
+    drawReserves();
+    drawMoney();
+  });
 
+  // Always show the “pinned vs sloped” note
+  showPredFeedback(pinnedNoteHTML(R, ior));
+
+  if (window.MathJax?.typesetPromise) window.MathJax.typesetPromise();
+}
   // ---------------- INIT ----------------
   function init(){
     els.iorSlider.value = String(ior);
