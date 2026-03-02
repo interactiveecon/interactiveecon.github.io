@@ -11,139 +11,168 @@ window.addEventListener("DOMContentLoaded", () => {
     scTitle: $("scTitle"),
     scDesc: $("scDesc"),
 
-    qSlider: $("qSlider"),
     qVal: $("qVal"),
-    cumVal: $("cumVal"),
-    minusBtn: $("minusBtn"),
-    plusBtn: $("plusBtn"),
+    mbVal: $("mbVal"),
+    mcVal: $("mcVal"),
+    tbVal: $("tbVal"),
+    tcVal: $("tcVal"),
+    cnbVal: $("cnbVal"),
+    stepVal: $("stepVal"),
+
+    lessBtn: $("lessBtn"),
+    moreBtn: $("moreBtn"),
+    qSlider: $("qSlider"),
 
     tableBody: $("tableBody"),
     feedback: $("feedback"),
 
-    chart1: $("chart1"), // MB/MC
-    chart2: $("chart2"), // cumulative net benefit
-    chart3: $("chart3"), // TB/TC
+    chart1: $("chart1"),
+    chart2: $("chart2"),
+    chart3: $("chart3"),
   };
 
   function setStatus(msg){ els.status.textContent = msg; }
   function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
-  function escapeHtml(s){
-    return String(s ?? "")
-      .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
-  }
 
-  if (!window.MARGINALISM_DATA || !Array.isArray(window.MARGINALISM_DATA.scenarios)) {
-    setStatus("ERROR: data.js did not load (MARGINALISM_DATA missing).");
+  if (!window.MARGINALISM_CONT || !Array.isArray(window.MARGINALISM_CONT.scenarios)) {
+    setStatus("ERROR: data.js did not load (MARGINALISM_CONT missing).");
     return;
   }
-  const ALL = window.MARGINALISM_DATA.scenarios;
+  const ALL = window.MARGINALISM_CONT.scenarios;
 
   let cur = null;
-  let chosenQ = 0;
+  let q = 0;
   let checked = false;
+
+  // MB(q)=a-bq, MC(q)=c+dq
+  const MB = (q) => cur.mb.a - cur.mb.b * q;
+  const MC = (q) => cur.mc.c + cur.mc.d * q;
+
+  // TB(q)=∫0^q MB(x) dx = a q - (b/2) q^2
+  const TB = (q) => cur.mb.a * q - 0.5 * cur.mb.b * q * q;
+
+  // TC(q)=∫0^q MC(x) dx = c q + (d/2) q^2
+  const TC = (q) => cur.mc.c * q + 0.5 * cur.mc.d * q * q;
+
+  const CNB = (q) => TB(q) - TC(q);
+
+  // Optimal q*: MB(q*)=MC(q*) => a - b q* = c + d q* => q* = (a-c)/(b+d)
+  function qStar(){
+    const a = cur.mb.a, b = cur.mb.b, c = cur.mc.c, d = cur.mc.d;
+    const qs = (a - c) / (b + d);
+    return clamp(qs, 0, cur.qMax);
+  }
 
   function pickScenario(){
     return ALL[Math.floor(Math.random()*ALL.length)];
   }
 
-  function computeCumulative(mb, mc){
-    const cum = [0]; // net benefit cumulative
-    for (let i=1;i<=mb.length;i++){
-      const nb = mb[i-1] - mc[i-1];
-      cum[i] = cum[i-1] + nb;
-    }
-    return cum;
+  function fmt(x){ return (Number.isFinite(x) ? x.toFixed(2) : "—"); }
+
+  // Adaptive step: move halfway toward q*, but never smaller than 0.01
+  // If we are within 0.02 of q*, snap exactly to q* to “land” on it.
+  function computeStep(){
+    const target = qStar();
+    const dist = Math.abs(target - q);
+    if (dist <= 0.02) return dist;            // snap range
+    return Math.max(0.01, Math.min(0.75, dist/2));
   }
 
-  function computeTotals(mb, mc){
-    const TB = [0], TC = [0];
-    for (let i=1;i<=mb.length;i++){
-      TB[i] = TB[i-1] + mb[i-1];
-      TC[i] = TC[i-1] + mc[i-1];
-    }
-    return { TB, TC };
+  function setQ(newQ){
+    if (!cur) return;
+    checked = false;
+    q = clamp(newQ, 0, cur.qMax);
+    els.qSlider.value = String(q);
+    renderAll();
   }
 
-  function optimalQ(mb, mc){
-    const cum = computeCumulative(mb, mc);
-    let bestQ = 0;
-    let bestV = cum[0];
-    for (let q=1;q<cum.length;q++){
-      if (cum[q] > bestV + 1e-9){
-        bestV = cum[q];
-        bestQ = q;
-      }
+  function stepToward(dir){
+    const target = qStar();
+    const dist = target - q;
+    const step = computeStep();
+
+    // If close enough, snap
+    if (Math.abs(dist) <= 0.02) {
+      setQ(target);
+      return;
     }
-    return { bestQ, cum };
+
+    if (dir === "more") setQ(q + step);
+    else setQ(q - step);
   }
 
   function renderScenario(sc){
     cur = sc;
     checked = false;
-    chosenQ = 0;
 
     els.scTitle.textContent = sc.title;
     els.scDesc.textContent = sc.desc;
 
     els.qSlider.min = 0;
-    els.qSlider.max = sc.units;
-    els.qSlider.value = "0";
+    els.qSlider.max = sc.qMax;
+    els.qSlider.step = 0.01;
+
+    // Start at a non-trivial point
+    q = clamp(sc.qMax * 0.25, 0, sc.qMax);
+    els.qSlider.value = String(q);
 
     els.feedback.style.display = "none";
     els.feedback.innerHTML = "";
 
-    setStatus("Choose a quantity q, then click Check.");
+    setStatus("Use A little more / A little less to move toward MB = MC.");
     renderAll();
   }
 
-  function setQ(q){
-    if (!cur) return;
-    chosenQ = clamp(q, 0, cur.units);
-    els.qSlider.value = String(chosenQ);
-    renderAll();
+  function renderKPIs(){
+    els.qVal.textContent = fmt(q);
+    els.mbVal.textContent = fmt(MB(q));
+    els.mcVal.textContent = fmt(MC(q));
+    els.tbVal.textContent = fmt(TB(q));
+    els.tcVal.textContent = fmt(TC(q));
+    els.cnbVal.textContent = fmt(CNB(q));
+    els.stepVal.textContent = fmt(computeStep());
   }
 
   function renderTable(){
-    const mb = cur.mb, mc = cur.mc;
-    const { bestQ, cum } = optimalQ(mb, mc);
+    const qs = qStar();
+    const prev = clamp(q - 0.25, 0, cur.qMax);
+    const next = clamp(q + 0.25, 0, cur.qMax);
 
-    els.tableBody.innerHTML = "";
-    for (let q=1;q<=cur.units;q++){
-      const nb = mb[q-1] - mc[q-1];
-      const tr = document.createElement("tr");
+    const rows = [
+      { label:"Previous", q: prev },
+      { label:"Current",  q: q },
+      { label:"Next",     q: next },
+      { label:"Optimal",  q: qs }
+    ];
 
-      if (q === chosenQ) tr.classList.add("sel");
-      if (checked && q === bestQ) tr.classList.add("opt");
-      if (checked && q === chosenQ && chosenQ !== bestQ) tr.classList.add("badsel");
-
-      tr.innerHTML = `
-        <td>Unit ${q}</td>
-        <td>${mb[q-1].toFixed(1)}</td>
-        <td>${mc[q-1].toFixed(1)}</td>
-        <td>${nb.toFixed(2)}</td>
-        <td>${cum[q].toFixed(2)}</td>
+    els.tableBody.innerHTML = rows.map(r => {
+      const cls = (Math.abs(r.q - q) < 1e-9) ? "cur" : (checked && r.label==="Optimal" ? "opt" : "");
+      return `
+        <tr class="${cls}">
+          <td>${r.label}</td>
+          <td>${fmt(r.q)}</td>
+          <td>${fmt(MB(r.q))}</td>
+          <td>${fmt(MC(r.q))}</td>
+          <td>${fmt(TB(r.q))}</td>
+          <td>${fmt(TC(r.q))}</td>
+          <td>${fmt(CNB(r.q))}</td>
+        </tr>
       `;
-      els.tableBody.appendChild(tr);
-    }
-
-    els.qVal.textContent = String(chosenQ);
-    els.cumVal.textContent = String(cum[chosenQ].toFixed(0));
+    }).join("");
   }
 
-  // --- canvas helpers ---
+  // Canvas helpers
   function setupCanvas(canvas){
     const ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
     const W = canvas.clientWidth * dpr;
     const H = canvas.clientHeight * dpr;
-    if (canvas.width !== W || canvas.height !== H){
-      canvas.width = W; canvas.height = H;
-    }
+    if (canvas.width !== W || canvas.height !== H){ canvas.width = W; canvas.height = H; }
     return { ctx, W, H, dpr };
   }
 
   function drawAxes(ctx, W, H, dpr, xLabel, yLabel){
-    const pad = { l: 44*dpr, r: 14*dpr, t: 14*dpr, b: 34*dpr };
+    const pad = { l: 46*dpr, r: 14*dpr, t: 14*dpr, b: 34*dpr };
     const X0 = pad.l, X1 = W - pad.r;
     const Y0 = pad.t, Y1 = H - pad.b;
 
@@ -160,212 +189,179 @@ window.addEventListener("DOMContentLoaded", () => {
 
     ctx.fillStyle = "rgba(0,0,0,0.70)";
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillText(xLabel, (X0+X1)/2, Y1 + 10*dpr);
 
     ctx.save();
-    ctx.translate(X0 - 30*dpr, (Y0+Y1)/2);
+    ctx.translate(X0 - 32*dpr, (Y0+Y1)/2);
     ctx.rotate(-Math.PI/2);
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillText(yLabel, 0, 0);
     ctx.restore();
 
     return { X0, X1, Y0, Y1 };
   }
 
-  function drawStep(vals, n, ctx, X0, X1, Y0, Y1, yMax, stroke, dpr){
-    const xTo = (q) => X0 + (q / n) * (X1 - X0);
-    const yTo = (v) => Y0 + (yMax - v) / yMax * (Y1 - Y0);
+  function drawLine(ctx, X0,X1,Y0,Y1, qMax, yMin,yMax, f, stroke, dpr){
+    const xTo = (x) => X0 + (x/qMax)*(X1-X0);
+    const yTo = (y) => Y0 + (yMax - y)/(yMax - yMin)*(Y1-Y0);
 
     ctx.strokeStyle = stroke;
     ctx.lineWidth = 3*dpr;
     ctx.beginPath();
-    ctx.moveTo(xTo(0), yTo(vals[0]));
-    for (let q=1;q<=n;q++){
-      const vPrev = vals[q-1];
-      ctx.lineTo(xTo(q), yTo(vPrev));
-      if (q < n){
-        const vNext = vals[q];
-        ctx.lineTo(xTo(q), yTo(vNext));
+
+    const N = 200;
+    for (let i=0;i<=N;i++){
+      const x = (i/N)*qMax;
+      const y = f(x);
+      if (i===0) ctx.moveTo(xTo(x), yTo(y));
+      else ctx.lineTo(xTo(x), yTo(y));
+    }
+    ctx.stroke();
+
+    return { xTo, yTo };
+  }
+
+  function drawMarker(ctx, x, y, color, dpr){
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, 5*dpr, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  function drawVLine(ctx, x, Y0, Y1, dpr){
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
+    ctx.lineWidth = 2*dpr;
+    ctx.setLineDash([4*dpr, 6*dpr]);
+    ctx.beginPath(); ctx.moveTo(x, Y0); ctx.lineTo(x, Y1); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  function drawCharts(){
+    const qs = qStar();
+
+    // Chart 1: MB & MC
+    {
+      const { ctx, W, H, dpr } = setupCanvas(els.chart1);
+      ctx.clearRect(0,0,W,H);
+      const { X0,X1,Y0,Y1 } = drawAxes(ctx,W,H,dpr, "q", "Marginal value");
+
+      // y range
+      const samples = [0, cur.qMax, qs, q];
+      let yMin = Infinity, yMax = -Infinity;
+      for (const x of samples){
+        yMin = Math.min(yMin, MB(x), MC(x));
+        yMax = Math.max(yMax, MB(x), MC(x));
+      }
+      yMin = Math.min(yMin, 0);
+      yMax = yMax * 1.10;
+
+      const mbMap = drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, yMin,yMax, MB, "rgba(31,119,180,0.90)", dpr);
+      const mcMap = drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, yMin,yMax, MC, "rgba(230,159,0,0.95)", dpr);
+
+      const xTo = mbMap.xTo, yTo = mbMap.yTo;
+      drawVLine(ctx, xTo(q), Y0, Y1, dpr);
+      drawMarker(ctx, xTo(q), yTo(MB(q)), "rgba(31,119,180,0.90)", dpr);
+      drawMarker(ctx, xTo(q), yTo(MC(q)), "rgba(230,159,0,0.95)", dpr);
+
+      if (checked){
+        drawMarker(ctx, xTo(qs), yTo(MB(qs)), "rgba(34,120,34,0.95)", dpr);
+        ctx.fillStyle = "rgba(34,120,34,0.95)";
+        ctx.font = `${12*dpr}px system-ui`;
+        ctx.textAlign="left"; ctx.textBaseline="bottom";
+        ctx.fillText("MB=MC", xTo(qs)+8*dpr, yTo(MB(qs))-6*dpr);
       }
     }
-    ctx.stroke();
-  }
 
-  function drawLine(vals, n, ctx, X0, X1, Y0, Y1, yMin, yMax, stroke, dpr){
-    const xTo = (q) => X0 + (q / n) * (X1 - X0);
-    const yTo = (v) => Y0 + (yMax - v) / (yMax - yMin) * (Y1 - Y0);
+    // Chart 3: TB & TC
+    {
+      const { ctx, W, H, dpr } = setupCanvas(els.chart3);
+      ctx.clearRect(0,0,W,H);
+      const { X0,X1,Y0,Y1 } = drawAxes(ctx,W,H,dpr, "q", "Total");
 
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = 3*dpr;
-    ctx.beginPath();
-    ctx.moveTo(xTo(0), yTo(vals[0]));
-    for (let q=1;q<=n;q++){
-      ctx.lineTo(xTo(q), yTo(vals[q]));
+      // y range
+      const yMax = Math.max(TB(cur.qMax), TC(cur.qMax)) * 1.05 + 1e-9;
+      const yMin = 0;
+
+      const tbMap = drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, yMin,yMax, TB, "rgba(31,119,180,0.90)", dpr);
+      drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, yMin,yMax, TC, "rgba(230,159,0,0.95)", dpr);
+
+      const xTo = tbMap.xTo, yTo = tbMap.yTo;
+      drawVLine(ctx, xTo(q), Y0, Y1, dpr);
+      drawMarker(ctx, xTo(q), yTo(TB(q)), "rgba(31,119,180,0.90)", dpr);
+      drawMarker(ctx, xTo(q), yTo(TC(q)), "rgba(230,159,0,0.95)", dpr);
+      if (checked){
+        drawMarker(ctx, xTo(qs), yTo(TB(qs)), "rgba(34,120,34,0.95)", dpr);
+      }
     }
-    ctx.stroke();
-  }
 
-  function drawMBMC(){
-    const { ctx, W, H, dpr } = setupCanvas(els.chart1);
-    ctx.clearRect(0,0,W,H);
+    // Chart 2: CNB
+    {
+      const { ctx, W, H, dpr } = setupCanvas(els.chart2);
+      ctx.clearRect(0,0,W,H);
+      const { X0,X1,Y0,Y1 } = drawAxes(ctx,W,H,dpr, "q", "CNB");
 
-    const { X0, X1, Y0, Y1 } = drawAxes(ctx, W, H, dpr, "Quantity (q)", "Value per unit");
+      // y range by sampling
+      let ymin = Infinity, ymax = -Infinity;
+      for (let i=0;i<=200;i++){
+        const x = (i/200)*cur.qMax;
+        const y = CNB(x);
+        ymin = Math.min(ymin, y);
+        ymax = Math.max(ymax, y);
+      }
+      const pad = 0.10*(ymax - ymin + 1e-9);
+      ymin -= pad; ymax += pad;
 
-    const mb = cur.mb, mc = cur.mc;
-    const n = cur.units;
-    const yMax = Math.max(...mb, ...mc) * 1.10;
+      const nbMap = drawLine(ctx,X0,X1,Y0,Y1, cur.qMax, ymin,ymax, CNB, "rgba(0,0,0,0.75)", dpr);
+      const xTo = nbMap.xTo, yTo = nbMap.yTo;
 
-    drawStep(mb, n, ctx, X0, X1, Y0, Y1, yMax, "rgba(31,119,180,0.90)", dpr); // MB
-    drawStep(mc, n, ctx, X0, X1, Y0, Y1, yMax, "rgba(230,159,0,0.95)", dpr);  // MC
+      drawVLine(ctx, xTo(q), Y0, Y1, dpr);
+      drawMarker(ctx, xTo(q), yTo(CNB(q)), "rgba(0,0,0,0.75)", dpr);
 
-    // chosen q marker
-    const xTo = (q) => X0 + (q / n) * (X1 - X0);
-    ctx.strokeStyle = "rgba(0,0,0,0.35)";
-    ctx.lineWidth = 2*dpr;
-    ctx.setLineDash([4*dpr, 6*dpr]);
-    ctx.beginPath(); ctx.moveTo(xTo(chosenQ), Y0); ctx.lineTo(xTo(chosenQ), Y1); ctx.stroke();
-    ctx.setLineDash([]);
-
-    // legend
-    ctx.fillStyle = "rgba(31,119,180,0.90)";
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
-    ctx.textAlign = "left"; ctx.textBaseline = "top";
-    ctx.fillText("MB", X0 + 6*dpr, Y0 + 6*dpr);
-    ctx.fillStyle = "rgba(230,159,0,0.95)";
-    ctx.fillText("MC", X0 + 6*dpr, Y0 + 22*dpr);
-  }
-
-  function drawCum(){
-    const { ctx, W, H, dpr } = setupCanvas(els.chart2);
-    ctx.clearRect(0,0,W,H);
-
-    const { X0, X1, Y0, Y1 } = drawAxes(ctx, W, H, dpr, "Quantity (q)", "Cumulative net benefit");
-
-    const { bestQ, cum } = optimalQ(cur.mb, cur.mc);
-    const n = cur.units;
-
-    const maxAbs = Math.max(...cum.map(v => Math.abs(v))) * 1.20 + 1e-9;
-    const yMin = -maxAbs, yMax = maxAbs;
-
-    // zero line
-    const yTo = (v) => Y0 + (yMax - v) / (yMax - yMin) * (Y1 - Y0);
-    ctx.strokeStyle = "rgba(0,0,0,0.20)";
-    ctx.lineWidth = 2*dpr;
-    ctx.beginPath(); ctx.moveTo(X0, yTo(0)); ctx.lineTo(X1, yTo(0)); ctx.stroke();
-
-    drawLine(cum, n, ctx, X0, X1, Y0, Y1, yMin, yMax, "rgba(0,0,0,0.70)", dpr);
-
-    // chosen point
-    const xTo = (q) => X0 + (q / n) * (X1 - X0);
-    ctx.fillStyle = "rgba(0,0,0,0.70)";
-    ctx.beginPath(); ctx.arc(xTo(chosenQ), yTo(cum[chosenQ]), 5*dpr, 0, Math.PI*2); ctx.fill();
-
-    if (checked){
-      ctx.fillStyle = "rgba(34,120,34,0.95)";
-      ctx.beginPath(); ctx.arc(xTo(bestQ), yTo(cum[bestQ]), 6*dpr, 0, Math.PI*2); ctx.fill();
-      ctx.fillStyle = "rgba(34,120,34,0.95)";
-      ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
-      ctx.textAlign = "left"; ctx.textBaseline = "bottom";
-      ctx.fillText("Optimal", xTo(bestQ) + 8*dpr, yTo(cum[bestQ]) - 6*dpr);
+      if (checked){
+        drawMarker(ctx, xTo(qs), yTo(CNB(qs)), "rgba(34,120,34,0.95)", dpr);
+        ctx.fillStyle = "rgba(34,120,34,0.95)";
+        ctx.font = `${12*dpr}px system-ui`;
+        ctx.textAlign="left"; ctx.textBaseline="bottom";
+        ctx.fillText("Max", xTo(qs)+8*dpr, yTo(CNB(qs))-6*dpr);
+      }
     }
-  }
-
-  function drawTBTC(){
-    const { ctx, W, H, dpr } = setupCanvas(els.chart3);
-    ctx.clearRect(0,0,W,H);
-
-    const { X0, X1, Y0, Y1 } = drawAxes(ctx, W, H, dpr, "Quantity (q)", "Total");
-
-    const n = cur.units;
-    const { TB, TC } = computeTotals(cur.mb, cur.mc);
-
-    const yMax = Math.max(...TB, ...TC) * 1.08 + 1e-9;
-    const yMin = 0;
-
-    drawLine(TB, n, ctx, X0, X1, Y0, Y1, yMin, yMax, "rgba(31,119,180,0.90)", dpr); // TB
-    drawLine(TC, n, ctx, X0, X1, Y0, Y1, yMin, yMax, "rgba(230,159,0,0.95)", dpr); // TC
-
-    // chosen marker
-    const xTo = (q) => X0 + (q / n) * (X1 - X0);
-    const yTo = (v) => Y0 + (yMax - v) / (yMax - yMin) * (Y1 - Y0);
-
-    ctx.strokeStyle = "rgba(0,0,0,0.35)";
-    ctx.lineWidth = 2*dpr;
-    ctx.setLineDash([4*dpr, 6*dpr]);
-    ctx.beginPath(); ctx.moveTo(xTo(chosenQ), Y0); ctx.lineTo(xTo(chosenQ), Y1); ctx.stroke();
-    ctx.setLineDash([]);
-
-    // legend
-    ctx.fillStyle = "rgba(31,119,180,0.90)";
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
-    ctx.textAlign = "left"; ctx.textBaseline = "top";
-    ctx.fillText("TB", X0 + 6*dpr, Y0 + 6*dpr);
-    ctx.fillStyle = "rgba(230,159,0,0.95)";
-    ctx.fillText("TC", X0 + 6*dpr, Y0 + 22*dpr);
-
-    // mark chosen points
-    ctx.fillStyle = "rgba(31,119,180,0.90)";
-    ctx.beginPath(); ctx.arc(xTo(chosenQ), yTo(TB[chosenQ]), 5*dpr, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = "rgba(230,159,0,0.95)";
-    ctx.beginPath(); ctx.arc(xTo(chosenQ), yTo(TC[chosenQ]), 5*dpr, 0, Math.PI*2); ctx.fill();
   }
 
   function renderAll(){
     if (!cur) return;
+    renderKPIs();
     renderTable();
-    drawMBMC();
-    drawTBTC();
-    drawCum();
+    drawCharts();
   }
 
   function reset(){
     if (!cur) return;
     checked = false;
-    setQ(0);
+    setQ(cur.qMax * 0.25);
     els.feedback.style.display = "none";
     els.feedback.innerHTML = "";
-    setStatus("Selection reset.");
+    setStatus("Reset quantity. Move toward MB = MC.");
   }
 
   function check(){
-    if (!cur){
-      setStatus("Click New Scenario first.");
-      return;
-    }
+    if (!cur){ setStatus("Click New Scenario first."); return; }
     checked = true;
 
-    const { bestQ, cum } = optimalQ(cur.mb, cur.mc);
-    const ok = (chosenQ === bestQ);
+    const qs = qStar();
+    const gap = Math.abs(MB(q) - MC(q));
 
-    const mbNext = (chosenQ < cur.units) ? cur.mb[chosenQ] : null;
-    const mcNext = (chosenQ < cur.units) ? cur.mc[chosenQ] : null;
-
-    let explain = "";
-if (chosenQ === cur.units){
-  explain = "You chose the maximum quantity. The marginal rule says: take another unit only if MB ≥ MC.";
-} else {
-  explain = `At the next unit (unit ${chosenQ+1}), MB is ${mbNext} and MC is ${mcNext}. `;
-  explain += (mbNext >= mcNext)
-    ? "Since MB ≥ MC, taking one more unit increases (or keeps) net benefit."
-    : "Since MB < MC, taking one more unit would reduce net benefit—so you should stop.";
-
-  explain += ` In this scenario, the optimal stopping point is unit ${bestQ}, where MB equals MC exactly.`;
-}
-
+    const ok = gap <= 0.05; // within 5 cents (or 0.05 units)
     els.feedback.style.display = "block";
     els.feedback.innerHTML = `
-      ${ok ? `<span class="tagOK">Correct</span>` : `<span class="tagBad">Not quite</span>`}
-      <strong>Optimal quantity:</strong> ${bestQ}.<br>
-      <strong>Your cumulative net benefit at q=${chosenQ}:</strong> ${cum[chosenQ].toFixed(0)}.<br>
-      <strong>Cumulative net benefit at the optimum:</strong> ${cum[bestQ].toFixed(0)}.<br><br>
-      <strong>Marginal reasoning:</strong> ${escapeHtml(explain)}
+      ${ok ? `<span class="tagOK">Close enough</span>` : `<span class="tagBad">Not yet</span>`}
+      <strong>Optimal q*</strong> is ${fmt(qs)} where <strong>MB = MC</strong>.<br>
+      At your q=${fmt(q)}, MB−MC = ${fmt(MB(q) - MC(q))}.<br><br>
+      <strong>Interpretation:</strong> If MB &gt; MC, doing a little more increases net benefit. If MB &lt; MC, doing a little less increases net benefit.
     `;
 
     renderAll();
-    setStatus(ok ? "Nice — correct stopping rule." : "Check the highlighted optimal row and try again.");
+    setStatus(ok ? "Nice — you’re at the marginal optimum." : "Use the buttons to move toward MB = MC.");
   }
 
   // Events
@@ -373,14 +369,14 @@ if (chosenQ === cur.units){
   els.resetBtn.addEventListener("click", reset);
   els.checkBtn.addEventListener("click", check);
 
+  els.moreBtn.addEventListener("click", () => stepToward("more"));
+  els.lessBtn.addEventListener("click", () => stepToward("less"));
+
   els.qSlider.addEventListener("input", () => {
     checked = false;
-    els.feedback.style.display = "none";
     setQ(Number(els.qSlider.value));
+    els.feedback.style.display = "none";
   });
-
-  els.minusBtn.addEventListener("click", () => setQ(chosenQ - 1));
-  els.plusBtn.addEventListener("click", () => setQ(chosenQ + 1));
 
   renderScenario(pickScenario());
 });
