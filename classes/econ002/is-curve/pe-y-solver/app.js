@@ -90,31 +90,34 @@ function buildSol1(){
 
   els.sol1.innerHTML = `
     <ol>
-      <li><strong>Start with the definitions:</strong>
+      <li><strong>Start with the definitions (plug in the given numbers):</strong>
         <div class="math">
 C = ${p.C0} + ${fmt2(p.MPC)}·(Y − ${p.T})
+
 I = ${p.I0} − ${p.b}·${fmt2(p.r)}
+
 G = ${p.G}
         </div>
       </li>
 
       <li><strong>Simplify investment using the given r:</strong>
         <div class="math">
-I = ${p.I0} − ${fmt2(p.b*p.r)} = ${fmt2(Ival)}
+I = ${p.I0} − ${fmt2(p.b*p.r)}
+I = ${fmt2(Ival)}
         </div>
       </li>
 
       <li><strong>Write planned expenditure:</strong>
         <div class="math">
 PE(Y) = C + I + G
-      = [${p.C0} + ${fmt2(p.MPC)}·(Y − ${p.T})] + (${fmt2(Ival)}) + (${p.G})
+PE(Y) = [${p.C0} + ${fmt2(p.MPC)}·(Y − ${p.T})] + (${fmt2(Ival)}) + (${p.G})
         </div>
       </li>
 
       <li><strong>Collect the constant term and the Y term:</strong>
         <div class="math">
 PE(Y) = (${p.C0} − ${fmt2(p.MPC*p.T)} + ${fmt2(Ival)} + ${p.G}) + ${fmt2(p.MPC)}·Y
-      = ${fmt2(A)} + ${fmt2(p.MPC)}·Y
+PE(Y) = ${fmt2(A)} + ${fmt2(p.MPC)}·Y
         </div>
       </li>
     </ol>
@@ -129,7 +132,8 @@ function buildSol2(){
     <ol>
       <li><strong>Use equilibrium condition:</strong>
         <div class="math">
-Y = PE(Y) = ${fmt2(A)} + ${fmt2(p.MPC)}·Y
+Y = PE(Y)
+Y = ${fmt2(A)} + ${fmt2(p.MPC)}·Y
         </div>
       </li>
 
@@ -143,8 +147,8 @@ Y − ${fmt2(p.MPC)}·Y = ${fmt2(A)}
       <li><strong>Solve for Y* by dividing:</strong>
         <div class="math">
 Y* = ${fmt2(A)} / (1 − ${fmt2(p.MPC)})
-   = ${fmt2(A)} / ${fmt2(1 - p.MPC)}
-   = ${fmt2(YstarVal)}
+Y* = ${fmt2(A)} / ${fmt2(1 - p.MPC)}
+Y* = ${fmt2(YstarVal)}
         </div>
       </li>
     </ol>
