@@ -70,10 +70,14 @@
   function Rd(i){ return D.demand.a - D.demand.b * i; }
 
   function iStar(Rqty, iorVal){
-    // Equilibrium i solves R = Rd(i) subject to i >= ior (IOR floor)
-    const iFree = (D.demand.a - Rqty) / D.demand.b;
-    return Math.max(iorVal, iFree);
-  }
+  // corridor: floor at IOR, ceiling at discount rate
+  const idisc = BASE.idisc;
+  const iFree = (D.demand.a - Rqty) / D.demand.b;
+
+  if (iFree < iorVal) return iorVal;   // floor binds
+  if (iFree > idisc)  return idisc;    // ceiling binds
+  return iFree;                         // middle region
+}
 
   function effectiveMultiplier(iorVal){
     const rr = BASE.rr;
@@ -91,12 +95,12 @@
 
   // ----- UI helpers -----
   function enableControls(on){
-    controlsUnlocked = on;
-    els.applyBtn.disabled = !on;
-    els.omoBuyBtn.disabled = !on;
-    els.omoSellBtn.disabled = !on;
-    els.iorSlider.disabled = !on;
-  }
+  // keep these always interactive once scenario starts
+  els.applyBtn.disabled = !on;
+  els.omoBuyBtn.disabled = !on;
+  els.omoSellBtn.disabled = !on;
+  els.iorSlider.disabled = !on;
+}
 
   function showPredFeedback(html){
     if (!html){
@@ -293,10 +297,10 @@
     renderAll();
   }
   function iorChange(){
-    if (!controlsUnlocked) return;
-    ior = Number(els.iorSlider.value);
-    renderAll();
-  }
+  ior = Number(els.iorSlider.value);
+  els.iorVal.textContent = `${fmt2(ior)}%`;
+  renderAll();
+}
 
   // ----- drawing -----
   function setupCanvas(canvas){
@@ -393,19 +397,30 @@
     line(ctx, xTo(R0), yTo(imin), xTo(R0), yTo(imax), BLUE, 3, dpr);
 
     // demand: piecewise with floor at ior (flat segment below ior)
-    function drawDemand(color, iorVal){
-      const iKink = iorVal;
-      const Rk = Rd(iKink);
-      // above kink: sloped
-      const iTop = imax;
-      const Rtop = Rd(iTop);
-      line(ctx, xTo(Math.max(Rmin, Math.min(Rmax, Rtop))), yTo(iTop),
-               xTo(Math.max(Rmin, Math.min(Rmax, Rk))),   yTo(iKink),
-               color, 3, dpr);
-      // below kink: horizontal at ior (approx)
-      line(ctx, xTo(Rmin), yTo(iKink), xTo(Math.max(Rmin, Math.min(Rmax, Rk))), yTo(iKink), color, 3, dpr);
-    }
-    drawDemand(BLUE, ior0);
+   function drawDemandCorridor(color, iorVal){
+  const idisc = BASE.idisc;
+
+  // Breakpoints in quantity space for the middle linear segment
+  const R_floor = Rd(iorVal);   // where middle meets floor
+  const R_ceil  = Rd(idisc);    // where middle meets ceiling
+
+  // Clamp to plot window
+  const Rf = Math.max(Rmin, Math.min(Rmax, R_floor));
+  const Rc = Math.max(Rmin, Math.min(Rmax, R_ceil));
+
+  // 1) Ceiling: horizontal at idisc on the LEFT (low reserves)
+  //    from Rmin to Rc
+  line(ctx, xTo(Rmin), yTo(idisc), xTo(Rc), yTo(idisc), color, 3, dpr);
+
+  // 2) Middle: downward sloping between (Rc, idisc) and (Rf, ior)
+  line(ctx, xTo(Rc), yTo(idisc), xTo(Rf), yTo(iorVal), color, 3, dpr);
+
+  // 3) Floor: horizontal at ior on the RIGHT (high reserves)
+  //    from Rf to Rmax
+  line(ctx, xTo(Rf), yTo(iorVal), xTo(Rmax), yTo(iorVal), color, 3, dpr);
+}
+    drawDemandCorridor(BLUE, ior0);
+drawDemandCorridor(ORANGE, ior);
 
     // current curves (orange)
     drawDemand(ORANGE, ior);
@@ -435,11 +450,18 @@
     }
 
     // draw IOR line faintly
-    line(ctx, xTo(Rmin), yTo(ior), xTo(Rmax), yTo(ior), GREY, 2, dpr, [3,6]);
-    ctx.fillStyle = "rgba(0,0,0,0.45)";
-    ctx.font = `${12*dpr}px system-ui`;
-    ctx.textAlign="left"; ctx.textBaseline="bottom";
-    ctx.fillText("IOR floor", xTo(Rmin) + 6*dpr, yTo(ior) - 4*dpr);
+    // IOR floor
+line(ctx, xTo(Rmin), yTo(ior), xTo(Rmax), yTo(ior), GREY, 2, dpr, [3,6]);
+
+// Discount rate ceiling
+line(ctx, xTo(Rmin), yTo(BASE.idisc), xTo(Rmax), yTo(BASE.idisc), GREY, 2, dpr, [3,6]);
+ctx.fillStyle = "rgba(0,0,0,0.45)";
+ctx.font = `${12*dpr}px system-ui`;
+ctx.textAlign="left"; ctx.textBaseline="bottom";
+ctx.fillText("Discount rate", xTo(Rmin) + 6*dpr, yTo(BASE.idisc) - 4*dpr);
+
+ctx.textBaseline="bottom";
+ctx.fillText("IOR", xTo(Rmin) + 6*dpr, yTo(ior) - 4*dpr);
   }
 
   function drawMoney(){
