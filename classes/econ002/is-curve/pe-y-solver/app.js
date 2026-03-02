@@ -61,20 +61,19 @@
   }
 
   function renderProblem(){
-    const Ival = p.I0 - p.b*p.r;
-    els.eqBox.innerHTML = `
-      <div class="eqline"><strong>Consumption:</strong> <code>C = C0 + MPC·(Y − T)</code></div>
-      <div class="eqline">Values: <code>C0=${p.C0}</code>, <code>MPC=${fmt2(p.MPC)}</code>, <code>T=${p.T}</code></div>
+  els.eqBox.innerHTML = `
+    <div class="eqline"><strong>Consumption:</strong> <code>C = ${p.C0} + ${fmt2(p.MPC)}·(Y − T)</code></div>
 
-      <div class="eqline" style="margin-top:10px;"><strong>Investment:</strong> <code>I = I0 − b·r</code></div>
-      <div class="eqline">Values: <code>I0=${p.I0}</code>, <code>b=${p.b}</code>, <code>r=${fmt2(p.r)}</code> ⇒ <code>I=${fmt2(Ival)}</code></div>
+    <div class="eqline" style="margin-top:10px;"><strong>Investment:</strong> <code>I = ${p.I0} − ${p.b}·r</code></div>
 
-      <div class="eqline" style="margin-top:10px;"><strong>Government purchases:</strong> <code>G=${p.G}</code></div>
+    <div class="eqline" style="margin-top:10px;"><strong>Government purchases:</strong> <code>G = ${p.G}</code></div>
+    <div class="eqline"><strong>Taxes:</strong> <code>T = ${p.T}</code></div>
+    <div class="eqline"><strong>Interest rate:</strong> <code>r = ${fmt2(p.r)}</code></div>
 
-      <div class="eqline" style="margin-top:10px;"><strong>Planned expenditure:</strong> <code>PE(Y) = C + I + G</code></div>
-      <div class="eqline"><strong>Equilibrium condition:</strong> <code>Y = PE(Y)</code></div>
-    `;
-  }
+    <div class="eqline" style="margin-top:10px;"><strong>Planned expenditure:</strong> <code>PE(Y) = C + I + G</code></div>
+    <div class="eqline"><strong>Equilibrium condition:</strong> <code>Y = PE(Y)</code></div>
+  `;
+}
 
   function resetReveals(){
     els.sol1.style.display = "none";
@@ -85,57 +84,72 @@
     els.show2.textContent = "Show solution";
   }
 
-  function buildSol1(){
-    const Ival = p.I0 - p.b*p.r;
-    const A = p.C0 - p.MPC*p.T + Ival + p.G;
+function buildSol1(){
+  const Ival = p.I0 - p.b*p.r;
+  const A = p.C0 - p.MPC*p.T + Ival + p.G;
 
-    els.sol1.innerHTML = `
-      <div class="math">
-Step 1a) Write each component using the given numbers:
-
+  els.sol1.innerHTML = `
+    <ol>
+      <li><strong>Start with the definitions:</strong>
+        <div class="math">
 C = ${p.C0} + ${fmt2(p.MPC)}·(Y − ${p.T})
-  = ${p.C0} + ${fmt2(p.MPC)}·Y − ${fmt2(p.MPC*p.T)}
-
 I = ${p.I0} − ${p.b}·${fmt2(p.r)}
-  = ${p.I0} − ${fmt2(p.b*p.r)}
-  = ${fmt2(Ival)}
-
 G = ${p.G}
+        </div>
+      </li>
 
-Step 1b) Add them to get planned expenditure:
+      <li><strong>Simplify investment using the given r:</strong>
+        <div class="math">
+I = ${p.I0} − ${fmt2(p.b*p.r)} = ${fmt2(Ival)}
+        </div>
+      </li>
 
+      <li><strong>Write planned expenditure:</strong>
+        <div class="math">
 PE(Y) = C + I + G
-      = (${p.C0} + ${fmt2(p.MPC)}·Y − ${fmt2(p.MPC*p.T)}) + (${fmt2(Ival)}) + (${p.G})
-      = [${p.C0} − ${fmt2(p.MPC*p.T)} + ${fmt2(Ival)} + ${p.G}] + ${fmt2(p.MPC)}·Y
+      = [${p.C0} + ${fmt2(p.MPC)}·(Y − ${p.T})] + (${fmt2(Ival)}) + (${p.G})
+        </div>
+      </li>
+
+      <li><strong>Collect the constant term and the Y term:</strong>
+        <div class="math">
+PE(Y) = (${p.C0} − ${fmt2(p.MPC*p.T)} + ${fmt2(Ival)} + ${p.G}) + ${fmt2(p.MPC)}·Y
       = ${fmt2(A)} + ${fmt2(p.MPC)}·Y
-      </div>
-    `;
-  }
+        </div>
+      </li>
+    </ol>
+  `;
+}
 
-  function buildSol2(){
-    const Ival = p.I0 - p.b*p.r;
-    const A = p.C0 - p.MPC*p.T + Ival + p.G;
+function buildSol2(){
+  const Ival = p.I0 - p.b*p.r;
+  const A = p.C0 - p.MPC*p.T + Ival + p.G;
 
-    els.sol2.innerHTML = `
-      <div class="math">
-Step 2a) Use equilibrium condition Y = PE(Y):
+  els.sol2.innerHTML = `
+    <ol>
+      <li><strong>Use equilibrium condition:</strong>
+        <div class="math">
+Y = PE(Y) = ${fmt2(A)} + ${fmt2(p.MPC)}·Y
+        </div>
+      </li>
 
-Y = ${fmt2(A)} + ${fmt2(p.MPC)}·Y
-
-Step 2b) Move the ${fmt2(p.MPC)}·Y term to the left:
-
+      <li><strong>Move the Y term to the left:</strong>
+        <div class="math">
 Y − ${fmt2(p.MPC)}·Y = ${fmt2(A)}
-
 (1 − ${fmt2(p.MPC)})·Y = ${fmt2(A)}
+        </div>
+      </li>
 
-Step 2c) Divide both sides by (1 − MPC):
-
+      <li><strong>Solve for Y* by dividing:</strong>
+        <div class="math">
 Y* = ${fmt2(A)} / (1 − ${fmt2(p.MPC)})
    = ${fmt2(A)} / ${fmt2(1 - p.MPC)}
    = ${fmt2(YstarVal)}
-      </div>
-    `;
-  }
+        </div>
+      </li>
+    </ol>
+  `;
+}
 
   function toggleSol(which){
     if (which === 1){
