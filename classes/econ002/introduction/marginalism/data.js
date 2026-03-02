@@ -1,45 +1,38 @@
 // data.js
-// Each scenario defines continuous MB(q) and MC(q) and integrates to TB/TC.
-// We use simple linear marginals so MB=MC has a clean exact solution.
+// Scenario templates with parameter ranges for MB(q)=a-bq and MC(q)=c+dq.
+// App will draw (a,b,c,d) randomly each round and ensure q* is interior.
 
 window.MARGINALISM_CONT = {
-  scenarios: [
+  templates: [
     {
       id: "study",
       title: "Studying (hours)",
       desc:
         "Choose how many hours to study.\n" +
-        "Marginal benefit falls (each extra hour helps less).\n" +
-        "Marginal cost rises (fatigue and giving up other activities).",
+        "MB falls (diminishing returns). MC rises (fatigue/opportunity cost).",
       unitLabel: "hours",
       qMax: 10,
-      // MB(q)=a-bq, MC(q)=c+dq
-      mb: { a: 18, b: 1.6 },
-      mc: { c: 4,  d: 0.8 }
+      ranges: {
+        a: [16, 22],   // MB intercept
+        b: [1.2, 2.2], // MB slope (>0)
+        c: [2, 6],     // MC intercept
+        d: [0.6, 1.4]  // MC slope (>0)
+      }
     },
     {
       id: "overtime",
       title: "Working overtime (hours)",
       desc:
-        "Choose how many overtime hours to work.\n" +
-        "Marginal benefit is the extra pay (falls slightly due to taxes/effort).\n" +
-        "Marginal cost rises with fatigue and giving up leisure.",
+        "Choose overtime hours.\n" +
+        "MB may fall slightly (taxes/effort). MC rises with fatigue/leisure loss.",
       unitLabel: "hours",
       qMax: 10,
-      mb: { a: 16, b: 0.8 },
-      mc: { c: 3,  d: 1.1 }
-    },
-    {
-      id: "practice",
-      title: "Practice problems (dozens)",
-      desc:
-        "Choose how many dozens of practice problems to do.\n" +
-        "Early practice helps a lot; later practice helps less.\n" +
-        "Marginal cost rises as you get mentally tired.",
-      unitLabel: "dozens",
-      qMax: 10,
-      mb: { a: 22, b: 1.9 },
-      mc: { c: 2,  d: 1.0 }
+      ranges: {
+        a: [14, 20],
+        b: [0.4, 1.2],
+        c: [1, 5],
+        d: [0.9, 1.8]
+      }
     },
     {
       id: "ads",
@@ -47,11 +40,78 @@ window.MARGINALISM_CONT = {
       desc:
         "Choose how much to spend on advertising.\n" +
         "Early spending reaches easy customers; later spending has lower impact.\n" +
-        "Marginal cost rises as you reach harder-to-reach customers.",
+        "MC rises as you target harder-to-reach customers.",
       unitLabel: "$100s",
       qMax: 10,
-      mb: { a: 24, b: 1.7 },
-      mc: { c: 5,  d: 0.9 }
+      ranges: {
+        a: [18, 28],
+        b: [1.0, 2.2],
+        c: [3, 8],
+        d: [0.6, 1.4]
+      }
+    },
+    {
+      id: "training",
+      title: "Job training (hours)",
+      desc:
+        "Choose training time.\n" +
+        "MB falls as you exhaust the most valuable skills first.\n" +
+        "MC rises as training becomes tiring/time-consuming.",
+      unitLabel: "hours",
+      qMax: 10,
+      ranges: {
+        a: [15, 24],
+        b: [1.0, 2.0],
+        c: [2, 7],
+        d: [0.7, 1.5]
+      }
+    },
+    {
+      id: "exercise",
+      title: "Exercise (hours per week)",
+      desc:
+        "Choose exercise hours.\n" +
+        "MB falls (extra hours help less). MC rises (fatigue/time).",
+      unitLabel: "hours",
+      qMax: 10,
+      ranges: {
+        a: [14, 22],
+        b: [0.9, 1.8],
+        c: [1, 6],
+        d: [0.7, 1.6]
+      }
+    },
+
+    // A few more conceptual contexts to vary framing
+    {
+      id: "shopping",
+      title: "Shopping for deals (hours)",
+      desc:
+        "Choose how many hours to spend searching for deals.\n" +
+        "MB falls (you find the best deals first). MC rises (time/effort).",
+      unitLabel: "hours",
+      qMax: 10,
+      ranges: {
+        a: [12, 20],
+        b: [0.8, 1.6],
+        c: [1, 5],
+        d: [0.8, 1.7]
+      }
+    },
+    {
+      id: "quality",
+      title: "Quality checks (hundreds of items)",
+      desc:
+        "Choose how many quality checks to perform.\n" +
+        "MB falls (most defects found early). MC rises (more inspection effort).",
+      unitLabel: "100s items",
+      qMax: 10,
+      ranges: {
+        a: [16, 26],
+        b: [1.0, 2.2],
+        c: [2, 7],
+        d: [0.7, 1.6]
+      }
     }
   ]
 };
