@@ -16,7 +16,6 @@
 
     rrSlider: $("rrSlider"),
     rrVal: $("rrVal"),
-    erCheck: $("erCheck"),
 
     dR0: $("dR0"),
     mTheory: $("mTheory"),
@@ -34,6 +33,11 @@
     liabsCell: $("liabsCell"),
     explainLog: $("explainLog"),
     processLog: $("processLog"),
+
+    splitLeft: $("splitLeft"),
+    splitRight: $("splitRight"),
+    segReq: $("segReq"),
+    segLoan: $("segLoan"),
   };
 
   function fmt(x){ return Number.isFinite(x) ? x.toFixed(2) : "—"; }
@@ -61,13 +65,13 @@
     });
   }
 
-  // Scenario state
-  let rr = 0.10;
+  let reserveRatio = 0.10;      // current slider value
+  let rrMin = 0.10;             // scenario’s required reserve ratio (lower bound for slider)
   let dR = 0;
   let step = 0;
   let running = false;
 
-  // Each step records: bank, deposit, reqRes, excessRes (optional), loan
+  // history: {k, bank, deposit, reqRes, loan}
   const history = [];
 
   function setStatus(msg){ els.status.textContent = msg; }
@@ -77,7 +81,6 @@
     els.runBtn.disabled = true;
 
     els.rrSlider.disabled = true;
-    els.erCheck.disabled = true;
 
     els.scenarioTitle.textContent = "Scenario";
     els.scenarioDesc.textContent = "Click “New Scenario” to start.";
@@ -99,20 +102,31 @@
     els.explainLog.textContent = "—";
     els.processLog.textContent = "—";
 
+    // bar reset
+    els.splitLeft.textContent = "Required reserves: —";
+    els.splitRight.textContent = "New loan: —";
+    els.segReq.style.width = "0%";
+    els.segLoan.style.width = "0%";
+    els.segReq.textContent = "";
+    els.segLoan.textContent = "";
+
     typeset(document.body);
+  }
+
+  function nextBankName(k){
+    return D.banks[(k-1) % D.banks.length];
   }
 
   function computeTotals(){
     const M = history.reduce((s,h) => s + h.deposit, 0);
     const L = history.reduce((s,h) => s + h.loan, 0);
-    const RRtot = history.reduce((s,h) => s + h.reqRes + h.excessRes, 0);
+    const RRtot = history.reduce((s,h) => s + h.reqRes, 0);
     const mImpl = (dR > 0) ? (M / dR) : 0;
-
     return { M, L, RRtot, mImpl };
   }
 
   function updateTotalsUI(){
-    const mTheory = 1/rr;
+    const mTheory = 1/reserveRatio;
     const dMTheory = dR * mTheory;
 
     const { M, L, RRtot, mImpl } = computeTotals();
@@ -127,6 +141,31 @@
     els.mImpl.textContent = fmt(mImpl);
   }
 
+  function renderBar(deposit, reqRes, loan){
+    if (!Number.isFinite(deposit) || deposit <= 0){
+      els.splitLeft.textContent = "Required reserves: —";
+      els.splitRight.textContent = "New loan: —";
+      els.segReq.style.width = "0%";
+      els.segLoan.style.width = "0%";
+      els.segReq.textContent = "";
+      els.segLoan.textContent = "";
+      return;
+    }
+
+    const reqPct = clamp((reqRes / deposit) * 100, 0, 100);
+    const loanPct = clamp((loan / deposit) * 100, 0, 100);
+
+    els.splitLeft.textContent = `Required reserves: ${fmt(reqRes)} (${fmt(reqPct)}%)`;
+    els.splitRight.textContent = `New loan: ${fmt(loan)} (${fmt(loanPct)}%)`;
+
+    els.segReq.style.width = `${reqPct}%`;
+    els.segLoan.style.width = `${loanPct}%`;
+
+    // Only label if segment is wide enough (avoids cramped text)
+    els.segReq.textContent = reqPct >= 18 ? "RR" : "";
+    els.segLoan.textContent = loanPct >= 18 ? "Loan" : "";
+  }
+
   function renderStepUI(last){
     if (!last){
       els.stepSummary.textContent = "No steps yet. Click Step to begin.";
@@ -135,6 +174,7 @@
       els.assetsCell.textContent = "—";
       els.liabsCell.textContent = "—";
       els.explainLog.textContent = "—";
+      renderBar(NaN, NaN, NaN);
       return;
     }
 
@@ -144,26 +184,24 @@
     els.stepSummary.textContent =
       `A deposit arrives at ${last.bank}. The bank keeps required reserves and makes a new loan.`;
 
-    // T-account: show the flows (simple and clear)
+    // WOW bar
+    renderBar(last.deposit, last.reqRes, last.loan);
+
+    // T-account lines
     els.assetsCell.textContent =
       `+ Reserves: ${fmt(last.deposit)}\n` +
       `− Required reserves: ${fmt(last.reqRes)}\n` +
-      (last.excessRes > 0 ? `− Excess reserves: ${fmt(last.excessRes)}\n` : "") +
       `+ Loans: ${fmt(last.loan)}`;
 
     els.liabsCell.textContent =
       `+ Deposits (money): ${fmt(last.deposit)}`;
 
-    // Explanation
-    const erLine = last.excessRes > 0
-      ? `Excess reserves (optional): ${fmt(last.excessRes)}\n`
-      : "";
-
+    // Explanation below T-account
     els.explainLog.textContent =
 `Deposit: ${fmt(last.deposit)}
-Required reserves: rr·deposit = ${fmt(rr)}·${fmt(last.deposit)} = ${fmt(last.reqRes)}
-${erLine}New loan (excess reserves): ${fmt(last.loan)}
-That loan becomes a deposit at the next bank in the next step.`;
+Required reserves: reserve ratio · deposit = ${fmt(reserveRatio)} · ${fmt(last.deposit)} = ${fmt(last.reqRes)}
+New loan (excess reserves): ${fmt(last.loan)}
+That loan becomes the next bank’s deposit in the next step.`;
 
     typeset(els.explainLog);
   }
@@ -174,13 +212,9 @@ That loan becomes a deposit at the next bank in the next step.`;
       return;
     }
     const lines = history.map(h =>
-      `Step ${h.k} (${h.bank}): deposit ${fmt(h.deposit)} → required reserves ${fmt(h.reqRes)}${h.excessRes>0?`, excess reserves ${fmt(h.excessRes)}`:""} → loan ${fmt(h.loan)}`
+      `Step ${h.k} (${h.bank}): deposit ${fmt(h.deposit)} → required reserves ${fmt(h.reqRes)} → loan ${fmt(h.loan)}`
     );
     els.processLog.textContent = lines.join("\n");
-  }
-
-  function nextBankName(k){
-    return D.banks[(k-1) % D.banks.length];
   }
 
   function canContinue(nextLoan){
@@ -188,33 +222,22 @@ That loan becomes a deposit at the next bank in the next step.`;
   }
 
   function stepOnce(){
-    // Determine deposit arriving this step
     const deposit = (step === 1) ? dR : history[history.length - 1].loan;
 
-    const reqRes = rr * deposit;
-    const er = els.erCheck.checked ? (D.excessReserveRate * deposit) : 0;
+    const reqRes = reserveRatio * deposit;
+    const loan = Math.max(0, deposit - reqRes);
 
-    const loan = Math.max(0, deposit - reqRes - er);
-
-    const rec = {
-      k: step,
-      bank: nextBankName(step),
-      deposit,
-      reqRes,
-      excessRes: er,
-      loan
-    };
+    const rec = { k: step, bank: nextBankName(step), deposit, reqRes, loan };
     history.push(rec);
 
     updateTotalsUI();
     renderStepUI(rec);
     renderProcessLog();
 
-    // Enable/disable continuation
     if (!canContinue(loan)){
       els.stepBtn.disabled = true;
       els.runBtn.disabled = true;
-      setStatus("Process complete (no meaningful excess reserves left).");
+      setStatus("Process complete (next loan is tiny).");
       running = false;
       return;
     }
@@ -228,20 +251,12 @@ That loan becomes a deposit at the next bank in the next step.`;
 
     const loop = () => {
       if (!running) return;
-
-      // If step button disabled, stop
-      if (els.stepBtn.disabled){
-        running = false;
-        return;
-      }
+      if (els.stepBtn.disabled){ running = false; return; }
 
       step++;
       stepOnce();
-
-      // Continue with a short delay for readability
       setTimeout(loop, 250);
     };
-
     loop();
   }
 
@@ -250,21 +265,26 @@ That loan becomes a deposit at the next bank in the next step.`;
     step = 0;
     running = false;
 
-    rr = rndStep(D.rrRange[0], D.rrRange[1], 0.01);
-    dR = rndInt(D.injectionRange[0], D.injectionRange[1]);
+    // draw required reserve ratio (minimum slider value)
+    rrMin = rndStep(D.rrRange[0], D.rrRange[1], 0.01);
+    reserveRatio = rrMin;
 
+    // set slider range rrMin -> 1.00
     els.rrSlider.disabled = false;
-    els.rrSlider.value = String(rr);
-    els.rrVal.textContent = fmt(rr);
+    els.rrSlider.min = String(rrMin);
+    els.rrSlider.max = "1.00";
+    els.rrSlider.step = "0.01";
+    els.rrSlider.value = String(reserveRatio);
+    els.rrVal.textContent = fmt(reserveRatio);
 
-    els.erCheck.disabled = false;
-    els.erCheck.checked = false;
+    dR = rndInt(D.injectionRange[0], D.injectionRange[1]);
 
     els.scenarioTitle.textContent = "Scenario";
     els.scenarioDesc.textContent =
       `Initial reserve injection: ΔR = ${fmt(dR)}\n` +
-      `Required reserve ratio: rr = ${fmt(rr)}\n\n` +
-      `Click Step to see how deposits are created across banks.`;
+      `Required reserve ratio (minimum): rr = ${fmt(rrMin)}\n\n` +
+      `Move the slider (rr ≥ ${fmt(rrMin)}) to see how a higher reserve ratio shrinks money creation.\n` +
+      `Click Step to start.`;
 
     els.stepBtn.disabled = false;
     els.runBtn.disabled = false;
@@ -291,34 +311,22 @@ That loan becomes a deposit at the next bank in the next step.`;
     setStatus("Reset steps (same scenario).");
   }
 
-  // Slider handlers
   function rrChanged(){
-    rr = Number(els.rrSlider.value);
-    els.rrVal.textContent = fmt(rr);
+    reserveRatio = Number(els.rrSlider.value);
+    els.rrVal.textContent = fmt(reserveRatio);
 
-    // Recompute from scratch using same injection + rr (reset history)
+    // reset steps so the chain reflects the new reserve ratio
     history.length = 0;
     step = 0;
 
     updateTotalsUI();
     renderStepUI(null);
     renderProcessLog();
-    setStatus("rr changed. Steps reset for the new rr.");
+    setStatus("Reserve ratio changed. Steps reset.");
     typeset(document.body);
   }
 
-  function erChanged(){
-    // Same idea: reset steps so the process reflects new rule
-    history.length = 0;
-    step = 0;
-
-    updateTotalsUI();
-    renderStepUI(null);
-    renderProcessLog();
-    setStatus("Excess reserve setting changed. Steps reset.");
-  }
-
-  // Wire events
+  // wiring
   els.newBtn.addEventListener("click", newScenario);
 
   els.stepBtn.addEventListener("click", () => {
@@ -339,9 +347,7 @@ That loan becomes a deposit at the next bank in the next step.`;
   });
 
   els.rrSlider.addEventListener("input", rrChanged);
-  els.erCheck.addEventListener("change", erChanged);
 
-  // Init
   window.addEventListener("load", () => {
     resetUI();
     setStatus("Ready.");
