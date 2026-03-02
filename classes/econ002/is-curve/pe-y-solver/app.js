@@ -208,6 +208,213 @@ Y* = ${fmt2(YstarVal)}
   els.checkBtn.addEventListener("click", checkAnswer);
   els.revealBtn.addEventListener("click", revealAnswer);
 
+// -------------------- Multiplier Practice --------------------
+const multEls = {
+  newBtn: document.getElementById("newMultBtn"),
+  pile: document.getElementById("multPile"),
+  prompt: document.getElementById("multPrompt"),
+  feedback: document.getElementById("multFeedback"),
+  checkBtn: document.getElementById("checkMultBtn"),
+  clearBtn: document.getElementById("clearMultBtn"),
+};
+
+let multScenario = null; 
+// { type: "G"|"T"|"I", dG, dT, dI, dY, multType:"GI"|"TAX", multVal }
+
+// Helper to create cards
+function mkCard(id, text, payload){
+  const el = document.createElement("div");
+  el.className = "mcard";
+  el.textContent = text;
+  el.draggable = true;
+  el.dataset.cardId = id;
+  el.dataset.payload = JSON.stringify(payload);
+  el.addEventListener("dragstart", (ev) => {
+    ev.dataTransfer.setData("text/plain", id);
+    ev.dataTransfer.setData("application/json", el.dataset.payload);
+    ev.dataTransfer.effectAllowed = "move";
+  });
+  return el;
+}
+
+function clearSlots(selector){
+  document.querySelectorAll(selector).forEach(s => {
+    s.textContent = "drop";
+    s.classList.remove("filled");
+    delete s.dataset.payload;
+  });
+}
+
+function setMultFeedback(html){
+  if (!multEls.feedback) return;
+  if (!html){ multEls.feedback.style.display="none"; multEls.feedback.innerHTML=""; return; }
+  multEls.feedback.style.display="block";
+  multEls.feedback.innerHTML = html;
+}
+
+// Setup drop logic once
+function setupDropZones(){
+  const zones = document.querySelectorAll("[data-mslot],[data-vslot]");
+  zones.forEach(z => {
+    z.addEventListener("dragover", (ev) => { ev.preventDefault(); z.classList.add("dragover"); });
+    z.addEventListener("dragleave", () => z.classList.remove("dragover"));
+    z.addEventListener("drop", (ev) => {
+      ev.preventDefault();
+      z.classList.remove("dragover");
+
+      const payloadRaw = ev.dataTransfer.getData("application/json");
+      if (!payloadRaw) return;
+      const payload = JSON.parse(payloadRaw);
+
+      // Enforce type matching: multiplier slot accepts payload.kind==="mult"
+      if (z.dataset.mslot === "mult" && payload.kind !== "mult") return;
+      if (z.dataset.mslot === "shock" && payload.kind !== "shock") return;
+
+      // value slots accept payload.kind==="value" only
+      if (z.dataset.vslot && payload.kind !== "value") return;
+
+      // Put the card text in the slot
+      z.textContent = payload.label;
+      z.classList.add("filled");
+      z.dataset.payload = payloadRaw;
+
+      setMultFeedback("");
+    });
+  });
+}
+
+// Build a new multiplier scenario
+function newMultiplierScenario(){
+  // Reset slots + pile
+  clearSlots("[data-mslot]");
+  clearSlots("[data-vslot]");
+  setMultFeedback("");
+  if (multEls.pile) multEls.pile.innerHTML = "";
+
+  // Use current MPC from this problem
+  const mpc = p.MPC;
+
+  const multGI = 1/(1-mpc);
+  const multTax = (-mpc)/(1-mpc);
+
+  // Choose shock type
+  const types = ["G","T","I"];
+  const type = types[Math.floor(Math.random()*types.length)];
+
+  // Choose a shock size
+  const shockSizes = [10, 15, 20, 25, 30];
+  const s = shockSizes[Math.floor(Math.random()*shockSizes.length)];
+  const sign = Math.random() < 0.5 ? -1 : 1;
+
+  const dG = (type==="G") ? sign*s : 0;
+  const dT = (type==="T") ? sign*s : 0;
+  const dI = (type==="I") ? sign*s : 0;
+
+  const multType = (type==="T") ? "TAX" : "GI";
+  const multVal = (multType==="TAX") ? multTax : multGI;
+
+  const dY = multVal * (type==="G" ? dG : type==="T" ? dT : dI);
+
+  multScenario = { type, dG, dT, dI, dY, multType, multVal };
+
+  const arrow = sign>0 ? "increases" : "decreases";
+  const varName = (type==="G") ? "G" : (type==="T") ? "T" : "Investment (I)";
+  multEls.prompt.textContent =
+    `Scenario: ${varName} ${arrow}. Build ΔY using the correct multiplier and the correct shock.`;
+
+  // Cards: multipliers
+  const multCards = [
+    mkCard("mult_gi", "1/(1−MPC)", { kind:"mult", label:"1/(1−MPC)", mult:"GI" }),
+    mkCard("mult_tax", "−MPC/(1−MPC)", { kind:"mult", label:"−MPC/(1−MPC)", mult:"TAX" }),
+  ];
+
+  // Cards: shock symbols
+  const shockCards = [
+    mkCard("shock_dG", "ΔG", { kind:"shock", label:"ΔG", shock:"G" }),
+    mkCard("shock_dT", "ΔT", { kind:"shock", label:"ΔT", shock:"T" }),
+    mkCard("shock_dI", "ΔI", { kind:"shock", label:"ΔI", shock:"I" }),
+  ];
+
+  // Numeric value cards: include the three correct values and a couple distractors
+  const vals = new Set([dG, dT, dI, 0]);
+  vals.add(sign*(s+5));
+  vals.add(sign*(s-5));
+
+  const valueCards = Array.from(vals).map((v,i) =>
+    mkCard(`val_${i}_${v}`, (v>=0?`+${v}`:`${v}`), { kind:"value", label:(v>=0?`+${v}`:`${v}`), value:v })
+  );
+
+  // ΔY candidate cards: correct + two distractors
+  const dYround = Math.round(dY*100)/100;
+  const cands = new Set([dYround, Math.round((dYround*0.8)*100)/100, Math.round((dYround*1.2)*100)/100]);
+  const dYCards = Array.from(cands).map((v,i) =>
+    mkCard(`dy_${i}_${v}`, (v>=0?`+${v}`:`${v}`), { kind:"value", label:(v>=0?`+${v}`:`${v}`), value:v, isDY:true })
+  );
+
+  // Render pile in a nice order
+  [...multCards, ...shockCards, ...valueCards, ...dYCards].forEach(el => multEls.pile.appendChild(el));
+}
+
+// Check multiplier answers
+function checkMultiplier(){
+  if (!multScenario){
+    setMultFeedback(`<span class="tagBad">No scenario</span> Click <strong>New Multiplier Scenario</strong> first.`);
+    return;
+  }
+
+  const multSlot = document.querySelector('[data-mslot="mult"]');
+  const shockSlot = document.querySelector('[data-mslot="shock"]');
+
+  const vG = document.querySelector('[data-vslot="dG"]');
+  const vT = document.querySelector('[data-vslot="dT"]');
+  const vI = document.querySelector('[data-vslot="dI"]');
+  const vY = document.querySelector('[data-vslot="dY"]');
+
+  const need = [];
+
+  // Validate formula slots
+  const multOk = multSlot?.dataset.payload && JSON.parse(multSlot.dataset.payload).mult === multScenario.multType;
+  const shockOk = shockSlot?.dataset.payload && JSON.parse(shockSlot.dataset.payload).shock === multScenario.type;
+
+  // Validate numeric value slots
+  function valOf(slot){
+    if (!slot?.dataset.payload) return null;
+    return JSON.parse(slot.dataset.payload).value;
+  }
+  const dGok = valOf(vG) === multScenario.dG;
+  const dTok = valOf(vT) === multScenario.dT;
+  const dIok = valOf(vI) === multScenario.dI;
+
+  // ΔY slot check (allow 0.01 tolerance)
+  const dy = valOf(vY);
+  const dyOk = (dy != null) && Math.abs(dy - Math.round(multScenario.dY*100)/100) <= 0.01;
+
+  if (multOk && shockOk && dGok && dTok && dIok && dyOk){
+    setMultFeedback(`<span class="tagOK">Correct</span> Nice — you matched the multiplier, the shock, the shock values, and ΔY.`);
+  } else {
+    setMultFeedback(
+      `<span class="tagBad">Not quite</span>
+       Check: (i) the multiplier type, (ii) the correct shock in the formula, and (iii) that only the shocked variable is nonzero.`
+    );
+  }
+}
+
+// Clear multiplier section
+function clearMultiplier(){
+  clearSlots("[data-mslot]");
+  clearSlots("[data-vslot]");
+  setMultFeedback("");
+}
+
+// Wire multiplier controls (only if section exists on page)
+if (multEls.newBtn){
+  setupDropZones();
+  multEls.newBtn.addEventListener("click", newMultiplierScenario);
+  multEls.checkBtn.addEventListener("click", checkMultiplier);
+  multEls.clearBtn.addEventListener("click", clearMultiplier);
+}
+
+  
   // init
   genProblem();
 })();
