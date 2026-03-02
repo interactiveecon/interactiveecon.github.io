@@ -34,6 +34,8 @@
     whyBtn: $("whyBtn"),
     predFeedback: $("predFeedback"),
 
+    pinnedNote: $("pinnedNote"),
+
     resCanvas: $("resCanvas"),
     moneyCanvas: $("moneyCanvas")
   };
@@ -88,6 +90,11 @@
     typeset(els.predFeedback);
   }
 
+  function setPinnedNote(html){
+    els.pinnedNote.innerHTML = html || "";
+    typeset(els.pinnedNote);
+  }
+
   function enableControls(on){
     els.applyBtn.disabled   = !on;
     els.omoBuyBtn.disabled  = !on;
@@ -121,24 +128,19 @@
     return "middle";
   }
 
-  // ---------- Money supply rule (only changes when i_ff changes) ----------
-  // Anchor: baseline money level = (1/rr)*R_base, but changes only via i_ff.
+  // ---------- Money supply rule: changes only when i_ff changes ----------
   const GAMMA = 120; // money units per 1% change in i_ff
-
   function baseline_i0(){ return iStar(R_base, ior_base); }
   function baseline_M0(){ return (1/BASE.rr) * R_base; }
-
   function M_of_i(i){
     const i0 = baseline_i0();
     const M0 = baseline_M0();
     return Math.max(0, M0 + GAMMA*(i0 - i));
   }
-
   function moneySupply(Rqty, iorVal){
     const i = iStar(Rqty, iorVal);
     return M_of_i(i);
   }
-
   function displayedMultiplier(Rqty, iorVal){
     const M = moneySupply(Rqty, iorVal);
     return (Rqty > 0) ? (M / Rqty) : 0;
@@ -157,7 +159,7 @@
     const u = Math.random();
 
     if (u < 0.60){
-      // floor region (pinned at IOR)
+      // floor region
       const lo = Math.min(Rmax, Rf + 5);
       const hi = Rmax;
       R_base = Math.floor(lo + Math.random()*(hi - lo + 1));
@@ -172,11 +174,10 @@
       const hi = Math.max(Rmin, Rc - 5);
       R_base = Math.floor(lo + Math.random()*(hi - lo + 1));
     }
-
     R = R_base;
   }
 
-  // ---------- Pinned note ----------
+  // ---------- Pinned note content (separate from prediction feedback) ----------
   function pinnedNoteHTML(){
     const reg = region(R, ior);
     if (reg === "floor"){
@@ -196,7 +197,6 @@
 
   // ---------- Scenario ----------
   function newScenario(){
-    // baseline for this round
     ior_base = BASE.ior;
     ior = ior_base;
     els.iorSlider.value = String(ior);
@@ -229,6 +229,7 @@
 
     enableControls(true);
     setStatus("Scenario ready. Initial reserves randomized.");
+
     renderAll();
   }
 
@@ -251,6 +252,10 @@
     clearPredictions();
     enableControls(false);
     setStatus("Reset.");
+
+    // IMPORTANT: no pinned note until a scenario exists
+    setPinnedNote("");
+
     renderAll();
   }
 
@@ -315,17 +320,13 @@
       showPredFeedback(`<span class="tagBad">No scenario</span> Click <strong>New Scenario</strong> first.`);
       return;
     }
-    const reg = region(R, ior);
-    const baseNote = pinnedNoteHTML();
-
     let extra = "";
     if (scenario.kind === "IOR"){
-      extra = `IOR changes the <strong>floor</strong>. If the equilibrium is in the middle region, changing IOR won’t move \$begin:math:text$i\_\{ff\}\\$end:math:text$.`;
+      extra = `IOR changes the <strong>floor</strong>. If equilibrium is in the middle region, changing IOR won’t move \$begin:math:text$i\_\{ff\}\\$end:math:text$.`;
     } else {
       extra = `OMO shifts the <strong>supply</strong> of reserves. \$begin:math:text$M\\$end:math:text$ changes only if that shift moves \$begin:math:text$i\_\{ff\}\\$end:math:text$.`;
     }
-
-    showPredFeedback(`${baseNote}<br><br>${extra}`);
+    showPredFeedback(extra);
   }
 
   // ---------- Apply shock / controls ----------
@@ -368,7 +369,7 @@
     renderAll();
   }
 
-  // ---------- Drawing helpers ----------
+  // ---------- Drawing ----------
   function setupCanvas(canvas){
     const ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
@@ -454,15 +455,14 @@
 
     const idisc = BASE.idisc;
 
-    // Supply lines
+    // supply
     line(ctx, xTo(R_base), yTo(imin), xTo(R_base), yTo(imax), BLUE, 3, dpr);
     line(ctx, xTo(R),      yTo(imin), xTo(R),      yTo(imax), ORANGE, 3, dpr);
 
-    // Demand (3-piece): ceiling flat, middle down, floor flat
+    // demand 3-piece
     function drawDemand(color, iorVal){
       const R_floor = Rd(iorVal);
       const R_ceil  = Rd(idisc);
-
       const Rf = clamp(R_floor, Rmin, Rmax);
       const Rc = clamp(R_ceil,  Rmin, Rmax);
 
@@ -470,18 +470,16 @@
       line(ctx, xTo(Rc), yTo(idisc), xTo(Rf), yTo(iorVal), color, 3, dpr);
       line(ctx, xTo(Rf), yTo(iorVal), xTo(Rmax), yTo(iorVal), color, 3, dpr);
     }
-
     drawDemand(BLUE, ior_base);
     drawDemand(ORANGE, ior);
 
-    // Floor/ceiling reference lines
+    // references
     line(ctx, xTo(Rmin), yTo(ior),   xTo(Rmax), yTo(ior),   GREY, 2, dpr, [3,6]);
     line(ctx, xTo(Rmin), yTo(idisc), xTo(Rmax), yTo(idisc), GREY, 2, dpr, [3,6]);
 
-    // Equilibria
+    // points
     const i0 = iStar(R_base, ior_base);
     const i1 = iStar(R, ior);
-
     const x0 = xTo(R_base), y0p = yTo(i0);
     const x1 = xTo(R),      y1p = yTo(i1);
 
@@ -512,7 +510,6 @@
     const xTo = (Rv) => X0 + (Rv-Rmin)/(Rmax-Rmin)*(X1-X0);
     const yTo = (Mv) => Y0 + (Mmax-Mv)/(Mmax-Mmin)*(Y1-Y0);
 
-    // Plot implied M(R) via iStar: horizontal where i_ff pinned
     function drawMcurve(color, iorVal){
       const N = 240;
       ctx.strokeStyle = color;
@@ -532,7 +529,6 @@
 
     const M0 = moneySupply(R_base, ior_base);
     const M1 = moneySupply(R, ior);
-
     const x0 = xTo(R_base), y0p = yTo(M0);
     const x1 = xTo(R),      y1p = yTo(M1);
 
@@ -573,8 +569,8 @@
       drawMoney();
     });
 
-    // Always show pinned/sloped note
-    showPredFeedback(pinnedNoteHTML());
+    // Only show pinned note when a scenario exists (prevents “pinned” before predicting)
+    if (scenario) setPinnedNote(pinnedNoteHTML());
   }
 
   // ---------- Init / events ----------
@@ -587,7 +583,13 @@
     els.scenarioDesc.textContent = "Click “New Scenario” to start.";
 
     enableControls(false);
+    setPinnedNote("");          // no pinned note at start
+    showPredFeedback("");       // no prediction feedback at start
     setStatus("Ready.");
+
+    // typeset the static page once
+    typeset(document.body);
+
     renderAll();
   }
 
@@ -604,12 +606,7 @@
 
   window.addEventListener("resize", renderAll);
 
-  // KaTeX scripts load deferred; render after DOM is ready and after KaTeX loads
   window.addEventListener("load", () => {
-    // give auto-render a moment to become available
-    setTimeout(() => {
-      typeset(document.body);
-      init();
-    }, 50);
+    setTimeout(init, 50);
   });
 })();
