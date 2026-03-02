@@ -32,111 +32,79 @@ window.addEventListener("DOMContentLoaded", () => {
   };
 
   const DATA = window.KCIS_DATA;
-  if (!DATA) { els.status.textContent = "ERROR: data.js not loaded."; return; }
-
+  if (!DATA) { els.status.textContent = "ERROR: data.js not loaded (KCIS_DATA missing)."; return; }
   const P = DATA.params;
 
-  // Baseline
   const BASE = { ...DATA.baseline };
 
-  // Current policy variables (student-controlled sliders)
-  let r = BASE.r;
-  let G = BASE.G;
-  let T = BASE.T;
+  let r = BASE.r, G = BASE.G, T = BASE.T;
+  let currentShock = null; // {var, delta, target}
 
-  // Scenario shock (target values) - does NOT move sliders
-  let currentShock = null; // { var, delta, target }
-
-  // Mechanism chain state: slotKey -> cardId (string)
-  const chainState = {};
-
-  // Colors (baseline blue, current orange)
   const BLUE = "rgba(31,119,180,0.92)";
   const ORANGE = "rgba(230,159,0,0.95)";
-  const GHOST = "rgba(0,0,0,0.18)";
 
   function setStatus(msg){ els.status.textContent = msg; }
   function fmt(x){ return (Number.isFinite(x) ? x.toFixed(2) : "—"); }
   function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
 
-  // ---------- Core model ----------
+  // ---------- Model ----------
   function Iof(rr){ return P.I0 - P.b * rr; }
-  function Cof(Y, TT){ return P.C0 + P.MPC*(Y - TT); }
-  function PEof(Y, rr, GG, TT){ return Cof(Y, TT) + Iof(rr) + GG; }
-
   function Ystar(rr, GG, TT){
     const num = P.C0 - P.MPC*TT + Iof(rr) + GG;
-    const den = (1 - P.MPC);
-    return num / den;
+    return num / (1 - P.MPC);
   }
-
   function Yis(rr, GG, TT){ return Ystar(rr, GG, TT); }
 
-  // ---------- Mechanism templates ----------
-  // Build chain nodes depending on shock variable
-  function chainForShock(shockVar){
-    if (shockVar === "r"){
-      return [
-        { key:"r",  label:"r" },
-        { key:"I",  label:"I" },
-        { key:"PE", label:"PE" },
-        { key:"INV",label:"Inventories" },
-        { key:"Y",  label:"Y" }
-      ];
-    }
-    if (shockVar === "T"){
-      return [
-        { key:"T",  label:"T" },
-        { key:"C",  label:"C" },
-        { key:"PE", label:"PE" },
-        { key:"INV",label:"Inventories" },
-        { key:"Y",  label:"Y" }
-      ];
-    }
-    // G
-    return [
-      { key:"G",  label:"G" },
-      { key:"PE", label:"PE" },
-      { key:"INV",label:"Inventories" },
-      { key:"Y",  label:"Y" }
-    ];
-  }
-
-  // Card set (pile options)
+  // ---------- Mechanism ----------
   const CARD_BANK = [
-    // policy vars
     { id:"r_up",  text:"r ↑",  var:"r", dir:"↑" },
     { id:"r_dn",  text:"r ↓",  var:"r", dir:"↓" },
     { id:"G_up",  text:"G ↑",  var:"G", dir:"↑" },
     { id:"G_dn",  text:"G ↓",  var:"G", dir:"↓" },
     { id:"T_up",  text:"T ↑",  var:"T", dir:"↑" },
     { id:"T_dn",  text:"T ↓",  var:"T", dir:"↓" },
-
-    // endogenous links
     { id:"I_up",  text:"I ↑",  var:"I", dir:"↑" },
     { id:"I_dn",  text:"I ↓",  var:"I", dir:"↓" },
-
     { id:"C_up",  text:"C ↑",  var:"C", dir:"↑" },
     { id:"C_dn",  text:"C ↓",  var:"C", dir:"↓" },
-
     { id:"PE_up", text:"PE ↑", var:"PE", dir:"↑" },
     { id:"PE_dn", text:"PE ↓", var:"PE", dir:"↓" },
-
     { id:"INV_up",text:"Inventories ↑", var:"INV", dir:"↑" },
     { id:"INV_dn",text:"Inventories ↓", var:"INV", dir:"↓" },
-
     { id:"Y_up",  text:"Y ↑",  var:"Y", dir:"↑" },
     { id:"Y_dn",  text:"Y ↓",  var:"Y", dir:"↓" },
   ];
 
-  function buildPileForShock(shockVar){
-    els.pile.innerHTML = "";
-    const neededVars = new Set(chainForShock(shockVar).map(n => n.key));
-    // we allow PE/INV/Y always; plus shock-specific links
-    const allow = (c) => neededVars.has(c.var);
-    const cards = CARD_BANK.filter(allow);
+  function chainForShock(v){
+    if (v === "r") return ["r","I","PE","INV","Y"];
+    if (v === "T") return ["T","C","PE","INV","Y"];
+    return ["G","PE","INV","Y"];
+  }
 
-    // duplicate each card twice for easy dragging
+  function expectedMechanism(v, sign){
+    if (v === "r"){
+      return sign==="↑"
+        ? { r:"↑", I:"↓", PE:"↓", INV:"↑", Y:"↓" }
+        : { r:"↓", I:"↑", PE:"↑", INV:"↓", Y:"↑" };
+    }
+    if (v === "T"){
+      return sign==="↑"
+        ? { T:"↑", C:"↓", PE:"↓", INV:"↑", Y:"↓" }
+        : { T:"↓", C:"↑", PE:"↑", INV:"↓", Y:"↑" };
+    }
+    // G
+    return sign==="↑"
+      ? { G:"↑", PE:"↑", INV:"↓", Y:"↑" }
+      : { G:"↓", PE:"↓", INV:"↑", Y:"↓" };
+  }
+
+  const chainState = {}; // slot -> cardId
+
+  function buildPileForShock(v){
+    els.pile.innerHTML = "";
+    const needed = new Set(chainForShock(v));
+    const cards = CARD_BANK.filter(c => needed.has(c.var));
+
     const expanded = [];
     for (const c of cards){ expanded.push(c, c); }
     shuffle(expanded);
@@ -155,19 +123,19 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function buildChainUI(shockVar){
+  function buildChainUI(v){
     els.chain.innerHTML = "";
-    Object.keys(chainState).forEach(k => delete chainState[k]);
+    for (const k of Object.keys(chainState)) delete chainState[k];
 
-    const nodes = chainForShock(shockVar);
-
-    nodes.forEach((n, idx) => {
+    const seq = chainForShock(v);
+    seq.forEach((key, idx) => {
       const node = document.createElement("div");
       node.className = "node";
-      node.innerHTML = `<div class="lbl">${n.label}</div><div class="slot" data-slot="${n.key}">drop</div>`;
+      node.innerHTML = `<div class="lbl">${key==="INV" ? "Inventories" : key}</div>
+                        <div class="slot" data-slot="${key}">drop</div>`;
       els.chain.appendChild(node);
 
-      if (idx < nodes.length-1){
+      if (idx < seq.length-1){
         const arrow = document.createElement("div");
         arrow.className = "arrow";
         arrow.textContent = "→";
@@ -191,8 +159,7 @@ window.addEventListener("DOMContentLoaded", () => {
         if (!card) return;
 
         const key = slot.dataset.slot;
-        // enforce correct variable type for slot (e.g., INV slot must get INV_* card)
-        if (card.var !== key) return;
+        if (card.var !== key) return; // enforce variable match
 
         chainState[key] = id;
         slot.textContent = card.text;
@@ -203,42 +170,18 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function clearChain(){
-    const slots = els.chain.querySelectorAll(".slot");
-    slots.forEach(slot => {
-      slot.textContent = "drop";
-      slot.classList.remove("filled");
+    for (const k of Object.keys(chainState)) delete chainState[k];
+    els.chain.querySelectorAll(".slot").forEach(s => {
+      s.textContent = "drop";
+      s.classList.remove("filled");
     });
-    Object.keys(chainState).forEach(k => delete chainState[k]);
     renderMechFeedback("");
   }
 
   function renderMechFeedback(html){
-    if (!html){
-      els.mechFeedback.style.display = "none";
-      els.mechFeedback.innerHTML = "";
-      return;
-    }
-    els.mechFeedback.style.display = "block";
+    if (!html){ els.mechFeedback.style.display="none"; els.mechFeedback.innerHTML=""; return; }
+    els.mechFeedback.style.display="block";
     els.mechFeedback.innerHTML = html;
-  }
-
-  function expectedMechanism(shockVar, deltaSign){
-    // deltaSign is ↑ or ↓ for the shocked variable
-    // return mapping slotKey -> direction symbol (↑/↓)
-    if (shockVar === "r"){
-      // r↑ -> I↓ -> PE↓ -> INV↑ -> Y↓ ; r↓ opposite
-      if (deltaSign === "↑") return { r:"↑", I:"↓", PE:"↓", INV:"↑", Y:"↓" };
-      return { r:"↓", I:"↑", PE:"↑", INV:"↓", Y:"↑" };
-    }
-    if (shockVar === "T"){
-      // T↑ -> C↓ -> PE↓ -> INV↑ -> Y↓ ; T↓ opposite
-      if (deltaSign === "↑") return { T:"↑", C:"↓", PE:"↓", INV:"↑", Y:"↓" };
-      return { T:"↓", C:"↑", PE:"↑", INV:"↓", Y:"↑" };
-    }
-    // G
-    // G↑ -> PE↑ -> INV↓ -> Y↑ ; G↓ opposite
-    if (deltaSign === "↑") return { G:"↑", PE:"↑", INV:"↓", Y:"↑" };
-    return { G:"↓", PE:"↓", INV:"↑", Y:"↓" };
   }
 
   function checkMechanism(){
@@ -246,12 +189,10 @@ window.addEventListener("DOMContentLoaded", () => {
       renderMechFeedback(`<span class="tagBad">No scenario</span> Click <strong>New Scenario</strong> first.`);
       return;
     }
-    // Determine sign from shock
     const sign = currentShock.delta > 0 ? "↑" : "↓";
-    const needed = expectedMechanism(currentShock.var, sign);
+    const need = expectedMechanism(currentShock.var, sign);
 
-    // Ensure all required slots filled
-    for (const k of Object.keys(needed)){
+    for (const k of Object.keys(need)){
       if (!chainState[k]){
         renderMechFeedback(`<span class="tagBad">Incomplete</span> Fill all blanks in the chain, then check.`);
         return;
@@ -259,32 +200,29 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 
     const wrong = [];
-    for (const [k,dir] of Object.entries(needed)){
+    for (const [k,dir] of Object.entries(need)){
       const card = CARD_BANK.find(c => c.id === chainState[k]);
       if (!card || card.dir !== dir) wrong.push(k);
     }
 
     if (!wrong.length){
-      renderMechFeedback(`<span class="tagOK">Correct</span> Nice — that chain matches the mechanism for this shock.`);
+      renderMechFeedback(`<span class="tagOK">Correct</span> Great — that matches the mechanism for this shock.`);
       return;
     }
 
-    const nice = (k) => (k==="INV" ? "Inventories" : k);
-    const correctTxt = wrong.map(k => `${nice(k)} should be <strong>${needed[k]}</strong>`).join(", ");
-    renderMechFeedback(`<span class="tagBad">Not quite</span> ${correctTxt}.`);
+    const nice = (k)=> k==="INV" ? "Inventories" : k;
+    const msg = wrong.map(k => `${nice(k)} should be <strong>${need[k]}</strong>`).join(", ");
+    renderMechFeedback(`<span class="tagBad">Not quite</span> ${msg}.`);
   }
 
-  // ---------- Scenario generation ----------
+  // ---------- Scenarios ----------
   function newScenario(){
-    // Do NOT change sliders. Just announce a shock and set target.
     clearChain();
     renderMechFeedback("");
 
     const vars = ["r","G","T"];
     const v = vars[Math.floor(Math.random()*vars.length)];
-    const deltas = DATA.shocks[v];
-    const delta = deltas[Math.floor(Math.random()*deltas.length)];
-
+    const delta = DATA.shocks[v][Math.floor(Math.random()*DATA.shocks[v].length)];
     currentShock = { var: v, delta, target: BASE[v] + delta };
 
     const word = delta > 0 ? "increases" : "decreases";
@@ -294,14 +232,11 @@ window.addEventListener("DOMContentLoaded", () => {
       `${v} ${word} (Δ${v} = ${delta}).\n\n` +
       `Sliders are still at baseline. Use sliders to apply the shock, then build the mechanism.`;
 
-    // Build mechanism UI specific to this shock
     buildPileForShock(v);
     buildChainUI(v);
+    els.mechPrompt.textContent = `Fill the ${v}-shock mechanism chain using the cards.`;
 
-    els.mechPrompt.textContent =
-      `Fill the blanks for the ${v}-shock mechanism. Drag the matching direction cards into the chain.`;
-
-    setStatus("Apply the shock with sliders, then build the chain and click Check Mechanism.");
+    setStatus("Sliders are baseline. Apply the shock with sliders, then check the chain.");
     renderAll();
   }
 
@@ -311,14 +246,14 @@ window.addEventListener("DOMContentLoaded", () => {
     syncSliders();
     clearChain();
     renderMechFeedback("");
+
+    els.pile.innerHTML = "";
+    els.chain.innerHTML = "";
     els.scenarioTitle.textContent = "Scenario";
     els.scenarioDesc.textContent = "Click “New Scenario” to start.";
     els.mechPrompt.textContent = "Click New Scenario to generate a shock.";
-    // reset pile/chain to default empty
-    els.pile.innerHTML = "";
-    els.chain.innerHTML = "";
-    renderAll();
     setStatus("Reset to baseline.");
+    renderAll();
   }
 
   // ---------- Sliders ----------
@@ -350,7 +285,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function drawAxes(ctx, W, H, dpr, xLabel, yLabel){
-    const pad = { l: 58*dpr, r: 14*dpr, t: 14*dpr, b: 50*dpr };
+    const pad = { l: 60*dpr, r: 14*dpr, t: 14*dpr, b: 52*dpr };
     const X0 = pad.l, X1 = W - pad.r;
     const Y0 = pad.t, Y1 = H - pad.b;
 
@@ -371,7 +306,7 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.fillText(xLabel, (X0+X1)/2, Y1 + 20*dpr);
 
     ctx.save();
-    ctx.translate(X0 - 46*dpr, (Y0+Y1)/2);
+    ctx.translate(X0 - 48*dpr, (Y0+Y1)/2);
     ctx.rotate(-Math.PI/2);
     ctx.textAlign="center"; ctx.textBaseline="top";
     ctx.fillText(yLabel, 0, 0);
@@ -419,46 +354,39 @@ window.addEventListener("DOMContentLoaded", () => {
     const { ctx, W, H, dpr } = setupCanvas(els.kcCanvas);
     ctx.clearRect(0,0,W,H);
 
-    const { X0,X1,Y0,Y1 } = drawAxes(ctx,W,H,dpr,"Output (Y)","Planned Expenditure (PE)");
+    const { X0,X1,Y0p,Y1p } = drawAxes(ctx,W,H,dpr,"Output (Y)","Planned Expenditure (PE)");
 
     const Ymin = 0, Ymax = 900;
     const xTo = (Y) => X0 + (Y-Ymin)/(Ymax-Ymin)*(X1-X0);
-    const yTo = (PE) => Y0 + (Ymax-PE)/(Ymax-Ymin)*(Y1-Y0);
+    const yTo = (PE) => Y0p + (Ymax-PE)/(Ymax-Ymin)*(Y1p-Y0p);
 
     // 45 line
     line(ctx, xTo(Ymin), yTo(Ymin), xTo(Ymax), yTo(Ymax), "rgba(0,0,0,0.65)", 3, dpr);
 
-    // Baseline PE (blue)
+    // PE lines: PE = A + MPC*Y
     const Ab = P.C0 - P.MPC*BASE.T + Iof(BASE.r) + BASE.G;
-    const PEb0 = Ab + P.MPC*Ymin;
-    const PEb1 = Ab + P.MPC*Ymax;
-    line(ctx, xTo(Ymin), yTo(PEb0), xTo(Ymax), yTo(PEb1), BLUE, 3, dpr);
-
-    // Current PE (orange)
     const Ac = P.C0 - P.MPC*T + Iof(r) + G;
-    const PEc0 = Ac + P.MPC*Ymin;
-    const PEc1 = Ac + P.MPC*Ymax;
-    line(ctx, xTo(Ymin), yTo(PEc0), xTo(Ymax), yTo(PEc1), ORANGE, 3, dpr);
 
-    // Equilibria
+    line(ctx, xTo(Ymin), yTo(Ab + P.MPC*Ymin), xTo(Ymax), yTo(Ab + P.MPC*Ymax), BLUE, 3, dpr);
+    line(ctx, xTo(Ymin), yTo(Ac + P.MPC*Ymin), xTo(Ymax), yTo(Ac + P.MPC*Ymax), ORANGE, 3, dpr);
+
     const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
     const Y1eq = Ystar(r, G, T);
 
-    // baseline point
-    dot(ctx, xTo(Y0), yTo(Y0), BLUE, dpr);
-    line(ctx, xTo(Y0), yTo(Ymin), xTo(Y0), yTo(Y0), "rgba(0,0,0,0.25)", 2, dpr, [4,6]);
-    xTick(ctx, xTo(Y0), Y1, "Y₀", dpr);
+    // baseline equilibrium marker + x tick
+    dot(ctx, xTo(Y0eq), yTo(Y0eq), BLUE, dpr);
+    xTick(ctx, xTo(Y0eq), Y1p, "Y₀", dpr);
 
-    // current point + label if changed
-    if (Math.abs(Y1v - Y0) > 1e-6){
-      dot(ctx, xTo(Y1v), yTo(Y1v), ORANGE, dpr);
-      line(ctx, xTo(Y1v), yTo(Ymin), xTo(Y1v), yTo(Y1v), "rgba(0,0,0,0.25)", 2, dpr, [4,6]);
-      xTick(ctx, xTo(Y1v), Y1, "Y₁", dpr);
+    // new equilibrium marker + x tick + label (if changed)
+    const changed = (Math.abs(Y1eq - Y0eq) > 1e-6);
+    if (changed){
+      dot(ctx, xTo(Y1eq), yTo(Y1eq), ORANGE, dpr);
+      xTick(ctx, xTo(Y1eq), Y1p, "Y₁", dpr);
 
       ctx.fillStyle = "rgba(0,0,0,0.70)";
       ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
       ctx.textAlign="left"; ctx.textBaseline="bottom";
-      ctx.fillText(`New equilibrium`, xTo(Y1v) + 8*dpr, yTo(Y1v) - 6*dpr);
+      ctx.fillText("New equilibrium", xTo(Y1eq)+8*dpr, yTo(Y1eq)-6*dpr);
     }
   }
 
@@ -466,70 +394,63 @@ window.addEventListener("DOMContentLoaded", () => {
     const { ctx, W, H, dpr } = setupCanvas(els.isCanvas);
     ctx.clearRect(0,0,W,H);
 
-    const { X0,X1,Y0,Y1 } = drawAxes(ctx,W,H,dpr,"Output (Y)","Interest rate (r)");
+    const { X0,X1,Y0p,Y1p } = drawAxes(ctx,W,H,dpr,"Output (Y)","Interest rate (r)");
 
     const rMin = DATA.ranges.r.min;
     const rMax = DATA.ranges.r.max;
     const Ymin = 0, Ymax = 900;
 
     const xTo = (Y) => X0 + (Y-Ymin)/(Ymax-Ymin)*(X1-X0);
-    const yTo = (rr) => Y0 + (rMax-rr)/(rMax-rMin)*(Y1-Y0);
+    const yTo = (rr) => Y0p + (rMax-rr)/(rMax-rMin)*(Y1p-Y0p);
 
-    // y-axis ticks for r
+    // y-axis labeled ticks for r
     for (const rr of [0,2,4,6,8,10]){
-      yTick(ctx, X0, yTo(rr), rr.toFixed(0), dpr);
+      yTick(ctx, X0, yTo(rr), rr.toString(), dpr);
     }
 
-    // Baseline IS (blue): varies r, baseline G,T
-    const N = 120;
-    ctx.strokeStyle = BLUE;
-    ctx.lineWidth = 3*dpr;
-    ctx.beginPath();
-    for (let i=0;i<=N;i++){
-      const rr = rMin + (i/N)*(rMax-rMin);
-      const YY = Yis(rr, BASE.G, BASE.T);
-      const x = xTo(YY), y = yTo(rr);
-      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    // Plot baseline IS (blue) and current IS (orange)
+    const N = 160;
+    function drawISCurve(color, GG, TT){
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3*dpr;
+      ctx.beginPath();
+      for (let i=0;i<=N;i++){
+        const rr = rMin + (i/N)*(rMax-rMin);
+        const YY = Yis(rr, GG, TT);
+        const x = xTo(YY);
+        const y = yTo(rr);
+        if (i===0) ctx.moveTo(x,y);
+        else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
     }
-    ctx.stroke();
+    drawISCurve(BLUE, BASE.G, BASE.T);
+    drawISCurve(ORANGE, G, T);
 
-    // Current IS (orange): varies r, current G,T
-    ctx.strokeStyle = ORANGE;
-    ctx.lineWidth = 3*dpr;
-    ctx.beginPath();
-    for (let i=0;i<=N;i++){
-      const rr = rMin + (i/N)*(rMax-rMin);
-      const YY = Yis(rr, G, T);
-      const x = xTo(YY), y = yTo(rr);
-      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-    }
-    ctx.stroke();
-
-    // Equilibrium points at current r
+    // Equilibrium points:
     const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
     const Y1eq = Ystar(r, G, T);
 
-    // Baseline point (at baseline r)
-    dot(ctx, xTo(Y0), yTo(BASE.r), BLUE, dpr);
-    xTick(ctx, xTo(Y0), Y1, "Y₀", dpr);
+    dot(ctx, xTo(Y0eq), yTo(BASE.r), BLUE, dpr);
+    xTick(ctx, xTo(Y0eq), Y1p, "Y₀", dpr);
 
-    // Current point (at current r)
-    if (Math.abs(Y1v - Y0) > 1e-6 || Math.abs(r - BASE.r) > 1e-6){
-      dot(ctx, xTo(Y1v), yTo(r), ORANGE, dpr);
-      xTick(ctx, xTo(Y1v), Y1, "Y₁", dpr);
+    const changed = (Math.abs(Y1eq - Y0eq) > 1e-6) || (Math.abs(r - BASE.r) > 1e-6);
+    if (changed){
+      dot(ctx, xTo(Y1eq), yTo(r), ORANGE, dpr);
+      xTick(ctx, xTo(Y1eq), Y1p, "Y₁", dpr);
 
       ctx.fillStyle = "rgba(0,0,0,0.70)";
       ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
       ctx.textAlign="left"; ctx.textBaseline="bottom";
-      ctx.fillText(`New equilibrium`, xTo(Y1v) + 8*dpr, yTo(r) - 6*dpr);
+      ctx.fillText("New equilibrium", xTo(Y1eq)+8*dpr, yTo(r)-6*dpr);
     }
   }
 
   function renderStats(){
-    const Y0v = Ystar(BASE.r, BASE.G, BASE.T);
-    const Y1v = Ystar(r,G,T);
-    els.y0.textContent = fmt(Y0v);
-    els.y1.textContent = fmt(Y1v);
+    const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
+    const Y1eq = Ystar(r, G, T);
+    els.y0.textContent = fmt(Y0eq);
+    els.y1.textContent = fmt(Y1eq);
   }
 
   function renderAll(){
@@ -538,7 +459,7 @@ window.addEventListener("DOMContentLoaded", () => {
     drawIS();
   }
 
-  // ---------- Utilities ----------
+  // ---------- Utils ----------
   function shuffle(a){
     for (let i=a.length-1;i>0;i--){
       const j = Math.floor(Math.random()*(i+1));
@@ -548,19 +469,17 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // ---------- Init ----------
   function init(){
-    // sliders start at baseline
-    els.rSlider.value = String(BASE.r);
-    els.gSlider.value = String(BASE.G);
-    els.tSlider.value = String(BASE.T);
-
+    // baseline slider values
     r = BASE.r; G = BASE.G; T = BASE.T;
+    els.rSlider.value = String(r);
+    els.gSlider.value = String(G);
+    els.tSlider.value = String(T);
     syncSliders();
 
     renderAll();
     setStatus("Ready.");
   }
 
-  // Events
   els.rSlider.addEventListener("input", onSlider);
   els.gSlider.addEventListener("input", onSlider);
   els.tSlider.addEventListener("input", onSlider);
