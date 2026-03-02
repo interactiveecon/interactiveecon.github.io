@@ -281,14 +281,25 @@
 
   // ---------- Canvas drawing ----------
   function setupCanvas(canvas){
-    const ctx = canvas.getContext("2d");
-    const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    const W = Math.max(1, Math.floor(rect.width * dpr));
-    const H = Math.max(1, Math.floor(rect.height * dpr));
-    if (canvas.width !== W || canvas.height !== H){ canvas.width = W; canvas.height = H; }
-    return { ctx, W, H, dpr };
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+
+  // Sometimes the canvas rect reports 0×0; fall back to parent (.chartCard) size.
+  let rect = canvas.getBoundingClientRect();
+  if (rect.width < 2 || rect.height < 2) {
+    const p = canvas.parentElement?.getBoundingClientRect?.();
+    if (p && p.width > rect.width && p.height > rect.height) rect = p;
   }
+
+  const W = Math.max(2, Math.floor(rect.width * dpr));
+  const H = Math.max(2, Math.floor(rect.height * dpr));
+
+  if (canvas.width !== W || canvas.height !== H){
+    canvas.width = W;
+    canvas.height = H;
+  }
+  return { ctx, W, H, dpr, cssW: rect.width, cssH: rect.height };
+}
 
   function drawAxes(ctx, W, H, dpr, xLabel, yLabel){
     const pad = { l: 60*dpr, r: 14*dpr, t: 14*dpr, b: 52*dpr };
@@ -429,16 +440,30 @@
   }
 
   function drawAll(){
-    const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
-    const Y1eq = Ystar(r, G, T);
-    els.y0.textContent = fmt(Y0eq);
-    els.y1.textContent = fmt(Y1eq);
+  const Y0eq = Ystar(BASE.r, BASE.G, BASE.T);
+  const Y1eq = Ystar(r, G, T);
+  els.y0.textContent = fmt(Y0eq);
+  els.y1.textContent = fmt(Y1eq);
 
-    requestAnimationFrame(() => {
-      drawKC();
-      drawIS();
-    });
-  }
+  requestAnimationFrame(() => {
+    // draw KC
+    {
+      const pack = setupCanvas(els.kcCanvas);
+      // show sizes in status (temporary debugging)
+      setStatus(`Ready. KC canvas: ${pack.cssW.toFixed(0)}×${pack.cssH.toFixed(0)} px`);
+
+      // draw a faint border so we know pixels are being painted
+      pack.ctx.clearRect(0,0,pack.W,pack.H);
+      pack.ctx.strokeStyle = "rgba(0,0,0,0.12)";
+      pack.ctx.lineWidth = 2*pack.dpr;
+      pack.ctx.strokeRect(1*pack.dpr, 1*pack.dpr, pack.W-2*pack.dpr, pack.H-2*pack.dpr);
+    }
+
+    // now run your normal draws
+    drawKC();
+    drawIS();
+  });
+}
 
   // ---------- Wire up ----------
   els.rSlider.addEventListener("input", onSlider);
