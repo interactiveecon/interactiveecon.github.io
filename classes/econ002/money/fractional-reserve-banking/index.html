@@ -44,13 +44,7 @@
       font-size: 12px;
     }
 
-    .controlsGrid{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-      margin-top: 10px;
-    }
-
+    .controlsGrid{ display:grid; grid-template-columns: 1fr; gap:10px; margin-top:10px; }
     .control{
       border:1px solid rgba(0,0,0,0.08);
       border-radius: 14px;
@@ -74,23 +68,18 @@
       font-size: 12px;
       margin-bottom: 6px;
     }
-    input[type="range"]{ width: 100%; }
+    input[type="range"]{ width:100%; }
 
     .panelRow{ display:grid; gap:12px; }
-
     .card{
       border:1px solid rgba(0,0,0,0.08);
       border-radius: 14px;
       background: rgba(255,255,255,0.78);
       padding: 12px;
     }
-    .card h3{
-      margin:0;
-      font-size: 14px;
-      color: var(--ink);
-    }
+    .card h3{ margin:0; font-size:14px; color: var(--ink); }
 
-    /* Polished “deposit split” bar */
+    /* Deposit split bar (polished) */
     .splitWrap{ margin-top: 10px; }
     .splitLabel{
       display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;
@@ -118,12 +107,17 @@
     .seg.req{ background: rgba(31,119,180,0.22); }
     .seg.loan{ background: rgba(230,159,0,0.22); }
 
+    /* Ghost preview (lighter) */
+    .ghostWrap{ margin-top: 10px; opacity: 0.62; }
+    .ghostTitle{ font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-weight: 900; margin-bottom: 6px; }
+
     /* T-account styling */
     .tacct{
       border:1px solid rgba(0,0,0,0.10);
       border-radius: 14px;
       background: rgba(255,255,255,0.85);
       padding: 10px;
+      margin-top: 12px;
     }
     .thead{
       display:flex; justify-content:space-between; align-items:baseline; gap:10px;
@@ -135,16 +129,12 @@
     .tgrid{
       display:grid;
       grid-template-columns: 1fr 1fr;
-      gap: 0;
       border-radius: 12px;
       overflow:hidden;
       border: 1px solid rgba(0,0,0,0.08);
       background: rgba(255,255,255,0.9);
     }
-    .tcell{
-      padding: 10px 12px;
-      font-variant-numeric: tabular-nums;
-    }
+    .tcell{ padding: 10px 12px; font-variant-numeric: tabular-nums; }
     .tcell.assets{ border-right: 2px solid rgba(0,0,0,0.12); }
     .tcap{
       font-size: 11px;
@@ -184,21 +174,7 @@
         <div class="title-block">
           <div class="kicker">Macroeconomics Practice Lab</div>
           <h1>T-Accounts & Money Creation</h1>
-          <p class="sub">Track how an initial reserve injection creates deposits through lending.</p>
-
-          <details class="howto">
-            <summary>Instructions</summary>
-            <div class="howto-body">
-              <ol>
-                <li>Click <strong>New Scenario</strong> to draw \(\Delta R\) and the <strong>required reserve ratio</strong>.</li>
-                <li>Click <strong>Step</strong> to move to the next bank in the chain.</li>
-                <li>The “deposit split” bar shows how each deposit becomes required reserves + new loans.</li>
-              </ol>
-              <p class="howto-note">
-                In the simple model, \(m=\frac{1}{rr}\) and \(\Delta M \approx \Delta R\cdot m\).
-              </p>
-            </div>
-          </details>
+          <p class="sub">A simple deposit expansion process with a required reserve ratio.</p>
         </div>
 
         <div class="controls-card">
@@ -218,7 +194,7 @@
     <section class="panel">
       <div class="panel-head">
         <h2>Scenario + Totals</h2>
-        <p class="panel-sub">Totals update each step.</p>
+        <p class="panel-sub">Totals update every step.</p>
       </div>
 
       <div class="grid2">
@@ -231,7 +207,7 @@
               <label>Reserve ratio (required)</label>
               <div class="row"><span>Reserve ratio</span><span id="rrVal">—</span></div>
               <input id="rrSlider" type="range" min="0.10" max="1.00" step="0.01" value="0.10" disabled>
-              <div class="mini">Slider range is from the scenario’s required reserve ratio up to 1.00.</div>
+              <div class="mini">Slider runs from the scenario’s required reserve ratio up to 1.00.</div>
             </div>
           </div>
 
@@ -244,7 +220,7 @@
           <div class="pillRow">
             <span class="pill">Total deposits \(M\): <span id="Mtot">—</span></span>
             <span class="pill">Total loans: <span id="Ltot">—</span></span>
-            <span class="pill">Total required reserves: <span id="RRtot">—</span></span>
+            <span class="pill">Total reserves held: <span id="RRtot">—</span></span>
             <span class="pill">Implied \(m = M/\Delta R\): <span id="mImpl">—</span></span>
           </div>
         </div>
@@ -255,9 +231,10 @@
               <h3>Current step</h3>
               <div class="mini" id="stepSummary">No scenario yet.</div>
 
+              <!-- Current split -->
               <div class="splitWrap">
                 <div class="splitLabel">
-                  <span id="splitLeft">Required reserves: —</span>
+                  <span id="splitLeft">Reserves held: —</span>
                   <span id="splitRight">New loan: —</span>
                 </div>
                 <div class="splitBar" aria-label="Deposit split bar">
@@ -266,13 +243,27 @@
                 </div>
               </div>
 
-              <div class="tacct" style="margin-top:12px;">
+              <!-- Ghost preview -->
+              <div class="ghostWrap">
+                <div class="ghostTitle">Next step preview</div>
+                <div class="splitLabel">
+                  <span id="ghostLeft">Next reserves held: —</span>
+                  <span id="ghostRight">Next loan: —</span>
+                </div>
+                <div class="splitBar" aria-label="Next step preview bar">
+                  <div id="gReq" class="seg req" style="width:0%"></div>
+                  <div id="gLoan" class="seg loan" style="width:0%"></div>
+                </div>
+              </div>
+
+              <!-- T-account -->
+              <div class="tacct">
                 <div class="thead">
                   <div class="bank" id="bankName">—</div>
                   <div class="step" id="stepNum">—</div>
                 </div>
 
-                <div class="tgrid" role="table" aria-label="T-account">
+                <div class="tgrid" role="table" aria-label="Balance sheet T-account">
                   <div class="tcell assets">
                     <div class="tcap">Assets</div>
                     <div id="assetsCell" class="tlines">—</div>
@@ -283,6 +274,7 @@
                   </div>
                 </div>
 
+                <!-- What happened -->
                 <div class="log" id="explainLog">—</div>
               </div>
             </div>
