@@ -20,8 +20,9 @@ window.addEventListener("DOMContentLoaded", () => {
     tableBody: $("tableBody"),
     feedback: $("feedback"),
 
-    chart1: $("chart1"),
-    chart2: $("chart2"),
+    chart1: $("chart1"), // MB/MC
+    chart2: $("chart2"), // cumulative net benefit
+    chart3: $("chart3"), // TB/TC
   };
 
   function setStatus(msg){ els.status.textContent = msg; }
@@ -46,12 +47,21 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function computeCumulative(mb, mc){
-    const cum = [0]; // cum[0]=0 at q=0
+    const cum = [0]; // net benefit cumulative
     for (let i=1;i<=mb.length;i++){
       const nb = mb[i-1] - mc[i-1];
       cum[i] = cum[i-1] + nb;
     }
     return cum;
+  }
+
+  function computeTotals(mb, mc){
+    const TB = [0], TC = [0];
+    for (let i=1;i<=mb.length;i++){
+      TB[i] = TB[i-1] + mb[i-1];
+      TC[i] = TC[i-1] + mc[i-1];
+    }
+    return { TB, TC };
   }
 
   function optimalQ(mb, mc){
@@ -120,7 +130,7 @@ window.addEventListener("DOMContentLoaded", () => {
     els.cumVal.textContent = String(cum[chosenQ].toFixed(0));
   }
 
-  // --- Simple canvas chart helpers ---
+  // --- canvas helpers ---
   function setupCanvas(canvas){
     const ctx = canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
@@ -137,7 +147,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const X0 = pad.l, X1 = W - pad.r;
     const Y0 = pad.t, Y1 = H - pad.b;
 
-    // grid
     ctx.strokeStyle = "rgba(0,0,0,0.10)";
     ctx.lineWidth = 1*dpr;
     for (let i=0;i<=5;i++){
@@ -149,7 +158,6 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.beginPath(); ctx.moveTo(X0,y); ctx.lineTo(X1,y); ctx.stroke();
     }
 
-    // labels
     ctx.fillStyle = "rgba(0,0,0,0.70)";
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "center";
@@ -167,6 +175,39 @@ window.addEventListener("DOMContentLoaded", () => {
     return { X0, X1, Y0, Y1 };
   }
 
+  function drawStep(vals, n, ctx, X0, X1, Y0, Y1, yMax, stroke, dpr){
+    const xTo = (q) => X0 + (q / n) * (X1 - X0);
+    const yTo = (v) => Y0 + (yMax - v) / yMax * (Y1 - Y0);
+
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 3*dpr;
+    ctx.beginPath();
+    ctx.moveTo(xTo(0), yTo(vals[0]));
+    for (let q=1;q<=n;q++){
+      const vPrev = vals[q-1];
+      ctx.lineTo(xTo(q), yTo(vPrev));
+      if (q < n){
+        const vNext = vals[q];
+        ctx.lineTo(xTo(q), yTo(vNext));
+      }
+    }
+    ctx.stroke();
+  }
+
+  function drawLine(vals, n, ctx, X0, X1, Y0, Y1, yMin, yMax, stroke, dpr){
+    const xTo = (q) => X0 + (q / n) * (X1 - X0);
+    const yTo = (v) => Y0 + (yMax - v) / (yMax - yMin) * (Y1 - Y0);
+
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 3*dpr;
+    ctx.beginPath();
+    ctx.moveTo(xTo(0), yTo(vals[0]));
+    for (let q=1;q<=n;q++){
+      ctx.lineTo(xTo(q), yTo(vals[q]));
+    }
+    ctx.stroke();
+  }
+
   function drawMBMC(){
     const { ctx, W, H, dpr } = setupCanvas(els.chart1);
     ctx.clearRect(0,0,W,H);
@@ -175,49 +216,24 @@ window.addEventListener("DOMContentLoaded", () => {
 
     const mb = cur.mb, mc = cur.mc;
     const n = cur.units;
-
     const yMax = Math.max(...mb, ...mc) * 1.10;
+
+    drawStep(mb, n, ctx, X0, X1, Y0, Y1, yMax, "rgba(31,119,180,0.90)", dpr); // MB
+    drawStep(mc, n, ctx, X0, X1, Y0, Y1, yMax, "rgba(230,159,0,0.95)", dpr);  // MC
+
+    // chosen q marker
     const xTo = (q) => X0 + (q / n) * (X1 - X0);
-    const yTo = (v) => Y0 + (yMax - v) / yMax * (Y1 - Y0);
-
-    // step lines for MB and MC
-    function stepLine(vals, stroke){
-      ctx.strokeStyle = stroke;
-      ctx.lineWidth = 3*dpr;
-      ctx.beginPath();
-      ctx.moveTo(xTo(0), yTo(vals[0]));
-      for (let q=1;q<=n;q++){
-        const vPrev = vals[q-1];
-        ctx.lineTo(xTo(q), yTo(vPrev));
-        if (q < n){
-          const vNext = vals[q];
-          ctx.lineTo(xTo(q), yTo(vNext));
-        }
-      }
-      ctx.stroke();
-    }
-
-    // draw curves
-    stepLine(mb, "rgba(31,119,180,0.90)");   // MB
-    stepLine(mc, "rgba(230,159,0,0.95)");    // MC
-
-    // chosen vertical marker
     ctx.strokeStyle = "rgba(0,0,0,0.35)";
     ctx.lineWidth = 2*dpr;
     ctx.setLineDash([4*dpr, 6*dpr]);
-    ctx.beginPath();
-    ctx.moveTo(xTo(chosenQ), Y0);
-    ctx.lineTo(xTo(chosenQ), Y1);
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(xTo(chosenQ), Y0); ctx.lineTo(xTo(chosenQ), Y1); ctx.stroke();
     ctx.setLineDash([]);
 
     // legend
     ctx.fillStyle = "rgba(31,119,180,0.90)";
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
+    ctx.textAlign = "left"; ctx.textBaseline = "top";
     ctx.fillText("MB", X0 + 6*dpr, Y0 + 6*dpr);
-
     ctx.fillStyle = "rgba(230,159,0,0.95)";
     ctx.fillText("MC", X0 + 6*dpr, Y0 + 22*dpr);
   }
@@ -231,56 +247,77 @@ window.addEventListener("DOMContentLoaded", () => {
     const { bestQ, cum } = optimalQ(cur.mb, cur.mc);
     const n = cur.units;
 
-    const yMax = Math.max(...cum.map(v => Math.abs(v))) * 1.20 + 1e-9;
-    const xTo = (q) => X0 + (q / n) * (X1 - X0);
-    const yTo = (v) => {
-      // map [-yMax, yMax] to [Y1, Y0]
-      return Y0 + (yMax - v) / (2*yMax) * (Y1 - Y0);
-    };
+    const maxAbs = Math.max(...cum.map(v => Math.abs(v))) * 1.20 + 1e-9;
+    const yMin = -maxAbs, yMax = maxAbs;
 
     // zero line
+    const yTo = (v) => Y0 + (yMax - v) / (yMax - yMin) * (Y1 - Y0);
     ctx.strokeStyle = "rgba(0,0,0,0.20)";
     ctx.lineWidth = 2*dpr;
-    ctx.beginPath();
-    ctx.moveTo(X0, yTo(0));
-    ctx.lineTo(X1, yTo(0));
-    ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X0, yTo(0)); ctx.lineTo(X1, yTo(0)); ctx.stroke();
 
-    // line
-    ctx.strokeStyle = "rgba(0,0,0,0.70)";
-    ctx.lineWidth = 3*dpr;
-    ctx.beginPath();
-    ctx.moveTo(xTo(0), yTo(cum[0]));
-    for (let q=1;q<=n;q++){
-      ctx.lineTo(xTo(q), yTo(cum[q]));
-    }
-    ctx.stroke();
+    drawLine(cum, n, ctx, X0, X1, Y0, Y1, yMin, yMax, "rgba(0,0,0,0.70)", dpr);
 
     // chosen point
+    const xTo = (q) => X0 + (q / n) * (X1 - X0);
     ctx.fillStyle = "rgba(0,0,0,0.70)";
-    ctx.beginPath();
-    ctx.arc(xTo(chosenQ), yTo(cum[chosenQ]), 5*dpr, 0, Math.PI*2);
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(xTo(chosenQ), yTo(cum[chosenQ]), 5*dpr, 0, Math.PI*2); ctx.fill();
 
-    // optimal point (only after check)
     if (checked){
       ctx.fillStyle = "rgba(34,120,34,0.95)";
-      ctx.beginPath();
-      ctx.arc(xTo(bestQ), yTo(cum[bestQ]), 6*dpr, 0, Math.PI*2);
-      ctx.fill();
-
+      ctx.beginPath(); ctx.arc(xTo(bestQ), yTo(cum[bestQ]), 6*dpr, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = "rgba(34,120,34,0.95)";
       ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
-      ctx.textAlign = "left";
-      ctx.textBaseline = "bottom";
+      ctx.textAlign = "left"; ctx.textBaseline = "bottom";
       ctx.fillText("Optimal", xTo(bestQ) + 8*dpr, yTo(cum[bestQ]) - 6*dpr);
     }
+  }
+
+  function drawTBTC(){
+    const { ctx, W, H, dpr } = setupCanvas(els.chart3);
+    ctx.clearRect(0,0,W,H);
+
+    const { X0, X1, Y0, Y1 } = drawAxes(ctx, W, H, dpr, "Quantity (q)", "Total");
+
+    const n = cur.units;
+    const { TB, TC } = computeTotals(cur.mb, cur.mc);
+
+    const yMax = Math.max(...TB, ...TC) * 1.08 + 1e-9;
+    const yMin = 0;
+
+    drawLine(TB, n, ctx, X0, X1, Y0, Y1, yMin, yMax, "rgba(31,119,180,0.90)", dpr); // TB
+    drawLine(TC, n, ctx, X0, X1, Y0, Y1, yMin, yMax, "rgba(230,159,0,0.95)", dpr); // TC
+
+    // chosen marker
+    const xTo = (q) => X0 + (q / n) * (X1 - X0);
+    const yTo = (v) => Y0 + (yMax - v) / (yMax - yMin) * (Y1 - Y0);
+
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
+    ctx.lineWidth = 2*dpr;
+    ctx.setLineDash([4*dpr, 6*dpr]);
+    ctx.beginPath(); ctx.moveTo(xTo(chosenQ), Y0); ctx.lineTo(xTo(chosenQ), Y1); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // legend
+    ctx.fillStyle = "rgba(31,119,180,0.90)";
+    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText("TB", X0 + 6*dpr, Y0 + 6*dpr);
+    ctx.fillStyle = "rgba(230,159,0,0.95)";
+    ctx.fillText("TC", X0 + 6*dpr, Y0 + 22*dpr);
+
+    // mark chosen points
+    ctx.fillStyle = "rgba(31,119,180,0.90)";
+    ctx.beginPath(); ctx.arc(xTo(chosenQ), yTo(TB[chosenQ]), 5*dpr, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "rgba(230,159,0,0.95)";
+    ctx.beginPath(); ctx.arc(xTo(chosenQ), yTo(TC[chosenQ]), 5*dpr, 0, Math.PI*2); ctx.fill();
   }
 
   function renderAll(){
     if (!cur) return;
     renderTable();
     drawMBMC();
+    drawTBTC();
     drawCum();
   }
 
@@ -303,7 +340,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const { bestQ, cum } = optimalQ(cur.mb, cur.mc);
     const ok = (chosenQ === bestQ);
 
-    const mbNext = (chosenQ < cur.units) ? cur.mb[chosenQ] : null; // MB of unit q+1 (index q)
+    const mbNext = (chosenQ < cur.units) ? cur.mb[chosenQ] : null;
     const mcNext = (chosenQ < cur.units) ? cur.mc[chosenQ] : null;
 
     let explain = "";
@@ -329,7 +366,7 @@ window.addEventListener("DOMContentLoaded", () => {
     setStatus(ok ? "Nice — correct stopping rule." : "Check the highlighted optimal row and try again.");
   }
 
-  // Wire events
+  // Events
   els.newBtn.addEventListener("click", () => renderScenario(pickScenario()));
   els.resetBtn.addEventListener("click", reset);
   els.checkBtn.addEventListener("click", check);
@@ -343,6 +380,5 @@ window.addEventListener("DOMContentLoaded", () => {
   els.minusBtn.addEventListener("click", () => setQ(chosenQ - 1));
   els.plusBtn.addEventListener("click", () => setQ(chosenQ + 1));
 
-  // init
   renderScenario(pickScenario());
 });
