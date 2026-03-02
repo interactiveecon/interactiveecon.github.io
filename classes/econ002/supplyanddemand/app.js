@@ -45,7 +45,6 @@ window.addEventListener("DOMContentLoaded", () => {
     setStatus("ERROR: data.js did not load. Ensure data.js is in the same folder and loads before app.js.");
     return;
   }
-
   const DATA = window.ALONG_SHIFT_DATA;
 
   // ---------- Why panel ----------
@@ -59,18 +58,74 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   renderWhyLists(null);
 
+  // ---------- Conditional direction dropdowns ----------
+  function setDirOptions(selectEl, opts){
+    selectEl.innerHTML = `<option value="" selected>Select…</option>` +
+      opts.map(o => `<option value="${o.value}">${o.label}</option>`).join("");
+  }
+
+  function updateDirDropdowns(){
+    // Demand
+    const dA = els.dAction.value;
+    if (dA === "NONE") {
+      setDirOptions(els.dDir, [{ value:"NA", label:"Not applicable" }]);
+      els.dDir.value = "NA";
+    } else if (dA === "ALONG") {
+      setDirOptions(els.dDir, [
+        { value:"UP", label:"Higher price (move up along demand)" },
+        { value:"DOWN", label:"Lower price (move down along demand)" }
+      ]);
+    } else if (dA === "SHIFT") {
+      setDirOptions(els.dDir, [
+        { value:"R", label:"Right (demand increases)" },
+        { value:"L", label:"Left (demand decreases)" }
+      ]);
+    } else {
+      setDirOptions(els.dDir, []);
+    }
+
+    // Supply
+    const sA = els.sAction.value;
+    if (sA === "NONE") {
+      setDirOptions(els.sDir, [{ value:"NA", label:"Not applicable" }]);
+      els.sDir.value = "NA";
+    } else if (sA === "ALONG") {
+      setDirOptions(els.sDir, [
+        { value:"UP", label:"Higher price (move up along supply)" },
+        { value:"DOWN", label:"Lower price (move down along supply)" }
+      ]);
+    } else if (sA === "SHIFT") {
+      // You requested supply shift labeled up/down
+      setDirOptions(els.sDir, [
+        { value:"UPSHIFT", label:"Up (supply decreases)" },
+        { value:"DOWNSHIFT", label:"Down (supply increases)" }
+      ]);
+    } else {
+      setDirOptions(els.sDir, []);
+    }
+  }
+
+  els.dAction.addEventListener("change", () => {
+    const prev = els.dDir.value;
+    updateDirDropdowns();
+    // keep selection if still valid
+    if ([...els.dDir.options].some(o => o.value === prev)) els.dDir.value = prev;
+  });
+
+  els.sAction.addEventListener("change", () => {
+    const prev = els.sDir.value;
+    updateDirDropdowns();
+    if ([...els.sDir.options].some(o => o.value === prev)) els.sDir.value = prev;
+  });
+
   // ---------- Graph model ----------
   const AX = { qMin: 0, qMax: 100, pMin: 0, pMax: 100 };
-
-  const base = {
-    D: { a: 90, b: 0.8 },
-    S: { c: 10, d: 0.7 }
-  };
+  const base = { D: { a: 90, b: 0.8 }, S: { c: 10, d: 0.7 } };
 
   function clone(x){ return JSON.parse(JSON.stringify(x)); }
   function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
 
-  let stage = 0;     // 0 baseline, 1 scenario loaded (no shift), 2 shifts shown, 3 show excess+new eq
+  let stage = 0;
   let scenario = null;
 
   let curves = {
@@ -83,7 +138,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const P = S.c + S.d * Q;
     return { Q, P };
   }
-
   const eq0 = solveEq(curves.D0, curves.S0);
 
   function applyShifts(sc){
@@ -127,6 +181,25 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // ---------- Drawing ----------
+  function drawArrow(ctx, x1,y1,x2,y2, dpr){
+    // line
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x2,y2);
+    ctx.stroke();
+    // arrow head
+    const ang = Math.atan2(y2-y1, x2-x1);
+    const len = 10*dpr;
+    const a1 = ang + Math.PI*0.8;
+    const a2 = ang - Math.PI*0.8;
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2 + len*Math.cos(a1), y2 + len*Math.sin(a1));
+    ctx.lineTo(x2 + len*Math.cos(a2), y2 + len*Math.sin(a2));
+    ctx.closePath();
+    ctx.fill();
+  }
+
   function draw(){
     const canvas = els.chart;
     const ctx = canvas.getContext("2d");
@@ -137,7 +210,7 @@ window.addEventListener("DOMContentLoaded", () => {
     if (canvas.width !== W || canvas.height !== H){ canvas.width = W; canvas.height = H; }
     ctx.clearRect(0,0,W,H);
 
-    const pad = { l: 58*dpr, r: 18*dpr, t: 18*dpr, b: 48*dpr };
+    const pad = { l: 58*dpr, r: 18*dpr, t: 18*dpr, b: 58*dpr }; // extra bottom padding
     const X0 = pad.l, X1 = W - pad.r;
     const Y0 = pad.t, Y1 = H - pad.b;
 
@@ -163,7 +236,8 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.fillText("Quantity", (X0+X1)/2, Y1 + 14*dpr);
+    // ✅ move Quantity label lower so it doesn't cover Q₁/Q₂ ticks
+    ctx.fillText("Quantity", (X0+X1)/2, Y1 + 26*dpr);
 
     ctx.save();
     ctx.translate(X0 - 40*dpr, (Y0+Y1)/2);
@@ -191,10 +265,9 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // ✅ label at the right end (standard look)
+      // label at far right end
       const qL = 96;
       const pL = isDemand ? (params.a - params.b*qL) : (params.c + params.d*qL);
-
       ctx.fillStyle = style;
       ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
       ctx.textAlign = "left";
@@ -206,7 +279,7 @@ window.addEventListener("DOMContentLoaded", () => {
     drawCurve(true,  curves.D0, cDash, true);
     drawCurve(false, curves.S0, cDash, true);
 
-    // current
+    // current curves
     if (stage >= 2) {
       drawCurve(true,  curves.D1, cDemand, false);
       drawCurve(false, curves.S1, cSupply, false);
@@ -215,6 +288,7 @@ window.addEventListener("DOMContentLoaded", () => {
       drawCurve(false, curves.S0, cSupply, false);
     }
 
+    // equilibrium marker with guides + labels
     function markEq(eq, labelP, labelQ, color){
       ctx.fillStyle = color;
       ctx.beginPath();
@@ -240,10 +314,38 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.fillText(labelP, qToX(0) - 8*dpr, pToY(eq.P));
     }
 
-    // mark initial equilibrium
     markEq(eq0, "P₁", "Q₁", "rgba(0,0,0,0.70)");
 
-    // stage 3: show excess + new equilibrium
+    // ✅ shift arrows when revealed (stage >= 2)
+    if (stage >= 2 && scenario) {
+      ctx.lineWidth = 2.5*dpr;
+
+      // Demand shift arrow: horizontal right/left near mid of curve
+      if (scenario.demand.action === "SHIFT") {
+        const dir = scenario.demand.dir; // R/L
+        ctx.strokeStyle = cDemand;
+        ctx.fillStyle = cDemand;
+        const y = pToY(55);
+        const xMid = qToX(55);
+        const dx = 22*dpr * (dir === "R" ? 1 : -1);
+        drawArrow(ctx, xMid - dx, y, xMid + dx, y, dpr);
+      }
+
+      // Supply shift arrow: up/down (as you want to teach it)
+      if (scenario.supply.action === "SHIFT") {
+        // In your dataset supply SHIFT uses dir R/L internally,
+        // but we want the arrow to point "down" for increase (R) and "up" for decrease (L)
+        const up = (scenario.supply.dir === "L"); // supply decreases -> up
+        ctx.strokeStyle = cSupply;
+        ctx.fillStyle = cSupply;
+        const x = qToX(65);
+        const yMid = pToY(45);
+        const dy = 22*dpr * (up ? -1 : 1);
+        drawArrow(ctx, x, yMid - dy, x, yMid + dy, dpr);
+      }
+    }
+
+    // stage 3 extras
     if (stage >= 3 && scenario) {
       const out = computeOutcome(scenario);
       const P1 = eq0.P;
@@ -254,7 +356,7 @@ window.addEventListener("DOMContentLoaded", () => {
       const qL = clamp(Math.min(Qd, Qs), AX.qMin, AX.qMax);
       const qR = clamp(Math.max(Qd, Qs), AX.qMin, AX.qMax);
 
-      // vertical markers
+      // vertical markers at Qd/Qs
       ctx.strokeStyle = "rgba(0,0,0,0.25)";
       ctx.lineWidth = 2*dpr;
       ctx.setLineDash([4*dpr, 6*dpr]);
@@ -275,8 +377,7 @@ window.addEventListener("DOMContentLoaded", () => {
         ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
         ctx.textAlign = "center";
 
-        // ✅ label position rule:
-        // ED -> below; ES -> above
+        // ✅ ED below; ES above
         if (out.excess === "ED") {
           ctx.textBaseline = "top";
           ctx.fillText("Excess demand", (qToX(qL)+qToX(qR))/2, pToY(P1) + 10*dpr);
@@ -308,9 +409,14 @@ window.addEventListener("DOMContentLoaded", () => {
     els.scDesc.textContent = sc.desc;
     setStatus("Stage 1: classify demand and supply (along vs shift).");
 
-    els.dAction.value = ""; els.dDir.value = "";
-    els.sAction.value = ""; els.sDir.value = "";
-    els.fb1.style.display = "none"; els.fb1.innerHTML = "";
+    els.dAction.value = "";
+    els.sAction.value = "";
+    updateDirDropdowns();
+    els.dDir.value = "";
+    els.sDir.value = "";
+
+    els.fb1.style.display = "none";
+    els.fb1.innerHTML = "";
 
     els.stage2.style.display = "none";
     els.excess.value = ""; els.pMove.value = ""; els.qMove.value = "";
@@ -334,8 +440,12 @@ window.addEventListener("DOMContentLoaded", () => {
     els.scDesc.textContent = "Click “New Scenario” to begin.";
     setStatus("Ready.");
 
-    els.dAction.value = ""; els.dDir.value = "";
-    els.sAction.value = ""; els.sDir.value = "";
+    els.dAction.value = "";
+    els.sAction.value = "";
+    updateDirDropdowns();
+    els.dDir.value = "";
+    els.sDir.value = "";
+
     els.fb1.style.display = "none"; els.fb1.innerHTML = "";
 
     els.stage2.style.display = "none";
@@ -349,14 +459,23 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // ---------- Stage checks ----------
+  function normalizeSupplyShiftDirForCheck(val){
+    // Student sees UPSHIFT = supply decreases (maps to internal "L")
+    // Student sees DOWNSHIFT = supply increases (maps to internal "R")
+    if (val === "UPSHIFT") return "L";
+    if (val === "DOWNSHIFT") return "R";
+    return val;
+  }
+
   function checkStage1(){
     if (!scenario) { setStatus("Click New Scenario first."); return; }
 
     const dA = els.dAction.value, dD = els.dDir.value;
-    const sA = els.sAction.value, sD = els.sDir.value;
-    if (!dA || !dD || !sA || !sD) { setStatus("Please complete all Stage 1 dropdowns."); return; }
+    const sA = els.sAction.value, sDraw = els.sDir.value;
+    if (!dA || !dD || !sA || !sDraw) { setStatus("Please complete all Stage 1 dropdowns."); return; }
 
-    // ✅ Now Stage 1 expects BOTH: the shift AND the movement along the other curve.
+    const sD = normalizeSupplyShiftDirForCheck(sDraw);
+
     const ok =
       dA === scenario.demand.action &&
       dD === scenario.demand.dir &&
@@ -366,7 +485,7 @@ window.addEventListener("DOMContentLoaded", () => {
     els.fb1.style.display = "block";
     els.fb1.innerHTML = ok
       ? `<span class="tagOK">Correct</span> Nice. Now predict the market outcome (Stage 2).`
-      : `<span class="tagBad">Not quite</span> Remember: if one curve shifts, the new equilibrium price changes, which causes a movement along the other curve.`;
+      : `<span class="tagBad">Not quite</span> If one curve shifts, the equilibrium price changes, causing a movement along the other curve.`;
 
     if (ok) {
       stage = 2;
@@ -400,7 +519,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const okEx = ex === out.excess;
     const okP  = pM === out.pMove;
     const okQ  = (out.qMove === "AMB") ? (qM === "AMB") : (qM === out.qMove);
-
     const ok = okEx && okP && okQ;
 
     els.fb2.style.display = "block";
@@ -428,7 +546,7 @@ window.addEventListener("DOMContentLoaded", () => {
   els.check1Btn.addEventListener("click", checkStage1);
   els.check2Btn.addEventListener("click", checkStage2);
 
-  // typeset header once
+  // Typeset header once
   const howTo = document.getElementById("howTo");
   if (howTo && window.MathJax?.typesetPromise) window.MathJax.typesetPromise([howTo]);
 
