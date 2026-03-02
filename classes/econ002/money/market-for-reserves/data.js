@@ -4,7 +4,8 @@ window.MONEY_LAB = {
   baseline: {
     R: 100,      // reserves quantity
     ior: 2.0,    // interest on reserves (%)
-    rr: 0.10     // required reserve ratio (for baseline multiplier)
+    rr: 0.10,     // required reserve ratio (for baseline multiplier)
+    idisc: 4.0      // <-- ADD: discount rate (ceiling), %
   },
 
   // Reserves demand: for i >= ior, Rd(i) = a - b*i
