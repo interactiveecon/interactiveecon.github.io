@@ -344,14 +344,16 @@ window.addEventListener("DOMContentLoaded", () => {
     const mcNext = (chosenQ < cur.units) ? cur.mc[chosenQ] : null;
 
     let explain = "";
-    if (chosenQ === cur.units){
-      explain = "You chose the maximum quantity. A marginal rule says you should keep going only while MB ≥ MC.";
-    } else {
-      explain = `At the next unit (unit ${chosenQ+1}), MB is ${mbNext} and MC is ${mcNext}. `;
-      explain += (mbNext >= mcNext)
-        ? "Since MB ≥ MC, you should take at least one more unit."
-        : "Since MB < MC, you should stop here (taking another unit reduces net benefit).";
-    }
+if (chosenQ === cur.units){
+  explain = "You chose the maximum quantity. The marginal rule says: take another unit only if MB ≥ MC.";
+} else {
+  explain = `At the next unit (unit ${chosenQ+1}), MB is ${mbNext} and MC is ${mcNext}. `;
+  explain += (mbNext >= mcNext)
+    ? "Since MB ≥ MC, taking one more unit increases (or keeps) net benefit."
+    : "Since MB < MC, taking one more unit would reduce net benefit—so you should stop.";
+
+  explain += ` In this scenario, the optimal stopping point is unit ${bestQ}, where MB equals MC exactly.`;
+}
 
     els.feedback.style.display = "block";
     els.feedback.innerHTML = `
