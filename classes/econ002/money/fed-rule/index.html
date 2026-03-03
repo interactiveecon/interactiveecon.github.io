@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fed Rule: Movement vs Shift</title>
+
+  <link rel="stylesheet" href="/assets/style.css">
+
+  <!-- KaTeX (robust math rendering) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    .stack{ display:grid; gap:14px; margin-top:18px; }
+    .grid2{ display:grid; grid-template-columns: 1.05fr 0.95fr; gap:12px; align-items:start; }
+    @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
+
+    .box{
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(246,242,234,0.35);
+      padding: 12px;
+    }
+    .mini{ font-size: 12px; color: var(--muted); line-height: 1.45; margin-top: 6px; }
+    .scenarioTitle{ font-weight: 900; color: var(--ink); font-size: 16px; margin: 0; }
+    .scenarioDesc{ margin-top: 8px; color: var(--ink-2); font-size: 13px; line-height: 1.5; white-space: pre-line; }
+
+    .chartCard{
+      height: 360px;
+      border:1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.78);
+      padding: 10px;
+    }
+    canvas{ width:100%; height:100%; display:block; }
+
+    .controlsGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    @media (max-width: 980px){ .controlsGrid{ grid-template-columns: 1fr; } }
+
+    .control{
+      border:1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.68);
+      padding: 10px;
+    }
+    .control label{
+      display:block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .control .row{
+      display:flex; justify-content:space-between; align-items:center;
+      gap: 10px;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+      font-weight: 800;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    input[type="range"]{ width: 100%; }
+
+    .predCard{
+      border:1px solid rgba(0,0,0,0.08);
+      background: rgba(255,255,255,0.75);
+      border-radius: 14px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+    .predGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    @media (max-width: 980px){ .predGrid{ grid-template-columns: 1fr; } }
+
+    .predItem{
+      border:1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.65);
+      padding: 10px;
+    }
+    .predItem .q{ font-weight: 900; color: var(--ink); font-size: 12px; margin-bottom: 6px; }
+    .predItem select{
+      width: 100%;
+      padding: 9px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.16);
+      background: rgba(255,255,255,0.9);
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .feedback{
+      margin-top: 12px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+      padding-top: 10px;
+      display:none;
+      color: var(--ink-2);
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-line;
+    }
+    .tagOK{
+      display:inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(34,139,34,0.12);
+      border: 1px solid rgba(34,139,34,0.25);
+      color: rgba(34,120,34,1);
+      font-weight: 800;
+      font-size: 12px;
+      margin-right: 8px;
+    }
+    .tagBad{
+      display:inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(178,34,34,0.10);
+      border: 1px solid rgba(178,34,34,0.25);
+      color: rgba(140,0,0,0.95);
+      font-weight: 800;
+      font-size: 12px;
+      margin-right: 8px;
+    }
+
+    .pillRow{ display:flex; gap:10px; flex-wrap:wrap; margin-top: 10px; }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(255,255,255,0.75);
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="page-header">
+    <div class="container">
+      <nav class="crumbbar">
+        <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
+      </nav>
+
+      <div class="header-inner">
+        <div class="title-block">
+          <div class="kicker">Macroeconomics Practice Lab</div>
+          <h1>Fed Rule: Movement vs Shift</h1>
+          <p class="sub">
+            Learn what changes cause a <strong>movement along</strong> the Fed rule vs a <strong>shift</strong>.
+          </p>
+
+          <details class="howto">
+            <summary>Instructions</summary>
+            <div class="howto-body">
+              <p>
+                The Fed rule is \( r = aY + bP + cZ \) with \(a,b,c&gt;0\).
+                In the graph, \(r\) is on the vertical axis and \(Y\) is on the horizontal axis.
+              </p>
+              <ul>
+                <li><strong>Movement along</strong> the line happens when <strong>\(Y\)</strong> changes.</li>
+                <li><strong>Shifts</strong> of the line happen when <strong>\(P\)</strong> or <strong>\(Z\)</strong> changes (the intercept \(bP+cZ\) changes).</li>
+              </ul>
+              <ol>
+                <li>Click <strong>New Scenario</strong>.</li>
+                <li>Predict whether it’s a movement along or a shift, and which way \(r\) and \(Y\) change.</li>
+                <li>After you check, click <strong>Reveal</strong> to show the change on the graph.</li>
+              </ol>
+            </div>
+          </details>
+        </div>
+
+        <div class="controls-card">
+          <div class="controls-actions">
+            <button id="newBtn" class="btn primary">New Scenario</button>
+            <button id="revealBtn" class="btn" disabled>Reveal</button>
+            <button id="resetBtn" class="btn subtle">Reset</button>
+          </div>
+          <div id="status" class="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container stack">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Fed Rule in (r, Y) Space</h2>
+        <p class="panel-sub">Baseline line stays in grey; current line/point are highlighted after Reveal.</p>
+      </div>
+
+      <div class="grid2">
+        <div class="box">
+          <p class="scenarioTitle">Scenario</p>
+          <div class="scenarioDesc" id="scenarioDesc">Click “New Scenario” to start.</div>
+
+          <div class="predCard">
+            <div class="mini"><strong>Predict first</strong></div>
+
+            <div class="predGrid">
+              <div class="predItem">
+                <div class="q">Is this a movement along the rule, or a shift of the rule?</div>
+                <select id="predType">
+                  <option value="">Select…</option>
+                  <option value="move">Movement along</option>
+                  <option value="shift">Shift</option>
+                </select>
+              </div>
+
+              <div class="predItem">
+                <div class="q">What happens to \(r\)?</div>
+                <select id="predR">
+                  <option value="">Select…</option>
+                  <option value="up">Up</option>
+                  <option value="down">Down</option>
+                  <option value="same">Same</option>
+                </select>
+              </div>
+
+              <div class="predItem">
+                <div class="q">What happens to \(Y\)?</div>
+                <select id="predY">
+                  <option value="">Select…</option>
+                  <option value="up">Up</option>
+                  <option value="down">Down</option>
+                  <option value="same">Same</option>
+                </select>
+              </div>
+
+              <div class="predItem">
+                <div class="q">Actions</div>
+                <div class="controls-actions">
+                  <button id="checkBtn" class="btn primary">Check</button>
+                  <button id="whyBtn" class="btn">Why?</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="feedback" id="feedback"></div>
+          </div>
+
+          <div class="mini" style="margin-top:12px;"><strong>Values</strong> (baseline vs current)</div>
+          <div class="pillRow">
+            <span class="pill">\(a\): <span id="aVal">—</span></span>
+            <span class="pill">\(b\): <span id="bVal">—</span></span>
+            <span class="pill">\(c\): <span id="cVal">—</span></span>
+          </div>
+          <div class="pillRow">
+            <span class="pill">Baseline \(Y_0\): <span id="Y0">—</span></span>
+            <span class="pill">Current \(Y_1\): <span id="Y1">—</span></span>
+            <span class="pill">Baseline \(r_0\): <span id="r0">—</span></span>
+            <span class="pill">Current \(r_1\): <span id="r1">—</span></span>
+          </div>
+
+          <div class="controlsGrid">
+            <div class="control">
+              <label for="Yslider">Output \(Y\)</label>
+              <div class="row"><span>Y</span><span id="Ydisp">—</span></div>
+              <input id="Yslider" type="range" min="0" max="100" step="1" value="50" disabled>
+              <div class="mini">Changing \(Y\) moves you <strong>along</strong> the rule.</div>
+            </div>
+            <div class="control">
+              <label for="Pslider">Price level \(P\)</label>
+              <div class="row"><span>P</span><span id="Pdisp">—</span></div>
+              <input id="Pslider" type="range" min="0" max="10" step="0.1" value="5" disabled>
+              <div class="mini">Changing \(P\) shifts the rule (intercept changes).</div>
+            </div>
+            <div class="control">
+              <label for="Zslider">Other factors \(Z\)</label>
+              <div class="row"><span>Z</span><span id="Zdisp">—</span></div>
+              <input id="Zslider" type="range" min="0" max="10" step="0.1" value="5" disabled>
+              <div class="mini">Changing \(Z\) shifts the rule (intercept changes).</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="box">
+          <div class="chartCard">
+            <canvas id="canvas"></canvas>
+          </div>
+          <div class="mini">Grey = baseline rule; colored = current rule/point (after Reveal).</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="./data.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
