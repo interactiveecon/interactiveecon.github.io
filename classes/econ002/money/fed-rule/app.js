@@ -1,13 +1,23 @@
 (() => {
   const $ = (id) => document.getElementById(id);
-  const D = window.FED_RULE_LAB;
-  if (!D) return;
 
-  // KaTeX helper
+  // --------- DATA (embedded so nothing can be missing) ----------
+  const D = {
+    params: { a: 0.08, b: 0.6, c: 0.6 },
+    baseline: { Y: 50, P: 5, Z: 5 },
+    shocks: {
+      dY: [10, 15, 20],
+      dP: [0.8, 1.2, 1.6],
+      dZ: [0.8, 1.2, 1.6]
+    },
+    axes: { Ymin: 0, Ymax: 100, rmin: 0, rmax: 20 }
+  };
+
+  // --------- KaTeX: retry until available ----------
   function typeset(el){
     if (!el) return;
     if (!window.renderMathInElement){
-      setTimeout(() => typeset(el), 50);
+      setTimeout(() => typeset(el), 60);
       return;
     }
     window.renderMathInElement(el, {
@@ -26,7 +36,6 @@
     revealBtn: $("revealBtn"),
     resetBtn: $("resetBtn"),
     status: $("status"),
-
     scenarioDesc: $("scenarioDesc"),
 
     predType: $("predType"),
@@ -39,7 +48,6 @@
     aVal: $("aVal"),
     bVal: $("bVal"),
     cVal: $("cVal"),
-
     Y0: $("Y0"),
     Y1: $("Y1"),
     r0: $("r0"),
@@ -55,11 +63,13 @@
     canvas: $("canvas"),
   };
 
-  const BLUE = "rgba(31,119,180,0.92)";
+  // Guard: if any critical element missing, stop early
+  if (!els.newBtn || !els.canvas) return;
+
   const ORANGE = "rgba(230,159,0,0.95)";
-  const GREY = "rgba(0,0,0,0.18)";
-  const DASH = "rgba(0,0,0,0.30)";
-  const INK = "rgba(0,0,0,0.70)";
+  const GREY   = "rgba(0,0,0,0.22)";
+  const DASH   = "rgba(0,0,0,0.30)";
+  const INK    = "rgba(0,0,0,0.70)";
 
   const { a, b, c } = D.params;
   const base = { ...D.baseline };
@@ -68,9 +78,10 @@
   let scenario = null; // { var:"Y"|"P"|"Z", dir:"up"|"down", mag:number }
   let revealed = false;
 
-  function setStatus(msg){ els.status.textContent = msg; }
+  function setStatus(msg){ if (els.status) els.status.textContent = msg; }
 
-  function showFeedback(html, ok=false){
+  function showFeedback(html){
+    if (!els.feedback) return;
     if (!html){
       els.feedback.style.display = "none";
       els.feedback.innerHTML = "";
@@ -81,15 +92,21 @@
     typeset(els.feedback);
   }
 
+  function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
+
   function rOf(Y, P, Z){ return a*Y + b*P + c*Z; }
 
+  // ---------- Canvas drawing ----------
   function setupCanvas(){
     const ctx = els.canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
     const rect = els.canvas.getBoundingClientRect();
     const W = Math.max(2, Math.floor(rect.width * dpr));
     const H = Math.max(2, Math.floor(rect.height * dpr));
-    if (els.canvas.width !== W || els.canvas.height !== H){ els.canvas.width=W; els.canvas.height=H; }
+    if (els.canvas.width !== W || els.canvas.height !== H){
+      els.canvas.width = W;
+      els.canvas.height = H;
+    }
     return { ctx, W, H, dpr };
   }
 
@@ -121,7 +138,7 @@
     ctx.fillText("Policy rate (r)", 0, 0);
     ctx.restore();
 
-    return { X0,X1,Y0,Y1, pad };
+    return { X0,X1,Y0,Y1 };
   }
 
   function line(ctx, x1,y1,x2,y2, stroke, lw, dpr, dash=null){
@@ -136,6 +153,24 @@
     ctx.beginPath(); ctx.arc(x,y,5*dpr,0,Math.PI*2); ctx.fill();
   }
 
+  function arrow(ctx, x1,y1,x2,y2, color, dpr){
+    // line
+    line(ctx, x1,y1,x2,y2, color, 2.5, dpr);
+    // head
+    const ang = Math.atan2(y2-y1, x2-x1);
+    const len = 10*dpr;
+    const a1 = ang + Math.PI*0.85;
+    const a2 = ang - Math.PI*0.85;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5*dpr;
+    ctx.beginPath();
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2 + len*Math.cos(a1), y2 + len*Math.sin(a1));
+    ctx.moveTo(x2,y2);
+    ctx.lineTo(x2 + len*Math.cos(a2), y2 + len*Math.sin(a2));
+    ctx.stroke();
+  }
+
   function draw(){
     const { ctx, W, H, dpr } = setupCanvas();
     ctx.clearRect(0,0,W,H);
@@ -143,34 +178,50 @@
     const { X0,X1,Y0,Y1 } = drawAxes(ctx,W,H,dpr);
 
     const { Ymin,Ymax,rmin,rmax } = D.axes;
-
     const xTo = (Yv) => X0 + (Yv-Ymin)/(Ymax-Ymin)*(X1-X0);
     const yTo = (rv) => Y0 + (rmax-rv)/(rmax-rmin)*(Y1-Y0);
 
-    // baseline line (always visible)
+    // Baseline rule (grey)
     const rL0 = rOf(Ymin, base.P, base.Z);
     const rR0 = rOf(Ymax, base.P, base.Z);
     line(ctx, xTo(Ymin), yTo(rL0), xTo(Ymax), yTo(rR0), GREY, 3, dpr);
 
-    // baseline point
+    // Baseline point + dashed projections
     const r0 = rOf(base.Y, base.P, base.Z);
-    dot(ctx, xTo(base.Y), yTo(r0), "rgba(0,0,0,0.35)", dpr);
-    line(ctx, xTo(base.Y), yTo(r0), xTo(base.Y), yTo(rmin), DASH, 2, dpr, [4,6]);
-    line(ctx, xTo(base.Y), yTo(r0), xTo(Ymin), yTo(r0), DASH, 2, dpr, [4,6]);
+    const x0 = xTo(base.Y), y0 = yTo(r0);
+    dot(ctx, x0, y0, "rgba(0,0,0,0.40)", dpr);
+    line(ctx, x0, y0, x0, yTo(rmin), DASH, 2, dpr, [4,6]);
+    line(ctx, x0, y0, xTo(Ymin), y0, DASH, 2, dpr, [4,6]);
 
-    // current (only after reveal)
-    if (revealed){
-      const rL1 = rOf(Ymin, cur.P, cur.Z);
-      const rR1 = rOf(Ymax, cur.P, cur.Z);
-      line(ctx, xTo(Ymin), yTo(rL1), xTo(Ymax), yTo(rR1), ORANGE, 3, dpr);
+    if (!revealed) return;
 
-      const r1 = rOf(cur.Y, cur.P, cur.Z);
-      dot(ctx, xTo(cur.Y), yTo(r1), ORANGE, dpr);
-      line(ctx, xTo(cur.Y), yTo(r1), xTo(cur.Y), yTo(rmin), DASH, 2, dpr, [4,6]);
-      line(ctx, xTo(cur.Y), yTo(r1), xTo(Ymin), yTo(r1), DASH, 2, dpr, [4,6]);
+    // Current rule (orange)
+    const rL1 = rOf(Ymin, cur.P, cur.Z);
+    const rR1 = rOf(Ymax, cur.P, cur.Z);
+    line(ctx, xTo(Ymin), yTo(rL1), xTo(Ymax), yTo(rR1), ORANGE, 3, dpr);
+
+    // Current point + dashed projections
+    const r1 = rOf(cur.Y, cur.P, cur.Z);
+    const x1 = xTo(cur.Y), y1 = yTo(r1);
+    dot(ctx, x1, y1, ORANGE, dpr);
+    line(ctx, x1, y1, x1, yTo(rmin), DASH, 2, dpr, [4,6]);
+    line(ctx, x1, y1, xTo(Ymin), y1, DASH, 2, dpr, [4,6]);
+
+    // ---- Small arrow (polish) ----
+    if (scenario?.var === "Y"){
+      // movement along: arrow from baseline point to new point
+      arrow(ctx, x0, y0, x1, y1, ORANGE, dpr);
+    } else if (scenario?.var === "P" || scenario?.var === "Z"){
+      // shift: vertical arrow at Y0 from old r(Y0) to new r(Y0)
+      const rOldAtY0 = rOf(base.Y, base.P, base.Z);
+      const rNewAtY0 = rOf(base.Y, cur.P, cur.Z);
+      const yy0 = yTo(rOldAtY0);
+      const yy1 = yTo(rNewAtY0);
+      arrow(ctx, x0, yy0, x0, yy1, ORANGE, dpr);
     }
   }
 
+  // ---------- UI state ----------
   function updateNumbers(){
     const r0 = rOf(base.Y, base.P, base.Z);
     const r1 = rOf(cur.Y, cur.P, cur.Z);
@@ -195,13 +246,38 @@
     els.Zslider.disabled = locked;
   }
 
-  function newScenario(){
-    // reset to baseline values, hide reveal
+  function applyScenarioToCurrent(){
+    if (!scenario) return;
     cur = { ...base };
+
+    if (scenario.var === "Y"){
+      cur.Y = clamp(base.Y + (scenario.dir==="up" ? scenario.mag : -scenario.mag), D.axes.Ymin, D.axes.Ymax);
+    } else if (scenario.var === "P"){
+      cur.P = Math.max(0, base.P + (scenario.dir==="up" ? scenario.mag : -scenario.mag));
+    } else {
+      cur.Z = Math.max(0, base.Z + (scenario.dir==="up" ? scenario.mag : -scenario.mag));
+    }
+
+    els.Yslider.value = String(cur.Y);
+    els.Pslider.value = String(cur.P);
+    els.Zslider.value = String(cur.Z);
+  }
+
+  function expectedAnswers(){
+    if (!scenario) return null;
+    const type = (scenario.var === "Y") ? "move" : "shift";
+    const Ychg = (scenario.var === "Y") ? (scenario.dir==="up" ? "up" : "down") : "same";
+    const Rchg = (scenario.dir==="up" ? "up" : "down");
+    return { type, Ychg, Rchg };
+  }
+
+  // ---------- Actions ----------
+  function newScenario(){
     revealed = false;
     els.revealBtn.disabled = true;
 
-    // reset sliders to baseline
+    // reset to baseline
+    cur = { ...base };
     els.Yslider.value = String(base.Y);
     els.Pslider.value = String(base.P);
     els.Zslider.value = String(base.Z);
@@ -214,26 +290,25 @@
     else v = "Z";
 
     const dir = Math.random() < 0.5 ? "up" : "down";
-    const mag =
-      v==="Y" ? D.shocks.dY[Math.floor(Math.random()*D.shocks.dY.length)]
-              : (v==="P" ? D.shocks.dP[Math.floor(Math.random()*D.shocks.dP.length)]
-                         : D.shocks.dZ[Math.floor(Math.random()*D.shocks.dZ.length));
+    const mag = v==="Y"
+      ? D.shocks.dY[Math.floor(Math.random()*D.shocks.dY.length)]
+      : (v==="P"
+          ? D.shocks.dP[Math.floor(Math.random()*D.shocks.dP.length)]
+          : D.shocks.dZ[Math.floor(Math.random()*D.shocks.dZ.length)]);
 
     scenario = { var: v, dir, mag };
 
     const dirWord = dir==="up" ? "increases" : "decreases";
     els.scenarioDesc.textContent =
       `Shock: ${v} ${dirWord}.\n` +
-      `Your job: decide if this is a movement along the Fed rule or a shift of the rule.\n\n` +
-      `Then click Reveal to see it on the graph.`;
+      `Predict whether this is a movement along the rule or a shift of the rule.\n` +
+      `Then click Reveal to show it on the graph.`;
 
-    // clear predictions + feedback
     els.predType.value = "";
     els.predR.value = "";
     els.predY.value = "";
     showFeedback("");
 
-    // unlock controls so they can implement after reveal if desired
     lockControls(false);
 
     setStatus("Scenario ready. Predict first.");
@@ -242,49 +317,9 @@
     typeset(document.body);
   }
 
-  function applyScenarioToCurrent(){
-    // apply exactly the scenario change to cur
-    if (!scenario) return;
-    cur = { ...base };
-
-    if (scenario.var === "Y"){
-      cur.Y = base.Y + (scenario.dir==="up" ? scenario.mag : -scenario.mag);
-      cur.Y = Math.max(D.axes.Ymin, Math.min(D.axes.Ymax, cur.Y));
-    }
-    if (scenario.var === "P"){
-      cur.P = base.P + (scenario.dir==="up" ? scenario.mag : -scenario.mag);
-      cur.P = Math.max(0, cur.P);
-    }
-    if (scenario.var === "Z"){
-      cur.Z = base.Z + (scenario.dir==="up" ? scenario.mag : -scenario.mag);
-      cur.Z = Math.max(0, cur.Z);
-    }
-
-    // sync sliders
-    els.Yslider.value = String(cur.Y);
-    els.Pslider.value = String(cur.P);
-    els.Zslider.value = String(cur.Z);
-  }
-
-  function expectedAnswers(){
-    if (!scenario) return null;
-
-    // movement vs shift
-    const type = (scenario.var === "Y") ? "move" : "shift";
-
-    // implied changes
-    const Ychg = (scenario.var === "Y") ? (scenario.dir==="up" ? "up" : "down") : "same";
-    const Rchg =
-      (scenario.var === "Y") ? (scenario.dir==="up" ? "up" : "down") :
-      (scenario.var === "P" || scenario.var === "Z") ? (scenario.dir==="up" ? "up" : "down") :
-      "same";
-
-    return { type, Ychg, Rchg };
-  }
-
   function check(){
     if (!scenario){
-      showFeedback(`<span class="tagBad">No scenario</span> Click New Scenario first.`);
+      showFeedback(`<span class="tagBad">No scenario</span> Click <strong>New Scenario</strong> first.`);
       return;
     }
     const exp = expectedAnswers();
@@ -299,33 +334,32 @@
 
     const ok = (a1===exp.type && a2===exp.Rchg && a3===exp.Ychg);
     if (ok){
-      showFeedback(`<span class="tagOK">Correct</span> Now click <strong>Reveal</strong> to see it on the graph.`);
+      showFeedback(`<span class="tagOK">Correct</span> Click <strong>Reveal</strong>.`);
       els.revealBtn.disabled = false;
       setStatus("Correct. Ready to reveal.");
     } else {
-      showFeedback(`<span class="tagBad">Not quite</span> Remember: changing $begin:math:text$Y$end:math:text$ moves along; changing $begin:math:text$P$end:math:text$ or $begin:math:text$Z$end:math:text$ shifts the rule.`);
+      showFeedback(`<span class="tagBad">Not quite</span> Remember: $begin:math:text$Y$end:math:text$ changes = movement along; $begin:math:text$P$end:math:text$ or $begin:math:text$Z$end:math:text$ changes = shift.`);
       setStatus("Try again.");
     }
   }
 
   function why(){
     if (!scenario){
-      showFeedback(`<span class="tagBad">No scenario</span> Click New Scenario first.`);
+      showFeedback(`<span class="tagBad">No scenario</span> Click <strong>New Scenario</strong> first.`);
       return;
     }
-    const exp = expectedAnswers();
-    let txt = "";
 
+    let txt = "";
     if (scenario.var === "Y"){
       txt =
-        `Because the shock changes \$begin:math:text$Y\\$end:math:text$, you move to a different point on the same line.\n` +
-        `That is a \$begin:math:text$\\\\textbf\{movement along\}\\$end:math:text$ the Fed rule.\n\n` +
-        `Since \$begin:math:text$a\>0\\$end:math:text$, higher \$begin:math:text$Y\\$end:math:text$ implies higher \$begin:math:text$r\\$end:math:text$ (and lower \$begin:math:text$Y\\$end:math:text$ implies lower \$begin:math:text$r\\$end:math:text$).`;
+        `Because the shock changes $Y$, you move to a different point on the same line.\n` +
+        `That is a **movement along** the Fed rule.\n\n` +
+        `Since $a>0$, higher $Y$ implies higher $r$ (and lower $Y$ implies lower $r$).`;
     } else {
       txt =
-        `Because the shock changes \$begin:math:text$ \$\{scenario\.var\} \\$end:math:text$, the intercept \$begin:math:text$bP\+cZ\\$end:math:text$ changes.\n` +
-        `That shifts the whole rule up or down (same slope \$begin:math:text$a\\$end:math:text$).\n\n` +
-        `Higher \$begin:math:text$\$\{scenario\.var\}\\$end:math:text$ raises \$begin:math:text$r\\$end:math:text$ at every \$begin:math:text$Y\\$end:math:text$ (a shift up).`;
+        `Because the shock changes $${scenario.var}$$, the intercept term $bP+cZ$ changes.\n` +
+        `That shifts the whole rule up or down (same slope $a$).\n\n` +
+        `Higher $${scenario.var}$$ raises $r$ at every $Y$ (shift up).`;
     }
 
     showFeedback(`<span class="tagOK">Why</span> ${txt}`);
@@ -337,33 +371,33 @@
     revealed = true;
     updateNumbers();
     draw();
-    setStatus("Revealed. Try moving sliders to explore other movements/shifts.");
+    setStatus("Revealed. Use sliders to explore additional movements/shifts.");
   }
 
   function reset(){
     scenario = null;
     revealed = false;
     cur = { ...base };
+
     els.scenarioDesc.textContent = "Click “New Scenario” to start.";
+    els.revealBtn.disabled = true;
 
     els.predType.value = "";
     els.predR.value = "";
     els.predY.value = "";
     showFeedback("");
 
-    els.revealBtn.disabled = true;
-
     els.Yslider.value = String(base.Y);
     els.Pslider.value = String(base.P);
     els.Zslider.value = String(base.Z);
 
+    lockControls(true);
     updateNumbers();
     draw();
     setStatus("Reset.");
     typeset(document.body);
   }
 
-  // sliders: allow exploration after reveal or even before
   function sliderChanged(){
     cur.Y = Number(els.Yslider.value);
     cur.P = Number(els.Pslider.value);
@@ -372,7 +406,7 @@
     draw();
   }
 
-  // wire events
+  // ---------- Wire events ----------
   els.newBtn.addEventListener("click", newScenario);
   els.checkBtn.addEventListener("click", check);
   els.whyBtn.addEventListener("click", why);
@@ -383,14 +417,14 @@
   els.Pslider.addEventListener("input", sliderChanged);
   els.Zslider.addEventListener("input", sliderChanged);
 
-  window.addEventListener("resize", () => { draw(); });
+  window.addEventListener("resize", draw);
 
-  // init
+  // ---------- Init ----------
   window.addEventListener("load", () => {
+    lockControls(true);
     updateNumbers();
     draw();
     setStatus("Ready.");
     typeset(document.body);
-    lockControls(true); // no sliders until first scenario
   });
 })();
