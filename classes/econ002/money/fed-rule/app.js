@@ -93,17 +93,23 @@
 
   // Canvas
   function setupCanvas(){
-    const ctx = els.canvas.getContext("2d");
-    const dpr = window.devicePixelRatio || 1;
-    const rect = els.canvas.getBoundingClientRect();
-    const W = Math.max(2, Math.floor(rect.width * dpr));
-    const H = Math.max(2, Math.floor(rect.height * dpr));
-    if (els.canvas.width !== W || els.canvas.height !== H){
-      els.canvas.width = W;
-      els.canvas.height = H;
-    }
-    return { ctx, W, H, dpr };
+  const ctx = els.canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+
+  // Use layout size; if 0 (not laid out yet), fall back to a sane default.
+  const rect = els.canvas.getBoundingClientRect();
+  const cssW = rect.width  || 600;
+  const cssH = rect.height || 360;
+
+  const W = Math.max(2, Math.floor(cssW * dpr));
+  const H = Math.max(2, Math.floor(cssH * dpr));
+
+  if (els.canvas.width !== W || els.canvas.height !== H){
+    els.canvas.width = W;
+    els.canvas.height = H;
   }
+  return { ctx, W, H, dpr };
+}
 
   function drawAxes(ctx, W, H, dpr){
     const pad = { l: 60*dpr, r: 16*dpr, t: 16*dpr, b: 52*dpr };
@@ -390,14 +396,22 @@
   els.Pslider.addEventListener("input", sliderChanged);
   els.Zslider.addEventListener("input", sliderChanged);
 
-  window.addEventListener("resize", draw);
+  window.addEventListener("resize", () => requestAnimationFrame(draw));
 
   // Init
   window.addEventListener("load", () => {
-    lockControls(true);
-    updateNumbers();
-    draw();
-    setStatus("Ready.");
-    typeset(document.body);
-  });
+  lockControls(true);
+  updateNumbers();
+  setStatus("Ready.");
+  typeset(document.body);
+
+  // Draw after layout completes
+  requestAnimationFrame(draw);
+
+  // Redraw any time the canvas size changes (very reliable)
+  if (window.ResizeObserver){
+    const ro = new ResizeObserver(() => requestAnimationFrame(draw));
+    ro.observe(els.canvas);
+  }
+}););
 })();
