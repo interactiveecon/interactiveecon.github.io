@@ -1,7 +1,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // --------- DATA (embedded so nothing can be missing) ----------
+  // Embedded data
   const D = {
     params: { a: 0.08, b: 0.6, c: 0.6 },
     baseline: { Y: 50, P: 5, Z: 5 },
@@ -13,7 +13,7 @@
     axes: { Ymin: 0, Ymax: 100, rmin: 0, rmax: 20 }
   };
 
-  // --------- KaTeX: retry until available ----------
+  // KaTeX retry
   function typeset(el){
     if (!el) return;
     if (!window.renderMathInElement){
@@ -33,7 +33,6 @@
 
   const els = {
     newBtn: $("newBtn"),
-    revealBtn: $("revealBtn"),
     resetBtn: $("resetBtn"),
     status: $("status"),
     scenarioDesc: $("scenarioDesc"),
@@ -63,7 +62,6 @@
     canvas: $("canvas"),
   };
 
-  // Guard: if any critical element missing, stop early
   if (!els.newBtn || !els.canvas) return;
 
   const ORANGE = "rgba(230,159,0,0.95)";
@@ -75,13 +73,11 @@
   const base = { ...D.baseline };
 
   let cur = { ...base };
-  let scenario = null; // { var:"Y"|"P"|"Z", dir:"up"|"down", mag:number }
-  let revealed = false;
+  let scenario = null; // { var:"Y"|"P"|"Z", dir:"up"|"down", mag:number, target:{Y,P,Z} }
 
-  function setStatus(msg){ if (els.status) els.status.textContent = msg; }
+  function setStatus(msg){ els.status.textContent = msg; }
 
   function showFeedback(html){
-    if (!els.feedback) return;
     if (!html){
       els.feedback.style.display = "none";
       els.feedback.innerHTML = "";
@@ -93,10 +89,9 @@
   }
 
   function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
-
   function rOf(Y, P, Z){ return a*Y + b*P + c*Z; }
 
-  // ---------- Canvas drawing ----------
+  // Canvas
   function setupCanvas(){
     const ctx = els.canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
@@ -152,11 +147,8 @@
     ctx.fillStyle = color;
     ctx.beginPath(); ctx.arc(x,y,5*dpr,0,Math.PI*2); ctx.fill();
   }
-
   function arrow(ctx, x1,y1,x2,y2, color, dpr){
-    // line
     line(ctx, x1,y1,x2,y2, color, 2.5, dpr);
-    // head
     const ang = Math.atan2(y2-y1, x2-x1);
     const len = 10*dpr;
     const a1 = ang + Math.PI*0.85;
@@ -171,57 +163,65 @@
     ctx.stroke();
   }
 
+  function approxEq(x,y,tol){ return Math.abs(x-y) <= tol; }
+
+  function matchesScenario(){
+    if (!scenario) return false;
+    const t = scenario.target;
+    const tolY = 0.5;   // Y slider step is 1
+    const tolP = 0.05;  // P,Z slider step is 0.1
+    const tolZ = 0.05;
+
+    return approxEq(cur.Y, t.Y, tolY) && approxEq(cur.P, t.P, tolP) && approxEq(cur.Z, t.Z, tolZ);
+  }
+
   function draw(){
     const { ctx, W, H, dpr } = setupCanvas();
     ctx.clearRect(0,0,W,H);
 
     const { X0,X1,Y0,Y1 } = drawAxes(ctx,W,H,dpr);
-
     const { Ymin,Ymax,rmin,rmax } = D.axes;
+
     const xTo = (Yv) => X0 + (Yv-Ymin)/(Ymax-Ymin)*(X1-X0);
     const yTo = (rv) => Y0 + (rmax-rv)/(rmax-rmin)*(Y1-Y0);
 
-    // Baseline rule (grey)
+    // baseline line + point
     const rL0 = rOf(Ymin, base.P, base.Z);
     const rR0 = rOf(Ymax, base.P, base.Z);
     line(ctx, xTo(Ymin), yTo(rL0), xTo(Ymax), yTo(rR0), GREY, 3, dpr);
 
-    // Baseline point + dashed projections
     const r0 = rOf(base.Y, base.P, base.Z);
     const x0 = xTo(base.Y), y0 = yTo(r0);
     dot(ctx, x0, y0, "rgba(0,0,0,0.40)", dpr);
     line(ctx, x0, y0, x0, yTo(rmin), DASH, 2, dpr, [4,6]);
     line(ctx, x0, y0, xTo(Ymin), y0, DASH, 2, dpr, [4,6]);
 
-    if (!revealed) return;
+    // current line + point (always drawn once scenario exists; they discover via sliders)
+    if (!scenario) return;
 
-    // Current rule (orange)
     const rL1 = rOf(Ymin, cur.P, cur.Z);
     const rR1 = rOf(Ymax, cur.P, cur.Z);
     line(ctx, xTo(Ymin), yTo(rL1), xTo(Ymax), yTo(rR1), ORANGE, 3, dpr);
 
-    // Current point + dashed projections
     const r1 = rOf(cur.Y, cur.P, cur.Z);
     const x1 = xTo(cur.Y), y1 = yTo(r1);
     dot(ctx, x1, y1, ORANGE, dpr);
     line(ctx, x1, y1, x1, yTo(rmin), DASH, 2, dpr, [4,6]);
     line(ctx, x1, y1, xTo(Ymin), y1, DASH, 2, dpr, [4,6]);
 
-    // ---- Small arrow (polish) ----
-    if (scenario?.var === "Y"){
-      // movement along: arrow from baseline point to new point
-      arrow(ctx, x0, y0, x1, y1, ORANGE, dpr);
-    } else if (scenario?.var === "P" || scenario?.var === "Z"){
-      // shift: vertical arrow at Y0 from old r(Y0) to new r(Y0)
-      const rOldAtY0 = rOf(base.Y, base.P, base.Z);
-      const rNewAtY0 = rOf(base.Y, cur.P, cur.Z);
-      const yy0 = yTo(rOldAtY0);
-      const yy1 = yTo(rNewAtY0);
-      arrow(ctx, x0, yy0, x0, yy1, ORANGE, dpr);
+    // Arrow appears only when they have implemented the scenario
+    if (matchesScenario()){
+      if (scenario.var === "Y"){
+        arrow(ctx, x0, y0, x1, y1, ORANGE, dpr);
+      } else {
+        // shift: show vertical arrow at Y0 from old r(Y0) to new r(Y0)
+        const rOld = rOf(base.Y, base.P, base.Z);
+        const rNew = rOf(base.Y, cur.P, cur.Z);
+        arrow(ctx, x0, yTo(rOld), x0, yTo(rNew), ORANGE, dpr);
+      }
     }
   }
 
-  // ---------- UI state ----------
   function updateNumbers(){
     const r0 = rOf(base.Y, base.P, base.Z);
     const r1 = rOf(cur.Y, cur.P, cur.Z);
@@ -246,23 +246,6 @@
     els.Zslider.disabled = locked;
   }
 
-  function applyScenarioToCurrent(){
-    if (!scenario) return;
-    cur = { ...base };
-
-    if (scenario.var === "Y"){
-      cur.Y = clamp(base.Y + (scenario.dir==="up" ? scenario.mag : -scenario.mag), D.axes.Ymin, D.axes.Ymax);
-    } else if (scenario.var === "P"){
-      cur.P = Math.max(0, base.P + (scenario.dir==="up" ? scenario.mag : -scenario.mag));
-    } else {
-      cur.Z = Math.max(0, base.Z + (scenario.dir==="up" ? scenario.mag : -scenario.mag));
-    }
-
-    els.Yslider.value = String(cur.Y);
-    els.Pslider.value = String(cur.P);
-    els.Zslider.value = String(cur.Z);
-  }
-
   function expectedAnswers(){
     if (!scenario) return null;
     const type = (scenario.var === "Y") ? "move" : "shift";
@@ -271,18 +254,13 @@
     return { type, Ychg, Rchg };
   }
 
-  // ---------- Actions ----------
   function newScenario(){
-    revealed = false;
-    els.revealBtn.disabled = true;
-
     // reset to baseline
     cur = { ...base };
     els.Yslider.value = String(base.Y);
     els.Pslider.value = String(base.P);
     els.Zslider.value = String(base.Z);
 
-    // pick shock variable
     const u = Math.random();
     let v = "Y";
     if (u < 0.45) v = "Y";
@@ -296,13 +274,18 @@
           ? D.shocks.dP[Math.floor(Math.random()*D.shocks.dP.length)]
           : D.shocks.dZ[Math.floor(Math.random()*D.shocks.dZ.length)]);
 
-    scenario = { var: v, dir, mag };
+    const target = { ...base };
+    if (v==="Y") target.Y = clamp(base.Y + (dir==="up"?mag:-mag), D.axes.Ymin, D.axes.Ymax);
+    if (v==="P") target.P = Math.max(0, base.P + (dir==="up"?mag:-mag));
+    if (v==="Z") target.Z = Math.max(0, base.Z + (dir==="up"?mag:-mag));
+
+    scenario = { var: v, dir, mag, target };
 
     const dirWord = dir==="up" ? "increases" : "decreases";
     els.scenarioDesc.textContent =
       `Shock: ${v} ${dirWord}.\n` +
-      `Predict whether this is a movement along the rule or a shift of the rule.\n` +
-      `Then click Reveal to show it on the graph.`;
+      `Use the sliders to implement the shock and see what happens on the graph.\n` +
+      `Tip: $begin:math:text$Y$end:math:text$ moves along the line; $begin:math:text$P$end:math:text$ and $begin:math:text$Z$end:math:text$ shift the line.`;
 
     els.predType.value = "";
     els.predR.value = "";
@@ -310,8 +293,7 @@
     showFeedback("");
 
     lockControls(false);
-
-    setStatus("Scenario ready. Predict first.");
+    setStatus("Scenario ready. Predict first, then move the sliders.");
     updateNumbers();
     draw();
     typeset(document.body);
@@ -334,11 +316,10 @@
 
     const ok = (a1===exp.type && a2===exp.Rchg && a3===exp.Ychg);
     if (ok){
-      showFeedback(`<span class="tagOK">Correct</span> Click <strong>Reveal</strong>.`);
-      els.revealBtn.disabled = false;
-      setStatus("Correct. Ready to reveal.");
+      showFeedback(`<span class="tagOK">Correct</span> Now use the sliders to implement the shock and confirm it on the graph.`);
+      setStatus("Correct. Implement the shock with sliders.");
     } else {
-      showFeedback(`<span class="tagBad">Not quite</span> Remember: $begin:math:text$Y$end:math:text$ changes = movement along; $begin:math:text$P$end:math:text$ or $begin:math:text$Z$end:math:text$ changes = shift.`);
+      showFeedback(`<span class="tagBad">Not quite</span> Remember: $begin:math:text$Y$end:math:text$ change = movement along; $begin:math:text$P$end:math:text$ or $begin:math:text$Z$end:math:text$ change = shift.`);
       setStatus("Try again.");
     }
   }
@@ -348,40 +329,24 @@
       showFeedback(`<span class="tagBad">No scenario</span> Click <strong>New Scenario</strong> first.`);
       return;
     }
-
     let txt = "";
     if (scenario.var === "Y"){
       txt =
-        `Because the shock changes $Y$, you move to a different point on the same line.\n` +
-        `That is a **movement along** the Fed rule.\n\n` +
-        `Since $a>0$, higher $Y$ implies higher $r$ (and lower $Y$ implies lower $r$).`;
+        `Because the shock changes $Y$, you move to a different point on the same line (movement along).\n` +
+        `Since $a>0$, higher $Y$ means higher $r$.`;
     } else {
       txt =
-        `Because the shock changes $${scenario.var}$$, the intercept term $bP+cZ$ changes.\n` +
-        `That shifts the whole rule up or down (same slope $a$).\n\n` +
-        `Higher $${scenario.var}$$ raises $r$ at every $Y$ (shift up).`;
+        `Because the shock changes $${scenario.var}$$, the intercept $bP+cZ$ changes.\n` +
+        `That shifts the whole rule up/down (same slope $a$).`;
     }
-
     showFeedback(`<span class="tagOK">Why</span> ${txt}`);
-  }
-
-  function reveal(){
-    if (!scenario) return;
-    applyScenarioToCurrent();
-    revealed = true;
-    updateNumbers();
-    draw();
-    setStatus("Revealed. Use sliders to explore additional movements/shifts.");
   }
 
   function reset(){
     scenario = null;
-    revealed = false;
     cur = { ...base };
 
     els.scenarioDesc.textContent = "Click “New Scenario” to start.";
-    els.revealBtn.disabled = true;
-
     els.predType.value = "";
     els.predR.value = "";
     els.predY.value = "";
@@ -399,18 +364,26 @@
   }
 
   function sliderChanged(){
+    if (!scenario) return;
     cur.Y = Number(els.Yslider.value);
     cur.P = Number(els.Pslider.value);
     cur.Z = Number(els.Zslider.value);
+
     updateNumbers();
     draw();
+
+    if (matchesScenario()){
+      // gentle, non-intrusive confirmation
+      if (els.feedback.style.display !== "block"){
+        showFeedback(`<span class="tagOK">Nice</span> You implemented the scenario shock. The arrow shows the change.`);
+      }
+    }
   }
 
-  // ---------- Wire events ----------
+  // Wire events
   els.newBtn.addEventListener("click", newScenario);
   els.checkBtn.addEventListener("click", check);
   els.whyBtn.addEventListener("click", why);
-  els.revealBtn.addEventListener("click", reveal);
   els.resetBtn.addEventListener("click", reset);
 
   els.Yslider.addEventListener("input", sliderChanged);
@@ -419,7 +392,7 @@
 
   window.addEventListener("resize", draw);
 
-  // ---------- Init ----------
+  // Init
   window.addEventListener("load", () => {
     lockControls(true);
     updateNumbers();
