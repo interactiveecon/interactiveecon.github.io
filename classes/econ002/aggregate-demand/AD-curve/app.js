@@ -2,31 +2,43 @@
   const $ = (id) => document.getElementById(id);
 
   // -----------------------
-  // KaTeX render (safe)
+  // KaTeX (safe)
   // -----------------------
   function typeset(el) {
     if (!el) return;
-    if (!window.renderMathInElement) { setTimeout(() => typeset(el), 60); return; }
+    if (!window.renderMathInElement) {
+      setTimeout(() => typeset(el), 60);
+      return;
+    }
     window.renderMathInElement(el, {
       delimiters: [
         { left: "\\(", right: "\\)", display: false },
         { left: "$", right: "$", display: false },
         { left: "\\[", right: "\\]", display: true },
-        { left: "$$", right: "$$", display: true }
+        { left: "$$", right: "$$", display: true },
       ],
-      throwOnError: false
+      throwOnError: false,
     });
   }
 
   // -----------------------
-  // MODEL: linear IS–FR with (G,T,C,I) shifters + (P,Z) in FR
+  // Robust DOM picking (supports multiple ID schemes)
+  // -----------------------
+  function pickEl(...ids) {
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el) return el;
+    }
+    return null;
+  }
+
+  // -----------------------
+  // Model: linear IS–FR with shifters
   // -----------------------
   const M = {
-    // axes
     isfr: { Ymin: 0, Ymax: 200, rmin: 0, rmax: 20 },
-    ad:   { Ymin: 0, Ymax: 200, Pmin: 3, Pmax: 7 },
+    ad: { Ymin: 0, Ymax: 200, Pmin: 3, Pmax: 7 },
 
-    // baselines
     base: { G: 100, T: 100, C: 100, I: 100, P: 5, Z: 5 },
 
     // IS: r = aIS - bIS*Y + gG*(G-G0) - gT*(T-T0) + gC*(C-C0) + gI*(I-I0)
@@ -34,43 +46,53 @@
 
     // FR: r = aFR + bFR*Y + hP*(P-P0) + hZ*(Z-Z0)
     FR: { aFR: 2, bFR: 0.04, hP: 1.8, hZ: 1.8 },
+
+    // slider ranges (match typical index)
+    ranges: {
+      G: { min: 80, max: 120, step: 1 },
+      T: { min: 80, max: 120, step: 1 },
+      C: { min: 80, max: 120, step: 1 },
+      I: { min: 80, max: 120, step: 1 },
+      P: { min: 3, max: 7, step: 0.1 },
+      Z: { min: 3, max: 7, step: 0.1 },
+    },
   };
 
-  function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
-  function approxEq(x, y, tol) { return Math.abs(x - y) <= tol; }
+  function clamp(x, lo, hi) {
+    return Math.max(lo, Math.min(hi, x));
+  }
+  function approxEq(x, y, tol) {
+    return Math.abs(x - y) <= tol;
+  }
 
   function IS_r(Y, G, T, C, I) {
     const { aIS, bIS, gG, gT, gC, gI } = M.IS;
     const { G: G0, T: T0, C: C0, I: I0 } = M.base;
-    return aIS - bIS * Y + gG*(G - G0) - gT*(T - T0) + gC*(C - C0) + gI*(I - I0);
+    return aIS - bIS * Y + gG * (G - G0) - gT * (T - T0) + gC * (C - C0) + gI * (I - I0);
   }
 
   function FR_r(Y, P, Z) {
     const { aFR, bFR, hP, hZ } = M.FR;
     const { P: P0, Z: Z0 } = M.base;
-    return aFR + bFR * Y + hP*(P - P0) + hZ*(Z - Z0);
+    return aFR + bFR * Y + hP * (P - P0) + hZ * (Z - Z0);
   }
 
-  // Solve intersection
   function eqm(G, T, C, I, P, Z) {
     const { bIS } = M.IS;
     const { bFR } = M.FR;
 
-    // IS: r = A - bIS*Y + s
-    // FR: r = C0 + bFR*Y + t
-    // put all shifters into s and t via evaluating at Y=0
+    // IS: r = A0 - bIS*Y (since A0 = IS_r(0,...))
+    // FR: r = C0 + bFR*Y (since C0 = FR_r(0,...))
     const A0 = IS_r(0, G, T, C, I);
     const C0 = FR_r(0, P, Z);
 
-    const denom = (bIS + bFR);
+    const denom = bIS + bFR;
     let Y = (A0 - C0) / denom;
     Y = clamp(Y, M.isfr.Ymin, M.isfr.Ymax);
-
     const r = FR_r(Y, P, Z);
     return { Y, r };
   }
 
-  // AD curve: trace Y(P) holding (G,T,C,I,Z) fixed
   function buildADCurve({ G, T, C, I, Z }, n = 60) {
     const pts = [];
     for (let i = 0; i <= n; i++) {
@@ -82,49 +104,60 @@
   }
 
   // -----------------------
-  // TOKENS + MECHANISMS
+  // Tokens & mechanisms (exact)
   // -----------------------
   const TOK = {
-    Gup:"G↑", Gdn:"G↓",
-    Tup:"T↑", Tdn:"T↓",
-    Cup:"C↑", Cdn:"C↓",
-    Iup:"I↑", Idn:"I↓",
-    Pup:"P↑", Pdn:"P↓",
-    Zup:"Z↑", Zdn:"Z↓",
+    Gup: "G↑",
+    Gdn: "G↓",
+    Tup: "T↑",
+    Tdn: "T↓",
+    Cup: "C↑",
+    Cdn: "C↓",
+    Iup: "I↑",
+    Idn: "I↓",
+    Pup: "P↑",
+    Pdn: "P↓",
+    Zup: "Z↑",
+    Zdn: "Z↓",
 
-    PEup:"PE↑", PEdn:"PE↓",
-    UInvUp:"Unplanned Inventories↑", UInvDn:"Unplanned Inventories↓",
-    Yup:"Y↑", Ydn:"Y↓",
-    FFup:"FF↑", FFdn:"FF↓",
-    rup:"r↑", rdn:"r↓",
+    PEup: "PE↑",
+    PEdn: "PE↓",
+    UInvUp: "Unplanned Inventories↑",
+    UInvDn: "Unplanned Inventories↓",
+    Yup: "Y↑",
+    Ydn: "Y↓",
+    FFup: "FF↑",
+    FFdn: "FF↓",
+    rup: "r↑",
+    rdn: "r↓",
   };
 
-  // Your required sequences (exact order)
   const MECH = {
-    // Fiscal
-    "G_up": [TOK.Gup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
-    "G_dn": [TOK.Gdn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
+    // Government purchases
+    G_up: [TOK.Gup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
+    G_dn: [TOK.Gdn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
 
-    "T_dn": [TOK.Tdn, TOK.Cup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
-    "T_up": [TOK.Tup, TOK.Cdn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
+    // Taxes
+    T_dn: [TOK.Tdn, TOK.Cup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
+    T_up: [TOK.Tup, TOK.Cdn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
 
-    // P and Z
-    "P_up": [TOK.Pup, TOK.FFup, TOK.rup, TOK.Idn, TOK.PEdn, TOK.UInvUp, TOK.Ydn],
-    "P_dn": [TOK.Pdn, TOK.FFdn, TOK.rdn, TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup],
+    // Price Level
+    P_up: [TOK.Pup, TOK.FFup, TOK.rup, TOK.Idn, TOK.PEdn, TOK.UInvUp, TOK.Ydn],
+    P_dn: [TOK.Pdn, TOK.FFdn, TOK.rdn, TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup],
 
-    "Z_up": [TOK.Zup, TOK.FFup, TOK.rup, TOK.Idn, TOK.PEdn, TOK.UInvUp, TOK.Ydn],
-    "Z_dn": [TOK.Zdn, TOK.FFdn, TOK.rdn, TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup],
+    // Z
+    Z_up: [TOK.Zup, TOK.FFup, TOK.rup, TOK.Idn, TOK.PEdn, TOK.UInvUp, TOK.Ydn],
+    Z_dn: [TOK.Zdn, TOK.FFdn, TOK.rdn, TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup],
 
-    // NEW: Consumption shocks
-    "C_up": [TOK.Cup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
-    "C_dn": [TOK.Cdn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
+    // Consumption shocks
+    C_up: [TOK.Cup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
+    C_dn: [TOK.Cdn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
 
-    // NEW: Investment shocks
-    "I_up": [TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
-    "I_dn": [TOK.Idn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
+    // Investment shocks
+    I_dn: [TOK.Idn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
+    I_up: [TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
   };
 
-  // Pill pool grouped (no shuffle), with SHORT pills (see makePill)
   const PILL_GROUPS = [
     { name: "G", pills: [TOK.Gup, TOK.Gdn] },
     { name: "T", pills: [TOK.Tup, TOK.Tdn] },
@@ -139,37 +172,32 @@
     { name: "Interest rate", pills: [TOK.rup, TOK.rdn] },
   ];
 
-  function mechKeyFor(varName, dir) {
-    const d = (dir === "up") ? "up" : "dn";
-    return `${varName}_${d}`;
-  }
-
   // -----------------------
-  // NEWS SCENARIOS (add C and I)
+  // Scenario bank (headline)
   // -----------------------
   const SCEN = [
-    { var:"G", dir:"up",   source:"Policy Desk", headline:"Spending bill passes in Congress", brief:"Federal purchases rise over the next quarter." },
-    { var:"G", dir:"down", source:"Policy Desk", headline:"Spending cuts announced", brief:"Government purchases will be reduced to meet a budget target." },
+    { var: "G", dir: "up", source: "Policy Desk", headline: "Spending bill passes in Congress", brief: "Federal purchases rise over the next quarter." },
+    { var: "G", dir: "down", source: "Policy Desk", headline: "Spending cuts announced", brief: "Government purchases will be reduced to meet a budget target." },
 
-    { var:"T", dir:"down", source:"Policy Desk", headline:"Tax cut approved", brief:"Households face lower taxes starting this month." },
-    { var:"T", dir:"up",   source:"Policy Desk", headline:"Tax increase scheduled", brief:"Higher taxes take effect to stabilize public finances." },
+    { var: "T", dir: "down", source: "Policy Desk", headline: "Tax cut approved", brief: "Households face lower taxes starting this month." },
+    { var: "T", dir: "up", source: "Policy Desk", headline: "Tax increase scheduled", brief: "Higher taxes take effect to stabilize public finances." },
 
-    { var:"C", dir:"up",   source:"Household Survey", headline:"Consumer confidence jumps", brief:"Households report greater willingness to spend." },
-    { var:"C", dir:"down", source:"Household Survey", headline:"Confidence weakens", brief:"Households become more cautious and cut spending." },
+    { var: "C", dir: "up", source: "Household Survey", headline: "Consumer confidence jumps", brief: "Households report greater willingness to spend." },
+    { var: "C", dir: "down", source: "Household Survey", headline: "Confidence weakens", brief: "Households become more cautious and cut spending." },
 
-    { var:"I", dir:"up",   source:"Business Pulse", headline:"Firms ramp up investment plans", brief:"Capital spending plans expand due to strong outlook." },
-    { var:"I", dir:"down", source:"Business Pulse", headline:"Investment plans pulled back", brief:"Firms delay projects amid uncertainty." },
+    { var: "I", dir: "up", source: "Business Pulse", headline: "Firms ramp up investment plans", brief: "Capital spending plans expand due to strong outlook." },
+    { var: "I", dir: "down", source: "Business Pulse", headline: "Investment plans pulled back", brief: "Firms delay projects amid uncertainty." },
 
-    { var:"P", dir:"up",   source:"Inflation Watch", headline:"Inflation pressures intensify", brief:"Prices rise broadly across goods and services." },
-    { var:"P", dir:"down", source:"Inflation Watch", headline:"Deflation appears", brief:"Prices fall across many categories (deflation)." },
+    { var: "P", dir: "up", source: "Inflation Watch", headline: "Inflation pressures intensify", brief: "Prices rise broadly across goods and services." },
+    { var: "P", dir: "down", source: "Inflation Watch", headline: "Deflation appears", brief: "Prices fall across many categories (deflation)." },
 
-    { var:"Z", dir:"up",   source:"Policy Desk", headline:"Tariffs announced; uncertainty rises", brief:"Policy uncertainty rises; the Fed leans more cautious." },
-    { var:"Z", dir:"down", source:"Financial Conditions", headline:"Financial stress eases", brief:"Credit conditions improve; the Fed feels less need to restrain activity." },
+    { var: "Z", dir: "up", source: "Policy Desk", headline: "Tariffs announced; uncertainty rises", brief: "Policy uncertainty rises; the Fed leans more cautious." },
+    { var: "Z", dir: "down", source: "Financial Conditions", headline: "Financial stress eases", brief: "Credit conditions improve; the Fed feels less need to restrain activity." },
   ];
 
   function makeStamp() {
-    const days = ["Mon","Tue","Wed","Thu","Fri"];
-    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const d = days[Math.floor(Math.random() * days.length)];
     const m = months[Math.floor(Math.random() * months.length)];
     const day = 1 + Math.floor(Math.random() * 28);
@@ -178,158 +206,91 @@
     return `${d} ${m} ${day}, ${hr}:${min} AM`;
   }
 
+  function mechKeyFor(varName, dir) {
+    return `${varName}_${dir === "up" ? "up" : "dn"}`;
+  }
+
   // -----------------------
-  // DOM (expects these IDs in your index)
+  // Element bindings (supports both ID schemes)
   // -----------------------
   const els = {
-    newBtn: $("newBtn"),
-    resetBtn: $("resetBtn"),
-    status: $("status"),
-    scenarioDesc: $("scenarioDesc"),
+    newBtn: pickEl("newBtn"),
+    resetBtn: pickEl("resetBtn"),
+    status: pickEl("status"),
+    scenarioDesc: pickEl("scenarioDesc"),
 
-    // sliders (Cslider & Islider must exist in your index for C/I shocks)
-    Gslider: $("Gslider"),
-    Tslider: $("Tslider"),
-    Cslider: $("Cslider"),
-    Islider: $("Islider"),
-    Pslider: $("Pslider"),
-    Zslider: $("Zslider"),
+    // sliders
+    Gslider: pickEl("Gslider"),
+    Tslider: pickEl("Tslider"),
+    Cslider: pickEl("Cslider"),
+    Islider: pickEl("Islider", "Islider"),
+    Pslider: pickEl("Pslider"),
+    Zslider: pickEl("Zslider"),
 
-    Gdisp: $("Gdisp"),
-    Tdisp: $("Tdisp"),
-    Cdisp: $("Cdisp"),
-    Idisp: $("Idisp"),
-    Pdisp: $("Pdisp"),
-    Zdisp: $("Zdisp"),
+    Gdisp: pickEl("Gdisp"),
+    Tdisp: pickEl("Tdisp"),
+    Cdisp: pickEl("Cdisp"),
+    Idisp: pickEl("Idisp"),
+    Pdisp: pickEl("Pdisp"),
+    Zdisp: pickEl("Zdisp"),
 
-    // pills / mechanism
-    slots: $("slots"),
-    poolGroups: $("poolGroups"),
-    mechStatus: $("mechStatus"),
-    checkMechBtn: $("checkMechBtn"),
-    clearMechBtn: $("clearMechBtn"),
+    // mechanism UI
+    slots: pickEl("slots"),
+    poolGroups: pickEl("poolGroups"),
+    mechStatus: pickEl("mechStatus"),
+    checkMechBtn: pickEl("checkMechBtn"),
+    clearMechBtn: pickEl("clearMechBtn"),
 
-    // predictions
-    predISAction: $("predISAction"),
-    predISDir: $("predISDir"),
-    predFRAction: $("predFRAction"),
-    predFRDir: $("predFRDir"),
-    predADAction: $("predADAction"),
-    predADDir: $("predADDir"),
-    checkPredBtn: $("checkPredBtn"),
-    whyPredBtn: $("whyPredBtn"),
-    predStatus: $("predStatus"),
+    // predictions (two schemes)
+    isAction: pickEl("predISAction", "isAction"),
+    isDir: pickEl("predISDir", "isDir"),
+    frAction: pickEl("predFRAction", "frAction"),
+    frDir: pickEl("predFRDir", "frDir"),
+    adAction: pickEl("predADAction", "adAction"),
+    adDir: pickEl("predADDir", "adDir"),
+
+    checkPredBtn: pickEl("checkPredBtn"),
+    whyPredBtn: pickEl("whyPredBtn"),
+    predStatus: pickEl("predStatus"),
 
     // canvases
-    isfrCanvas: $("isfrCanvas"),
-    adCanvas: $("adCanvas"),
+    isfrCanvas: pickEl("isfrCanvas"),
+    adCanvas: pickEl("adCanvas"),
   };
-
-  // ---------- Prediction dropdown population (robust to ID names) ----------
-function pickEl(...ids) {
-  for (const id of ids) {
-    const el = document.getElementById(id);
-    if (el) return el;
-  }
-  return null;
-}
-
-const predUI = {
-  // supports either naming scheme
-  isAction: pickEl("predISAction", "isAction"),
-  isDir:    pickEl("predISDir", "isDir"),
-  frAction: pickEl("predFRAction", "frAction"),
-  frDir:    pickEl("predFRDir", "frDir"),
-  adAction: pickEl("predADAction", "adAction"),
-  adDir:    pickEl("predADDir", "adDir"),
-};
-
-function fillOptions(selectEl, options) {
-  if (!selectEl) return;
-  selectEl.innerHTML = "";
-  const first = document.createElement("option");
-  first.value = "";
-  first.textContent = "Direction…";
-  selectEl.appendChild(first);
-
-  for (const [val, label] of options) {
-    const o = document.createElement("option");
-    o.value = val;
-    o.textContent = label;
-    selectEl.appendChild(o);
-  }
-}
-
-function updateDirOptions(curve) {
-  // curve: "IS" | "FR" | "AD"
-  if (curve === "IS") {
-    const action = predUI.isAction?.value || "";
-    if (!action) return fillOptions(predUI.isDir, []);
-    if (action === "shift") return fillOptions(predUI.isDir, [["right","Right"], ["left","Left"]]);
-    return fillOptions(predUI.isDir, [["up","Up along"], ["down","Down along"]]);
-  }
-
-  if (curve === "FR") {
-    const action = predUI.frAction?.value || "";
-    if (!action) return fillOptions(predUI.frDir, []);
-    // For FR we keep the same labels; "shift" vs "move along" is captured by the Action menu.
-    return fillOptions(predUI.frDir, [["up","Up"], ["down","Down"]]);
-  }
-
-  if (curve === "AD") {
-    const action = predUI.adAction?.value || "";
-    if (!action) return fillOptions(predUI.adDir, []);
-    if (action === "shift") return fillOptions(predUI.adDir, [["right","Right"], ["left","Left"]]);
-    return fillOptions(predUI.adDir, [["up","Up along"], ["down","Down along"]]);
-  }
-}
-
-function initPredictionUI() {
-  // populate empty direction menus initially
-  updateDirOptions("IS");
-  updateDirOptions("FR");
-  updateDirOptions("AD");
-
-  // attach listeners once
-  if (predUI.isAction && !predUI.isAction.dataset.bound) {
-    predUI.isAction.addEventListener("change", () => updateDirOptions("IS"));
-    predUI.isAction.dataset.bound = "1";
-  }
-  if (predUI.frAction && !predUI.frAction.dataset.bound) {
-    predUI.frAction.addEventListener("change", () => updateDirOptions("FR"));
-    predUI.frAction.dataset.bound = "1";
-  }
-  if (predUI.adAction && !predUI.adAction.dataset.bound) {
-    predUI.adAction.addEventListener("change", () => updateDirOptions("AD"));
-    predUI.adAction.dataset.bound = "1";
-  }
-}
 
   if (!els.isfrCanvas || !els.adCanvas) return;
 
   // -----------------------
   // State
   // -----------------------
-  let scenario = null;        // {var,dir,stamp,source,headline,brief}
+  let scenario = null;
   let slotsState = [];
   let mechOK = false;
 
-  // prediction gate
   let predMade = false;
   let predCorrect = false;
-
-  // reveal gate: once correct slider moves in correct direction (any magnitude)
   let revealed = false;
 
-  // current values (start baseline)
   let cur = { ...M.base };
 
   const baseEq = eqm(M.base.G, M.base.T, M.base.C, M.base.I, M.base.P, M.base.Z);
   const baseAD = buildADCurve({ G: M.base.G, T: M.base.T, C: M.base.C, I: M.base.I, Z: M.base.Z }, 60);
 
   // -----------------------
-  // Slider locking after scenario until prediction is made
-  // Students CAN still do mechanism while sliders locked.
+  // Helpers: status
+  // -----------------------
+  function setStatus(msg) {
+    if (els.status) els.status.textContent = msg;
+  }
+  function setPredStatus(msg) {
+    if (els.predStatus) els.predStatus.textContent = msg;
+  }
+  function setMechStatus(msg) {
+    if (els.mechStatus) els.mechStatus.textContent = msg || "";
+  }
+
+  // -----------------------
+  // Sliders: lock until prediction checked; then unlock correct slider and constrain direction
   // -----------------------
   function allSliders() {
     return [els.Gslider, els.Tslider, els.Cslider, els.Islider, els.Pslider, els.Zslider].filter(Boolean);
@@ -339,33 +300,47 @@ function initPredictionUI() {
     for (const s of allSliders()) s.disabled = true;
   }
 
-  function restoreSliderRanges() {
-    // these are safe defaults; your index can set better ranges
-    if (els.Gslider) { els.Gslider.min = "80"; els.Gslider.max = "120"; }
-    if (els.Tslider) { els.Tslider.min = "80"; els.Tslider.max = "120"; }
-    if (els.Cslider) { els.Cslider.min = "80"; els.Cslider.max = "120"; }
-    if (els.Islider) { els.Islider.min = "80"; els.Islider.max = "120"; }
-    if (els.Pslider) { els.Pslider.min = "3";  els.Pslider.max = "7"; }
-    if (els.Zslider) { els.Zslider.min = "3";  els.Zslider.max = "7"; }
+  function applyDefaultRanges() {
+    const map = {
+      G: els.Gslider,
+      T: els.Tslider,
+      C: els.Cslider,
+      I: els.Islider,
+      P: els.Pslider,
+      Z: els.Zslider,
+    };
+    for (const k of Object.keys(map)) {
+      const sl = map[k];
+      if (!sl) continue;
+      const r = M.ranges[k];
+      sl.min = String(r.min);
+      sl.max = String(r.max);
+      if (r.step != null) sl.step = String(r.step);
+    }
   }
 
-  function setSliderConstraint(slider, min, max) {
-    if (!slider) return;
-    slider.min = String(min);
-    slider.max = String(max);
+  function setSliderConstraint(sl, min, max) {
+    if (!sl) return;
+    sl.min = String(min);
+    sl.max = String(max);
   }
 
   function unlockOnlyCorrectSlider() {
-    // lock all first
     lockAllSliders();
-    restoreSliderRanges();
-
+    applyDefaultRanges();
     if (!scenario || !predMade) return;
+
+    // reset values to baseline
+    cur = { ...M.base };
+    if (els.Gslider) els.Gslider.value = String(M.base.G);
+    if (els.Tslider) els.Tslider.value = String(M.base.T);
+    if (els.Cslider) els.Cslider.value = String(M.base.C);
+    if (els.Islider) els.Islider.value = String(M.base.I);
+    if (els.Pslider) els.Pslider.value = String(M.base.P);
+    if (els.Zslider) els.Zslider.value = String(M.base.Z);
 
     const v = scenario.var;
     const dir = scenario.dir;
-
-    // enable only correct slider, constrain direction relative to baseline
     const baseVal = M.base[v];
 
     const sliderMap = {
@@ -376,34 +351,47 @@ function initPredictionUI() {
       P: els.Pslider,
       Z: els.Zslider,
     };
-    const s = sliderMap[v];
-    if (!s) return;
+    const sl = sliderMap[v];
+    if (!sl) return;
 
-    s.disabled = false;
+    sl.disabled = false;
 
-    // constrain direction (any magnitude)
-    // if dir=up => [base, max], dir=down => [min, base]
-    const min = Number(s.min);
-    const max = Number(s.max);
-    if (dir === "up") setSliderConstraint(s, baseVal, max);
-    else setSliderConstraint(s, min, baseVal);
+    const min = Number(sl.min);
+    const max = Number(sl.max);
+    if (dir === "up") setSliderConstraint(sl, baseVal, max);
+    else setSliderConstraint(sl, min, baseVal);
 
-    // force to baseline to start
-    s.value = String(baseVal);
+    // ensure it starts at baseline
+    sl.value = String(baseVal);
 
-    // reset current to baseline
-    cur = { ...M.base };
     updateReadouts();
     drawAll();
   }
 
   // -----------------------
+  // Readouts
+  // -----------------------
+  function updateReadouts() {
+    if (els.Gdisp) els.Gdisp.textContent = cur.G.toFixed(0);
+    if (els.Tdisp) els.Tdisp.textContent = cur.T.toFixed(0);
+    if (els.Cdisp) els.Cdisp.textContent = cur.C.toFixed(0);
+    if (els.Idisp) els.Idisp.textContent = cur.I.toFixed(0);
+    if (els.Pdisp) els.Pdisp.textContent = cur.P.toFixed(1);
+    if (els.Zdisp) els.Zdisp.textContent = cur.Z.toFixed(1);
+  }
+
+  function syncCurFromSliders() {
+    if (els.Gslider) cur.G = Number(els.Gslider.value);
+    if (els.Tslider) cur.T = Number(els.Tslider.value);
+    if (els.Cslider) cur.C = Number(els.Cslider.value);
+    if (els.Islider) cur.I = Number(els.Islider.value);
+    if (els.Pslider) cur.P = Number(els.Pslider.value);
+    if (els.Zslider) cur.Z = Number(els.Zslider.value);
+  }
+
+  // -----------------------
   // Mechanism UI
   // -----------------------
-  function setStatus(msg) { if (els.status) els.status.textContent = msg; }
-  function setPredStatus(msg) { if (els.predStatus) els.predStatus.textContent = msg; }
-  function setMechStatus(msg) { if (els.mechStatus) els.mechStatus.textContent = msg || ""; }
-
   function makePill(token) {
     const d = document.createElement("div");
     d.className = "pill";
@@ -411,10 +399,11 @@ function initPredictionUI() {
     d.draggable = true;
     d.dataset.tok = token;
 
-    // Make pills SHORT even if CSS isn’t perfect:
-    d.style.padding = "2px 10px";
-    d.style.lineHeight = "1.05";
-    d.style.height = "auto";
+    // hard-force compactness regardless of global css
+    d.style.padding = "1px 8px";
+    d.style.lineHeight = "1";
+    d.style.fontSize = "12px";
+    d.style.alignItems = "center";
 
     d.addEventListener("dragstart", (e) => {
       e.dataTransfer.setData("text/plain", token);
@@ -455,7 +444,11 @@ function initPredictionUI() {
       slot.textContent = "Drop";
       slot.dataset.idx = String(i);
 
-      slot.addEventListener("dragover", (e) => { e.preventDefault(); e.dataTransfer.dropEffect="move"; });
+      slot.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+      });
+
       slot.addEventListener("drop", (e) => {
         e.preventDefault();
         const tok = e.dataTransfer.getData("text/plain");
@@ -465,6 +458,7 @@ function initPredictionUI() {
         slot.textContent = tok;
         setMechStatus("");
       });
+
       slot.addEventListener("dblclick", () => {
         slotsState[i] = null;
         slot.classList.remove("filled");
@@ -506,63 +500,184 @@ function initPredictionUI() {
       mechOK = false;
       return;
     }
-    mechOK = seq.every((t,i)=> slotsState[i] === t);
+    mechOK = seq.every((t, i) => slotsState[i] === t);
     setMechStatus(mechOK ? "Correct." : "Not quite. Try again.");
   }
 
   // -----------------------
-  // Predictions: IS / FR / AD (shift vs movement + direction)
+  // Predictions UI: populate direction options based on action
   // -----------------------
-  // We use these direction conventions:
-  // IS shift: left/right; IS movement: up/down
-  // FR shift: up/down;  FR movement: up/down
-  // AD shift: left/right; AD movement: up/down (P up means move UP along AD; P down means move DOWN)
-  function expectedPrediction(s) {
-    const v = s.var, dir = s.dir;
+  function fillOptions(selectEl, options) {
+    if (!selectEl) return;
+    selectEl.innerHTML = "";
+    const first = document.createElement("option");
+    first.value = "";
+    first.textContent = "Direction…";
+    selectEl.appendChild(first);
+    for (const [val, label] of options) {
+      const o = document.createElement("option");
+      o.value = val;
+      o.textContent = label;
+      selectEl.appendChild(o);
+    }
+  }
 
-    // defaults
-    let IS = { action: "move", dir: "up" };
-    let FR = { action: "move", dir: "up" };
-    let AD = { action: "shift", dir: "right" };
+  function updateDirOptions(curve) {
+    if (curve === "IS") {
+      const act = els.isAction?.value || "";
+      if (!act) return fillOptions(els.isDir, []);
+      if (act === "shift") return fillOptions(els.isDir, [["right","Right"], ["left","Left"]]);
+      return fillOptions(els.isDir, [["up","Up along"], ["down","Down along"]]);
+    }
+    if (curve === "FR") {
+      const act = els.frAction?.value || "";
+      if (!act) return fillOptions(els.frDir, []);
+      // shift vs move is in action; direction is up/down either way
+      return fillOptions(els.frDir, [["up","Up"], ["down","Down"]]);
+    }
+    if (curve === "AD") {
+      const act = els.adAction?.value || "";
+      if (!act) return fillOptions(els.adDir, []);
+      if (act === "shift") return fillOptions(els.adDir, [["right","Right"], ["left","Left"]]);
+      return fillOptions(els.adDir, [["up","Up along"], ["down","Down along"]]);
+    }
+  }
 
-    if (v === "G" || v === "T" || v === "C" || v === "I") {
-      // Demand-side shocks shift IS; FR fixed => move along FR; AD shifts
-      // Up shock => IS right, FR up (movement), AD right
-      // Down shock => IS left, FR down, AD left
-      IS = { action: "shift", dir: (dir === "up" ? "right" : "left") };
-      FR = { action: "move",  dir: (dir === "up" ? "up" : "down") };
-      AD = { action: "shift", dir: (dir === "up" ? "right" : "left") };
+  function initPredictionUI() {
+    // attach once
+    if (els.isAction && !els.isAction.dataset.bound) {
+      els.isAction.addEventListener("change", () => updateDirOptions("IS"));
+      els.isAction.dataset.bound = "1";
+    }
+    if (els.frAction && !els.frAction.dataset.bound) {
+      els.frAction.addEventListener("change", () => updateDirOptions("FR"));
+      els.frAction.dataset.bound = "1";
+    }
+    if (els.adAction && !els.adAction.dataset.bound) {
+      els.adAction.addEventListener("change", () => updateDirOptions("AD"));
+      els.adAction.dataset.bound = "1";
     }
 
-    if (v === "P" || v === "Z") {
-      // FR shifts (up if P/Z up, down if P/Z down)
-      // IS fixed => move along IS (up if r up; down if r down)
-      // AD:
-      //  - P change: movement along AD (since P itself changes)
-      //  - Z change: AD shifts (policy stance changes output at each P)
-      IS = { action: "move", dir: (dir === "up" ? "up" : "down") };
-      FR = { action: "shift", dir: (dir === "up" ? "up" : "down") };
-      if (v === "P") AD = { action: "move", dir: (dir === "up" ? "up" : "down") };
-      if (v === "Z") AD = { action: "shift", dir: (dir === "up" ? "left" : "right") };
-    }
+    // initialize blank direction menus
+    updateDirOptions("IS");
+    updateDirOptions("FR");
+    updateDirOptions("AD");
+  }
 
-    return { IS, FR, AD };
+  function predWiringOK() {
+    return !!(els.isAction && els.isDir && els.frAction && els.frDir && els.adAction && els.adDir);
   }
 
   function predComplete() {
-    const need = [els.predISAction, els.predISDir, els.predFRAction, els.predFRDir, els.predADAction, els.predADDir];
-    return need.every(el => el && el.value && el.value !== "");
+    if (!predWiringOK()) return false;
+    const vals = [
+      els.isAction.value, els.isDir.value,
+      els.frAction.value, els.frDir.value,
+      els.adAction.value, els.adDir.value
+    ];
+    return vals.every(v => (v ?? "").trim() !== "");
+  }
+
+  // Expected prediction mapping
+  function expectedPrediction(s) {
+    const v = s.var, dir = s.dir;
+
+    // For each curve: action in {"shift","move"}; direction depends on curve/action
+    // IS shift: left/right ; IS move: up/down
+    // FR shift: up/down ; FR move: up/down
+    // AD shift: left/right ; AD move: up/down
+    if (v === "G" || v === "C" || v === "I") {
+      return {
+        IS: { action: "shift", dir: dir === "up" ? "right" : "left" },
+        FR: { action: "move",  dir: dir === "up" ? "up" : "down" },
+        AD: { action: "shift", dir: dir === "up" ? "right" : "left" },
+      };
+    }
+    if (v === "T") {
+      // T up -> IS left; T down -> IS right
+      return {
+        IS: { action: "shift", dir: dir === "up" ? "left" : "right" },
+        FR: { action: "move",  dir: dir === "up" ? "down" : "up" },
+        AD: { action: "shift", dir: dir === "up" ? "left" : "right" },
+      };
+    }
+    if (v === "P") {
+      return {
+        IS: { action: "move",  dir: dir === "up" ? "up" : "down" },
+        FR: { action: "shift", dir: dir === "up" ? "up" : "down" },
+        AD: { action: "move",  dir: dir === "up" ? "up" : "down" },
+      };
+    }
+    // Z
+    return {
+      IS: { action: "move",  dir: dir === "up" ? "up" : "down" },
+      FR: { action: "shift", dir: dir === "up" ? "up" : "down" },
+      AD: { action: "shift", dir: dir === "up" ? "left" : "right" },
+    };
+  }
+
+  function whyPredictionText(s) {
+    const v = s.var, dir = s.dir;
+    const exp = expectedPrediction(s);
+
+    const up = dir === "up";
+    let txt = "Big idea:\n";
+    txt += "• IS shifts when planned spending changes at a given interest rate (G, T, C, I).\n";
+    txt += "• FR shifts when the Fed wants a different r at each output level (P or Z).\n";
+    txt += "• AD comes from IS–FR equilibrium: shifts in IS/FR shift AD; changes in P move along AD.\n\n";
+
+    if (v === "G" || v === "C" || v === "I") {
+      txt += `This scenario changes ${v} directly, so planned expenditure changes.\n`;
+      txt += `• IS shifts ${up ? "right" : "left"} (goods market equilibrium changes at each r).\n`;
+      txt += "• FR does not shift; the new equilibrium is at a different Y on the same FR → movement along FR.\n";
+      txt += `• Output changes at each price level, so AD shifts ${up ? "right" : "left"}.\n`;
+    } else if (v === "T") {
+      txt += "This scenario changes taxes, which changes consumption.\n";
+      txt += `• T ${up ? "up" : "down"} → C ${up ? "down" : "up"} → IS shifts ${up ? "left" : "right"}.\n`;
+      txt += "• FR does not shift; the equilibrium moves along FR as Y changes.\n";
+      txt += `• Therefore AD shifts ${up ? "left" : "right"}.\n`;
+    } else if (v === "P") {
+      txt += "This scenario is a change in the price level.\n";
+      txt += `• P ${up ? "up" : "down"} shifts FR ${up ? "up" : "down"} (Fed chooses higher/lower r at a given Y).\n`;
+      txt += "• IS does not shift; r changes move the economy along IS.\n";
+      txt += "• In (P,Y) space, changing P is a movement along AD.\n";
+    } else {
+      txt += "This scenario is a change in other policy considerations (Z).\n";
+      txt += `• Z ${up ? "up" : "down"} shifts FR ${up ? "up" : "down"} (tighter/easier stance).\n`;
+      txt += "• IS does not shift; r changes move along IS.\n";
+      txt += `• Because equilibrium Y changes at each P, AD shifts ${up ? "left" : "right"}.\n`;
+    }
+
+    txt += "\nCorrect predictions:\n";
+    txt += `• IS: ${exp.IS.action} (${exp.IS.dir})\n`;
+    txt += `• FR: ${exp.FR.action} (${exp.FR.dir})\n`;
+    txt += `• AD: ${exp.AD.action} (${exp.AD.dir})`;
+    return txt;
   }
 
   function checkPrediction() {
     if (!scenario) { setPredStatus("Click New Scenario first."); return; }
-    if (!predComplete()) { setPredStatus("Answer all prediction dropdowns first."); return; }
+    if (!predWiringOK()) {
+      setPredStatus("Prediction dropdown IDs don't match app.js. Check IS/FR/AD action+direction select IDs.");
+      return;
+    }
+    if (!predComplete()) {
+      const missing = [];
+      if (!els.isAction.value) missing.push("IS action");
+      if (!els.isDir.value) missing.push("IS direction");
+      if (!els.frAction.value) missing.push("FR action");
+      if (!els.frDir.value) missing.push("FR direction");
+      if (!els.adAction.value) missing.push("AD action");
+      if (!els.adDir.value) missing.push("AD direction");
+      setPredStatus("Answer all prediction dropdowns first. Missing: " + missing.join(", "));
+      return;
+    }
 
     const exp = expectedPrediction(scenario);
     const got = {
-      IS: { action: els.predISAction.value, dir: els.predISDir.value },
-      FR: { action: els.predFRAction.value, dir: els.predFRDir.value },
-      AD: { action: els.predADAction.value, dir: els.predADDir.value },
+      IS: { action: els.isAction.value, dir: els.isDir.value },
+      FR: { action: els.frAction.value, dir: els.frDir.value },
+      AD: { action: els.adAction.value, dir: els.adDir.value },
     };
 
     const ok =
@@ -572,50 +687,20 @@ function initPredictionUI() {
 
     predMade = true;
     predCorrect = ok;
+    revealed = false;
 
-    setPredStatus(ok ? "Correct. Now use the slider." : "Not quite. Now use the slider to see what actually changes.");
-    setStatus("Prediction checked.");
+    setPredStatus(ok
+      ? "Checked. Correct. Now only the correct slider is unlocked (and only in the correct direction)."
+      : "Checked. Not quite. Now only the correct slider is unlocked (and only in the correct direction) so you can see what actually changes."
+    );
 
-    // unlock only correct slider + direction
     unlockOnlyCorrectSlider();
+    setStatus(ok ? "Prediction correct." : "Prediction checked.");
   }
 
   function whyPrediction() {
     if (!scenario) { setPredStatus("Click New Scenario first."); return; }
-
-    const exp = expectedPrediction(scenario);
-    const v = scenario.var, dir = scenario.dir;
-
-    // detailed intuitive explanation (no algebra)
-    let txt = "Why this is the correct classification:\n\n";
-
-    if (v === "G" || v === "T" || v === "C" || v === "I") {
-      txt +=
-        "This is a demand-side shock that changes planned expenditure directly.\n" +
-        "• That changes the IS curve itself (a shift), because for any interest rate the goods market equilibrium output changes.\n" +
-        "• The Fed rule (FR) does not shift here—policy stance is the same—so the equilibrium moves along FR.\n" +
-        "• Aggregate Demand shifts because at each price level, the IS–FR equilibrium output is different.\n\n";
-      if (dir === "up") txt += "Direction: higher demand → IS shifts right → equilibrium output rises and r rises → AD shifts right.";
-      else txt += "Direction: lower demand → IS shifts left → equilibrium output falls and r falls → AD shifts left.";
-    } else if (v === "P") {
-      txt +=
-        "This is a change in the price level.\n" +
-        "• A higher price level leads the Fed to target a higher funds rate (FR shifts up); a lower price level shifts FR down.\n" +
-        "• IS does not shift—spending behavior hasn’t changed at each r—so the equilibrium moves along IS as r changes.\n" +
-        "• In (P,Y) space, changing P is a movement along the AD curve: you’re looking at a different point with a different P.\n\n";
-      if (dir === "up") txt += "Direction: P rises → FR shifts up → r rises → investment falls → output falls → move up along AD (higher P, lower Y).";
-      else txt += "Direction: P falls → FR shifts down → r falls → investment rises → output rises → move down along AD (lower P, higher Y).";
-    } else { // Z
-      txt +=
-        "This is a change in other policy considerations/stance.\n" +
-        "• The Fed becomes more hawkish or dovish independent of current output, so FR shifts.\n" +
-        "• IS does not shift—spending at each r hasn’t changed—so the equilibrium moves along IS.\n" +
-        "• Aggregate Demand shifts because at each price level, the IS–FR equilibrium output changes when policy stance changes.\n\n";
-      if (dir === "up") txt += "Direction: Z rises (more hawkish) → FR shifts up → r rises → investment falls → output falls → AD shifts left.";
-      else txt += "Direction: Z falls (more dovish) → FR shifts down → r falls → investment rises → output rises → AD shifts right.";
-    }
-
-    setPredStatus(txt);
+    setPredStatus(whyPredictionText(scenario));
   }
 
   // -----------------------
@@ -634,6 +719,8 @@ function initPredictionUI() {
 
   function resetToBaseline() {
     cur = { ...M.base };
+    applyDefaultRanges();
+
     if (els.Gslider) els.Gslider.value = String(M.base.G);
     if (els.Tslider) els.Tslider.value = String(M.base.T);
     if (els.Cslider) els.Cslider.value = String(M.base.C);
@@ -641,40 +728,81 @@ function initPredictionUI() {
     if (els.Pslider) els.Pslider.value = String(M.base.P);
     if (els.Zslider) els.Zslider.value = String(M.base.Z);
 
+    slotsState = [];
     mechOK = false;
-    revealed = false;
     predMade = false;
     predCorrect = false;
+    revealed = false;
+
     setMechStatus("");
     setPredStatus("");
     updateReadouts();
     drawAll();
   }
 
-  // -----------------------
-  // Readouts
-  // -----------------------
-  function updateReadouts() {
-    if (els.Gdisp) els.Gdisp.textContent = cur.G.toFixed(0);
-    if (els.Tdisp) els.Tdisp.textContent = cur.T.toFixed(0);
-    if (els.Cdisp) els.Cdisp.textContent = cur.C.toFixed(0);
-    if (els.Idisp) els.Idisp.textContent = cur.I.toFixed(0);
-    if (els.Pdisp) els.Pdisp.textContent = cur.P.toFixed(1);
-    if (els.Zdisp) els.Zdisp.textContent = cur.Z.toFixed(1);
+  function resetAll() {
+    scenario = null;
+    resetToBaseline();
+    if (els.scenarioDesc) els.scenarioDesc.textContent = "Click “New Scenario” to start.";
+    if (els.slots) els.slots.innerHTML = "";
+    if (els.poolGroups) els.poolGroups.innerHTML = "";
+    setStatus("Reset.");
+    lockAllSliders();
+    typeset(document.body);
+  }
+
+  function newScenario() {
+    resetToBaseline();
+
+    scenario = { ...SCEN[Math.floor(Math.random() * SCEN.length)], stamp: makeStamp() };
+    setScenarioText(scenario);
+
+    renderPoolGrouped();
+
+    const key = mechKeyFor(scenario.var, scenario.dir);
+    const seq = MECH[key];
+    renderSlots(seq.length);
+
+    // Clear prediction selects
+    if (els.isAction) els.isAction.value = "";
+    if (els.frAction) els.frAction.value = "";
+    if (els.adAction) els.adAction.value = "";
+    initPredictionUI();
+    if (els.isDir) els.isDir.value = "";
+    if (els.frDir) els.frDir.value = "";
+    if (els.adDir) els.adDir.value = "";
+    setPredStatus("");
+
+    lockAllSliders();
+    setStatus("Scenario ready. Build the mechanism and make predictions.");
+    typeset(document.body);
+    drawAll();
   }
 
   // -----------------------
-  // Reveal condition (after prediction, slider unlocked, any move in allowed dir)
+  // Slider move (only enabled slider should trigger reveal)
   // -----------------------
   function updateReveal() {
     if (revealed || !scenario || !predMade) return;
 
-    const v = scenario.var, dir = scenario.dir;
+    const v = scenario.var;
+    const dir = scenario.dir;
     const baseVal = M.base[v];
     const curVal = cur[v];
 
     if (dir === "up" && curVal > baseVal) revealed = true;
     if (dir === "down" && curVal < baseVal) revealed = true;
+
+    if (revealed) setStatus("Revealed.");
+  }
+
+  function onSlider() {
+    // Only unlocked slider should be enabled, but keep robust
+    if (!predMade) return;
+    syncCurFromSliders();
+    updateReveal();
+    updateReadouts();
+    drawAll();
   }
 
   // -----------------------
@@ -691,89 +819,49 @@ function initPredictionUI() {
     return { ctx, dpr, W, H };
   }
 
-  function drawLine(ctx, x1,y1,x2,y2, stroke, lw, dpr, dash=null) {
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = lw*dpr;
-    if (dash) ctx.setLineDash(dash.map(v=>v*dpr)); else ctx.setLineDash([]);
-    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  function dot(ctx, x,y, color, dpr) {
-    ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(x,y,5*dpr,0,Math.PI*2); ctx.fill();
-  }
-  function arrow(ctx, x1,y1,x2,y2, color, dpr) {
-    drawLine(ctx, x1,y1,x2,y2, color, 2.5, dpr);
-    const ang = Math.atan2(y2-y1, x2-x1);
-    const len = 10*dpr;
-    const a1 = ang + Math.PI*0.85;
-    const a2 = ang - Math.PI*0.85;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2.5*dpr;
-    ctx.beginPath();
-    ctx.moveTo(x2,y2);
-    ctx.lineTo(x2 + len*Math.cos(a1), y2 + len*Math.sin(a1));
-    ctx.moveTo(x2,y2);
-    ctx.lineTo(x2 + len*Math.cos(a2), y2 + len*Math.sin(a2));
-    ctx.stroke();
-  }
-  function xTick(ctx, x, yAxisBottom, label, dpr) {
-    ctx.strokeStyle = "rgba(0,0,0,0.45)";
-    ctx.lineWidth = 2*dpr;
-    ctx.beginPath(); ctx.moveTo(x, yAxisBottom); ctx.lineTo(x, yAxisBottom + 6*dpr); ctx.stroke();
-    ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = `${12*dpr}px system-ui`;
-    ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText(label, x, yAxisBottom + 8*dpr);
-  }
-  function yTick(ctx, xAxisLeft, y, label, dpr) {
-    ctx.strokeStyle = "rgba(0,0,0,0.45)";
-    ctx.lineWidth = 2*dpr;
-    ctx.beginPath(); ctx.moveTo(xAxisLeft - 6*dpr, y); ctx.lineTo(xAxisLeft, y); ctx.stroke();
-    ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = `${12*dpr}px system-ui`;
-    ctx.textAlign = "right"; ctx.textBaseline = "middle";
-    ctx.fillText(label, xAxisLeft - 10*dpr, y);
+  function drawGrid(ctx, X0, X1, Y0, Y1, dpr) {
+    ctx.strokeStyle = "rgba(0,0,0,0.10)";
+    ctx.lineWidth = 1 * dpr;
+    for (let i = 0; i <= 5; i++) {
+      const x = X0 + i * (X1 - X0) / 5;
+      ctx.beginPath(); ctx.moveTo(x, Y0); ctx.lineTo(x, Y1); ctx.stroke();
+    }
+    for (let i = 0; i <= 4; i++) {
+      const y = Y0 + i * (Y1 - Y0) / 4;
+      ctx.beginPath(); ctx.moveTo(X0, y); ctx.lineTo(X1, y); ctx.stroke();
+    }
   }
 
   function drawISFR() {
     const { ctx, dpr, W, H } = getCtx(els.isfrCanvas);
-    ctx.clearRect(0,0,W,H);
+    ctx.clearRect(0, 0, W, H);
 
     const pad = { l: 70*dpr, r: 18*dpr, t: 18*dpr, b: 60*dpr };
-    const X0 = pad.l, X1 = W-pad.r;
-    const Y0 = pad.t, Y1 = H-pad.b;
+    const X0 = pad.l, X1 = W - pad.r;
+    const Y0 = pad.t, Y1 = H - pad.b;
 
     const { Ymin, Ymax, rmin, rmax } = M.isfr;
-    const xTo = (Y) => X0 + (Y-Ymin)/(Ymax-Ymin)*(X1-X0);
-    const yTo = (r) => Y0 + (rmax-r)/(rmax-rmin)*(Y1-Y0);
+    const xTo = (Y) => X0 + (Y - Ymin) / (Ymax - Ymin) * (X1 - X0);
+    const yTo = (r) => Y0 + (rmax - r) / (rmax - rmin) * (Y1 - Y0);
 
-    // grid
-    ctx.strokeStyle = "rgba(0,0,0,0.10)";
-    ctx.lineWidth = 1*dpr;
-    for (let i=0;i<=5;i++){
-      const x = X0 + i*(X1-X0)/5;
-      ctx.beginPath(); ctx.moveTo(x,Y0); ctx.lineTo(x,Y1); ctx.stroke();
-    }
-    for (let i=0;i<=4;i++){
-      const y = Y0 + i*(Y1-Y0)/4;
-      ctx.beginPath(); ctx.moveTo(X0,y); ctx.lineTo(X1,y); ctx.stroke();
-    }
+    drawGrid(ctx, X0, X1, Y0, Y1, dpr);
 
-    // labels
+    // axis labels
     ctx.fillStyle = "rgba(0,0,0,0.70)";
     ctx.font = `${12*dpr}px system-ui`;
-    ctx.textAlign="center"; ctx.textBaseline="top";
-    ctx.fillText("Output (Y)", (X0+X1)/2, Y1 + 22*dpr);
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillText("Output (Y)", (X0 + X1) / 2, Y1 + 22*dpr);
+
     ctx.save();
-    ctx.translate(X0 - 52*dpr, (Y0+Y1)/2);
+    ctx.translate(X0 - 52*dpr, (Y0 + Y1) / 2);
     ctx.rotate(-Math.PI/2);
-    ctx.textAlign="center"; ctx.textBaseline="top";
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillText("Interest rate (r)", 0, 0);
     ctx.restore();
 
-    // baseline curves
     const YL = Ymin, YR = Ymax;
+
+    // baseline curves (grey)
     const isL0 = IS_r(YL, M.base.G, M.base.T, M.base.C, M.base.I);
     const isR0 = IS_r(YR, M.base.G, M.base.T, M.base.C, M.base.I);
     const frL0 = FR_r(YL, M.base.P, M.base.Z);
@@ -782,7 +870,7 @@ function initPredictionUI() {
     drawLine(ctx, xTo(YL), yTo(isL0), xTo(YR), yTo(isR0), "rgba(0,0,0,0.22)", 3, dpr);
     drawLine(ctx, xTo(YL), yTo(frL0), xTo(YR), yTo(frR0), "rgba(0,0,0,0.22)", 3, dpr);
 
-    // baseline equilibrium
+    // baseline equilibrium point
     const x1p = xTo(baseEq.Y), y1p = yTo(baseEq.r);
     dot(ctx, x1p, y1p, "rgba(0,0,0,0.40)", dpr);
     drawLine(ctx, x1p, y1p, x1p, yTo(rmin), "rgba(0,0,0,0.30)", 2, dpr, [4,6]);
@@ -790,7 +878,7 @@ function initPredictionUI() {
     xTick(ctx, x1p, Y1, "Y₁", dpr);
     yTick(ctx, X0, y1p, "r₁", dpr);
 
-    // current curves (only after prediction unlocks slider; but we still draw them based on current state)
+    // current curves (orange) always shown after prediction unlock begins
     const isL1 = IS_r(YL, cur.G, cur.T, cur.C, cur.I);
     const isR1 = IS_r(YR, cur.G, cur.T, cur.C, cur.I);
     const frL1 = FR_r(YL, cur.P, cur.Z);
@@ -806,7 +894,6 @@ function initPredictionUI() {
       drawLine(ctx, x2p, y2p, x2p, yTo(rmin), "rgba(0,0,0,0.30)", 2, dpr, [4,6]);
       drawLine(ctx, x2p, y2p, xTo(Ymin), y2p, "rgba(0,0,0,0.30)", 2, dpr, [4,6]);
 
-      // Skip Y₂ entirely if output doesn't change
       if (!approxEq(eq2.Y, baseEq.Y, 1e-6)) xTick(ctx, x2p, Y1, "Y₂", dpr);
       yTick(ctx, X0, y2p, "r₂", dpr);
       arrow(ctx, x1p, y1p, x2p, y2p, "rgba(230,159,0,0.95)", dpr);
@@ -815,41 +902,32 @@ function initPredictionUI() {
 
   function drawAD() {
     const { ctx, dpr, W, H } = getCtx(els.adCanvas);
-    ctx.clearRect(0,0,W,H);
+    ctx.clearRect(0, 0, W, H);
 
     const pad = { l: 70*dpr, r: 18*dpr, t: 18*dpr, b: 60*dpr };
-    const X0 = pad.l, X1 = W-pad.r;
-    const Y0 = pad.t, Y1 = H-pad.b;
+    const X0 = pad.l, X1 = W - pad.r;
+    const Y0 = pad.t, Y1 = H - pad.b;
 
     const { Ymin, Ymax, Pmin, Pmax } = M.ad;
-    const xTo = (Y) => X0 + (Y-Ymin)/(Ymax-Ymin)*(X1-X0);
-    const yTo = (P) => Y0 + (Pmax-P)/(Pmax-Pmin)*(Y1-Y0);
+    const xTo = (Y) => X0 + (Y - Ymin) / (Ymax - Ymin) * (X1 - X0);
+    const yTo = (P) => Y0 + (Pmax - P) / (Pmax - Pmin) * (Y1 - Y0);
 
-    // grid
-    ctx.strokeStyle = "rgba(0,0,0,0.10)";
-    ctx.lineWidth = 1*dpr;
-    for (let i=0;i<=5;i++){
-      const x = X0 + i*(X1-X0)/5;
-      ctx.beginPath(); ctx.moveTo(x,Y0); ctx.lineTo(x,Y1); ctx.stroke();
-    }
-    for (let i=0;i<=4;i++){
-      const y = Y0 + i*(Y1-Y0)/4;
-      ctx.beginPath(); ctx.moveTo(X0,y); ctx.lineTo(X1,y); ctx.stroke();
-    }
+    drawGrid(ctx, X0, X1, Y0, Y1, dpr);
 
-    // labels
+    // axis labels
     ctx.fillStyle = "rgba(0,0,0,0.70)";
     ctx.font = `${12*dpr}px system-ui`;
-    ctx.textAlign="center"; ctx.textBaseline="top";
-    ctx.fillText("Output (Y)", (X0+X1)/2, Y1 + 22*dpr);
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillText("Output (Y)", (X0 + X1) / 2, Y1 + 22*dpr);
+
     ctx.save();
-    ctx.translate(X0 - 52*dpr, (Y0+Y1)/2);
+    ctx.translate(X0 - 52*dpr, (Y0 + Y1) / 2);
     ctx.rotate(-Math.PI/2);
-    ctx.textAlign="center"; ctx.textBaseline="top";
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillText("Price level (P)", 0, 0);
     ctx.restore();
 
-    // baseline AD
+    // baseline AD curve (grey)
     ctx.strokeStyle = "rgba(0,0,0,0.22)";
     ctx.lineWidth = 3*dpr;
     ctx.beginPath();
@@ -868,7 +946,7 @@ function initPredictionUI() {
     xTick(ctx, x1p, Y1, "Y₁", dpr);
     yTick(ctx, X0, y1p, "P₁", dpr);
 
-    // current AD curve for (G,T,C,I,Z)
+    // current AD curve (orange) from current shifters
     const curAD = buildADCurve({ G: cur.G, T: cur.T, C: cur.C, I: cur.I, Z: cur.Z }, 60);
     ctx.strokeStyle = "rgba(230,159,0,0.95)";
     ctx.lineWidth = 3*dpr;
@@ -893,76 +971,13 @@ function initPredictionUI() {
     }
   }
 
-  function drawAll() { drawISFR(); drawAD(); }
-
-  // -----------------------
-  // Slider / prediction flow
-  // -----------------------
-  function syncCurFromSliders() {
-    if (els.Gslider) cur.G = Number(els.Gslider.value);
-    if (els.Tslider) cur.T = Number(els.Tslider.value);
-    if (els.Cslider) cur.C = Number(els.Cslider.value);
-    if (els.Islider) cur.I = Number(els.Islider.value);
-    if (els.Pslider) cur.P = Number(els.Pslider.value);
-    if (els.Zslider) cur.Z = Number(els.Zslider.value);
-  }
-
-  function onSlider() {
-    // Only the unlocked slider will actually move, but keep this robust
-    syncCurFromSliders();
-    updateReveal();
-    updateReadouts();
-    drawAll();
+  function drawAll() {
+    drawISFR();
+    drawAD();
   }
 
   // -----------------------
-  // Scenario + reset
-  // -----------------------
-  function newScenario() {
-    resetToBaseline();
-
-    scenario = { ...SCEN[Math.floor(Math.random()*SCEN.length)], stamp: makeStamp() };
-    setScenarioText(scenario);
-
-    renderPoolGrouped();
-    const key = mechKeyFor(scenario.var, scenario.dir);
-    const seq = MECH[key];
-    renderSlots(seq.length);
-
-    // predictions cleared
-    if (els.predISAction) els.predISAction.value = "";
-    if (els.predISDir) els.predISDir.value = "";
-    if (els.predFRAction) els.predFRAction.value = "";
-    if (els.predFRDir) els.predFRDir.value = "";
-    if (els.predADAction) els.predADAction.value = "";
-    if (els.predADDir) els.predADDir.value = "";
-    setPredStatus("");
-
-    initPredictionUI();
-
-    // lock sliders until prediction is checked
-    lockAllSliders();
-
-    setStatus("Scenario ready. Build the mechanism and make predictions.");
-    typeset(document.body);
-    drawAll();
-  }
-
-  function resetAll() {
-    scenario = null;
-    resetToBaseline();
-    if (els.scenarioDesc) els.scenarioDesc.textContent = "Click “New Scenario” to start.";
-    if (els.slots) els.slots.innerHTML = "";
-    if (els.poolGroups) els.poolGroups.innerHTML = "";
-    setMechStatus("");
-    setPredStatus("");
-    setStatus("Reset.");
-    typeset(document.body);
-    drawAll();
-  }
-
-  // -----------------------
-  // Event wiring
+  // Events
   // -----------------------
   els.newBtn?.addEventListener("click", newScenario);
   els.resetBtn?.addEventListener("click", resetAll);
@@ -973,7 +988,7 @@ function initPredictionUI() {
   els.checkPredBtn?.addEventListener("click", checkPrediction);
   els.whyPredBtn?.addEventListener("click", whyPrediction);
 
-  // sliders
+  // sliders (only one is enabled at a time after prediction)
   els.Gslider?.addEventListener("input", onSlider);
   els.Tslider?.addEventListener("input", onSlider);
   els.Cslider?.addEventListener("input", onSlider);
@@ -987,12 +1002,11 @@ function initPredictionUI() {
   // Init
   // -----------------------
   window.addEventListener("load", () => {
-    resetAll();
-    // Ensure baseline slider values exist even if C/I sliders absent
-    restoreSliderRanges();
+    applyDefaultRanges();
     initPredictionUI();
-    typeset(document.body);
+    resetAll();
     requestAnimationFrame(drawAll);
     setTimeout(drawAll, 120);
+    typeset(document.body);
   });
 })();
