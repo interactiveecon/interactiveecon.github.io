@@ -357,20 +357,20 @@
     ctx.stroke();
   }
 
-  function xTick(ctx, x, yAxisBottom, label, dpr, dx = 0) {
-    ctx.strokeStyle = "rgba(0,0,0,0.45)";
-    ctx.lineWidth = 2 * dpr;
-    ctx.beginPath();
-    ctx.moveTo(x, yAxisBottom);
-    ctx.lineTo(x, yAxisBottom + 6 * dpr);
-    ctx.stroke();
+  function xTick(ctx, x, yAxisBottom, label, dpr, dx = 0, dy = 0) {
+  ctx.strokeStyle = "rgba(0,0,0,0.45)";
+  ctx.lineWidth = 2 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(x, yAxisBottom);
+  ctx.lineTo(x, yAxisBottom + 6 * dpr);
+  ctx.stroke();
 
-    ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = `${12 * dpr}px system-ui`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    ctx.fillText(label, x + dx, yAxisBottom + 8 * dpr);
-  }
+  ctx.fillStyle = "rgba(0,0,0,0.65)";
+  ctx.font = `${12 * dpr}px system-ui`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillText(label, x + dx, yAxisBottom + 8 * dpr + dy);
+}
 
   function yTick(ctx, xAxisLeft, y, label, dpr, dy = 0) {
     ctx.strokeStyle = "rgba(0,0,0,0.45)";
@@ -479,7 +479,12 @@
       const ySame = approxEq(cur.Y, base.Y, 0.5);
       const rSame = approxEq(r2, r1Base, 0.02);
 
-      xTick(ctx, x2p, Y1, "Y₂", dpr, ySame ? (18 * dpr) : 0);
+      // Skip drawing Y₂ entirely if output doesn't change
+      if (!ySame) {
+        xTick(ctx, x2p, Y1, "Y₂", dpr);
+      }
+
+      // If r doesn't change, nudge r₂ slightly so it doesn't sit on top of r₁
       yTick(ctx, X0, y2p, "r₂", dpr, rSame ? (14 * dpr) : 0);
 
       if (scenario.var === "Y") {
