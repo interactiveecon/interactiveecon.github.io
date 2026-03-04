@@ -7,7 +7,7 @@
 
   <link rel="stylesheet" href="/assets/style.css">
 
-  <!-- KaTeX -->
+  <!-- KaTeX for text math (optional but nice) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
@@ -23,18 +23,26 @@
       background: rgba(246,242,234,0.35);
       padding: 12px;
     }
-    .mini{ font-size: 12px; color: var(--muted); line-height: 1.45; margin-top: 6px; }
+
     .scenarioTitle{ font-weight: 900; color: var(--ink); font-size: 16px; margin: 0; }
     .scenarioDesc{ margin-top: 8px; color: var(--ink-2); font-size: 13px; line-height: 1.5; white-space: pre-line; }
 
     .chartCard{
-      height: 360px;
+      height: 380px;
       border:1px solid rgba(0,0,0,0.08);
       border-radius: 14px;
       background: rgba(255,255,255,0.78);
       padding: 10px;
+      display:flex;
     }
-    canvas{ width:100%; height:100%; display:block; }
+    /* The canvas will stretch to fill the card */
+    #canvas{
+      width:100%;
+      height:100%;
+      display:block;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.65);
+    }
 
     .controlsGrid{
       display:grid;
@@ -164,7 +172,7 @@
           <h1>Fed Rule: Movement vs Shift</h1>
           <p class="sub">
             Fed rule: \( r = aY + bP + cZ \) with \(a,b,c>0\).
-            Learn what causes a <strong>movement along</strong> the rule vs a <strong>shift</strong>.
+            Students implement the scenario by moving sliders.
           </p>
         </div>
 
@@ -183,7 +191,7 @@
     <section class="panel">
       <div class="panel-head">
         <h2>Fed Rule in (r, Y) Space</h2>
-        <p class="panel-sub">Students implement the scenario by moving sliders.</p>
+        <p class="panel-sub">Arrow appears once your sliders match the scenario shock.</p>
       </div>
 
       <div class="grid2">
@@ -192,8 +200,6 @@
           <div class="scenarioDesc" id="scenarioDesc">Click “New Scenario” to start.</div>
 
           <div class="predCard">
-            <div class="mini"><strong>Predict first</strong></div>
-
             <div class="predGrid">
               <div class="predItem">
                 <div class="q">Movement along or shift?</div>
@@ -205,7 +211,7 @@
               </div>
 
               <div class="predItem">
-                <div class="q">What happens to \(r\)?</div>
+                <div class="q">What happens to r?</div>
                 <select id="predR">
                   <option value="">Select…</option>
                   <option value="up">Up</option>
@@ -215,7 +221,7 @@
               </div>
 
               <div class="predItem">
-                <div class="q">What happens to \(Y\)?</div>
+                <div class="q">What happens to Y?</div>
                 <select id="predY">
                   <option value="">Select…</option>
                   <option value="up">Up</option>
@@ -236,47 +242,43 @@
             <div class="feedback" id="feedback"></div>
           </div>
 
-          <div class="mini" style="margin-top:12px;"><strong>Values</strong></div>
           <div class="pillRow">
-            <span class="pill">\(a\): <span id="aVal">—</span></span>
-            <span class="pill">\(b\): <span id="bVal">—</span></span>
-            <span class="pill">\(c\): <span id="cVal">—</span></span>
+            <span class="pill">a: <span id="aVal">—</span></span>
+            <span class="pill">b: <span id="bVal">—</span></span>
+            <span class="pill">c: <span id="cVal">—</span></span>
           </div>
 
           <div class="pillRow">
-            <span class="pill">Baseline \(Y_0\): <span id="Y0">—</span></span>
-            <span class="pill">Current \(Y_1\): <span id="Y1">—</span></span>
-            <span class="pill">Baseline \(r_0\): <span id="r0">—</span></span>
-            <span class="pill">Current \(r_1\): <span id="r1">—</span></span>
+            <span class="pill">Baseline Y₀: <span id="Y0">—</span></span>
+            <span class="pill">Current Y₁: <span id="Y1">—</span></span>
+            <span class="pill">Baseline r₀: <span id="r0">—</span></span>
+            <span class="pill">Current r₁: <span id="r1">—</span></span>
           </div>
 
           <div class="controlsGrid">
             <div class="control">
-              <label for="Yslider">Output \(Y\)</label>
+              <label for="Yslider">Output Y</label>
               <div class="row"><span>Y</span><span id="Ydisp">—</span></div>
               <input id="Yslider" type="range" min="0" max="100" step="1" value="50" disabled>
-              <div class="mini">Changing \(Y\) = movement along (same line).</div>
             </div>
             <div class="control">
-              <label for="Pslider">Price level \(P\)</label>
+              <label for="Pslider">Price level P</label>
               <div class="row"><span>P</span><span id="Pdisp">—</span></div>
               <input id="Pslider" type="range" min="0" max="10" step="0.1" value="5" disabled>
-              <div class="mini">Changing \(P\) = shift (intercept changes).</div>
             </div>
             <div class="control">
-              <label for="Zslider">Other factors \(Z\)</label>
+              <label for="Zslider">Other factors Z</label>
               <div class="row"><span>Z</span><span id="Zdisp">—</span></div>
               <input id="Zslider" type="range" min="0" max="10" step="0.1" value="5" disabled>
-              <div class="mini">Changing \(Z\) = shift (intercept changes).</div>
             </div>
           </div>
         </div>
 
         <div class="box">
+          <!-- IMPORTANT: explicit attributes ensure it never renders as 0x0 -->
           <div class="chartCard">
-            <canvas id="canvas"></canvas>
+            <canvas id="canvas" width="900" height="560"></canvas>
           </div>
-          <div class="mini">Arrow appears when your sliders match the scenario shock.</div>
         </div>
       </div>
     </section>
