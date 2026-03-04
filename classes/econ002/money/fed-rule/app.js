@@ -1,55 +1,155 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // Embedded data + scenario bank
+  // Embedded data + scenario bank (news-style)
   const D = {
     params: { a: 0.08, b: 0.6, c: 0.6 },
     baseline: { Y: 50, P: 5, Z: 5 },
 
-    // axis ranges
     axes: { Ymin: 0, Ymax: 100, rmin: 0, rmax: 20 },
 
-    // scenario magnitudes (keep consistent with slider steps)
     mags: {
       Y: [10, 15, 20],
       P: [0.8, 1.2, 1.6],
       Z: [0.8, 1.2, 1.6],
     },
 
-    // Realistic scenario templates
+    // News-brief scenario templates
+    // Rule: keep each scenario “clean” (primarily Y, P, or Z).
     scenarios: [
-      // ---- Y (output/activity) => movement along ----
-      { var:"Y", dir:"up",   title:"Consumer spending surge", desc:"Retail sales jump and firms ramp up production." },
-      { var:"Y", dir:"down", title:"Demand slowdown", desc:"Households cut spending and firms reduce production." },
-      { var:"Y", dir:"up",   title:"Business investment boom", desc:"Firms expand capacity and increase production." },
-      { var:"Y", dir:"down", title:"Housing/construction slump", desc:"Homebuilding falls and related industries contract." },
-      { var:"Y", dir:"up",   title:"Export demand rises", desc:"Foreign demand for domestic goods increases production." },
-      { var:"Y", dir:"down", title:"Export demand weakens", desc:"Foreign demand softens and domestic production falls." },
+      // ---- Y (output/activity) ----
+      {
+        var:"Y", dir:"up",
+        headline:"Retail sales surprise to the upside",
+        brief:"Major retailers report strong demand and firms increase production schedules.",
+        source:"Morning Economic Brief",
+      },
+      {
+        var:"Y", dir:"down",
+        headline:"Spending cools; firms scale back production",
+        brief:"Households cut discretionary purchases and inventories begin to build up.",
+        source:"Morning Economic Brief",
+      },
+      {
+        var:"Y", dir:"up",
+        headline:"Investment strengthens as firms expand capacity",
+        brief:"Businesses boost equipment purchases and ramp up output.",
+        source:"Industry Update",
+      },
+      {
+        var:"Y", dir:"down",
+        headline:"Housing and construction activity slows sharply",
+        brief:"New projects are postponed and related industries reduce production.",
+        source:"Industry Update",
+      },
+      {
+        var:"Y", dir:"up",
+        headline:"Export demand rises",
+        brief:"Foreign demand for domestic goods increases, pushing up production.",
+        source:"Global Markets Note",
+      },
+      {
+        var:"Y", dir:"down",
+        headline:"Export demand weakens",
+        brief:"Foreign buyers pull back, reducing domestic production.",
+        source:"Global Markets Note",
+      },
 
-      // Fiscal policy (Y)
-      { var:"Y", dir:"up",   title:"Fiscal stimulus", desc:"Government increases spending and/or cuts taxes, boosting demand and output." },
-      { var:"Y", dir:"down", title:"Fiscal tightening", desc:"Government reduces spending and/or raises taxes, lowering demand and output." },
+      // Fiscal policy (still Y, but phrased as output effects)
+      {
+        var:"Y", dir:"up",
+        headline:"New fiscal package boosts demand",
+        brief:"Government spending rises and/or taxes fall, supporting higher production and output.",
+        source:"Policy Desk",
+      },
+      {
+        var:"Y", dir:"down",
+        headline:"Fiscal tightening weighs on activity",
+        brief:"Spending cuts and/or tax increases reduce demand, lowering production and output.",
+        source:"Policy Desk",
+      },
 
-      // ---- P (price level) => shift ----
-      { var:"P", dir:"up",   title:"Broad inflation pressure", desc:"Prices rise across many goods and services." },
-      { var:"P", dir:"up",   title:"Energy price spike", desc:"Oil and gasoline prices jump and push the overall price level up." },
-      { var:"P", dir:"up",   title:"Cost-of-living surge", desc:"Rents and food prices rise broadly." },
+      // ---- P (price level) ----
+      {
+        var:"P", dir:"up",
+        headline:"Inflation pressure broadens",
+        brief:"Price increases spread across many goods and services.",
+        source:"Inflation Watch",
+      },
+      {
+        var:"P", dir:"up",
+        headline:"Energy prices surge",
+        brief:"Higher energy costs pass through to the overall price level.",
+        source:"Inflation Watch",
+      },
+      {
+        var:"P", dir:"up",
+        headline:"Cost-of-living jump",
+        brief:"Rents and food prices rise broadly, pushing prices higher.",
+        source:"Inflation Watch",
+      },
 
-      // Deflation (P down)
-      { var:"P", dir:"down", title:"Deflationary pressure", desc:"Prices begin falling across many categories (deflation)." },
-      { var:"P", dir:"down", title:"Energy price collapse", desc:"Energy prices fall sharply and pull the overall price level down." },
-      { var:"P", dir:"down", title:"Widespread price cuts", desc:"Firms cut prices broadly to clear excess inventory." },
+      // Deflation (P down) — explicitly deflation, not disinflation
+      {
+        var:"P", dir:"down",
+        headline:"Deflation emerges",
+        brief:"Prices fall across a wide range of categories (overall price level declines).",
+        source:"Inflation Watch",
+      },
+      {
+        var:"P", dir:"down",
+        headline:"Widespread price cuts",
+        brief:"Firms cut prices broadly to clear excess inventories.",
+        source:"Inflation Watch",
+      },
+      {
+        var:"P", dir:"down",
+        headline:"Energy price collapse pulls prices down",
+        brief:"A sharp drop in energy prices contributes to a lower overall price level.",
+        source:"Inflation Watch",
+      },
 
-      // ---- Z (other Fed considerations) => shift ----
-      { var:"Z", dir:"up",   title:"Tariff uncertainty", desc:"Wide-ranging tariffs are announced; the Fed becomes more cautious / hawkish given uncertainty." },
-      { var:"Z", dir:"down", title:"Financial stress", desc:"Credit markets tighten and risk rises; the Fed leans toward easier policy." },
-      { var:"Z", dir:"up",   title:"Financial exuberance", desc:"Risk-taking and speculation rise; the Fed leans more hawkish for stability." },
-      { var:"Z", dir:"down", title:"Confidence shock", desc:"Uncertainty spikes and firms postpone investment; the Fed leans more dovish." },
-      { var:"Z", dir:"up",   title:"Policy regime shift (hawkish)", desc:"The Fed signals it will respond more aggressively going forward." },
-      { var:"Z", dir:"down", title:"Policy regime shift (dovish)", desc:"The Fed signals it will respond less aggressively / prioritize employment." },
+      // ---- Z (other Fed considerations / stance) ----
+      {
+        var:"Z", dir:"up",
+        headline:"Tariffs announced; uncertainty rises",
+        brief:"Wide-ranging tariffs increase uncertainty. The Fed leans more hawkish while waiting to see broader effects.",
+        source:"Policy Desk",
+      },
+      {
+        var:"Z", dir:"down",
+        headline:"Financial stress increases",
+        brief:"Credit conditions tighten and risk rises. The Fed leans more accommodative to support stability.",
+        source:"Financial Conditions",
+      },
+      {
+        var:"Z", dir:"up",
+        headline:"Risk-taking accelerates in asset markets",
+        brief:"Speculation rises. The Fed leans more hawkish to limit financial imbalances.",
+        source:"Financial Conditions",
+      },
+      {
+        var:"Z", dir:"down",
+        headline:"Uncertainty shock hits confidence",
+        brief:"Firms delay projects amid uncertainty. The Fed leans more dovish as a precaution.",
+        source:"Financial Conditions",
+      },
+      {
+        var:"Z", dir:"up",
+        headline:"Fed signals a more aggressive stance going forward",
+        brief:"Officials emphasize stronger responses in future policy decisions.",
+        source:"Central Bank Watch",
+      },
+      {
+        var:"Z", dir:"down",
+        headline:"Fed signals a more patient stance",
+        brief:"Officials emphasize flexibility and caution in future policy decisions.",
+        source:"Central Bank Watch",
+      },
     ],
   };
 
+  // KaTeX render
   function typeset(el){
     if (!el) return;
     if (!window.renderMathInElement){
@@ -106,7 +206,7 @@
   const base = { ...D.baseline };
 
   let cur = { ...base };
-  let scenario = null; // {var,dir,mag,title,desc,target}
+  let scenario = null; // {var,dir,mag,headline,brief,source,target,stamp}
 
   function rOf(Y,P,Z){ return a*Y + b*P + c*Z; }
   function clamp(x,lo,hi){ return Math.max(lo, Math.min(hi, x)); }
@@ -124,16 +224,14 @@
     typeset(els.feedback);
   }
 
-  // Canvas scaling (always renders)
+  // Canvas scaling
   function getCtx() {
     const ctx = els.canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
     const Wcss = els.canvas.clientWidth || 900;
     const Hcss = els.canvas.clientHeight || 560;
-
     const W = Math.floor(Wcss * dpr);
     const H = Math.floor(Hcss * dpr);
-
     if (els.canvas.width !== W || els.canvas.height !== H) {
       els.canvas.width = W;
       els.canvas.height = H;
@@ -283,6 +381,17 @@
     return arr[Math.floor(Math.random()*arr.length)];
   }
 
+  function makeStamp(){
+    const days = ["Mon","Tue","Wed","Thu","Fri"];
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const d = days[Math.floor(Math.random()*days.length)];
+    const m = months[Math.floor(Math.random()*months.length)];
+    const day = 1 + Math.floor(Math.random()*28);
+    const hr = 7 + Math.floor(Math.random()*6); // 7–12
+    const min = Math.random() < 0.5 ? "00" : "30";
+    return `${d} ${m} ${day}, ${hr}:${min} AM`;
+  }
+
   function newScenario(){
     // reset to baseline
     cur = { ...base };
@@ -298,13 +407,14 @@
     if (s.var==="P") target.P = Math.max(0, base.P + (s.dir==="up"?mag:-mag));
     if (s.var==="Z") target.Z = Math.max(0, base.Z + (s.dir==="up"?mag:-mag));
 
-    scenario = { ...s, mag, target };
+    scenario = { ...s, mag, target, stamp: makeStamp() };
 
+    // No “Shock:” line (harder / more realistic)
     els.scenarioDesc.textContent =
-      `${scenario.title}\n${scenario.desc}\n\n` +
-      `Shock: ${scenario.var} ${scenario.dir==="up" ? "increases" : "decreases"}.\n` +
-      `Use the sliders to implement the shock.\n` +
-      `Hint: Y changes = movement along; P or Z changes = shift.`;
+      `${scenario.stamp} • ${scenario.source}\n` +
+      `${scenario.headline}\n` +
+      `${scenario.brief}\n\n` +
+      `Your task: use the sliders to match what changed. (The arrow appears when you match it.)`;
 
     els.predType.value = "";
     els.predR.value = "";
@@ -335,10 +445,10 @@
 
     const ok = (a1===exp.type && a2===exp.Rchg && a3===exp.Ychg);
     if (ok){
-      showFeedback(`<span class="tagOK">Correct</span> Now implement the shock with sliders. The arrow appears when you match it.`);
+      showFeedback(`<span class="tagOK">Correct</span> Now implement the change with sliders. The arrow appears when you match it.`);
       setStatus("Correct.");
     } else {
-      showFeedback(`<span class="tagBad">Not quite</span> Remember: Y changes = movement along; P or Z changes = shift.`);
+      showFeedback(`<span class="tagBad">Not quite</span> Reminder: Y changes = movement along; P or Z changes = shift.`);
       setStatus("Try again.");
     }
   }
@@ -349,8 +459,8 @@
       return;
     }
     const txt = (scenario.var === "Y")
-      ? `This scenario changes $Y$ (output). Changing $Y$ moves you to a different point on the same line (movement along). Since $a>0$, higher $Y$ implies higher $r$.`
-      : `This scenario changes $${scenario.var}$$, which changes the intercept term $bP+cZ$. That shifts the whole rule up/down (same slope $a$).`;
+      ? `This story is about output/activity changing, so it maps to $Y$. Changing $Y$ moves you to a different point on the same line (movement along).`
+      : `This story is not primarily about output changing. It maps to $${scenario.var}$$, which changes the intercept term $bP+cZ$, shifting the entire line up/down.`;
     showFeedback(`<span class="tagOK">Why</span> ${txt}`);
   }
 
@@ -385,8 +495,8 @@
     draw();
 
     if (matchesScenario()){
-      showFeedback(`<span class="tagOK">Nice</span> You implemented the scenario. The arrow shows the change.`);
-      setStatus("Scenario implemented.");
+      showFeedback(`<span class="tagOK">Nice</span> You matched the scenario. The arrow shows movement vs shift.`);
+      setStatus("Scenario matched.");
     }
   }
 
