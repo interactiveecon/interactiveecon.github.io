@@ -225,6 +225,86 @@
     adCanvas: $("adCanvas"),
   };
 
+  // ---------- Prediction dropdown population (robust to ID names) ----------
+function pickEl(...ids) {
+  for (const id of ids) {
+    const el = document.getElementById(id);
+    if (el) return el;
+  }
+  return null;
+}
+
+const predUI = {
+  // supports either naming scheme
+  isAction: pickEl("predISAction", "isAction"),
+  isDir:    pickEl("predISDir", "isDir"),
+  frAction: pickEl("predFRAction", "frAction"),
+  frDir:    pickEl("predFRDir", "frDir"),
+  adAction: pickEl("predADAction", "adAction"),
+  adDir:    pickEl("predADDir", "adDir"),
+};
+
+function fillOptions(selectEl, options) {
+  if (!selectEl) return;
+  selectEl.innerHTML = "";
+  const first = document.createElement("option");
+  first.value = "";
+  first.textContent = "Direction…";
+  selectEl.appendChild(first);
+
+  for (const [val, label] of options) {
+    const o = document.createElement("option");
+    o.value = val;
+    o.textContent = label;
+    selectEl.appendChild(o);
+  }
+}
+
+function updateDirOptions(curve) {
+  // curve: "IS" | "FR" | "AD"
+  if (curve === "IS") {
+    const action = predUI.isAction?.value || "";
+    if (!action) return fillOptions(predUI.isDir, []);
+    if (action === "shift") return fillOptions(predUI.isDir, [["right","Right"], ["left","Left"]]);
+    return fillOptions(predUI.isDir, [["up","Up along"], ["down","Down along"]]);
+  }
+
+  if (curve === "FR") {
+    const action = predUI.frAction?.value || "";
+    if (!action) return fillOptions(predUI.frDir, []);
+    // For FR we keep the same labels; "shift" vs "move along" is captured by the Action menu.
+    return fillOptions(predUI.frDir, [["up","Up"], ["down","Down"]]);
+  }
+
+  if (curve === "AD") {
+    const action = predUI.adAction?.value || "";
+    if (!action) return fillOptions(predUI.adDir, []);
+    if (action === "shift") return fillOptions(predUI.adDir, [["right","Right"], ["left","Left"]]);
+    return fillOptions(predUI.adDir, [["up","Up along"], ["down","Down along"]]);
+  }
+}
+
+function initPredictionUI() {
+  // populate empty direction menus initially
+  updateDirOptions("IS");
+  updateDirOptions("FR");
+  updateDirOptions("AD");
+
+  // attach listeners once
+  if (predUI.isAction && !predUI.isAction.dataset.bound) {
+    predUI.isAction.addEventListener("change", () => updateDirOptions("IS"));
+    predUI.isAction.dataset.bound = "1";
+  }
+  if (predUI.frAction && !predUI.frAction.dataset.bound) {
+    predUI.frAction.addEventListener("change", () => updateDirOptions("FR"));
+    predUI.frAction.dataset.bound = "1";
+  }
+  if (predUI.adAction && !predUI.adAction.dataset.bound) {
+    predUI.adAction.addEventListener("change", () => updateDirOptions("AD"));
+    predUI.adAction.dataset.bound = "1";
+  }
+}
+
   if (!els.isfrCanvas || !els.adCanvas) return;
 
   // -----------------------
@@ -858,6 +938,8 @@
     if (els.predADDir) els.predADDir.value = "";
     setPredStatus("");
 
+    initPredictionUI();
+
     // lock sliders until prediction is checked
     lockAllSliders();
 
@@ -908,6 +990,7 @@
     resetAll();
     // Ensure baseline slider values exist even if C/I sliders absent
     restoreSliderRanges();
+    initPredictionUI();
     typeset(document.body);
     requestAnimationFrame(drawAll);
     setTimeout(drawAll, 120);
