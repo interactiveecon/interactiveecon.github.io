@@ -37,12 +37,12 @@
     FR: { aFR: 2, bFR: 0.04, hP: 1.8, hZ: 1.8 },
 
     ranges: {
-      G: { min: 80, max: 120, step: 1 },
-      T: { min: 80, max: 120, step: 1 },
-      C: { min: 80, max: 120, step: 1 },
-      I: { min: 80, max: 120, step: 1 },
-      P: { min: 3, max: 7, step: 0.1 },
-      Z: { min: 3, max: 7, step: 0.1 },
+      G: { min: 40, max: 160, step: 1 },
+      T: { min: 40, max: 160, step: 1 },
+      C: { min: 40, max: 160, step: 1 },
+      I: { min: 40, max: 160, step: 1 },
+      P: { min: 1, max: 9, step: 0.1 },
+      Z: { min: 1, max: 9, step: 0.1 },
     },
   };
 
@@ -883,7 +883,7 @@
     drawLine(ctx, x2p, y2p, x2p, yTo(Pmin), "rgba(0,0,0,0.30)", 2, dpr, [4, 6]);
     drawLine(ctx, x2p, y2p, xTo(Ymin), y2p, "rgba(0,0,0,0.30)", 2, dpr, [4, 6]);
     if (!approxEq(eq2.Y, baseEq.Y, 1e-6)) xTick(ctx, x2p, Y1, "Y₂", dpr);
-    yTick(ctx, X0, y2p, "P₂", dpr);
+    if (!approxEq(cur.P, M.base.P, 1e-6)) yTick(ctx, X0, y2p, "P₂", dpr);
     arrow(ctx, x1p, y1p, x2p, y2p, "rgba(230,159,0,0.95)", dpr);
   }
 
