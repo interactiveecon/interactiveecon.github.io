@@ -1081,6 +1081,17 @@
     typeset(document.body);
   }
 
+  function makeStamp() {
+  const days = ["Mon","Tue","Wed","Thu","Fri"];
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const d = days[Math.floor(Math.random() * days.length)];
+  const m = months[Math.floor(Math.random() * months.length)];
+  const day = 1 + Math.floor(Math.random() * 28);
+  const hr = 7 + Math.floor(Math.random() * 6);
+  const min = Math.random() < 0.5 ? "00" : "30";
+  return `${d} ${m} ${day}, ${hr}:${min} AM`;
+}
+
   function newScenario() {
     resetToBaseline();
 
