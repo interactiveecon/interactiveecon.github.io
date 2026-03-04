@@ -22,27 +22,27 @@
   }
 
   // -----------------------
-  // MODEL
+  // MODEL (wider slider ranges + slightly stronger sensitivities)
   // -----------------------
   const M = {
     isfr: { Ymin: 0, Ymax: 200, rmin: 0, rmax: 20 },
-    ad: { Ymin: 0, Ymax: 200, Pmin: 3, Pmax: 7 },
+    ad: { Ymin: 0, Ymax: 200, Pmin: 2.5, Pmax: 7.5 },
 
     base: { G: 100, T: 100, C: 100, I: 100, P: 5, Z: 5 },
 
-    // IS: r = aIS - bIS*Y + gG*(G-G0) - gT*(T-T0) + gC*(C-C0) + gI*(I-I0)
-    IS: { aIS: 16, bIS: 0.06, gG: 0.05, gT: 0.05, gC: 0.05, gI: 0.05 },
+    // IS: r = aIS - bIS*Y + shifters
+    IS: { aIS: 16, bIS: 0.06, gG: 0.08, gT: 0.08, gC: 0.08, gI: 0.08 },
 
     // FR: r = aFR + bFR*Y + hP*(P-P0) + hZ*(Z-Z0)
-    FR: { aFR: 2, bFR: 0.04, hP: 1.8, hZ: 1.8 },
+    FR: { aFR: 2, bFR: 0.04, hP: 2.4, hZ: 2.4 },
 
     ranges: {
-      G: { min: 40, max: 160, step: 1 },
-      T: { min: 40, max: 160, step: 1 },
-      C: { min: 40, max: 160, step: 1 },
-      I: { min: 40, max: 160, step: 1 },
-      P: { min: 1, max: 9, step: 0.1 },
-      Z: { min: 1, max: 9, step: 0.1 },
+      G: { min: 60, max: 140, step: 1 },
+      T: { min: 60, max: 140, step: 1 },
+      C: { min: 60, max: 140, step: 1 },
+      I: { min: 60, max: 140, step: 1 },
+      P: { min: 2.5, max: 7.5, step: 0.1 },
+      Z: { min: 2.5, max: 7.5, step: 0.1 },
     },
   };
 
@@ -61,6 +61,7 @@
     return aFR + bFR * Y + hP * (P - P0) + hZ * (Z - Z0);
   }
 
+  // Clamped equilibrium for drawing point/IS-FR canvas (so points stay on chart)
   function eqm(G, T, C, I, P, Z) {
     const A0 = IS_r(0, G, T, C, I);
     const C0 = FR_r(0, P, Z);
@@ -72,24 +73,27 @@
     return { Y, r };
   }
 
+  // Unclamped equilibrium for AD curve generation (prevents vertical “sticking”)
   function eqmUnclamped(G, T, C, I, P, Z) {
-  const A0 = IS_r(0, G, T, C, I);
-  const C0 = FR_r(0, P, Z);
-  const denom = (M.IS.bIS + M.FR.bFR);
-  const Y = (A0 - C0) / denom;     // <-- no clamp
-  const r = FR_r(Y, P, Z);
-  return { Y, r };
-}
+    const A0 = IS_r(0, G, T, C, I);
+    const C0 = FR_r(0, P, Z);
+    const denom = M.IS.bIS + M.FR.bFR;
 
-  function buildADCurve({ G, T, C, I, Z }, n = 60) {
-  const pts = [];
-  for (let i = 0; i <= n; i++) {
-    const P = M.ad.Pmin + (M.ad.Pmax - M.ad.Pmin) * (i / n);
-    const { Y } = eqmUnclamped(G, T, C, I, P, Z);
-    pts.push({ Y, P });
+    const Y = (A0 - C0) / denom; // no clamp
+    const r = FR_r(Y, P, Z);
+    return { Y, r };
   }
-  return pts;
-}
+
+  // Use unclamped Y for AD curve; we will clip at draw time
+  function buildADCurve({ G, T, C, I, Z }, n = 70) {
+    const pts = [];
+    for (let i = 0; i <= n; i++) {
+      const P = M.ad.Pmin + (M.ad.Pmax - M.ad.Pmin) * (i / n);
+      const { Y } = eqmUnclamped(G, T, C, I, P, Z);
+      pts.push({ Y, P });
+    }
+    return pts;
+  }
 
   // -----------------------
   // TOKENS + MECHANISMS
@@ -120,32 +124,31 @@
   };
 
   const MECH = {
-    // Government purchases
+    // Government purchases:
     G_up: [TOK.Gup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
     G_dn: [TOK.Gdn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
 
-    // Taxes
+    // Taxes:
     T_dn: [TOK.Tdn, TOK.Cup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
     T_up: [TOK.Tup, TOK.Cdn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
 
-    // Price Level
+    // Price Level:
     P_up: [TOK.Pup, TOK.FFup, TOK.rup, TOK.Idn, TOK.PEdn, TOK.UInvUp, TOK.Ydn],
     P_dn: [TOK.Pdn, TOK.FFdn, TOK.rdn, TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup],
 
-    // Z
+    // Z:
     Z_up: [TOK.Zup, TOK.FFup, TOK.rup, TOK.Idn, TOK.PEdn, TOK.UInvUp, TOK.Ydn],
     Z_dn: [TOK.Zdn, TOK.FFdn, TOK.rdn, TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup],
 
-    // Consumption shocks
+    // Consumption shocks:
     C_up: [TOK.Cup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
     C_dn: [TOK.Cdn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
 
-    // Investment shocks
+    // Investment shocks:
     I_dn: [TOK.Idn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
     I_up: [TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
   };
 
-  // Full labels for headings
   const PILL_GROUPS = [
     { name: "Government Purchases", pills: [TOK.Gup, TOK.Gdn] },
     { name: "Taxes", pills: [TOK.Tup, TOK.Tdn] },
@@ -163,106 +166,153 @@
   const mechKeyFor = (varName, dir) => `${varName}_${dir === "up" ? "up" : "dn"}`;
 
   // -----------------------
-  // Scenarios (headline format)
+  // Expanded scenarios (~60), with clearer G “government buys goods/services”
   // -----------------------
-const SCEN = [
-  // -------------------------
-  // Government Purchases (G)
-  // -------------------------
-// Government Purchases (G) — explicitly “government buys goods/services”
-{ var:"G", dir:"up", source:"Congress", headline:"Congress authorizes major federal procurement surge", brief:"Federal agencies increase purchases of goods and contracted services." },
-{ var:"G", dir:"up", source:"White House", headline:"Federal infrastructure program launches new contracts", brief:"The federal government increases purchases for construction and equipment." },
-{ var:"G", dir:"up", source:"Defense Dept.", headline:"Pentagon expands equipment orders", brief:"The federal government buys more goods and services this quarter." },
-{ var:"G", dir:"up", source:"FEMA", headline:"Federal disaster response ramps up purchases", brief:"Federal agencies increase purchases for logistics and reconstruction." },
-{ var:"G", dir:"up", source:"State & Local", headline:"State governments expand public works spending", brief:"State and local governments increase purchases of materials and services." },
+  const SCEN = [
+    // G up
+    { var:"G", dir:"up", source:"Congress", headline:"Emergency infrastructure package approved", brief:"Federal agencies increase purchases of construction and equipment." },
+    { var:"G", dir:"up", source:"Defense Dept.", headline:"Defense procurement expanded", brief:"The government buys more goods and services this quarter." },
+    { var:"G", dir:"up", source:"White House", headline:"Federal contract awards accelerate", brief:"New government contracts raise purchases of goods and services." },
+    { var:"G", dir:"up", source:"FEMA", headline:"Disaster response ramps up purchases", brief:"Federal agencies increase purchases for logistics and reconstruction." },
+    { var:"G", dir:"up", source:"Public Sector", headline:"Public health program expands staffing and supplies", brief:"Government purchases of services increase." },
+    { var:"G", dir:"up", source:"State & Local", headline:"State and local governments accelerate public works", brief:"Public purchases rise as projects move forward." },
+    { var:"G", dir:"up", source:"Congress", headline:"Large federal procurement initiative announced", brief:"Federal purchases of goods and contracted services rise." },
+    { var:"G", dir:"up", source:"Policy Desk", headline:"Infrastructure projects move from planning to spending", brief:"Government purchases increase over the next quarter." },
+    { var:"G", dir:"up", source:"Public Sector", headline:"Education agencies expand service contracts", brief:"Government purchases of services increase." },
+    { var:"G", dir:"up", source:"Policy Desk", headline:"Government accelerates equipment replacement cycle", brief:"Public purchases of equipment rise." },
 
-{ var:"G", dir:"down", source:"Congress", headline:"Federal agencies ordered to reduce procurement", brief:"Government purchases of goods and services are cut this quarter." },
-{ var:"G", dir:"down", source:"OMB", headline:"Budget directive freezes new federal contracts", brief:"Federal purchases fall as agencies delay procurement." },
-{ var:"G", dir:"down", source:"Congress", headline:"Spending cuts reduce government purchases", brief:"Government buys fewer goods and services over the next quarter." },
-{ var:"G", dir:"down", source:"State & Local", headline:"State governments pause public works contracts", brief:"State and local purchases of services and materials decline." },
-{ var:"G", dir:"down", source:"Policy Desk", headline:"Public project pipeline scaled back", brief:"Government reduces purchases tied to infrastructure projects." },
+    // G down
+    { var:"G", dir:"down", source:"OMB", headline:"Budget directive freezes new federal contracts", brief:"Federal purchases fall as agencies delay procurement." },
+    { var:"G", dir:"down", source:"Congress", headline:"Spending caps trigger broad cuts", brief:"Government reduces purchases to meet budget targets." },
+    { var:"G", dir:"down", source:"Policy Desk", headline:"Continuing resolution delays agency spending", brief:"Procurement is postponed and purchases fall." },
+    { var:"G", dir:"down", source:"Public Sector", headline:"Infrastructure project pipeline paused", brief:"Government slows purchases of materials and services." },
+    { var:"G", dir:"down", source:"Congress", headline:"Across-agency procurement cuts announced", brief:"Government buys fewer goods and services this quarter." },
+    { var:"G", dir:"down", source:"State & Local", headline:"State governments pause public works contracts", brief:"State and local purchases of services and materials decline." },
+    { var:"G", dir:"down", source:"Policy Desk", headline:"Project cancellations reduce public procurement", brief:"Government purchases decline over the next quarter." },
+    { var:"G", dir:"down", source:"Public Sector", headline:"Agency hiring and service contracts scaled back", brief:"Government purchases of services fall." },
+    { var:"G", dir:"down", source:"Policy Desk", headline:"Reconstruction spending winds down", brief:"Government purchases decrease as emergency programs end." },
+    { var:"G", dir:"down", source:"Policy Desk", headline:"Procurement timelines stretched out", brief:"Government purchases are reduced and postponed." },
 
-  // -------------------------
-  // Taxes (T)
-  // -------------------------
-  { var:"T", dir:"down", source:"Policy Desk", headline:"Tax cut takes effect; withholding falls", brief:"Households keep more after-tax income." },
-  { var:"T", dir:"down", source:"Policy Desk", headline:"Payroll tax holiday announced", brief:"Take-home pay rises for most workers." },
-  { var:"T", dir:"down", source:"Policy Desk", headline:"Child tax credit expansion begins", brief:"Net taxes paid by households decline." },
-  { var:"T", dir:"down", source:"Policy Desk", headline:"Standard deduction for taxes raised", brief:"Typical households’ tax liability falls." },
-  { var:"T", dir:"down", source:"Policy Desk", headline:"Temporary rebate checks issued", brief:"Effective net taxes fall this period." },
-  { var:"T", dir:"up", source:"Policy Desk", headline:"Tax surcharge implemented to reduce deficits", brief:"Household tax burden rises." },
-  { var:"T", dir:"up", source:"Policy Desk", headline:"Payroll tax rate increases", brief:"After-tax income falls for most workers." },
-  { var:"T", dir:"up", source:"Policy Desk", headline:"Rebates expire; withholding rises", brief:"Net taxes increase this month." },
-  { var:"T", dir:"up", source:"Policy Desk", headline:"State tax hikes enacted", brief:"Household tax payments rise." },
-  { var:"T", dir:"up", source:"Policy Desk", headline:"Broad tax increase scheduled", brief:"Tax payments increase over the next quarter." },
+    // T down
+    { var:"T", dir:"down", source:"Policy Desk", headline:"Tax cut takes effect; withholding falls", brief:"Households keep more after-tax income." },
+    { var:"T", dir:"down", source:"Policy Desk", headline:"Payroll tax holiday announced", brief:"Take-home pay rises for most workers." },
+    { var:"T", dir:"down", source:"Policy Desk", headline:"Child tax credit expansion begins", brief:"Net taxes paid by households decline." },
+    { var:"T", dir:"down", source:"Policy Desk", headline:"Standard deduction raised", brief:"Typical households’ tax liability falls." },
+    { var:"T", dir:"down", source:"Policy Desk", headline:"Temporary rebate checks issued", brief:"Effective net taxes fall this period." },
+    { var:"T", dir:"down", source:"Policy Desk", headline:"Withholding tables updated", brief:"Paychecks rise as taxes withheld fall." },
+    { var:"T", dir:"down", source:"Policy Desk", headline:"Tax relief extended", brief:"Households face lower tax payments this quarter." },
+    { var:"T", dir:"down", source:"Policy Desk", headline:"Temporary tax credit enacted", brief:"Net tax burden falls." },
+    { var:"T", dir:"down", source:"Policy Desk", headline:"Lower payroll deductions begin", brief:"Households keep more income after taxes." },
+    { var:"T", dir:"down", source:"Policy Desk", headline:"Tax refunds increase", brief:"Net taxes fall this period." },
 
-  // -------------------------
-  // Consumption (C)
-  // -------------------------
-  { var:"C", dir:"up", source:"Household Survey", headline:"Consumer confidence surges; spending rebounds", brief:"Households increase purchases broadly." },
-  { var:"C", dir:"up", source:"Markets", headline:"Household wealth rises after market rally", brief:"Spending increases as households feel better off." },
-  { var:"C", dir:"up", source:"Retail Pulse", headline:"Pent-up demand boosts services and retail", brief:"Consumers spend more than usual this month." },
-  { var:"C", dir:"up", source:"Household Survey", headline:"Uncertainty eases; households loosen budgets", brief:"Consumption rises as precautionary saving falls." },
-  { var:"C", dir:"up", source:"Retail Pulse", headline:"Holiday sales exceed expectations", brief:"Consumption jumps relative to trend." },
-  { var:"C", dir:"down", source:"Household Survey", headline:"Consumer sentiment drops; discretionary spending cut", brief:"Households reduce purchases." },
-  { var:"C", dir:"down", source:"Household Survey", headline:"Precautionary saving rises", brief:"Households become cautious and consumption falls." },
-  { var:"C", dir:"down", source:"Credit Conditions", headline:"Delinquencies rise; spending tightens", brief:"Households pull back on consumption." },
-  { var:"C", dir:"down", source:"Household Survey", headline:"Budget squeeze leads to cutbacks", brief:"Households reduce discretionary spending." },
-  { var:"C", dir:"down", source:"Markets", headline:"Negative wealth shock reduces spending", brief:"Households cut consumption as wealth falls." },
+    // T up
+    { var:"T", dir:"up", source:"Policy Desk", headline:"Tax surcharge implemented to reduce deficits", brief:"Household tax burden rises." },
+    { var:"T", dir:"up", source:"Policy Desk", headline:"Payroll tax rate increases", brief:"After-tax income falls for most workers." },
+    { var:"T", dir:"up", source:"Policy Desk", headline:"Rebates expire; withholding rises", brief:"Net taxes increase this month." },
+    { var:"T", dir:"up", source:"Policy Desk", headline:"State tax hikes enacted", brief:"Household tax payments rise." },
+    { var:"T", dir:"up", source:"Policy Desk", headline:"Broad tax increase scheduled", brief:"Tax payments increase over the next quarter." },
+    { var:"T", dir:"up", source:"Policy Desk", headline:"Temporary credits sunset", brief:"Net taxes rise as credits expire." },
+    { var:"T", dir:"up", source:"Policy Desk", headline:"Withholding tables updated upward", brief:"Paychecks fall as taxes withheld rise." },
+    { var:"T", dir:"up", source:"Policy Desk", headline:"Tax compliance push raises payments", brief:"Households pay more in taxes this quarter." },
+    { var:"T", dir:"up", source:"Policy Desk", headline:"New surtax begins", brief:"Net tax burden rises." },
+    { var:"T", dir:"up", source:"Policy Desk", headline:"Refunds shrink", brief:"Net taxes paid rise this period." },
 
-  // -------------------------
-  // Investment (I)
-  // -------------------------
-  { var:"I", dir:"up", source:"Business Pulse", headline:"Firms expand capacity; equipment orders jump", brief:"Capital spending increases." },
-  { var:"I", dir:"up", source:"Business Pulse", headline:"Tech upgrade cycle accelerates", brief:"Firms raise investment in new equipment and software." },
-  { var:"I", dir:"up", source:"Business Pulse", headline:"Business optimism improves; capex plans increase", brief:"Firms increase investment spending." },
-  { var:"I", dir:"up", source:"Construction Watch", headline:"Housing starts rise; residential building expands", brief:"Residential investment increases." },
-  { var:"I", dir:"up", source:"Business Pulse", headline:"Project pipeline expands", brief:"Firms approve more capital projects." },
-  { var:"I", dir:"down", source:"Business Pulse", headline:"Firms postpone projects amid uncertainty", brief:"Capital spending is delayed and investment falls." },
-  { var:"I", dir:"down", source:"Credit Conditions", headline:"Credit conditions tighten; capex plans delayed", brief:"Investment declines as financing becomes harder." },
-  { var:"I", dir:"down", source:"Construction Watch", headline:"Commercial construction slows", brief:"Investment falls as projects are canceled or postponed." },
-  { var:"I", dir:"down", source:"Business Pulse", headline:"Earnings slump; investment budgets cut", brief:"Firms reduce investment spending." },
-  { var:"I", dir:"down", source:"Business Pulse", headline:"Demand outlook weakens; expansion plans scrapped", brief:"Firms cut back on investment." },
+    // C up
+    { var:"C", dir:"up", source:"Household Survey", headline:"Consumer confidence surges; spending rebounds", brief:"Households increase purchases broadly." },
+    { var:"C", dir:"up", source:"Markets", headline:"Household wealth rises after market rally", brief:"Spending increases as households feel better off." },
+    { var:"C", dir:"up", source:"Retail Pulse", headline:"Pent-up demand boosts services and retail", brief:"Consumers spend more than usual this month." },
+    { var:"C", dir:"up", source:"Household Survey", headline:"Uncertainty eases; households loosen budgets", brief:"Consumption rises as precautionary saving falls." },
+    { var:"C", dir:"up", source:"Retail Pulse", headline:"Holiday sales exceed expectations", brief:"Consumption jumps relative to trend." },
+    { var:"C", dir:"up", source:"Household Survey", headline:"Households report higher planned spending", brief:"Consumption rises this quarter." },
+    { var:"C", dir:"up", source:"Retail Pulse", headline:"Services spending accelerates", brief:"Households increase consumption of services." },
+    { var:"C", dir:"up", source:"Household Survey", headline:"Improved job prospects boost spending intentions", brief:"Consumption increases." },
+    { var:"C", dir:"up", source:"Retail Pulse", headline:"Auto and durable goods purchases surge", brief:"Consumption rises." },
+    { var:"C", dir:"up", source:"Household Survey", headline:"Lower uncertainty reduces saving", brief:"Households spend more." },
 
-  // -------------------------
-  // Price Level / Inflation environment (P)
-  // -------------------------
-  { var:"P", dir:"up", source:"Inflation Watch", headline:"Inflation pressures broaden across sectors", brief:"Prices rise more rapidly across many categories." },
-  { var:"P", dir:"up", source:"Inflation Watch", headline:"Supply disruptions push prices higher", brief:"Broader inflation pressure increases." },
-  { var:"P", dir:"up", source:"Inflation Watch", headline:"Wage growth and pricing power lift inflation", brief:"Inflation pressure strengthens." },
-  { var:"P", dir:"up", source:"Inflation Watch", headline:"Commodity prices surge; inflation rises", brief:"Price pressure increases economy-wide." },
-  { var:"P", dir:"up", source:"Inflation Watch", headline:"Inflation expectations drift up", brief:"Pricing pressure becomes more persistent." },
-  { var:"P", dir:"down", source:"Inflation Watch", headline:"Broad price declines emerge; deflation appears", brief:"Prices fall across many categories (deflation)." },
-  { var:"P", dir:"down", source:"Inflation Watch", headline:"Demand weakness triggers widespread markdowns", brief:"Businesses cut prices broadly (deflationary pressure)." },
-  { var:"P", dir:"down", source:"Inflation Watch", headline:"Global goods glut drives prices down", brief:"Broad deflationary pressure lowers the price level." },
-  { var:"P", dir:"down", source:"Inflation Watch", headline:"Competitive price wars spread", brief:"Firms cut prices broadly; the price level falls." },
-  { var:"P", dir:"down", source:"Inflation Watch", headline:"Economy-wide discounting intensifies", brief:"Prices fall across many goods and services." },
+    // C down
+    { var:"C", dir:"down", source:"Household Survey", headline:"Consumer sentiment drops; discretionary spending cut", brief:"Households reduce purchases." },
+    { var:"C", dir:"down", source:"Household Survey", headline:"Precautionary saving rises", brief:"Households become cautious and consumption falls." },
+    { var:"C", dir:"down", source:"Credit Conditions", headline:"Delinquencies rise; spending tightens", brief:"Households pull back on consumption." },
+    { var:"C", dir:"down", source:"Household Survey", headline:"Budget squeeze leads to cutbacks", brief:"Households reduce discretionary spending." },
+    { var:"C", dir:"down", source:"Markets", headline:"Negative wealth shock reduces spending", brief:"Households cut consumption as wealth falls." },
+    { var:"C", dir:"down", source:"Retail Pulse", headline:"Retail sales weaken broadly", brief:"Consumption declines this month." },
+    { var:"C", dir:"down", source:"Household Survey", headline:"Households delay major purchases", brief:"Consumption falls as spending is postponed." },
+    { var:"C", dir:"down", source:"Retail Pulse", headline:"Services demand softens", brief:"Households reduce consumption of services." },
+    { var:"C", dir:"down", source:"Household Survey", headline:"Higher uncertainty boosts saving", brief:"Consumption falls." },
+    { var:"C", dir:"down", source:"Household Survey", headline:"Spending intentions decline", brief:"Consumption decreases this quarter." },
 
-  // -------------------------
-  // Other Fed considerations / stance (Z)
-  // -------------------------
-  { var:"Z", dir:"up", source:"Policy Desk", headline:"Major tariff package announced; uncertainty rises", brief:"Policy uncertainty increases; the Fed becomes more cautious." },
-  { var:"Z", dir:"up", source:"Financial Stability", headline:"Financial stability concerns rise", brief:"The Fed leans more cautious about risks." },
-  { var:"Z", dir:"up", source:"Policy Desk", headline:"Geopolitical risk rises", brief:"Risk management concerns push the Fed toward a more cautious stance." },
-  { var:"Z", dir:"up", source:"Market Monitor", headline:"Risk premia rise; Fed signals caution", brief:"The Fed becomes more hawkish/cautious independent of current output." },
-  { var:"Z", dir:"up", source:"Policy Desk", headline:"Policy uncertainty surges", brief:"The Fed adopts a more cautious stance while risks are assessed." },
-  { var:"Z", dir:"down", source:"Financial Conditions", headline:"Financial conditions ease; markets calm", brief:"The Fed feels more comfortable supporting activity." },
-  { var:"Z", dir:"down", source:"Financial Stability", headline:"Banking stress fades", brief:"The Fed shifts toward a more supportive stance." },
-  { var:"Z", dir:"down", source:"Policy Desk", headline:"Forward guidance emphasizes patience and support", brief:"The Fed adopts a more dovish/supportive stance at any output level." },
-  { var:"Z", dir:"down", source:"Market Monitor", headline:"Liquidity improves; stress indicators fall", brief:"Easier financial conditions support a more dovish stance." },
-  { var:"Z", dir:"down", source:"Financial Conditions", headline:"Risk sentiment improves broadly", brief:"The Fed becomes more supportive independent of current output." },
-];
+    // I up
+    { var:"I", dir:"up", source:"Business Pulse", headline:"Firms expand capacity; equipment orders jump", brief:"Capital spending increases." },
+    { var:"I", dir:"up", source:"Business Pulse", headline:"Tech upgrade cycle accelerates", brief:"Firms raise investment in new equipment and software." },
+    { var:"I", dir:"up", source:"Business Pulse", headline:"Business optimism improves; capex plans increase", brief:"Firms increase investment spending." },
+    { var:"I", dir:"up", source:"Construction Watch", headline:"Housing starts rise; residential building expands", brief:"Residential investment increases." },
+    { var:"I", dir:"up", source:"Business Pulse", headline:"Project pipeline expands", brief:"Firms approve more capital projects." },
+    { var:"I", dir:"up", source:"Business Pulse", headline:"Factory expansions announced", brief:"Investment spending rises." },
+    { var:"I", dir:"up", source:"Construction Watch", headline:"Commercial construction picks up", brief:"Investment increases as projects begin." },
+    { var:"I", dir:"up", source:"Business Pulse", headline:"Equipment replacement accelerates", brief:"Firms invest more in new capital." },
+    { var:"I", dir:"up", source:"Business Pulse", headline:"Capacity constraints spur new projects", brief:"Investment rises." },
+    { var:"I", dir:"up", source:"Business Pulse", headline:"Capital spending budgets increased", brief:"Firms raise investment." },
 
-  function makeStamp() {
-    const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const d = days[Math.floor(Math.random() * days.length)];
-    const m = months[Math.floor(Math.random() * months.length)];
-    const day = 1 + Math.floor(Math.random() * 28);
-    const hr = 7 + Math.floor(Math.random() * 6);
-    const min = Math.random() < 0.5 ? "00" : "30";
-    return `${d} ${m} ${day}, ${hr}:${min} AM`;
-  }
+    // I down
+    { var:"I", dir:"down", source:"Business Pulse", headline:"Firms postpone projects amid uncertainty", brief:"Capital spending is delayed and investment falls." },
+    { var:"I", dir:"down", source:"Credit Conditions", headline:"Credit conditions tighten; capex plans delayed", brief:"Investment declines as financing becomes harder." },
+    { var:"I", dir:"down", source:"Construction Watch", headline:"Commercial construction slows", brief:"Investment falls as projects are postponed." },
+    { var:"I", dir:"down", source:"Business Pulse", headline:"Earnings slump; investment budgets cut", brief:"Firms reduce investment spending." },
+    { var:"I", dir:"down", source:"Business Pulse", headline:"Demand outlook weakens; expansion plans scrapped", brief:"Firms cut back on investment." },
+    { var:"I", dir:"down", source:"Business Pulse", headline:"Capital projects canceled", brief:"Investment spending falls." },
+    { var:"I", dir:"down", source:"Construction Watch", headline:"Residential building slows", brief:"Residential investment declines." },
+    { var:"I", dir:"down", source:"Business Pulse", headline:"Equipment orders drop", brief:"Firms reduce capital spending." },
+    { var:"I", dir:"down", source:"Business Pulse", headline:"Capex plans revised down", brief:"Investment decreases this quarter." },
+    { var:"I", dir:"down", source:"Business Pulse", headline:"Project approvals stall", brief:"Investment falls." },
+
+    // P up
+    { var:"P", dir:"up", source:"Inflation Watch", headline:"Inflation pressures broaden across sectors", brief:"Prices rise more rapidly across many categories." },
+    { var:"P", dir:"up", source:"Inflation Watch", headline:"Supply disruptions push prices higher", brief:"Broader inflation pressure increases." },
+    { var:"P", dir:"up", source:"Inflation Watch", headline:"Wage growth and pricing power lift inflation", brief:"Inflation pressure strengthens." },
+    { var:"P", dir:"up", source:"Inflation Watch", headline:"Commodity prices surge; inflation rises", brief:"Price pressure increases economy-wide." },
+    { var:"P", dir:"up", source:"Inflation Watch", headline:"Inflation expectations drift up", brief:"Pricing pressure becomes more persistent." },
+    { var:"P", dir:"up", source:"Inflation Watch", headline:"Broad price increases accelerate", brief:"The price level rises faster." },
+    { var:"P", dir:"up", source:"Inflation Watch", headline:"Service inflation strengthens", brief:"Overall price pressure increases." },
+    { var:"P", dir:"up", source:"Inflation Watch", headline:"Prices rise across essentials", brief:"The price level increases." },
+    { var:"P", dir:"up", source:"Inflation Watch", headline:"Persistent inflation remains elevated", brief:"Price pressure remains strong." },
+    { var:"P", dir:"up", source:"Inflation Watch", headline:"Inflation surprise to the upside", brief:"Prices rise more than expected." },
+
+    // P down (deflation)
+    { var:"P", dir:"down", source:"Inflation Watch", headline:"Broad price declines emerge; deflation appears", brief:"Prices fall across many categories (deflation)." },
+    { var:"P", dir:"down", source:"Inflation Watch", headline:"Demand weakness triggers widespread markdowns", brief:"Businesses cut prices broadly (deflationary pressure)." },
+    { var:"P", dir:"down", source:"Inflation Watch", headline:"Global goods glut drives prices down", brief:"Broad deflationary pressure lowers the price level." },
+    { var:"P", dir:"down", source:"Inflation Watch", headline:"Competitive price wars spread", brief:"Firms cut prices broadly; the price level falls." },
+    { var:"P", dir:"down", source:"Inflation Watch", headline:"Economy-wide discounting intensifies", brief:"Prices fall across many goods and services." },
+    { var:"P", dir:"down", source:"Inflation Watch", headline:"Deflationary pressure broadens", brief:"The price level falls." },
+    { var:"P", dir:"down", source:"Inflation Watch", headline:"Widespread price cuts reported", brief:"Prices fall across sectors." },
+    { var:"P", dir:"down", source:"Inflation Watch", headline:"Retailers slash prices broadly", brief:"The price level declines." },
+    { var:"P", dir:"down", source:"Inflation Watch", headline:"Prices fall across core categories", brief:"Deflation appears economy-wide." },
+    { var:"P", dir:"down", source:"Inflation Watch", headline:"Deflation surprise", brief:"Prices fall more than expected." },
+
+    // Z up (more cautious/hawkish)
+    { var:"Z", dir:"up", source:"Policy Desk", headline:"Major tariff package announced; uncertainty rises", brief:"Policy uncertainty increases; the Fed becomes more cautious." },
+    { var:"Z", dir:"up", source:"Financial Stability", headline:"Financial stability concerns rise", brief:"Risk management concerns push the Fed toward caution." },
+    { var:"Z", dir:"up", source:"Policy Desk", headline:"Geopolitical risk rises", brief:"The Fed leans more cautious because risks are elevated." },
+    { var:"Z", dir:"up", source:"Market Monitor", headline:"Risk premia rise; Fed signals caution", brief:"The Fed becomes more hawkish/cautious independent of output." },
+    { var:"Z", dir:"up", source:"Policy Desk", headline:"Policy uncertainty surges", brief:"The Fed adopts a more cautious stance while risks are assessed." },
+    { var:"Z", dir:"up", source:"Financial Conditions", headline:"Financial volatility increases", brief:"The Fed becomes more cautious in setting policy." },
+    { var:"Z", dir:"up", source:"Policy Desk", headline:"Risk management shifts toward restraint", brief:"The Fed leans more hawkish at any output level." },
+    { var:"Z", dir:"up", source:"Financial Stability", headline:"Concerns about overheating grow", brief:"The Fed becomes more cautious independent of output." },
+    { var:"Z", dir:"up", source:"Market Monitor", headline:"Financial conditions tighten unexpectedly", brief:"The Fed prioritizes caution in policy stance." },
+    { var:"Z", dir:"up", source:"Policy Desk", headline:"Uncertainty about future policy rises", brief:"The Fed leans more cautious while waiting for clarity." },
+
+    // Z down (more supportive/dovish)
+    { var:"Z", dir:"down", source:"Financial Conditions", headline:"Financial conditions ease; markets calm", brief:"The Fed feels more comfortable supporting activity." },
+    { var:"Z", dir:"down", source:"Financial Stability", headline:"Banking stress fades", brief:"The Fed shifts toward a more supportive stance." },
+    { var:"Z", dir:"down", source:"Policy Desk", headline:"Forward guidance emphasizes patience and support", brief:"The Fed adopts a more dovish stance at any output level." },
+    { var:"Z", dir:"down", source:"Market Monitor", headline:"Liquidity improves; stress indicators fall", brief:"Easier financial conditions support a more dovish stance." },
+    { var:"Z", dir:"down", source:"Financial Conditions", headline:"Risk sentiment improves broadly", brief:"The Fed becomes more supportive independent of output." },
+    { var:"Z", dir:"down", source:"Policy Desk", headline:"Uncertainty fades; Fed signals flexibility", brief:"The Fed leans more supportive at any output level." },
+    { var:"Z", dir:"down", source:"Market Monitor", headline:"Volatility declines; financial stress recedes", brief:"The Fed feels more comfortable supporting the economy." },
+    { var:"Z", dir:"down", source:"Financial Stability", headline:"Stability concerns ease", brief:"The Fed adopts a more supportive policy stance." },
+    { var:"Z", dir:"down", source:"Policy Desk", headline:"Risk management shifts toward support", brief:"The Fed leans more dovish independent of output." },
+    { var:"Z", dir:"down", source:"Financial Conditions", headline:"Credit conditions improve", brief:"The Fed becomes more supportive at any output level." },
+  ];
 
   // -----------------------
   // DOM
@@ -304,7 +354,7 @@ const SCEN = [
     checkMechBtn: $("checkMechBtn"),
     clearMechBtn: $("clearMechBtn"),
 
-    // NEW mechanism result elements (from your updated index)
+    // mechanism result UI (must exist in index)
     mechBadge: $("mechBadge"),
     mechMsg: $("mechMsg"),
 
@@ -312,6 +362,24 @@ const SCEN = [
     isfrCanvas: $("isfrCanvas"),
     adCanvas: $("adCanvas"),
   };
+
+  // Guard: if index is missing required ids, fail gracefully.
+  const required = [
+    "newBtn","resetBtn","scenarioDesc","isAction","isDir","frAction","frDir","adAction","adDir",
+    "checkPredBtn","whyPredBtn","predStatus",
+    "Gslider","Tslider","Cslider","Islider","Pslider","Zslider",
+    "Gdisp","Tdisp","Cdisp","Idisp","Pdisp","Zdisp",
+    "slots","poolGroups","checkMechBtn","clearMechBtn",
+    "mechBadge","mechMsg",
+    "isfrCanvas","adCanvas"
+  ];
+  for (const id of required) {
+    if (!els[id]) {
+      // If something is missing, don't wire anything (prevents "buttons don't work" due to thrown errors).
+      console.warn(`Missing required element id="${id}". App not initialized.`);
+      return;
+    }
+  }
 
   // -----------------------
   // State
@@ -327,18 +395,16 @@ const SCEN = [
   let cur = { ...M.base };
 
   const baseEq = eqm(M.base.G, M.base.T, M.base.C, M.base.I, M.base.P, M.base.Z);
-  const baseAD = buildADCurve({ G: M.base.G, T: M.base.T, C: M.base.C, I: M.base.I, Z: M.base.Z }, 60);
+  const baseAD = buildADCurve({ G: M.base.G, T: M.base.T, C: M.base.C, I: M.base.I, Z: M.base.Z }, 80);
 
   // -----------------------
   // Status helpers
   // -----------------------
-  const setStatus = (msg) => { if (els.status) els.status.textContent = msg; };
-  const setPredStatus = (msg) => { if (els.predStatus) els.predStatus.textContent = msg || ""; };
+  const setStatus = (msg) => { els.status.textContent = msg || ""; };
+  const setPredStatus = (msg) => { els.predStatus.textContent = msg || ""; };
 
-  // Mechanism result badge + message
   function setMechResult(kind, msg) {
-    if (!els.mechBadge || !els.mechMsg) return;
-
+    // kind: "ok" | "bad" | null
     if (!kind) {
       els.mechBadge.hidden = true;
       els.mechBadge.className = "mech-badge";
@@ -346,13 +412,12 @@ const SCEN = [
       els.mechMsg.textContent = msg || "";
       return;
     }
-
     els.mechBadge.hidden = false;
     els.mechBadge.className = "mech-badge " + (kind === "ok" ? "ok" : "bad");
     els.mechBadge.textContent = (kind === "ok") ? "Correct" : "Wrong";
     els.mechMsg.textContent = msg || "";
   }
-  function clearMechResult() { setMechResult(null, ""); }
+  const clearMechResult = () => setMechResult(null, "");
 
   // -----------------------
   // Sliders: lock/unlock
@@ -361,7 +426,6 @@ const SCEN = [
     const map = { G: els.Gslider, T: els.Tslider, C: els.Cslider, I: els.Islider, P: els.Pslider, Z: els.Zslider };
     for (const k of Object.keys(map)) {
       const sl = map[k];
-      if (!sl) continue;
       const r = M.ranges[k];
       sl.min = String(r.min);
       sl.max = String(r.max);
@@ -370,23 +434,20 @@ const SCEN = [
   }
 
   function lockAllSliders() {
-    [els.Gslider, els.Tslider, els.Cslider, els.Islider, els.Pslider, els.Zslider].forEach(sl => {
-      if (sl) sl.disabled = true;
-    });
+    [els.Gslider, els.Tslider, els.Cslider, els.Islider, els.Pslider, els.Zslider].forEach(sl => sl.disabled = true);
   }
 
   function resetSlidersToBaseline() {
     cur = { ...M.base };
-    if (els.Gslider) els.Gslider.value = String(M.base.G);
-    if (els.Tslider) els.Tslider.value = String(M.base.T);
-    if (els.Cslider) els.Cslider.value = String(M.base.C);
-    if (els.Islider) els.Islider.value = String(M.base.I);
-    if (els.Pslider) els.Pslider.value = String(M.base.P);
-    if (els.Zslider) els.Zslider.value = String(M.base.Z);
+    els.Gslider.value = String(M.base.G);
+    els.Tslider.value = String(M.base.T);
+    els.Cslider.value = String(M.base.C);
+    els.Islider.value = String(M.base.I);
+    els.Pslider.value = String(M.base.P);
+    els.Zslider.value = String(M.base.Z);
   }
 
   function setSliderConstraint(sl, min, max) {
-    if (!sl) return;
     sl.min = String(min);
     sl.max = String(max);
   }
@@ -422,21 +483,21 @@ const SCEN = [
   // Readouts
   // -----------------------
   function syncCurFromSliders() {
-    if (els.Gslider) cur.G = Number(els.Gslider.value);
-    if (els.Tslider) cur.T = Number(els.Tslider.value);
-    if (els.Cslider) cur.C = Number(els.Cslider.value);
-    if (els.Islider) cur.I = Number(els.Islider.value);
-    if (els.Pslider) cur.P = Number(els.Pslider.value);
-    if (els.Zslider) cur.Z = Number(els.Zslider.value);
+    cur.G = Number(els.Gslider.value);
+    cur.T = Number(els.Tslider.value);
+    cur.C = Number(els.Cslider.value);
+    cur.I = Number(els.Islider.value);
+    cur.P = Number(els.Pslider.value);
+    cur.Z = Number(els.Zslider.value);
   }
 
   function updateReadouts() {
-    if (els.Gdisp) els.Gdisp.textContent = cur.G.toFixed(0);
-    if (els.Tdisp) els.Tdisp.textContent = cur.T.toFixed(0);
-    if (els.Cdisp) els.Cdisp.textContent = cur.C.toFixed(0);
-    if (els.Idisp) els.Idisp.textContent = cur.I.toFixed(0);
-    if (els.Pdisp) els.Pdisp.textContent = cur.P.toFixed(1);
-    if (els.Zdisp) els.Zdisp.textContent = cur.Z.toFixed(1);
+    els.Gdisp.textContent = cur.G.toFixed(0);
+    els.Tdisp.textContent = cur.T.toFixed(0);
+    els.Cdisp.textContent = cur.C.toFixed(0);
+    els.Idisp.textContent = cur.I.toFixed(0);
+    els.Pdisp.textContent = cur.P.toFixed(1);
+    els.Zdisp.textContent = cur.Z.toFixed(1);
   }
 
   // -----------------------
@@ -456,7 +517,6 @@ const SCEN = [
   }
 
   function renderPoolGrouped() {
-    if (!els.poolGroups) return;
     els.poolGroups.innerHTML = "";
     for (const g of PILL_GROUPS) {
       const wrap = document.createElement("div");
@@ -477,7 +537,6 @@ const SCEN = [
   }
 
   function renderSlots(requiredLen) {
-    if (!els.slots) return;
     els.slots.innerHTML = "";
     slotsState = new Array(requiredLen).fill(null);
 
@@ -521,7 +580,6 @@ const SCEN = [
   }
 
   function clearSlots() {
-    if (!els.slots) return;
     const children = Array.from(els.slots.querySelectorAll(".slot"));
     for (const s of children) {
       const idx = Number(s.dataset.idx);
@@ -546,15 +604,12 @@ const SCEN = [
 
     mechOK = seq.every((t, i) => slotsState[i] === t);
 
-    if (mechOK) {
-      setMechResult("ok", "Nice. Your chain matches the scenario mechanism.");
-    } else {
-      setMechResult("bad", "Not quite. Try again—at least one step is out of order or incorrect.");
-    }
+    if (mechOK) setMechResult("ok", "Nice. Your chain matches the scenario mechanism.");
+    else setMechResult("bad", "Not quite. Try again—at least one step is out of order or incorrect.");
   }
 
   // -----------------------
-  // Prediction UI
+  // Predictions
   // -----------------------
   function fillOptions(selectEl, options) {
     selectEl.innerHTML = "";
@@ -574,19 +629,19 @@ const SCEN = [
     if (curve === "IS") {
       const act = els.isAction.value || "";
       if (!act) return fillOptions(els.isDir, []);
-      if (act === "shift") return fillOptions(els.isDir, [["right", "Right"], ["left", "Left"]]);
-      return fillOptions(els.isDir, [["up", "Up along"], ["down", "Down along"]]);
+      if (act === "shift") return fillOptions(els.isDir, [["right","Right"], ["left","Left"]]);
+      return fillOptions(els.isDir, [["up","Up along"], ["down","Down along"]]);
     }
     if (curve === "FR") {
       const act = els.frAction.value || "";
       if (!act) return fillOptions(els.frDir, []);
-      return fillOptions(els.frDir, [["up", "Up"], ["down", "Down"]]);
+      return fillOptions(els.frDir, [["up","Up"], ["down","Down"]]);
     }
     if (curve === "AD") {
       const act = els.adAction.value || "";
       if (!act) return fillOptions(els.adDir, []);
-      if (act === "shift") return fillOptions(els.adDir, [["right", "Right"], ["left", "Left"]]);
-      return fillOptions(els.adDir, [["up", "Up along"], ["down", "Down along"]]);
+      if (act === "shift") return fillOptions(els.adDir, [["right","Right"], ["left","Left"]]);
+      return fillOptions(els.adDir, [["up","Up along"], ["down","Down along"]]);
     }
   }
 
@@ -611,30 +666,30 @@ const SCEN = [
 
     if (v === "G" || v === "C" || v === "I") {
       return {
-        IS: { action: "shift", dir: dir === "up" ? "right" : "left" },
-        FR: { action: "move",  dir: dir === "up" ? "up" : "down" },
-        AD: { action: "shift", dir: dir === "up" ? "right" : "left" },
+        IS: { action:"shift", dir: dir === "up" ? "right" : "left" },
+        FR: { action:"move",  dir: dir === "up" ? "up" : "down" },
+        AD: { action:"shift", dir: dir === "up" ? "right" : "left" },
       };
     }
     if (v === "T") {
       return {
-        IS: { action: "shift", dir: dir === "up" ? "left" : "right" },
-        FR: { action: "move",  dir: dir === "up" ? "down" : "up" },
-        AD: { action: "shift", dir: dir === "up" ? "left" : "right" },
+        IS: { action:"shift", dir: dir === "up" ? "left" : "right" },
+        FR: { action:"move",  dir: dir === "up" ? "down" : "up" },
+        AD: { action:"shift", dir: dir === "up" ? "left" : "right" },
       };
     }
     if (v === "P") {
       return {
-        IS: { action: "move",  dir: dir === "up" ? "up" : "down" },
-        FR: { action: "shift", dir: dir === "up" ? "up" : "down" },
-        AD: { action: "move",  dir: dir === "up" ? "up" : "down" },
+        IS: { action:"move",  dir: dir === "up" ? "up" : "down" },
+        FR: { action:"shift", dir: dir === "up" ? "up" : "down" },
+        AD: { action:"move",  dir: dir === "up" ? "up" : "down" },
       };
     }
     // Z
     return {
-      IS: { action: "move",  dir: dir === "up" ? "up" : "down" },
-      FR: { action: "shift", dir: dir === "up" ? "up" : "down" },
-      AD: { action: "shift", dir: dir === "up" ? "left" : "right" },
+      IS: { action:"move",  dir: dir === "up" ? "up" : "down" },
+      FR: { action:"shift", dir: dir === "up" ? "up" : "down" },
+      AD: { action:"shift", dir: dir === "up" ? "left" : "right" },
     };
   }
 
@@ -855,7 +910,7 @@ const SCEN = [
 
     const YL = Ymin, YR = Ymax;
 
-    // baseline curves (grey)
+    // baseline curves
     const isL0 = IS_r(YL, M.base.G, M.base.T, M.base.C, M.base.I);
     const isR0 = IS_r(YR, M.base.G, M.base.T, M.base.C, M.base.I);
     const frL0 = FR_r(YL, M.base.P, M.base.Z);
@@ -863,7 +918,7 @@ const SCEN = [
     drawLine(ctx, xTo(YL), yTo(isL0), xTo(YR), yTo(isR0), "rgba(0,0,0,0.22)", 3, dpr);
     drawLine(ctx, xTo(YL), yTo(frL0), xTo(YR), yTo(frR0), "rgba(0,0,0,0.22)", 3, dpr);
 
-    // baseline eq
+    // baseline point
     const x1p = xTo(baseEq.Y), y1p = yTo(baseEq.r);
     dot(ctx, x1p, y1p, "rgba(0,0,0,0.40)", dpr);
     drawLine(ctx, x1p, y1p, x1p, yTo(rmin), "rgba(0,0,0,0.30)", 2, dpr, [4, 6]);
@@ -873,7 +928,7 @@ const SCEN = [
 
     if (!revealed) return;
 
-    // current curves (orange)
+    // current curves
     const isL1 = IS_r(YL, cur.G, cur.T, cur.C, cur.I);
     const isR1 = IS_r(YR, cur.G, cur.T, cur.C, cur.I);
     const frL1 = FR_r(YL, cur.P, cur.Z);
@@ -881,6 +936,7 @@ const SCEN = [
     drawLine(ctx, xTo(YL), yTo(isL1), xTo(YR), yTo(isR1), "rgba(230,159,0,0.95)", 3, dpr);
     drawLine(ctx, xTo(YL), yTo(frL1), xTo(YR), yTo(frR1), "rgba(230,159,0,0.95)", 3, dpr);
 
+    // new point (clamped to chart)
     const eq2 = eqm(cur.G, cur.T, cur.C, cur.I, cur.P, cur.Z);
     const x2p = xTo(eq2.Y), y2p = yTo(eq2.r);
     dot(ctx, x2p, y2p, "rgba(230,159,0,0.95)", dpr);
@@ -920,20 +976,18 @@ const SCEN = [
     ctx.fillText("Price level (P)", 0, 0);
     ctx.restore();
 
-    // baseline AD curve
+    // baseline AD (clip out-of-range Y so it "disappears" instead of vertical)
     ctx.strokeStyle = "rgba(0,0,0,0.22)";
     ctx.lineWidth = 3*dpr;
     ctx.beginPath();
-let penDown = false;
-for (let i = 0; i < curAD.length; i++) {
-  const pt = curAD[i];
-  if (pt.Y < Ymin || pt.Y > Ymax) { penDown = false; continue; } // <-- skip out of range
-
-  const x = xTo(pt.Y), y = yTo(pt.P);
-  if (!penDown) { ctx.moveTo(x, y); penDown = true; }
-  else { ctx.lineTo(x, y); }
-}
-ctx.stroke();
+    let penDown = false;
+    for (const pt of baseAD) {
+      if (pt.Y < Ymin || pt.Y > Ymax) { penDown = false; continue; }
+      const x = xTo(pt.Y), y = yTo(pt.P);
+      if (!penDown) { ctx.moveTo(x, y); penDown = true; }
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
 
     // baseline point
     const x1p = xTo(baseEq.Y), y1p = yTo(M.base.P);
@@ -945,26 +999,31 @@ ctx.stroke();
 
     if (!revealed) return;
 
-    // current AD curve (orange)
-    const curAD = buildADCurve({ G: cur.G, T: cur.T, C: cur.C, I: cur.I, Z: cur.Z }, 60);
+    // current AD
+    const curAD = buildADCurve({ G: cur.G, T: cur.T, C: cur.C, I: cur.I, Z: cur.Z }, 80);
     ctx.strokeStyle = "rgba(230,159,0,0.95)";
     ctx.lineWidth = 3*dpr;
     ctx.beginPath();
-    for (let i = 0; i < curAD.length; i++) {
-      const pt = curAD[i];
+    penDown = false;
+    for (const pt of curAD) {
+      if (pt.Y < Ymin || pt.Y > Ymax) { penDown = false; continue; }
       const x = xTo(pt.Y), y = yTo(pt.P);
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      if (!penDown) { ctx.moveTo(x, y); penDown = true; }
+      else ctx.lineTo(x, y);
     }
     ctx.stroke();
 
-    // new point
+    // new point (clamped point for readability)
     const eq2 = eqm(cur.G, cur.T, cur.C, cur.I, cur.P, cur.Z);
     const x2p = xTo(eq2.Y), y2p = yTo(cur.P);
     dot(ctx, x2p, y2p, "rgba(230,159,0,0.95)", dpr);
     drawLine(ctx, x2p, y2p, x2p, yTo(Pmin), "rgba(0,0,0,0.30)", 2, dpr, [4, 6]);
     drawLine(ctx, x2p, y2p, xTo(Ymin), y2p, "rgba(0,0,0,0.30)", 2, dpr, [4, 6]);
     if (!approxEq(eq2.Y, baseEq.Y, 1e-6)) xTick(ctx, x2p, Y1, "Y₂", dpr);
+
+    // Skip P₂ if price didn’t change (prevents overlap with P₁)
     if (!approxEq(cur.P, M.base.P, 1e-6)) yTick(ctx, X0, y2p, "P₂", dpr);
+
     arrow(ctx, x1p, y1p, x2p, y2p, "rgba(230,159,0,0.95)", dpr);
   }
 
@@ -1025,11 +1084,13 @@ ctx.stroke();
   function newScenario() {
     resetToBaseline();
 
-    scenario = { ...SCEN[Math.floor(Math.random() * SCEN.length)], stamp: makeStamp() };
+    // draw scenario
+    const pick = SCEN[Math.floor(Math.random() * SCEN.length)];
+    scenario = { ...pick, stamp: makeStamp() };
     setScenarioText(scenario);
 
+    // pool + slots
     renderPoolGrouped();
-
     const key = mechKeyFor(scenario.var, scenario.dir);
     const seq = MECH[key];
     renderSlots(seq.length);
@@ -1039,7 +1100,7 @@ ctx.stroke();
   }
 
   // -----------------------
-  // Event wiring
+  // Wire events
   // -----------------------
   els.newBtn.addEventListener("click", newScenario);
   els.resetBtn.addEventListener("click", resetAll);
