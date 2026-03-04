@@ -1,17 +1,12 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // -----------------------
-  // Data / Scenario bank
-  // -----------------------
   const D = {
-    params: { a: 0.08, b: 0.6, c: 0.6 }, // internal only
+    params: { a: 0.08, b: 0.6, c: 0.6 },
     baseline: { Y: 50, P: 5, Z: 5 },
     axes: { Ymin: 0, Ymax: 100, rmin: 0, rmax: 20 },
     mags: { Y: [10, 15, 20], P: [0.8, 1.2, 1.6], Z: [0.8, 1.2, 1.6] },
-
     scenarios: [
-      // Y
       { id:"Y_retail_up", var:"Y", dir:"up", source:"Morning Economic Brief",
         headline:"Retail sales surprise to the upside",
         brief:"Major retailers report strong demand and firms increase production schedules." },
@@ -37,7 +32,6 @@
         headline:"Fiscal tightening weighs on activity",
         brief:"Spending cuts and/or tax increases reduce demand, lowering production and output." },
 
-      // P
       { id:"P_inflation_hot", var:"P", dir:"up", source:"Inflation Watch",
         headline:"Inflation pressure broadens",
         brief:"Price increases spread across many goods and services." },
@@ -57,7 +51,6 @@
         headline:"Energy price collapse pulls prices down",
         brief:"A sharp drop in energy prices contributes to a lower overall price level." },
 
-      // Z
       { id:"Z_tariffs", var:"Z", dir:"up", source:"Policy Desk",
         headline:"Tariffs announced; uncertainty rises",
         brief:"Wide-ranging tariffs increase uncertainty. The Fed leans more hawkish while waiting to see broader effects." },
@@ -79,9 +72,6 @@
     ],
   };
 
-  // -----------------------
-  // KaTeX render (safe)
-  // -----------------------
   function typeset(el) {
     if (!el) return;
     if (!window.renderMathInElement) {
@@ -99,9 +89,6 @@
     });
   }
 
-  // -----------------------
-  // DOM
-  // -----------------------
   const els = {
     newBtn: $("newBtn"),
     resetBtn: $("resetBtn"),
@@ -132,26 +119,21 @@
 
   if (!els.canvas || !els.newBtn) return;
 
-  // -----------------------
-  // Style constants
-  // -----------------------
   const ORANGE = "rgba(230,159,0,0.95)";
   const GREY = "rgba(0,0,0,0.22)";
   const DASH = "rgba(0,0,0,0.30)";
   const INK = "rgba(0,0,0,0.70)";
 
-  const { a, b, c } = D.params; // internal only
+  const { a, b, c } = D.params;
   const base = { ...D.baseline };
 
   let cur = { ...base };
-  let scenario = null;       // {id,var,dir,mag,headline,brief,source,target,stamp}
-  let predMade = false;      // set to true after first Check
-  let allowedVar = null;     // "Y" | "P" | "Z"
-  let allowedDir = null;     // "up" | "down"
+  let scenario = null;
+  let predMade = false;
 
-  // -----------------------
-  // Helpers
-  // -----------------------
+  // NEW: "reveal" occurs as soon as the unlocked slider moves in the allowed direction (any magnitude)
+  let revealed = false;
+
   function rOf(Y, P, Z) { return a * Y + b * P + c * Z; }
   function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
   function approxEq(x, y, tol) { return Math.abs(x - y) <= tol; }
@@ -184,19 +166,7 @@
     return `${d} ${m} ${day}, ${hr}:${min} AM`;
   }
 
-  function matchesTarget() {
-    if (!scenario) return false;
-    const t = scenario.target;
-    return (
-      approxEq(cur.Y, t.Y, 0.5) &&
-      approxEq(cur.P, t.P, 0.05) &&
-      approxEq(cur.Z, t.Z, 0.05)
-    );
-  }
-
-  // -----------------------
-  // Your updated WHY text (remembered)
-  // -----------------------
+  // Your remembered whyText(s)
   function whyText(s) {
     const header =
       "Big idea:\n" +
@@ -224,7 +194,6 @@
         "• Output (Y) isn’t what drives the change here — the pricing environment does.";
     }
 
-    // Z
     const up = s.dir === "up";
     return header +
       "This scenario is about uncertainty/financial conditions/policy stance:\n" +
@@ -235,69 +204,56 @@
       "• In this app, Z is a catch-all for those “other considerations,” so changing Z shifts the line.";
   }
 
-  // -----------------------
-  // Locking logic
-  // -----------------------
+  // Slider locking helpers
   function lockAllSliders() {
     els.Yslider.disabled = true;
     els.Pslider.disabled = true;
     els.Zslider.disabled = true;
   }
-
   function setSliderConstraint(slider, min, max) {
     slider.min = String(min);
     slider.max = String(max);
   }
 
-  function applyUnlockRulesAfterPrediction() {
-    // Lock all first
+  function unlockCorrectSliderOnly() {
     lockAllSliders();
-
     if (!scenario || !predMade) return;
 
-    allowedVar = scenario.var;
-    allowedDir = scenario.dir;
-
-    // Reset slider ranges to defaults first
+    // restore defaults
     setSliderConstraint(els.Yslider, D.axes.Ymin, D.axes.Ymax);
     setSliderConstraint(els.Pslider, 0, 10);
     setSliderConstraint(els.Zslider, 0, 10);
 
-    // Enable only the correct slider and restrict direction
-    if (allowedVar === "Y") {
-      els.Yslider.disabled = false;
-      const baseY = base.Y;
-      if (allowedDir === "up") setSliderConstraint(els.Yslider, baseY, D.axes.Ymax);
-      else setSliderConstraint(els.Yslider, D.axes.Ymin, baseY);
-      // Keep locked at baseline until student moves (still baseline value)
-      els.Yslider.value = String(baseY);
-    }
+    // lock values to baseline initially
+    els.Yslider.value = String(base.Y);
+    els.Pslider.value = String(base.P);
+    els.Zslider.value = String(base.Z);
 
-    if (allowedVar === "P") {
-      els.Pslider.disabled = false;
-      const baseP = base.P;
-      if (allowedDir === "up") setSliderConstraint(els.Pslider, baseP, 10);
-      else setSliderConstraint(els.Pslider, 0, baseP);
-      els.Pslider.value = String(baseP);
-    }
-
-    if (allowedVar === "Z") {
-      els.Zslider.disabled = false;
-      const baseZ = base.Z;
-      if (allowedDir === "up") setSliderConstraint(els.Zslider, baseZ, 10);
-      else setSliderConstraint(els.Zslider, 0, baseZ);
-      els.Zslider.value = String(baseZ);
-    }
-
-    // Ensure current state matches baseline after applying constraints
     cur = { ...base };
+
+    const v = scenario.var;
+    const dir = scenario.dir;
+
+    if (v === "Y") {
+      els.Yslider.disabled = false;
+      if (dir === "up") setSliderConstraint(els.Yslider, base.Y, D.axes.Ymax);
+      else setSliderConstraint(els.Yslider, D.axes.Ymin, base.Y);
+    }
+    if (v === "P") {
+      els.Pslider.disabled = false;
+      if (dir === "up") setSliderConstraint(els.Pslider, base.P, 10);
+      else setSliderConstraint(els.Pslider, 0, base.P);
+    }
+    if (v === "Z") {
+      els.Zslider.disabled = false;
+      if (dir === "up") setSliderConstraint(els.Zslider, base.Z, 10);
+      else setSliderConstraint(els.Zslider, 0, base.Z);
+    }
+
     updateNumbers();
     draw();
   }
 
-  // -----------------------
-  // Update numeric readouts
-  // -----------------------
   function updateNumbers() {
     const r1 = rOf(base.Y, base.P, base.Z);
     const rNow = rOf(cur.Y, cur.P, cur.Z);
@@ -312,9 +268,6 @@
     els.Zdisp.textContent = cur.Z.toFixed(1);
   }
 
-  // -----------------------
-  // Predictions check
-  // -----------------------
   function expectedAnswers() {
     if (!scenario) return null;
     const type = (scenario.var === "Y") ? "move" : "shift";
@@ -328,7 +281,6 @@
       showFeedback(`<span class="tagBad">No scenario</span> Click <strong>New Scenario</strong> first.`);
       return;
     }
-
     const exp = expectedAnswers();
     const a1 = els.predType.value;
     const a2 = els.predR.value;
@@ -341,17 +293,15 @@
 
     const ok = (a1 === exp.type && a2 === exp.Rchg && a3 === exp.Ychg);
     predMade = true;
+    revealed = false;
 
-    if (ok) {
-      showFeedback(`<span class="tagOK">Checked</span> Now use the slider to see what actually happens.`);
-      setStatus("Prediction checked (correct).");
-    } else {
-      showFeedback(`<span class="tagBad">Checked</span> Now use the slider to see what actually happens, then update your prediction.`);
-      setStatus("Prediction checked (not correct).");
-    }
+    showFeedback(ok
+      ? `<span class="tagOK">Checked</span> Now move the unlocked slider to see what changes.`
+      : `<span class="tagBad">Checked</span> Now move the unlocked slider to see what actually changes, then update your prediction.`
+    );
+    setStatus(ok ? "Prediction checked (correct)." : "Prediction checked (not correct).");
 
-    // Unlock only the correct slider and only in the correct direction
-    applyUnlockRulesAfterPrediction();
+    unlockCorrectSliderOnly();
   }
 
   function why() {
@@ -362,9 +312,7 @@
     showFeedback(`<span class="tagOK">Why</span>\n${whyText(scenario)}`);
   }
 
-  // -----------------------
   // Canvas drawing
-  // -----------------------
   function getCtx() {
     const ctx = els.canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
@@ -439,6 +387,28 @@
     ctx.fillText(label, xAxisLeft - 10 * dpr, y + dy);
   }
 
+  // "Reveal" should happen once the correct slider moves in correct direction (any magnitude).
+  function updateRevealFlag() {
+    if (!scenario || !predMade) return;
+    const v = scenario.var;
+    const dir = scenario.dir;
+
+    if (revealed) return;
+
+    if (v === "Y") {
+      if (dir === "up" && Number(els.Yslider.value) > base.Y) revealed = true;
+      if (dir === "down" && Number(els.Yslider.value) < base.Y) revealed = true;
+    }
+    if (v === "P") {
+      if (dir === "up" && Number(els.Pslider.value) > base.P) revealed = true;
+      if (dir === "down" && Number(els.Pslider.value) < base.P) revealed = true;
+    }
+    if (v === "Z") {
+      if (dir === "up" && Number(els.Zslider.value) > base.Z) revealed = true;
+      if (dir === "down" && Number(els.Zslider.value) < base.Z) revealed = true;
+    }
+  }
+
   function draw() {
     const { ctx, dpr, W, H } = getCtx();
     ctx.clearRect(0, 0, W, H);
@@ -488,7 +458,6 @@
     line(ctx, x1p, y1p, x1p, yTo(rmin), DASH, 2, dpr, [4, 6]);
     line(ctx, x1p, y1p, xTo(Ymin), y1p, DASH, 2, dpr, [4, 6]);
 
-    // baseline ticks always
     xTick(ctx, x1p, Y1, "Y₁", dpr, 0);
     yTick(ctx, X0, y1p, "r₁", dpr, 0);
 
@@ -505,19 +474,14 @@
     line(ctx, x2p, y2p, x2p, yTo(rmin), DASH, 2, dpr, [4, 6]);
     line(ctx, x2p, y2p, xTo(Ymin), y2p, DASH, 2, dpr, [4, 6]);
 
-    // Ticks: show Y2/r2 only after matching scenario (your earlier pedagogy),
-    // but fix overlap if Y doesn't change by offsetting label.
-    if (matchesTarget()) {
+    // Reveal labels/arrow once unlocked slider moved correctly (any magnitude)
+    if (revealed) {
       const ySame = approxEq(cur.Y, base.Y, 0.5);
       const rSame = approxEq(r2, r1Base, 0.02);
 
-      // X-axis: if same, shift Y2 label to the right so it doesn't overlap
       xTick(ctx, x2p, Y1, "Y₂", dpr, ySame ? (18 * dpr) : 0);
-
-      // Y-axis: if same, shift r2 label slightly down
       yTick(ctx, X0, y2p, "r₂", dpr, rSame ? (14 * dpr) : 0);
 
-      // arrow
       if (scenario.var === "Y") {
         arrow(ctx, x1p, y1p, x2p, y2p, ORANGE, dpr);
       } else {
@@ -528,38 +492,20 @@
     }
   }
 
-  // -----------------------
-  // Scenario + UI actions
-  // -----------------------
-  function setScenarioTextWithLockingInstructions() {
-    if (!scenario) return;
-    els.scenarioDesc.textContent =
-      `${scenario.stamp} • ${scenario.source}\n` +
-      `${scenario.headline}\n` +
-      `${scenario.brief}\n\n` +
-      `Step 1: Make a prediction, then click Check.\n` +
-      `Step 2: The app unlocks only the correct slider and only in the correct direction so you can see what actually happens.`;
-  }
-
   function newScenario() {
-    // reset state
     cur = { ...base };
     predMade = false;
-    allowedVar = null;
-    allowedDir = null;
+    revealed = false;
 
-    // reset slider values & ranges to defaults
     els.Yslider.value = String(base.Y);
     els.Pslider.value = String(base.P);
     els.Zslider.value = String(base.Z);
 
-    // restore default ranges
-    els.Yslider.min = String(D.axes.Ymin);
-    els.Yslider.max = String(D.axes.Ymax);
-    els.Pslider.min = "0"; els.Pslider.max = "10";
-    els.Zslider.min = "0"; els.Zslider.max = "10";
+    // restore ranges
+    setSliderConstraint(els.Yslider, D.axes.Ymin, D.axes.Ymax);
+    setSliderConstraint(els.Pslider, 0, 10);
+    setSliderConstraint(els.Zslider, 0, 10);
 
-    // pick scenario
     const s0 = D.scenarios[Math.floor(Math.random() * D.scenarios.length)];
     const mag = pickMagnitude(s0.var);
 
@@ -570,16 +516,19 @@
 
     scenario = { ...s0, mag, target, stamp: makeStamp() };
 
-    // clear predictions + feedback
+    els.scenarioDesc.textContent =
+      `${scenario.stamp} • ${scenario.source}\n` +
+      `${scenario.headline}\n` +
+      `${scenario.brief}\n\n` +
+      `Step 1: Make a prediction, then click Check.\n` +
+      `Step 2: The app unlocks only the correct slider and only in the correct direction.`;
+
     els.predType.value = "";
     els.predR.value = "";
     els.predY.value = "";
     showFeedback("");
 
-    // lock sliders until prediction checked
     lockAllSliders();
-
-    setScenarioTextWithLockingInstructions();
 
     setStatus("Scenario ready. Make a prediction, then click Check.");
     updateNumbers();
@@ -591,8 +540,7 @@
     scenario = null;
     cur = { ...base };
     predMade = false;
-    allowedVar = null;
-    allowedDir = null;
+    revealed = false;
 
     els.scenarioDesc.textContent = "Click “New Scenario” to start.";
 
@@ -601,11 +549,9 @@
     els.predY.value = "";
     showFeedback("");
 
-    // restore slider defaults and lock
-    els.Yslider.min = String(D.axes.Ymin);
-    els.Yslider.max = String(D.axes.Ymax);
-    els.Pslider.min = "0"; els.Pslider.max = "10";
-    els.Zslider.min = "0"; els.Zslider.max = "10";
+    setSliderConstraint(els.Yslider, D.axes.Ymin, D.axes.Ymax);
+    setSliderConstraint(els.Pslider, 0, 10);
+    setSliderConstraint(els.Zslider, 0, 10);
 
     els.Yslider.value = String(base.Y);
     els.Pslider.value = String(base.P);
@@ -622,24 +568,23 @@
   function sliderChanged() {
     if (!scenario || !predMade) return;
 
-    // Read only from allowed slider to avoid accidental state changes
-    // (others are disabled anyway)
     cur.Y = Number(els.Yslider.value);
     cur.P = Number(els.Pslider.value);
     cur.Z = Number(els.Zslider.value);
 
+    updateRevealFlag();
     updateNumbers();
     draw();
 
-    if (matchesTarget()) {
-      showFeedback(`<span class="tagOK">Nice</span> You matched the scenario. The arrow highlights movement vs shift.`);
-      setStatus("Scenario matched.");
+    if (revealed) {
+      setStatus("Change revealed.");
+      if (matchesTarget()) {
+        showFeedback(`<span class="tagOK">Nice</span> You matched the scenario’s size too.`);
+      }
     }
   }
 
-  // -----------------------
   // Wire events
-  // -----------------------
   els.newBtn.addEventListener("click", newScenario);
   els.resetBtn.addEventListener("click", reset);
   els.checkBtn.addEventListener("click", check);
@@ -651,9 +596,6 @@
 
   window.addEventListener("resize", () => requestAnimationFrame(draw));
 
-  // -----------------------
-  // Init (also: rename chart title outside JS per your request)
-  // -----------------------
   window.addEventListener("load", () => {
     lockAllSliders();
     updateNumbers();
@@ -661,36 +603,5 @@
     setStatus("Ready.");
     typeset(document.body);
     setTimeout(draw, 120);
-
-    // 2) If you have a panel title element on the page, try to rename it to "Fed Rule"
-    // without breaking anything (safe no-op if not found).
-    const h2s = document.querySelectorAll("h2");
-    for (const h2 of h2s) {
-      if (h2.textContent && h2.textContent.trim().toLowerCase().includes("fed rule")) {
-        h2.textContent = "Fed Rule";
-        break;
-      }
-    }
-
-    // 2) Remove panel-sub tick sentence if present (safe no-op).
-    const subs = document.querySelectorAll(".panel-sub");
-    for (const p of subs) {
-      const t = (p.textContent || "").toLowerCase();
-      if (t.includes("tick") && (t.includes("y") || t.includes("r"))) {
-        p.textContent = "";
-      }
-    }
-
-    // 1) Update instructions box if present (collapsible howto)
-    // (We can't reliably edit your HTML here, but we can append a short note.)
-    const howto = document.querySelector(".howto-body");
-    if (howto && !howto.dataset.locknote) {
-      const note = document.createElement("p");
-      note.className = "howto-note";
-      note.textContent =
-        "New feature: sliders are locked until you click Check. After you check (right or wrong), the app unlocks only the correct slider and only in the correct direction so you can see what actually happens.";
-      howto.appendChild(note);
-      howto.dataset.locknote = "1";
-    }
   });
 })();
