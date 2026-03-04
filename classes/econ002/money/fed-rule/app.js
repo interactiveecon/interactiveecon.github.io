@@ -1,16 +1,53 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // Embedded data
+  // Embedded data + scenario bank
   const D = {
     params: { a: 0.08, b: 0.6, c: 0.6 },
     baseline: { Y: 50, P: 5, Z: 5 },
-    shocks: {
-      dY: [10, 15, 20],
-      dP: [0.8, 1.2, 1.6],
-      dZ: [0.8, 1.2, 1.6]
+
+    // axis ranges
+    axes: { Ymin: 0, Ymax: 100, rmin: 0, rmax: 20 },
+
+    // scenario magnitudes (keep consistent with slider steps)
+    mags: {
+      Y: [10, 15, 20],
+      P: [0.8, 1.2, 1.6],
+      Z: [0.8, 1.2, 1.6],
     },
-    axes: { Ymin: 0, Ymax: 100, rmin: 0, rmax: 20 }
+
+    // Realistic scenario templates
+    scenarios: [
+      // ---- Y (output/activity) => movement along ----
+      { var:"Y", dir:"up",   title:"Consumer spending surge", desc:"Retail sales jump and firms ramp up production." },
+      { var:"Y", dir:"down", title:"Demand slowdown", desc:"Households cut spending and firms reduce production." },
+      { var:"Y", dir:"up",   title:"Business investment boom", desc:"Firms expand capacity and increase production." },
+      { var:"Y", dir:"down", title:"Housing/construction slump", desc:"Homebuilding falls and related industries contract." },
+      { var:"Y", dir:"up",   title:"Export demand rises", desc:"Foreign demand for domestic goods increases production." },
+      { var:"Y", dir:"down", title:"Export demand weakens", desc:"Foreign demand softens and domestic production falls." },
+
+      // Fiscal policy (Y)
+      { var:"Y", dir:"up",   title:"Fiscal stimulus", desc:"Government increases spending and/or cuts taxes, boosting demand and output." },
+      { var:"Y", dir:"down", title:"Fiscal tightening", desc:"Government reduces spending and/or raises taxes, lowering demand and output." },
+
+      // ---- P (price level) => shift ----
+      { var:"P", dir:"up",   title:"Broad inflation pressure", desc:"Prices rise across many goods and services." },
+      { var:"P", dir:"up",   title:"Energy price spike", desc:"Oil and gasoline prices jump and push the overall price level up." },
+      { var:"P", dir:"up",   title:"Cost-of-living surge", desc:"Rents and food prices rise broadly." },
+
+      // Deflation (P down)
+      { var:"P", dir:"down", title:"Deflationary pressure", desc:"Prices begin falling across many categories (deflation)." },
+      { var:"P", dir:"down", title:"Energy price collapse", desc:"Energy prices fall sharply and pull the overall price level down." },
+      { var:"P", dir:"down", title:"Widespread price cuts", desc:"Firms cut prices broadly to clear excess inventory." },
+
+      // ---- Z (other Fed considerations) => shift ----
+      { var:"Z", dir:"up",   title:"Tariff uncertainty", desc:"Wide-ranging tariffs are announced; the Fed becomes more cautious / hawkish given uncertainty." },
+      { var:"Z", dir:"down", title:"Financial stress", desc:"Credit markets tighten and risk rises; the Fed leans toward easier policy." },
+      { var:"Z", dir:"up",   title:"Financial exuberance", desc:"Risk-taking and speculation rise; the Fed leans more hawkish for stability." },
+      { var:"Z", dir:"down", title:"Confidence shock", desc:"Uncertainty spikes and firms postpone investment; the Fed leans more dovish." },
+      { var:"Z", dir:"up",   title:"Policy regime shift (hawkish)", desc:"The Fed signals it will respond more aggressively going forward." },
+      { var:"Z", dir:"down", title:"Policy regime shift (dovish)", desc:"The Fed signals it will respond less aggressively / prioritize employment." },
+    ],
   };
 
   function typeset(el){
@@ -43,9 +80,6 @@
     whyBtn: $("whyBtn"),
     feedback: $("feedback"),
 
-    aVal: $("aVal"),
-    bVal: $("bVal"),
-    cVal: $("cVal"),
     Y0: $("Y0"),
     Y1: $("Y1"),
     r0: $("r0"),
@@ -72,7 +106,7 @@
   const base = { ...D.baseline };
 
   let cur = { ...base };
-  let scenario = null; // {var, dir, mag, target}
+  let scenario = null; // {var,dir,mag,title,desc,target}
 
   function rOf(Y,P,Z){ return a*Y + b*P + c*Z; }
   function clamp(x,lo,hi){ return Math.max(lo, Math.min(hi, x)); }
@@ -90,7 +124,7 @@
     typeset(els.feedback);
   }
 
-  // Canvas always has a width/height attribute. We still scale for DPR.
+  // Canvas scaling (always renders)
   function getCtx() {
     const ctx = els.canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
@@ -220,10 +254,6 @@
     const r0 = rOf(base.Y, base.P, base.Z);
     const r1 = rOf(cur.Y, cur.P, cur.Z);
 
-    els.aVal.textContent = a.toFixed(2);
-    els.bVal.textContent = b.toFixed(2);
-    els.cVal.textContent = c.toFixed(2);
-
     els.Y0.textContent = base.Y.toFixed(0);
     els.Y1.textContent = cur.Y.toFixed(0);
     els.r0.textContent = r0.toFixed(2);
@@ -248,6 +278,11 @@
     return { type, Ychg, Rchg };
   }
 
+  function pickMagnitude(v){
+    const arr = D.mags[v];
+    return arr[Math.floor(Math.random()*arr.length)];
+  }
+
   function newScenario(){
     // reset to baseline
     cur = { ...base };
@@ -255,24 +290,20 @@
     els.Pslider.value = String(base.P);
     els.Zslider.value = String(base.Z);
 
-    const u = Math.random();
-    let v = (u < 0.45) ? "Y" : (u < 0.75 ? "P" : "Z");
-    const dir = Math.random() < 0.5 ? "up" : "down";
-    const mag = v==="Y"
-      ? D.shocks.dY[Math.floor(Math.random()*D.shocks.dY.length)]
-      : (v==="P" ? D.shocks.dP[Math.floor(Math.random()*D.shocks.dP.length)]
-                : D.shocks.dZ[Math.floor(Math.random()*D.shocks.dZ.length)]);
+    const s = D.scenarios[Math.floor(Math.random()*D.scenarios.length)];
+    const mag = pickMagnitude(s.var);
 
     const target = { ...base };
-    if (v==="Y") target.Y = clamp(base.Y + (dir==="up"?mag:-mag), D.axes.Ymin, D.axes.Ymax);
-    if (v==="P") target.P = Math.max(0, base.P + (dir==="up"?mag:-mag));
-    if (v==="Z") target.Z = Math.max(0, base.Z + (dir==="up"?mag:-mag));
+    if (s.var==="Y") target.Y = clamp(base.Y + (s.dir==="up"?mag:-mag), D.axes.Ymin, D.axes.Ymax);
+    if (s.var==="P") target.P = Math.max(0, base.P + (s.dir==="up"?mag:-mag));
+    if (s.var==="Z") target.Z = Math.max(0, base.Z + (s.dir==="up"?mag:-mag));
 
-    scenario = { var: v, dir, mag, target };
+    scenario = { ...s, mag, target };
 
     els.scenarioDesc.textContent =
-      `Shock: ${v} ${dir==="up" ? "increases" : "decreases"}.\n` +
-      `Use the sliders to implement the shock and see what happens on the graph.\n` +
+      `${scenario.title}\n${scenario.desc}\n\n` +
+      `Shock: ${scenario.var} ${scenario.dir==="up" ? "increases" : "decreases"}.\n` +
+      `Use the sliders to implement the shock.\n` +
       `Hint: Y changes = movement along; P or Z changes = shift.`;
 
     els.predType.value = "";
@@ -318,8 +349,8 @@
       return;
     }
     const txt = (scenario.var === "Y")
-      ? `Changing $Y$ moves you to a different point on the same line (movement along). Since $a>0$, higher $Y$ implies higher $r$.`
-      : `Changing $${scenario.var}$$ changes the intercept term $bP+cZ$, shifting the whole line up/down (same slope $a$).`;
+      ? `This scenario changes $Y$ (output). Changing $Y$ moves you to a different point on the same line (movement along). Since $a>0$, higher $Y$ implies higher $r$.`
+      : `This scenario changes $${scenario.var}$$, which changes the intercept term $bP+cZ$. That shifts the whole rule up/down (same slope $a$).`;
     showFeedback(`<span class="tagOK">Why</span> ${txt}`);
   }
 
@@ -369,18 +400,15 @@
   els.Pslider.addEventListener("input", sliderChanged);
   els.Zslider.addEventListener("input", sliderChanged);
 
-  // Redraw on resize
-  window.addEventListener("resize", () => requestAnimationFrame(() => { draw(); }));
+  window.addEventListener("resize", () => requestAnimationFrame(draw));
 
   // Init
   window.addEventListener("load", () => {
     lockControls(true);
     updateNumbers();
-    draw();               // will always draw because canvas has width/height attrs
+    draw();
     setStatus("Ready.");
     typeset(document.body);
-
-    // Extra safety: redraw again after layout settles
     setTimeout(draw, 120);
   });
 })();
