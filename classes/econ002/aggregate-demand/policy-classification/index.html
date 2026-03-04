@@ -1,0 +1,1019 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Policy Classifier — Aggregate Demand</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+      --font-serif: "Source Serif 4", Georgia, serif;
+      --paper: #f6f2ea;
+      --panel: #ffffff;
+      --ink: #1f2937;
+      --ink-2: #374151;
+      --muted: #6b7280;
+      --line: #e7dfd2;
+      --line-2: #d9cfbf;
+      --shadow: 0 1px 2px rgba(17,24,39,0.06), 0 10px 24px rgba(17,24,39,0.06);
+      --accent: #2f5d7c;
+      --focus: #2563eb;
+      --good: #1b7f4b;
+      --bad: #b42318;
+      --good-bg: rgba(27,127,75,0.08);
+      --bad-bg: rgba(180,35,24,0.08);
+      --good-border: rgba(27,127,75,0.35);
+      --bad-border: rgba(180,35,24,0.35);
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-sans); }
+
+    .container { max-width: 1120px; margin: 0 auto; padding: 18px 18px; }
+
+    .page-header {
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,0.75), rgba(255,255,255,0));
+    }
+    .header-inner {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 18px;
+      align-items: start;
+      padding-top: 22px;
+      padding-bottom: 14px;
+    }
+    @media (max-width: 780px) { .header-inner { grid-template-columns: 1fr; } }
+
+    .crumbbar { margin: 0 0 10px; }
+    .crumb-link { color: var(--accent); text-decoration: none; font-weight: 800; font-size: 13px; }
+    .crumb-link:hover { text-decoration: underline; }
+
+    .kicker { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    h1 { font-family: var(--font-serif); font-size: 36px; line-height: 1.1; margin: 0; }
+    .sub { margin: 10px 0 0; color: var(--ink-2); line-height: 1.55; max-width: 82ch; }
+
+    .howto {
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.70);
+      padding: 10px 12px;
+    }
+    .howto summary { cursor: pointer; font-weight: 600; color: var(--accent); font-size: 14px; }
+    .howto-body { margin-top: 10px; color: var(--ink-2); line-height: 1.55; font-size: 14px; }
+    .howto-body ol { margin: 0 0 0 18px; padding: 0; }
+    .howto-body li { margin-bottom: 4px; }
+
+    .controls-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+    .controls-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .status { margin-top: 10px; min-height: 20px; color: var(--muted); font-size: 13px; }
+
+    .btn {
+      border: 1px solid var(--line-2);
+      background: #fff;
+      color: var(--ink);
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      font-family: var(--font-sans);
+      transition: background 0.15s, border-color 0.15s, transform 0.06s;
+    }
+    .btn:hover { background: rgba(47,93,124,0.06); border-color: rgba(47,93,124,0.35); }
+    .btn:active { transform: translateY(1px); }
+    .btn.primary { background: rgba(47,93,124,0.10); border-color: rgba(47,93,124,0.35); color: var(--accent); }
+    .btn.primary:hover { background: rgba(47,93,124,0.16); }
+    .btn.subtle { background: rgba(139,90,43,0.08); border-color: rgba(139,90,43,0.25); }
+    .btn.subtle:hover { background: rgba(139,90,43,0.13); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* Score bar */
+    .score-bar {
+      display: flex; gap: 16px; align-items: center; flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .score-chip {
+      font-size: 13px; font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line-2);
+      background: rgba(255,255,255,0.8);
+      color: var(--ink);
+    }
+    .score-chip.correct { background: var(--good-bg); border-color: var(--good-border); color: var(--good); }
+    .score-chip.incorrect { background: var(--bad-bg); border-color: var(--bad-border); color: var(--bad); }
+
+    /* Main layout */
+    .main-stack { display: grid; gap: 14px; margin-top: 18px; }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .panel-head h2 {
+      margin: 0;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    /* Scenario display */
+    .scenario-box {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(246,242,234,0.5);
+      padding: 14px 16px;
+      margin-bottom: 18px;
+    }
+    .scenario-stamp {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .scenario-headline {
+      font-family: var(--font-serif);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.25;
+      margin: 0 0 6px;
+    }
+    .scenario-brief {
+      font-size: 14px;
+      color: var(--ink-2);
+      line-height: 1.5;
+      margin: 0;
+    }
+    .scenario-placeholder {
+      font-size: 14px;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    /* Question grid */
+    .q-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 980px) { .q-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 560px) { .q-grid { grid-template-columns: 1fr; } }
+
+    .q-block {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.7);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .q-block.answered-correct {
+      border-color: var(--good-border);
+      background: var(--good-bg);
+    }
+    .q-block.answered-wrong {
+      border-color: var(--bad-border);
+      background: var(--bad-bg);
+    }
+
+    .q-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .q-title {
+      font-weight: 900;
+      font-size: 15px;
+      color: var(--ink);
+    }
+
+    /* Choice buttons */
+    .choices { display: flex; flex-direction: column; gap: 7px; }
+    .choice-btn {
+      width: 100%;
+      text-align: left;
+      padding: 9px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line-2);
+      background: rgba(255,255,255,0.85);
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s, transform 0.06s;
+    }
+    .choice-btn:hover:not(:disabled) {
+      background: rgba(47,93,124,0.07);
+      border-color: rgba(47,93,124,0.30);
+    }
+    .choice-btn:active:not(:disabled) { transform: translateY(1px); }
+    .choice-btn.selected {
+      background: rgba(47,93,124,0.12);
+      border-color: rgba(47,93,124,0.45);
+      color: var(--accent);
+    }
+    .choice-btn.correct-reveal {
+      background: var(--good-bg);
+      border-color: var(--good-border);
+      color: var(--good);
+      font-weight: 800;
+    }
+    .choice-btn.wrong-reveal {
+      background: var(--bad-bg);
+      border-color: var(--bad-border);
+      color: var(--bad);
+    }
+    .choice-btn:disabled { cursor: default; }
+
+    /* Per-question feedback */
+    .q-feedback {
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--ink-2);
+      display: none;
+    }
+    .q-feedback.visible { display: block; }
+    .q-feedback .verdict {
+      font-weight: 800;
+      margin-bottom: 3px;
+    }
+    .q-feedback .verdict.good { color: var(--good); }
+    .q-feedback .verdict.bad { color: var(--bad); }
+
+    /* Explanation panel */
+    .explain-panel {
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(246,242,234,0.40);
+      padding: 14px 16px;
+      display: none;
+    }
+    .explain-panel.visible { display: block; }
+    .explain-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .explain-body {
+      font-size: 13px;
+      color: var(--ink-2);
+      line-height: 1.6;
+    }
+    .explain-chain {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .chain-tok {
+      font-size: 12px;
+      font-weight: 800;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(47,93,124,0.10);
+      border: 1px solid rgba(47,93,124,0.25);
+      color: var(--accent);
+    }
+    .chain-arrow {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    /* Progress dots */
+    .progress-row {
+      display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 10px;
+    }
+    .prog-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      border: 1.5px solid var(--line-2);
+      background: rgba(255,255,255,0.7);
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .prog-dot.correct { background: var(--good); border-color: var(--good); }
+    .prog-dot.wrong { background: var(--bad); border-color: var(--bad); }
+    .prog-dot.current { border-color: var(--accent); background: rgba(47,93,124,0.15); }
+
+    .footer {
+      margin-top: 18px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .footer-inner { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+
+    :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+    /* Shake animation for wrong answer */
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20% { transform: translateX(-5px); }
+      40% { transform: translateX(5px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+    .shake { animation: shake 0.35s ease; }
+
+    /* Fade in */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeIn 0.25s ease forwards; }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar">
+      <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
+    </nav>
+    <div class="header-inner">
+      <div>
+        <div class="kicker">Macroeconomics Practice Lab</div>
+        <h1>Policy Classifier</h1>
+        <p class="sub">
+          Read each policy scenario, then classify it: Is it fiscal or monetary? Expansionary or contractionary? Which curve shifts, and in which direction?
+        </p>
+        <details class="howto">
+          <summary>How this app works</summary>
+          <div class="howto-body">
+            <ol>
+              <li>Click <strong>New Scenario</strong> to draw a policy headline.</li>
+              <li>Answer all three classification questions by clicking your choice.</li>
+              <li>Click <strong>Check answers</strong> to see how you did. Correct answers turn green; wrong answers are revealed.</li>
+              <li>Read the explanation, then click <strong>New Scenario</strong> to continue.</li>
+            </ol>
+          </div>
+        </details>
+      </div>
+      <div class="controls-card">
+        <div class="controls-actions">
+          <button id="newBtn" class="btn primary">New Scenario</button>
+          <button id="checkBtn" class="btn" disabled>Check answers</button>
+          <button id="resetBtn" class="btn subtle">Reset</button>
+        </div>
+        <div class="score-bar">
+          <span class="score-chip correct" id="scoreCorrect">✓ 0</span>
+          <span class="score-chip incorrect" id="scoreWrong">✗ 0</span>
+          <span class="score-chip" id="scoreTotal">0 answered</span>
+        </div>
+        <div id="status" class="status" aria-live="polite">Click "New Scenario" to begin.</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="container main-stack">
+  <div class="panel fade-in">
+    <div class="panel-head">
+      <h2>Scenario</h2>
+      <div class="progress-row" id="progressRow"></div>
+    </div>
+
+    <div class="scenario-box" id="scenarioBox">
+      <p class="scenario-placeholder">Click "New Scenario" to start.</p>
+    </div>
+
+    <!-- Questions -->
+    <div class="q-grid" id="qGrid">
+
+      <!-- Q1: Fiscal or Monetary -->
+      <div class="q-block" id="qBlock0">
+        <div class="q-label">Question 1</div>
+        <div class="q-title">What type of policy is this?</div>
+        <div class="choices" id="choices0"></div>
+        <div class="q-feedback" id="feedback0"></div>
+      </div>
+
+      <!-- Q2: Expansionary or Contractionary -->
+      <div class="q-block" id="qBlock1">
+        <div class="q-label">Question 2</div>
+        <div class="q-title">Is it expansionary or contractionary?</div>
+        <div class="choices" id="choices1"></div>
+        <div class="q-feedback" id="feedback1"></div>
+      </div>
+
+      <!-- Q3: Which curve shifts + direction -->
+      <div class="q-block" id="qBlock2">
+        <div class="q-label">Question 3</div>
+        <div class="q-title">Which curve shifts, and in which direction?</div>
+        <div class="choices" id="choices2"></div>
+        <div class="q-feedback" id="feedback2"></div>
+      </div>
+
+      <!-- Q4: AD shift vs movement along -->
+      <div class="q-block" id="qBlock3">
+        <div class="q-label">Question 4</div>
+        <div class="q-title">What happens to the AD curve?</div>
+        <div class="choices" id="choices3"></div>
+        <div class="q-feedback" id="feedback3"></div>
+      </div>
+
+    </div>
+
+    <!-- Explanation -->
+    <div class="explain-panel" id="explainPanel">
+      <div class="explain-title">Explanation</div>
+      <div class="explain-body" id="explainBody"></div>
+      <div class="explain-chain" id="explainChain"></div>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div>ECON 002 — Aggregate Demand</div>
+      <div>Hosted on GitHub Pages</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+(() => {
+  // ── Scenarios ──────────────────────────────────────────────────────────────
+  // type: "fiscal" | "monetary"
+  // stance: "expansionary" | "contractionary"
+  // curve: "IS" | "FR"
+  // direction: "right" | "left" | "down" | "up"
+  //   IS shifts right/left; FR shifts up/down
+  // chain: mechanism tokens
+  // explain: prose explanation
+
+  const SCEN = [
+    // ── FISCAL / EXPANSIONARY / IS right ────────────────────────────────────
+    {
+      source: "Congress",
+      headline: "Emergency infrastructure bill passes, boosting federal spending",
+      brief: "The federal government significantly increases purchases of goods and services.",
+      type: "fiscal",
+      stance: "expansionary",
+      curve: "IS",
+      direction: "right",
+      chain: ["G↑","PE↑","Unplanned Inventories↓","Y↑","FF↑","r↑"],
+      explain: "Higher government purchases (G) raise planned expenditure, cutting unplanned inventories. Firms expand output, so Y rises. The Fed responds by raising the federal funds rate. On the IS–FR diagram, the IS curve shifts right — a higher Y is consistent with any given interest rate. Because output rises at the unchanged price level, the AD curve shifts right."
+    },
+    {
+      source: "White House",
+      headline: "Federal agencies accelerate contract awards this quarter",
+      brief: "Government purchases of goods and services rise sharply.",
+      type: "fiscal",
+      stance: "expansionary",
+      curve: "IS",
+      direction: "right",
+      chain: ["G↑","PE↑","Unplanned Inventories↓","Y↑","FF↑","r↑"],
+      explain: "An increase in government purchases raises planned expenditure and reduces unplanned inventories. Firms respond by raising output. The IS curve shifts right and, at the prevailing price level, output expands — shifting the AD curve rightward as well."
+    },
+    {
+      source: "Policy Desk",
+      headline: "Tax cuts take effect; withholding falls for millions of households",
+      brief: "Net taxes paid by households decline, boosting disposable income.",
+      type: "fiscal",
+      stance: "expansionary",
+      curve: "IS",
+      direction: "right",
+      chain: ["T↓","C↑","PE↑","Unplanned Inventories↓","Y↑","FF↑","r↑"],
+      explain: "A tax cut raises disposable income, which increases consumption (C). Higher consumption raises planned expenditure and lowers unplanned inventories, so firms produce more. The IS curve shifts right. At the unchanged price level, output is higher, so the AD curve shifts right."
+    },
+    {
+      source: "Policy Desk",
+      headline: "Child tax credit expansion begins, raising household take-home pay",
+      brief: "Effective net taxes fall this period for most families.",
+      type: "fiscal",
+      stance: "expansionary",
+      curve: "IS",
+      direction: "right",
+      chain: ["T↓","C↑","PE↑","Unplanned Inventories↓","Y↑","FF↑","r↑"],
+      explain: "Lower net taxes increase households' disposable income and consumption. This raises planned expenditure and reduces unplanned inventories, prompting firms to raise output. The IS curve shifts right and the AD curve follows — more output is demanded at every price level."
+    },
+    {
+      source: "State & Local",
+      headline: "State and local governments accelerate public works spending",
+      brief: "Public purchases of goods and services rise as projects move forward.",
+      type: "fiscal",
+      stance: "expansionary",
+      curve: "IS",
+      direction: "right",
+      chain: ["G↑","PE↑","Unplanned Inventories↓","Y↑","FF↑","r↑"],
+      explain: "Higher government purchases raise planned expenditure. Unplanned inventories fall and firms expand production. The IS curve shifts right. Because output rises at the given price level, the AD curve also shifts right."
+    },
+
+    // ── FISCAL / CONTRACTIONARY / IS left ───────────────────────────────────
+    {
+      source: "OMB",
+      headline: "Budget directive freezes new federal contracts across agencies",
+      brief: "Federal purchases fall as agencies delay procurement.",
+      type: "fiscal",
+      stance: "contractionary",
+      curve: "IS",
+      direction: "left",
+      chain: ["G↓","PE↓","Unplanned Inventories↑","Y↓","FF↓","r↓"],
+      explain: "Lower government purchases reduce planned expenditure, causing unplanned inventories to pile up. Firms cut output. The IS curve shifts left — less output is consistent with any given interest rate. At the unchanged price level, output falls, shifting the AD curve left."
+    },
+    {
+      source: "Congress",
+      headline: "Spending caps trigger broad cuts to federal programs",
+      brief: "The government reduces purchases of goods and services to meet budget targets.",
+      type: "fiscal",
+      stance: "contractionary",
+      curve: "IS",
+      direction: "left",
+      chain: ["G↓","PE↓","Unplanned Inventories↑","Y↓","FF↓","r↓"],
+      explain: "Reduced government purchases lower planned expenditure and lead to excess inventories. Firms respond by scaling back output. The IS curve shifts left, and the AD curve shifts left as well — lower output at the prevailing price level."
+    },
+    {
+      source: "Policy Desk",
+      headline: "Payroll tax surcharge introduced to reduce the deficit",
+      brief: "Households face a higher tax burden, reducing disposable income.",
+      type: "fiscal",
+      stance: "contractionary",
+      curve: "IS",
+      direction: "left",
+      chain: ["T↑","C↓","PE↓","Unplanned Inventories↑","Y↓","FF↓","r↓"],
+      explain: "Higher taxes reduce disposable income and household consumption. Lower consumption reduces planned expenditure and causes unplanned inventories to rise. Firms cut production, shifting the IS curve left. Output falls at the prevailing price level, so the AD curve shifts left."
+    },
+    {
+      source: "Congress",
+      headline: "Across-agency procurement cuts reduce government buying",
+      brief: "Government buys fewer goods and services this quarter.",
+      type: "fiscal",
+      stance: "contractionary",
+      curve: "IS",
+      direction: "left",
+      chain: ["G↓","PE↓","Unplanned Inventories↑","Y↓","FF↓","r↓"],
+      explain: "Fewer government purchases lower planned expenditure. Unplanned inventories rise and firms cut output. The IS curve shifts left. Because output falls at the unchanged price level, the AD curve shifts left too."
+    },
+    {
+      source: "Policy Desk",
+      headline: "Tax deductions reduced as part of fiscal consolidation plan",
+      brief: "Most households will owe more in taxes this year.",
+      type: "fiscal",
+      stance: "contractionary",
+      curve: "IS",
+      direction: "left",
+      chain: ["T↑","C↓","PE↓","Unplanned Inventories↑","Y↓","FF↓","r↓"],
+      explain: "Higher net taxes reduce household disposable income and consumption, lowering planned expenditure. Unplanned inventories build up and firms reduce output. The IS curve shifts left, and the AD curve shifts left to reflect the lower equilibrium output at the given price level."
+    },
+
+    // ── MONETARY / EXPANSIONARY / FR down ───────────────────────────────────
+    {
+      source: "Federal Reserve",
+      headline: "Fed cuts the federal funds rate target by 50 basis points",
+      brief: "The central bank lowers its key policy interest rate.",
+      type: "monetary",
+      stance: "expansionary",
+      curve: "FR",
+      direction: "down",
+      chain: ["FF↓","r↓","I↑","PE↑","Unplanned Inventories↓","Y↑"],
+      explain: "A lower federal funds rate reduces the real interest rate, which stimulates investment spending. Higher investment raises planned expenditure, unplanned inventories fall, and firms expand production. The FR curve shifts down on the IS–FR diagram. At the given price level output rises, shifting the AD curve right."
+    },
+    {
+      source: "Federal Reserve",
+      headline: "Fed announces quantitative easing program to support economy",
+      brief: "The central bank expands its balance sheet to push down long-term rates.",
+      type: "monetary",
+      stance: "expansionary",
+      curve: "FR",
+      direction: "down",
+      chain: ["FF↓","r↓","I↑","PE↑","Unplanned Inventories↓","Y↑"],
+      explain: "Quantitative easing lowers long-term interest rates, encouraging investment. Rising investment increases planned expenditure, causing unplanned inventories to fall and firms to boost output. The FR curve shifts downward, and the AD curve shifts right — more output demanded at every price level."
+    },
+    {
+      source: "Federal Reserve",
+      headline: "FOMC votes to ease monetary policy amid weak growth data",
+      brief: "The Fed reduces its policy rate to stimulate the economy.",
+      type: "monetary",
+      stance: "expansionary",
+      curve: "FR",
+      direction: "down",
+      chain: ["FF↓","r↓","I↑","PE↑","Unplanned Inventories↓","Y↑"],
+      explain: "Easier monetary policy lowers the federal funds rate and real interest rates. This boosts investment, which raises planned expenditure and lowers unplanned inventories. Output expands. The FR curve shifts down in the IS–FR diagram, and the AD curve shifts right."
+    },
+    {
+      source: "Federal Reserve",
+      headline: "Fed signals extended period of near-zero interest rates",
+      brief: "Forward guidance pushes down market interest rates broadly.",
+      type: "monetary",
+      stance: "expansionary",
+      curve: "FR",
+      direction: "down",
+      chain: ["FF↓","r↓","I↑","PE↑","Unplanned Inventories↓","Y↑"],
+      explain: "Forward guidance that rates will remain low reduces current borrowing costs, stimulating investment. Higher investment raises planned expenditure and reduces unplanned inventories. Firms expand output. The FR curve shifts down and the AD curve shifts right."
+    },
+    {
+      source: "Federal Reserve",
+      headline: "Fed cuts rates to counter weakening labor market",
+      brief: "Monetary easing aims to stimulate hiring and investment.",
+      type: "monetary",
+      stance: "expansionary",
+      curve: "FR",
+      direction: "down",
+      chain: ["FF↓","r↓","I↑","PE↑","Unplanned Inventories↓","Y↑"],
+      explain: "Cutting the federal funds rate lowers real interest rates and encourages firms to invest more. Rising investment increases planned expenditure, reduces unplanned inventories, and leads firms to raise output. The FR curve shifts down; at the prevailing price level, higher output means the AD curve shifts right."
+    },
+
+    // ── MONETARY / CONTRACTIONARY / FR up ───────────────────────────────────
+    {
+      source: "Federal Reserve",
+      headline: "Fed raises rates sharply to combat above-target inflation",
+      brief: "The FOMC increases the federal funds rate target.",
+      type: "monetary",
+      stance: "contractionary",
+      curve: "FR",
+      direction: "up",
+      chain: ["FF↑","r↑","I↓","PE↓","Unplanned Inventories↑","Y↓"],
+      explain: "A higher federal funds rate raises real interest rates, making borrowing more expensive and reducing investment. Lower investment cuts planned expenditure, causing unplanned inventories to rise and firms to reduce output. The FR curve shifts up in the IS–FR diagram, and the AD curve shifts left."
+    },
+    {
+      source: "Federal Reserve",
+      headline: "FOMC votes to tighten monetary policy after inflation surprise",
+      brief: "The Fed raises its benchmark rate to slow spending.",
+      type: "monetary",
+      stance: "contractionary",
+      curve: "FR",
+      direction: "up",
+      chain: ["FF↑","r↑","I↓","PE↓","Unplanned Inventories↑","Y↓"],
+      explain: "Tighter monetary policy increases the federal funds rate and real interest rates. This reduces investment spending, lowers planned expenditure, and causes unplanned inventories to accumulate. Firms cut output. The FR curve shifts up and the AD curve shifts left."
+    },
+    {
+      source: "Federal Reserve",
+      headline: "Fed resumes rate hikes after pause to address persistent inflation",
+      brief: "The central bank tightens policy to reduce aggregate demand.",
+      type: "monetary",
+      stance: "contractionary",
+      curve: "FR",
+      direction: "up",
+      chain: ["FF↑","r↑","I↓","PE↓","Unplanned Inventories↑","Y↓"],
+      explain: "Raising rates increases real interest rates, discouraging investment. Lower investment reduces planned expenditure, inventories pile up, and firms pull back production. The FR curve shifts upward in the IS–FR diagram; at the given price level, output falls and the AD curve shifts left."
+    },
+    {
+      source: "Federal Reserve",
+      headline: "Fed signals higher-for-longer rates to restore price stability",
+      brief: "Market rates rise in anticipation of sustained policy tightening.",
+      type: "monetary",
+      stance: "contractionary",
+      curve: "FR",
+      direction: "up",
+      chain: ["FF↑","r↑","I↓","PE↓","Unplanned Inventories↑","Y↓"],
+      explain: "Expectations of higher policy rates push up current real interest rates, reducing investment. Lower investment cuts planned expenditure and causes inventories to rise. Firms reduce output. The FR curve shifts up and the AD curve shifts left — less output at every price level."
+    },
+    {
+      source: "Federal Reserve",
+      headline: "Fed raises rates in response to strong job market and wage growth",
+      brief: "The FOMC tightens to cool an overheating economy.",
+      type: "monetary",
+      stance: "contractionary",
+      curve: "FR",
+      direction: "up",
+      chain: ["FF↑","r↑","I↓","PE↓","Unplanned Inventories↑","Y↓"],
+      explain: "Higher interest rates reduce investment spending and therefore planned expenditure. Unplanned inventories rise and firms cut output. The FR curve shifts upward; at the prevailing price level, equilibrium output falls, meaning the AD curve shifts left."
+    },
+  ];
+
+  // ── Questions config ─────────────────────────────────────────────────────
+
+  function buildQuestions(s) {
+    // AD: fiscal/monetary policy always SHIFTS the AD curve (never a movement along)
+    // direction: expansionary → right, contractionary → left
+    const adDir = s.stance === "expansionary" ? "right" : "left";
+    return [
+      {
+        id: 0,
+        correct: s.type,
+        choices: [
+          { value: "fiscal",   label: "Fiscal policy" },
+          { value: "monetary", label: "Monetary policy" },
+        ],
+        feedbackCorrect: "Correct! " + (s.type === "fiscal"
+          ? "This policy directly changes government purchases (G) or taxes (T) — the tools of fiscal policy."
+          : "This policy changes the federal funds rate — the main tool of monetary policy."),
+        feedbackWrong: (s.type === "fiscal"
+          ? "This is actually fiscal policy — it involves changes to government purchases (G) or taxes (T)."
+          : "This is actually monetary policy — it involves the Fed changing the federal funds rate."),
+      },
+      {
+        id: 1,
+        correct: s.stance,
+        choices: [
+          { value: "expansionary",   label: "Expansionary" },
+          { value: "contractionary", label: "Contractionary" },
+        ],
+        feedbackCorrect: "Correct! " + (s.stance === "expansionary"
+          ? "This policy boosts aggregate demand and raises output."
+          : "This policy reduces aggregate demand and lowers output."),
+        feedbackWrong: (s.stance === "expansionary"
+          ? "This is actually expansionary — it raises output and shifts AD right."
+          : "This is actually contractionary — it lowers output and shifts AD left."),
+      },
+      {
+        id: 2,
+        correct: s.curve + "-" + s.direction,
+        choices: buildCurveChoices(s),
+        feedbackCorrect: buildCurveCorrect(s),
+        feedbackWrong: buildCurveWrong(s),
+      },
+      {
+        id: 3,
+        correct: "shift-" + adDir,
+        choices: [
+          { value: "shift-right",  label: "AD shifts right" },
+          { value: "shift-left",   label: "AD shifts left" },
+          { value: "move-right",   label: "Movement along AD (rightward)" },
+          { value: "move-left",    label: "Movement along AD (leftward)" },
+        ],
+        feedbackCorrect: `Correct! Fiscal and monetary policy change the equilibrium output at every price level, so the AD curve itself shifts ${adDir}.`,
+        feedbackWrong: `The AD curve shifts ${adDir}. Remember: fiscal and monetary policy shift the AD curve — only a change in the price level causes a movement along AD.`,
+      },
+    ];
+  }
+
+  function buildCurveChoices(s) {
+    // IS shifts left/right; FR shifts up/down
+    return [
+      { value: "IS-right", label: "IS shifts right" },
+      { value: "IS-left",  label: "IS shifts left" },
+      { value: "FR-up",    label: "FR shifts up" },
+      { value: "FR-down",  label: "FR shifts down" },
+    ];
+  }
+
+  function buildCurveCorrect(s) {
+    const curveDir = s.curve + " " + (s.direction === "right" ? "rightward" : s.direction === "left" ? "leftward" : s.direction === "up" ? "upward" : "downward");
+    return `Correct! The ${curveDir} shift reflects this policy's direct effect on the IS–FR diagram.`;
+  }
+
+  function buildCurveWrong(s) {
+    const dir = s.direction === "right" ? "right" : s.direction === "left" ? "left" : s.direction === "up" ? "up" : "down";
+    return `Not quite. The ${s.curve} curve shifts ${dir}. ${s.curve === "IS"
+      ? "Fiscal policy affects the goods market directly, shifting IS."
+      : "Monetary policy changes the federal funds rate, shifting FR."}`;
+  }
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  let scenario = null;
+  let questions = [];
+  let selections = [null, null, null, null];  // selected value per question
+  let checked = false;
+  let history = []; // array of booleans (all-correct per round)
+  let totalCorrect = 0;
+  let totalWrong = 0;
+  let recentScenarios = [];
+
+  // ── DOM refs ──────────────────────────────────────────────────────────────
+  const newBtn      = document.getElementById("newBtn");
+  const checkBtn    = document.getElementById("checkBtn");
+  const resetBtn    = document.getElementById("resetBtn");
+  const statusEl    = document.getElementById("status");
+  const scenarioBox = document.getElementById("scenarioBox");
+  const qGrid       = document.getElementById("qGrid");
+  const explainPanel = document.getElementById("explainPanel");
+  const explainBody  = document.getElementById("explainBody");
+  const explainChain = document.getElementById("explainChain");
+  const progressRow  = document.getElementById("progressRow");
+  const scoreCorrect = document.getElementById("scoreCorrect");
+  const scoreWrong   = document.getElementById("scoreWrong");
+  const scoreTotal   = document.getElementById("scoreTotal");
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function setStatus(msg) { statusEl.textContent = msg; }
+
+  function updateScoreBar() {
+    scoreCorrect.textContent = `✓ ${totalCorrect}`;
+    scoreWrong.textContent   = `✗ ${totalWrong}`;
+    scoreTotal.textContent   = `${totalCorrect + totalWrong} answered`;
+  }
+
+  function updateProgress() {
+    progressRow.innerHTML = "";
+    history.forEach((correct, i) => {
+      const d = document.createElement("div");
+      d.className = "prog-dot " + (correct ? "correct" : "wrong");
+      d.title = `Scenario ${i+1}: ${correct ? "All correct" : "Some wrong"}`;
+      progressRow.appendChild(d);
+    });
+  }
+
+  function allSelected() { return selections.every(s => s !== null); }
+
+  function makeStamp() {
+    const days = ["Mon","Tue","Wed","Thu","Fri"];
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const d = days[Math.floor(Math.random() * days.length)];
+    const m = months[Math.floor(Math.random() * months.length)];
+    const day = 1 + Math.floor(Math.random() * 28);
+    const hr = 7 + Math.floor(Math.random() * 9);
+    const min = Math.random() < 0.5 ? "00" : "30";
+    return `${d}, ${m} ${day} — ${hr}:${min} ${hr < 12 ? "AM" : "PM"}`;
+  }
+
+  // ── Render scenario ───────────────────────────────────────────────────────
+  function renderScenario() {
+    scenarioBox.innerHTML = `
+      <div class="scenario-stamp">${scenario.stamp} · ${scenario.source}</div>
+      <p class="scenario-headline">${scenario.headline}</p>
+      <p class="scenario-brief">${scenario.brief}</p>
+    `;
+  }
+
+  // ── Render questions ──────────────────────────────────────────────────────
+  function renderQuestions() {
+    questions.forEach((q) => {
+      const choicesEl = document.getElementById(`choices${q.id}`);
+      const blockEl   = document.getElementById(`qBlock${q.id}`);
+      choicesEl.innerHTML = "";
+      blockEl.className = "q-block fade-in";
+
+      q.choices.forEach((c) => {
+        const btn = document.createElement("button");
+        btn.className = "choice-btn";
+        btn.textContent = c.label;
+        btn.dataset.value = c.value;
+        btn.addEventListener("click", () => onSelect(q.id, c.value, btn));
+        choicesEl.appendChild(btn);
+      });
+
+      const fb = document.getElementById(`feedback${q.id}`);
+      fb.innerHTML = "";
+      fb.className = "q-feedback";
+    });
+  }
+
+  // ── Selection handler ─────────────────────────────────────────────────────
+  function onSelect(qId, value, clickedBtn) {
+    if (checked) return;
+    selections[qId] = value;
+
+    // update button states
+    const choicesEl = document.getElementById(`choices${qId}`);
+    choicesEl.querySelectorAll(".choice-btn").forEach(b => {
+      b.classList.toggle("selected", b.dataset.value === value);
+    });
+
+    // enable check if all selected
+    checkBtn.disabled = !allSelected();
+    if (allSelected()) setStatus("All questions answered — click Check answers.");
+  }
+
+  // ── Check answers ─────────────────────────────────────────────────────────
+  function checkAnswers() {
+    if (!allSelected() || checked) return;
+    checked = true;
+    checkBtn.disabled = true;
+
+    let allCorrect = true;
+
+    questions.forEach((q) => {
+      const isCorrect = selections[q.id] === q.correct;
+      if (!isCorrect) allCorrect = false;
+
+      const blockEl   = document.getElementById(`qBlock${q.id}`);
+      const choicesEl = document.getElementById(`choices${q.id}`);
+      const feedbackEl = document.getElementById(`feedback${q.id}`);
+
+      blockEl.className = "q-block " + (isCorrect ? "answered-correct" : "answered-wrong");
+
+      choicesEl.querySelectorAll(".choice-btn").forEach(b => {
+        b.disabled = true;
+        if (b.dataset.value === q.correct) {
+          b.classList.remove("selected");
+          b.classList.add("correct-reveal");
+        } else if (b.dataset.value === selections[q.id] && !isCorrect) {
+          b.classList.remove("selected");
+          b.classList.add("wrong-reveal");
+        }
+      });
+
+      feedbackEl.innerHTML = `<div class="verdict ${isCorrect ? 'good' : 'bad'}">${isCorrect ? "✓ Correct" : "✗ Not quite"}</div>${isCorrect ? q.feedbackCorrect : q.feedbackWrong}`;
+      feedbackEl.className = "q-feedback visible";
+
+      if (!isCorrect) {
+        blockEl.classList.add("shake");
+        setTimeout(() => blockEl.classList.remove("shake"), 400);
+      }
+    });
+
+    // count score: each question individually
+    questions.forEach(q => {
+      if (selections[q.id] === q.correct) totalCorrect++;
+      else totalWrong++;
+    });
+    history.push(allCorrect);
+    updateScoreBar();
+    updateProgress();
+
+    // Show explanation
+    explainBody.textContent = scenario.explain;
+    explainChain.innerHTML = scenario.chain.map((tok, i) =>
+      `<span class="chain-tok">${tok}</span>` +
+      (i < scenario.chain.length - 1 ? `<span class="chain-arrow">→</span>` : "")
+    ).join("");
+    explainPanel.className = "explain-panel visible fade-in";
+
+    const nCorrect = questions.filter(q => selections[q.id] === q.correct).length;
+    setStatus(nCorrect === 4
+      ? "✓ Perfect! All four correct. Click New Scenario to continue."
+      : `${nCorrect}/4 correct. Review the explanation, then try a new scenario.`);
+  }
+
+  // ── New scenario ──────────────────────────────────────────────────────────
+  function newScenario() {
+    // avoid immediate repeats
+    let pick;
+    let attempts = 0;
+    do {
+      pick = SCEN[Math.floor(Math.random() * SCEN.length)];
+      attempts++;
+    } while (recentScenarios.includes(pick.headline) && attempts < 20);
+    recentScenarios.push(pick.headline);
+    if (recentScenarios.length > 4) recentScenarios.shift();
+
+    scenario = { ...pick, stamp: makeStamp() };
+    questions = buildQuestions(scenario);
+    selections = [null, null, null, null];
+    checked = false;
+
+    renderScenario();
+    renderQuestions();
+
+    explainPanel.className = "explain-panel";
+    checkBtn.disabled = true;
+    setStatus("Read the scenario, then answer all three questions.");
+  }
+
+  // ── Reset ─────────────────────────────────────────────────────────────────
+  function resetAll() {
+    scenario = null;
+    questions = [];
+    selections = [null, null, null, null];
+    checked = false;
+    history = [];
+    totalCorrect = 0;
+    totalWrong = 0;
+    recentScenarios = [];
+
+    scenarioBox.innerHTML = `<p class="scenario-placeholder">Click "New Scenario" to start.</p>`;
+    [0,1,2,3].forEach(i => {
+      document.getElementById(`choices${i}`).innerHTML = "";
+      document.getElementById(`feedback${i}`).className = "q-feedback";
+      document.getElementById(`feedback${i}`).innerHTML = "";
+      document.getElementById(`qBlock${i}`).className = "q-block";
+    });
+    explainPanel.className = "explain-panel";
+    checkBtn.disabled = true;
+    progressRow.innerHTML = "";
+    updateScoreBar();
+    setStatus("Click \"New Scenario\" to begin.");
+  }
+
+  // ── Events ────────────────────────────────────────────────────────────────
+  newBtn.addEventListener("click", newScenario);
+  checkBtn.addEventListener("click", checkAnswers);
+  resetBtn.addEventListener("click", resetAll);
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  updateScoreBar();
+})();
+</script>
+</body>
+</html>
