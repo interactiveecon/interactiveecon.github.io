@@ -6,7 +6,10 @@
   // -----------------------
   function typeset(el) {
     if (!el) return;
-    if (!window.renderMathInElement) { setTimeout(() => typeset(el), 60); return; }
+    if (!window.renderMathInElement) {
+      setTimeout(() => typeset(el), 60);
+      return;
+    }
     window.renderMathInElement(el, {
       delimiters: [
         { left: "\\(", right: "\\)", display: false },
@@ -23,7 +26,7 @@
   // -----------------------
   const M = {
     isfr: { Ymin: 0, Ymax: 200, rmin: 0, rmax: 20 },
-    ad:   { Ymin: 0, Ymax: 200, Pmin: 3, Pmax: 7 },
+    ad: { Ymin: 0, Ymax: 200, Pmin: 3, Pmax: 7 },
 
     base: { G: 100, T: 100, C: 100, I: 100, P: 5, Z: 5 },
 
@@ -49,19 +52,19 @@
   function IS_r(Y, G, T, C, I) {
     const { aIS, bIS, gG, gT, gC, gI } = M.IS;
     const { G: G0, T: T0, C: C0, I: I0 } = M.base;
-    return aIS - bIS * Y + gG*(G - G0) - gT*(T - T0) + gC*(C - C0) + gI*(I - I0);
+    return aIS - bIS * Y + gG * (G - G0) - gT * (T - T0) + gC * (C - C0) + gI * (I - I0);
   }
 
   function FR_r(Y, P, Z) {
     const { aFR, bFR, hP, hZ } = M.FR;
     const { P: P0, Z: Z0 } = M.base;
-    return aFR + bFR * Y + hP*(P - P0) + hZ*(Z - Z0);
+    return aFR + bFR * Y + hP * (P - P0) + hZ * (Z - Z0);
   }
 
   function eqm(G, T, C, I, P, Z) {
     const A0 = IS_r(0, G, T, C, I);
     const C0 = FR_r(0, P, Z);
-    const denom = (M.IS.bIS + M.FR.bFR);
+    const denom = M.IS.bIS + M.FR.bFR;
 
     let Y = (A0 - C0) / denom;
     Y = clamp(Y, M.isfr.Ymin, M.isfr.Ymax);
@@ -83,17 +86,28 @@
   // TOKENS + MECHANISMS
   // -----------------------
   const TOK = {
-    Gup:"G↑", Gdn:"G↓",
-    Tup:"T↑", Tdn:"T↓",
-    Cup:"C↑", Cdn:"C↓",
-    Iup:"I↑", Idn:"I↓",
-    Pup:"P↑", Pdn:"P↓",
-    Zup:"Z↑", Zdn:"Z↓",
-    PEup:"PE↑", PEdn:"PE↓",
-    UInvUp:"Unplanned Inventories↑", UInvDn:"Unplanned Inventories↓",
-    Yup:"Y↑", Ydn:"Y↓",
-    FFup:"FF↑", FFdn:"FF↓",
-    rup:"r↑", rdn:"r↓",
+    Gup: "G↑",
+    Gdn: "G↓",
+    Tup: "T↑",
+    Tdn: "T↓",
+    Cup: "C↑",
+    Cdn: "C↓",
+    Iup: "I↑",
+    Idn: "I↓",
+    Pup: "P↑",
+    Pdn: "P↓",
+    Zup: "Z↑",
+    Zdn: "Z↓",
+    PEup: "PE↑",
+    PEdn: "PE↓",
+    UInvUp: "Unplanned Inventories↑",
+    UInvDn: "Unplanned Inventories↓",
+    Yup: "Y↑",
+    Ydn: "Y↓",
+    FFup: "FF↑",
+    FFdn: "FF↓",
+    rup: "r↑",
+    rdn: "r↓",
   };
 
   const MECH = {
@@ -117,24 +131,25 @@
     C_up: [TOK.Cup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
     C_dn: [TOK.Cdn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
 
-    // Investment shocks (as requested)
+    // Investment shocks
     I_dn: [TOK.Idn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
     I_up: [TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
   };
 
-const PILL_GROUPS = [
-  { name: "Government Purchases", pills: [TOK.Gup, TOK.Gdn] },
-  { name: "Taxes", pills: [TOK.Tup, TOK.Tdn] },
-  { name: "Consumption", pills: [TOK.Cup, TOK.Cdn] },
-  { name: "Investment", pills: [TOK.Iup, TOK.Idn] },
-  { name: "Price Level", pills: [TOK.Pup, TOK.Pdn] },
-  { name: "Other Factors (Z)", pills: [TOK.Zup, TOK.Zdn] },
-  { name: "Planned Expenditure", pills: [TOK.PEup, TOK.PEdn] },
-  { name: "Unplanned Inventories", pills: [TOK.UInvUp, TOK.UInvDn] },
-  { name: "Output", pills: [TOK.Yup, TOK.Ydn] },
-  { name: "Federal Funds Rate", pills: [TOK.FFup, TOK.FFdn] },
-  { name: "Interest Rate", pills: [TOK.rup, TOK.rdn] },
-];
+  // Full labels for headings
+  const PILL_GROUPS = [
+    { name: "Government Purchases", pills: [TOK.Gup, TOK.Gdn] },
+    { name: "Taxes", pills: [TOK.Tup, TOK.Tdn] },
+    { name: "Consumption", pills: [TOK.Cup, TOK.Cdn] },
+    { name: "Investment", pills: [TOK.Iup, TOK.Idn] },
+    { name: "Price Level", pills: [TOK.Pup, TOK.Pdn] },
+    { name: "Other Factors (Z)", pills: [TOK.Zup, TOK.Zdn] },
+    { name: "Planned Expenditure", pills: [TOK.PEup, TOK.PEdn] },
+    { name: "Unplanned Inventories", pills: [TOK.UInvUp, TOK.UInvDn] },
+    { name: "Output", pills: [TOK.Yup, TOK.Ydn] },
+    { name: "Federal Funds Rate", pills: [TOK.FFup, TOK.FFdn] },
+    { name: "Interest Rate", pills: [TOK.rup, TOK.rdn] },
+  ];
 
   const mechKeyFor = (varName, dir) => `${varName}_${dir === "up" ? "up" : "dn"}`;
 
@@ -142,28 +157,28 @@ const PILL_GROUPS = [
   // Scenarios (headline format)
   // -----------------------
   const SCEN = [
-    { var:"G", dir:"up",   source:"Policy Desk", headline:"Spending bill passes in Congress", brief:"Federal purchases rise over the next quarter." },
-    { var:"G", dir:"down", source:"Policy Desk", headline:"Spending cuts announced", brief:"Government purchases will be reduced to meet a budget target." },
+    { var: "G", dir: "up", source: "Policy Desk", headline: "Spending bill passes in Congress", brief: "Federal purchases rise over the next quarter." },
+    { var: "G", dir: "down", source: "Policy Desk", headline: "Spending cuts announced", brief: "Government purchases will be reduced to meet a budget target." },
 
-    { var:"T", dir:"down", source:"Policy Desk", headline:"Tax cut approved", brief:"Households face lower taxes starting this month." },
-    { var:"T", dir:"up",   source:"Policy Desk", headline:"Tax increase scheduled", brief:"Higher taxes take effect to stabilize public finances." },
+    { var: "T", dir: "down", source: "Policy Desk", headline: "Tax cut approved", brief: "Households face lower taxes starting this month." },
+    { var: "T", dir: "up", source: "Policy Desk", headline: "Tax increase scheduled", brief: "Higher taxes take effect to stabilize public finances." },
 
-    { var:"C", dir:"up",   source:"Household Survey", headline:"Consumer confidence jumps", brief:"Households report greater willingness to spend." },
-    { var:"C", dir:"down", source:"Household Survey", headline:"Confidence weakens", brief:"Households become more cautious and cut spending." },
+    { var: "C", dir: "up", source: "Household Survey", headline: "Consumer confidence jumps", brief: "Households report greater willingness to spend." },
+    { var: "C", dir: "down", source: "Household Survey", headline: "Confidence weakens", brief: "Households become more cautious and cut spending." },
 
-    { var:"I", dir:"up",   source:"Business Pulse", headline:"Firms ramp up investment plans", brief:"Capital spending plans expand due to strong outlook." },
-    { var:"I", dir:"down", source:"Business Pulse", headline:"Investment plans pulled back", brief:"Firms delay projects amid uncertainty." },
+    { var: "I", dir: "up", source: "Business Pulse", headline: "Firms ramp up investment plans", brief: "Capital spending plans expand due to strong outlook." },
+    { var: "I", dir: "down", source: "Business Pulse", headline: "Investment plans pulled back", brief: "Firms delay projects amid uncertainty." },
 
-    { var:"P", dir:"up",   source:"Inflation Watch", headline:"Inflation pressures intensify", brief:"Prices rise broadly across goods and services." },
-    { var:"P", dir:"down", source:"Inflation Watch", headline:"Deflation appears", brief:"Prices fall across many categories (deflation)." },
+    { var: "P", dir: "up", source: "Inflation Watch", headline: "Inflation pressures intensify", brief: "Prices rise broadly across goods and services." },
+    { var: "P", dir: "down", source: "Inflation Watch", headline: "Deflation appears", brief: "Prices fall across many categories (deflation)." },
 
-    { var:"Z", dir:"up",   source:"Policy Desk", headline:"Tariffs announced; uncertainty rises", brief:"Policy uncertainty rises; the Fed leans more cautious." },
-    { var:"Z", dir:"down", source:"Financial Conditions", headline:"Financial stress eases", brief:"Credit conditions improve; the Fed feels less need to restrain activity." },
+    { var: "Z", dir: "up", source: "Policy Desk", headline: "Tariffs announced; uncertainty rises", brief: "Policy uncertainty rises; the Fed leans more cautious." },
+    { var: "Z", dir: "down", source: "Financial Conditions", headline: "Financial stress eases", brief: "Credit conditions improve; the Fed feels less need to restrain activity." },
   ];
 
   function makeStamp() {
-    const days = ["Mon","Tue","Wed","Thu","Fri"];
-    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const d = days[Math.floor(Math.random() * days.length)];
     const m = months[Math.floor(Math.random() * months.length)];
     const day = 1 + Math.floor(Math.random() * 28);
@@ -181,7 +196,7 @@ const PILL_GROUPS = [
     status: $("status"),
     scenarioDesc: $("scenarioDesc"),
 
-    // prediction
+    // predictions
     isAction: $("isAction"),
     isDir: $("isDir"),
     frAction: $("frAction"),
@@ -209,9 +224,12 @@ const PILL_GROUPS = [
     // mechanism
     slots: $("slots"),
     poolGroups: $("poolGroups"),
-    mechStatus: $("mechStatus"),
     checkMechBtn: $("checkMechBtn"),
     clearMechBtn: $("clearMechBtn"),
+
+    // NEW mechanism result elements (from your updated index)
+    mechBadge: $("mechBadge"),
+    mechMsg: $("mechMsg"),
 
     // canvases
     isfrCanvas: $("isfrCanvas"),
@@ -232,14 +250,32 @@ const PILL_GROUPS = [
   let cur = { ...M.base };
 
   const baseEq = eqm(M.base.G, M.base.T, M.base.C, M.base.I, M.base.P, M.base.Z);
-  const baseAD = buildADCurve({ G:M.base.G, T:M.base.T, C:M.base.C, I:M.base.I, Z:M.base.Z }, 60);
+  const baseAD = buildADCurve({ G: M.base.G, T: M.base.T, C: M.base.C, I: M.base.I, Z: M.base.Z }, 60);
 
   // -----------------------
   // Status helpers
   // -----------------------
   const setStatus = (msg) => { if (els.status) els.status.textContent = msg; };
   const setPredStatus = (msg) => { if (els.predStatus) els.predStatus.textContent = msg || ""; };
-  const setMechStatus = (msg) => { if (els.mechStatus) els.mechStatus.textContent = msg || ""; };
+
+  // Mechanism result badge + message
+  function setMechResult(kind, msg) {
+    if (!els.mechBadge || !els.mechMsg) return;
+
+    if (!kind) {
+      els.mechBadge.hidden = true;
+      els.mechBadge.className = "mech-badge";
+      els.mechBadge.textContent = "";
+      els.mechMsg.textContent = msg || "";
+      return;
+    }
+
+    els.mechBadge.hidden = false;
+    els.mechBadge.className = "mech-badge " + (kind === "ok" ? "ok" : "bad");
+    els.mechBadge.textContent = (kind === "ok") ? "Correct" : "Wrong";
+    els.mechMsg.textContent = msg || "";
+  }
+  function clearMechResult() { setMechResult(null, ""); }
 
   // -----------------------
   // Sliders: lock/unlock
@@ -374,7 +410,11 @@ const PILL_GROUPS = [
       slot.textContent = "Drop";
       slot.dataset.idx = String(i);
 
-      slot.addEventListener("dragover", (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; });
+      slot.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+      });
+
       slot.addEventListener("drop", (e) => {
         e.preventDefault();
         const tok = e.dataTransfer.getData("text/plain");
@@ -382,13 +422,14 @@ const PILL_GROUPS = [
         slotsState[i] = tok;
         slot.classList.add("filled");
         slot.textContent = tok;
-        setMechStatus("");
+        clearMechResult();
       });
+
       slot.addEventListener("dblclick", () => {
         slotsState[i] = null;
         slot.classList.remove("filled");
         slot.textContent = "Drop";
-        setMechStatus("");
+        clearMechResult();
       });
 
       els.slots.appendChild(slot);
@@ -411,29 +452,34 @@ const PILL_GROUPS = [
       s.classList.remove("filled");
       s.textContent = "Drop";
     }
-    setMechStatus("");
+    clearMechResult();
   }
 
   function checkMechanism() {
-    if (!scenario) { setMechStatus("Click New Scenario first."); return; }
+    if (!scenario) { setMechResult("bad", "Click New Scenario first."); return; }
     const key = mechKeyFor(scenario.var, scenario.dir);
     const seq = MECH[key];
-    if (!seq) { setMechStatus("No mechanism defined."); return; }
+    if (!seq) { setMechResult("bad", "No mechanism defined."); return; }
 
     if (slotsState.some(v => v === null)) {
-      setMechStatus("Fill all blanks before checking.");
+      setMechResult("bad", "Fill all blanks before checking.");
       mechOK = false;
       return;
     }
+
     mechOK = seq.every((t, i) => slotsState[i] === t);
-    setMechStatus(mechOK ? "Correct." : "Not quite. Try again.");
+
+    if (mechOK) {
+      setMechResult("ok", "Nice. Your chain matches the scenario mechanism.");
+    } else {
+      setMechResult("bad", "Not quite. Try again—at least one step is out of order or incorrect.");
+    }
   }
 
   // -----------------------
   // Prediction UI
   // -----------------------
   function fillOptions(selectEl, options) {
-    if (!selectEl) return;
     selectEl.innerHTML = "";
     const first = document.createElement("option");
     first.value = "";
@@ -451,19 +497,19 @@ const PILL_GROUPS = [
     if (curve === "IS") {
       const act = els.isAction.value || "";
       if (!act) return fillOptions(els.isDir, []);
-      if (act === "shift") return fillOptions(els.isDir, [["right","Right"], ["left","Left"]]);
-      return fillOptions(els.isDir, [["up","Up along"], ["down","Down along"]]);
+      if (act === "shift") return fillOptions(els.isDir, [["right", "Right"], ["left", "Left"]]);
+      return fillOptions(els.isDir, [["up", "Up along"], ["down", "Down along"]]);
     }
     if (curve === "FR") {
       const act = els.frAction.value || "";
       if (!act) return fillOptions(els.frDir, []);
-      return fillOptions(els.frDir, [["up","Up"], ["down","Down"]]);
+      return fillOptions(els.frDir, [["up", "Up"], ["down", "Down"]]);
     }
     if (curve === "AD") {
       const act = els.adAction.value || "";
       if (!act) return fillOptions(els.adDir, []);
-      if (act === "shift") return fillOptions(els.adDir, [["right","Right"], ["left","Left"]]);
-      return fillOptions(els.adDir, [["up","Up along"], ["down","Down along"]]);
+      if (act === "shift") return fillOptions(els.adDir, [["right", "Right"], ["left", "Left"]]);
+      return fillOptions(els.adDir, [["up", "Up along"], ["down", "Down along"]]);
     }
   }
 
@@ -486,38 +532,32 @@ const PILL_GROUPS = [
   function expectedPrediction(s) {
     const v = s.var, dir = s.dir;
 
-    // G/C/I: IS shifts; FR moves along; AD shifts
     if (v === "G" || v === "C" || v === "I") {
       return {
-        IS: { action:"shift", dir: dir === "up" ? "right" : "left" },
-        FR: { action:"move",  dir: dir === "up" ? "up" : "down" },
-        AD: { action:"shift", dir: dir === "up" ? "right" : "left" }
+        IS: { action: "shift", dir: dir === "up" ? "right" : "left" },
+        FR: { action: "move",  dir: dir === "up" ? "up" : "down" },
+        AD: { action: "shift", dir: dir === "up" ? "right" : "left" },
       };
     }
-
-    // T: taxes up contracts (IS left, FR down along, AD left)
     if (v === "T") {
       return {
-        IS: { action:"shift", dir: dir === "up" ? "left" : "right" },
-        FR: { action:"move",  dir: dir === "up" ? "down" : "up" },
-        AD: { action:"shift", dir: dir === "up" ? "left" : "right" }
+        IS: { action: "shift", dir: dir === "up" ? "left" : "right" },
+        FR: { action: "move",  dir: dir === "up" ? "down" : "up" },
+        AD: { action: "shift", dir: dir === "up" ? "left" : "right" },
       };
     }
-
-    // P: FR shifts; IS moves along; AD moves along
     if (v === "P") {
       return {
-        IS: { action:"move",  dir: dir === "up" ? "up" : "down" },
-        FR: { action:"shift", dir: dir === "up" ? "up" : "down" },
-        AD: { action:"move",  dir: dir === "up" ? "up" : "down" }
+        IS: { action: "move",  dir: dir === "up" ? "up" : "down" },
+        FR: { action: "shift", dir: dir === "up" ? "up" : "down" },
+        AD: { action: "move",  dir: dir === "up" ? "up" : "down" },
       };
     }
-
-    // Z: FR shifts; IS moves along; AD shifts (tight -> left)
+    // Z
     return {
-      IS: { action:"move",  dir: dir === "up" ? "up" : "down" },
-      FR: { action:"shift", dir: dir === "up" ? "up" : "down" },
-      AD: { action:"shift", dir: dir === "up" ? "left" : "right" }
+      IS: { action: "move",  dir: dir === "up" ? "up" : "down" },
+      FR: { action: "shift", dir: dir === "up" ? "up" : "down" },
+      AD: { action: "shift", dir: dir === "up" ? "left" : "right" },
     };
   }
 
@@ -570,7 +610,7 @@ const PILL_GROUPS = [
     const got = {
       IS: { action: els.isAction.value, dir: els.isDir.value },
       FR: { action: els.frAction.value, dir: els.frDir.value },
-      AD: { action: els.adAction.value, dir: els.adDir.value }
+      AD: { action: els.adAction.value, dir: els.adDir.value },
     };
 
     const ok =
@@ -597,7 +637,7 @@ const PILL_GROUPS = [
   }
 
   // -----------------------
-  // Reveal logic
+  // Reveal logic + slider handler
   // -----------------------
   function updateReveal() {
     if (revealed || !scenario || !predMade) return;
@@ -628,103 +668,117 @@ const PILL_GROUPS = [
     const Hcss = canvas.clientHeight || canvas.height;
     const W = Math.floor(Wcss * dpr);
     const H = Math.floor(Hcss * dpr);
-    if (canvas.width !== W || canvas.height !== H) {
-      canvas.width = W;
-      canvas.height = H;
-    }
+    if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
     return { ctx, dpr, W, H };
   }
 
-  function drawLine(ctx, x1, y1, x2, y2, stroke, lw, dpr, dash=null) {
+  function drawLine(ctx, x1, y1, x2, y2, stroke, lw, dpr, dash = null) {
     ctx.strokeStyle = stroke;
-    ctx.lineWidth = lw*dpr;
-    ctx.setLineDash(dash ? dash.map(v=>v*dpr) : []);
-    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    ctx.lineWidth = lw * dpr;
+    ctx.setLineDash(dash ? dash.map(v => v * dpr) : []);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
     ctx.setLineDash([]);
   }
 
   function dot(ctx, x, y, color, dpr) {
     ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(x,y,5*dpr,0,Math.PI*2); ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x, y, 5 * dpr, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  function arrow(ctx, x1,y1,x2,y2, color, dpr) {
-    drawLine(ctx, x1,y1,x2,y2, color, 2.5, dpr);
-    const ang = Math.atan2(y2-y1, x2-x1);
-    const len = 10*dpr;
-    const a1 = ang + Math.PI*0.85;
-    const a2 = ang - Math.PI*0.85;
+  function arrow(ctx, x1, y1, x2, y2, color, dpr) {
+    drawLine(ctx, x1, y1, x2, y2, color, 2.5, dpr);
+    const ang = Math.atan2(y2 - y1, x2 - x1);
+    const len = 10 * dpr;
+    const a1 = ang + Math.PI * 0.85;
+    const a2 = ang - Math.PI * 0.85;
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2.5*dpr;
+    ctx.lineWidth = 2.5 * dpr;
     ctx.beginPath();
-    ctx.moveTo(x2,y2);
-    ctx.lineTo(x2 + len*Math.cos(a1), y2 + len*Math.sin(a1));
-    ctx.moveTo(x2,y2);
-    ctx.lineTo(x2 + len*Math.cos(a2), y2 + len*Math.sin(a2));
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 + len * Math.cos(a1), y2 + len * Math.sin(a1));
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 + len * Math.cos(a2), y2 + len * Math.sin(a2));
     ctx.stroke();
   }
 
   function xTick(ctx, x, yAxisBottom, label, dpr) {
     ctx.strokeStyle = "rgba(0,0,0,0.45)";
-    ctx.lineWidth = 2*dpr;
-    ctx.beginPath(); ctx.moveTo(x, yAxisBottom); ctx.lineTo(x, yAxisBottom + 6*dpr); ctx.stroke();
+    ctx.lineWidth = 2 * dpr;
+    ctx.beginPath();
+    ctx.moveTo(x, yAxisBottom);
+    ctx.lineTo(x, yAxisBottom + 6 * dpr);
+    ctx.stroke();
     ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = `${12*dpr}px system-ui`;
-    ctx.textAlign = "center"; ctx.textBaseline = "top";
-    ctx.fillText(label, x, yAxisBottom + 8*dpr);
+    ctx.font = `${12 * dpr}px system-ui`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText(label, x, yAxisBottom + 8 * dpr);
   }
 
   function yTick(ctx, xAxisLeft, y, label, dpr) {
     ctx.strokeStyle = "rgba(0,0,0,0.45)";
-    ctx.lineWidth = 2*dpr;
-    ctx.beginPath(); ctx.moveTo(xAxisLeft - 6*dpr, y); ctx.lineTo(xAxisLeft, y); ctx.stroke();
+    ctx.lineWidth = 2 * dpr;
+    ctx.beginPath();
+    ctx.moveTo(xAxisLeft - 6 * dpr, y);
+    ctx.lineTo(xAxisLeft, y);
+    ctx.stroke();
     ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = `${12*dpr}px system-ui`;
-    ctx.textAlign = "right"; ctx.textBaseline = "middle";
-    ctx.fillText(label, xAxisLeft - 10*dpr, y);
+    ctx.font = `${12 * dpr}px system-ui`;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, xAxisLeft - 10 * dpr, y);
   }
 
   function drawGrid(ctx, X0, X1, Y0, Y1, dpr) {
     ctx.strokeStyle = "rgba(0,0,0,0.10)";
-    ctx.lineWidth = 1*dpr;
-    for (let i=0;i<=5;i++){
-      const x = X0 + i*(X1-X0)/5;
-      ctx.beginPath(); ctx.moveTo(x,Y0); ctx.lineTo(x,Y1); ctx.stroke();
+    ctx.lineWidth = 1 * dpr;
+    for (let i = 0; i <= 5; i++) {
+      const x = X0 + i * (X1 - X0) / 5;
+      ctx.beginPath(); ctx.moveTo(x, Y0); ctx.lineTo(x, Y1); ctx.stroke();
     }
-    for (let i=0;i<=4;i++){
-      const y = Y0 + i*(Y1-Y0)/4;
-      ctx.beginPath(); ctx.moveTo(X0,y); ctx.lineTo(X1,y); ctx.stroke();
+    for (let i = 0; i <= 4; i++) {
+      const y = Y0 + i * (Y1 - Y0) / 4;
+      ctx.beginPath(); ctx.moveTo(X0, y); ctx.lineTo(X1, y); ctx.stroke();
     }
   }
 
   function drawISFR() {
     const { ctx, dpr, W, H } = getCtx(els.isfrCanvas);
-    ctx.clearRect(0,0,W,H);
+    ctx.clearRect(0, 0, W, H);
 
-    const pad = { l:70*dpr, r:18*dpr, t:18*dpr, b:60*dpr };
-    const X0=pad.l, X1=W-pad.r, Y0=pad.t, Y1=H-pad.b;
+    const pad = { l: 70*dpr, r: 18*dpr, t: 18*dpr, b: 60*dpr };
+    const X0 = pad.l, X1 = W - pad.r;
+    const Y0 = pad.t, Y1 = H - pad.b;
 
     const { Ymin, Ymax, rmin, rmax } = M.isfr;
-    const xTo = (Y)=> X0 + (Y-Ymin)/(Ymax-Ymin)*(X1-X0);
-    const yTo = (r)=> Y0 + (rmax-r)/(rmax-rmin)*(Y1-Y0);
+    const xTo = (Y) => X0 + (Y - Ymin) / (Ymax - Ymin) * (X1 - X0);
+    const yTo = (r) => Y0 + (rmax - r) / (rmax - rmin) * (Y1 - Y0);
 
     drawGrid(ctx, X0, X1, Y0, Y1, dpr);
 
     // labels
-    ctx.fillStyle="rgba(0,0,0,0.70)";
-    ctx.font=`${12*dpr}px system-ui`;
-    ctx.textAlign="center"; ctx.textBaseline="top";
-    ctx.fillText("Output (Y)", (X0+X1)/2, Y1+22*dpr);
+    ctx.fillStyle = "rgba(0,0,0,0.70)";
+    ctx.font = `${12*dpr}px system-ui`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText("Output (Y)", (X0 + X1) / 2, Y1 + 22*dpr);
+
     ctx.save();
-    ctx.translate(X0-52*dpr,(Y0+Y1)/2);
+    ctx.translate(X0 - 52*dpr, (Y0 + Y1) / 2);
     ctx.rotate(-Math.PI/2);
-    ctx.textAlign="center"; ctx.textBaseline="top";
-    ctx.fillText("Interest rate (r)",0,0);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText("Interest rate (r)", 0, 0);
     ctx.restore();
 
-    const YL=Ymin, YR=Ymax;
+    const YL = Ymin, YR = Ymax;
 
-    // baseline curves
+    // baseline curves (grey)
     const isL0 = IS_r(YL, M.base.G, M.base.T, M.base.C, M.base.I);
     const isR0 = IS_r(YR, M.base.G, M.base.T, M.base.C, M.base.I);
     const frL0 = FR_r(YL, M.base.P, M.base.Z);
@@ -733,16 +787,16 @@ const PILL_GROUPS = [
     drawLine(ctx, xTo(YL), yTo(frL0), xTo(YR), yTo(frR0), "rgba(0,0,0,0.22)", 3, dpr);
 
     // baseline eq
-    const x1p=xTo(baseEq.Y), y1p=yTo(baseEq.r);
+    const x1p = xTo(baseEq.Y), y1p = yTo(baseEq.r);
     dot(ctx, x1p, y1p, "rgba(0,0,0,0.40)", dpr);
-    drawLine(ctx, x1p, y1p, x1p, yTo(rmin), "rgba(0,0,0,0.30)", 2, dpr, [4,6]);
-    drawLine(ctx, x1p, y1p, xTo(Ymin), y1p, "rgba(0,0,0,0.30)", 2, dpr, [4,6]);
+    drawLine(ctx, x1p, y1p, x1p, yTo(rmin), "rgba(0,0,0,0.30)", 2, dpr, [4, 6]);
+    drawLine(ctx, x1p, y1p, xTo(Ymin), y1p, "rgba(0,0,0,0.30)", 2, dpr, [4, 6]);
     xTick(ctx, x1p, Y1, "Y₁", dpr);
     yTick(ctx, X0, y1p, "r₁", dpr);
 
     if (!revealed) return;
 
-    // current curves (orange) after reveal
+    // current curves (orange)
     const isL1 = IS_r(YL, cur.G, cur.T, cur.C, cur.I);
     const isR1 = IS_r(YR, cur.G, cur.T, cur.C, cur.I);
     const frL1 = FR_r(YL, cur.P, cur.Z);
@@ -751,10 +805,10 @@ const PILL_GROUPS = [
     drawLine(ctx, xTo(YL), yTo(frL1), xTo(YR), yTo(frR1), "rgba(230,159,0,0.95)", 3, dpr);
 
     const eq2 = eqm(cur.G, cur.T, cur.C, cur.I, cur.P, cur.Z);
-    const x2p=xTo(eq2.Y), y2p=yTo(eq2.r);
+    const x2p = xTo(eq2.Y), y2p = yTo(eq2.r);
     dot(ctx, x2p, y2p, "rgba(230,159,0,0.95)", dpr);
-    drawLine(ctx, x2p, y2p, x2p, yTo(rmin), "rgba(0,0,0,0.30)", 2, dpr, [4,6]);
-    drawLine(ctx, x2p, y2p, xTo(Ymin), y2p, "rgba(0,0,0,0.30)", 2, dpr, [4,6]);
+    drawLine(ctx, x2p, y2p, x2p, yTo(rmin), "rgba(0,0,0,0.30)", 2, dpr, [4, 6]);
+    drawLine(ctx, x2p, y2p, xTo(Ymin), y2p, "rgba(0,0,0,0.30)", 2, dpr, [4, 6]);
     if (!approxEq(eq2.Y, baseEq.Y, 1e-6)) xTick(ctx, x2p, Y1, "Y₂", dpr);
     yTick(ctx, X0, y2p, "r₂", dpr);
     arrow(ctx, x1p, y1p, x2p, y2p, "rgba(230,159,0,0.95)", dpr);
@@ -762,68 +816,72 @@ const PILL_GROUPS = [
 
   function drawAD() {
     const { ctx, dpr, W, H } = getCtx(els.adCanvas);
-    ctx.clearRect(0,0,W,H);
+    ctx.clearRect(0, 0, W, H);
 
-    const pad = { l:70*dpr, r:18*dpr, t:18*dpr, b:60*dpr };
-    const X0=pad.l, X1=W-pad.r, Y0=pad.t, Y1=H-pad.b;
+    const pad = { l: 70*dpr, r: 18*dpr, t: 18*dpr, b: 60*dpr };
+    const X0 = pad.l, X1 = W - pad.r;
+    const Y0 = pad.t, Y1 = H - pad.b;
 
     const { Ymin, Ymax, Pmin, Pmax } = M.ad;
-    const xTo = (Y)=> X0 + (Y-Ymin)/(Ymax-Ymin)*(X1-X0);
-    const yTo = (P)=> Y0 + (Pmax-P)/(Pmax-Pmin)*(Y1-Y0);
+    const xTo = (Y) => X0 + (Y - Ymin) / (Ymax - Ymin) * (X1 - X0);
+    const yTo = (P) => Y0 + (Pmax - P) / (Pmax - Pmin) * (Y1 - Y0);
 
     drawGrid(ctx, X0, X1, Y0, Y1, dpr);
 
     // labels
-    ctx.fillStyle="rgba(0,0,0,0.70)";
-    ctx.font=`${12*dpr}px system-ui`;
-    ctx.textAlign="center"; ctx.textBaseline="top";
-    ctx.fillText("Output (Y)", (X0+X1)/2, Y1+22*dpr);
+    ctx.fillStyle = "rgba(0,0,0,0.70)";
+    ctx.font = `${12*dpr}px system-ui`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText("Output (Y)", (X0 + X1) / 2, Y1 + 22*dpr);
+
     ctx.save();
-    ctx.translate(X0-52*dpr,(Y0+Y1)/2);
+    ctx.translate(X0 - 52*dpr, (Y0 + Y1) / 2);
     ctx.rotate(-Math.PI/2);
-    ctx.textAlign="center"; ctx.textBaseline="top";
-    ctx.fillText("Price level (P)",0,0);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "top";
+    ctx.fillText("Price level (P)", 0, 0);
     ctx.restore();
 
-    // baseline AD curve (grey)
-    ctx.strokeStyle="rgba(0,0,0,0.22)";
-    ctx.lineWidth=3*dpr;
+    // baseline AD curve
+    ctx.strokeStyle = "rgba(0,0,0,0.22)";
+    ctx.lineWidth = 3*dpr;
     ctx.beginPath();
-    for(let i=0;i<baseAD.length;i++){
-      const pt=baseAD[i];
-      const x=xTo(pt.Y), y=yTo(pt.P);
-      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    for (let i = 0; i < baseAD.length; i++) {
+      const pt = baseAD[i];
+      const x = xTo(pt.Y), y = yTo(pt.P);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
     ctx.stroke();
 
     // baseline point
-    const x1p=xTo(baseEq.Y), y1p=yTo(M.base.P);
+    const x1p = xTo(baseEq.Y), y1p = yTo(M.base.P);
     dot(ctx, x1p, y1p, "rgba(0,0,0,0.40)", dpr);
-    drawLine(ctx, x1p, y1p, x1p, yTo(Pmin), "rgba(0,0,0,0.30)", 2, dpr, [4,6]);
-    drawLine(ctx, x1p, y1p, xTo(Ymin), y1p, "rgba(0,0,0,0.30)", 2, dpr, [4,6]);
+    drawLine(ctx, x1p, y1p, x1p, yTo(Pmin), "rgba(0,0,0,0.30)", 2, dpr, [4, 6]);
+    drawLine(ctx, x1p, y1p, xTo(Ymin), y1p, "rgba(0,0,0,0.30)", 2, dpr, [4, 6]);
     xTick(ctx, x1p, Y1, "Y₁", dpr);
     yTick(ctx, X0, y1p, "P₁", dpr);
 
     if (!revealed) return;
 
     // current AD curve (orange)
-    const curAD = buildADCurve({ G:cur.G, T:cur.T, C:cur.C, I:cur.I, Z:cur.Z }, 60);
-    ctx.strokeStyle="rgba(230,159,0,0.95)";
-    ctx.lineWidth=3*dpr;
+    const curAD = buildADCurve({ G: cur.G, T: cur.T, C: cur.C, I: cur.I, Z: cur.Z }, 60);
+    ctx.strokeStyle = "rgba(230,159,0,0.95)";
+    ctx.lineWidth = 3*dpr;
     ctx.beginPath();
-    for(let i=0;i<curAD.length;i++){
-      const pt=curAD[i];
-      const x=xTo(pt.Y), y=yTo(pt.P);
-      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    for (let i = 0; i < curAD.length; i++) {
+      const pt = curAD[i];
+      const x = xTo(pt.Y), y = yTo(pt.P);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
     ctx.stroke();
 
     // new point
     const eq2 = eqm(cur.G, cur.T, cur.C, cur.I, cur.P, cur.Z);
-    const x2p=xTo(eq2.Y), y2p=yTo(cur.P);
+    const x2p = xTo(eq2.Y), y2p = yTo(cur.P);
     dot(ctx, x2p, y2p, "rgba(230,159,0,0.95)", dpr);
-    drawLine(ctx, x2p, y2p, x2p, yTo(Pmin), "rgba(0,0,0,0.30)", 2, dpr, [4,6]);
-    drawLine(ctx, x2p, y2p, xTo(Ymin), y2p, "rgba(0,0,0,0.30)", 2, dpr, [4,6]);
+    drawLine(ctx, x2p, y2p, x2p, yTo(Pmin), "rgba(0,0,0,0.30)", 2, dpr, [4, 6]);
+    drawLine(ctx, x2p, y2p, xTo(Ymin), y2p, "rgba(0,0,0,0.30)", 2, dpr, [4, 6]);
     if (!approxEq(eq2.Y, baseEq.Y, 1e-6)) xTick(ctx, x2p, Y1, "Y₂", dpr);
     yTick(ctx, X0, y2p, "P₂", dpr);
     arrow(ctx, x1p, y1p, x2p, y2p, "rgba(230,159,0,0.95)", dpr);
@@ -835,10 +893,9 @@ const PILL_GROUPS = [
   }
 
   // -----------------------
-  // Scenario text / reset / new
+  // Scenario / reset
   // -----------------------
   function setScenarioText(s) {
-    if (!els.scenarioDesc) return;
     els.scenarioDesc.textContent =
       `${s.stamp} • ${s.source}\n` +
       `${s.headline}\n` +
@@ -853,17 +910,15 @@ const PILL_GROUPS = [
     resetSlidersToBaseline();
     updateReadouts();
 
-    // reset states
     slotsState = [];
     mechOK = false;
     predMade = false;
     predCorrect = false;
     revealed = false;
 
-    setMechStatus("");
+    clearMechResult();
     setPredStatus("");
 
-    // reset prediction selects
     els.isAction.value = "";
     els.frAction.value = "";
     els.adAction.value = "";
@@ -903,7 +958,7 @@ const PILL_GROUPS = [
   }
 
   // -----------------------
-  // Events
+  // Event wiring
   // -----------------------
   els.newBtn.addEventListener("click", newScenario);
   els.resetBtn.addEventListener("click", resetAll);
