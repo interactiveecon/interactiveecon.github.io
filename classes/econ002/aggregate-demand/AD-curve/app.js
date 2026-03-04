@@ -72,15 +72,24 @@
     return { Y, r };
   }
 
+  function eqmUnclamped(G, T, C, I, P, Z) {
+  const A0 = IS_r(0, G, T, C, I);
+  const C0 = FR_r(0, P, Z);
+  const denom = (M.IS.bIS + M.FR.bFR);
+  const Y = (A0 - C0) / denom;     // <-- no clamp
+  const r = FR_r(Y, P, Z);
+  return { Y, r };
+}
+
   function buildADCurve({ G, T, C, I, Z }, n = 60) {
-    const pts = [];
-    for (let i = 0; i <= n; i++) {
-      const P = M.ad.Pmin + (M.ad.Pmax - M.ad.Pmin) * (i / n);
-      const { Y } = eqm(G, T, C, I, P, Z);
-      pts.push({ Y, P });
-    }
-    return pts;
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const P = M.ad.Pmin + (M.ad.Pmax - M.ad.Pmin) * (i / n);
+    const { Y } = eqmUnclamped(G, T, C, I, P, Z);
+    pts.push({ Y, P });
   }
+  return pts;
+}
 
   // -----------------------
   // TOKENS + MECHANISMS
@@ -160,16 +169,18 @@ const SCEN = [
   // -------------------------
   // Government Purchases (G)
   // -------------------------
-  { var:"G", dir:"up", source:"Policy Desk", headline:"Emergency infrastructure package approved", brief:"Federal purchases of construction and equipment rise." },
-  { var:"G", dir:"up", source:"Policy Desk", headline:"Defense procurement expanded", brief:"Government buys more goods and services this quarter." },
-  { var:"G", dir:"up", source:"Policy Desk", headline:"State and local capital projects accelerated", brief:"Public sector spending rises as projects move forward." },
-  { var:"G", dir:"up", source:"Policy Desk", headline:"Disaster relief spending ramps up", brief:"Reconstruction purchases increase due to storm damage." },
-  { var:"G", dir:"up", source:"Public Sector", headline:"Public health campaign expands staffing and supplies", brief:"Government purchases of services increase." },
-  { var:"G", dir:"down", source:"Policy Desk", headline:"Spending caps trigger broad cuts", brief:"Government reduces purchases to meet budget targets." },
-  { var:"G", dir:"down", source:"Policy Desk", headline:"Continuing resolution delays agency spending", brief:"Procurement is postponed and purchases fall." },
-  { var:"G", dir:"down", source:"Policy Desk", headline:"Aid programs sunset; agencies reduce procurement", brief:"Government purchases decline this quarter." },
-  { var:"G", dir:"down", source:"Policy Desk", headline:"Sequestration implemented", brief:"Across-agency cuts reduce government purchases." },
-  { var:"G", dir:"down", source:"Public Sector", headline:"Infrastructure project pipeline paused", brief:"Government slows purchases of materials and contracted services." },
+// Government Purchases (G) — explicitly “government buys goods/services”
+{ var:"G", dir:"up", source:"Congress", headline:"Congress authorizes major federal procurement surge", brief:"Federal agencies increase purchases of goods and contracted services." },
+{ var:"G", dir:"up", source:"White House", headline:"Federal infrastructure program launches new contracts", brief:"The federal government increases purchases for construction and equipment." },
+{ var:"G", dir:"up", source:"Defense Dept.", headline:"Pentagon expands equipment orders", brief:"The federal government buys more goods and services this quarter." },
+{ var:"G", dir:"up", source:"FEMA", headline:"Federal disaster response ramps up purchases", brief:"Federal agencies increase purchases for logistics and reconstruction." },
+{ var:"G", dir:"up", source:"State & Local", headline:"State governments expand public works spending", brief:"State and local governments increase purchases of materials and services." },
+
+{ var:"G", dir:"down", source:"Congress", headline:"Federal agencies ordered to reduce procurement", brief:"Government purchases of goods and services are cut this quarter." },
+{ var:"G", dir:"down", source:"OMB", headline:"Budget directive freezes new federal contracts", brief:"Federal purchases fall as agencies delay procurement." },
+{ var:"G", dir:"down", source:"Congress", headline:"Spending cuts reduce government purchases", brief:"Government buys fewer goods and services over the next quarter." },
+{ var:"G", dir:"down", source:"State & Local", headline:"State governments pause public works contracts", brief:"State and local purchases of services and materials decline." },
+{ var:"G", dir:"down", source:"Policy Desk", headline:"Public project pipeline scaled back", brief:"Government reduces purchases tied to infrastructure projects." },
 
   // -------------------------
   // Taxes (T)
@@ -177,7 +188,7 @@ const SCEN = [
   { var:"T", dir:"down", source:"Policy Desk", headline:"Tax cut takes effect; withholding falls", brief:"Households keep more after-tax income." },
   { var:"T", dir:"down", source:"Policy Desk", headline:"Payroll tax holiday announced", brief:"Take-home pay rises for most workers." },
   { var:"T", dir:"down", source:"Policy Desk", headline:"Child tax credit expansion begins", brief:"Net taxes paid by households decline." },
-  { var:"T", dir:"down", source:"Policy Desk", headline:"Standard deduction raised", brief:"Typical households’ tax liability falls." },
+  { var:"T", dir:"down", source:"Policy Desk", headline:"Standard deduction for taxes raised", brief:"Typical households’ tax liability falls." },
   { var:"T", dir:"down", source:"Policy Desk", headline:"Temporary rebate checks issued", brief:"Effective net taxes fall this period." },
   { var:"T", dir:"up", source:"Policy Desk", headline:"Tax surcharge implemented to reduce deficits", brief:"Household tax burden rises." },
   { var:"T", dir:"up", source:"Policy Desk", headline:"Payroll tax rate increases", brief:"After-tax income falls for most workers." },
@@ -913,12 +924,16 @@ const SCEN = [
     ctx.strokeStyle = "rgba(0,0,0,0.22)";
     ctx.lineWidth = 3*dpr;
     ctx.beginPath();
-    for (let i = 0; i < baseAD.length; i++) {
-      const pt = baseAD[i];
-      const x = xTo(pt.Y), y = yTo(pt.P);
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
+let penDown = false;
+for (let i = 0; i < curAD.length; i++) {
+  const pt = curAD[i];
+  if (pt.Y < Ymin || pt.Y > Ymax) { penDown = false; continue; } // <-- skip out of range
+
+  const x = xTo(pt.Y), y = yTo(pt.P);
+  if (!penDown) { ctx.moveTo(x, y); penDown = true; }
+  else { ctx.lineTo(x, y); }
+}
+ctx.stroke();
 
     // baseline point
     const x1p = xTo(baseEq.Y), y1p = yTo(M.base.P);
