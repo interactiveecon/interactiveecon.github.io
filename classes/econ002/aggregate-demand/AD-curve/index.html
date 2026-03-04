@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Aggregate Demand</title>
+
+  <link rel="stylesheet" href="/assets/style.css">
+
+  <!-- KaTeX for inline math in text -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    .stack{ display:grid; gap:14px; margin-top:18px; }
+    .grid2{ display:grid; grid-template-columns: 1.1fr 0.9fr; gap:12px; align-items:start; }
+    @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
+
+    .box{
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(246,242,234,0.35);
+      padding: 12px;
+    }
+
+    .scenarioTitle{ font-weight: 900; color: var(--ink); font-size: 16px; margin: 0; }
+    .scenarioDesc{ margin-top: 8px; color: var(--ink-2); font-size: 13px; line-height: 1.5; white-space: pre-line; }
+
+    .chartStack{ display:grid; gap:10px; }
+    .chartCard{
+      border:1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.78);
+      padding: 10px;
+    }
+    .chartTitle{
+      display:flex; justify-content:space-between; align-items:baseline;
+      gap: 10px; margin: 2px 2px 8px;
+    }
+    .chartTitle h3{ margin:0; font-size: 14px; font-weight: 900; color: var(--ink); }
+    .chartTitle .hint{ margin:0; font-size: 12px; color: var(--ink-2); }
+    canvas{
+      width:100%;
+      height:300px;
+      display:block;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.65);
+    }
+    #adCanvas{ height:280px; }
+
+    .controlsGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    @media (max-width: 980px){ .controlsGrid{ grid-template-columns: 1fr; } }
+
+    .control{
+      border:1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.68);
+      padding: 10px;
+    }
+    .control label{
+      display:block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .control .row{
+      display:flex; justify-content:space-between; align-items:center;
+      gap: 10px;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+      font-weight: 800;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+    input[type="range"]{ width: 100%; }
+
+    .pillRow{ display:flex; gap:10px; flex-wrap:wrap; margin-top: 10px; }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(255,255,255,0.75);
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+      font-weight: 900;
+      font-size: 12px;
+      user-select:none;
+      cursor: grab;
+    }
+    .pill:active{ cursor: grabbing; }
+
+    .mechCard{
+      border:1px solid rgba(0,0,0,0.08);
+      background: rgba(255,255,255,0.75);
+      border-radius: 14px;
+      padding: 12px;
+      margin-top: 12px;
+    }
+
+    .mechHead{
+      display:flex; justify-content:space-between; align-items:center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .mechHead h3{
+      margin:0; font-size: 14px; font-weight: 900; color: var(--ink);
+    }
+
+    .slots{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      gap: 8px;
+    }
+    .slot{
+      min-width: 86px;
+      height: 34px;
+      border-radius: 999px;
+      border: 1px dashed rgba(0,0,0,0.20);
+      background: rgba(255,255,255,0.55);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 900;
+      color: rgba(0,0,0,0.35);
+      font-size: 12px;
+      padding: 0 10px;
+      user-select:none;
+    }
+    .slot.filled{
+      border-style: solid;
+      color: var(--ink);
+      background: rgba(255,255,255,0.85);
+    }
+    .arrowTok{
+      font-weight: 900;
+      color: rgba(0,0,0,0.35);
+      padding: 0 4px;
+      user-select:none;
+    }
+
+    .poolWrap{
+      margin-top: 12px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+      padding-top: 10px;
+    }
+    .poolTitle{
+      font-size: 12px;
+      font-weight: 900;
+      color: var(--ink);
+      margin: 0 0 8px;
+    }
+    .pool{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 8px;
+    }
+
+    .actionsRow{
+      display:flex;
+      gap: 10px;
+      flex-wrap:wrap;
+      margin-top: 10px;
+      align-items:center;
+    }
+
+    .statusLine{
+      margin-top: 10px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+      padding-top: 10px;
+      color: var(--ink-2);
+      font-size: 13px;
+      line-height: 1.5;
+      white-space: pre-line;
+    }
+
+    .tagOK{
+      display:inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(34,139,34,0.12);
+      border: 1px solid rgba(34,139,34,0.25);
+      color: rgba(34,120,34,1);
+      font-weight: 900;
+      font-size: 12px;
+      margin-right: 8px;
+    }
+    .tagBad{
+      display:inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(178,34,34,0.10);
+      border: 1px solid rgba(178,34,34,0.25);
+      color: rgba(140,0,0,0.95);
+      font-weight: 900;
+      font-size: 12px;
+      margin-right: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <header class="page-header">
+    <div class="container">
+      <nav class="crumbbar">
+        <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
+      </nav>
+
+      <div class="header-inner">
+        <div class="title-block">
+          <div class="kicker">Macroeconomics Practice Lab</div>
+          <h1>Aggregate Demand</h1>
+          <p class="sub">
+            Use IS–FR to see where the AD curve comes from, and build the mechanism that explains why output changes.
+          </p>
+
+          <details class="howto">
+            <summary>How this app works</summary>
+            <div class="howto-body">
+              <ol>
+                <li>Click <strong>New Scenario</strong> to get a “news brief” about <strong>G</strong>, <strong>T</strong>, <strong>P</strong>, or <strong>Z</strong>.</li>
+                <li>Build the mechanism by dragging pills into the blanks (no hints in the blanks).</li>
+                <li>Click <strong>Check mechanism</strong>. If correct, you’ll be ready to test the scenario with sliders.</li>
+                <li><strong>Sliders start at baseline.</strong Move the slider that matches the scenario in the correct direction (any magnitude) to reveal \(Y_2\), \(r_2\), and the AD change.</li>
+              </ol>
+              <ul>
+                <li><strong>G or T</strong> shift <strong>IS</strong> → AD shifts.</li>
+                <li><strong>P or Z</strong> shift <strong>FR</strong> → AD shifts (or moves along when only \(P\) changes and you trace points).</li>
+              </ul>
+            </div>
+          </details>
+        </div>
+
+        <div class="controls-card">
+          <div class="controls-actions">
+            <button id="newBtn" class="btn primary">New Scenario</button>
+            <button id="resetBtn" class="btn subtle">Reset</button>
+          </div>
+          <div id="status" class="status" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container stack">
+    <section class="panel">
+      <div class="panel-head">
+        <h2>IS–FR and AD</h2>
+        <p class="panel-sub"></p>
+      </div>
+
+      <div class="grid2">
+        <!-- Left -->
+        <div class="box">
+          <p class="scenarioTitle">Scenario</p>
+          <div class="scenarioDesc" id="scenarioDesc">Click “New Scenario” to start.</div>
+
+          <div class="controlsGrid">
+            <div class="control">
+              <label for="Gslider">Government purchases (G)</label>
+              <div class="row"><span>G</span><span id="Gdisp">—</span></div>
+              <input id="Gslider" type="range" min="80" max="120" step="1" value="100">
+            </div>
+            <div class="control">
+              <label for="Tslider">Taxes (T)</label>
+              <div class="row"><span>T</span><span id="Tdisp">—</span></div>
+              <input id="Tslider" type="range" min="80" max="120" step="1" value="100">
+            </div>
+            <div class="control">
+              <label for="Pslider">Price level (P)</label>
+              <div class="row"><span>P</span><span id="Pdisp">—</span></div>
+              <input id="Pslider" type="range" min="3" max="7" step="0.1" value="5">
+            </div>
+            <div class="control">
+              <label for="Zslider">Other factors (Z)</label>
+              <div class="row"><span>Z</span><span id="Zdisp">—</span></div>
+              <input id="Zslider" type="range" min="3" max="7" step="0.1" value="5">
+            </div>
+          </div>
+
+          <div class="pillRow">
+            <span class="pill">Baseline: \(Y_1\)=<span id="Y1pill">—</span>, \(r_1\)=<span id="r1pill">—</span>, \(P\)=<span id="Ppill">—</span></span>
+            <span class="pill">Current: \(Y\)=<span id="Ycurpill">—</span>, \(r\)=<span id="rcurpill">—</span></span>
+          </div>
+
+          <div class="mechCard">
+            <div class="mechHead">
+              <h3>Build the mechanism</h3>
+              <div class="controls-actions">
+                <button id="checkMechBtn" class="btn primary">Check mechanism</button>
+                <button id="clearMechBtn" class="btn subtle">Clear</button>
+              </div>
+            </div>
+
+            <div class="slots" id="slots"></div>
+
+            <div class="poolWrap">
+              <p class="poolTitle">Pill pool (drag into the blanks)</p>
+              <div class="pool" id="pool"></div>
+            </div>
+
+            <div class="statusLine" id="mechStatus"></div>
+          </div>
+        </div>
+
+        <!-- Right -->
+        <div class="box">
+          <div class="chartStack">
+            <div class="chartCard">
+              <div class="chartTitle">
+                <h3>IS–FR</h3>
+                <p class="hint">Grey = baseline, orange = current</p>
+              </div>
+              <canvas id="isfrCanvas" width="900" height="560"></canvas>
+            </div>
+
+            <div class="chartCard">
+              <div class="chartTitle">
+                <h3>Aggregate Demand (AD)</h3>
+                <p class="hint">Grey = baseline AD, orange = current AD</p>
+              </div>
+              <canvas id="adCanvas" width="900" height="520"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
