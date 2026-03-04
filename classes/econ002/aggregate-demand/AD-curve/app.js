@@ -122,19 +122,19 @@
     I_up: [TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
   };
 
-  const PILL_GROUPS = [
-    { name: "G", pills: [TOK.Gup, TOK.Gdn] },
-    { name: "T", pills: [TOK.Tup, TOK.Tdn] },
-    { name: "C", pills: [TOK.Cup, TOK.Cdn] },
-    { name: "I", pills: [TOK.Iup, TOK.Idn] },
-    { name: "P", pills: [TOK.Pup, TOK.Pdn] },
-    { name: "Z", pills: [TOK.Zup, TOK.Zdn] },
-    { name: "Planned Expenditure", pills: [TOK.PEup, TOK.PEdn] },
-    { name: "Unplanned Inventories", pills: [TOK.UInvUp, TOK.UInvDn] },
-    { name: "Output", pills: [TOK.Yup, TOK.Ydn] },
-    { name: "Federal Funds", pills: [TOK.FFup, TOK.FFdn] },
-    { name: "Interest rate", pills: [TOK.rup, TOK.rdn] },
-  ];
+const PILL_GROUPS = [
+  { name: "Government Purchases", pills: [TOK.Gup, TOK.Gdn] },
+  { name: "Taxes", pills: [TOK.Tup, TOK.Tdn] },
+  { name: "Consumption", pills: [TOK.Cup, TOK.Cdn] },
+  { name: "Investment", pills: [TOK.Iup, TOK.Idn] },
+  { name: "Price Level", pills: [TOK.Pup, TOK.Pdn] },
+  { name: "Other Factors (Z)", pills: [TOK.Zup, TOK.Zdn] },
+  { name: "Planned Expenditure", pills: [TOK.PEup, TOK.PEdn] },
+  { name: "Unplanned Inventories", pills: [TOK.UInvUp, TOK.UInvDn] },
+  { name: "Output", pills: [TOK.Yup, TOK.Ydn] },
+  { name: "Federal Funds Rate", pills: [TOK.FFup, TOK.FFdn] },
+  { name: "Interest Rate", pills: [TOK.rup, TOK.rdn] },
+];
 
   const mechKeyFor = (varName, dir) => `${varName}_${dir === "up" ? "up" : "dn"}`;
 
