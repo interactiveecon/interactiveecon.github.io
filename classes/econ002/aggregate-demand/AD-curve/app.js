@@ -156,25 +156,91 @@
   // -----------------------
   // Scenarios (headline format)
   // -----------------------
-  const SCEN = [
-    { var: "G", dir: "up", source: "Policy Desk", headline: "Spending bill passes in Congress", brief: "Federal purchases rise over the next quarter." },
-    { var: "G", dir: "down", source: "Policy Desk", headline: "Spending cuts announced", brief: "Government purchases will be reduced to meet a budget target." },
+const SCEN = [
+  // -------------------------
+  // Government Purchases (G)
+  // -------------------------
+  { var:"G", dir:"up", source:"Policy Desk", headline:"Emergency infrastructure package approved", brief:"Federal purchases of construction and equipment rise." },
+  { var:"G", dir:"up", source:"Policy Desk", headline:"Defense procurement expanded", brief:"Government buys more goods and services this quarter." },
+  { var:"G", dir:"up", source:"Policy Desk", headline:"State and local capital projects accelerated", brief:"Public sector spending rises as projects move forward." },
+  { var:"G", dir:"up", source:"Policy Desk", headline:"Disaster relief spending ramps up", brief:"Reconstruction purchases increase due to storm damage." },
+  { var:"G", dir:"up", source:"Public Sector", headline:"Public health campaign expands staffing and supplies", brief:"Government purchases of services increase." },
+  { var:"G", dir:"down", source:"Policy Desk", headline:"Spending caps trigger broad cuts", brief:"Government reduces purchases to meet budget targets." },
+  { var:"G", dir:"down", source:"Policy Desk", headline:"Continuing resolution delays agency spending", brief:"Procurement is postponed and purchases fall." },
+  { var:"G", dir:"down", source:"Policy Desk", headline:"Aid programs sunset; agencies reduce procurement", brief:"Government purchases decline this quarter." },
+  { var:"G", dir:"down", source:"Policy Desk", headline:"Sequestration implemented", brief:"Across-agency cuts reduce government purchases." },
+  { var:"G", dir:"down", source:"Public Sector", headline:"Infrastructure project pipeline paused", brief:"Government slows purchases of materials and contracted services." },
 
-    { var: "T", dir: "down", source: "Policy Desk", headline: "Tax cut approved", brief: "Households face lower taxes starting this month." },
-    { var: "T", dir: "up", source: "Policy Desk", headline: "Tax increase scheduled", brief: "Higher taxes take effect to stabilize public finances." },
+  // -------------------------
+  // Taxes (T)
+  // -------------------------
+  { var:"T", dir:"down", source:"Policy Desk", headline:"Tax cut takes effect; withholding falls", brief:"Households keep more after-tax income." },
+  { var:"T", dir:"down", source:"Policy Desk", headline:"Payroll tax holiday announced", brief:"Take-home pay rises for most workers." },
+  { var:"T", dir:"down", source:"Policy Desk", headline:"Child tax credit expansion begins", brief:"Net taxes paid by households decline." },
+  { var:"T", dir:"down", source:"Policy Desk", headline:"Standard deduction raised", brief:"Typical households’ tax liability falls." },
+  { var:"T", dir:"down", source:"Policy Desk", headline:"Temporary rebate checks issued", brief:"Effective net taxes fall this period." },
+  { var:"T", dir:"up", source:"Policy Desk", headline:"Tax surcharge implemented to reduce deficits", brief:"Household tax burden rises." },
+  { var:"T", dir:"up", source:"Policy Desk", headline:"Payroll tax rate increases", brief:"After-tax income falls for most workers." },
+  { var:"T", dir:"up", source:"Policy Desk", headline:"Rebates expire; withholding rises", brief:"Net taxes increase this month." },
+  { var:"T", dir:"up", source:"Policy Desk", headline:"State tax hikes enacted", brief:"Household tax payments rise." },
+  { var:"T", dir:"up", source:"Policy Desk", headline:"Broad tax increase scheduled", brief:"Tax payments increase over the next quarter." },
 
-    { var: "C", dir: "up", source: "Household Survey", headline: "Consumer confidence jumps", brief: "Households report greater willingness to spend." },
-    { var: "C", dir: "down", source: "Household Survey", headline: "Confidence weakens", brief: "Households become more cautious and cut spending." },
+  // -------------------------
+  // Consumption (C)
+  // -------------------------
+  { var:"C", dir:"up", source:"Household Survey", headline:"Consumer confidence surges; spending rebounds", brief:"Households increase purchases broadly." },
+  { var:"C", dir:"up", source:"Markets", headline:"Household wealth rises after market rally", brief:"Spending increases as households feel better off." },
+  { var:"C", dir:"up", source:"Retail Pulse", headline:"Pent-up demand boosts services and retail", brief:"Consumers spend more than usual this month." },
+  { var:"C", dir:"up", source:"Household Survey", headline:"Uncertainty eases; households loosen budgets", brief:"Consumption rises as precautionary saving falls." },
+  { var:"C", dir:"up", source:"Retail Pulse", headline:"Holiday sales exceed expectations", brief:"Consumption jumps relative to trend." },
+  { var:"C", dir:"down", source:"Household Survey", headline:"Consumer sentiment drops; discretionary spending cut", brief:"Households reduce purchases." },
+  { var:"C", dir:"down", source:"Household Survey", headline:"Precautionary saving rises", brief:"Households become cautious and consumption falls." },
+  { var:"C", dir:"down", source:"Credit Conditions", headline:"Delinquencies rise; spending tightens", brief:"Households pull back on consumption." },
+  { var:"C", dir:"down", source:"Household Survey", headline:"Budget squeeze leads to cutbacks", brief:"Households reduce discretionary spending." },
+  { var:"C", dir:"down", source:"Markets", headline:"Negative wealth shock reduces spending", brief:"Households cut consumption as wealth falls." },
 
-    { var: "I", dir: "up", source: "Business Pulse", headline: "Firms ramp up investment plans", brief: "Capital spending plans expand due to strong outlook." },
-    { var: "I", dir: "down", source: "Business Pulse", headline: "Investment plans pulled back", brief: "Firms delay projects amid uncertainty." },
+  // -------------------------
+  // Investment (I)
+  // -------------------------
+  { var:"I", dir:"up", source:"Business Pulse", headline:"Firms expand capacity; equipment orders jump", brief:"Capital spending increases." },
+  { var:"I", dir:"up", source:"Business Pulse", headline:"Tech upgrade cycle accelerates", brief:"Firms raise investment in new equipment and software." },
+  { var:"I", dir:"up", source:"Business Pulse", headline:"Business optimism improves; capex plans increase", brief:"Firms increase investment spending." },
+  { var:"I", dir:"up", source:"Construction Watch", headline:"Housing starts rise; residential building expands", brief:"Residential investment increases." },
+  { var:"I", dir:"up", source:"Business Pulse", headline:"Project pipeline expands", brief:"Firms approve more capital projects." },
+  { var:"I", dir:"down", source:"Business Pulse", headline:"Firms postpone projects amid uncertainty", brief:"Capital spending is delayed and investment falls." },
+  { var:"I", dir:"down", source:"Credit Conditions", headline:"Credit conditions tighten; capex plans delayed", brief:"Investment declines as financing becomes harder." },
+  { var:"I", dir:"down", source:"Construction Watch", headline:"Commercial construction slows", brief:"Investment falls as projects are canceled or postponed." },
+  { var:"I", dir:"down", source:"Business Pulse", headline:"Earnings slump; investment budgets cut", brief:"Firms reduce investment spending." },
+  { var:"I", dir:"down", source:"Business Pulse", headline:"Demand outlook weakens; expansion plans scrapped", brief:"Firms cut back on investment." },
 
-    { var: "P", dir: "up", source: "Inflation Watch", headline: "Inflation pressures intensify", brief: "Prices rise broadly across goods and services." },
-    { var: "P", dir: "down", source: "Inflation Watch", headline: "Deflation appears", brief: "Prices fall across many categories (deflation)." },
+  // -------------------------
+  // Price Level / Inflation environment (P)
+  // -------------------------
+  { var:"P", dir:"up", source:"Inflation Watch", headline:"Inflation pressures broaden across sectors", brief:"Prices rise more rapidly across many categories." },
+  { var:"P", dir:"up", source:"Inflation Watch", headline:"Supply disruptions push prices higher", brief:"Broader inflation pressure increases." },
+  { var:"P", dir:"up", source:"Inflation Watch", headline:"Wage growth and pricing power lift inflation", brief:"Inflation pressure strengthens." },
+  { var:"P", dir:"up", source:"Inflation Watch", headline:"Commodity prices surge; inflation rises", brief:"Price pressure increases economy-wide." },
+  { var:"P", dir:"up", source:"Inflation Watch", headline:"Inflation expectations drift up", brief:"Pricing pressure becomes more persistent." },
+  { var:"P", dir:"down", source:"Inflation Watch", headline:"Broad price declines emerge; deflation appears", brief:"Prices fall across many categories (deflation)." },
+  { var:"P", dir:"down", source:"Inflation Watch", headline:"Demand weakness triggers widespread markdowns", brief:"Businesses cut prices broadly (deflationary pressure)." },
+  { var:"P", dir:"down", source:"Inflation Watch", headline:"Global goods glut drives prices down", brief:"Broad deflationary pressure lowers the price level." },
+  { var:"P", dir:"down", source:"Inflation Watch", headline:"Competitive price wars spread", brief:"Firms cut prices broadly; the price level falls." },
+  { var:"P", dir:"down", source:"Inflation Watch", headline:"Economy-wide discounting intensifies", brief:"Prices fall across many goods and services." },
 
-    { var: "Z", dir: "up", source: "Policy Desk", headline: "Tariffs announced; uncertainty rises", brief: "Policy uncertainty rises; the Fed leans more cautious." },
-    { var: "Z", dir: "down", source: "Financial Conditions", headline: "Financial stress eases", brief: "Credit conditions improve; the Fed feels less need to restrain activity." },
-  ];
+  // -------------------------
+  // Other Fed considerations / stance (Z)
+  // -------------------------
+  { var:"Z", dir:"up", source:"Policy Desk", headline:"Major tariff package announced; uncertainty rises", brief:"Policy uncertainty increases; the Fed becomes more cautious." },
+  { var:"Z", dir:"up", source:"Financial Stability", headline:"Financial stability concerns rise", brief:"The Fed leans more cautious about risks." },
+  { var:"Z", dir:"up", source:"Policy Desk", headline:"Geopolitical risk rises", brief:"Risk management concerns push the Fed toward a more cautious stance." },
+  { var:"Z", dir:"up", source:"Market Monitor", headline:"Risk premia rise; Fed signals caution", brief:"The Fed becomes more hawkish/cautious independent of current output." },
+  { var:"Z", dir:"up", source:"Policy Desk", headline:"Policy uncertainty surges", brief:"The Fed adopts a more cautious stance while risks are assessed." },
+  { var:"Z", dir:"down", source:"Financial Conditions", headline:"Financial conditions ease; markets calm", brief:"The Fed feels more comfortable supporting activity." },
+  { var:"Z", dir:"down", source:"Financial Stability", headline:"Banking stress fades", brief:"The Fed shifts toward a more supportive stance." },
+  { var:"Z", dir:"down", source:"Policy Desk", headline:"Forward guidance emphasizes patience and support", brief:"The Fed adopts a more dovish/supportive stance at any output level." },
+  { var:"Z", dir:"down", source:"Market Monitor", headline:"Liquidity improves; stress indicators fall", brief:"Easier financial conditions support a more dovish stance." },
+  { var:"Z", dir:"down", source:"Financial Conditions", headline:"Risk sentiment improves broadly", brief:"The Fed becomes more supportive independent of current output." },
+];
 
   function makeStamp() {
     const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
