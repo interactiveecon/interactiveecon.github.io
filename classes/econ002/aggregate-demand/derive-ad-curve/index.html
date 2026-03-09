@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Deriving Aggregate Demand</title>
+
+  <link rel="stylesheet" href="/assets/style.css">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    .stack { display: grid; gap: 14px; margin-top: 18px; }
+
+    /* Two-column layout: controls left, charts right */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+    @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+
+    /* Left column */
+    .left-col { display: grid; gap: 12px; }
+
+    /* Price selector card */
+    .price-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+    .price-card-title {
+      font-size: 13px; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--accent); font-weight: 800; margin-bottom: 12px;
+    }
+
+    /* The three price-level buttons */
+    .price-btns { display: grid; gap: 8px; }
+    .price-btn {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line-2);
+      background: rgba(255,255,255,0.85);
+      cursor: pointer;
+      font-family: var(--font-sans, "Inter", sans-serif);
+      transition: background 0.12s, border-color 0.12s, transform 0.06s;
+      text-align: left;
+      gap: 10px;
+    }
+    .price-btn:hover { background: rgba(47,93,124,0.07); border-color: rgba(47,93,124,0.30); }
+    .price-btn:active { transform: translateY(1px); }
+
+    .price-btn .pbtn-left { display: flex; flex-direction: column; gap: 2px; }
+    .price-btn .pbtn-label { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 600; }
+    .price-btn .pbtn-val   { font-size: 18px; font-weight: 900; color: var(--ink); }
+    .price-btn .pbtn-tag   { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; border: 1px solid transparent; }
+
+    /* Per-point colors */
+    .p1-color { color: #2f5d7c; }
+    .p2-color { color: #b45309; }
+    .p3-color { color: #1b7f4b; }
+
+    .price-btn.active-p1 { border-color: rgba(47,93,124,0.50);  background: rgba(47,93,124,0.08); }
+    .price-btn.active-p2 { border-color: rgba(180,83,9,0.50);   background: rgba(180,83,9,0.07); }
+    .price-btn.active-p3 { border-color: rgba(27,127,75,0.50);  background: rgba(27,127,75,0.07); }
+
+    .tag-p1 { background: rgba(47,93,124,0.12);  border-color: rgba(47,93,124,0.35);  color: #2f5d7c; }
+    .tag-p2 { background: rgba(180,83,9,0.10);   border-color: rgba(180,83,9,0.35);   color: #b45309; }
+    .tag-p3 { background: rgba(27,127,75,0.10);  border-color: rgba(27,127,75,0.35);  color: #1b7f4b; }
+
+    .pbtn-dot {
+      width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;
+    }
+    .dot-p1 { background: #2f5d7c; }
+    .dot-p2 { background: #b45309; }
+    .dot-p3 { background: #1b7f4b; }
+
+    /* Insight box */
+    .insight-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+      font-size: 13px;
+      color: var(--ink-2);
+      line-height: 1.6;
+    }
+    .insight-title {
+      font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
+      color: var(--accent); font-weight: 800; margin-bottom: 8px;
+    }
+    .insight-body { min-height: 60px; }
+
+    /* Equilibrium readout pills */
+    .eq-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .eq-pill {
+      font-size: 12px; font-weight: 800;
+      padding: 4px 10px; border-radius: 999px;
+      border: 1px solid var(--line-2);
+      background: rgba(255,255,255,0.85);
+      color: var(--ink);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Step progress */
+    .step-row {
+      display: flex; align-items: center; gap: 8px; margin-top: 12px;
+      font-size: 12px; color: var(--muted);
+    }
+    .step-dot {
+      width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--line-2);
+      background: #fff; display: flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 900; color: var(--muted); flex-shrink: 0;
+      transition: background .2s, border-color .2s, color .2s;
+    }
+    .step-dot.done-p1 { background: #2f5d7c; border-color: #2f5d7c; color: #fff; }
+    .step-dot.done-p2 { background: #b45309; border-color: #b45309; color: #fff; }
+    .step-dot.done-p3 { background: #1b7f4b; border-color: #1b7f4b; color: #fff; }
+    .step-line { flex: 1; height: 1.5px; background: var(--line-2); }
+
+    /* Right column: stacked canvases */
+    .right-col { display: grid; gap: 12px; }
+    .chart-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+    .chart-head {
+      display: flex; justify-content: space-between; align-items: baseline;
+      gap: 10px; margin-bottom: 10px;
+    }
+    .chart-head h2 {
+      margin: 0; font-size: 13px; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--accent); font-weight: 800;
+    }
+    .chart-hint { font-size: 12px; color: var(--muted); }
+
+    canvas {
+      width: 100%; display: block; border-radius: 10px;
+      background: rgba(255,255,255,0.65);
+    }
+    #isfrCanvas { height: 300px; }
+    #adCanvas   { height: 260px; }
+
+    /* Reset button tweak */
+    .btn.ghost {
+      background: transparent; border-color: var(--line-2); color: var(--muted);
+      font-size: 12px; padding: 6px 12px;
+    }
+    .btn.ghost:hover { background: rgba(0,0,0,0.04); }
+
+    .footer { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    .footer-inner { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeIn 0.22s ease forwards; }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar">
+      <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
+    </nav>
+    <div class="header-inner">
+      <div class="title-block">
+        <div class="kicker">Macroeconomics Practice Lab</div>
+        <h1>Deriving Aggregate Demand</h1>
+        <p class="sub">
+          See how a change in the price level shifts the FR curve, changes equilibrium output, and traces out the AD curve — one point at a time.
+        </p>
+        <details class="howto">
+          <summary>How this app works</summary>
+          <div class="howto-body">
+            <ol>
+              <li>The economy starts at price level \(P_1\) (baseline). The IS–FR diagram shows equilibrium at point A.</li>
+              <li>Click <strong>\(P_2\) — Higher Price Level</strong>. Watch the FR curve shift <em>up</em> because the Fed raises rates when prices rise. Notice output falls to \(Y_2\). Point B is plotted on the AD diagram below.</li>
+              <li>Click <strong>\(P_3\) — Lower Price Level</strong>. The FR curve shifts <em>down</em>, output rises to \(Y_3\). Point C is plotted.</li>
+              <li>Once all three points are plotted, the AD curve connects them — revealing why it is <strong>downward sloping</strong>.</li>
+            </ol>
+            <p style="margin:8px 0 0"><strong>Key idea:</strong> The AD curve is <em>not</em> like a regular supply/demand curve. Each point on it is a full IS–FR equilibrium. Moving along AD means the price level changes and the FR curve shifts in response.</p>
+          </div>
+        </details>
+      </div>
+      <div class="controls-card">
+        <div class="controls-actions">
+          <button id="resetBtn" class="btn subtle">Reset</button>
+        </div>
+        <div id="status" class="status" aria-live="polite">Click a price level to begin.</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="container stack">
+  <div class="main-grid">
+
+    <!-- LEFT: controls -->
+    <div class="left-col">
+
+      <!-- Price selector -->
+      <div class="price-card">
+        <div class="price-card-title">Choose a Price Level</div>
+        <div class="price-btns">
+
+          <button class="price-btn active-p1" id="btnP1" data-p="1">
+            <div class="pbtn-left">
+              <span class="pbtn-label">Baseline</span>
+              <span class="pbtn-val p1-color">\(P_1 = 5\)</span>
+            </div>
+            <span class="pbtn-tag tag-p1">Point A</span>
+            <div class="pbtn-dot dot-p1"></div>
+          </button>
+
+          <button class="price-btn" id="btnP2" data-p="2">
+            <div class="pbtn-left">
+              <span class="pbtn-label">Higher price level</span>
+              <span class="pbtn-val p2-color">\(P_2 = 6.5\)</span>
+            </div>
+            <span class="pbtn-tag tag-p2">Point B</span>
+            <div class="pbtn-dot dot-p2"></div>
+          </button>
+
+          <button class="price-btn" id="btnP3" data-p="3">
+            <div class="pbtn-left">
+              <span class="pbtn-label">Lower price level</span>
+              <span class="pbtn-val p3-color">\(P_3 = 3.5\)</span>
+            </div>
+            <span class="pbtn-tag tag-p3">Point C</span>
+            <div class="pbtn-dot dot-p3"></div>
+          </button>
+
+        </div>
+
+        <!-- Progress dots -->
+        <div class="step-row">
+          <div class="step-dot" id="stepA">A</div>
+          <div class="step-line"></div>
+          <div class="step-dot" id="stepB">B</div>
+          <div class="step-line"></div>
+          <div class="step-dot" id="stepC">C</div>
+        </div>
+      </div>
+
+      <!-- Insight box -->
+      <div class="insight-card">
+        <div class="insight-title">What's happening</div>
+        <div class="insight-body" id="insightBody">
+          Select a price level to see how the IS–FR equilibrium responds and how that point maps onto the AD curve.
+        </div>
+        <div class="eq-pills" id="eqPills"></div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: charts -->
+    <div class="right-col">
+      <div class="chart-card">
+        <div class="chart-head">
+          <h2>IS–FR Diagram</h2>
+          <span class="chart-hint">FR shifts when P changes; IS is fixed</span>
+        </div>
+        <canvas id="isfrCanvas" width="900" height="540"></canvas>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-head">
+          <h2>Aggregate Demand</h2>
+          <span class="chart-hint" id="adHint">Points accumulate as you select price levels</span>
+        </div>
+        <canvas id="adCanvas" width="900" height="480"></canvas>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div>ECON 002 — Aggregate Demand</div>
+      <div>Hosted on GitHub Pages</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+(() => {
+  // ── Model (same params as AD Curve app) ──────────────────────────────────
+  const M = {
+    IS:  { aIS: 16, bIS: 0.06, gG: 0.08, gT: 0.08, gC: 0.08, gI: 0.08 },
+    FR:  { aFR: 2,  bFR: 0.04, hP: 2.4,  hZ: 2.4  },
+    base:{ G: 100, T: 100, C: 100, I: 100, P: 5, Z: 5 },
+    isfr:{ Ymin: 0, Ymax: 200, rmin: 0, rmax: 20 },
+    ad:  { Ymin: 0, Ymax: 200, Pmin: 2, Pmax: 8 },
+  };
+
+  // Three price levels for the derivation
+  const PRICES = {
+    1: { P: 5,   label: 'P₁ = 5',   point: 'A', colorSolid: '#2f5d7c', colorFade: 'rgba(47,93,124,0.18)',  colorLine: 'rgba(47,93,124,0.80)' },
+    2: { P: 6.5, label: 'P₂ = 6.5', point: 'B', colorSolid: '#b45309', colorFade: 'rgba(180,83,9,0.15)',   colorLine: 'rgba(180,83,9,0.85)'  },
+    3: { P: 3.5, label: 'P₃ = 3.5', point: 'C', colorSolid: '#1b7f4b', colorFade: 'rgba(27,127,75,0.15)',  colorLine: 'rgba(27,127,75,0.80)' },
+  };
+
+  const INSIGHTS = {
+    1: `At the <strong>baseline price level P₁ = 5</strong>, the FR curve intersects the IS curve at point A. This gives us equilibrium output Y₁ and interest rate r₁. This is our starting point on the AD curve.`,
+    2: `When the <strong>price level rises to P₂ = 6.5</strong>, the Fed responds by raising interest rates at every level of output — the FR curve shifts <em>up</em>. The new equilibrium is at point B: output falls to Y₂ and the interest rate rises to r₂. We plot (P₂, Y₂) on the AD diagram.`,
+    3: `When the <strong>price level falls to P₃ = 3.5</strong>, the Fed lowers rates — the FR curve shifts <em>down</em>. The new equilibrium is at point C: output rises to Y₃ and the interest rate falls to r₃. We plot (P₃, Y₃) on the AD diagram. Connecting A, B, C traces the downward-sloping AD curve.`,
+  };
+
+  function IS_r(Y) {
+    const { aIS, bIS, gG, gT, gC, gI } = M.IS;
+    const b = M.base;
+    return aIS - bIS * Y + gG*(b.G-b.G) - gT*(b.T-b.T) + gC*(b.C-b.C) + gI*(b.I-b.I);
+    // simplifies to: aIS - bIS*Y  (all deltas = 0 at baseline)
+  }
+
+  function FR_r(Y, P) {
+    const { aFR, bFR, hP, hZ } = M.FR;
+    const { P: P0, Z: Z0 } = M.base;
+    return aFR + bFR * Y + hP * (P - P0) + hZ * (Z0 - Z0);
+  }
+
+  function equilibrium(P) {
+    // IS:  r = aIS - bIS*Y
+    // FR:  r = aFR + bFR*Y + hP*(P-P0)
+    // Solve: aIS - bIS*Y = aFR + bFR*Y + hP*(P-P0)
+    const { aIS, bIS } = M.IS;
+    const { aFR, bFR, hP } = M.FR;
+    const P0 = M.base.P;
+    const denom = bIS + bFR;
+    const Y = (aIS - aFR - hP*(P - P0)) / denom;
+    const r = FR_r(Y, P);
+    return {
+      Y: Math.max(M.isfr.Ymin, Math.min(M.isfr.Ymax, Y)),
+      r: Math.max(M.isfr.rmin, Math.min(M.isfr.rmax, r)),
+    };
+  }
+
+  // Build a smooth AD curve by sweeping P
+  function buildADCurve(n = 80) {
+    const pts = [];
+    for (let i = 0; i <= n; i++) {
+      const P = M.ad.Pmin + (M.ad.Pmax - M.ad.Pmin) * (i / n);
+      const { Y } = equilibrium(P);
+      pts.push({ Y, P });
+    }
+    return pts;
+  }
+
+  // ── State ────────────────────────────────────────────────────────────────
+  let activeP  = 1;          // which price button is selected
+  let revealed = new Set([1]); // which points have been shown
+
+  // ── DOM ──────────────────────────────────────────────────────────────────
+  const isfrCanvas = document.getElementById('isfrCanvas');
+  const adCanvas   = document.getElementById('adCanvas');
+  const statusEl   = document.getElementById('status');
+  const insightBody = document.getElementById('insightBody');
+  const eqPills    = document.getElementById('eqPills');
+  const adHint     = document.getElementById('adHint');
+  const btnP1 = document.getElementById('btnP1');
+  const btnP2 = document.getElementById('btnP2');
+  const btnP3 = document.getElementById('btnP3');
+  const stepA = document.getElementById('stepA');
+  const stepB = document.getElementById('stepB');
+  const stepC = document.getElementById('stepC');
+  const resetBtn = document.getElementById('resetBtn');
+
+  const BTNS = { 1: btnP1, 2: btnP2, 3: btnP3 };
+  const STEPS = { 1: stepA, 2: stepB, 3: stepC };
+
+  // ── Canvas helpers ────────────────────────────────────────────────────────
+  function getCtx(canvas) {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const W = rect.width  * dpr;
+    const H = rect.height * dpr;
+    if (canvas.width !== W || canvas.height !== H) {
+      canvas.width  = W;
+      canvas.height = H;
+    }
+    const ctx = canvas.getContext('2d');
+    return { ctx, dpr, W, H };
+  }
+
+  function drawGrid(ctx, X0, X1, Y0, Y1, dpr) {
+    ctx.strokeStyle = 'rgba(0,0,0,0.07)';
+    ctx.lineWidth = 1 * dpr;
+    for (let i = 0; i <= 5; i++) {
+      const x = X0 + i * (X1-X0)/5;
+      ctx.beginPath(); ctx.moveTo(x,Y0); ctx.lineTo(x,Y1); ctx.stroke();
+    }
+    for (let i = 0; i <= 4; i++) {
+      const y = Y0 + i * (Y1-Y0)/4;
+      ctx.beginPath(); ctx.moveTo(X0,y); ctx.lineTo(X1,y); ctx.stroke();
+    }
+  }
+
+  function line(ctx, x1, y1, x2, y2, color, lw, dpr, dash=[]) {
+    ctx.save();
+    ctx.strokeStyle = color; ctx.lineWidth = lw * dpr;
+    ctx.setLineDash(dash.map(d => d*dpr));
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function dot(ctx, x, y, color, dpr, r=5) {
+    ctx.beginPath();
+    ctx.arc(x, y, r*dpr, 0, Math.PI*2);
+    ctx.fillStyle = color; ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5*dpr; ctx.stroke();
+  }
+
+  function label(ctx, text, x, y, color, dpr, align='center', baseline='middle', size=12) {
+    ctx.fillStyle = color;
+    ctx.font = `900 ${size*dpr}px "Inter", system-ui, sans-serif`;
+    ctx.textAlign = align; ctx.textBaseline = baseline;
+    ctx.fillText(text, x, y);
+  }
+
+  function xTick(ctx, x, Y1, text, dpr, color='rgba(0,0,0,0.60)') {
+    ctx.fillStyle = color;
+    ctx.font = `800 ${11*dpr}px "Inter", system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText(text, x, Y1 + 6*dpr);
+  }
+
+  function yTick(ctx, X0, y, text, dpr, color='rgba(0,0,0,0.60)') {
+    ctx.fillStyle = color;
+    ctx.font = `800 ${11*dpr}px "Inter", system-ui, sans-serif`;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, X0 - 5*dpr, y);
+  }
+
+  // ── Draw IS-FR ────────────────────────────────────────────────────────────
+  function drawISFR() {
+    const { ctx, dpr, W, H } = getCtx(isfrCanvas);
+    ctx.clearRect(0, 0, W, H);
+
+    const pad = { l:68*dpr, r:20*dpr, t:18*dpr, b:52*dpr };
+    const X0=pad.l, X1=W-pad.r, Y0=pad.t, Y1=H-pad.b;
+    const { Ymin, Ymax, rmin, rmax } = M.isfr;
+
+    const xTo = Y  => X0 + (Y  - Ymin) / (Ymax - Ymin) * (X1-X0);
+    const yTo = r  => Y0 + (rmax - r)  / (rmax - rmin) * (Y1-Y0);
+
+    drawGrid(ctx, X0, X1, Y0, Y1, dpr);
+
+    // Axis labels
+    ctx.fillStyle = 'rgba(0,0,0,0.60)';
+    ctx.font = `${12*dpr}px "Inter", system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('Output (Y)', (X0+X1)/2, Y1+26*dpr);
+    ctx.save();
+    ctx.translate(X0-50*dpr, (Y0+Y1)/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('Interest Rate (r)', 0, 0);
+    ctx.restore();
+
+    // IS curve (always same — does not depend on P)
+    const rIS_L = IS_r(Ymin);
+    const rIS_R = IS_r(Ymax);
+    line(ctx, xTo(Ymin), yTo(rIS_L), xTo(Ymax), yTo(rIS_R), 'rgba(0,0,0,0.30)', 2.5, dpr);
+    // IS label
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.font = `700 ${12*dpr}px "Inter", system-ui, sans-serif`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillText('IS', xTo(Ymax)+4*dpr, yTo(rIS_R)-2*dpr);
+
+    // Draw FR curves for each revealed price level (back to front: faded first)
+    const order = [1,2,3].filter(p => revealed.has(p) && p !== activeP);
+    order.push(activeP); // active on top
+
+    for (const p of order) {
+      if (!revealed.has(p)) continue;
+      const { P, colorLine, colorFade, colorSolid, point } = PRICES[p];
+      const isActive = p === activeP;
+
+      const rFR_L = FR_r(Ymin, P);
+      const rFR_R = FR_r(Ymax, P);
+      const alpha = isActive ? 1 : 0.45;
+      const lw    = isActive ? 2.5 : 1.8;
+
+      // FR line
+      const c = isActive ? colorLine : colorFade.replace(/[\d.]+\)$/, `${alpha})`);
+      line(ctx, xTo(Ymin), yTo(rFR_L), xTo(Ymax), yTo(rFR_R), colorLine, lw, dpr);
+
+      // FR label near right end
+      const labelY = Math.min(Ymax - 5, Ymax);
+      ctx.fillStyle = isActive ? colorSolid : colorLine;
+      ctx.globalAlpha = isActive ? 1.0 : 0.5;
+      ctx.font = `700 ${11*dpr}px "Inter", system-ui, sans-serif`;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(`FR(${PRICES[p].label})`, xTo(Ymax)+4*dpr, yTo(rFR_R));
+      ctx.globalAlpha = 1;
+
+      // Equilibrium point
+      const eq = equilibrium(P);
+      const ex = xTo(eq.Y), ey = yTo(eq.r);
+
+      ctx.globalAlpha = isActive ? 1.0 : 0.45;
+      // Dashed projections
+      line(ctx, ex, ey, ex, yTo(rmin), 'rgba(0,0,0,0.25)', 1.5, dpr, [4,5]);
+      line(ctx, ex, ey, xTo(Ymin), ey, 'rgba(0,0,0,0.25)', 1.5, dpr, [4,5]);
+
+      dot(ctx, ex, ey, colorSolid, dpr, isActive ? 5.5 : 4);
+      ctx.globalAlpha = 1;
+
+      // Point label (A, B, C)
+      if (isActive) {
+        ctx.fillStyle = colorSolid;
+        ctx.font = `900 ${13*dpr}px "Inter", system-ui, sans-serif`;
+        ctx.textAlign  = 'left'; ctx.textBaseline = 'bottom';
+        ctx.fillText(point, ex + 8*dpr, ey - 4*dpr);
+
+        xTick(ctx, ex, Y1, p===1?'Y₁':p===2?'Y₂':'Y₃', dpr, colorSolid);
+        yTick(ctx, X0, ey, p===1?'r₁':p===2?'r₂':'r₃', dpr, colorSolid);
+      }
+    }
+  }
+
+  // ── Draw AD ───────────────────────────────────────────────────────────────
+  function drawAD() {
+    const { ctx, dpr, W, H } = getCtx(adCanvas);
+    ctx.clearRect(0, 0, W, H);
+
+    const pad = { l:68*dpr, r:20*dpr, t:18*dpr, b:52*dpr };
+    const X0=pad.l, X1=W-pad.r, Y0=pad.t, Y1=H-pad.b;
+    const { Ymin, Ymax, Pmin, Pmax } = M.ad;
+
+    const xTo = Y => X0 + (Y - Ymin) / (Ymax - Ymin) * (X1-X0);
+    const yTo = P => Y0 + (Pmax - P) / (Pmax - Pmin) * (Y1-Y0);
+
+    drawGrid(ctx, X0, X1, Y0, Y1, dpr);
+
+    // Axis labels
+    ctx.fillStyle = 'rgba(0,0,0,0.60)';
+    ctx.font = `${12*dpr}px "Inter", system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('Output (Y)', (X0+X1)/2, Y1+26*dpr);
+    ctx.save();
+    ctx.translate(X0-50*dpr, (Y0+Y1)/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('Price Level (P)', 0, 0);
+    ctx.restore();
+
+    // If all 3 points revealed, draw the full AD curve first (behind points)
+    if (revealed.has(1) && revealed.has(2) && revealed.has(3)) {
+      const curve = buildADCurve(100);
+      ctx.strokeStyle = 'rgba(47,93,124,0.45)';
+      ctx.lineWidth = 2.5*dpr;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      let penDown = false;
+      for (const pt of curve) {
+        if (pt.Y < Ymin || pt.Y > Ymax) { penDown = false; continue; }
+        const x = xTo(pt.Y), y = yTo(pt.P);
+        if (!penDown) { ctx.moveTo(x,y); penDown = true; }
+        else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+
+      // AD label
+      const lastValid = curve.filter(pt => pt.Y >= Ymin && pt.Y <= Ymax).pop();
+      if (lastValid) {
+        ctx.fillStyle = 'rgba(47,93,124,0.70)';
+        ctx.font = `700 ${13*dpr}px "Inter", system-ui, sans-serif`;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillText('AD', xTo(lastValid.Y)+6*dpr, yTo(lastValid.P));
+      }
+
+      adHint.textContent = 'All three points plotted — the AD curve is downward sloping!';
+    }
+
+    // Draw each revealed point
+    for (const p of [1,2,3]) {
+      if (!revealed.has(p)) continue;
+      const { P, colorSolid, point } = PRICES[p];
+      const { Y } = equilibrium(P);
+      if (Y < Ymin || Y > Ymax) continue;
+
+      const ex = xTo(Y), ey = yTo(P);
+      const isActive = p === activeP;
+
+      ctx.globalAlpha = isActive ? 1.0 : 0.55;
+
+      // Dashed projections
+      line(ctx, ex, ey, ex, yTo(Pmin), 'rgba(0,0,0,0.22)', 1.5, dpr, [4,5]);
+      line(ctx, ex, ey, xTo(Ymin), ey, 'rgba(0,0,0,0.22)', 1.5, dpr, [4,5]);
+
+      dot(ctx, ex, ey, colorSolid, dpr, isActive ? 6 : 4.5);
+
+      // Point label
+      ctx.fillStyle = colorSolid;
+      ctx.font = `900 ${13*dpr}px "Inter", system-ui, sans-serif`;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+      ctx.fillText(point, ex+8*dpr, ey-4*dpr);
+
+      xTick(ctx, ex, Y1, p===1?'Y₁':p===2?'Y₂':'Y₃', dpr, colorSolid);
+      yTick(ctx, X0, ey, p===1?'P₁':p===2?'P₂':'P₃', dpr, colorSolid);
+
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawAll() {
+    drawISFR();
+    drawAD();
+  }
+
+  // ── UI updates ────────────────────────────────────────────────────────────
+  function updateButtons() {
+    [1,2,3].forEach(p => {
+      const btn = BTNS[p];
+      btn.classList.remove('active-p1','active-p2','active-p3');
+      if (p === activeP) btn.classList.add(`active-p${p}`);
+    });
+  }
+
+  function updateSteps() {
+    const doneClass = { 1:'done-p1', 2:'done-p2', 3:'done-p3' };
+    [1,2,3].forEach(p => {
+      const el = STEPS[p];
+      el.classList.remove('done-p1','done-p2','done-p3');
+      if (revealed.has(p)) el.classList.add(doneClass[p]);
+    });
+  }
+
+  function updateInsight() {
+    insightBody.innerHTML = INSIGHTS[activeP];
+
+    const eq = equilibrium(PRICES[activeP].P);
+    const { point } = PRICES[activeP];
+    eqPills.innerHTML = `
+      <span class="eq-pill">P${point === 'A' ? '₁' : point === 'B' ? '₂' : '₃'} = ${PRICES[activeP].P}</span>
+      <span class="eq-pill">Y${point === 'A' ? '₁' : point === 'B' ? '₂' : '₃'} = ${eq.Y.toFixed(1)}</span>
+      <span class="eq-pill">r${point === 'A' ? '₁' : point === 'B' ? '₂' : '₃'} = ${eq.r.toFixed(2)}</span>
+    `;
+  }
+
+  function updateStatus() {
+    const n = revealed.size;
+    if (n === 1) setStatus('Point A plotted. Now try P₂ (higher price) or P₃ (lower price).');
+    else if (n === 2) setStatus('Two points plotted. Select the third price level to complete the AD curve.');
+    else setStatus('All three points plotted — the AD curve is now fully derived!');
+  }
+
+  function setStatus(msg) { statusEl.textContent = msg; }
+
+  // ── Event: price button click ─────────────────────────────────────────────
+  function selectP(p) {
+    activeP = p;
+    revealed.add(p);
+    updateButtons();
+    updateSteps();
+    updateInsight();
+    updateStatus();
+    drawAll();
+  }
+
+  btnP1.addEventListener('click', () => selectP(1));
+  btnP2.addEventListener('click', () => selectP(2));
+  btnP3.addEventListener('click', () => selectP(3));
+
+  // ── Reset ─────────────────────────────────────────────────────────────────
+  resetBtn.addEventListener('click', () => {
+    activeP  = 1;
+    revealed = new Set([1]);
+    adHint.textContent = 'Points accumulate as you select price levels';
+    updateButtons();
+    updateSteps();
+    updateInsight();
+    updateStatus();
+    drawAll();
+  });
+
+  // ── KaTeX ─────────────────────────────────────────────────────────────────
+  function typeset(el) {
+    if (!el) return;
+    if (!window.renderMathInElement) { setTimeout(() => typeset(el), 60); return; }
+    window.renderMathInElement(el, {
+      delimiters: [
+        { left:'\\(', right:'\\)', display:false },
+        { left:'$',   right:'$',   display:false },
+      ],
+      throwOnError: false,
+    });
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  window.addEventListener('resize', () => requestAnimationFrame(drawAll));
+  window.addEventListener('load', () => {
+    updateButtons();
+    updateSteps();
+    updateInsight();
+    updateStatus();
+    drawAll();
+    setTimeout(drawAll, 120);
+    typeset(document.body);
+  });
+})();
+</script>
+</body>
+</html>
