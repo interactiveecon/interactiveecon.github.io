@@ -239,8 +239,8 @@
               <span id="policyLabel">ΔG</span>
               <span class="slider-val" id="policyVal">+100</span>
             </div>
-            <input type="range" id="policySlider" min="20" max="200" step="10" value="100" oninput="update()" />
-            <div class="slider-bounds"><span>20</span><span>200</span></div>
+            <input type="range" id="policySlider" min="-200" max="200" step="10" value="100" oninput="update()" />
+            <div class="slider-bounds"><span>−200</span><span>+200</span></div>
           </div>
 
         </div>
@@ -426,8 +426,10 @@ function drawPE(type, mpc, policyAmt) {
   const Yeq_old = intercept_base / (1 - mpc);
   const Yeq_new = intercept_new  / (1 - mpc);
 
-  const Ymax_disp = Math.max(Yeq_new, Yeq_old) * 1.25;
+  // Keep scale anchored to OLD equilibrium so A never moves visually.
+  // Give 60% headroom above Yeq_old so B has room to move right (or left).
   const Ymin_disp = 0;
+  const Ymax_disp = Yeq_old * 1.60;
 
   const xTo = Y  => X0 + (Y - Ymin_disp) / (Ymax_disp - Ymin_disp) * (X1-X0);
   const yTo = PE => Y0 + (1 - (PE - Ymin_disp) / (Ymax_disp - Ymin_disp)) * (Y1-Y0);
@@ -527,17 +529,25 @@ function drawRounds(rounds, type) {
   const X0=pad.l, X1=W-pad.r, Y0=pad.t, Y1=H-pad.b;
 
   const steps = rounds.map(r => r.step);
-  const absMax = Math.max(...steps.map(Math.abs), 1);
   const colors = { G: '#2f5d7c', T: '#b45309', BB: '#1b7f4b' };
   const barColor = colors[type];
   const barCount = rounds.length;
   const gap = 8*dpr;
   const barW = (X1-X0 - gap*(barCount-1)) / barCount;
 
-  // zero line
-  const zeroY = type === 'T' && rounds[0].step < 0
-    ? Y0 + (Y1-Y0)*0.18  // put zero up top when negative
-    : Y1;                  // put zero at bottom when positive
+  // Compute data range so zero line is always placed correctly and bars never clip.
+  // Add a 15% margin above/below the extremes so labels have room.
+  const dataMax = Math.max(...steps, 0);
+  const dataMin = Math.min(...steps, 0);
+  const span = Math.max(dataMax - dataMin, 1);
+  const margin = span * 0.18;
+  const rangeTop = dataMax + margin;     // value that maps to Y0 (top of chart)
+  const rangeBot = dataMin - margin;     // value that maps to Y1 (bottom of chart)
+  const rangeSpan = rangeTop - rangeBot;
+
+  // Canvas-coordinate helpers
+  const valToY = v => Y0 + (rangeTop - v) / rangeSpan * (Y1 - Y0);
+  const zeroY  = valToY(0);
 
   // grid
   ctx.strokeStyle='rgba(0,0,0,0.07)'; ctx.lineWidth=1*dpr;
@@ -555,24 +565,28 @@ function drawRounds(rounds, type) {
   rounds.forEach((r, i) => {
     const x = X0 + i*(barW+gap);
     const val = r.step;
-    const barH = Math.abs(val) / absMax * (Y1-Y0) * 0.80;
+    const barTop    = val >= 0 ? valToY(val) : zeroY;
+    const barBottom = val >= 0 ? zeroY       : valToY(val);
+    const barH = barBottom - barTop;
     const isFirst = i === 0;
 
     // bar
-    ctx.fillStyle = isFirst
-      ? barColor
-      : barColor + 'aa';
-    const barTop = val >= 0 ? zeroY - barH : zeroY;
+    ctx.fillStyle = isFirst ? barColor : barColor + 'aa';
     ctx.beginPath();
     roundRect(ctx, x, barTop, barW, barH, 4*dpr);
     ctx.fill();
 
-    // value label
+    // value label — above bar for positive, below for negative
     ctx.fillStyle = isFirst ? barColor : 'rgba(0,0,0,0.45)';
     ctx.font = `${isFirst?'800':'700'} ${10*dpr}px "Inter",sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline = val>=0 ? 'bottom' : 'top';
-    const labelY = val>=0 ? barTop-3*dpr : barTop+barH+3*dpr;
-    ctx.fillText(Math.abs(val)<0.5 ? '≈0' : (val>=0?'+':'')+val.toFixed(1), x+barW/2, labelY);
+    ctx.textAlign = 'center';
+    if (val >= 0) {
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(Math.abs(val)<0.5 ? '≈0' : '+'+val.toFixed(1), x+barW/2, barTop-3*dpr);
+    } else {
+      ctx.textBaseline = 'top';
+      ctx.fillText(val.toFixed(1), x+barW/2, barBottom+3*dpr);
+    }
 
     // x label
     ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.font=`${9*dpr}px "Inter",sans-serif`;
@@ -672,12 +686,18 @@ function buildResults(type, mpc, policyAmt, totals) {
 
   let text = '';
   if (type === 'G') {
-    text = `A <strong>ΔG of +${policyAmt}</strong> raises planned expenditure directly by ${policyAmt} in round 1. Each round, households spend MPC of their new income, adding smaller and smaller waves. Total: ${sign}${Math.round(deltaY)}. The multiplier ${multFormula} captures the full geometric sum.`;
+    const dir = policyAmt >= 0 ? 'raises' : 'lowers';
+    const absAmt = Math.abs(policyAmt);
+    text = `A <strong>ΔG of ${policyAmt>=0?'+':''}${policyAmt}</strong> ${dir} planned expenditure directly by ${absAmt} in round 1. Each subsequent round, households ${policyAmt>=0?'spend':'cut spending by'} MPC of their new income, adding smaller and smaller waves. Total: ${sign}${Math.round(deltaY)}. The multiplier ${multFormula} captures the full geometric sum.`;
   } else if (type === 'T') {
-    const firstHit = (-mpc*policyAmt).toFixed(1);
-    text = `A <strong>ΔT of +${policyAmt}</strong> (tax increase) reduces disposable income, so households cut consumption by MPC × ΔT = ${(-firstHit).toFixed(1)} in round 1 — not the full ${policyAmt}. That's why the tax multiplier ${multFormula} is smaller in absolute value than the government purchases multiplier.`;
+    const firstHit = (-mpc * policyAmt);
+    const dir = policyAmt >= 0 ? 'increases' : 'decreases';
+    const dispEffect = policyAmt >= 0 ? 'reduces' : 'raises';
+    text = `A <strong>ΔT of ${policyAmt>=0?'+':''}${policyAmt}</strong> (tax ${policyAmt>=0?'increase':'cut'}) ${dispEffect} disposable income, so households ${policyAmt>=0?'cut':'raise'} consumption by |MPC × ΔT| = ${Math.abs(firstHit).toFixed(1)} in round 1 — not the full ${Math.abs(policyAmt)}. That's why the tax multiplier ${multFormula} is smaller in absolute value than the government purchases multiplier.`;
   } else {
-    text = `Equal increases in G and T of <strong>${policyAmt}</strong>. The ΔG raises PE by ${policyAmt}; the ΔT cuts it by MPC × ${policyAmt} = ${(mpc*policyAmt).toFixed(1)}. Net first-round effect: ${(policyAmt*(1-mpc)).toFixed(1)}. After all rounds, ΔY = <strong>+${Math.round(deltaY)}</strong> — exactly equal to ΔG. This is the <em>balanced budget multiplier = 1</em>.`;
+    const dir = policyAmt >= 0 ? 'increases' : 'decreases';
+    const absAmt = Math.abs(policyAmt);
+    text = `Equal ${dir} in G and T of <strong>${absAmt}</strong>. The ΔG ${policyAmt>=0?'raises':'lowers'} PE by ${absAmt}; the ΔT ${policyAmt>=0?'cuts':'adds'} MPC × ${absAmt} = ${(mpc*absAmt).toFixed(1)}. Net first-round effect: ${(policyAmt*(1-mpc)).toFixed(1)}. After all rounds, ΔY = <strong>${sign}${Math.round(deltaY)}</strong> — exactly equal to ΔG. This is the <em>balanced budget multiplier = 1</em>.`;
   }
 
   insight.innerHTML = text;
@@ -709,7 +729,7 @@ function update() {
   const mpc = getMPC();
   const policyAmt = getPolicy();
   document.getElementById('mpcVal').textContent = mpc.toFixed(2);
-  document.getElementById('policyVal').textContent = '+' + policyAmt;
+  document.getElementById('policyVal').textContent = (policyAmt >= 0 ? '+' : '') + policyAmt;
 
   const rounds = calcRounds(policyType, mpc, policyAmt);
   const totals = calcTotals(policyType, mpc, policyAmt);
