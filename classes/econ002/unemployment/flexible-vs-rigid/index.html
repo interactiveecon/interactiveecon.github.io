@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flexible vs. Sticky Wages</title>
+  <title>Flexible vs. Rigid Wages</title>
 
   <link rel="stylesheet" href="/assets/style.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
@@ -132,7 +132,7 @@
     .outcome-val.none { color: var(--muted); }
     .outcome-val.warn { color: #b45309; }
 
-    /* Unemployment bracket on sticky diagram */
+    /* Unemployment bracket on rigid diagram */
     .unemp-badge {
       display: inline-flex; align-items: center; gap: 5px;
       font-size: 11px; font-weight: 800; padding: 4px 10px;
@@ -175,10 +175,10 @@
     <div class="header-inner">
       <div class="title-block">
         <div class="kicker">Macroeconomics Practice Lab</div>
-        <h1>Flexible vs. Sticky Wages</h1>
+        <h1>Flexible vs. Rigid Wages</h1>
         <p class="sub">
           How does the labor market respond to a shock when wages can adjust freely versus when they are stuck?
-          Step through the adjustment process in both worlds and see why sticky wages produce unemployment.
+          Step through the adjustment process in both worlds and see why rigid wages produce unemployment.
         </p>
         <details class="howto">
           <summary>How this app works</summary>
@@ -187,11 +187,11 @@
               <li>Choose a <strong>shock type</strong> — a recession (labor demand falls) or a boom (labor demand rises).</li>
               <li>Set the <strong>shock size</strong> with the slider.</li>
               <li>Click <strong>Next Step</strong> to walk through the adjustment one stage at a time, or <strong>Show All</strong> to see the full outcome immediately.</li>
-              <li>Compare the left panel (flexible wages) with the right panel (sticky wages) at each step.</li>
+              <li>Compare the left panel (flexible wages) with the right panel (rigid wages) at each step.</li>
             </ol>
             <p style="margin:6px 0 0">
               <strong>Key contrast:</strong> With flexible wages, the market clears at a lower wage — employment falls but there is <em>no unemployment</em>.
-              With sticky wages, the real wage stays at \(W/P^*\), employment falls further, and a gap opens between workers who want jobs and jobs available — that gap is <strong>cyclical unemployment</strong>.
+              With rigid wages, the real wage stays at \(W/P^*\), employment falls further, and a gap opens between workers who want jobs and jobs available — that gap is <strong>cyclical unemployment</strong>.
             </p>
           </div>
         </details>
@@ -260,7 +260,7 @@
     </div>
     <div class="chart-card">
       <div class="chart-head">
-        <h2 class="h2-rigid">Sticky Wages</h2>
+        <h2 class="h2-rigid">Rigid Wages</h2>
         <span style="font-size:11px;color:var(--muted)">Wages stuck at W/P*</span>
       </div>
       <canvas id="rigidCanvas" width="800" height="620"></canvas>
@@ -275,7 +275,7 @@
       <div class="unemp-badge flex-badge" style="margin-top:10px">✓ No unemployment — market clears</div>
     </div>
     <div class="compare-card">
-      <div class="compare-title ct-rigid">Sticky Wages — Outcomes</div>
+      <div class="compare-title ct-rigid">Rigid Wages — Outcomes</div>
       <div class="outcome-rows" id="rigidOutcomes"></div>
       <div class="unemp-badge rigid-badge" id="unempBadge">⚠ Cyclical unemployment exists</div>
     </div>
@@ -327,7 +327,7 @@ function getParams() {
   const eq_old = equilibrium(aD_old);
   const eq_new = equilibrium(aD_new);
 
-  // Sticky: wage stays at old W*, employment = quantity demanded at W*
+  // Rigid: wage stays at old W*, employment = quantity demanded at W*
   // LD_new: W/P = aD_new - bD·L  →  L_rigid = (aD_new - W*) / bD
   const W_rigid = eq_old.W;
   const L_rigid = (aD_new - W_rigid) / MODEL.bD;
@@ -351,7 +351,7 @@ function getAnnotation(step) {
     `The economy starts at initial equilibrium <strong>A</strong> — real wage \(W/P^*\) and employment \(L^*\). Labor demand (LD) and supply (LS) intersect with no unemployment in either world.`,
     `A <strong>${shock}</strong> hits: labor demand shifts <strong>${ldDir}</strong> to LD'. At the old wage \(W/P^*\), there is now ${shockType==='recession'?'excess supply (more workers than jobs)':'excess demand (more jobs than workers)'}.`,
     `<strong>Flexible wages:</strong> the real wage ${wDir} to clear the market. Employment ${lDir} to \(L'\) — the new equilibrium at point B. ${shockType==='recession'?'Wages fall but <em>no unemployment</em> exists.':'Wages rise and employment increases.'}`,
-    `<strong>Sticky wages:</strong> the real wage stays stuck at \(W/P^*\). Firms only hire \(L'\) workers (labor demand at the old wage). But \(L^*\) workers still want jobs — the gap \(U = L^* - L'\) is <strong>cyclical unemployment</strong>.`,
+    `<strong>Rigid wages:</strong> the real wage stays stuck at \(W/P^*\). Firms only hire \(L'\) workers (labor demand at the old wage). But \(L^*\) workers still want jobs — the gap \(U = L^* - L'\) is <strong>cyclical unemployment</strong>.`,
   ];
   return annotations[step] || annotations[0];
 }
@@ -439,36 +439,66 @@ function drawLaborMarket(canvasId, mode, step) {
     ctx.fillText(lbl, x+dx*dpr, y+dy*dpr);
   }
 
-  function axisTickX(L_v, label, color, yOffset=0) {
+  // Numeric tick labels — always show actual values, never symbolic
+  function axisTickX(L_v, color) {
+    if (L_v < 0) return; // never show negative labor
     const x = xTo(L_v);
     ctx.fillStyle=color; ctx.font=`700 ${10*dpr}px "Inter",sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='top';
-    ctx.fillText(label, x, Y1+5*dpr+yOffset*dpr);
+    ctx.fillText(L_v.toFixed(1), x, Y1+5*dpr);
   }
 
-  function axisTickY(W_v, label, color) {
+  function axisTickY(W_v, color) {
+    if (W_v < 0) return; // never show negative wages
     const y = yTo(W_v);
     ctx.fillStyle=color; ctx.font=`700 ${10*dpr}px "Inter",sans-serif`;
     ctx.textAlign='right'; ctx.textBaseline='middle';
-    ctx.fillText(label, X0-5*dpr, y);
+    ctx.fillText(W_v.toFixed(2), X0-5*dpr, y);
+  }
+
+  // Horizontal arrow between LD and LD', drawn at a fixed W level, pointing left (recession) or right (boom)
+  function drawShiftArrow(aD_from, aD_to, arrowColor) {
+    // Draw at W = midpoint of the two curves' y-intercepts
+    const W_mid = (aD_from + aD_to) / 2 * 0.62;
+    if (W_mid <= 0 || W_mid >= Wmax) return;
+    // x positions on each curve at W_mid: L = (aD - W) / bD
+    const L_from = (aD_from - W_mid) / bD;
+    const L_to   = (aD_to   - W_mid) / bD;
+    if (L_from < 0 || L_to < 0) return;
+    const x1 = xTo(L_from);
+    const x2 = xTo(L_to);
+    const y  = yTo(W_mid);
+    const dir = x2 > x1 ? 1 : -1; // +1 = rightward (boom), -1 = leftward (recession)
+    // Arrow line
+    ctx.strokeStyle = arrowColor; ctx.lineWidth = 2*dpr; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke();
+    // Arrowhead at x2
+    const hw = 5*dpr, hl = 8*dpr;
+    ctx.fillStyle = arrowColor;
+    ctx.beginPath();
+    ctx.moveTo(x2, y);
+    ctx.lineTo(x2 - dir*hl, y - hw);
+    ctx.lineTo(x2 - dir*hl, y + hw);
+    ctx.closePath(); ctx.fill();
   }
 
   // ── Step 0: always draw LS and LD_old ──
   curveLine(aS, +1, 'rgba(47,93,124,0.85)',  2.5, [], 'LS');
-  curveLine(aD_old, -1, 'rgba(0,0,0,0.55)', 2.5, [], step >= 1 ? 'LD' : 'LD');
+  curveLine(aD_old, -1, 'rgba(0,0,0,0.55)', 2.5, [], 'LD');
 
   // Equilibrium A (always shown)
   const ax = xTo(eq_old.L), ay = yTo(eq_old.W);
   dashes(ax, ay, X0, Y1);
   dot(ax, ay, 'rgba(0,0,0,0.70)');
   pointLabel('A', ax, ay, 'rgba(0,0,0,0.70)');
-  axisTickX(eq_old.L, 'L*', 'rgba(0,0,0,0.60)');
-  axisTickY(eq_old.W, 'W/P*', 'rgba(0,0,0,0.60)');
+  axisTickX(eq_old.L, 'rgba(0,0,0,0.60)');
+  axisTickY(eq_old.W, 'rgba(0,0,0,0.60)');
 
-  // ── Step 1+: draw LD' ──
+  // ── Step 1+: draw LD' and shift arrow ──
   if (step >= 1) {
     const ldColor = shockType === 'recession' ? '#b42318' : '#1b7f4b';
     curveLine(aD_new, -1, ldColor, 2.5, [], "LD'");
+    drawShiftArrow(aD_old, aD_new, ldColor);
   }
 
   // ── Step 2+: flexible equilibrium B — flex panel only ──
@@ -477,40 +507,40 @@ function drawLaborMarket(canvasId, mode, step) {
     dashes(bx, by, X0, Y1);
     dot(bx, by, '#2f5d7c');
     pointLabel('B', bx, by, '#2f5d7c');
-    axisTickX(eq_new.L, "L'", '#2f5d7c', 0);
-    axisTickY(eq_new.W, "W/P'", '#2f5d7c');
+    axisTickX(eq_new.L, '#2f5d7c');
+    axisTickY(eq_new.W, '#2f5d7c');
   }
 
   // ── Step 3 rigid: show stuck wage, L_rigid, unemployment bracket ──
   if (mode === 'rigid' && step >= 3) {
+    // Clamp L_rigid to zero — employment can't be negative
+    const L_rig = Math.max(0, L_rigid);
+
     // Wage floor line at W*
     ctx.strokeStyle='rgba(180,83,9,0.55)'; ctx.lineWidth=1.5*dpr; ctx.setLineDash([6*dpr,4*dpr]);
     ctx.beginPath(); ctx.moveTo(X0, yTo(W_rigid)); ctx.lineTo(X1, yTo(W_rigid)); ctx.stroke();
     ctx.setLineDash([]);
 
-    // Employment under sticky wages (LD' at W*)
-    const bx = xTo(L_rigid), by = yTo(W_rigid);
-    // Vertical dashed down to x-axis
+    // Employment under rigid wages (LD' at W*) — vertical dashed down to x-axis
+    const bx = xTo(L_rig), by = yTo(W_rigid);
     ctx.strokeStyle='rgba(180,83,9,0.35)'; ctx.lineWidth=1.5*dpr; ctx.setLineDash([4*dpr,5*dpr]);
     ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx, Y1); ctx.stroke();
     ctx.setLineDash([]);
     dot(bx, by, '#b45309');
     pointLabel("B", bx, by, '#b45309', -18, -8);
-    axisTickX(L_rigid, "L'", '#b45309', 0);
+    axisTickX(L_rig, '#b45309');
 
-    // Labor supply point at W* (workers who want jobs)
-    const lsx = xTo(L_supply_at_Wstar), lsy = yTo(W_rigid);
-    // Already at W*, same height as B
+    // Labor supply at W* — dashed vertical
+    const lsx = xTo(L_supply_at_Wstar);
     ctx.strokeStyle='rgba(180,83,9,0.25)'; ctx.lineWidth=1.5*dpr; ctx.setLineDash([4*dpr,5*dpr]);
-    ctx.beginPath(); ctx.moveTo(lsx, lsy); ctx.lineTo(lsx, Y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(lsx, yTo(W_rigid)); ctx.lineTo(lsx, Y1); ctx.stroke();
     ctx.setLineDash([]);
 
-    // Unemployment bracket between L_rigid and eq_old.L at W*
-    const Ux1 = xTo(L_rigid), Ux2 = xTo(eq_old.L);
+    // Unemployment bracket between L_rig and eq_old.L at W*
+    const Ux1 = xTo(L_rig), Ux2 = xTo(eq_old.L);
     const bracketY = yTo(W_rigid) - 14*dpr;
     ctx.strokeStyle = '#b45309'; ctx.lineWidth = 2*dpr;
     ctx.beginPath(); ctx.moveTo(Ux1, bracketY); ctx.lineTo(Ux2, bracketY); ctx.stroke();
-    // tick marks
     [Ux1, Ux2].forEach(x => {
       ctx.beginPath(); ctx.moveTo(x, bracketY-4*dpr); ctx.lineTo(x, bracketY+4*dpr); ctx.stroke();
     });
@@ -575,15 +605,25 @@ function renderCompare() {
   const lFDir  = lFlexChange >= 0 ? 'up' : 'down';
   const lRDir  = lRigidChange >= 0 ? 'up' : 'down';
 
+  function changeText(oldVal, newVal, decimals=2) {
+    const diff = newVal - oldVal;
+    const absD = Math.abs(diff).toFixed(decimals);
+    const nv   = newVal.toFixed(decimals);
+    const dir  = diff >= 0 ? 'rises by' : 'falls by';
+    return `${dir} ${absD} → ${nv}`;
+  }
+
+  const L_rig_clamped = Math.max(0, L_rigid);
+
   document.getElementById('flexOutcomes').innerHTML =
-    row('Real Wage', (wChange>=0?'+':'')+wChange.toFixed(2) + ' → ' + eq_new.W.toFixed(2), wDir) +
-    row('Employment', (lFlexChange>=0?'+':'')+lFlexChange.toFixed(1) + ' → ' + eq_new.L.toFixed(1), lFDir) +
+    row('Real Wage',   changeText(eq_old.W, eq_new.W, 2), wDir) +
+    row('Employment',  changeText(eq_old.L, eq_new.L, 1), lFDir) +
     row('Unemployment', 'None', 'none');
 
   const unempVal = Math.max(0, unemp);
   document.getElementById('rigidOutcomes').innerHTML =
-    row('Real Wage', 'Stuck at ' + eq_old.W.toFixed(2), 'warn') +
-    row('Employment', lRigidChange.toFixed(1) + ' → ' + L_rigid.toFixed(1), lRDir) +
+    row('Real Wage', 'Unchanged at ' + eq_old.W.toFixed(2), 'warn') +
+    row('Employment', changeText(eq_old.L, L_rig_clamped, 1), lRDir) +
     row('Unemployment', unempVal > 0 ? unempVal.toFixed(1) + ' workers' : '—', unempVal > 0 ? 'down' : 'none') +
     (unempVal <= 0 ? row('Note', 'Excess demand — upward wage pressure') : '');
 
@@ -594,9 +634,9 @@ function renderCompare() {
 
   // Key insight
   if (isRecession) {
-    insight.innerHTML = `<strong>Why does rigidity matter so much?</strong> With flexible wages, the real wage falls from ${eq_old.W.toFixed(2)} to ${eq_new.W.toFixed(2)} and employment adjusts to ${eq_new.L.toFixed(1)} — the market clears with <em>no</em> unemployment. With sticky wages, the wage stays at ${eq_old.W.toFixed(2)}, firms hire only ${L_rigid.toFixed(1)} workers (what LD' says at that wage), but ${eq_old.L.toFixed(1)} workers still want jobs. The gap of <strong>${unempVal.toFixed(1)}</strong> is <em>cyclical unemployment</em> — unemployment caused purely by the wage not adjusting. This is why economists worry about sticky wages: recessions produce more unemployment than a frictionless market would.`;
+    insight.innerHTML = `<strong>Why does rigidity matter so much?</strong> With flexible wages, the real wage falls from ${eq_old.W.toFixed(2)} to ${eq_new.W.toFixed(2)} and employment adjusts to ${eq_new.L.toFixed(1)} — the market clears with <em>no</em> unemployment. With rigid wages, the wage stays at ${eq_old.W.toFixed(2)}, firms hire only ${L_rigid.toFixed(1)} workers (what LD' says at that wage), but ${eq_old.L.toFixed(1)} workers still want jobs. The gap of <strong>${unempVal.toFixed(1)}</strong> is <em>cyclical unemployment</em> — unemployment caused purely by the wage not adjusting. This is why economists worry about sticky wages: recessions produce more unemployment than a frictionless market would.`;
   } else {
-    insight.innerHTML = `<strong>Booms are symmetric but less harmful.</strong> Labor demand rises, putting upward pressure on wages. With flexible wages, wages rise to ${eq_new.W.toFixed(2)} and employment expands to ${eq_new.L.toFixed(1)} — a clean, efficient expansion. With sticky wages, wages are stuck at ${eq_old.W.toFixed(2)}, and firms want to hire <em>more</em> workers (${L_rigid.toFixed(1)}) but there aren't enough at that wage. This excess demand may put pressure on wages to rise, eventually eroding rigidity — illustrating why wages tend to be more flexible upward than downward.`;
+    insight.innerHTML = `<strong>Booms are symmetric but less harmful.</strong> Labor demand rises, putting upward pressure on wages. With flexible wages, wages rise to ${eq_new.W.toFixed(2)} and employment expands to ${eq_new.L.toFixed(1)} — a clean, efficient expansion. With rigid wages, wages are stuck at ${eq_old.W.toFixed(2)}, and firms want to hire <em>more</em> workers (${L_rigid.toFixed(1)}) but there aren't enough at that wage. This excess demand may put pressure on wages to rise, eventually eroding rigidity — illustrating why wages tend to be more flexible upward than downward.`;
   }
 }
 
