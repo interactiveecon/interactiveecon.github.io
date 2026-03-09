@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fed Rule — Variable Classifier</title>
+
+  <link rel="stylesheet" href="/assets/style.css">
+
+  <!-- KaTeX -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    .stack { display: grid; gap: 14px; margin-top: 18px; }
+
+    .scenario-box {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(246,242,234,0.5);
+      padding: 14px 16px;
+      margin-bottom: 18px;
+    }
+    .scenario-stamp {
+      font-size: 11px; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px;
+    }
+    .scenario-headline {
+      font-family: var(--font-serif, "Source Serif 4", Georgia, serif);
+      font-size: 20px; font-weight: 700; color: var(--ink);
+      line-height: 1.25; margin: 0 0 6px;
+    }
+    .scenario-brief { font-size: 14px; color: var(--ink-2); line-height: 1.5; margin: 0; }
+    .scenario-placeholder { font-size: 14px; color: var(--muted); font-style: italic; margin: 0; }
+
+    /* 2 rows × 3 cols: Y↑ P↑ Z↑ / Y↓ P↓ Z↓ */
+    .choice-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 600px) { .choice-grid { grid-template-columns: 1fr 1fr; } }
+
+    .choice-btn {
+      width: 100%;
+      padding: 14px 10px;
+      border-radius: 14px;
+      border: 1px solid var(--line-2);
+      background: rgba(255,255,255,0.85);
+      color: var(--ink);
+      font-family: var(--font-sans, "Inter", sans-serif);
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.12s, border-color 0.12s, transform 0.06s;
+      line-height: 1.2;
+    }
+    .choice-btn .var-label {
+      display: block; font-size: 11px; font-weight: 600;
+      color: var(--muted); text-transform: uppercase;
+      letter-spacing: 0.06em; margin-bottom: 4px;
+    }
+    .choice-btn .var-sym { display: block; font-size: 22px; font-weight: 900; }
+
+    .choice-btn:hover:not(:disabled) {
+      background: rgba(47,93,124,0.08);
+      border-color: rgba(47,93,124,0.35);
+      transform: translateY(-1px);
+    }
+    .choice-btn:active:not(:disabled) { transform: translateY(1px); }
+    .choice-btn.correct-reveal {
+      background: rgba(27,127,75,0.10);
+      border-color: rgba(27,127,75,0.45);
+      color: #1b7f4b;
+    }
+    .choice-btn.wrong-reveal {
+      background: rgba(180,35,24,0.08);
+      border-color: rgba(180,35,24,0.35);
+      color: #b42318;
+    }
+    .choice-btn:disabled { cursor: default; }
+
+    .feedback-panel {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(246,242,234,0.40);
+      padding: 14px 16px;
+      display: none;
+    }
+    .feedback-panel.visible { display: block; }
+
+    .verdict { font-size: 14px; font-weight: 800; margin-bottom: 8px; }
+    .verdict.good { color: #1b7f4b; }
+    .verdict.bad  { color: #b42318; }
+
+    .explain-text {
+      font-size: 13px; color: var(--ink-2); line-height: 1.65;
+    }
+
+    .chain-row {
+      display: flex; flex-wrap: wrap; gap: 6px;
+      align-items: center; margin-top: 12px;
+    }
+    .chain-tok {
+      font-size: 12px; font-weight: 800; padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(47,93,124,0.10);
+      border: 1px solid rgba(47,93,124,0.25);
+      color: var(--accent, #2f5d7c);
+    }
+    .chain-arrow { color: var(--muted); font-size: 13px; font-weight: 700; }
+
+    .score-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+    .score-chip {
+      font-size: 13px; font-weight: 700; padding: 4px 10px;
+      border-radius: 999px; border: 1px solid var(--line-2);
+      background: rgba(255,255,255,0.8); color: var(--ink);
+    }
+    .score-chip.correct  { background: rgba(27,127,75,0.08); border-color: rgba(27,127,75,0.35); color: #1b7f4b; }
+    .score-chip.incorrect { background: rgba(180,35,24,0.08); border-color: rgba(180,35,24,0.35); color: #b42318; }
+
+    .progress-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+    .prog-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      border: 1.5px solid var(--line-2); background: rgba(255,255,255,0.7);
+    }
+    .prog-dot.correct { background: #1b7f4b; border-color: #1b7f4b; }
+    .prog-dot.wrong   { background: #b42318; border-color: #b42318; }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20% { transform: translateX(-5px); }
+      40% { transform: translateX(5px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+    .shake { animation: shake 0.35s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeIn 0.25s ease forwards; }
+
+    .footer { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    .footer-inner { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar">
+      <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
+    </nav>
+    <div class="header-inner">
+      <div class="title-block">
+        <div class="kicker">Macroeconomics Practice Lab</div>
+        <h1>Fed Rule — Variable Classifier</h1>
+        <p class="sub">
+          Read the scenario, then identify which variable in the Fed Rule changed — \(Y\), \(P\), or \(Z\) — and whether it went up or down.
+        </p>
+        <details class="howto">
+          <summary>How this app works</summary>
+          <div class="howto-body">
+            <p style="margin:0 0 8px">The Fed Rule is \(r = aY + bP + cZ\). Every scenario changes exactly one of these three variables.</p>
+            <ol>
+              <li>Click <strong>New Scenario</strong> to read a news brief.</li>
+              <li>Click one of the six buttons to identify which variable changed and whether it went up or down.</li>
+              <li>The app immediately reveals whether you were right, explains why, and shows the causal chain.</li>
+              <li>Click <strong>New Scenario</strong> to keep practicing.</li>
+            </ol>
+            <ul>
+              <li><strong>\(Y\) (Output)</strong>: changes in real activity — production, spending, investment, exports.</li>
+              <li><strong>\(P\) (Price level)</strong>: changes in overall prices or inflation pressure.</li>
+              <li><strong>\(Z\) (Other factors)</strong>: changes in the Fed's stance due to financial conditions, uncertainty, or policy signals — these shift the entire FR curve.</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+
+      <div class="controls-card">
+        <div class="controls-actions">
+          <button id="newBtn" class="btn primary">New Scenario</button>
+          <button id="resetBtn" class="btn subtle">Reset</button>
+        </div>
+        <div class="score-bar">
+          <span class="score-chip correct"   id="scoreCorrect">✓ 0</span>
+          <span class="score-chip incorrect" id="scoreWrong">✗ 0</span>
+          <span class="score-chip"           id="scoreTotal">0 answered</span>
+        </div>
+        <div id="status" class="status" aria-live="polite">Click "New Scenario" to begin.</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="container stack">
+  <div class="panel fade-in">
+    <div class="panel-head">
+      <h2>Identify the Variable</h2>
+      <div class="progress-row" id="progressRow"></div>
+    </div>
+
+    <div class="scenario-box" id="scenarioBox">
+      <p class="scenario-placeholder">Click "New Scenario" to start.</p>
+    </div>
+
+    <!-- Y↑  P↑  Z↑  (top row) -->
+    <!-- Y↓  P↓  Z↓  (bottom row) -->
+    <div class="choice-grid" id="choiceGrid">
+      <button class="choice-btn" data-value="Y-up"   disabled>
+        <span class="var-label">Output</span>
+        <span class="var-sym">\(Y\uparrow\)</span>
+      </button>
+      <button class="choice-btn" data-value="P-up"   disabled>
+        <span class="var-label">Price level</span>
+        <span class="var-sym">\(P\uparrow\)</span>
+      </button>
+      <button class="choice-btn" data-value="Z-up"   disabled>
+        <span class="var-label">Other factors</span>
+        <span class="var-sym">\(Z\uparrow\)</span>
+      </button>
+      <button class="choice-btn" data-value="Y-down" disabled>
+        <span class="var-label">Output</span>
+        <span class="var-sym">\(Y\downarrow\)</span>
+      </button>
+      <button class="choice-btn" data-value="P-down" disabled>
+        <span class="var-label">Price level</span>
+        <span class="var-sym">\(P\downarrow\)</span>
+      </button>
+      <button class="choice-btn" data-value="Z-down" disabled>
+        <span class="var-label">Other factors</span>
+        <span class="var-sym">\(Z\downarrow\)</span>
+      </button>
+    </div>
+
+    <div class="feedback-panel" id="feedbackPanel">
+      <div class="verdict"     id="verdictEl"></div>
+      <div class="explain-text" id="explainEl"></div>
+      <div class="chain-row"   id="chainEl"></div>
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-inner">
+      <div>ECON 002 — Fed Rule</div>
+      <div>Hosted on GitHub Pages</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const SCENARIOS = [
+    // ── Y scenarios ──────────────────────────────────────────────────────────
+    { var:"Y", dir:"up", source:"Morning Economic Brief",
+      headline:"Retail sales surprise to the upside",
+      brief:"Major retailers report strong demand and firms increase production schedules.",
+      explain:"Strong retail sales mean households are spending more, which drives firms to increase production. Output (Y) rises. In the Fed Rule r = aY + bP + cZ, a higher Y leads the Fed to set a higher interest rate — this is a movement along the FR curve, not a shift.",
+      chain:["Spending↑","Production↑","Y↑","r↑ (along FR)"] },
+
+    { var:"Y", dir:"down", source:"Morning Economic Brief",
+      headline:"Spending cools; firms scale back production",
+      brief:"Households cut discretionary purchases and inventories begin to build up.",
+      explain:"Weaker household spending causes inventories to accumulate, so firms cut production. Output (Y) falls. In the Fed Rule, lower Y means the Fed sets a lower interest rate — a movement along the FR curve.",
+      chain:["Spending↓","Inventories↑","Production↓","Y↓","r↓ (along FR)"] },
+
+    { var:"Y", dir:"up", source:"Industry Update",
+      headline:"Investment strengthens as firms expand capacity",
+      brief:"Businesses boost equipment purchases and ramp up output.",
+      explain:"Higher business investment directly raises demand and causes firms to expand production. Output (Y) increases. The Fed responds by raising the interest rate along the existing FR curve.",
+      chain:["Investment↑","Demand↑","Y↑","r↑ (along FR)"] },
+
+    { var:"Y", dir:"down", source:"Industry Update",
+      headline:"Housing and construction activity slows sharply",
+      brief:"New projects are postponed and related industries reduce production.",
+      explain:"A slowdown in housing and construction reduces investment spending, so firms cut back production and output (Y) falls. The Fed responds with a lower interest rate along the same FR curve.",
+      chain:["Construction↓","Investment↓","Y↓","r↓ (along FR)"] },
+
+    { var:"Y", dir:"up", source:"Global Markets Note",
+      headline:"Export demand rises",
+      brief:"Foreign demand for domestic goods increases, pushing up production.",
+      explain:"Rising exports increase demand for domestically produced goods, so firms scale up production. Output (Y) rises. The Fed moves along the FR curve, setting a higher interest rate.",
+      chain:["Exports↑","Demand↑","Y↑","r↑ (along FR)"] },
+
+    { var:"Y", dir:"down", source:"Global Markets Note",
+      headline:"Export demand weakens",
+      brief:"Foreign buyers pull back, reducing domestic production.",
+      explain:"Weaker foreign demand reduces orders for domestic goods, causing firms to cut output. Output (Y) falls and the Fed moves along the FR curve to a lower interest rate.",
+      chain:["Exports↓","Demand↓","Y↓","r↓ (along FR)"] },
+
+    { var:"Y", dir:"up", source:"Policy Desk",
+      headline:"New fiscal package boosts demand",
+      brief:"Government spending rises and/or taxes fall, supporting higher production and output.",
+      explain:"Expansionary fiscal policy raises planned expenditure, reduces unplanned inventories, and leads firms to increase production. Output (Y) rises. The Fed responds by moving along the FR curve to a higher rate.",
+      chain:["G↑ or T↓","Spending↑","Y↑","r↑ (along FR)"] },
+
+    { var:"Y", dir:"down", source:"Policy Desk",
+      headline:"Fiscal tightening weighs on activity",
+      brief:"Spending cuts and/or tax increases reduce demand, lowering production and output.",
+      explain:"Contractionary fiscal policy reduces planned expenditure, causing inventories to build and firms to cut production. Output (Y) falls and the Fed moves along the FR curve to a lower rate.",
+      chain:["G↓ or T↑","Spending↓","Y↓","r↓ (along FR)"] },
+
+    // ── P scenarios ──────────────────────────────────────────────────────────
+    { var:"P", dir:"up", source:"Inflation Watch",
+      headline:"Inflation pressure broadens",
+      brief:"Price increases spread across many goods and services.",
+      explain:"Broad-based price increases raise the overall price level (P). In the Fed Rule, a higher P causes the Fed to set a higher interest rate at every level of output — the entire FR curve shifts upward. This is a shift, not a movement along.",
+      chain:["Prices rise broadly","P↑","FR shifts up","r↑ at every Y"] },
+
+    { var:"P", dir:"up", source:"Inflation Watch",
+      headline:"Energy prices surge",
+      brief:"Higher energy costs pass through to the overall price level.",
+      explain:"A surge in energy prices feeds into the overall price level (P↑). The Fed responds to higher inflation pressure by raising the interest rate at every output level — the FR curve shifts upward.",
+      chain:["Energy costs↑","P↑","FR shifts up","r↑ at every Y"] },
+
+    { var:"P", dir:"up", source:"Inflation Watch",
+      headline:"Cost-of-living jump",
+      brief:"Rents and food prices rise broadly, pushing prices higher.",
+      explain:"Rising rents and food prices push up the overall price level (P↑). Because the Fed responds to inflation by tightening, the FR curve shifts upward — a higher r at every level of Y.",
+      chain:["Rents & food↑","P↑","FR shifts up","r↑ at every Y"] },
+
+    { var:"P", dir:"down", source:"Inflation Watch",
+      headline:"Deflation emerges",
+      brief:"Prices fall across a wide range of categories (overall price level declines).",
+      explain:"Falling prices lower the overall price level (P↓). The Fed responds to deflationary pressure by easing — it sets a lower interest rate at every output level. The FR curve shifts downward.",
+      chain:["Prices fall broadly","P↓","FR shifts down","r↓ at every Y"] },
+
+    { var:"P", dir:"down", source:"Inflation Watch",
+      headline:"Widespread price cuts",
+      brief:"Firms cut prices broadly to clear excess inventories.",
+      explain:"Broad price cuts reduce the overall price level (P↓). Lower inflation pressure causes the Fed to set a lower policy rate at every output level — the FR curve shifts downward.",
+      chain:["Firms cut prices","P↓","FR shifts down","r↓ at every Y"] },
+
+    { var:"P", dir:"down", source:"Inflation Watch",
+      headline:"Energy price collapse pulls prices down",
+      brief:"A sharp drop in energy prices contributes to a lower overall price level.",
+      explain:"Collapsing energy prices drag down the overall price level (P↓). With reduced inflation pressure, the Fed eases its stance — the FR curve shifts downward, lowering r at every level of Y.",
+      chain:["Energy prices↓","P↓","FR shifts down","r↓ at every Y"] },
+
+    // ── Z scenarios ──────────────────────────────────────────────────────────
+    { var:"Z", dir:"up", source:"Policy Desk",
+      headline:"Tariffs announced; uncertainty rises",
+      brief:"Wide-ranging tariffs increase uncertainty. The Fed leans more hawkish while waiting to see broader effects.",
+      explain:"Rising uncertainty from tariffs causes the Fed to lean more hawkish — it sets a higher interest rate at every level of output and prices. This is captured by Z↑, which shifts the FR curve upward. Z is a catch-all for factors beyond Y and P that influence the Fed's stance.",
+      chain:["Tariffs → uncertainty↑","Fed more hawkish","Z↑","FR shifts up","r↑ at every Y"] },
+
+    { var:"Z", dir:"down", source:"Financial Conditions",
+      headline:"Financial stress increases",
+      brief:"Credit conditions tighten and risk rises. The Fed leans more accommodative to support stability.",
+      explain:"Increased financial stress causes the Fed to become more accommodative — it sets a lower rate at every output level to support stability. This is captured by Z↓, shifting the FR curve downward.",
+      chain:["Credit tightens","Risk↑","Fed more dovish","Z↓","FR shifts down","r↓ at every Y"] },
+
+    { var:"Z", dir:"up", source:"Financial Conditions",
+      headline:"Risk-taking accelerates in asset markets",
+      brief:"Speculation rises. The Fed leans more hawkish to limit financial imbalances.",
+      explain:"Excessive risk-taking and speculation in asset markets prompt the Fed to lean more hawkish, raising rates at every output level. Z↑ captures this change in the Fed's stance, shifting the FR curve upward.",
+      chain:["Speculation↑","Financial imbalances↑","Fed more hawkish","Z↑","FR shifts up"] },
+
+    { var:"Z", dir:"down", source:"Financial Conditions",
+      headline:"Uncertainty shock hits confidence",
+      brief:"Firms delay projects amid uncertainty. The Fed leans more dovish as a precaution.",
+      explain:"A shock to confidence causes firms to delay investment. As a precaution, the Fed leans dovish — it sets a lower rate at every output level. Z↓ captures this shift in stance, moving the FR curve downward.",
+      chain:["Confidence shock","Firms delay investment","Fed more dovish","Z↓","FR shifts down"] },
+
+    { var:"Z", dir:"up", source:"Central Bank Watch",
+      headline:"Fed signals a more aggressive stance going forward",
+      brief:"Officials emphasize stronger responses in future policy decisions.",
+      explain:"Forward guidance that the Fed will respond more aggressively means it sets a higher rate at every combination of Y and P. This is a change in the rule itself, captured by Z↑, which shifts the entire FR curve upward.",
+      chain:["Hawkish guidance","Rate higher at every Y","Z↑","FR shifts up"] },
+
+    { var:"Z", dir:"down", source:"Central Bank Watch",
+      headline:"Fed signals a more patient stance",
+      brief:"Officials emphasize flexibility and caution in future policy decisions.",
+      explain:"Dovish forward guidance means the Fed sets a lower rate at every combination of Y and P — the rule becomes less aggressive. This is captured by Z↓, which shifts the entire FR curve downward.",
+      chain:["Dovish guidance","Rate lower at every Y","Z↓","FR shifts down"] },
+  ];
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  let scenario     = null;
+  let answered     = false;
+  let totalCorrect = 0;
+  let totalWrong   = 0;
+  let history      = [];
+  let recentIds    = [];
+
+  // ── DOM ───────────────────────────────────────────────────────────────────
+  const newBtn        = document.getElementById("newBtn");
+  const resetBtn      = document.getElementById("resetBtn");
+  const statusEl      = document.getElementById("status");
+  const scenarioBox   = document.getElementById("scenarioBox");
+  const feedbackPanel = document.getElementById("feedbackPanel");
+  const verdictEl     = document.getElementById("verdictEl");
+  const explainEl     = document.getElementById("explainEl");
+  const chainEl       = document.getElementById("chainEl");
+  const progressRow   = document.getElementById("progressRow");
+  const scoreCorrect  = document.getElementById("scoreCorrect");
+  const scoreWrong    = document.getElementById("scoreWrong");
+  const scoreTotal    = document.getElementById("scoreTotal");
+
+  const choiceBtns = Array.from(document.querySelectorAll(".choice-btn"));
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function typeset(el) {
+    if (!el) return;
+    if (!window.renderMathInElement) { setTimeout(() => typeset(el), 60); return; }
+    window.renderMathInElement(el, {
+      delimiters: [
+        { left:"\\(", right:"\\)", display:false },
+        { left:"$",   right:"$",   display:false },
+      ],
+      throwOnError: false,
+    });
+  }
+
+  function makeStamp() {
+    const days   = ["Mon","Tue","Wed","Thu","Fri"];
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const d   = days[Math.floor(Math.random() * days.length)];
+    const mo  = months[Math.floor(Math.random() * months.length)];
+    const day = 1 + Math.floor(Math.random() * 28);
+    const hr  = 7 + Math.floor(Math.random() * 9);
+    const min = Math.random() < 0.5 ? "00" : "30";
+    return `${d}, ${mo} ${day} — ${hr}:${min} ${hr < 12 ? "AM" : "PM"}`;
+  }
+
+  function setStatus(msg) { statusEl.textContent = msg; }
+
+  function updateScoreBar() {
+    scoreCorrect.textContent = `✓ ${totalCorrect}`;
+    scoreWrong.textContent   = `✗ ${totalWrong}`;
+    scoreTotal.textContent   = `${totalCorrect + totalWrong} answered`;
+  }
+
+  function updateProgress() {
+    progressRow.innerHTML = "";
+    history.forEach(ok => {
+      const d = document.createElement("div");
+      d.className = "prog-dot " + (ok ? "correct" : "wrong");
+      progressRow.appendChild(d);
+    });
+  }
+
+  function renderChain(tokens) {
+    chainEl.innerHTML = tokens.map((tok, i) =>
+      `<span class="chain-tok">${tok}</span>` +
+      (i < tokens.length - 1 ? `<span class="chain-arrow">→</span>` : "")
+    ).join("");
+  }
+
+  // ── New scenario ──────────────────────────────────────────────────────────
+  function newScenario() {
+    let pick, attempts = 0;
+    do {
+      pick = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
+      attempts++;
+    } while (recentIds.includes(pick.headline) && attempts < 30);
+    recentIds.push(pick.headline);
+    if (recentIds.length > 5) recentIds.shift();
+
+    scenario = { ...pick, stamp: makeStamp() };
+    answered = false;
+
+    scenarioBox.innerHTML = `
+      <div class="scenario-stamp">${scenario.stamp} · ${scenario.source}</div>
+      <p class="scenario-headline">${scenario.headline}</p>
+      <p class="scenario-brief">${scenario.brief}</p>
+    `;
+
+    choiceBtns.forEach(btn => {
+      btn.disabled = false;
+      btn.className = "choice-btn";
+    });
+
+    feedbackPanel.className = "feedback-panel";
+    verdictEl.textContent   = "";
+    explainEl.textContent   = "";
+    chainEl.innerHTML       = "";
+
+    setStatus("Read the scenario, then click the variable that changed.");
+    typeset(document.body);
+  }
+
+  // ── Handle choice ─────────────────────────────────────────────────────────
+  function onChoice(btn) {
+    if (answered || !scenario) return;
+    answered = true;
+
+    const value   = btn.dataset.value;
+    const correct = `${scenario.var}-${scenario.dir}`;
+    const isRight = value === correct;
+
+    choiceBtns.forEach(b => {
+      b.disabled = true;
+      if (b.dataset.value === correct)         b.classList.add("correct-reveal");
+      else if (b === btn && !isRight)          b.classList.add("wrong-reveal");
+    });
+
+    if (!isRight) {
+      btn.classList.add("shake");
+      setTimeout(() => btn.classList.remove("shake"), 400);
+    }
+
+    if (isRight) totalCorrect++; else totalWrong++;
+    history.push(isRight);
+    updateScoreBar();
+    updateProgress();
+
+    verdictEl.textContent   = isRight ? "✓ Correct!" : "✗ Not quite.";
+    verdictEl.className     = "verdict " + (isRight ? "good" : "bad");
+    explainEl.textContent   = scenario.explain;
+    renderChain(scenario.chain);
+    feedbackPanel.className = "feedback-panel visible fade-in";
+
+    setStatus(isRight
+      ? "Correct! Click New Scenario to continue."
+      : "Review the explanation, then click New Scenario.");
+
+    typeset(feedbackPanel);
+  }
+
+  // ── Reset ─────────────────────────────────────────────────────────────────
+  function resetAll() {
+    scenario = null; answered = false;
+    totalCorrect = 0; totalWrong = 0;
+    history = []; recentIds = [];
+
+    scenarioBox.innerHTML = `<p class="scenario-placeholder">Click "New Scenario" to start.</p>`;
+    choiceBtns.forEach(btn => { btn.disabled = true; btn.className = "choice-btn"; });
+    feedbackPanel.className = "feedback-panel";
+    verdictEl.textContent = ""; explainEl.textContent = ""; chainEl.innerHTML = "";
+    progressRow.innerHTML = "";
+    updateScoreBar();
+    setStatus("Click \"New Scenario\" to begin.");
+  }
+
+  // ── Events ────────────────────────────────────────────────────────────────
+  newBtn.addEventListener("click", newScenario);
+  resetBtn.addEventListener("click", resetAll);
+  choiceBtns.forEach(btn => btn.addEventListener("click", () => onChoice(btn)));
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  updateScoreBar();
+  typeset(document.body);
+})();
+</script>
+</body>
+</html>
