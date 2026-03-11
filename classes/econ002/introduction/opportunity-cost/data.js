@@ -611,7 +611,6 @@ window.OPPCOST_MCQ = {
   ],
   correct: 0,
   explain: "The opportunity cost is the best alternative you give up—earning $45 from the shift you don’t take."
-},
-    )
+}
   ]
 };
