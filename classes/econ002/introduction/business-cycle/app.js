@@ -316,14 +316,14 @@ function initApp() {
       firstWasCorrect = okPeak && okTrough;
       if (firstWasCorrect) firstCorrectCount++;
 
-      // Don't reveal the correct answer yet — wait for Revise
-      drawAll(false);
+      // Reveal shading only if correct; wrong answer waits until Revise
+      drawAll(firstWasCorrect);
       phase = 'first-submitted';
 
       if (firstWasCorrect) {
         showFeedback(`<span class="tagOK">Correct!</span>
           <strong>Recession</strong> is the period from <strong>peak → trough</strong> in real GDP.
-          Notice unemployment rises during the recession and often remains elevated after the trough.`);
+          The shaded region shows the recession. Notice unemployment rises during the recession and often remains elevated after the trough.`);
         if (DISC_MODE) {
           recordScenario(true);
           els.checkBtn.textContent = 'Next Scenario →';
