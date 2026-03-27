@@ -613,7 +613,7 @@ h2{
   </style>
 
   <!-- jsPDF (loaded async — only needed at PDF generation time) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
 // session.js — Discussion Section Session Management
 // Stores everything in sessionStorage only (auto-cleared when tab closes).
@@ -981,42 +981,49 @@ h2{
         return;
       }
 
-      // Build and show modal
-      const modal = buildModal(opts.weekLabel, opts.noSeed);
-      document.body.appendChild(modal);
+      // Build and show modal — defer until body is available
+      function attachModal() {
+        const modal = buildModal(opts.weekLabel, opts.noSeed);
+        document.body.appendChild(modal);
 
-      // Focus first field
-      setTimeout(() => {
-        const el = document.getElementById('dmName');
-        if (el) el.focus();
-      }, 50);
+        // Focus first field
+        setTimeout(() => {
+          const el = document.getElementById('dmName');
+          if (el) el.focus();
+        }, 50);
 
-      document.getElementById('dmSubmit').addEventListener('click', function () {
-        if (!validate(opts.noSeed)) return;
-        const name = document.getElementById('dmName').value.trim();
-        const sid  = document.getElementById('dmId').value.trim();
-        const seed = opts.noSeed ? 'NO-SEED' : document.getElementById('dmSeed').value.trim().toUpperCase();
+        document.getElementById('dmSubmit').addEventListener('click', function () {
+          if (!validate(opts.noSeed)) return;
+          const name = document.getElementById('dmName').value.trim();
+          const sid  = document.getElementById('dmId').value.trim();
+          const seed = opts.noSeed ? 'NO-SEED' : document.getElementById('dmSeed').value.trim().toUpperCase();
 
-        if (global.Session) {
-          global.Session.start(name, sid, seed, opts.weekLabel || '');
-        }
+          if (global.Session) {
+            global.Session.start(name, sid, seed, opts.weekLabel || '');
+          }
 
-        // Dismiss modal
-        const m = document.getElementById(MODAL_ID);
-        if (m) m.remove();
+          const m = document.getElementById(MODAL_ID);
+          if (m) m.remove();
 
-        if (opts.onReady) opts.onReady(global.Session ? global.Session.getInfo() : { name, studentId: sid, seed });
-      });
-
-      // Allow Enter key to submit
-      [document.getElementById('dmName'), document.getElementById('dmId'),
-       opts.noSeed ? null : document.getElementById('dmSeed')]
-      .filter(Boolean)
-      .forEach(el => {
-        el.addEventListener('keydown', function(e) {
-          if (e.key === 'Enter') document.getElementById('dmSubmit').click();
+          if (opts.onReady) opts.onReady(global.Session ? global.Session.getInfo() : { name, studentId: sid, seed });
         });
-      });
+
+        [document.getElementById('dmName'), document.getElementById('dmId'),
+         opts.noSeed ? null : document.getElementById('dmSeed')]
+        .filter(Boolean)
+        .forEach(el => {
+          el.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') document.getElementById('dmSubmit').click();
+          });
+        });
+      }
+
+      if (document.body) {
+        attachModal();
+      } else {
+        document.addEventListener('DOMContentLoaded', attachModal);
+      }
+
     }
   };
 
