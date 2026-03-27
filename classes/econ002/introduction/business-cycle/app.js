@@ -333,14 +333,13 @@ function initApp() {
           setStatus("Correct. Click Next Scenario for a new one.");
         }
       } else {
-        showFeedback(`<span class="tagBad">Not quite</span>
-          ${DISC_MODE
-            ? 'After your TA reviews the correct answer, click <strong>Revise</strong> to reposition your markers.'
-            : 'Tip: look for the highest point before the downturn (peak) and lowest point before recovery (trough).'}`);
-        els.checkBtn.textContent = DISC_MODE ? 'Revise' : 'Next Scenario →';
+        showFeedback(DISC_MODE
+          ? `<span class="tagBad">Not quite</span> After your TA reviews the correct answer, click <strong>Revise</strong> to reposition your markers.`
+          : `<span class="tagBad">Not quite</span> Click <strong>Revise</strong> to reposition your markers.`);
+        els.checkBtn.textContent = 'Revise';
         setStatus(DISC_MODE
           ? "After TA review, click Revise to reposition your markers."
-          : "Review, then try a new scenario.");
+          : "Click Revise to try again.");
       }
 
     // ── Open revision — NOW reveal the correct answer ────────────────────
@@ -372,13 +371,15 @@ function initApp() {
            <strong>Recession:</strong> peak → trough in real GDP.
            Unemployment typically peaks <em>after</em> the trough — a lag.`
         : `<span class="tagBad">Still incorrect</span>
-           The correct markers are shown in green. Review the explanation with your TA.`);
+           The correct markers are shown in green.`);
 
-      if (DISC_MODE && scenariosCompleted < DISC_LIMIT) {
-        els.checkBtn.textContent = 'Next Scenario →';
-        setStatus(`${scenariosCompleted} of ${DISC_LIMIT} done.`);
-      } else if (DISC_MODE) {
-        showFinishBanner();
+      if (DISC_MODE) {
+        if (scenariosCompleted < DISC_LIMIT) {
+          els.checkBtn.textContent = 'Next Scenario →';
+          setStatus(`${scenariosCompleted} of ${DISC_LIMIT} done.`);
+        } else {
+          showFinishBanner();
+        }
       } else {
         els.checkBtn.textContent = 'Next Scenario →';
         setStatus("Click Next Scenario for a new one.");
