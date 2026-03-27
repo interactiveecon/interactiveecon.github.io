@@ -160,23 +160,48 @@ window.addEventListener("DOMContentLoaded", () => {
     updateScoreDisplay();
   }
 
-  // ── Colour choice labels after first submit ───────────────────────────────
-  function colourChoices(keepRevisable) {
+  // ── Colour choice labels ─────────────────────────────────────────────────
+  // phase 'lock':    lock all, mark wrong answer red only (no green reveal)
+  // phase 'revise':  unlock all non-correct choices so student can pick any
+  // phase 'final':   lock all, green=correct, red=wrong final answer
+  function colourChoices(mode) {
     for (let k = 0; k < current._opts.length; k++) {
       const lbl = $(`choiceLabel-${k}`);
       if (!lbl) continue;
       const inp = lbl.querySelector('input');
-      if (k === current._correctPos) {
-        lbl.style.borderColor = 'rgba(27,127,75,0.6)';
-        lbl.style.background  = 'rgba(27,127,75,0.07)';
-        if (inp) inp.disabled = true;
-      } else if (k === firstAnswerIdx && !firstCorrect) {
-        lbl.style.borderColor = 'rgba(180,35,24,0.6)';
-        lbl.style.background  = 'rgba(180,35,24,0.07)';
-        // keep enabled if we're in revision phase
-        if (inp) inp.disabled = !keepRevisable;
-      } else {
-        if (inp) inp.disabled = true;
+      // reset styles first
+      lbl.style.borderColor = '';
+      lbl.style.background  = '';
+      if (!inp) continue;
+
+      if (mode === 'lock') {
+        // Just lock everything; mark the wrong chosen answer red
+        inp.disabled = true;
+        if (k === firstAnswerIdx && !firstCorrect) {
+          lbl.style.borderColor = 'rgba(180,35,24,0.6)';
+          lbl.style.background  = 'rgba(180,35,24,0.07)';
+        }
+
+      } else if (mode === 'revise') {
+        // Re-enable all choices except the correct one
+        // (student should not be able to trivially just pick the green one —
+        //  we don't show which is correct yet)
+        if (k === current._correctPos) {
+          inp.disabled = true;
+        } else {
+          inp.disabled = false;
+        }
+
+      } else if (mode === 'final') {
+        // Reveal correct=green, final wrong=red, lock all
+        inp.disabled = true;
+        if (k === current._correctPos) {
+          lbl.style.borderColor = 'rgba(27,127,75,0.6)';
+          lbl.style.background  = 'rgba(27,127,75,0.07)';
+        } else if (k === current._finalAnswerIdx) {
+          lbl.style.borderColor = 'rgba(180,35,24,0.6)';
+          lbl.style.background  = 'rgba(180,35,24,0.07)';
+        }
       }
     }
   }
@@ -195,7 +220,12 @@ window.addEventListener("DOMContentLoaded", () => {
       if (firstCorrect) sessionFirstScore++;
 
       phase = 'first-submitted';
-      colourChoices(false);
+      if (firstCorrect) {
+        current._finalAnswerIdx = firstAnswerIdx;
+        colourChoices('final');
+      } else {
+        colourChoices('lock');
+      }
 
       const correctText = current._opts[current._correctPos].text;
       els.feedback.style.display = "block";
@@ -218,9 +248,8 @@ window.addEventListener("DOMContentLoaded", () => {
       } else {
         els.feedback.innerHTML = `
           <span class="tagBad">Not quite</span>
-          The correct answer is highlighted in green.<br>
-          <strong>Explanation:</strong> ${escapeHtml(current.explain)}<br><br>
-          <em>After your TA reviews this, click <strong>Revise</strong> to update your answer if needed.</em>
+          Your answer has been marked incorrect.<br>
+          <em>After your TA reviews the correct answer, click <strong>Revise</strong> to update your answer.</em>
         `;
         els.checkBtn.textContent = DISC_MODE ? 'Revise' : 'Next →';
         setStatus(DISC_MODE
@@ -231,11 +260,10 @@ window.addEventListener("DOMContentLoaded", () => {
     // ── Phase 2a: open revision ───────────────────────────────────────────
     } else if (phase === 'first-submitted' && els.checkBtn.textContent === 'Revise') {
       phase = 'revising';
-      // Re-enable wrong answer choices so student can change
-      colourChoices(true);
-      // Pre-select their original (wrong) answer
+      colourChoices('revise');
+      // Pre-select their original answer so they can change it or keep it
       const origInp = els.choices.querySelector(`input[value="${firstAnswerIdx}"]`);
-      if (origInp && !origInp.disabled) origInp.checked = true;
+      if (origInp) { origInp.checked = true; }
 
       els.checkBtn.textContent = 'Submit Final';
       els.feedback.innerHTML = `
@@ -248,6 +276,7 @@ window.addEventListener("DOMContentLoaded", () => {
       const sel = els.choices.querySelector('input[name="oc"]:not(:disabled):checked')
                || els.choices.querySelector('input[name="oc"]:checked');
       const finalIdx = sel ? Number(sel.value) : firstAnswerIdx;
+      current._finalAnswerIdx = finalIdx;
       recordQuestion(finalIdx, finalIdx === current._correctPos);
       phase = 'done';
 
@@ -255,10 +284,10 @@ window.addEventListener("DOMContentLoaded", () => {
       const correctText    = current._opts[current._correctPos].text;
       const finalText      = current._opts[finalIdx].text;
 
-      // Lock everything
-      colourChoices(false);
+      // Now reveal correct=green, wrong final=red
+      colourChoices('final');
       const finalInp = els.choices.querySelector(`input[value="${finalIdx}"]`);
-      if (finalInp) { finalInp.checked = true; finalInp.disabled = true; }
+      if (finalInp) finalInp.checked = true;
 
       els.feedback.style.display = "block";
       els.feedback.innerHTML = finalCorrect
