@@ -125,6 +125,19 @@
       save(d);
     },
 
+    // Compute a grade out of 5 based on pct correct (final score)
+    // >80%→5, >60%→4, >40%→3, >20%→2, >0%→1, 0%→0
+    gradePoints(finalScore, total) {
+      if (!total) return 0;
+      const pct = finalScore / total;
+      if (pct >= 0.80) return 5;
+      if (pct >= 0.60) return 4;
+      if (pct >= 0.40) return 3;
+      if (pct >= 0.20) return 2;
+      if (pct >  0)    return 1;
+      return 0;
+    },
+
     // Call once when a lab is fully submitted (after final submission).
     recordLabDone(labId, labLabel, firstScore, finalScore, total) {
       const d = load() || blank();
@@ -133,6 +146,7 @@
       d.labs[labId].firstScore = firstScore;
       d.labs[labId].finalScore = finalScore;
       d.labs[labId].total      = total;
+      d.labs[labId].grade      = Session.gradePoints(finalScore, total);
       d.labs[labId].doneAt     = new Date().toISOString();
       save(d);
     },
