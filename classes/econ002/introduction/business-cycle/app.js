@@ -280,9 +280,7 @@ function initApp() {
     banner.innerHTML = `
       <div>
         <div style="font-weight:800;color:#1b7f4b;font-size:14px;">
-          ✓ Lab complete — Final score: ${finalCorrectCount} / ${DISC_LIMIT}
-          &nbsp;·&nbsp; Grade: ${(window.Session ? Session.gradePoints(finalCorrectCount, DISC_LIMIT) : '-')} / 5 pts
-        </div>
+          ✓ Lab complete — Final score: ${finalCorrectCount} / ${DISC_LIMIT}</div>
         <div style="font-size:12px;color:#6b7280;margin-top:3px;">
           First-attempt score: ${firstCorrectCount} / ${DISC_LIMIT} &nbsp;·&nbsp;
           Return to Week 1 when your TA is ready.
