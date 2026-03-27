@@ -87,7 +87,7 @@ window.OPPCOST_MCQ = {
       title: "Cooking vs takeout",
       desc: "Ordering takeout costs $18. Cooking costs no extra money but takes time.\nAssume your next best alternative is ordering takeout.\nYou choose to cook.\n\nWhat is the opportunity cost of cooking?",
       options: [
-        "The $18 takeout you give up (the next best alternative)",
+        "The $18 takeout you give up",
         "The ingredients you already have at home",
         "Nothing, because cooking is free",
         "The fact that takeout is unhealthy"
@@ -219,7 +219,7 @@ window.OPPCOST_MCQ = {
       title: "Buying coffee",
       desc: "You stop for coffee on the way to class and pay $5.\nAssume the next best alternative was making coffee at home for $1.\n\nWhat is the opportunity cost of buying coffee?",
       options: [
-        "The $1 home coffee you give up (the next best alternative)",
+        "The $1 home coffee you give up",
         "The full $5 you paid",
         "Your time waiting in line",
         "Your caffeine level"
@@ -232,7 +232,7 @@ window.OPPCOST_MCQ = {
       title: "Streaming vs reading",
       desc: "You can watch a show or read for an hour.\nYou watch the show.\nAssume your next best alternative is reading.\n\nWhat is the opportunity cost of watching the show?",
       options: [
-        "The value of reading you give up (the next best alternative)",
+        "The value of reading you give up",
         "Your electricity bill",
         "Your subscription fee (already paid)",
         "Nothing because it’s leisure"
@@ -258,7 +258,7 @@ window.OPPCOST_MCQ = {
       title: "Skipping a sale",
       desc: "A jacket is on sale today for $60, but you don’t buy it.\nAssume the next best alternative was buying it today.\n\nWhat is the opportunity cost of not buying it?",
       options: [
-        "The value of having the jacket (the best alternative you give up)",
+        "The value of having the jacket",
         "The $60 you didn’t spend",
         "The original price of the jacket",
         "Nothing because you saved money"
@@ -370,7 +370,7 @@ window.OPPCOST_MCQ = {
   title: "Concert vs exam prep",
   desc: "You have a midterm tomorrow. Tonight you can go to a concert or study.\nYou go to the concert.\nAssume your next best alternative is studying.\n\nWhat is the opportunity cost of going to the concert?",
   options: [
-    "The value/benefit of studying you give up (the next best alternative)",
+    "The value/benefit of studying you give up",
     "The price of the concert ticket",
     "Your tuition for the course",
     "The grade you will definitely get"
@@ -396,7 +396,7 @@ window.OPPCOST_MCQ = {
   title: "Using a gift card",
   desc: "You have a $25 gift card to a store. You can use it for groceries or use it for snacks.\nYou buy snacks.\nAssume your next best alternative is groceries.\n\nWhat is the opportunity cost of buying snacks with the gift card?",
   options: [
-    "The groceries you give up buying (the next best alternative)",
+    "The groceries you give up buying",
     "The $25 on the gift card",
     "The price of the snacks (they are paid with the gift card)",
     "Nothing because it’s a gift card"
@@ -435,7 +435,7 @@ window.OPPCOST_MCQ = {
   title: "Buying a new phone now vs waiting",
   desc: "You can buy a phone today for $700 or wait one month for a likely sale price of $600.\nYou buy today.\nAssume your next best alternative is waiting.\n\nWhat is the opportunity cost of buying today?",
   options: [
-    "The benefit of waiting and paying $600 (the next best alternative)",
+    "The benefit of waiting and paying $600",
     "The $700 you pay today",
     "The phone case you also buy",
     "The time you spend setting up the phone"
@@ -489,7 +489,7 @@ window.OPPCOST_MCQ = {
   options: [
     "The $150 you give up by not selling it",
     "The price you paid for the couch years ago",
-    "The space it takes up (that may matter, but the best alternative is selling for $150 here)",
+    "The space it takes up",
     "Nothing because you already own it"
   ],
   correct: 0,
@@ -552,7 +552,7 @@ window.OPPCOST_MCQ = {
   title: "Picking a project topic",
   desc: "You can write a paper on Topic A or Topic B.\nYou choose Topic A.\nAssume your next best alternative is Topic B, which you believe you would enjoy more.\n\nWhat is the opportunity cost of choosing Topic A?",
   options: [
-    "The value of doing Topic B (the next best alternative) you give up",
+    "The value of doing Topic B you give up",
     "The time spent writing the paper",
     "Your course grade",
     "The professor’s time grading"
