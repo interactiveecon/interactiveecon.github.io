@@ -1,18 +1,17 @@
 // app.js — Opportunity Cost
-// Supports ?disc=1 for discussion section mode:
-//   - Limits to DISC_LIMIT questions
-//   - Changes breadcrumb to "← Week 1"
-//   - Shows "Finish & Return" button when all questions answered
+// Disc mode (?disc=1): 5 questions, two-attempt flow, session score recording.
+// Normal mode: unlimited, no session recording.
 
 window.addEventListener("DOMContentLoaded", () => {
   const $ = (id) => document.getElementById(id);
 
-  // ── Disc mode detection ───────────────────────────────────────────────────
+  // ── Disc mode ─────────────────────────────────────────────────────────────
   const DISC_MODE  = new URLSearchParams(location.search).get('disc') === '1';
   const DISC_LIMIT = 5;
+  const LAB_ID     = 'opportunity-cost';
+  const LAB_LABEL  = 'Opportunity Cost';
   const WEEK_URL   = '/classes/econ002/discussion/week-01/';
 
-  // Update breadcrumb if in disc mode
   if (DISC_MODE) {
     const crumb = document.querySelector('.crumb-link');
     if (crumb) { crumb.textContent = '← Week 1'; crumb.href = WEEK_URL; }
@@ -32,57 +31,70 @@ window.addEventListener("DOMContentLoaded", () => {
     score:    $("score"),
   };
 
-  function setStatus(msg){ els.status.textContent = msg; }
-  function escapeHtml(s){
+  function setStatus(msg) { els.status.textContent = msg; }
+  function escapeHtml(s) {
     return String(s ?? "")
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;");
+      .replaceAll("&","&amp;").replaceAll("<","&lt;")
+      .replaceAll(">","&gt;").replaceAll('"',"&quot;");
   }
 
   if (!window.OPPCOST_MCQ || !Array.isArray(window.OPPCOST_MCQ.scenarios)) {
-    setStatus("ERROR: data.js did not load (OPPCOST_MCQ missing).");
-    return;
+    setStatus("ERROR: data.js did not load."); return;
   }
 
   const ALL = window.OPPCOST_MCQ.scenarios;
 
-  let current   = null;
-  let attempted = 0;
-  let correct   = 0;
+  // ── State ─────────────────────────────────────────────────────────────────
+  let current      = null;
+  let queue        = [];
+  let queueIdx     = 0;
+  // phase: 'unanswered' | 'first-submitted' | 'revising' | 'done'
+  let phase        = 'unanswered';
+  let firstAnswerIdx = null;
+  let firstCorrect   = false;
 
-  // In disc mode, draw a fixed shuffled queue of DISC_LIMIT questions up front
-  let queue     = [];
-  let queueIdx  = 0;
+  let sessionFirstScore = 0;
+  let sessionFinalScore = 0;
 
-  function shuffle(a){
+  function shuffle(a) {
     const b = a.slice();
-    for (let i = b.length-1; i > 0; i--){
+    for (let i = b.length-1; i > 0; i--) {
       const j = Math.floor(Math.random()*(i+1));
-      [b[i], b[j]] = [b[j], b[i]];
+      [b[i],b[j]] = [b[j],b[i]];
     }
     return b;
   }
 
-  function buildQueue(){
-    const pool = shuffle(ALL.slice());
-    queue    = pool.slice(0, DISC_LIMIT);
+  function buildQueue() {
+    queue    = shuffle(ALL.slice()).slice(0, DISC_LIMIT);
     queueIdx = 0;
+    sessionFirstScore = 0;
+    sessionFinalScore = 0;
   }
 
-  function updateScore(){
-    if (DISC_MODE){
-      els.score.textContent =
-        `${correct} / ${attempted} correct  (${queueIdx} of ${DISC_LIMIT} questions)`;
+  // ── Score display ─────────────────────────────────────────────────────────
+  function updateScoreDisplay() {
+    if (DISC_MODE) {
+      const done = Math.min(queueIdx, DISC_LIMIT);
+      els.score.textContent = done === 0
+        ? `Question 1 of ${DISC_LIMIT}`
+        : `${done} of ${DISC_LIMIT} done  |  Score: ${sessionFinalScore} / ${done}`;
     } else {
-      els.score.textContent = `${correct} correct out of ${attempted} attempted`;
+      els.score.textContent = `${sessionFinalScore} correct out of ${queueIdx} attempted`;
     }
   }
 
   // ── Finish banner ─────────────────────────────────────────────────────────
-  function showFinishBanner(){
+  function showFinishBanner() {
     if ($('discFinishBanner')) return;
+
+    if (DISC_MODE && window.Session && Session.isActive()) {
+      Session.recordLabDone(
+        LAB_ID, LAB_LABEL,
+        sessionFirstScore, sessionFinalScore, DISC_LIMIT
+      );
+    }
+
     const banner = document.createElement('div');
     banner.id = 'discFinishBanner';
     banner.style.cssText = `
@@ -94,10 +106,11 @@ window.addEventListener("DOMContentLoaded", () => {
     banner.innerHTML = `
       <div>
         <div style="font-weight:800;color:#1b7f4b;font-size:14px;">
-          ✓ All ${DISC_LIMIT} questions complete — ${correct} / ${DISC_LIMIT} correct
+          ✓ Lab complete — Final score: ${sessionFinalScore} / ${DISC_LIMIT}
         </div>
         <div style="font-size:12px;color:#6b7280;margin-top:3px;">
-          Wait for your TA to review the answers, then return to Week 1 to continue.
+          First-attempt score: ${sessionFirstScore} / ${DISC_LIMIT} &nbsp;·&nbsp;
+          Return to Week 1 when your TA is ready.
         </div>
       </div>
       <a href="${WEEK_URL}"
@@ -106,18 +119,18 @@ window.addEventListener("DOMContentLoaded", () => {
         ← Return to Week 1
       </a>
     `;
-    // Insert after the score box
-    const scoreEl = els.score.closest('.box') || els.score.parentElement;
-    scoreEl.appendChild(banner);
-
-    // Disable new scenario button
-    els.newBtn.disabled = true;
-    els.newBtn.style.opacity = '0.4';
-    setStatus(`Lab complete — ${correct} / ${DISC_LIMIT} correct.`);
+    const scoreBox = els.score.closest('.box') || els.score.parentElement;
+    scoreBox.appendChild(banner);
+    els.newBtn.disabled = els.checkBtn.disabled = true;
+    els.newBtn.style.opacity = els.checkBtn.style.opacity = '0.4';
   }
 
-  function renderScenario(sc){
-    current = sc;
+  // ── Render question ───────────────────────────────────────────────────────
+  function renderScenario(sc) {
+    current        = sc;
+    phase          = 'unanswered';
+    firstAnswerIdx = null;
+    firstCorrect   = false;
 
     els.qTitle.textContent = sc.title;
     els.qDesc.textContent  = sc.desc;
@@ -128,7 +141,7 @@ window.addEventListener("DOMContentLoaded", () => {
     current._correctPos = opts.findIndex(o => o.origIndex === sc.correct);
 
     els.choices.innerHTML = opts.map((o, k) => `
-      <label class="choice">
+      <label class="choice" id="choiceLabel-${k}" style="transition:border-color .15s,background .15s;">
         <input type="radio" name="oc" value="${k}">
         <div class="choiceText">${escapeHtml(o.text)}</div>
       </label>
@@ -138,71 +151,188 @@ window.addEventListener("DOMContentLoaded", () => {
     els.feedback.innerHTML     = "";
     els.whyBox.style.display   = "none";
 
-    if (DISC_MODE){
-      setStatus(`Question ${queueIdx} of ${DISC_LIMIT} — pick an answer, then click Check.`);
-    } else {
-      setStatus("Pick an answer, then click Check.");
+    els.checkBtn.textContent = 'Submit';
+    els.checkBtn.disabled    = false;
+    els.resetBtn.disabled    = false;
+
+    const qNum = DISC_MODE ? `Question ${queueIdx+1} of ${DISC_LIMIT}` : 'New question';
+    setStatus(`${qNum} — pick an answer, then click Submit.`);
+    updateScoreDisplay();
+  }
+
+  // ── Colour choice labels after first submit ───────────────────────────────
+  function colourChoices(keepRevisable) {
+    for (let k = 0; k < current._opts.length; k++) {
+      const lbl = $(`choiceLabel-${k}`);
+      if (!lbl) continue;
+      const inp = lbl.querySelector('input');
+      if (k === current._correctPos) {
+        lbl.style.borderColor = 'rgba(27,127,75,0.6)';
+        lbl.style.background  = 'rgba(27,127,75,0.07)';
+        if (inp) inp.disabled = true;
+      } else if (k === firstAnswerIdx && !firstCorrect) {
+        lbl.style.borderColor = 'rgba(180,35,24,0.6)';
+        lbl.style.background  = 'rgba(180,35,24,0.07)';
+        // keep enabled if we're in revision phase
+        if (inp) inp.disabled = !keepRevisable;
+      } else {
+        if (inp) inp.disabled = true;
+      }
     }
   }
 
-  function newScenario(){
-    if (DISC_MODE){
-      if (queueIdx >= DISC_LIMIT){ showFinishBanner(); return; }
+  // ── Main submit handler ───────────────────────────────────────────────────
+  function handleSubmit() {
+    if (!current) { setStatus("Click New Scenario first."); return; }
+
+    // ── Phase 1: first submission ─────────────────────────────────────────
+    if (phase === 'unanswered') {
+      const sel = els.choices.querySelector('input[name="oc"]:checked');
+      if (!sel) { setStatus("Please select an answer first."); return; }
+
+      firstAnswerIdx = Number(sel.value);
+      firstCorrect   = (firstAnswerIdx === current._correctPos);
+      if (firstCorrect) sessionFirstScore++;
+
+      phase = 'first-submitted';
+      colourChoices(false);
+
+      const correctText = current._opts[current._correctPos].text;
+      els.feedback.style.display = "block";
+
+      if (firstCorrect) {
+        els.feedback.innerHTML = `
+          <span class="tagOK">Correct</span>
+          <strong>Opportunity cost:</strong> ${escapeHtml(correctText)}<br>
+          <strong>Explanation:</strong> ${escapeHtml(current.explain)}
+        `;
+        // Correct first time — record and allow Next
+        if (DISC_MODE) {
+          recordQuestion(firstAnswerIdx, true);
+          els.checkBtn.textContent = 'Next →';
+          setStatus("Correct! Click Next → for the next question.");
+        } else {
+          els.checkBtn.textContent = 'Next →';
+          setStatus("Correct! Click Next → for the next question.");
+        }
+      } else {
+        els.feedback.innerHTML = `
+          <span class="tagBad">Not quite</span>
+          The correct answer is highlighted in green.<br>
+          <strong>Explanation:</strong> ${escapeHtml(current.explain)}<br><br>
+          <em>After your TA reviews this, click <strong>Revise</strong> to update your answer if needed.</em>
+        `;
+        els.checkBtn.textContent = DISC_MODE ? 'Revise' : 'Next →';
+        setStatus(DISC_MODE
+          ? "See the correct answer. After TA review, click Revise."
+          : "Review the explanation, then click Next →.");
+      }
+
+    // ── Phase 2a: open revision ───────────────────────────────────────────
+    } else if (phase === 'first-submitted' && els.checkBtn.textContent === 'Revise') {
+      phase = 'revising';
+      // Re-enable wrong answer choices so student can change
+      colourChoices(true);
+      // Pre-select their original (wrong) answer
+      const origInp = els.choices.querySelector(`input[value="${firstAnswerIdx}"]`);
+      if (origInp && !origInp.disabled) origInp.checked = true;
+
+      els.checkBtn.textContent = 'Submit Final';
+      els.feedback.innerHTML = `
+        <em>You may change your answer. When ready, click <strong>Submit Final</strong>.</em>
+      `;
+      setStatus("Update your answer if needed, then click Submit Final.");
+
+    // ── Phase 2b: final submission after revision ─────────────────────────
+    } else if (phase === 'revising') {
+      const sel = els.choices.querySelector('input[name="oc"]:not(:disabled):checked')
+               || els.choices.querySelector('input[name="oc"]:checked');
+      const finalIdx = sel ? Number(sel.value) : firstAnswerIdx;
+      recordQuestion(finalIdx, finalIdx === current._correctPos);
+      phase = 'done';
+
+      const finalCorrect   = (finalIdx === current._correctPos);
+      const correctText    = current._opts[current._correctPos].text;
+      const finalText      = current._opts[finalIdx].text;
+
+      // Lock everything
+      colourChoices(false);
+      const finalInp = els.choices.querySelector(`input[value="${finalIdx}"]`);
+      if (finalInp) { finalInp.checked = true; finalInp.disabled = true; }
+
+      els.feedback.style.display = "block";
+      els.feedback.innerHTML = finalCorrect
+        ? `<span class="tagOK">Correct after revision</span>
+           <strong>Opportunity cost:</strong> ${escapeHtml(correctText)}<br>
+           <strong>Explanation:</strong> ${escapeHtml(current.explain)}`
+        : `<span class="tagBad">Incorrect</span>
+           You chose: ${escapeHtml(finalText)}<br>
+           <strong>Correct answer:</strong> ${escapeHtml(correctText)}<br>
+           <strong>Explanation:</strong> ${escapeHtml(current.explain)}`;
+
+      updateScoreDisplay();
+
+      if (DISC_MODE && queueIdx > DISC_LIMIT) {
+        showFinishBanner();
+      } else {
+        els.checkBtn.textContent = 'Next →';
+        setStatus(DISC_MODE
+          ? `${queueIdx} of ${DISC_LIMIT} done — click Next → to continue.`
+          : "Click Next → for the next question.");
+      }
+
+    // ── Next → ───────────────────────────────────────────────────────────
+    } else if (els.checkBtn.textContent === 'Next →') {
+      newScenario();
+    }
+  }
+
+  // ── Record a single question to session ───────────────────────────────────
+  function recordQuestion(finalIdx, finalCorrect) {
+    if (finalCorrect) sessionFinalScore++;
+    queueIdx++;
+    updateScoreDisplay();
+
+    if (DISC_MODE && window.Session && Session.isActive()) {
+      Session.recordQuestion(
+        LAB_ID,
+        queueIdx - 1,
+        current.title,
+        current._opts[firstAnswerIdx].text,
+        firstCorrect,
+        current._opts[finalIdx].text,
+        finalCorrect
+      );
+    }
+
+    if (DISC_MODE && queueIdx >= DISC_LIMIT) showFinishBanner();
+  }
+
+  // ── New scenario ──────────────────────────────────────────────────────────
+  function newScenario() {
+    if (DISC_MODE) {
+      if (queueIdx >= DISC_LIMIT) { showFinishBanner(); return; }
       renderScenario(queue[queueIdx]);
     } else {
       renderScenario(ALL[Math.floor(Math.random()*ALL.length)]);
     }
   }
 
-  function reset(){
-    els.feedback.style.display = "none";
-    els.feedback.innerHTML     = "";
-    els.whyBox.style.display   = "none";
+  function resetChoice() {
+    if (phase !== 'unanswered') return;
     els.choices.querySelectorAll('input[name="oc"]').forEach(r => r.checked = false);
-    setStatus("Selection cleared. Choose an answer and click Check.");
+    setStatus("Selection cleared. Choose an answer and click Submit.");
   }
 
-  function check(){
-    if (!current){ setStatus("Click New Scenario first."); return; }
-    const sel = els.choices.querySelector('input[name="oc"]:checked');
-    if (!sel){ setStatus("Please select an option first."); return; }
-
-    const selNum = Number(sel.value);
-    attempted++;
-    const ok = selNum === current._correctPos;
-    if (ok) correct++;
-    if (DISC_MODE) queueIdx++;
-    updateScore();
-
-    const correctText = current._opts[current._correctPos].text;
-    const chosenText  = current._opts[selNum].text;
-
-    els.feedback.style.display = "block";
-    els.feedback.innerHTML = `
-      ${ok ? `<span class="tagOK">Correct</span>` : `<span class="tagBad">Not quite</span>`}
-      <strong>Opportunity cost:</strong> ${escapeHtml(correctText)}<br>
-      ${ok ? `` : `<strong>You chose:</strong> ${escapeHtml(chosenText)}<br>`}
-      <strong>Explanation:</strong> ${escapeHtml(current.explain)}
-    `;
-
-    if (DISC_MODE && queueIdx >= DISC_LIMIT){
-      // Replace New Scenario button label to signal completion
-      els.newBtn.textContent = 'Done';
-      setStatus(`Last question done — ${correct} / ${DISC_LIMIT} correct.`);
-      showFinishBanner();
-    } else {
-      setStatus(ok ? "Nice. Click New Scenario for the next question." : "Review the explanation, then click New Scenario.");
-    }
-  }
-
-  els.newBtn.addEventListener("click",  newScenario);
-  els.checkBtn.addEventListener("click", check);
-  els.resetBtn.addEventListener("click", reset);
+  // ── Wire up ───────────────────────────────────────────────────────────────
+  els.newBtn.addEventListener("click",   newScenario);
+  els.checkBtn.addEventListener("click", handleSubmit);
+  els.resetBtn.addEventListener("click", resetChoice);
   els.whyBtn.addEventListener("click",  () => {
-    els.whyBox.style.display = (els.whyBox.style.display === "none") ? "block" : "none";
+    els.whyBox.style.display = els.whyBox.style.display === "none" ? "block" : "none";
   });
 
-  updateScore();
+  updateScoreDisplay();
   if (DISC_MODE) buildQueue();
   newScenario();
 });
