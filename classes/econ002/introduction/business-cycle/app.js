@@ -82,7 +82,14 @@ function initApp() {
   let firstTroughIdx = null;
   let firstWasCorrect = false;
 
-  function rand(lo, hi) { return lo + Math.random()*(hi-lo); }
+  function rand(lo, hi, rng) { return lo + (rng ? rng() : Math.random())*(hi-lo); }
+
+  // Returns a seeded rng for a specific scenario index in disc mode
+  function scenarioRng(idx) {
+    if (!DISC_MODE || !window.Session) return null;
+    // Each scenario index gets its own deterministic RNG stream
+    return Session.rngForLab(LAB_ID + '|scenario' + idx);
+  }
   function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
 
   function argMaxInRange(arr, a, b) {
@@ -111,27 +118,28 @@ function initApp() {
     return best;
   }
 
-  function makeCycle(metaId) {
+  function makeCycle(metaId, rng) {
+    // rng: seeded random function in disc mode, null otherwise (falls back to Math.random)
     t = Array.from({length:T}, (_,i)=>i);
-    const base=100, trendSlope=rand(0.10,0.22);
-    let amp=rand(4,7), width=rand(10,16), dropAmp=rand(5,9), dropWidth=rand(8,14);
+    const base=100, trendSlope=rand(0.10,0.22,rng);
+    let amp=rand(4,7,rng), width=rand(10,16,rng), dropAmp=rand(5,9,rng), dropWidth=rand(8,14,rng);
     if (metaId==="sharp")  { dropAmp*=1.35; dropWidth*=0.85; amp*=1.05; }
     if (metaId==="mild")   { dropAmp*=0.70; amp*=0.85; }
     if (metaId==="long")   { dropWidth*=1.45; }
-    const peakCenter=Math.floor(rand(30,38)), troughCenter=Math.floor(rand(48,58));
+    const peakCenter=Math.floor(rand(30,38,rng)), troughCenter=Math.floor(rand(48,58,rng));
     gdp = t.map(i => {
       const trend = base+trendSlope*i;
       const bump  = amp*Math.exp(-0.5*Math.pow((i-peakCenter)/width,2));
       const dip   = dropAmp*Math.exp(-0.5*Math.pow((i-troughCenter)/dropWidth,2));
-      return trend+bump-dip+rand(-0.20,0.20);
+      return trend+bump-dip+rand(-0.20,0.20,rng);
     });
     truePeakIdx   = argMaxInRange(gdp, peakCenter-10,   peakCenter+10);
     trueTroughIdx = argMinInRange(gdp, troughCenter-12, troughCenter+12);
     if (trueTroughIdx <= truePeakIdx+5) trueTroughIdx = Math.min(T-8, truePeakIdx+12);
     const trendApprox = t.map(i => base+trendSlope*i);
     const gap = gdp.map((y,i)=>y-trendApprox[i]);
-    const lag=Math.floor(rand(4,7)), uBase=rand(4.5,6.5), uAmp=rand(0.45,0.80);
-    unemp = t.map(i => clamp(uBase-uAmp*gap[Math.max(0,i-lag)]+rand(-0.10,0.10), 3.0, 10.0));
+    const lag=Math.floor(rand(4,7,rng)), uBase=rand(4.5,6.5,rng), uAmp=rand(0.45,0.80,rng);
+    unemp = t.map(i => clamp(uBase-uAmp*gap[Math.max(0,i-lag)]+rand(-0.10,0.10,rng), 3.0, 10.0));
 
     placedPeakIdx = null; placedTroughIdx = null;
     firstPeakIdx = null; firstTroughIdx = null; firstWasCorrect = false;
@@ -420,7 +428,8 @@ function initApp() {
     els.scTitle.textContent = curMeta.title;
     els.scDesc.textContent  = curMeta.desc;
     els.checkBtn.textContent = 'Check';
-    makeCycle(curMeta.id);
+    // In disc mode, use a seeded rng per scenario so all students see identical graphs
+    makeCycle(curMeta.id, DISC_MODE ? scenarioRng(scenariosCompleted) : null);
   }
 
   function handleGDPClick(ev) {
@@ -471,5 +480,5 @@ function initApp() {
   }
   els.scTitle.textContent = curMeta.title;
   els.scDesc.textContent  = curMeta.desc;
-  makeCycle(curMeta.id);
+  makeCycle(curMeta.id, DISC_MODE ? scenarioRng(0) : null);
 }
