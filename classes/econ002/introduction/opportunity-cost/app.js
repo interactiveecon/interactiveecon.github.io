@@ -2,7 +2,25 @@
 // Disc mode (?disc=1): 5 questions, two-attempt flow, session score recording.
 // Normal mode: unlimited, no session recording.
 
-window.addEventListener("DOMContentLoaded", () => {
+// Load session.js dynamically when in disc mode, then boot the app
+(function () {
+  const DISC_MODE = new URLSearchParams(location.search).get('disc') === '1';
+  function boot() {
+    window.addEventListener("DOMContentLoaded", initApp);
+    if (document.readyState !== 'loading') initApp();
+  }
+  if (DISC_MODE && !window.Session) {
+    const scr = document.createElement('script');
+    scr.src = '/assets/session.js';
+    scr.onload = boot;
+    document.head.appendChild(scr);
+  } else {
+    boot();
+  }
+})();
+
+function initApp() {
+  if (initApp._ran) return; initApp._ran = true;
   const $ = (id) => document.getElementById(id);
 
   // ── Disc mode ─────────────────────────────────────────────────────────────
@@ -183,14 +201,9 @@ window.addEventListener("DOMContentLoaded", () => {
         }
 
       } else if (mode === 'revise') {
-        // Re-enable all choices except the correct one
-        // (student should not be able to trivially just pick the green one —
-        //  we don't show which is correct yet)
-        if (k === current._correctPos) {
-          inp.disabled = true;
-        } else {
-          inp.disabled = false;
-        }
+        // Re-enable all 4 choices — TA has reviewed the correct answer
+        // so student should be free to select any option including the correct one
+        inp.disabled = false;
 
       } else if (mode === 'final') {
         // Reveal correct=green, final wrong=red, lock all
@@ -364,4 +377,4 @@ window.addEventListener("DOMContentLoaded", () => {
   updateScoreDisplay();
   if (DISC_MODE) buildQueue();
   newScenario();
-});
+}
