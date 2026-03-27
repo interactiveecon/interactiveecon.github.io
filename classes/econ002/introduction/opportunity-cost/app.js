@@ -64,7 +64,17 @@
     }
 
     function buildQueue() {
-      queue = shuffle(ALL.slice()).slice(0, DISC_LIMIT);
+      // In disc mode use the session seed so all students get identical questions
+      const rng = (DISC_MODE && window.Session) ? Session.rngForLab(LAB_ID) : Math.random.bind(Math);
+      function seededShuffle(a) {
+        const b = a.slice();
+        for (let i = b.length-1; i > 0; i--) {
+          const j = Math.floor(rng() * (i+1));
+          [b[i],b[j]] = [b[j],b[i]];
+        }
+        return b;
+      }
+      queue = seededShuffle(ALL.slice()).slice(0, DISC_LIMIT);
       queueIdx = sessionFirstScore = sessionFinalScore = 0;
     }
 
@@ -105,6 +115,7 @@
         <div>
           <div style="font-weight:800;color:#1b7f4b;font-size:14px;">
             ✓ Lab complete — Final score: ${sessionFinalScore} / ${DISC_LIMIT}
+            &nbsp;·&nbsp; Grade: ${(window.Session ? Session.gradePoints(sessionFinalScore, DISC_LIMIT) : '-')} / 5 pts
           </div>
           <div style="font-size:12px;color:#6b7280;margin-top:3px;">
             First-attempt score: ${sessionFirstScore} / ${DISC_LIMIT} &nbsp;·&nbsp;
