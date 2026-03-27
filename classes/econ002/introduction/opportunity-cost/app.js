@@ -234,13 +234,14 @@
           els.checkBtn.textContent = 'Next →';
           setStatus("Correct! Click Next → for the next question.");
         } else {
-          els.feedback.innerHTML = `
-            <span class="tagBad">Not quite</span>
-            Your answer has been marked. After your TA reviews the correct answer,
-            click <strong>Revise</strong> to update your answer.
-          `;
-          els.checkBtn.textContent = DISC_MODE ? 'Revise' : 'Next →';
-          setStatus(DISC_MODE ? "Click Revise after TA review." : "Review, then click Next →.");
+          els.feedback.innerHTML = DISC_MODE
+            ? `<span class="tagBad">Not quite</span>
+               Your answer has been marked. After your TA reviews the correct answer,
+               click <strong>Revise</strong> to update your answer.`
+            : `<span class="tagBad">Not quite</span>
+               Click <strong>Revise</strong> to change your answer.`;
+          els.checkBtn.textContent = 'Revise';
+          setStatus(DISC_MODE ? "Click Revise after TA review." : "Click Revise to try again.");
         }
 
       // ── Open revision ────────────────────────────────────────────────────
