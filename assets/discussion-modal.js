@@ -120,9 +120,9 @@
         </div>
 
         <div class="dm-field">
-          <label for="dmId">Student ID</label>
-          <input id="dmId" type="text" placeholder="e.g. 12345678" autocomplete="off" />
-          <div class="dm-err-msg" id="dmIdErr">Please enter your student ID.</div>
+          <label for="dmId">NetID</label>
+          <input id="dmId" type="text" placeholder="e.g. abc123" autocomplete="off" />
+          <div class="dm-err-msg" id="dmIdErr">Please enter your NetID.</div>
         </div>
 
         ${noSeed ? '' : `
