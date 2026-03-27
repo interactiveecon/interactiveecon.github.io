@@ -281,6 +281,7 @@ function initApp() {
       <div>
         <div style="font-weight:800;color:#1b7f4b;font-size:14px;">
           ✓ Lab complete — Final score: ${finalCorrectCount} / ${DISC_LIMIT}
+          &nbsp;·&nbsp; Grade: ${(window.Session ? Session.gradePoints(finalCorrectCount, DISC_LIMIT) : '-')} / 5 pts
         </div>
         <div style="font-size:12px;color:#6b7280;margin-top:3px;">
           First-attempt score: ${firstCorrectCount} / ${DISC_LIMIT} &nbsp;·&nbsp;
@@ -462,7 +463,9 @@ function initApp() {
   // ── Init ──────────────────────────────────────────────────────────────────
   if (DISC_MODE) {
     const pool = DATA.scenarios.slice();
-    for (let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+    // Seeded shuffle — same code = same scenario order for all students
+    const rng = (window.Session) ? Session.rngForLab(LAB_ID) : Math.random.bind(Math);
+    for (let i=pool.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
     discQueue = pool.slice(0, DISC_LIMIT);
     curMeta   = discQueue[0];
   } else {
