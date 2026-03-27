@@ -468,17 +468,36 @@ function initApp() {
   els.gdpCanvas.addEventListener("click", handleGDPClick);
 
   // ── Init ──────────────────────────────────────────────────────────────────
-  if (DISC_MODE) {
+  function startDiscMode() {
+    // Called after Session.start() so seed is available
     const pool = DATA.scenarios.slice();
-    // Seeded shuffle — same code = same scenario order for all students
-    const rng = (window.Session) ? Session.rngForLab(LAB_ID) : Math.random.bind(Math);
+    const rng  = Session.rngForLab(LAB_ID);
     for (let i=pool.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
     discQueue = pool.slice(0, DISC_LIMIT);
     curMeta   = discQueue[0];
+    els.scTitle.textContent = curMeta.title;
+    els.scDesc.textContent  = curMeta.desc;
+    makeCycle(curMeta.id, scenarioRng(0));
+  }
+
+  if (DISC_MODE) {
+    // Render a placeholder until the student enters their code
+    els.scTitle.textContent = 'Waiting for session…';
+    els.scDesc.textContent  = 'Enter your name and session code to begin.';
+    // DiscussionModal will call onReady once session is started
+    if (window.DiscussionModal) {
+      DiscussionModal.init({
+        weekLabel: 'Week 1 — Introduction',
+        onReady: startDiscMode
+      });
+    } else {
+      // fallback: modal already shown by week page, session already active
+      if (window.Session && Session.isActive()) startDiscMode();
+    }
   } else {
     curMeta = DATA.scenarios[0];
+    els.scTitle.textContent = curMeta.title;
+    els.scDesc.textContent  = curMeta.desc;
+    makeCycle(curMeta.id, null);
   }
-  els.scTitle.textContent = curMeta.title;
-  els.scDesc.textContent  = curMeta.desc;
-  makeCycle(curMeta.id, DISC_MODE ? scenarioRng(0) : null);
 }
