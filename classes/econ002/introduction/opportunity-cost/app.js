@@ -348,8 +348,23 @@
     });
 
     updateScoreDisplay();
-    if (DISC_MODE) buildQueue();
-    newScenario();
+
+    if (DISC_MODE) {
+      // Show placeholder until student enters code — then build seeded queue
+      els.qTitle.textContent = 'Waiting for session…';
+      els.qDesc.textContent  = 'Enter your name and session code to begin.';
+      els.choices.innerHTML  = '';
+      if (window.DiscussionModal) {
+        DiscussionModal.init({
+          weekLabel: 'Week 1 — Introduction',
+          onReady: function() { buildQueue(); newScenario(); }
+        });
+      } else if (window.Session && Session.isActive()) {
+        buildQueue(); newScenario();
+      }
+    } else {
+      newScenario();
+    }
   } // end startApp
 
   // ── Load session.js if needed, then start ───────────────────────────────
