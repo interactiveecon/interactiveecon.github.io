@@ -332,6 +332,19 @@ function initApp() {
   els.resetBtn.addEventListener('click',    resetBoard);
   els.checkBtn.addEventListener('click',    handleCheck);
 
-  renderBoard();
-  newRound();
+  if (DISC_MODE) {
+    // Show empty board until student enters code — then build seeded round
+    renderBoard(); // shows "No cards loaded" message
+    if (window.DiscussionModal) {
+      DiscussionModal.init({
+        weekLabel: 'Week 1 — Introduction',
+        onReady: function() { newRound(); }
+      });
+    } else if (window.Session && Session.isActive()) {
+      newRound();
+    }
+  } else {
+    renderBoard();
+    newRound();
+  }
 }
