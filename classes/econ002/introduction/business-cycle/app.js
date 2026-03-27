@@ -2,7 +2,25 @@
 // Disc mode (?disc=1): 3 scenarios, two-attempt flow, session recording.
 // Normal mode: unlimited scenarios, no session recording.
 
-window.addEventListener("DOMContentLoaded", () => {
+// Load session.js dynamically when in disc mode, then boot the app
+(function () {
+  const DISC_MODE = new URLSearchParams(location.search).get('disc') === '1';
+  function boot() {
+    window.addEventListener("DOMContentLoaded", initApp);
+    if (document.readyState !== 'loading') initApp();
+  }
+  if (DISC_MODE && !window.Session) {
+    const scr = document.createElement('script');
+    scr.src = '/assets/session.js';
+    scr.onload = boot;
+    document.head.appendChild(scr);
+  } else {
+    boot();
+  }
+})();
+
+function initApp() {
+  if (initApp._ran) return; initApp._ran = true;
   const $ = (id) => document.getElementById(id);
 
   // ── Disc mode ─────────────────────────────────────────────────────────────
@@ -452,4 +470,4 @@ window.addEventListener("DOMContentLoaded", () => {
   els.scTitle.textContent = curMeta.title;
   els.scDesc.textContent  = curMeta.desc;
   makeCycle(curMeta.id);
-});
+}
