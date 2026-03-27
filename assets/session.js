@@ -125,16 +125,15 @@
       save(d);
     },
 
-    // Compute a grade out of 5 based on pct correct (final score)
-    // >80%→5, >60%→4, >40%→3, >20%→2, >0%→1, 0%→0
+    // Grade out of 5: 100%→5, ≥80%→4, ≥60%→3, ≥40%→2, ≥20%→1, <20%→0
     gradePoints(finalScore, total) {
       if (!total) return 0;
       const pct = finalScore / total;
-      if (pct >= 0.80) return 5;
-      if (pct >= 0.60) return 4;
-      if (pct >= 0.40) return 3;
-      if (pct >= 0.20) return 2;
-      if (pct >  0)    return 1;
+      if (pct === 1.0) return 5;
+      if (pct >= 0.80) return 4;
+      if (pct >= 0.60) return 3;
+      if (pct >= 0.40) return 2;
+      if (pct >= 0.20) return 1;
       return 0;
     },
 
