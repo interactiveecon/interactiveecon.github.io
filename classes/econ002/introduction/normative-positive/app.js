@@ -108,6 +108,7 @@ function initApp() {
       <div>
         <div style="font-weight:800;color:#1b7f4b;font-size:14px;">
           ✓ Lab complete — Final score: ${finalCorrectCount} / ${total}
+          &nbsp;·&nbsp; Grade: ${(window.Session ? Session.gradePoints(finalCorrectCount, total) : '-')} / 5 pts
         </div>
         <div style="font-size:12px;color:#6b7280;margin-top:3px;">
           First-attempt score: ${firstCorrectCount} / ${total} &nbsp;·&nbsp;
@@ -277,7 +278,16 @@ function initApp() {
   // ── New round ─────────────────────────────────────────────────────────────
   function newRound() {
     const pool = ALL.slice();
-    shuffle(pool);
+    if (DISC_MODE && window.Session) {
+      // Seeded shuffle — same code = same cards for all students
+      const rng = Session.rngForLab(LAB_ID);
+      for (let i = pool.length-1; i > 0; i--) {
+        const j = Math.floor(rng() * (i+1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+    } else {
+      shuffle(pool);
+    }
     const n = DISC_MODE ? DISC_CARDS : Math.min(12, pool.length);
     cards = pool.slice(0, n).map(c => ({
       ...c, zone: 'STAGE', checked: null, revealDesc: false,
