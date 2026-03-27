@@ -1,325 +1,484 @@
-// discussion-pdf.js
-// Generates a detailed PDF summary from Session.export().
-// Requires jsPDF (loaded via CDN on the week page).
+// app.js — Business Cycle Anatomy
+// Disc mode (?disc=1): 3 scenarios, two-attempt flow, session recording.
+// Normal mode: unlimited scenarios, no session recording.
 
-(function (global) {
-  'use strict';
+// Load session.js dynamically when in disc mode, then boot the app
+(function () {
+  const DISC_MODE = new URLSearchParams(location.search).get('disc') === '1';
+  function boot() {
+    window.addEventListener("DOMContentLoaded", initApp);
+    if (document.readyState !== 'loading') initApp();
+  }
+  if (DISC_MODE && !window.Session) {
+    const scr = document.createElement('script');
+    scr.src = '/assets/session.js';
+    scr.onload = boot;
+    document.head.appendChild(scr);
+  } else {
+    boot();
+  }
+})();
 
-  const C = {
-    accent: [47,  93,  124],
-    good:   [27,  127, 75],
-    bad:    [180, 35,  24],
-    ink:    [31,  41,  55],
-    muted:  [107, 114, 128],
-    line:   [231, 223, 210],
-    paper:  [246, 242, 234],
-    white:  [255, 255, 255],
+function initApp() {
+  if (initApp._ran) return; initApp._ran = true;
+  const $ = (id) => document.getElementById(id);
+
+  // ── Disc mode ─────────────────────────────────────────────────────────────
+  const DISC_MODE  = new URLSearchParams(location.search).get('disc') === '1';
+  const DISC_LIMIT = 3;
+  const LAB_ID     = 'business-cycle';
+  const LAB_LABEL  = 'Business Cycle Anatomy';
+  const WEEK_URL   = '/classes/econ002/discussion/week-01/';
+
+  if (DISC_MODE) {
+    const crumb = document.querySelector('.crumb-link');
+    if (crumb) { crumb.textContent = '← Week 1'; crumb.href = WEEK_URL; }
+  }
+
+  const els = {
+    newBtn:     $("newBtn"),
+    modePeak:   $("modePeak"),
+    modeTrough: $("modeTrough"),
+    checkBtn:   $("checkBtn"),
+    resetBtn:   $("resetBtn"),
+    status:     $("status"),
+    scTitle:    $("scTitle"),
+    scDesc:     $("scDesc"),
+    hintBox:    $("hintBox"),
+    stepText:   $("stepText"),
+    feedback:   $("feedback"),
+    gdpCanvas:  $("gdpChart"),
+    uCanvas:    $("uChart"),
   };
 
-  function rgb(a) { return { r:a[0], g:a[1], b:a[2] }; }
-  function setColor(doc, arr, type) {
-    const c = rgb(arr);
-    if (type === 'fill') doc.setFillColor(c.r, c.g, c.b);
-    else doc.setTextColor(c.r, c.g, c.b);
+  function setStatus(msg) { els.status.textContent = msg; }
+  function showFeedback(html) { els.feedback.style.display = "block"; els.feedback.innerHTML = html; }
+  function hideFeedback()     { els.feedback.style.display = "none";  els.feedback.innerHTML = ""; }
+
+  const DATA = window.BCYCLE_DATA;
+  if (!DATA) { setStatus("ERROR: data.js did not load."); return; }
+
+  const T = DATA.T;
+
+  // ── Chart state ───────────────────────────────────────────────────────────
+  let curMeta = null;
+  let t = [], gdp = [], unemp = [];
+  let truePeakIdx = null, trueTroughIdx = null;
+  let placedPeakIdx = null, placedTroughIdx = null;
+  let mode = "PEAK";
+
+  // phase: 'placing' | 'first-submitted' | 'revising' | 'done'
+  let phase = 'placing';
+
+  // Disc mode score tracking
+  let discQueue           = [];
+  let scenariosCompleted  = 0;
+  let firstCorrectCount   = 0;
+  let finalCorrectCount   = 0;
+  let discDone            = false;
+
+  // Per-scenario first attempt
+  let firstPeakIdx   = null;
+  let firstTroughIdx = null;
+  let firstWasCorrect = false;
+
+  function rand(lo, hi, rng) { return lo + (rng ? rng() : Math.random())*(hi-lo); }
+
+  // Returns a seeded rng for a specific scenario index in disc mode
+  function scenarioRng(idx) {
+    if (!DISC_MODE || !window.Session) return null;
+    // Each scenario index gets its own deterministic RNG stream
+    return Session.rngForLab(LAB_ID + '|scenario' + idx);
   }
-  function setStroke(doc, arr) { const c=rgb(arr); doc.setDrawColor(c.r,c.g,c.b); }
-  function rr(doc, x, y, w, h, r, style) { doc.roundedRect(x,y,w,h,r,r,style); }
+  function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
 
-  // ── Layout ────────────────────────────────────────────────────────────────
-  const PW = 215.9, PH = 279.4;
-  const ML = 14, MR = 14;
-  const CW = PW - ML - MR;   // 187.9 mm
-
-  // Column layout (all relative to ML):
-  // | strip 2 | # 5 | Question ~80 | 1st Answer ~46 | Final ~46 | Badge 18 |
-  const COL_STRIP  = 0;
-  const COL_NUM    = 2;
-  const COL_Q      = 8;
-  const COL_Q_W    = 78;   // question text wrap width
-  const COL_1ST    = 88;
-  const COL_1ST_W  = 44;
-  const COL_FIN    = 134;
-  const COL_FIN_W  = 34;
-  const COL_BADGE  = 170;
-  const COL_BADGE_W= 17.9; // to right margin
-
-  const LINE_H     = 4.8;  // mm per text line at font 8
-  const ROW_PAD    = 3;    // vertical padding inside each row
-
-  // ── Page management ───────────────────────────────────────────────────────
-  function newPage(doc, state) {
-    doc.addPage();
-    state.y = 16;
-    drawFooter(doc, state);
+  function argMaxInRange(arr, a, b) {
+    const lo = clamp(Math.floor(a), 0, arr.length-1);
+    const hi = clamp(Math.floor(b), 0, arr.length-1);
+    let best = lo, bestV = arr[lo];
+    for (let i=lo; i<=hi; i++) if (arr[i]>bestV) { bestV=arr[i]; best=i; }
+    return best;
   }
-  function checkY(doc, state, need) {
-    if (state.y + need > PH - 20) newPage(doc, state);
+  function argMinInRange(arr, a, b) {
+    const lo = clamp(Math.floor(a), 0, arr.length-1);
+    const hi = clamp(Math.floor(b), 0, arr.length-1);
+    let best = lo, bestV = arr[lo];
+    for (let i=lo; i<=hi; i++) if (arr[i]<bestV) { bestV=arr[i]; best=i; }
+    return best;
   }
-  function drawFooter(doc, state) {
-    const pg = doc.internal.getCurrentPageInfo().pageNumber;
-    setColor(doc, C.muted, 'text');
-    doc.setFontSize(7.5);
-    doc.setFont('helvetica', 'normal');
-    doc.text(
-      `ECON 002 Discussion Section  •  ${state.session.weekLabel || ''}  •  ${state.dateStr}`,
-      ML, PH - 9
-    );
-    doc.text(`Page ${pg}`, PW - MR, PH - 9, { align: 'right' });
+  function snapToLocalExtremum(series, idx, kind) {
+    const w = 8;
+    const lo = clamp(idx-w, 1, series.length-2);
+    const hi = clamp(idx+w, 1, series.length-2);
+    let best = lo, bestV = series[lo];
+    for (let i=lo; i<=hi; i++) {
+      if (kind==="max" && series[i]>bestV) { bestV=series[i]; best=i; }
+      if (kind==="min" && series[i]<bestV) { bestV=series[i]; best=i; }
+    }
+    return best;
   }
 
-  // ── Header ────────────────────────────────────────────────────────────────
-  function drawHeader(doc, session, dateStr) {
-    setColor(doc, C.accent, 'fill');
-    doc.rect(0, 0, PW, 42, 'F');
+  function makeCycle(metaId, rng) {
+    // rng: seeded random function in disc mode, null otherwise (falls back to Math.random)
+    t = Array.from({length:T}, (_,i)=>i);
+    const base=100, trendSlope=rand(0.10,0.22,rng);
+    let amp=rand(4,7,rng), width=rand(10,16,rng), dropAmp=rand(5,9,rng), dropWidth=rand(8,14,rng);
+    if (metaId==="sharp")  { dropAmp*=1.35; dropWidth*=0.85; amp*=1.05; }
+    if (metaId==="mild")   { dropAmp*=0.70; amp*=0.85; }
+    if (metaId==="long")   { dropWidth*=1.45; }
+    const peakCenter=Math.floor(rand(30,38,rng)), troughCenter=Math.floor(rand(48,58,rng));
+    gdp = t.map(i => {
+      const trend = base+trendSlope*i;
+      const bump  = amp*Math.exp(-0.5*Math.pow((i-peakCenter)/width,2));
+      const dip   = dropAmp*Math.exp(-0.5*Math.pow((i-troughCenter)/dropWidth,2));
+      return trend+bump-dip+rand(-0.20,0.20,rng);
+    });
+    truePeakIdx   = argMaxInRange(gdp, peakCenter-10,   peakCenter+10);
+    trueTroughIdx = argMinInRange(gdp, troughCenter-12, troughCenter+12);
+    if (trueTroughIdx <= truePeakIdx+5) trueTroughIdx = Math.min(T-8, truePeakIdx+12);
+    const trendApprox = t.map(i => base+trendSlope*i);
+    const gap = gdp.map((y,i)=>y-trendApprox[i]);
+    const lag=Math.floor(rand(4,7,rng)), uBase=rand(4.5,6.5,rng), uAmp=rand(0.45,0.80,rng);
+    unemp = t.map(i => clamp(uBase-uAmp*gap[Math.max(0,i-lag)]+rand(-0.10,0.10,rng), 3.0, 10.0));
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(17);
-    setColor(doc, C.white, 'text');
-    doc.text('Discussion Section Summary', ML, 15);
+    placedPeakIdx = null; placedTroughIdx = null;
+    firstPeakIdx = null; firstTroughIdx = null; firstWasCorrect = false;
+    phase = 'placing'; mode = "PEAK";
+    updateModeUI(); hideFeedback(); drawAll();
 
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${session.weekLabel || 'ECON 002'}  •  ${dateStr}`, ML, 23);
+    const sNum = DISC_MODE ? ` (Scenario ${scenariosCompleted+1} of ${DISC_LIMIT})` : '';
+    setStatus(`Click on the GDP chart to place the Peak.${sNum}`);
+  }
 
-    // Student box
-    setColor(doc, C.white, 'fill');
-    rr(doc, ML, 28, CW, 18, 3, 'F');
+  // ── Drawing ───────────────────────────────────────────────────────────────
+  function setupCanvas(canvas) {
+    const ctx=canvas.getContext("2d"), dpr=window.devicePixelRatio||1;
+    const W=canvas.clientWidth*dpr, H=canvas.clientHeight*dpr;
+    if (canvas.width!==W||canvas.height!==H) { canvas.width=W; canvas.height=H; }
+    return {ctx,W,H,dpr};
+  }
+  function drawAxes(ctx,W,H,dpr,xLabel,yLabel) {
+    const pad={l:54*dpr,r:12*dpr,t:14*dpr,b:44*dpr};
+    const X0=pad.l,X1=W-pad.r,Y0=pad.t,Y1=H-pad.b;
+    ctx.strokeStyle="rgba(0,0,0,0.10)"; ctx.lineWidth=1*dpr;
+    for(let i=0;i<=5;i++){const x=X0+i*(X1-X0)/5;ctx.beginPath();ctx.moveTo(x,Y0);ctx.lineTo(x,Y1);ctx.stroke();}
+    for(let i=0;i<=4;i++){const y=Y0+i*(Y1-Y0)/4;ctx.beginPath();ctx.moveTo(X0,y);ctx.lineTo(X1,y);ctx.stroke();}
+    ctx.fillStyle="rgba(0,0,0,0.70)";
+    ctx.font=`${12*dpr}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial`;
+    ctx.textAlign="center"; ctx.textBaseline="top";
+    ctx.fillText(xLabel,(X0+X1)/2,Y1+14*dpr);
+    ctx.save();ctx.translate(X0-40*dpr,(Y0+Y1)/2);ctx.rotate(-Math.PI/2);
+    ctx.textAlign="center";ctx.textBaseline="top";ctx.fillText(yLabel,0,0);ctx.restore();
+    return {X0,X1,Y0,Y1};
+  }
+  function drawLine(ctx,X0,X1,Y0,Y1,xs,ys,yMin,yMax,stroke,dpr) {
+    const xTo=i=>X0+(i/(xs.length-1))*(X1-X0);
+    const yTo=v=>Y0+(yMax-v)/(yMax-yMin)*(Y1-Y0);
+    ctx.strokeStyle=stroke; ctx.lineWidth=3*dpr; ctx.beginPath();
+    for(let i=0;i<xs.length;i++){const x=xTo(i),y=yTo(ys[i]);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.stroke();
+    return {xTo,yTo};
+  }
+  function drawMarker(ctx,x,y,color,dpr) {
+    ctx.fillStyle=color; ctx.beginPath(); ctx.arc(x,y,5*dpr,0,Math.PI*2); ctx.fill();
+  }
+  function drawVLine(ctx,x,Y0,Y1,dpr) {
+    ctx.strokeStyle="rgba(0,0,0,0.35)"; ctx.lineWidth=2*dpr;
+    ctx.setLineDash([4*dpr,6*dpr]); ctx.beginPath(); ctx.moveTo(x,Y0); ctx.lineTo(x,Y1); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  function shadeInterval(ctx,xL,xR,Y0,Y1,dpr) {
+    ctx.fillStyle="rgba(0,0,0,0.07)"; ctx.strokeStyle="rgba(0,0,0,0.10)"; ctx.lineWidth=1*dpr;
+    ctx.beginPath(); ctx.rect(xL,Y0,xR-xL,Y1-Y0); ctx.fill(); ctx.stroke();
+  }
+  function labelAtTop(ctx,x,Y0,text,dpr) {
+    ctx.fillStyle="rgba(0,0,0,0.70)";
+    ctx.font=`${12*dpr}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial`;
+    ctx.textAlign="center"; ctx.textBaseline="bottom"; ctx.fillText(text,x,Y0-2*dpr);
+  }
+  function labelAtXAxis(ctx,x,Y1,text,dpr) {
+    ctx.fillStyle="rgba(0,0,0,0.70)";
+    ctx.font=`${12*dpr}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial`;
+    ctx.textAlign="center"; ctx.textBaseline="top"; ctx.fillText(text,x,Y1+8*dpr);
+  }
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    setColor(doc, C.ink, 'text');
-    doc.text(session.name || '—', ML + 5, 35);
+  // showTrue: whether to draw the true peak/trough markers and shading
+  function drawAll(showTrue) {
+    drawGDP(showTrue);
+    drawUnemp(showTrue);
+  }
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    setColor(doc, C.muted, 'text');
-    doc.text(`NetID: ${session.studentId || '—'}`, ML + 5, 42);
+  function drawGDP(showTrue) {
+    const {ctx,W,H,dpr}=setupCanvas(els.gdpCanvas); ctx.clearRect(0,0,W,H);
+    const {X0,X1,Y0,Y1}=drawAxes(ctx,W,H,dpr,"Time","Real GDP (index)");
+    const yMin=Math.min(...gdp)-1, yMax=Math.max(...gdp)+1;
+    const map=drawLine(ctx,X0,X1,Y0,Y1,t,gdp,yMin,yMax,"rgba(0,0,0,0.70)",dpr);
+    const xTo=map.xTo, yTo=map.yTo;
 
-    if (session.seed && session.seed !== 'NO-SEED') {
-      doc.text(`Session Code: ${session.seed}`, ML + 70, 42);
+    if (showTrue && truePeakIdx!=null && trueTroughIdx!=null) {
+      shadeInterval(ctx,xTo(truePeakIdx),xTo(trueTroughIdx),Y0,Y1,dpr);
+      labelAtTop(ctx,(xTo(truePeakIdx)+xTo(trueTroughIdx))/2,Y0,"Recession",dpr);
+      drawMarker(ctx,xTo(truePeakIdx),yTo(gdp[truePeakIdx]),"rgba(34,120,34,0.95)",dpr);
+      drawMarker(ctx,xTo(trueTroughIdx),yTo(gdp[trueTroughIdx]),"rgba(34,120,34,0.95)",dpr);
+      drawVLine(ctx,xTo(truePeakIdx),Y0,Y1,dpr);
+      drawVLine(ctx,xTo(trueTroughIdx),Y0,Y1,dpr);
+      labelAtXAxis(ctx,xTo(truePeakIdx),Y1,"Peak",dpr);
+      labelAtXAxis(ctx,xTo(trueTroughIdx),Y1,"Trough",dpr);
     }
 
-    return 54;
+    if (placedPeakIdx!=null) {
+      const x=xTo(placedPeakIdx),y=yTo(gdp[placedPeakIdx]);
+      drawMarker(ctx,x,y,"rgba(31,119,180,0.90)",dpr);
+      if (!showTrue) labelAtXAxis(ctx,x,Y1,"Peak",dpr);
+    }
+    if (placedTroughIdx!=null) {
+      const x=xTo(placedTroughIdx),y=yTo(gdp[placedTroughIdx]);
+      drawMarker(ctx,x,y,"rgba(31,119,180,0.90)",dpr);
+      if (!showTrue) labelAtXAxis(ctx,x,Y1,"Trough",dpr);
+    }
   }
 
-  // ── Grade helper ──────────────────────────────────────────────────────────
-  function gradePoints(finalScore, total) {
-    if (!total) return 0;
-    const pct = finalScore / total;
-    if (pct === 1.0) return 5;
-    if (pct >= 0.80) return 4;
-    if (pct >= 0.60) return 3;
-    if (pct >= 0.40) return 2;
-    if (pct >= 0.20) return 1;
-    return 0;
+  function drawUnemp(showTrue) {
+    const {ctx,W,H,dpr}=setupCanvas(els.uCanvas); ctx.clearRect(0,0,W,H);
+    const {X0,X1,Y0,Y1}=drawAxes(ctx,W,H,dpr,"Time","Unemployment (%)");
+    const map=drawLine(ctx,X0,X1,Y0,Y1,t,unemp,3.0,10.0,"rgba(230,159,0,0.95)",dpr);
+    const xTo=map.xTo;
+    if (showTrue && truePeakIdx!=null && trueTroughIdx!=null) {
+      shadeInterval(ctx,xTo(truePeakIdx),xTo(trueTroughIdx),Y0,Y1,dpr);
+      labelAtTop(ctx,(xTo(truePeakIdx)+xTo(trueTroughIdx))/2,Y0,"Recession",dpr);
+      drawVLine(ctx,xTo(truePeakIdx),Y0,Y1,dpr);
+      drawVLine(ctx,xTo(trueTroughIdx),Y0,Y1,dpr);
+    }
   }
 
-  // ── Score summary ─────────────────────────────────────────────────────────
-  function drawScoreSummary(doc, state, labs) {
-    const labArr = Object.values(labs).filter(l => l.doneAt);
-    let totalFirst = 0, totalFinal = 0, totalPossible = 0;
-    labArr.forEach(l => {
-      totalFirst    += l.firstScore || 0;
-      totalFinal    += l.finalScore || 0;
-      totalPossible += l.total      || 0;
-    });
+  // ── UI helpers ────────────────────────────────────────────────────────────
+  function updateModeUI() {
+    els.modePeak.classList.toggle("primary",   mode==="PEAK");
+    els.modePeak.classList.toggle("subtle",    mode!=="PEAK");
+    els.modeTrough.classList.toggle("primary", mode==="TROUGH");
+    els.modeTrough.classList.toggle("subtle",  mode!=="TROUGH");
+    els.stepText.textContent = (mode==="PEAK") ? "Place Peak" : "Place Trough";
+  }
 
-    // Overall assignment grade based on total final score across ALL labs
-    const assignGrade = gradePoints(totalFinal, totalPossible);
+  function resetMarkers() {
+    placedPeakIdx=null; placedTroughIdx=null;
+    phase='placing'; mode="PEAK";
+    updateModeUI(); hideFeedback(); drawAll(false);
+    setStatus("Markers cleared. Place the Peak.");
+  }
 
-    checkY(doc, state, 30);
-    const y = state.y;
+  // ── Finish banner ─────────────────────────────────────────────────────────
+  function showFinishBanner() {
+    if ($('discFinishBanner')) return;
+    discDone = true;
 
-    setColor(doc, C.paper, 'fill');
-    setStroke(doc, C.line);
-    doc.setLineWidth(0.3);
-    rr(doc, ML, y, CW, 24, 3, 'FD');
+    if (DISC_MODE && window.Session && Session.isActive()) {
+      Session.recordLabDone(LAB_ID, LAB_LABEL,
+        firstCorrectCount, finalCorrectCount, DISC_LIMIT);
+    }
 
-    // 5 columns: Initial | Final | Possible | Assignment Grade | Labs Done
-    const cols = [
-      { lbl: 'INITIAL SCORE', val: String(totalFirst),                x: ML + 5  },
-      { lbl: 'FINAL SCORE',   val: String(totalFinal),                x: ML + 48 },
-      { lbl: 'POSSIBLE',      val: String(totalPossible),             x: ML + 91 },
-      { lbl: 'ASSIGNMENT GRADE', val: `${assignGrade} / 5 pts`,      x: ML + 124},
-      { lbl: 'LABS DONE',     val: `${labArr.length} / ${Object.values(labs).length}`, x: ML + 163 },
-    ];
+    const banner = document.createElement('div');
+    banner.id = 'discFinishBanner';
+    banner.style.cssText = `
+      margin-top:16px; padding:16px 20px; border-radius:16px;
+      background:rgba(27,127,75,0.08); border:1.5px solid rgba(27,127,75,0.35);
+      display:flex; align-items:center; justify-content:space-between;
+      flex-wrap:wrap; gap:12px;
+    `;
+    banner.innerHTML = `
+      <div>
+        <div style="font-weight:800;color:#1b7f4b;font-size:14px;">
+          ✓ Lab complete — Final score: ${finalCorrectCount} / ${DISC_LIMIT}</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:3px;">
+          First-attempt score: ${firstCorrectCount} / ${DISC_LIMIT} &nbsp;·&nbsp;
+          Return to Week 1 when your TA is ready.
+        </div>
+      </div>
+      <a href="${WEEK_URL}"
+         style="padding:10px 20px;background:#1b7f4b;color:#fff;border-radius:12px;
+                font-weight:800;font-size:13px;text-decoration:none;white-space:nowrap;">
+        ← Return to Week 1
+      </a>
+    `;
+    els.feedback.insertAdjacentElement('afterend', banner);
+    els.newBtn.disabled = els.checkBtn.disabled = true;
+    els.newBtn.style.opacity = els.checkBtn.style.opacity = '0.4';
+  }
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7);
-    setColor(doc, C.muted, 'text');
-    cols.forEach(c => doc.text(c.lbl, c.x, y + 7));
+  // ── Check / Revise / Submit Final ─────────────────────────────────────────
+  function handleCheck() {
+    if (discDone) return;
 
-    doc.setFontSize(13);
-    cols.forEach((c, i) => {
-      if (i === 3) { // grade — colour by value
-        setColor(doc, assignGrade >= 4 ? C.good : assignGrade >= 2 ? C.accent : C.bad, 'text');
-      } else if (i === 1) {
-        setColor(doc, totalFinal === totalPossible ? C.good : C.accent, 'text');
+    // ── First submission ──────────────────────────────────────────────────
+    if (phase === 'placing') {
+      if (placedPeakIdx==null || placedTroughIdx==null) {
+        showFeedback(`<span class="tagBad">Not yet</span> Place both a peak and a trough, then click Check.`);
+        return;
+      }
+
+      const okPeak   = Math.abs(placedPeakIdx   - truePeakIdx)   <= 2;
+      const okTrough = Math.abs(placedTroughIdx - trueTroughIdx) <= 2;
+      firstPeakIdx    = placedPeakIdx;
+      firstTroughIdx  = placedTroughIdx;
+      firstWasCorrect = okPeak && okTrough;
+      if (firstWasCorrect) firstCorrectCount++;
+
+      // Reveal shading only if correct; wrong answer waits until Revise
+      drawAll(firstWasCorrect);
+      phase = 'first-submitted';
+
+      if (firstWasCorrect) {
+        showFeedback(`<span class="tagOK">Correct!</span>
+          <strong>Recession</strong> is the period from <strong>peak → trough</strong> in real GDP.
+          The shaded region shows the recession. Notice unemployment rises during the recession and often remains elevated after the trough.`);
+        if (DISC_MODE) {
+          recordScenario(true);
+          els.checkBtn.textContent = 'Next Scenario →';
+          setStatus(`Correct! (${scenariosCompleted} of ${DISC_LIMIT} done)`);
+        } else {
+          els.checkBtn.textContent = 'Next Scenario →';
+          setStatus("Correct. Click Next Scenario for a new one.");
+        }
       } else {
-        setColor(doc, C.ink, 'text');
-      }
-      doc.text(c.val, c.x, y + 18);
-    });
-
-    state.y = y + 30;
-  }
-
-  // ── Per-lab section ───────────────────────────────────────────────────────
-  function drawLabSection(doc, state, labId, lab) {
-    checkY(doc, state, 22);
-    const y = state.y;
-
-    // Title bar
-    setColor(doc, C.accent, 'fill');
-    rr(doc, ML, y, CW, 10, 2, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9.5);
-    setColor(doc, C.white, 'text');
-    doc.text(lab.label || labId, ML + 4, y + 7);
-
-    // Score chips (right-aligned in title bar): Initial and Final only
-    // No per-lab grade — the overall grade is shown in the summary
-    doc.setFontSize(8);
-    const chips = [
-      { txt: `Final: ${lab.finalScore ?? '—'} / ${lab.total ?? '—'}`, good: lab.finalScore === lab.total },
-      { txt: `Initial: ${lab.firstScore ?? '—'} / ${lab.total ?? '—'}`, good: false },
-    ];
-    let cx = PW - MR - 3;
-    chips.forEach(chip => {
-      const tw = doc.getTextWidth(chip.txt) + 5;
-      cx -= tw;
-      setColor(doc, chip.good ? C.good : C.white, 'fill');
-      rr(doc, cx, y + 1.5, tw, 7, 1.5, 'F');
-      setColor(doc, chip.good ? C.white : C.ink, 'text');
-      doc.text(chip.txt, cx + 2.5, y + 6.5);
-      cx -= 2;
-    });
-
-    state.y = y + 12;
-
-    // Column headers
-    checkY(doc, state, 10);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7);
-    setColor(doc, C.muted, 'text');
-    doc.text('#',          ML + COL_NUM,  state.y + 5);
-    doc.text('Question',   ML + COL_Q,    state.y + 5);
-    doc.text('1st Answer', ML + COL_1ST,  state.y + 5);
-    doc.text('Final',      ML + COL_FIN,  state.y + 5);
-    doc.text('Result',     ML + COL_BADGE + 1, state.y + 5);
-
-    setStroke(doc, C.line);
-    doc.setLineWidth(0.2);
-    doc.line(ML, state.y + 7, PW - MR, state.y + 7);
-    state.y += 9;
-
-    // Questions
-    const qs = lab.questions || [];
-    qs.forEach((q, i) => {
-      if (!q) return;
-
-      doc.setFontSize(8);
-      const qLines    = doc.splitTextToSize(q.text        || '(no text)', COL_Q_W);
-      const firstLines= doc.splitTextToSize(q.firstAnswer || '—',         COL_1ST_W);
-      const finalLines= doc.splitTextToSize(q.finalAnswer || '—',         COL_FIN_W);
-
-      const nLines = Math.max(qLines.length, firstLines.length, finalLines.length);
-      const rowH   = Math.max(10, nLines * LINE_H + ROW_PAD * 2);
-
-      checkY(doc, state, rowH + 1);
-      const ry = state.y;
-
-      // Alternating row background
-      if (i % 2 === 0) {
-        setColor(doc, [250, 248, 245], 'fill');
-        doc.rect(ML, ry, CW, rowH, 'F');
+        showFeedback(DISC_MODE
+          ? `<span class="tagBad">Not quite</span> After your TA reviews the correct answer, click <strong>Revise</strong> to reposition your markers.`
+          : `<span class="tagBad">Not quite</span> Click <strong>Revise</strong> to reposition your markers.`);
+        els.checkBtn.textContent = 'Revise';
+        setStatus(DISC_MODE
+          ? "After TA review, click Revise to reposition your markers."
+          : "Click Revise to try again.");
       }
 
-      // Left colour strip
-      const ok = q.finalCorrect;
-      setColor(doc, ok ? C.good : C.bad, 'fill');
-      doc.rect(ML + COL_STRIP, ry, 1.8, rowH, 'F');
+    // ── Open revision — NOW reveal the correct answer ────────────────────
+    } else if (phase === 'first-submitted' && els.checkBtn.textContent === 'Revise') {
+      phase = 'revising';
+      // Reset placed markers so student re-places
+      placedPeakIdx = null; placedTroughIdx = null;
+      mode = "PEAK"; updateModeUI();
+      // Reveal correct peak/trough for the first time
+      drawAll(true);
+      showFeedback(`<em>The correct peak and trough are marked in green. Re-place your markers, then click <strong>Submit Final</strong>.</em>`);
+      els.checkBtn.textContent = 'Submit Final';
+      setStatus("Correct markers shown. Re-place yours, then click Submit Final.");
 
-      const textY = ry + ROW_PAD + LINE_H * 0.8; // first line baseline
+    // ── Final submission ──────────────────────────────────────────────────
+    } else if (phase === 'revising') {
+      if (placedPeakIdx==null || placedTroughIdx==null) {
+        setStatus("Place both markers before submitting."); return;
+      }
+      const okPeak   = Math.abs(placedPeakIdx   - truePeakIdx)   <= 2;
+      const okTrough = Math.abs(placedTroughIdx - trueTroughIdx) <= 2;
+      const finalCorrect = okPeak && okTrough;
+      recordScenario(finalCorrect);
+      drawAll(true);
+      phase = 'done';
 
-      // Q number
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7.5);
-      setColor(doc, C.muted, 'text');
-      doc.text(String(i + 1), ML + COL_NUM, ry + rowH / 2, { baseline: 'middle' });
+      showFeedback(finalCorrect
+        ? `<span class="tagOK">Correct after revision</span>
+           <strong>Recession:</strong> peak → trough in real GDP.
+           Unemployment typically peaks <em>after</em> the trough — a lag.`
+        : `<span class="tagBad">Still incorrect</span>
+           The correct markers are shown in green.`);
 
-      // Question text
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      setColor(doc, C.ink, 'text');
-      doc.text(qLines, ML + COL_Q, textY);
+      if (DISC_MODE) {
+        if (scenariosCompleted < DISC_LIMIT) {
+          els.checkBtn.textContent = 'Next Scenario →';
+          setStatus(`${scenariosCompleted} of ${DISC_LIMIT} done.`);
+        } else {
+          showFinishBanner();
+        }
+      } else {
+        els.checkBtn.textContent = 'Next Scenario →';
+        setStatus("Click Next Scenario for a new one.");
+      }
 
-      // First answer
-      setColor(doc, q.firstCorrect ? C.good : C.bad, 'text');
-      doc.setFont('helvetica', q.firstCorrect ? 'normal' : 'bold');
-      doc.text(firstLines, ML + COL_1ST, textY);
-
-      // Final answer
-      setColor(doc, q.finalCorrect ? C.good : C.bad, 'text');
-      doc.setFont('helvetica', q.finalCorrect ? 'normal' : 'bold');
-      doc.text(finalLines, ML + COL_FIN, textY);
-
-      // Result badge
-      const bx = ML + COL_BADGE;
-      const bw = COL_BADGE_W;
-      setColor(doc, ok ? C.good : C.bad, 'fill');
-      rr(doc, bx, ry + rowH/2 - 3.5, bw, 7, 1.5, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(6.5);
-      setColor(doc, C.white, 'text');
-      doc.text(ok ? '✓ Correct' : '✗ Wrong', bx + bw/2, ry + rowH/2 + 1, { align: 'center' });
-
-      // Divider line between rows
-      setStroke(doc, C.line);
-      doc.setLineWidth(0.15);
-      doc.line(ML, ry + rowH, PW - MR, ry + rowH);
-
-      state.y = ry + rowH;
-    });
-
-    state.y += 8;
-  }
-
-  // ── Main ──────────────────────────────────────────────────────────────────
-  const DiscussionPDF = {
-    generate() {
-      if (!global.Session) { alert('session.js not loaded.'); return; }
-      const session = global.Session.export();
-      if (!session) { alert('No session data. Complete at least one lab first.'); return; }
-
-      const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
-      if (!jsPDFCtor) { alert('jsPDF library not loaded.'); return; }
-
-      const doc = new jsPDFCtor({ unit:'mm', format:'letter', orientation:'portrait' });
-
-      const now      = new Date();
-      const dateStr  = now.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
-      const timeStr  = now.toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit' });
-      const fullDate = `${dateStr} at ${timeStr}`;
-
-      const state = { y: 0, session, dateStr: fullDate };
-      drawFooter(doc, state);
-
-      state.y = drawHeader(doc, session, fullDate);
-      state.y += 6;
-      drawScoreSummary(doc, state, session.labs || {});
-
-      Object.entries(session.labs || {}).forEach(([labId, lab]) => {
-        state.y += 4;
-        drawLabSection(doc, state, labId, lab);
-      });
-
-      const safeName = (session.name || 'student').replace(/\s+/g, '-').toLowerCase();
-      const safeWeek = (session.weekLabel || 'discussion').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
-      doc.save(`econ002-${safeWeek}-${safeName}.pdf`);
+    // ── Next Scenario → ───────────────────────────────────────────────────
+    } else if (els.checkBtn.textContent === 'Next Scenario →') {
+      if (DISC_MODE && discDone) { showFinishBanner(); return; }
+      loadNextScenario();
     }
-  };
+  }
 
-  global.DiscussionPDF = DiscussionPDF;
+  function recordScenario(finalCorrect) {
+    if (finalCorrect) finalCorrectCount++;
+    scenariosCompleted++;
 
-})(window);
+    if (DISC_MODE && window.Session && Session.isActive()) {
+      Session.recordQuestion(
+        LAB_ID,
+        scenariosCompleted - 1,
+        curMeta.title,
+        `Peak: t=${firstPeakIdx}, Trough: t=${firstTroughIdx}`,
+        firstWasCorrect,
+        `Peak: t=${placedPeakIdx ?? firstPeakIdx}, Trough: t=${placedTroughIdx ?? firstTroughIdx}`,
+        finalCorrect
+      );
+    }
+
+    if (DISC_MODE && scenariosCompleted >= DISC_LIMIT) showFinishBanner();
+  }
+
+  function loadNextScenario() {
+    if (DISC_MODE) {
+      if (discDone || scenariosCompleted >= DISC_LIMIT) { showFinishBanner(); return; }
+      curMeta = discQueue[scenariosCompleted % discQueue.length];
+    } else {
+      curMeta = DATA.scenarios[Math.floor(Math.random()*DATA.scenarios.length)];
+    }
+    els.scTitle.textContent = curMeta.title;
+    els.scDesc.textContent  = curMeta.desc;
+    els.checkBtn.textContent = 'Check';
+    // In disc mode, use a seeded rng per scenario so all students see identical graphs
+    makeCycle(curMeta.id, DISC_MODE ? scenarioRng(scenariosCompleted) : null);
+  }
+
+  function handleGDPClick(ev) {
+    if (phase !== 'placing' && phase !== 'revising') return;
+    if (discDone) return;
+
+    const rect  = els.gdpCanvas.getBoundingClientRect();
+    const dpr   = window.devicePixelRatio || 1;
+    // The axes are drawn with a left pad of 54 CSS px and right pad of 12 CSS px.
+    // Map click x within that plot area to a time index.
+    const padL  = 54;   // must match drawAxes pad.l
+    const padR  = 12;
+    const plotW = rect.width - padL - padR;
+    const clickX = ev.clientX - rect.left - padL;
+    const frac  = Math.max(0, Math.min(1, clickX / plotW));
+    const rawIdx = Math.round(frac * (T-1));
+    const i = clamp(rawIdx, 0, T-1);
+
+    if (mode==="PEAK") {
+      placedPeakIdx = snapToLocalExtremum(gdp, i, "max");
+      setStatus("Peak placed. Now place the Trough.");
+      mode="TROUGH"; updateModeUI();
+    } else {
+      placedTroughIdx = snapToLocalExtremum(gdp, i, "min");
+      setStatus("Trough placed. Click Check.");
+    }
+    drawAll(phase === 'revising');
+  }
+
+  // ── Button wiring ─────────────────────────────────────────────────────────
+  els.newBtn.addEventListener("click",    loadNextScenario);
+  els.modePeak.addEventListener("click",  () => { if(phase==='placing'||phase==='revising'){mode="PEAK";  updateModeUI();setStatus("Click on GDP to place Peak.");} });
+  els.modeTrough.addEventListener("click",() => { if(phase==='placing'||phase==='revising'){mode="TROUGH";updateModeUI();setStatus("Click on GDP to place Trough.");} });
+  els.resetBtn.addEventListener("click",  resetMarkers);
+  els.checkBtn.addEventListener("click",  handleCheck);
+  els.gdpCanvas.addEventListener("click", handleGDPClick);
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  if (DISC_MODE) {
+    const pool = DATA.scenarios.slice();
+    // Seeded shuffle — same code = same scenario order for all students
+    const rng = (window.Session) ? Session.rngForLab(LAB_ID) : Math.random.bind(Math);
+    for (let i=pool.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+    discQueue = pool.slice(0, DISC_LIMIT);
+    curMeta   = discQueue[0];
+  } else {
+    curMeta = DATA.scenarios[0];
+  }
+  els.scTitle.textContent = curMeta.title;
+  els.scDesc.textContent  = curMeta.desc;
+  makeCycle(curMeta.id, DISC_MODE ? scenarioRng(0) : null);
+}
