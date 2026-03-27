@@ -130,13 +130,18 @@
     roundRect(doc, ML, y, CW, 22, 3, 'FD');
 
     // Labels
+    // Compute total grade points
+    let totalGrade = 0, maxGrade = 0;
+    labArr.forEach(l => { if (l.doneAt) { totalGrade += (l.grade || 0); maxGrade += 5; } });
+
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     setColor(doc, C.muted, 'text');
     doc.text('INITIAL SCORE', ML + 6, y + 7);
-    doc.text('FINAL SCORE', ML + 60, y + 7);
-    doc.text('POSSIBLE', ML + 114, y + 7);
-    doc.text('LABS COMPLETED', ML + 154, y + 7);
+    doc.text('FINAL SCORE', ML + 52, y + 7);
+    doc.text('POSSIBLE', ML + 98, y + 7);
+    doc.text('GRADE', ML + 134, y + 7);
+    doc.text('LABS DONE', ML + 162, y + 7);
 
     // Values
     doc.setFontSize(14);
@@ -144,10 +149,13 @@
     setColor(doc, C.ink, 'text');
     doc.text(String(totalFirst),    ML + 6,   y + 17);
     setColor(doc, totalFinal === totalPossible ? C.good : C.accent, 'text');
-    doc.text(String(totalFinal),    ML + 60,  y + 17);
+    doc.text(String(totalFinal),    ML + 52,  y + 17);
     setColor(doc, C.ink, 'text');
-    doc.text(String(totalPossible), ML + 114, y + 17);
-    doc.text(`${labArr.filter(l=>l.doneAt).length} / ${labArr.length}`, ML + 154, y + 17);
+    doc.text(String(totalPossible), ML + 98,  y + 17);
+    setColor(doc, totalGrade === maxGrade ? C.good : C.accent, 'text');
+    doc.text(maxGrade > 0 ? `${totalGrade} / ${maxGrade}` : '—', ML + 134, y + 17);
+    setColor(doc, C.ink, 'text');
+    doc.text(`${labArr.filter(l=>l.doneAt).length} / ${labArr.length}`, ML + 162, y + 17);
 
     state.y = y + 28;
   }
@@ -167,18 +175,23 @@
     doc.text(lab.label || labId, ML + 4, y + 7);
 
     // Score chips
+    const grade = (lab.grade !== undefined) ? lab.grade : null;
     const chips = [
       { label: 'Initial', val: lab.firstScore, total: lab.total, good: false },
       { label: 'Final',   val: lab.finalScore, total: lab.total, good: true  },
+      ...(grade !== null ? [{ label: 'Grade', val: grade, total: 5, good: true, isGrade: true }] : []),
     ];
     let cx = PW - MR - 4;
     chips.reverse().forEach(chip => {
-      const txt = `${chip.label}: ${chip.val ?? '—'} / ${chip.total ?? '—'}`;
+      const txt = chip.isGrade
+        ? `Grade: ${chip.val ?? '—'} / 5 pts`
+        : `${chip.label}: ${chip.val ?? '—'} / ${chip.total ?? '—'}`;
       const tw = doc.getTextWidth(txt) + 6;
       cx -= tw;
-      setColor(doc, chip.good && chip.val === chip.total ? C.good : C.white, 'fill');
+      const filled = chip.isGrade ? (chip.val >= 4) : (chip.good && chip.val === chip.total);
+      setColor(doc, filled ? C.good : C.white, 'fill');
       roundRect(doc, cx, y + 1, tw, 8, 1.5, 'F');
-      setColor(doc, chip.good && chip.val === chip.total ? C.white : C.ink, 'text');
+      setColor(doc, filled ? C.white : C.ink, 'text');
       doc.setFontSize(8);
       doc.text(txt, cx + 3, y + 6.5);
       cx -= 3;
