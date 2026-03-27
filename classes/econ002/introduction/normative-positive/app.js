@@ -227,14 +227,10 @@ function initApp() {
       const total = cards.filter(c => c.zone !== 'STAGE').length;
       els.checkMsg.textContent = `${firstCorrectCount} / ${total} correct on first attempt.`;
 
-      if (DISC_MODE) {
-        els.checkBtn.textContent = 'Revise';
-        setStatus(`${firstCorrectCount}/${total} correct. After TA review, click Revise to fix wrong answers.`);
-      } else {
-        setStatus(`${firstCorrectCount}/${total} correct. Start a new round or reset.`);
-        els.checkBtn.textContent = 'Check';
-        phase = 'sorting'; // allow re-checking in non-disc mode
-      }
+      els.checkBtn.textContent = 'Revise';
+      setStatus(DISC_MODE
+        ? `${firstCorrectCount}/${total} correct. After TA review, click Revise to fix wrong answers.`
+        : `${firstCorrectCount}/${total} correct. Click Revise to fix any wrong answers.`);
 
     // ── Open revision ─────────────────────────────────────────────────────
     } else if (phase === 'first-submitted' && els.checkBtn.textContent === 'Revise') {
@@ -264,12 +260,17 @@ function initApp() {
       renderBoard();
       updateProgress();
 
-      const total = cards.filter(c => c.zone !== 'STAGE' || c.finalZone).length;
-      els.checkMsg.textContent =
-        `Final score: ${finalCorrectCount} / ${cards.length}`;
+      els.checkMsg.textContent = `Final score: ${finalCorrectCount} / ${cards.length}`;
       setStatus(`Final: ${finalCorrectCount}/${cards.length} correct.`);
 
-      showFinishBanner();
+      if (DISC_MODE) {
+        showFinishBanner();
+      } else {
+        // Practice mode: allow starting a new round
+        els.checkBtn.textContent = 'Check';
+        els.newRoundBtn.disabled = false;
+        els.newRoundBtn.style.opacity = '1';
+      }
     }
   }
 
