@@ -82,7 +82,7 @@ window.addEventListener("DOMContentLoaded", () => {
     return best;
   }
   function snapToLocalExtremum(series, idx, kind) {
-    const w = 4;
+    const w = 8;
     const lo = clamp(idx-w, 1, series.length-2);
     const hi = clamp(idx+w, 1, series.length-2);
     let best = lo, bestV = series[lo];
@@ -298,16 +298,15 @@ window.addEventListener("DOMContentLoaded", () => {
       firstWasCorrect = okPeak && okTrough;
       if (firstWasCorrect) firstCorrectCount++;
 
-      // Always show true answer after first attempt
-      drawAll(true);
+      // Don't reveal the correct answer yet — wait for Revise
+      drawAll(false);
       phase = 'first-submitted';
 
       if (firstWasCorrect) {
-        showFeedback(`<span class="tagOK">Correct</span>
+        showFeedback(`<span class="tagOK">Correct!</span>
           <strong>Recession</strong> is the period from <strong>peak → trough</strong> in real GDP.
           Notice unemployment rises during the recession and often remains elevated after the trough.`);
         if (DISC_MODE) {
-          // Record and offer Next
           recordScenario(true);
           els.checkBtn.textContent = 'Next Scenario →';
           setStatus(`Correct! (${scenariosCompleted} of ${DISC_LIMIT} done)`);
@@ -317,27 +316,26 @@ window.addEventListener("DOMContentLoaded", () => {
         }
       } else {
         showFeedback(`<span class="tagBad">Not quite</span>
-          The correct peak and trough are now marked in green.<br>
           ${DISC_MODE
-            ? '<em>After your TA reviews this, click <strong>Revise</strong> to reposition your markers.</em>'
-            : 'Tip: look for the highest point before the downturn (peak) and lowest before recovery (trough).'}`);
+            ? 'After your TA reviews the correct answer, click <strong>Revise</strong> to reposition your markers.'
+            : 'Tip: look for the highest point before the downturn (peak) and lowest point before recovery (trough).'}`);
         els.checkBtn.textContent = DISC_MODE ? 'Revise' : 'Next Scenario →';
         setStatus(DISC_MODE
-          ? "See correct markers in green. After TA review, click Revise."
-          : "Review the chart, then try a new scenario.");
+          ? "After TA review, click Revise to reposition your markers."
+          : "Review, then try a new scenario.");
       }
 
-    // ── Open revision ─────────────────────────────────────────────────────
+    // ── Open revision — NOW reveal the correct answer ────────────────────
     } else if (phase === 'first-submitted' && els.checkBtn.textContent === 'Revise') {
       phase = 'revising';
       // Reset placed markers so student re-places
       placedPeakIdx = null; placedTroughIdx = null;
       mode = "PEAK"; updateModeUI();
-      // Redraw with true answer still visible but no placed markers
+      // Reveal correct peak/trough for the first time
       drawAll(true);
-      showFeedback(`<em>Re-place your Peak and Trough, then click <strong>Submit Final</strong>.</em>`);
+      showFeedback(`<em>The correct peak and trough are marked in green. Re-place your markers, then click <strong>Submit Final</strong>.</em>`);
       els.checkBtn.textContent = 'Submit Final';
-      setStatus("Re-place your markers, then click Submit Final.");
+      setStatus("Correct markers shown. Re-place yours, then click Submit Final.");
 
     // ── Final submission ──────────────────────────────────────────────────
     } else if (phase === 'revising') {
@@ -410,17 +408,28 @@ window.addEventListener("DOMContentLoaded", () => {
   function handleGDPClick(ev) {
     if (phase !== 'placing' && phase !== 'revising') return;
     if (discDone) return;
-    const rect = els.gdpCanvas.getBoundingClientRect();
-    const i    = clamp(Math.round(((ev.clientX-rect.left)/rect.width)*(T-1)), 0, T-1);
+
+    const rect  = els.gdpCanvas.getBoundingClientRect();
+    const dpr   = window.devicePixelRatio || 1;
+    // The axes are drawn with a left pad of 54 CSS px and right pad of 12 CSS px.
+    // Map click x within that plot area to a time index.
+    const padL  = 54;   // must match drawAxes pad.l
+    const padR  = 12;
+    const plotW = rect.width - padL - padR;
+    const clickX = ev.clientX - rect.left - padL;
+    const frac  = Math.max(0, Math.min(1, clickX / plotW));
+    const rawIdx = Math.round(frac * (T-1));
+    const i = clamp(rawIdx, 0, T-1);
+
     if (mode==="PEAK") {
-      placedPeakIdx = snapToLocalExtremum(gdp,i,"max");
+      placedPeakIdx = snapToLocalExtremum(gdp, i, "max");
       setStatus("Peak placed. Now place the Trough.");
       mode="TROUGH"; updateModeUI();
     } else {
-      placedTroughIdx = snapToLocalExtremum(gdp,i,"min");
+      placedTroughIdx = snapToLocalExtremum(gdp, i, "min");
       setStatus("Trough placed. Click Check.");
     }
-    drawAll(phase === 'revising'); // keep true markers visible during revision
+    drawAll(phase === 'revising');
   }
 
   // ── Button wiring ─────────────────────────────────────────────────────────
