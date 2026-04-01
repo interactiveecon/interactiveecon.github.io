@@ -1,0 +1,965 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Optimal Consumer Choice — ECON 104A</title>
+  <link rel="stylesheet" href="/assets/style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <!-- KaTeX for math rendering -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+  <style>
+    /* Lab-specific styles layered on top of style.css */
+    .lab-container { max-width: 780px; margin: 0 auto; padding: 18px; }
+
+    .problem-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 18px;
+    }
+
+    .problem-header {
+      font-family: var(--font-serif);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--ink);
+      margin: 0 0 16px;
+    }
+
+    .param-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 500px) { .param-grid { grid-template-columns: 1fr; } }
+
+    .param {
+      background: rgba(246,242,234,0.55);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 14px;
+    }
+    .param .label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .param .value {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .param.wide { grid-column: 1 / -1; }
+
+    /* Answer inputs */
+    .answer-section {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+    }
+    .answer-row {
+      display: flex;
+      gap: 14px;
+      align-items: end;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .answer-field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 5px;
+    }
+    .answer-field input {
+      width: 140px;
+      padding: 10px 12px;
+      border: 1.5px solid var(--line-2);
+      border-radius: 12px;
+      font-size: 16px;
+      font-family: var(--font-sans);
+      color: var(--ink);
+      background: #fafaf8;
+      outline: none;
+      transition: border-color 0.12s;
+    }
+    .answer-field input:focus { border-color: var(--accent); background: #fff; }
+    .answer-field input.correct { border-color: var(--good); background: rgba(27,127,75,0.06); }
+    .answer-field input.wrong { border-color: var(--bad); background: rgba(180,35,24,0.06); }
+
+    .result-msg {
+      margin-top: 10px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+    .result-msg.correct {
+      background: rgba(27,127,75,0.10);
+      border: 1px solid rgba(27,127,75,0.25);
+      color: var(--good);
+    }
+    .result-msg.wrong {
+      background: rgba(180,35,24,0.08);
+      border: 1px solid rgba(180,35,24,0.25);
+      color: var(--bad);
+    }
+
+    /* Diagnostic MC */
+    .diagnostic {
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+    }
+    .diag-step {
+      margin-bottom: 20px;
+      animation: fadeSlide 0.25s ease;
+    }
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .diag-step-header {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+    .diag-question {
+      font-size: 15px;
+      color: var(--ink);
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    .mc-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .mc-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border: 1.5px solid var(--line-2);
+      border-radius: 12px;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s, transform 0.06s;
+      font-size: 14px;
+      color: var(--ink);
+      line-height: 1.45;
+    }
+    .mc-option:hover:not(.disabled) {
+      border-color: rgba(47,93,124,0.5);
+      background: rgba(47,93,124,0.04);
+    }
+    .mc-option:active:not(.disabled) { transform: translateY(1px); }
+    .mc-option.selected-correct {
+      border-color: var(--good);
+      background: rgba(27,127,75,0.08);
+    }
+    .mc-option.selected-wrong {
+      border-color: var(--bad);
+      background: rgba(180,35,24,0.06);
+    }
+    .mc-option.revealed-correct {
+      border-color: var(--good);
+      background: rgba(27,127,75,0.12);
+    }
+    .mc-option.disabled { cursor: default; opacity: 0.7; }
+    .mc-option .mc-letter {
+      width: 24px; height: 24px;
+      border-radius: 999px;
+      border: 1.5px solid var(--line-2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: var(--muted);
+      flex-shrink: 0;
+    }
+    .mc-option.selected-correct .mc-letter {
+      background: var(--good); color: #fff; border-color: var(--good);
+    }
+    .mc-option.selected-wrong .mc-letter {
+      background: var(--bad); color: #fff; border-color: var(--bad);
+    }
+    .mc-option.revealed-correct .mc-letter {
+      background: var(--good); color: #fff; border-color: var(--good);
+    }
+
+    .explanation-box {
+      margin-top: 10px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(47,93,124,0.06);
+      border: 1px solid rgba(47,93,124,0.15);
+      font-size: 13px;
+      color: var(--ink-2);
+      line-height: 1.6;
+      animation: fadeSlide 0.2s ease;
+    }
+    .explanation-box .math-line {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      background: rgba(0,0,0,0.04);
+      padding: 6px 10px;
+      border-radius: 8px;
+      margin: 6px 0;
+      overflow-x: auto;
+      display: block;
+      font-size: 13px;
+    }
+
+    .diag-complete {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: rgba(27,127,75,0.08);
+      border: 1px solid rgba(27,127,75,0.20);
+      color: var(--good);
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    /* Score display */
+    .score-bar {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    /* KaTeX inline sizing */
+    .katex { font-size: 1.05em; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar">
+      <a class="crumb-link" href="/classes/econ104a/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner" style="grid-template-columns:1fr;">
+      <div class="title-block">
+        <div class="kicker">ECON 104A — Consumer Behavior</div>
+        <h1>Optimal Consumer Choice</h1>
+        <p class="sub">
+          Given a utility function, prices, and income, find the optimal consumption bundle (X*, Y*).
+          Enter your answers below. If incorrect, a step-by-step diagnostic will guide you through the solution.
+        </p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="lab-container">
+
+  <!-- Problem display -->
+  <div class="problem-card" id="problemCard">
+    <h2 class="problem-header">Problem</h2>
+    <div class="param wide" style="margin-bottom:12px;">
+      <div class="label">Utility Function</div>
+      <div class="value" id="utilDisplay"></div>
+    </div>
+    <div class="param-grid">
+      <div class="param">
+        <div class="label">Price of Good X</div>
+        <div class="value" id="pxDisplay"></div>
+      </div>
+      <div class="param">
+        <div class="label">Price of Good Y</div>
+        <div class="value" id="pyDisplay"></div>
+      </div>
+      <div class="param">
+        <div class="label">Income</div>
+        <div class="value" id="incDisplay"></div>
+      </div>
+    </div>
+
+    <!-- Answer input -->
+    <div class="answer-section">
+      <div class="answer-row">
+        <div class="answer-field">
+          <label>Optimal X*</label>
+          <input type="text" id="ansX" placeholder="e.g. 3.5" autocomplete="off" />
+        </div>
+        <div class="answer-field">
+          <label>Optimal Y*</label>
+          <input type="text" id="ansY" placeholder="e.g. 8" autocomplete="off" />
+        </div>
+        <button class="btn primary" id="checkBtn" style="height:44px;">Check Answers</button>
+      </div>
+      <div id="resultMsg" class="result-msg hidden"></div>
+    </div>
+
+    <!-- Diagnostic (shown after wrong answer) -->
+    <div id="diagnostic" class="diagnostic hidden">
+      <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:14px;">
+        Let's work through this step by step.
+      </div>
+      <div id="diagSteps"></div>
+      <div id="diagComplete" class="diag-complete hidden"></div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <button class="btn primary" id="newProblemBtn">New Problem</button>
+  </div>
+
+</main>
+
+<footer class="footer">
+  <div class="lab-container">
+    <div class="footer-inner">
+      <span>ECON 104A — Intermediate Microeconomic Theory</span>
+      <span class="footer-note">interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// OPTIMAL CONSUMER CHOICE LAB
+// ═══════════════════════════════════════════════════════════════════
+
+(function() {
+  'use strict';
+
+  // ── State ────────────────────────────────────────────────────────
+  let prob = {};      // current problem
+  let diagStep = 0;   // current diagnostic step (0 = not started)
+  let firstScore = null;
+
+  const LAB_ID    = 'optimal-choice';
+  const LAB_LABEL = 'Optimal Consumer Choice';
+  const TOTAL_Q   = 6; // 6 diagnostic questions
+
+  // ── DOM refs ─────────────────────────────────────────────────────
+  const $utilDisplay = document.getElementById('utilDisplay');
+  const $pxDisplay   = document.getElementById('pxDisplay');
+  const $pyDisplay   = document.getElementById('pyDisplay');
+  const $incDisplay  = document.getElementById('incDisplay');
+  const $ansX        = document.getElementById('ansX');
+  const $ansY        = document.getElementById('ansY');
+  const $checkBtn    = document.getElementById('checkBtn');
+  const $resultMsg   = document.getElementById('resultMsg');
+  const $diagnostic  = document.getElementById('diagnostic');
+  const $diagSteps   = document.getElementById('diagSteps');
+  const $diagComplete= document.getElementById('diagComplete');
+  const $newBtn      = document.getElementById('newProblemBtn');
+
+  // ── Math helpers ─────────────────────────────────────────────────
+  function gcd(a, b) { a = Math.abs(a); b = Math.abs(b); while(b) { [a,b] = [b, a%b]; } return a; }
+
+  function frac(num, den) {
+    if (den === 0) return '\\text{undef}';
+    if (num === 0) return '0';
+    const sign = (num < 0) !== (den < 0) ? '-' : '';
+    num = Math.abs(num); den = Math.abs(den);
+    const g = gcd(num, den);
+    num /= g; den /= g;
+    if (den === 1) return sign + num;
+    return sign + '\\frac{' + num + '}{' + den + '}';
+  }
+
+  function roundNice(v, tol) {
+    tol = tol || 0.001;
+    return Math.round(v / tol) * tol;
+  }
+
+  function approxEqual(a, b, tol) {
+    tol = tol || 0.05;
+    return Math.abs(a - b) < tol;
+  }
+
+  // ── Seeded RNG (uses Session if available, else Math.random) ────
+  function rng() {
+    if (window.Session && Session.rngForLab) {
+      // Already called rngForLab at problem generation
+    }
+    if (window._labRng) return window._labRng();
+    return Math.random();
+  }
+  function randInt(lo, hi) { return lo + Math.floor(rng() * (hi - lo + 1)); }
+
+  // ── Problem generation ──────────────────────────────────────────
+  function generateProblem() {
+    // Init RNG for this lab
+    if (window.Session && Session.rngForLab) {
+      window._labRng = Session.rngForLab(LAB_ID);
+    }
+
+    // Pick utility type: 1 = Cobb-Douglas, 2 = aXY + bX + cY
+    const uType = randInt(1, 2);
+    let p = { uType };
+
+    if (uType === 1) {
+      // Cobb-Douglas: U = a * X^α * Y^(1-α)
+      // Use nice fractions for alpha: multiples of 0.1 or simple fracs
+      const alphaChoices = [0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75];
+      p.alpha = alphaChoices[randInt(0, alphaChoices.length - 1)];
+      p.a_coeff = randInt(1, 5);
+    } else {
+      // U = b*X*Y + c*X + d*Y
+      p.b = randInt(1, 5);
+      p.c = randInt(1, 5);
+      p.d = randInt(1, 5);
+    }
+
+    p.px = randInt(3, 15);
+    p.py = randInt(3, 15);
+    p.inc = randInt(40, 120);
+
+    // Solve for optimal X*, Y*
+    solve(p);
+
+    // Ensure positive, finite solutions. Regenerate if not.
+    if (!isFinite(p.optX) || !isFinite(p.optY) || p.optX < 0 || p.optY < 0) {
+      return generateProblem(); // retry
+    }
+
+    prob = p;
+    return p;
+  }
+
+  function solve(p) {
+    if (p.uType === 1) {
+      // Cobb-Douglas: U = a * X^α * Y^(1-α)
+      // MUX = a * α * X^(α-1) * Y^(1-α)
+      // MUY = a * (1-α) * X^α * Y^(-α)
+      // MRS = (α/(1-α)) * (Y/X)
+      // Set MRS = px/py: (α/(1-α)) * (Y/X) = px/py
+      // => Y = ((1-α)*px / (α*py)) * X
+      // Budget: inc = px*X + py*Y
+      // => inc = px*X + py * ((1-α)*px/(α*py)) * X
+      // => inc = px*X + ((1-α)*px/α) * X
+      // => inc = px*X * (1 + (1-α)/α)
+      // => inc = px*X * (1/α)
+      // => X* = α * inc / px
+      // => Y* = (1-α) * inc / py
+      p.optX = p.alpha * p.inc / p.px;
+      p.optY = (1 - p.alpha) * p.inc / p.py;
+
+      // For diagnostic: store symbolic info
+      p.mux_str = p.alpha + '\\cdot' + (p.a_coeff > 1 ? p.a_coeff : '') + ' X^{' + roundNice(p.alpha-1,0.01) + '} Y^{' + roundNice(1-p.alpha,0.01) + '}';
+      p.muy_str = roundNice(1-p.alpha,0.01) + '\\cdot' + (p.a_coeff > 1 ? p.a_coeff : '') + ' X^{' + p.alpha + '} Y^{' + roundNice(-p.alpha,0.01) + '}';
+
+    } else {
+      // U = b*X*Y + c*X + d*Y
+      // MUX = bY + c
+      // MUY = bX + d
+      // MRS = (bY + c) / (bX + d) = px/py
+      // Cross multiply: py(bY + c) = px(bX + d)
+      // py*b*Y + py*c = px*b*X + px*d
+      // X = (py*b*Y + py*c - px*d) / (px*b)
+      // Budget: inc = px*X + py*Y
+      // inc = px * [(py*b*Y + py*c - px*d) / (px*b)] + py*Y
+      // inc = (py*b*Y + py*c - px*d) / b + py*Y
+      // inc = py*Y + (py*c - px*d)/b + py*Y
+      // inc = 2*py*Y + (py*c - px*d)/b
+      // Y = (inc - (py*c - px*d)/b) / (2*py)
+      // Y = (b*inc - py*c + px*d) / (2*b*py)
+
+      const B = p.b, C = p.c, D = p.d;
+      const numerY = B * p.inc - p.py * C + p.px * D;
+      const denomY = 2 * B * p.py;
+      p.optY = numerY / denomY;
+
+      // X from relationship
+      const numerX = p.py * B * p.optY + p.py * C - p.px * D;
+      const denomX = p.px * B;
+      p.optX = numerX / denomX;
+    }
+  }
+
+  // ── Render problem ──────────────────────────────────────────────
+  function renderProblem() {
+    const p = prob;
+    let utilTex;
+    if (p.uType === 1) {
+      const aStr = p.a_coeff > 1 ? p.a_coeff : '';
+      // Show alpha as fraction if possible
+      const alphaStr = fracFromDecimal(p.alpha);
+      const oneMinusAlphaStr = fracFromDecimal(roundNice(1 - p.alpha, 0.01));
+      utilTex = 'U = ' + aStr + 'X^{' + alphaStr + '} Y^{' + oneMinusAlphaStr + '}';
+    } else {
+      let parts = [];
+      if (p.b === 1) parts.push('XY'); else parts.push(p.b + 'XY');
+      if (p.c === 1) parts.push('X'); else parts.push(p.c + 'X');
+      if (p.d === 1) parts.push('Y'); else parts.push(p.d + 'Y');
+      utilTex = 'U = ' + parts.join(' + ');
+    }
+
+    renderKatex($utilDisplay, utilTex);
+    renderKatex($pxDisplay, 'P_X = ' + p.px);
+    renderKatex($pyDisplay, 'P_Y = ' + p.py);
+    renderKatex($incDisplay, 'I = ' + p.inc);
+
+    // Reset inputs
+    $ansX.value = '';
+    $ansY.value = '';
+    $ansX.className = '';
+    $ansY.className = '';
+    $resultMsg.className = 'result-msg hidden';
+    $resultMsg.textContent = '';
+    $diagnostic.classList.add('hidden');
+    $diagSteps.innerHTML = '';
+    $diagComplete.classList.add('hidden');
+    $checkBtn.disabled = false;
+    diagStep = 0;
+    firstScore = null;
+  }
+
+  function fracFromDecimal(d) {
+    // Convert nice decimals to LaTeX fractions
+    d = roundNice(d, 0.01);
+    const map = {
+      '0.25': '\\frac{1}{4}', '0.75': '\\frac{3}{4}',
+      '0.33': '\\frac{1}{3}', '0.67': '\\frac{2}{3}',
+      '0.2': '\\frac{1}{5}', '0.4': '\\frac{2}{5}', '0.6': '\\frac{3}{5}', '0.8': '\\frac{4}{5}',
+      '0.1': '\\frac{1}{10}', '0.3': '\\frac{3}{10}', '0.7': '\\frac{7}{10}', '0.9': '\\frac{9}{10}',
+      '0.5': '\\frac{1}{2}',
+      '1': '1', '0': '0',
+      '-0.25': '-\\frac{1}{4}', '-0.75': '-\\frac{3}{4}',
+      '-0.5': '-\\frac{1}{2}',
+      '-0.33': '-\\frac{1}{3}', '-0.67': '-\\frac{2}{3}',
+      '-0.2': '-\\frac{1}{5}', '-0.4': '-\\frac{2}{5}', '-0.6': '-\\frac{3}{5}', '-0.8': '-\\frac{4}{5}',
+      '-0.1': '-\\frac{1}{10}', '-0.3': '-\\frac{3}{10}', '-0.7': '-\\frac{7}{10}', '-0.9': '-\\frac{9}{10}',
+    };
+    const key = String(d);
+    return map[key] || String(d);
+  }
+
+  function renderKatex(el, tex) {
+    if (window.katex) {
+      katex.render(tex, el, { throwOnError: false, displayMode: false });
+    } else {
+      el.textContent = tex;
+    }
+  }
+  function katexHTML(tex) {
+    if (window.katex) {
+      return katex.renderToString(tex, { throwOnError: false, displayMode: false });
+    }
+    return tex;
+  }
+
+  // ── Check answer ────────────────────────────────────────────────
+  $checkBtn.addEventListener('click', function() {
+    const userX = parseFloat($ansX.value);
+    const userY = parseFloat($ansY.value);
+
+    if (isNaN(userX) || isNaN(userY)) {
+      $resultMsg.textContent = 'Please enter numeric values for both X and Y.';
+      $resultMsg.className = 'result-msg wrong';
+      return;
+    }
+
+    const xOk = approxEqual(userX, roundNice(prob.optX, 0.001), 0.15);
+    const yOk = approxEqual(userY, roundNice(prob.optY, 0.001), 0.15);
+
+    if (xOk && yOk) {
+      $ansX.classList.add('correct');
+      $ansY.classList.add('correct');
+      $resultMsg.innerHTML = '✓ Correct! The optimal bundle is X* = ' +
+        roundNice(prob.optX, 0.001) + ', Y* = ' + roundNice(prob.optY, 0.001) + '.';
+      $resultMsg.className = 'result-msg correct';
+      $checkBtn.disabled = true;
+      firstScore = 1;
+      recordResult(true);
+    } else {
+      $ansX.classList.add(xOk ? 'correct' : 'wrong');
+      $ansY.classList.add(yOk ? 'correct' : 'wrong');
+      $resultMsg.innerHTML = '✗ Not quite. Let\'s walk through the solution step by step.';
+      $resultMsg.className = 'result-msg wrong';
+      $checkBtn.disabled = true;
+      firstScore = 0;
+      startDiagnostic();
+    }
+  });
+
+  // Enter key in inputs
+  $ansX.addEventListener('keydown', function(e) { if (e.key === 'Enter') $checkBtn.click(); });
+  $ansY.addEventListener('keydown', function(e) { if (e.key === 'Enter') $checkBtn.click(); });
+
+  // ── Diagnostic engine ───────────────────────────────────────────
+  // Each step: { question, options: [{text, correct, latex?}], explanation }
+
+  function buildDiagnosticSteps() {
+    const p = prob;
+    const steps = [];
+
+    if (p.uType === 1) {
+      // ── Cobb-Douglas ──
+      const a = p.alpha;
+      const oneMinusA = roundNice(1 - a, 0.01);
+      const coeff = p.a_coeff;
+
+      // Step 1: Marginal Utilities
+      const muxCorrect = 'MU_X = ' + fracFromDecimal(a) + (coeff > 1 ? '\\cdot ' + coeff : '') + ' X^{' + fracFromDecimal(roundNice(a-1,0.01)) + '} Y^{' + fracFromDecimal(oneMinusA) + '}';
+      const muyCorrect = 'MU_Y = ' + fracFromDecimal(oneMinusA) + (coeff > 1 ? '\\cdot ' + coeff : '') + ' X^{' + fracFromDecimal(a) + '} Y^{' + fracFromDecimal(roundNice(-a,0.01)) + '}';
+      const muxShort = fracFromDecimal(a) + (coeff > 1 ? '\\cdot ' + coeff : '');
+      const muyShort = fracFromDecimal(oneMinusA) + (coeff > 1 ? '\\cdot ' + coeff : '');
+
+      steps.push({
+        header: 'Step 1: Marginal Utilities',
+        question: 'What are the marginal utilities MU_X and MU_Y?',
+        correctIdx: 0,
+        options: [
+          { tex: muxCorrect + ', \\quad ' + muyCorrect },
+          { tex: 'MU_X = ' + fracFromDecimal(oneMinusA) + (coeff>1?'\\cdot '+coeff:'') + ' X^{' + fracFromDecimal(a) + '} Y^{' + fracFromDecimal(roundNice(-a,0.01)) + '}, \\quad MU_Y = ' + fracFromDecimal(a) + (coeff>1?'\\cdot '+coeff:'') + ' X^{' + fracFromDecimal(roundNice(a-1,0.01)) + '} Y^{' + fracFromDecimal(oneMinusA) + '}' },
+          { tex: 'MU_X = ' + fracFromDecimal(a) + ' X^{' + fracFromDecimal(a) + '} Y^{' + fracFromDecimal(oneMinusA) + '}, \\quad MU_Y = ' + fracFromDecimal(oneMinusA) + ' X^{' + fracFromDecimal(a) + '} Y^{' + fracFromDecimal(oneMinusA) + '}' },
+          { tex: 'MU_X = X^{' + fracFromDecimal(a) + '} Y^{' + fracFromDecimal(oneMinusA) + '}, \\quad MU_Y = X^{' + fracFromDecimal(a) + '} Y^{' + fracFromDecimal(oneMinusA) + '}' },
+        ],
+        explanation: 'Take the partial derivative of U with respect to X (treating Y as constant) and with respect to Y (treating X as constant). Using the power rule: ' + katexHTML(muxCorrect) + ' and ' + katexHTML(muyCorrect) + '.'
+      });
+
+      // Step 2: MRS
+      const mrsTeX = 'MRS_{XY} = \\frac{' + fracFromDecimal(a) + '}{' + fracFromDecimal(oneMinusA) + '} \\cdot \\frac{Y}{X}';
+      steps.push({
+        header: 'Step 2: Marginal Rate of Substitution',
+        question: 'What is the MRS_{XY}?',
+        correctIdx: 0,
+        options: [
+          { tex: mrsTeX },
+          { tex: 'MRS_{XY} = \\frac{' + fracFromDecimal(oneMinusA) + '}{' + fracFromDecimal(a) + '} \\cdot \\frac{Y}{X}' },
+          { tex: 'MRS_{XY} = \\frac{' + fracFromDecimal(a) + '}{' + fracFromDecimal(oneMinusA) + '} \\cdot \\frac{X}{Y}' },
+          { tex: 'MRS_{XY} = \\frac{Y}{X}' },
+        ],
+        explanation: 'The MRS is the ratio of marginal utilities: ' + katexHTML('MRS_{XY} = \\frac{MU_X}{MU_Y}') + '. The coefficient ' + (coeff > 1 ? coeff : '') + ' cancels, and the X and Y terms simplify to give ' + katexHTML(mrsTeX) + '.'
+      });
+
+      // Step 3: Relationship between X and Y
+      const priceRatio = frac(p.px, p.py);
+      // α/(1-α) * Y/X = px/py => Y = ((1-α)*px)/(α*py) * X
+      const relNum = roundNice((1-a)*p.px, 0.01);
+      const relDen = roundNice(a*p.py, 0.01);
+      // Use integers where possible
+      const relNumInt = Math.round(relNum * 100);
+      const relDenInt = Math.round(relDen * 100);
+      const relFrac = frac(relNumInt, relDenInt);
+      const yEqTeX = 'Y = ' + relFrac + ' X';
+
+      steps.push({
+        header: 'Step 3: Relationship between X and Y',
+        question: 'Set MRS = P_X/P_Y and solve. What is Y in terms of X?',
+        correctIdx: 0,
+        options: [
+          { tex: yEqTeX },
+          { tex: 'Y = ' + frac(relDenInt, relNumInt) + ' X' },
+          { tex: 'X = ' + relFrac + ' Y' },
+          { tex: 'Y = ' + frac(p.px, p.py) + ' X' },
+        ],
+        explanation: 'Set ' + katexHTML(mrsTeX + ' = \\frac{' + p.px + '}{' + p.py + '}') + ' and solve for Y: ' + katexHTML(yEqTeX) + '.'
+      });
+
+      // Step 4: Budget constraint
+      const bcTeX = p.inc + ' = ' + p.px + 'X + ' + p.py + 'Y';
+      steps.push({
+        header: 'Step 4: Budget Constraint',
+        question: 'What is the budget constraint with the given values?',
+        correctIdx: 0,
+        options: [
+          { tex: bcTeX },
+          { tex: p.inc + ' = ' + p.py + 'X + ' + p.px + 'Y' },
+          { tex: (p.inc*2) + ' = ' + p.px + 'X + ' + p.py + 'Y' },
+          { tex: p.inc + ' = ' + (p.px+p.py) + '(X + Y)' },
+        ],
+        explanation: 'The budget constraint is I = P_X \\cdot X + P_Y \\cdot Y, so: ' + katexHTML(bcTeX) + '.'
+      });
+
+      // Step 5: Optimal Y
+      const optYRound = roundNice(p.optY, 0.001);
+      steps.push({
+        header: 'Step 5: Optimal Y',
+        question: 'Substitute the relationship from Step 3 into the budget constraint. What is Y*?',
+        correctIdx: 0,
+        options: [
+          { tex: 'Y^* = ' + optYRound },
+          { tex: 'Y^* = ' + roundNice(p.optX, 0.001) },
+          { tex: 'Y^* = ' + roundNice(optYRound * 2, 0.001) },
+          { tex: 'Y^* = ' + roundNice(p.inc / p.py, 0.001) },
+        ],
+        explanation: 'Substitute ' + katexHTML(yEqTeX) + ' into ' + katexHTML(bcTeX) + ' and solve for X, then find Y. For Cobb-Douglas: ' + katexHTML('Y^* = \\frac{(1-\\alpha) \\cdot I}{P_Y} = \\frac{' + roundNice(1-a,0.01) + ' \\times ' + p.inc + '}{' + p.py + '} = ' + optYRound) + '.'
+      });
+
+      // Step 6: Optimal X
+      const optXRound = roundNice(p.optX, 0.001);
+      steps.push({
+        header: 'Step 6: Optimal X',
+        question: 'Now find X* using your relationship from Step 3. What is X*?',
+        correctIdx: 0,
+        options: [
+          { tex: 'X^* = ' + optXRound },
+          { tex: 'X^* = ' + optYRound },
+          { tex: 'X^* = ' + roundNice(optXRound * 2, 0.001) },
+          { tex: 'X^* = ' + roundNice(p.inc / p.px, 0.001) },
+        ],
+        explanation: 'For Cobb-Douglas: ' + katexHTML('X^* = \\frac{\\alpha \\cdot I}{P_X} = \\frac{' + a + ' \\times ' + p.inc + '}{' + p.px + '} = ' + optXRound) + '.'
+      });
+
+    } else {
+      // ── aXY + bX + cY type ──
+      const B = p.b, C = p.c, D = p.d;
+
+      // Step 1: Marginal Utilities
+      const muxTeX = 'MU_X = ' + B + 'Y + ' + C;
+      const muyTeX = 'MU_Y = ' + B + 'X + ' + D;
+      steps.push({
+        header: 'Step 1: Marginal Utilities',
+        question: 'What are the marginal utilities MU_X and MU_Y?',
+        correctIdx: 0,
+        options: [
+          { tex: muxTeX + ', \\quad ' + muyTeX },
+          { tex: 'MU_X = ' + B + 'X + ' + D + ', \\quad MU_Y = ' + B + 'Y + ' + C },
+          { tex: 'MU_X = ' + B + 'XY + ' + C + ', \\quad MU_Y = ' + B + 'XY + ' + D },
+          { tex: 'MU_X = ' + B + 'Y, \\quad MU_Y = ' + B + 'X' },
+        ],
+        explanation: 'Take the partial derivative: ' + katexHTML('\\frac{\\partial}{\\partial X}(' + B + 'XY + ' + C + 'X + ' + D + 'Y) = ' + B + 'Y + ' + C) + ' and ' + katexHTML('\\frac{\\partial}{\\partial Y}(' + B + 'XY + ' + C + 'X + ' + D + 'Y) = ' + B + 'X + ' + D) + '.'
+      });
+
+      // Step 2: MRS
+      const mrsTeX2 = 'MRS_{XY} = \\frac{' + B + 'Y + ' + C + '}{' + B + 'X + ' + D + '}';
+      steps.push({
+        header: 'Step 2: Marginal Rate of Substitution',
+        question: 'What is the MRS_{XY}?',
+        correctIdx: 0,
+        options: [
+          { tex: mrsTeX2 },
+          { tex: 'MRS_{XY} = \\frac{' + B + 'X + ' + D + '}{' + B + 'Y + ' + C + '}' },
+          { tex: 'MRS_{XY} = \\frac{' + B + 'Y + ' + D + '}{' + B + 'X + ' + C + '}' },
+          { tex: 'MRS_{XY} = \\frac{Y}{X}' },
+        ],
+        explanation: katexHTML('MRS_{XY} = \\frac{MU_X}{MU_Y} = ' + '\\frac{' + B + 'Y + ' + C + '}{' + B + 'X + ' + D + '}') + '.'
+      });
+
+      // Step 3: Relationship
+      // py(bY+c) = px(bX+d) => X = (py*b*Y + py*c - px*d) / (px*b)
+      const xRelTeX = 'X = \\frac{' + p.py + '(' + B + 'Y + ' + C + ') - ' + p.px + '\\cdot' + D + '}{' + p.px + '\\cdot' + B + '}';
+      // Simplify: X = (py*b*Y + py*c - px*d) / (px*b)
+      const xRelSimp = 'X = \\frac{' + (p.py*B) + 'Y + ' + (p.py*C - p.px*D) + '}{' + (p.px*B) + '}';
+
+      steps.push({
+        header: 'Step 3: Relationship between X and Y',
+        question: 'Set MRS = P_X/P_Y and solve for X in terms of Y. What do you get?',
+        correctIdx: 0,
+        options: [
+          { tex: xRelSimp },
+          { tex: 'X = \\frac{' + (p.px*B) + 'Y + ' + (p.px*C - p.py*D) + '}{' + (p.py*B) + '}' },
+          { tex: 'Y = \\frac{' + (p.py*B) + 'X + ' + (p.py*C - p.px*D) + '}{' + (p.px*B) + '}' },
+          { tex: 'X = \\frac{' + p.px + 'Y + ' + p.py + '}{' + (p.px*B) + '}' },
+        ],
+        explanation: 'Cross multiply ' + katexHTML(mrsTeX2 + ' = \\frac{' + p.px + '}{' + p.py + '}') + ': ' + katexHTML(p.py + '(' + B + 'Y + ' + C + ') = ' + p.px + '(' + B + 'X + ' + D + ')') + '. Solve for X: ' + katexHTML(xRelSimp) + '.'
+      });
+
+      // Step 4: Budget constraint
+      const bcTeX = p.inc + ' = ' + p.px + 'X + ' + p.py + 'Y';
+      steps.push({
+        header: 'Step 4: Budget Constraint',
+        question: 'What is the budget constraint?',
+        correctIdx: 0,
+        options: [
+          { tex: bcTeX },
+          { tex: p.inc + ' = ' + p.py + 'X + ' + p.px + 'Y' },
+          { tex: (p.inc*2) + ' = ' + p.px + 'X + ' + p.py + 'Y' },
+          { tex: p.inc + ' = ' + (p.px+p.py) + '(X + Y)' },
+        ],
+        explanation: katexHTML('I = P_X X + P_Y Y \\implies ' + bcTeX) + '.'
+      });
+
+      // Step 5: Optimal Y
+      const optYRound = roundNice(p.optY, 0.001);
+      const optXRound = roundNice(p.optX, 0.001);
+      steps.push({
+        header: 'Step 5: Optimal Y',
+        question: 'Substitute X from Step 3 into the budget constraint. What is Y*?',
+        correctIdx: 0,
+        options: [
+          { tex: 'Y^* = ' + optYRound },
+          { tex: 'Y^* = ' + optXRound },
+          { tex: 'Y^* = ' + roundNice(optYRound * 2, 0.001) },
+          { tex: 'Y^* = ' + roundNice(p.inc / p.py, 0.001) },
+        ],
+        explanation: 'Substituting ' + katexHTML(xRelSimp) + ' into ' + katexHTML(bcTeX) + ' and solving gives ' + katexHTML('Y^* = ' + optYRound) + '.'
+      });
+
+      // Step 6: Optimal X
+      steps.push({
+        header: 'Step 6: Optimal X',
+        question: 'Plug Y* back into the relationship from Step 3. What is X*?',
+        correctIdx: 0,
+        options: [
+          { tex: 'X^* = ' + optXRound },
+          { tex: 'X^* = ' + optYRound },
+          { tex: 'X^* = ' + roundNice(optXRound * 2, 0.001) },
+          { tex: 'X^* = ' + roundNice(p.inc / p.px, 0.001) },
+        ],
+        explanation: 'Plug ' + katexHTML('Y^* = ' + optYRound) + ' back into ' + katexHTML(xRelSimp) + ' to get ' + katexHTML('X^* = ' + optXRound) + '.'
+      });
+    }
+
+    // Shuffle wrong options (keep correct at index 0, then shuffle all)
+    steps.forEach(step => {
+      // Fisher-Yates on options, tracking correctIdx
+      const opts = step.options.map((o, i) => ({ ...o, isCorrect: i === step.correctIdx }));
+      for (let i = opts.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1)); // use Math.random for UI shuffle
+        [opts[i], opts[j]] = [opts[j], opts[i]];
+      }
+      step.options = opts;
+      step.correctIdx = opts.findIndex(o => o.isCorrect);
+    });
+
+    return steps;
+  }
+
+  let diagStepsData = [];
+  let diagCorrectCount = 0;
+
+  function startDiagnostic() {
+    $diagnostic.classList.remove('hidden');
+    diagStepsData = buildDiagnosticSteps();
+    diagStep = 0;
+    diagCorrectCount = 0;
+    $diagSteps.innerHTML = '';
+    $diagComplete.classList.add('hidden');
+    showDiagStep(0);
+  }
+
+  function showDiagStep(idx) {
+    if (idx >= diagStepsData.length) {
+      // All done
+      const optXRound = roundNice(prob.optX, 0.001);
+      const optYRound = roundNice(prob.optY, 0.001);
+      $diagComplete.innerHTML = '✓ Diagnostic complete! The optimal bundle is X* = ' + optXRound + ', Y* = ' + optYRound + '. You got ' + diagCorrectCount + '/' + diagStepsData.length + ' diagnostic questions correct.';
+      $diagComplete.classList.remove('hidden');
+      recordResult(false);
+      return;
+    }
+
+    const step = diagStepsData[idx];
+    const el = document.createElement('div');
+    el.className = 'diag-step';
+    el.innerHTML = '<div class="diag-step-header">' + step.header + '</div>' +
+      '<div class="diag-question">' + katexHTML(step.question) + '</div>' +
+      '<div class="mc-options" id="mc-' + idx + '"></div>';
+
+    $diagSteps.appendChild(el);
+
+    const mcContainer = document.getElementById('mc-' + idx);
+    const letters = ['A', 'B', 'C', 'D'];
+
+    step.options.forEach((opt, oi) => {
+      const btn = document.createElement('div');
+      btn.className = 'mc-option';
+      btn.innerHTML = '<span class="mc-letter">' + letters[oi] + '</span><span>' + katexHTML(opt.tex) + '</span>';
+      btn.addEventListener('click', function() {
+        if (btn.classList.contains('disabled')) return;
+        handleMCSelect(idx, oi);
+      });
+      mcContainer.appendChild(btn);
+    });
+
+    // Scroll to new step
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function handleMCSelect(stepIdx, optIdx) {
+    const step = diagStepsData[stepIdx];
+    const mcContainer = document.getElementById('mc-' + stepIdx);
+    const options = mcContainer.querySelectorAll('.mc-option');
+    const isCorrect = optIdx === step.correctIdx;
+
+    // Disable all options
+    options.forEach(o => o.classList.add('disabled'));
+
+    if (isCorrect) {
+      options[optIdx].classList.add('selected-correct');
+      diagCorrectCount++;
+    } else {
+      options[optIdx].classList.add('selected-wrong');
+      // Reveal the correct one
+      options[step.correctIdx].classList.add('revealed-correct');
+    }
+
+    // Show explanation if wrong
+    if (!isCorrect) {
+      const explBox = document.createElement('div');
+      explBox.className = 'explanation-box';
+      explBox.innerHTML = '<strong>Here\'s how to find the answer:</strong><br>' + step.explanation;
+      mcContainer.parentElement.appendChild(explBox);
+    }
+
+    // Record to session
+    if (window.Session && Session.recordQuestion) {
+      const qText = step.header;
+      const firstAns = step.options[optIdx].tex.replace(/\\[a-z]+\{[^}]*\}/g, '').substring(0, 60);
+      const correctAns = step.options[step.correctIdx].tex.replace(/\\[a-z]+\{[^}]*\}/g, '').substring(0, 60);
+      Session.recordQuestion(LAB_ID, stepIdx, qText, firstAns, isCorrect, isCorrect ? firstAns : correctAns, true);
+    }
+
+    // After a short delay, show next step
+    setTimeout(function() {
+      showDiagStep(stepIdx + 1);
+    }, isCorrect ? 600 : 1800);
+  }
+
+  function recordResult(wasDirectCorrect) {
+    if (window.Session && Session.recordLabDone) {
+      const fs = wasDirectCorrect ? TOTAL_Q : diagCorrectCount;
+      Session.recordLabDone(LAB_ID, LAB_LABEL, firstScore === 1 ? TOTAL_Q : 0, wasDirectCorrect ? TOTAL_Q : diagCorrectCount, TOTAL_Q);
+    }
+  }
+
+  // ── New problem ─────────────────────────────────────────────────
+  $newBtn.addEventListener('click', function() {
+    generateProblem();
+    renderProblem();
+  });
+
+  // ── Init ────────────────────────────────────────────────────────
+  function init() {
+    // Wait for KaTeX to load
+    function go() {
+      generateProblem();
+      renderProblem();
+    }
+    if (window.katex) { go(); }
+    else {
+      // Poll for KaTeX
+      const check = setInterval(function() {
+        if (window.katex) { clearInterval(check); go(); }
+      }, 100);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+})();
+</script>
+
+</body>
+</html>
