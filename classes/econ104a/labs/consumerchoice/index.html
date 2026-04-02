@@ -140,15 +140,6 @@
       width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
     }
 
-    /* IC count control */
-    .graph-controls {
-      display: flex; align-items: center; gap: 8px;
-      margin-top: 10px; font-size: 12px; color: var(--muted);
-    }
-    .graph-controls input[type=range] {
-      flex: 1; accent-color: var(--accent);
-    }
-
     /* Transition hint shown after correct answer */
     .graph-annotation {
       margin-top: 8px;
@@ -312,24 +303,22 @@
             <div class="legend-swatch" style="background:#2f5d7c; height:2.5px;"></div>
             <span>Budget line</span>
           </div>
-          <div class="legend-row">
+          <div class="legend-row" id="legendStudentRow" style="display:none;">
+            <div class="legend-swatch" style="background:#b47200; height:2px;"></div>
+            <span id="legendStudentLabel">Your indifference curve</span>
+          </div>
+          <div class="legend-row" id="legendOptICRow" style="display:none;">
             <div class="legend-swatch" style="background:#1b7f4b; height:2px;"></div>
-            <span>Indifference curves</span>
+            <span>Optimal indifference curve</span>
           </div>
           <div class="legend-row" id="legendOptRow" style="display:none;">
             <div class="legend-dot" style="background:#b42318;"></div>
             <span>Optimal bundle (X*, Y*)</span>
           </div>
-          <div class="legend-row" id="legendTangRow" style="display:none;">
-            <div class="legend-swatch dashed" style="border-color:#b42318; width:22px;"></div>
-            <span>Tangency (MRS = P<sub>X</sub>/P<sub>Y</sub>)</span>
+          <div class="legend-row" id="legendStudentPtRow" style="display:none;">
+            <div class="legend-dot" style="background:#b47200;"></div>
+            <span>Your bundle</span>
           </div>
-        </div>
-
-        <div class="graph-controls">
-          <span>IC count:</span>
-          <input type="range" id="icCount" min="1" max="7" step="1" value="4">
-          <span id="icCountLabel">4</span>
         </div>
 
         <div class="graph-annotation" id="graphAnnotation"></div>
@@ -359,7 +348,13 @@
   let prob = {};
   let diagStep = 0;
   let firstScore = null;
-  let showOptimal = false;     // reveal optimal point on graph?
+
+  // Graph state
+  // studentX/Y: the bundle the student entered (shown immediately on Check)
+  // showOptimal: reveal the optimal IC + point (after correct answer or diagnostic complete)
+  let studentX    = null;
+  let studentY    = null;
+  let showOptimal = false;
 
   const LAB_ID    = 'optimal-choice';
   const LAB_LABEL = 'Optimal Consumer Choice';
@@ -379,8 +374,6 @@
   const $diagComplete= document.getElementById('diagComplete');
   const $newBtn      = document.getElementById('newProblemBtn');
   const $canvas      = document.getElementById('graphCanvas');
-  const $icCount     = document.getElementById('icCount');
-  const $icCountLabel= document.getElementById('icCountLabel');
   const $annotation  = document.getElementById('graphAnnotation');
 
   // ── Math helpers ─────────────────────────────────────────────────────────
@@ -400,7 +393,13 @@
     return den === 1 ? sign + num : sign + '\\frac{' + num + '}{' + den + '}';
   }
 
-  function roundNice(v, tol) { tol = tol || 0.001; return Math.round(v / tol) * tol; }
+  function roundNice(v, tolOrDp) {
+    // Accept tol (0.001 → 3dp) or direct integer dp, default 3dp
+    let dp;
+    if (!tolOrDp || tolOrDp >= 1) { dp = tolOrDp || 3; }
+    else { dp = Math.round(-Math.log10(tolOrDp)); }
+    return parseFloat(v.toFixed(dp));
+  }
   function approxEqual(a, b, tol) { tol = tol || 0.05; return Math.abs(a - b) < tol; }
 
   // ── RNG ──────────────────────────────────────────────────────────────────
@@ -540,10 +539,14 @@
     $diagComplete.classList.add('hidden');
     $checkBtn.disabled = false;
     diagStep = 0; firstScore = null;
-    showOptimal = false;
 
-    document.getElementById('legendOptRow').style.display  = 'none';
-    document.getElementById('legendTangRow').style.display = 'none';
+    // Reset graph state
+    studentX = null; studentY = null; showOptimal = false;
+
+    document.getElementById('legendStudentRow').style.display  = 'none';
+    document.getElementById('legendOptICRow').style.display    = 'none';
+    document.getElementById('legendOptRow').style.display      = 'none';
+    document.getElementById('legendStudentPtRow').style.display = 'none';
     $annotation.style.display = 'none';
 
     drawGraph();
@@ -577,19 +580,15 @@
     const PW = X1 - X0, PH = Y1 - Y0;
 
     // ── Axis bounds ──────────────────────────────────────────────────────────
-    // Set the axis max to slightly beyond the budget intercepts for breathing room
-    const xMax_data = (p.inc / p.px) * 1.35;
-    const yMax_data = (p.inc / p.py) * 1.35;
+    const xIntercept = p.inc / p.px;
+    const yIntercept = p.inc / p.py;
+    const xMax_data  = xIntercept * 1.35;
+    const yMax_data  = yIntercept * 1.35;
 
     const xToC = x => X0 + (x / xMax_data) * PW;
     const yToC = y => Y1 - (y / yMax_data) * PH;
-    const cToX = cx => ((cx - X0) / PW) * xMax_data;
-    const cToY = cy => ((Y1 - cy) / PH) * yMax_data;
 
-    // ── Background ───────────────────────────────────────────────────────────
-    // Subtle feasible region fill
-    const xIntercept = p.inc / p.px;
-    const yIntercept = p.inc / p.py;
+    // ── Feasible region fill ─────────────────────────────────────────────────
     ctx.beginPath();
     ctx.moveTo(xToC(0), yToC(0));
     ctx.lineTo(xToC(xIntercept), yToC(0));
@@ -598,48 +597,27 @@
     ctx.fillStyle = 'rgba(47,93,124,0.05)';
     ctx.fill();
 
-    // ── Grid lines ───────────────────────────────────────────────────────────
-    ctx.strokeStyle = 'rgba(0,0,0,0.06)';
-    ctx.lineWidth   = 1 * dpr;
-    const nGridX = 5, nGridY = 5;
-    for (let i = 1; i <= nGridX; i++) {
-      const x = (i / nGridX) * xMax_data;
-      ctx.beginPath(); ctx.moveTo(xToC(x), Y0); ctx.lineTo(xToC(x), Y1); ctx.stroke();
-    }
-    for (let i = 1; i <= nGridY; i++) {
-      const y = (i / nGridY) * yMax_data;
-      ctx.beginPath(); ctx.moveTo(X0, yToC(y)); ctx.lineTo(X1, yToC(y)); ctx.stroke();
-    }
-
     // ── Axes ─────────────────────────────────────────────────────────────────
     ctx.strokeStyle = 'rgba(0,0,0,0.30)';
     ctx.lineWidth   = 1.5 * dpr;
-    // X axis
     ctx.beginPath(); ctx.moveTo(X0, Y1); ctx.lineTo(X1, Y1); ctx.stroke();
-    // Y axis
     ctx.beginPath(); ctx.moveTo(X0, Y0); ctx.lineTo(X0, Y1); ctx.stroke();
+
     // Arrow heads
     ctx.fillStyle = 'rgba(0,0,0,0.30)';
-    // X arrow
     ctx.beginPath();
-    ctx.moveTo(X1,      Y1);
-    ctx.lineTo(X1 - 8*dpr, Y1 - 4*dpr);
-    ctx.lineTo(X1 - 8*dpr, Y1 + 4*dpr);
+    ctx.moveTo(X1, Y1); ctx.lineTo(X1 - 8*dpr, Y1 - 4*dpr); ctx.lineTo(X1 - 8*dpr, Y1 + 4*dpr);
     ctx.closePath(); ctx.fill();
-    // Y arrow
     ctx.beginPath();
-    ctx.moveTo(X0,           Y0);
-    ctx.lineTo(X0 - 4*dpr,  Y0 + 8*dpr);
-    ctx.lineTo(X0 + 4*dpr,  Y0 + 8*dpr);
+    ctx.moveTo(X0, Y0); ctx.lineTo(X0 - 4*dpr, Y0 + 8*dpr); ctx.lineTo(X0 + 4*dpr, Y0 + 8*dpr);
     ctx.closePath(); ctx.fill();
 
     // ── Axis labels ───────────────────────────────────────────────────────────
-    ctx.fillStyle  = 'rgba(0,0,0,0.55)';
-    ctx.font       = `700 ${12 * dpr}px "Inter", sans-serif`;
-    ctx.textAlign  = 'center';
+    ctx.fillStyle    = 'rgba(0,0,0,0.55)';
+    ctx.font         = `700 ${12 * dpr}px "Inter", sans-serif`;
+    ctx.textAlign    = 'center';
     ctx.textBaseline = 'top';
     ctx.fillText('X', (X0 + X1) / 2, Y1 + 14 * dpr);
-
     ctx.save();
     ctx.translate(X0 - 36 * dpr, (Y0 + Y1) / 2);
     ctx.rotate(-Math.PI / 2);
@@ -647,62 +625,131 @@
     ctx.fillText('Y', 0, 0);
     ctx.restore();
 
-    // ── Tick labels ──────────────────────────────────────────────────────────
-    ctx.font      = `${10 * dpr}px "Inter", sans-serif`;
-    ctx.fillStyle = 'rgba(0,0,0,0.40)';
+    // ── Budget intercept tick marks + labels only ────────────────────────────
+    ctx.font      = `700 ${11 * dpr}px "Inter", sans-serif`;
+    ctx.fillStyle = '#2f5d7c';
+
+    // X intercept tick
+    ctx.strokeStyle = '#2f5d7c';
+    ctx.lineWidth   = 1.5 * dpr;
+    ctx.beginPath();
+    ctx.moveTo(xToC(xIntercept), Y1 - 4 * dpr);
+    ctx.lineTo(xToC(xIntercept), Y1 + 4 * dpr);
+    ctx.stroke();
+    ctx.textAlign    = 'center';
     ctx.textBaseline = 'top';
-    for (let i = 1; i <= nGridX; i++) {
-      const xVal = (i / nGridX) * xMax_data;
-      ctx.textAlign = 'center';
-      ctx.fillText(Math.round(xVal * 10) / 10, xToC(xVal), Y1 + 4 * dpr);
-    }
-    ctx.textAlign = 'right';
-    for (let i = 1; i <= nGridY; i++) {
-      const yVal = (i / nGridY) * yMax_data;
-      ctx.textBaseline = 'middle';
-      ctx.fillText(Math.round(yVal * 10) / 10, X0 - 5 * dpr, yToC(yVal));
-    }
+    ctx.fillText(roundNice(xIntercept, 2), xToC(xIntercept), Y1 + 6 * dpr);
 
-    // ── Indifference curves ──────────────────────────────────────────────────
-    const numIC  = parseInt($icCount.value) || 4;
-    const U_opt  = utilityAt(p.optX, p.optY);
-    // Spread ICs: from ~0.4 * U_opt to ~1.7 * U_opt
-    const uLevels = [];
-    for (let i = 0; i < numIC; i++) {
-      const t = numIC === 1 ? 0.5 : i / (numIC - 1);
-      uLevels.push(U_opt * (0.38 + t * 1.36));
-    }
+    // Y intercept tick
+    ctx.beginPath();
+    ctx.moveTo(X0 - 4 * dpr, yToC(yIntercept));
+    ctx.lineTo(X0 + 4 * dpr, yToC(yIntercept));
+    ctx.stroke();
+    ctx.textAlign    = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(roundNice(yIntercept, 2), X0 - 7 * dpr, yToC(yIntercept));
 
-    uLevels.forEach((U, idx) => {
-      const isOptIC = idx === Math.floor(numIC * 0.5);  // highlight the one closest to optimal
-      const isExactOpt = Math.abs(U - U_opt) / U_opt < 0.08;
-
+    // ── Helper: draw one IC for a given utility level ────────────────────────
+    function drawIC(U, color, lineWidth, dash) {
       ctx.beginPath();
+      ctx.setLineDash(dash || []);
       let started = false;
-      const N = 180;
+      const N = 240;
       for (let k = 0; k <= N; k++) {
-        const x = (k / N) * xMax_data * 0.98;
+        const x = (k / N) * xMax_data * 0.99;
         if (x < 0.001) continue;
         const y = icY(x, U);
-        if (!isFinite(y) || y < 0 || y > yMax_data * 1.1) { started = false; continue; }
+        if (!isFinite(y) || y < 0 || y > yMax_data * 1.08) { started = false; continue; }
         const cx = xToC(x), cy = yToC(y);
         if (!started) { ctx.moveTo(cx, cy); started = true; }
         else ctx.lineTo(cx, cy);
       }
-
-      if (isExactOpt || Math.abs(U - U_opt) / U_opt < 0.08) {
-        // Optimal IC — highlighted green
-        ctx.strokeStyle = '#1b7f4b';
-        ctx.lineWidth   = showOptimal ? 2.5 * dpr : 1.8 * dpr;
-      } else {
-        // Other ICs — muted
-        ctx.strokeStyle = `rgba(27,127,75,${0.22 + 0.12 * idx / numIC})`;
-        ctx.lineWidth   = 1.5 * dpr;
-      }
+      ctx.strokeStyle = color;
+      ctx.lineWidth   = lineWidth;
       ctx.stroke();
-    });
+      ctx.setLineDash([]);
+    }
 
-    // ── Budget line ───────────────────────────────────────────────────────────
+    // ── Helper: draw a point with dashed projection lines ────────────────────
+    function drawPoint(xVal, yVal, color, label, showProjections) {
+      const cx = xToC(xVal), cy = yToC(yVal);
+
+      if (showProjections) {
+        ctx.setLineDash([5 * dpr, 4 * dpr]);
+        ctx.strokeStyle = color.replace(')', ',0.4)').replace('rgb', 'rgba');
+        ctx.lineWidth   = 1.5 * dpr;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, Y1); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(X0, cy); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Tick + label on X axis
+        ctx.strokeStyle = color;
+        ctx.lineWidth   = 1.5 * dpr;
+        ctx.beginPath(); ctx.moveTo(cx, Y1 - 4*dpr); ctx.lineTo(cx, Y1 + 4*dpr); ctx.stroke();
+        ctx.font = `700 ${11*dpr}px "Inter", sans-serif`;
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.fillText(roundNice(xVal, 0.01), cx, Y1 + 6*dpr);
+
+        // Tick + label on Y axis
+        ctx.beginPath(); ctx.moveTo(X0 - 4*dpr, cy); ctx.lineTo(X0 + 4*dpr, cy); ctx.stroke();
+        ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        ctx.fillText(roundNice(yVal, 0.01), X0 - 7*dpr, cy);
+      }
+
+      // Outer ring
+      ctx.beginPath(); ctx.arc(cx, cy, 9*dpr, 0, Math.PI * 2);
+      ctx.fillStyle = color.includes('rgba') ? color : hexToRgba(color, 0.15);
+      ctx.fill();
+      // Inner dot
+      ctx.beginPath(); ctx.arc(cx, cy, 5.5*dpr, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, 5.5*dpr, 0, Math.PI * 2);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5*dpr; ctx.stroke();
+
+      // Label
+      if (label) {
+        ctx.font = `700 ${11*dpr}px "Inter", sans-serif`;
+        ctx.fillStyle = color;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+        const offX = (xVal < xMax_data * 0.7) ?  9*dpr : -62*dpr;
+        const offY = (yVal < yMax_data * 0.7) ? -10*dpr :  18*dpr;
+        ctx.fillText(label, cx + offX, cy + offY);
+      }
+    }
+
+    function hexToRgba(hex, alpha) {
+      // Convert #rrggbb to rgba()
+      const r = parseInt(hex.slice(1,3),16);
+      const g = parseInt(hex.slice(3,5),16);
+      const b = parseInt(hex.slice(5,7),16);
+      return `rgba(${r},${g},${b},${alpha})`;
+    }
+
+    // ── Draw ICs ─────────────────────────────────────────────────────────────
+
+    // Student's IC (drawn as soon as they check)
+    if (studentX !== null && studentY !== null && studentX > 0 && studentY > 0) {
+      const U_student = utilityAt(studentX, studentY);
+      if (isFinite(U_student) && U_student > 0) {
+        drawIC(U_student, '#b47200', 2 * dpr);
+        drawPoint(studentX, studentY, '#b47200',
+          '(' + roundNice(studentX, 0.01) + ', ' + roundNice(studentY, 0.01) + ')',
+          true);
+      }
+    }
+
+    // Optimal IC + point (shown after correct answer or diagnostic complete)
+    if (showOptimal) {
+      const U_opt = utilityAt(p.optX, p.optY);
+      drawIC(U_opt, '#1b7f4b', 2.5 * dpr);
+      drawPoint(p.optX, p.optY, '#b42318',
+        '(' + roundNice(p.optX, 0.01) + ', ' + roundNice(p.optY, 0.01) + ')',
+        true);
+    }
+
+    // ── Budget line (drawn last so it sits on top of ICs) ────────────────────
     ctx.beginPath();
     ctx.moveTo(xToC(xIntercept), yToC(0));
     ctx.lineTo(xToC(0), yToC(yIntercept));
@@ -710,89 +757,7 @@
     ctx.lineWidth   = 2.5 * dpr;
     ctx.setLineDash([]);
     ctx.stroke();
-
-    // Budget intercept labels
-    ctx.font       = `700 ${11 * dpr}px "Inter", sans-serif`;
-    ctx.fillStyle  = '#2f5d7c';
-    ctx.textAlign  = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillText('I/Pₓ = ' + Math.round(xIntercept * 10) / 10, xToC(xIntercept), Y1 + 4 * dpr);
-    ctx.textAlign    = 'right';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('I/Pᵧ = ' + Math.round(yIntercept * 10) / 10, X0 - 5 * dpr, yToC(yIntercept));
-
-    // ── Optimal point (revealed after check) ────────────────────────────────
-    if (showOptimal) {
-      const ox = xToC(p.optX);
-      const oy = yToC(p.optY);
-
-      // Dashed projection lines to axes
-      ctx.setLineDash([5 * dpr, 4 * dpr]);
-      ctx.strokeStyle = 'rgba(180,35,24,0.45)';
-      ctx.lineWidth   = 1.5 * dpr;
-      ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox, Y1); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(X0, oy); ctx.stroke();
-      ctx.setLineDash([]);
-
-      // X*, Y* tick labels on axes
-      ctx.font       = `700 ${11 * dpr}px "Inter", sans-serif`;
-      ctx.fillStyle  = '#b42318';
-      ctx.textAlign  = 'center'; ctx.textBaseline = 'top';
-      ctx.fillText('X*=' + roundNice(p.optX, 0.01), ox, Y1 + 4 * dpr);
-      ctx.textAlign  = 'right'; ctx.textBaseline = 'middle';
-      ctx.fillText('Y*=' + roundNice(p.optY, 0.01), X0 - 5 * dpr, oy);
-
-      // Tangency line (short segment of IC slope = budget slope at optimum)
-      // MRS at optimum = px/py; draw a short tangent segment
-      const slope_bc = -p.px / p.py;   // budget line slope in data coords
-      const dx_data  = xMax_data * 0.12;
-      const tx1 = p.optX - dx_data, tx2 = p.optX + dx_data;
-      const ty1 = p.optY - slope_bc * dx_data;   // note: canvas y inverted handled via yToC
-      const ty2 = p.optY + slope_bc * dx_data;
-
-      ctx.beginPath();
-      ctx.moveTo(xToC(tx1), yToC(ty1));
-      ctx.lineTo(xToC(tx2), yToC(ty2));
-      ctx.strokeStyle = 'rgba(180,35,24,0.55)';
-      ctx.lineWidth   = 1.5 * dpr;
-      ctx.setLineDash([4 * dpr, 3 * dpr]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // ── Optimal point dot ────────────────────────────────────────────────
-      // Outer ring
-      ctx.beginPath();
-      ctx.arc(ox, oy, 9 * dpr, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(180,35,24,0.15)';
-      ctx.fill();
-      // Inner dot
-      ctx.beginPath();
-      ctx.arc(ox, oy, 5.5 * dpr, 0, Math.PI * 2);
-      ctx.fillStyle = '#b42318';
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(ox, oy, 5.5 * dpr, 0, Math.PI * 2);
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth   = 1.5 * dpr;
-      ctx.stroke();
-
-      // Label the optimal point
-      ctx.font       = `700 ${11 * dpr}px "Inter", sans-serif`;
-      ctx.fillStyle  = '#b42318';
-      ctx.textAlign  = 'left';
-      ctx.textBaseline = 'bottom';
-      // Choose offset direction so label doesn't overlap axes
-      const labelOffX = (p.optX < xMax_data * 0.7) ?  9 * dpr : -60 * dpr;
-      const labelOffY = (p.optY < yMax_data * 0.7) ? -10 * dpr :  18 * dpr;
-      ctx.fillText('(' + roundNice(p.optX, 0.01) + ', ' + roundNice(p.optY, 0.01) + ')', ox + labelOffX, oy + labelOffY);
-    }
   }
-
-  // Redraw on IC count change
-  $icCount.addEventListener('input', function () {
-    $icCountLabel.textContent = $icCount.value;
-    drawGraph();
-  });
 
   // Redraw on resize
   let resizeTimer;
@@ -812,46 +777,70 @@
       return;
     }
 
+    // Always capture student bundle and draw their IC immediately
+    studentX = userX; studentY = userY;
+
     const xOk = approxEqual(userX, roundNice(prob.optX, 0.001), 0.15);
     const yOk = approxEqual(userY, roundNice(prob.optY, 0.001), 0.15);
+
+    $checkBtn.disabled = true;
 
     if (xOk && yOk) {
       $ansX.classList.add('correct'); $ansY.classList.add('correct');
       $resultMsg.innerHTML = '✓ Correct! The optimal bundle is X* = ' +
-        roundNice(prob.optX, 0.001) + ', Y* = ' + roundNice(prob.optY, 0.001) + '.';
+        roundNice(prob.optX, 0.001) + ', Y* = ' + roundNice(prob.optY, 0.001) +
+        '. Notice how your indifference curve is tangent to the budget line.';
       $resultMsg.className = 'result-msg correct';
-      $checkBtn.disabled = true;
       firstScore = 1;
-      revealOptimal();
+      // Student IC is the optimal IC — reveal legend and annotation
+      showOptimal = true;
+      document.getElementById('legendStudentRow').style.display   = 'flex';
+      document.getElementById('legendStudentLabel').textContent    = 'Your bundle (optimal)';
+      document.getElementById('legendStudentPtRow').style.display  = 'none';
+      document.getElementById('legendOptRow').style.display        = 'none';  // same point, no need for both
+      updateAnnotation(true);
       recordResult(true);
     } else {
       $ansX.classList.add(xOk ? 'correct' : 'wrong');
       $ansY.classList.add(yOk ? 'correct' : 'wrong');
-      $resultMsg.innerHTML = '✗ Not quite. Let\'s work through the solution step by step.';
+      $resultMsg.innerHTML = '✗ Not quite. Notice how your indifference curve doesn\'t touch the budget line at its tangent point. Let\'s work through the solution step by step.';
       $resultMsg.className = 'result-msg wrong';
-      $checkBtn.disabled = true;
       firstScore = 0;
+      // Show student IC + point in legend
+      document.getElementById('legendStudentRow').style.display    = 'flex';
+      document.getElementById('legendStudentLabel').textContent     = 'Your bundle';
+      document.getElementById('legendStudentPtRow').style.display   = 'flex';
       startDiagnostic();
     }
+
+    drawGraph();
   });
 
   $ansX.addEventListener('keydown', e => { if (e.key === 'Enter') $checkBtn.click(); });
   $ansY.addEventListener('keydown', e => { if (e.key === 'Enter') $checkBtn.click(); });
 
-  // ── Reveal optimal point on graph ────────────────────────────────────────
+  // ── Reveal optimal IC + point on graph ───────────────────────────────────
   function revealOptimal() {
     showOptimal = true;
-    document.getElementById('legendOptRow').style.display  = 'flex';
-    document.getElementById('legendTangRow').style.display = 'flex';
+    document.getElementById('legendOptICRow').style.display  = 'flex';
+    document.getElementById('legendOptRow').style.display    = 'flex';
+    updateAnnotation(false);
+    drawGraph();
+  }
 
+  function updateAnnotation(wasCorrect) {
     const prRound = roundNice(prob.px / prob.py, 0.01);
     $annotation.style.display = 'block';
-    $annotation.innerHTML =
-      'At the optimum, the budget line is <strong>tangent</strong> to the highest attainable indifference curve. ' +
-      'The slope of the budget line equals ' + katexHTML('-\\frac{P_X}{P_Y} = -\\frac{' + prob.px + '}{' + prob.py + '} \\approx -' + prRound) +
-      ', which equals MRS at (X*, Y*).';
-
-    drawGraph();
+    if (wasCorrect) {
+      $annotation.innerHTML =
+        'Your indifference curve is <strong>tangent</strong> to the budget line — the slope of the budget line ' +
+        '(' + katexHTML('-\\frac{P_X}{P_Y} = -' + prRound) + ') equals the MRS at your bundle.';
+    } else {
+      $annotation.innerHTML =
+        'The <strong>orange</strong> curve passes through your bundle — it misses the tangency point. ' +
+        'The <strong>green</strong> curve is tangent to the budget line at the true optimum, where ' +
+        'MRS = ' + katexHTML('\\frac{P_X}{P_Y} = ' + prRound) + '.';
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -881,35 +870,41 @@
         explanation: 'Take the partial derivative: ' + katexHTML(muxCorrect) + ' and ' + katexHTML(muyCorrect) + '.'
       });
 
-      const mrsTeX = 'MRS_{XY} = \\frac{' + fracFromDecimal(a) + '}{' + fracFromDecimal(oneMinusA) + '} \\cdot \\frac{Y}{X}';
+      const mrsTeX = 'MRS_{XY} = ' + frac(Math.round(a * 100), Math.round(oneMinusA * 100)) + ' \\cdot \\frac{Y}{X}';
       steps.push({
         header: 'Step 2: Marginal Rate of Substitution',
         question: 'What is ' + katexHTML('MRS_{XY} = MU_X / MU_Y') + '?',
         correctIdx: 0,
         options: [
           { tex: mrsTeX },
-          { tex: 'MRS_{XY} = \\frac{' + fracFromDecimal(oneMinusA) + '}{' + fracFromDecimal(a) + '} \\cdot \\frac{Y}{X}' },
-          { tex: 'MRS_{XY} = \\frac{' + fracFromDecimal(a) + '}{' + fracFromDecimal(oneMinusA) + '} \\cdot \\frac{X}{Y}' },
+          { tex: 'MRS_{XY} = ' + frac(Math.round(oneMinusA * 100), Math.round(a * 100)) + ' \\cdot \\frac{Y}{X}' },
+          { tex: 'MRS_{XY} = ' + frac(Math.round(a * 100), Math.round(oneMinusA * 100)) + ' \\cdot \\frac{X}{Y}' },
           { tex: 'MRS_{XY} = \\frac{Y}{X}' },
         ],
-        explanation: katexHTML('MRS_{XY} = \\frac{MU_X}{MU_Y}') + '. The ' + (coeff > 1 ? coeff + ' ' : '') + 'and X/Y terms simplify to give ' + katexHTML(mrsTeX) + '.'
+        explanation: katexHTML('MRS_{XY} = \\frac{MU_X}{MU_Y}') + '. The coefficient' + (coeff > 1 ? ' ' + coeff : '') + ' cancels, and the X/Y exponents simplify to give ' + katexHTML(mrsTeX) + '.'
       });
 
-      const relNumInt = Math.round((1 - a) * p.px * 100);
-      const relDenInt = Math.round(a * p.py * 100);
-      const relFrac   = frac(relNumInt, relDenInt);
-      const yEqTeX    = 'Y = ' + relFrac + ' X';
+      // Step 3: solve for X in terms of Y (consistent with linear-quadratic)
+      // MRS = (α/1-α)·(Y/X) = Px/Py  →  X = [α·Py / ((1-α)·Px)] · Y
+      const xNumInt = Math.round(a * p.py * 100);
+      const xDenInt = Math.round(oneMinusA * p.px * 100);
+      const xOfYFrac = frac(xNumInt, xDenInt);
+      const xEqTeX  = 'X = ' + xOfYFrac + ' Y';
       steps.push({
         header: 'Step 3: Optimal Relationship (MRS = P_X/P_Y)',
-        question: 'Set ' + katexHTML('MRS = P_X / P_Y') + ' and solve for Y in terms of X.',
+        question: 'Set ' + katexHTML('MRS = P_X / P_Y') + ' and solve for X in terms of Y.',
         correctIdx: 0,
         options: [
-          { tex: yEqTeX },
-          { tex: 'Y = ' + frac(relDenInt, relNumInt) + ' X' },
-          { tex: 'X = ' + relFrac + ' Y' },
-          { tex: 'Y = ' + frac(p.px, p.py) + ' X' },
+          { tex: xEqTeX },
+          { tex: 'X = ' + frac(xDenInt, xNumInt) + ' Y' },
+          { tex: 'Y = ' + xOfYFrac + ' X' },
+          { tex: 'X = ' + frac(Math.round(a * p.px * 100), Math.round(oneMinusA * p.py * 100)) + ' Y' },
         ],
-        explanation: 'Setting ' + katexHTML(mrsTeX + ' = \\frac{' + p.px + '}{' + p.py + '}') + ' and solving for Y gives ' + katexHTML(yEqTeX) + '.'
+        explanation:
+          'Set ' + katexHTML(mrsTeX + ' = \\frac{' + p.px + '}{' + p.py + '}') +
+          ', then cross-multiply and solve for X: ' +
+          katexHTML('\\frac{\\alpha}{1-\\alpha} \\cdot \\frac{Y}{X} = \\frac{P_X}{P_Y}') +
+          ' \\implies ' + katexHTML(xEqTeX) + '.'
       });
 
       const bcTeX = p.inc + ' = ' + p.px + 'X + ' + p.py + 'Y';
@@ -926,32 +921,51 @@
         explanation: katexHTML('I = P_X X + P_Y Y \\implies ' + bcTeX) + '.'
       });
 
-      const optYRound = roundNice(p.optY, 0.001);
-      const optXRound = roundNice(p.optX, 0.001);
+      // Step 5: sub X = kY into budget and solve for Y*
+      // Px·(kY) + Py·Y = I  →  Y·(Px·k + Py) = I  →  Y* = I / (Px·k + Py)
+      // k = α·Py / ((1-α)·Px)  so  Px·k = α·Py/(1-α)
+      // Px·k + Py = α·Py/(1-α) + Py = Py·[α/(1-α) + 1] = Py/(1-α)
+      // So Y* = I·(1-α)/Py  — show the substitution explicitly
+      const optYRound = roundNice(p.optY, 3);
+      const optXRound = roundNice(p.optX, 3);
+      // Intermediate: coefficient on Y after substitution = Px·k + Py = Py/(1-α)
+      // Express as fraction: Py * 100 / (oneMinusA * 100)
+      const coeffYNum = Math.round(p.py * 100);
+      const coeffYDen = Math.round(oneMinusA * 100);
+      const coeffYFrac = frac(coeffYNum, coeffYDen);
       steps.push({
-        header: 'Step 5: Optimal Y*',
-        question: 'Substitute the Step 3 relationship into the budget constraint. What is ' + katexHTML('Y^*') + '?',
+        header: 'Step 5: Solve for Y*',
+        question: 'Substitute ' + katexHTML(xEqTeX) + ' into the budget constraint ' + katexHTML(bcTeX) + '. What is ' + katexHTML('Y^*') + '?',
         correctIdx: 0,
         options: [
           { tex: 'Y^* = ' + optYRound },
           { tex: 'Y^* = ' + optXRound },
-          { tex: 'Y^* = ' + roundNice(optYRound * 2, 0.001) },
-          { tex: 'Y^* = ' + roundNice(p.inc / p.py, 0.001) },
+          { tex: 'Y^* = ' + roundNice(optYRound * 2, 3) },
+          { tex: 'Y^* = ' + roundNice(p.inc / p.py, 3) },
         ],
-        explanation: 'For Cobb-Douglas: ' + katexHTML('Y^* = \\frac{(1-\\alpha) I}{P_Y} = \\frac{' + roundNice(1 - a, 0.01) + ' \\times ' + p.inc + '}{' + p.py + '} = ' + optYRound) + '.'
+        explanation:
+          'Substitute ' + katexHTML(xEqTeX) + ' into ' + katexHTML(bcTeX) + ': ' +
+          katexHTML(p.px + ' \\cdot (' + xOfYFrac + ' Y) + ' + p.py + ' Y = ' + p.inc) +
+          '. Collect Y terms : ' +
+          katexHTML(coeffYFrac + ' Y = ' + p.inc) +
+          '. So ' +
+          katexHTML('Y^* = \\frac{' + p.inc + '}{' + coeffYFrac.replace('\\frac{', '').replace('}{', '/').replace('}', '') + '} = ' + optYRound) + '.'
       });
 
+      // Step 6: sub Y* into X = kY* to get X*
       steps.push({
-        header: 'Step 6: Optimal X*',
-        question: 'Now solve for ' + katexHTML('X^*') + '.',
+        header: 'Step 6: Solve for X*',
+        question: 'Plug ' + katexHTML('Y^* = ' + optYRound) + ' into ' + katexHTML(xEqTeX) + '. What is ' + katexHTML('X^*') + '?',
         correctIdx: 0,
         options: [
           { tex: 'X^* = ' + optXRound },
           { tex: 'X^* = ' + optYRound },
-          { tex: 'X^* = ' + roundNice(optXRound * 2, 0.001) },
-          { tex: 'X^* = ' + roundNice(p.inc / p.px, 0.001) },
+          { tex: 'X^* = ' + roundNice(optXRound * 2, 3) },
+          { tex: 'X^* = ' + roundNice(p.inc / p.px, 3) },
         ],
-        explanation: 'For Cobb-Douglas: ' + katexHTML('X^* = \\frac{\\alpha I}{P_X} = \\frac{' + a + ' \\times ' + p.inc + '}{' + p.px + '} = ' + optXRound) + '.'
+        explanation:
+          'Substitute ' + katexHTML('Y^* = ' + optYRound) + ' into ' + katexHTML(xEqTeX) + ': ' +
+          katexHTML('X^* = ' + xOfYFrac + ' \\times ' + optYRound + ' = ' + optXRound) + '.'
       });
 
     } else {
@@ -974,31 +988,56 @@
       });
 
       const mrsTeX2 = 'MRS_{XY} = \\frac{' + B + 'Y + ' + C + '}{' + B + 'X + ' + D + '}';
+      // Build distractors that are always structurally distinct from correct and from each other:
+      // Wrong 1: flip numerator and denominator (inverted MRS)
+      // Wrong 2: swap the additive constants between numerator and denominator
+      // Wrong 3: drop the additive constants entirely (common "forget the constant" error)
+      const mrsWrong1 = 'MRS_{XY} = \\frac{' + B + 'X + ' + D + '}{' + B + 'Y + ' + C + '}';
+      // For wrong 2, only use swap if C !== D; otherwise use a scaled version
+      const mrsWrong2 = (C !== D)
+        ? 'MRS_{XY} = \\frac{' + B + 'Y + ' + D + '}{' + B + 'X + ' + C + '}'
+        : 'MRS_{XY} = \\frac{' + B + 'Y + ' + (C + 1) + '}{' + B + 'X + ' + (D + 1) + '}';
+      const mrsWrong3 = 'MRS_{XY} = \\frac{' + B + 'Y}{' + B + 'X} = \\frac{Y}{X}';
       steps.push({
         header: 'Step 2: MRS',
         question: 'What is ' + katexHTML('MRS_{XY}') + '?',
         correctIdx: 0,
         options: [
           { tex: mrsTeX2 },
-          { tex: 'MRS_{XY} = \\frac{' + B + 'X + ' + D + '}{' + B + 'Y + ' + C + '}' },
-          { tex: 'MRS_{XY} = \\frac{' + B + 'Y + ' + D + '}{' + B + 'X + ' + C + '}' },
-          { tex: 'MRS_{XY} = \\frac{Y}{X}' },
+          { tex: mrsWrong1 },
+          { tex: mrsWrong2 },
+          { tex: mrsWrong3 },
         ],
         explanation: katexHTML('MRS_{XY} = \\frac{MU_X}{MU_Y} = ' + mrsTeX2) + '.'
       });
 
-      const xRelSimp = 'X = \\frac{' + (p.py * B) + 'Y + ' + (p.py * C - p.px * D) + '}{' + (p.px * B) + '}';
+      // Step 3: X in terms of Y
+      // MRS = (BY+C)/(BX+D) = Px/Py
+      // Cross-multiply: Py(BY+C) = Px(BX+D)
+      // Px·B·X = Py·B·Y + Py·C - Px·D
+      // X = (Py·B·Y + Py·C - Px·D) / (Px·B)
+      const xNum_const = p.py * C - p.px * D;   // constant term in numerator
+      const xDen_lq    = p.px * B;
+      const xRel_lq    = 'X = \\frac{' + (p.py * B) + 'Y ' + (xNum_const >= 0 ? '+' : '') + ' ' + xNum_const + '}{' + xDen_lq + '}';
+
+      // Distractors: swap px/py coefficients; solve for Y instead of X; wrong constant sign
+      const xRelWrong1 = 'X = \\frac{' + (p.px * B) + 'Y ' + (p.px * C - p.py * D >= 0 ? '+' : '') + ' ' + (p.px * C - p.py * D) + '}{' + (p.py * B) + '}';
+      const xRelWrong2 = 'Y = \\frac{' + (p.py * B) + 'X ' + (xNum_const >= 0 ? '+' : '') + ' ' + xNum_const + '}{' + xDen_lq + '}';
+      const xRelWrong3 = 'X = \\frac{' + (p.py * B) + 'Y ' + (xNum_const >= 0 ? '-' : '+') + ' ' + Math.abs(xNum_const) + '}{' + xDen_lq + '}';
       steps.push({
         header: 'Step 3: Optimal Relationship (MRS = P_X/P_Y)',
         question: 'Set ' + katexHTML('MRS = P_X / P_Y') + ' and solve for X in terms of Y.',
         correctIdx: 0,
         options: [
-          { tex: xRelSimp },
-          { tex: 'X = \\frac{' + (p.px * B) + 'Y + ' + (p.px * C - p.py * D) + '}{' + (p.py * B) + '}' },
-          { tex: 'Y = \\frac{' + (p.py * B) + 'X + ' + (p.py * C - p.px * D) + '}{' + (p.px * B) + '}' },
-          { tex: 'X = \\frac{' + p.px + 'Y + ' + p.py + '}{' + (p.px * B) + '}' },
+          { tex: xRel_lq },
+          { tex: xRelWrong1 },
+          { tex: xRelWrong2 },
+          { tex: xRelWrong3 },
         ],
-        explanation: 'Cross multiply ' + katexHTML(mrsTeX2 + ' = \\frac{' + p.px + '}{' + p.py + '}') + ' and solve for X: ' + katexHTML(xRelSimp) + '.'
+        explanation:
+          'Cross-multiply ' + katexHTML(mrsTeX2 + ' = \\frac{' + p.px + '}{' + p.py + '}') + ': ' +
+          katexHTML(p.py + '(' + B + 'Y + ' + C + ') = ' + p.px + '(' + B + 'X + ' + D + ')') +
+          '. Rearrange for X: ' + katexHTML(xRel_lq) + '.'
       });
 
       const bcTeX = p.inc + ' = ' + p.px + 'X + ' + p.py + 'Y';
@@ -1015,32 +1054,52 @@
         explanation: katexHTML('I = P_X X + P_Y Y \\implies ' + bcTeX) + '.'
       });
 
-      const optYRound = roundNice(p.optY, 0.001);
-      const optXRound = roundNice(p.optX, 0.001);
+      // Step 5: sub X from Step 3 into budget and solve for Y*
+      // Px · [(Py·B·Y + Py·C - Px·D) / (Px·B)] + Py·Y = I
+      // (Py·B·Y + Py·C - Px·D)/B + Py·Y = I
+      // Py·Y + (Py·C - Px·D)/B + Py·Y = I
+      // 2·Py·Y = I - (Py·C - Px·D)/B
+      // Y* = (B·I - Py·C + Px·D) / (2·B·Py)
+      const optYRound = roundNice(p.optY, 3);
+      const optXRound = roundNice(p.optX, 3);
+      const yNumer = B * p.inc - p.py * C + p.px * D;
+      const yDenom = 2 * B * p.py;
       steps.push({
-        header: 'Step 5: Optimal Y*',
-        question: 'Substitute X from Step 3 into the budget constraint. What is ' + katexHTML('Y^*') + '?',
+        header: 'Step 5: Solve for Y*',
+        question: 'Substitute ' + katexHTML(xRel_lq) + ' into ' + katexHTML(bcTeX) + '. What is ' + katexHTML('Y^*') + '?',
         correctIdx: 0,
         options: [
           { tex: 'Y^* = ' + optYRound },
           { tex: 'Y^* = ' + optXRound },
-          { tex: 'Y^* = ' + roundNice(optYRound * 2, 0.001) },
-          { tex: 'Y^* = ' + roundNice(p.inc / p.py, 0.001) },
+          { tex: 'Y^* = ' + roundNice(optYRound * 2, 3) },
+          { tex: 'Y^* = ' + roundNice(p.inc / p.py, 3) },
         ],
-        explanation: 'Substituting and solving gives ' + katexHTML('Y^* = ' + optYRound) + '.'
+        explanation:
+          'Substitute into ' + katexHTML(bcTeX) + ' and simplify:' +
+          katexHTML('\\frac{' + (p.py * B) + 'Y ' + (xNum_const >= 0 ? '+' : '') + ' ' + xNum_const + '}{' + xDen_lq + '} \\cdot ' + p.px + ' + ' + p.py + ' Y = ' + p.inc) +
+          '. After cancelling ' + katexHTML('P_X') + ' and ' + katexHTML('B') + ':' +
+          katexHTML(p.py + 'Y + \\frac{' + (p.py * C - p.px * D) + '}{' + B + '} + ' + p.py + 'Y = ' + p.inc) +
+          '. Collect Y: ' +
+          katexHTML('2 \\cdot ' + p.py + ' Y = ' + p.inc + ' - \\frac{' + (p.py * C - p.px * D) + '}{' + B + '}') +
+          '. So ' +
+          katexHTML('Y^* = \\frac{' + yNumer + '}{' + yDenom + '} = ' + optYRound) + '.'
       });
 
+      // Step 6: sub Y* into X = (Py·B·Y + Py·C - Px·D)/(Px·B) to get X*
+      const xNumer_atOpt = p.py * B * p.optY + p.py * C - p.px * D;
       steps.push({
-        header: 'Step 6: Optimal X*',
-        question: 'Plug ' + katexHTML('Y^*') + ' back in. What is ' + katexHTML('X^*') + '?',
+        header: 'Step 6: Solve for X*',
+        question: 'Plug ' + katexHTML('Y^* = ' + optYRound) + ' into ' + katexHTML(xRel_lq) + '. What is ' + katexHTML('X^*') + '?',
         correctIdx: 0,
         options: [
           { tex: 'X^* = ' + optXRound },
           { tex: 'X^* = ' + optYRound },
-          { tex: 'X^* = ' + roundNice(optXRound * 2, 0.001) },
-          { tex: 'X^* = ' + roundNice(p.inc / p.px, 0.001) },
+          { tex: 'X^* = ' + roundNice(optXRound * 2, 3) },
+          { tex: 'X^* = ' + roundNice(p.inc / p.px, 3) },
         ],
-        explanation: 'Plug ' + katexHTML('Y^* = ' + optYRound) + ' into ' + katexHTML(xRelSimp) + ' to get ' + katexHTML('X^* = ' + optXRound) + '.'
+        explanation:
+          'Substitute ' + katexHTML('Y^* = ' + optYRound) + ': ' +
+          katexHTML('X^* = \\frac{' + (p.py * B) + ' \\times ' + optYRound + ' ' + (xNum_const >= 0 ? '+' : '') + ' ' + xNum_const + '}{' + xDen_lq + '} = \\frac{' + roundNice(xNumer_atOpt, 3) + '}{' + xDen_lq + '} = ' + optXRound) + '.'
       });
     }
 
@@ -1076,7 +1135,8 @@
       const oX = roundNice(prob.optX, 0.001);
       const oY = roundNice(prob.optY, 0.001);
       $diagComplete.innerHTML = '✓ Diagnostic complete! The optimal bundle is X* = ' + oX + ', Y* = ' + oY +
-        '. You got ' + diagCorrectCount + '/' + diagStepsData.length + ' diagnostic questions correct.';
+        '. You got ' + diagCorrectCount + '/' + diagStepsData.length + ' diagnostic questions correct. ' +
+        'Compare the green (optimal) and orange (your) indifference curves on the graph.';
       $diagComplete.classList.remove('hidden');
       revealOptimal();
       recordResult(false);
