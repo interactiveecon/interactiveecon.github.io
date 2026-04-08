@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>SE &amp; IE Sign Classifier — ECON 104A</title>
+  <link rel="stylesheet" href="/assets/style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea;--panel:#fff;
+      --ink:#1f2937;--ink-2:#374151;--muted:#6b7280;
+      --line:#e7dfd2;--line-2:#d9cfbf;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+      --accent:#2f5d7c;--good:#1b7f4b;--bad:#b42318;
+      --col-SE:#7c3aed;--col-IE:#166534;--col-TE:#9f1239;
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-sans);font-size:14px;line-height:1.5;}
+    .container{max-width:860px;margin:0 auto;padding:0 18px;}
+    .page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(255,255,255,0));}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:13px;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{display:block;padding:18px 0 14px;}
+    .kicker{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;font-weight:700;}
+    h1{font-family:var(--font-serif);font-size:30px;line-height:1.1;margin:0 0 7px;}
+    .sub{color:var(--ink-2);line-height:1.55;max-width:72ch;margin:0;font-size:13px;}
+    .lab-wrap{margin-top:20px;display:grid;gap:14px;}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow);}
+    .sec{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0 0 12px;display:flex;align-items:center;gap:7px;}
+    .sec::after{content:'';flex:1;height:1px;background:var(--line);}
+    .scenario-box{padding:14px 18px;border-radius:14px;background:rgba(47,93,124,.06);border:1px solid rgba(47,93,124,.18);margin-bottom:14px;}
+    .scenario-text{font-size:15px;font-weight:700;color:var(--ink);line-height:1.5;margin-bottom:10px;}
+    .bundle-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+    .bundle-chip{padding:5px 13px;border-radius:999px;font-size:13px;font-weight:800;border:1.5px solid;font-variant-numeric:tabular-nums;}
+    .chip-A{color:var(--accent);border-color:rgba(47,93,124,.35);background:rgba(47,93,124,.08);}
+    .chip-B{color:var(--bad);border-color:rgba(180,35,24,.30);background:rgba(180,35,24,.07);}
+    .bundle-label{font-size:12px;font-weight:700;color:var(--muted);}
+    .part-label{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:16px 0 8px;}
+    .sign-grid{display:grid;grid-template-columns:170px 1fr 1fr 1fr;gap:8px;margin-bottom:4px;}
+    .grid-header{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);text-align:center;padding:5px 4px;}
+    .grid-header.left{text-align:left;}
+    .good-label{font-size:13px;font-weight:700;color:var(--ink);display:flex;align-items:center;}
+    .sign-choices{display:flex;gap:5px;justify-content:center;}
+    .sign-btn{width:40px;height:34px;border-radius:9px;border:1.5px solid var(--line-2);background:#fff;font-family:var(--font-sans);font-size:15px;font-weight:800;color:var(--muted);cursor:pointer;transition:all .12s;display:flex;align-items:center;justify-content:center;}
+    .sign-btn:hover:not(:disabled){border-color:rgba(47,93,124,.5);color:var(--ink);}
+    .sign-btn.selected{background:var(--accent);border-color:var(--accent);color:#fff;}
+    .sign-btn.correct{background:var(--good);border-color:var(--good);color:#fff;}
+    .sign-btn.wrong{background:var(--bad);border-color:var(--bad);color:#fff;}
+    .sign-btn.reveal{background:rgba(27,127,75,.12);border-color:var(--good);color:var(--good);}
+    .sign-btn:disabled{cursor:default;}
+    .bigger-section{margin-top:14px;display:grid;gap:10px;}
+    .bigger-block{padding:12px 14px;border-radius:14px;background:rgba(246,242,234,.6);border:1px solid var(--line-2);}
+    .bigger-question{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px;line-height:1.4;}
+    .bigger-choices{display:flex;gap:8px;flex-wrap:wrap;}
+    .bigger-btn{padding:8px 14px;border-radius:11px;border:1.5px solid var(--line-2);background:#fff;font-family:var(--font-sans);font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .12s;}
+    .bigger-btn:hover:not(:disabled){border-color:rgba(47,93,124,.4);color:var(--ink);}
+    .bigger-btn.selected{background:var(--accent);border-color:var(--accent);color:#fff;}
+    .bigger-btn.correct{background:var(--good);border-color:var(--good);color:#fff;}
+    .bigger-btn.wrong{background:var(--bad);border-color:var(--bad);color:#fff;}
+    .bigger-btn.reveal{background:rgba(27,127,75,.12);border-color:var(--good);color:var(--good);}
+    .bigger-btn:disabled{cursor:default;}
+    .actions{display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap;}
+    .btn{border:1px solid var(--line-2);background:#fff;color:var(--ink);padding:10px 16px;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer;font-family:var(--font-sans);transition:all .12s;}
+    .btn:hover{background:rgba(47,93,124,.06);border-color:rgba(47,93,124,.35);}
+    .btn.primary{background:rgba(47,93,124,.10);border-color:rgba(47,93,124,.35);}
+    .btn.primary:hover{background:rgba(47,93,124,.18);}
+    .score-pill{font-size:12px;font-weight:800;color:var(--muted);padding:8px 14px;border:1px solid var(--line-2);border-radius:999px;font-variant-numeric:tabular-nums;}
+    .feedback-box{margin-top:14px;padding:13px 16px;border-radius:14px;font-size:13px;line-height:1.8;display:none;}
+    .feedback-box.correct{background:rgba(27,127,75,.08);border:1px solid rgba(27,127,75,.25);color:var(--good);}
+    .feedback-box.wrong{background:rgba(180,35,24,.07);border:1px solid rgba(180,35,24,.22);color:var(--bad);}
+    .feedback-box strong{color:var(--ink);}
+    .se-tag{color:var(--col-SE);font-weight:800;}
+    .ie-tag{color:var(--col-IE);font-weight:800;}
+    .te-tag{color:var(--col-TE);font-weight:800;}
+    footer{margin-top:32px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);}
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  </style>
+</head>
+<body>
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar"><a class="crumb-link" href="/classes/econ104a/labs/">← Practice Labs</a></nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104A — Individual &amp; Market Demand</div>
+      <h1>Substitution &amp; Income Effect Sign Classifier</h1>
+      <p class="sub">Use the observed bundles to compute the total effect, then use theory to determine the signs of the substitution and income effects — and which is larger in absolute value.</p>
+    </div>
+  </div>
+</header>
+<main class="container" style="padding-bottom:32px;">
+<div class="lab-wrap">
+  <div class="card">
+    <div class="sec">Scenario</div>
+    <div class="scenario-box">
+      <div class="scenario-text" id="scenText"></div>
+      <div class="bundle-row" id="bundleRow"></div>
+    </div>
+    <div class="part-label">Part 1 — Signs of each effect (+, −, or 0)</div>
+    <div class="sign-grid" id="signGrid"></div>
+    <div class="part-label">Part 2 — Which effect is larger in absolute value?</div>
+    <div class="bigger-section" id="biggerSection"></div>
+    <div class="actions">
+      <button class="btn primary" id="checkBtn">Check Answers</button>
+      <button class="btn" id="nextBtn">Next Question</button>
+      <span class="score-pill" id="scorePill">Score: 0 / 0</span>
+    </div>
+    <div class="feedback-box" id="feedbackBox"></div>
+  </div>
+</div>
+</main>
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <span>ECON 104A — Intermediate Microeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+<script>
+(function(){
+'use strict';
+
+// ── CD math helpers (U = X^0.5 * Y^0.5) ─────────────────────────
+function cdOpt(px,py,I){return {x:rnd(0.5*I/px), y:rnd(0.5*I/py)};}
+function cdU(x,y){return Math.sqrt(x*y);}
+function cdHicksPx(px2,py,UA){
+  const xAp=UA*Math.sqrt(py/px2), yAp=UA*Math.sqrt(px2/py);
+  return {x:rnd(xAp),y:rnd(yAp)};
+}
+function cdHicksPy(py2,px,UA){
+  const yAp=UA*Math.sqrt(px/py2), xAp=UA*Math.sqrt(py2/px);
+  return {x:rnd(xAp),y:rnd(yAp)};
+}
+function makeCDScenario(spec){
+  const {px1,px2,py1,py2,I}=spec;
+  const A=cdOpt(px1,py1,I), B=cdOpt(px2,py2,I);
+  if(A.x<0.5||A.y<0.5||B.x<0.5||B.y<0.5) return null;
+  const UA=cdU(A.x,A.y);
+  let Ap=A;
+  if(px1!==px2) Ap=cdHicksPx(px2,py2,UA);
+  else if(py1!==py2) Ap=cdHicksPy(py2,px2,UA);
+  if(!Ap||Ap.x<0.05||Ap.y<0.05) return null;
+  const seX=rnd(Ap.x-A.x),ieX=rnd(B.x-Ap.x),teX=rnd(B.x-A.x);
+  const seY=rnd(Ap.y-A.y),ieY=rnd(B.y-Ap.y),teY=rnd(B.y-A.y);
+  const sSeX=sgn(seX),sIeX=sgn(ieX),sTeX=sgn(teX);
+  const sSeY=sgn(seY),sIeY=sgn(ieY),sTeY=sgn(teY);
+  const teXAmb=(sSeX!=='0'&&sIeX!=='0'&&sSeX!==sIeX&&sTeX!=='0');
+  const teYAmb=(sSeY!=='0'&&sIeY!=='0'&&sSeY!==sIeY&&sTeY!=='0');
+  const biggerX=biggerRule(sSeX,sIeX,sTeX);
+  const biggerY=biggerRule(sSeY,sIeY,sTeY);
+  const isPx=px1!==px2, dir=isPx?(px2<px1?'falls':'rises'):(py2<py1?'falls':'rises');
+  let text='';
+  if(isPx) text=`P<sub>X</sub> ${dir} from $${px1} to $${px2}. P<sub>Y</sub>=$${py1}, Income=$${I}. Both goods are normal goods.`;
+  else     text=`P<sub>Y</sub> ${dir} from $${py1} to $${py2}. P<sub>X</sub>=$${px1}, Income=$${I}. Both goods are normal goods.`;
+  const explain=buildExplain(false,false,px1,px2,py1,py2,A,B,
+    sSeX,sIeX,sTeX,teXAmb,sSeY,sIeY,sTeY,teYAmb,biggerX,biggerY,false);
+  return {text,goodX:'Good X (normal)',goodY:'Good Y (normal)',
+    A,B,sSeX,sIeX,sTeX,teXAmb,sSeY,sIeY,sTeY,teYAmb,biggerX,biggerY,explain};
+}
+
+// ── LQ math helpers (U = b*X*Y + c*X + d*Y) ───────────────────────
+function rnd(v){return parseFloat(v.toFixed(2));}
+function sgn(v){return Math.abs(v)<0.005?'0':v>0?'+':'-';}
+
+function lqOpt(px,py,I,b,c,d){
+  return {x:rnd((b*I+py*c-px*d)/(2*b*px)), y:rnd((b*I-py*c+px*d)/(2*b*py))};
+}
+function lqU(x,y,b,c,d){return b*x*y+c*x+d*y;}
+
+function lqHicksPx(px2,py,UA,b,c,d){
+  const k=py/px2, m=(py*c-px2*d)/(px2*b);
+  const A2=b*k, B2=b*m+c*k+d, C2=c*m-UA;
+  const disc=B2*B2-4*A2*C2; if(disc<0)return null;
+  const y1=(-B2+Math.sqrt(disc))/(2*A2), y2=(-B2-Math.sqrt(disc))/(2*A2);
+  const y=(y1>0.05&&y2>0.05)?Math.min(y1,y2):(y1>0.05?y1:y2);
+  return {x:rnd(k*y+m), y:rnd(y)};
+}
+function lqHicksPy(py2,px,UA,b,c,d){
+  const K=px/py2;
+  const A2=b*K, B2=2*K*d, C2=d*(K*d-c)/b-UA;
+  const disc=B2*B2-4*A2*C2; if(disc<0)return null;
+  const x1=(-B2+Math.sqrt(disc))/(2*A2), x2=(-B2-Math.sqrt(disc))/(2*A2);
+  const x=(x1>0.05&&x2>0.05)?Math.min(x1,x2):(x1>0.05?x1:x2);
+  return {x:rnd(x), y:rnd(K*x+K*d/b-c/b)};
+}
+
+// ── Which-is-bigger rule ───────────────────────────────────────────
+// Key insight: we can only determine which effect is bigger when SE and IE
+// point in OPPOSITE directions. The sign of TE tells us which won.
+// When SE and IE point in the SAME direction, we cannot tell which is larger.
+// When SE=0 (income change), IE is always larger (or rather, IE=TE).
+function biggerRule(seSgn, ieSgn, teSgn){
+  if(seSgn==='0') return 'IE';     // income change: SE=0, IE=TE
+  if(ieSgn==='0') return 'SE';     // degenerate: IE=0
+  if(seSgn===ieSgn) return 'unclear'; // same direction: cannot tell from bundles
+  // Opposite directions: TE sign tells us which won
+  if(teSgn==='0') return 'equal';  // TE=0: SE and IE exactly cancel
+  if(teSgn===seSgn) return 'SE';
+  if(teSgn===ieSgn) return 'IE';
+  return 'unclear';
+}
+
+// ── Build a normal-good scenario from LQ parameters ───────────────
+function makeNormal(spec){
+  const {b,c,d,px1,px2,py1,py2,I} = spec;
+  const A=lqOpt(px1,py1,I,b,c,d), B=lqOpt(px2,py2,I,b,c,d);
+  if(A.x<0.5||A.y<0.5||B.x<0.5||B.y<0.5) return null;
+
+  const isIncChange=(px1===px2&&py1===py2);
+  const UA=lqU(A.x,A.y,b,c,d);
+  let Ap=A;
+  if(!isIncChange){
+    if(px1!==px2) Ap=lqHicksPx(px2,py2,UA,b,c,d);
+    else           Ap=lqHicksPy(py2,px2,UA,b,c,d);
+    if(!Ap||Ap.x<0.05||Ap.y<0.05) return null;
+    if(Math.abs(lqU(Ap.x,Ap.y,b,c,d)-UA)/UA>0.03) return null;
+  }
+
+  const seX=rnd(Ap.x-A.x), ieX=rnd(B.x-Ap.x), teX=rnd(B.x-A.x);
+  const seY=rnd(Ap.y-A.y), ieY=rnd(B.y-Ap.y), teY=rnd(B.y-A.y);
+  const sSeX=sgn(seX),sIeX=sgn(ieX),sTeX=sgn(teX);
+  const sSeY=sgn(seY),sIeY=sgn(ieY),sTeY=sgn(teY);
+  const teXAmb=(sSeX!=='0'&&sIeX!=='0'&&sSeX!==sIeX&&sTeX!=='0');
+  const teYAmb=(sSeY!=='0'&&sIeY!=='0'&&sSeY!==sIeY&&sTeY!=='0');
+
+  const biggerX=biggerRule(sSeX,sIeX,sTeX);
+  const biggerY=biggerRule(sSeY,sIeY,sTeY);
+
+  // Build scenario text
+  let text='';
+  if(isIncChange){
+    const incUp=B.x>A.x;
+    text=`Income ${incUp?'rises':'falls'} from $${I} to $${_I2}. P<sub>X</sub>=$${px1}, P<sub>Y</sub>=$${py1}. Both goods are normal goods. Prices are unchanged.`;
+  } else if(px1!==px2){
+    const dir=px2<px1?'falls':'rises';
+    text=`P<sub>X</sub> ${dir} from $${px1} to $${px2}. P<sub>Y</sub>=$${py1}, Income=$${I}. Both goods are normal goods.`;
+  } else {
+    const dir=py2<py1?'falls':'rises';
+    text=`P<sub>Y</sub> ${dir} from $${py1} to $${py2}. P<sub>X</sub>=$${px1}, Income=$${I}. Both goods are normal goods.`;
+  }
+
+  const explain=buildExplain(false,false,px1,px2,py1,py2,A,B,
+    sSeX,sIeX,sTeX,teXAmb,sSeY,sIeY,sTeY,teYAmb,biggerX,biggerY,isIncChange);
+
+  return {text,goodX:'Good X (normal)',goodY:'Good Y (normal)',
+    A,B,sSeX,sIeX,sTeX,teXAmb,sSeY,sIeY,sTeY,teYAmb,biggerX,biggerY,explain};
+}
+
+// ── Build a pre-specified inferior-good scenario ───────────────────
+// For inferior-good scenarios we pre-specify A and B on known budget lines.
+// Signs are derived purely from theory:
+//   SE on price-changed good: always opposite to price change
+//   IE on inferior good:      always opposite to SE (inferior means IE opposes SE)
+//   IE on normal good:        always same direction as income change
+//   TE: sgn(B - A) from the bundles
+//   Which-bigger: same rule (opposite directions → TE tells us; same → unclear)
+function makeInferior(spec){
+  const {text,goodX,goodY,A,B,
+         sSeX,sIeX,sSeY,sIeY} = spec;
+  const teX=rnd(B.x-A.x), teY=rnd(B.y-A.y);
+  const sTeX=sgn(teX), sTeY=sgn(teY);
+  const teXAmb=(sSeX!=='0'&&sIeX!=='0'&&sSeX!==sIeX&&sTeX!=='0');
+  const teYAmb=(sSeY!=='0'&&sIeY!=='0'&&sSeY!==sIeY&&sTeY!=='0');
+  const biggerX=biggerRule(sSeX,sIeX,sTeX);
+  const biggerY=biggerRule(sSeY,sIeY,sTeY);
+  const explain=spec.explain(sTeX,sTeY,biggerX,biggerY,teXAmb,teYAmb);
+  return {text,goodX,goodY,A,B,sSeX,sIeX,sTeX,teXAmb,sSeY,sIeY,sTeY,teYAmb,biggerX,biggerY,explain};
+}
+
+function buildExplain(xInf,yInf,px1,px2,py1,py2,A,B,
+    sSeX,sIeX,sTeX,teXAmb,sSeY,sIeY,sTeY,teYAmb,bigX,bigY,isInc){
+  const sw=s=>s==='+'?'positive':s==='-'?'negative':'zero';
+  const teX=rnd(B.x-A.x), teY=rnd(B.y-A.y);
+  let e=`<strong>Total effect from bundles:</strong> ΔX = ${teX>=0?'+':''}${teX}, ΔY = ${teY>=0?'+':''}${teY}.<br><br>`;
+  if(isInc){
+    e+=`Since prices are unchanged, <span class="se-tag">SE = 0</span> for both goods — no substitution is possible when relative prices don't change.<br><br>`;
+    e+=`IE = TE for both goods. Both are normal goods, so the income effect is <strong>${sw(sIeX)}</strong> on X and <strong>${sw(sIeY)}</strong> on Y. `;
+    e+=`With SE = 0, the IE is trivially larger for both goods.`;
+  } else {
+    const isPx=px1!==px2, dir=isPx?(px2<px1?'falls':'rises'):(py2<py1?'falls':'rises');
+    const changed=isPx?'X':'Y', other=isPx?'Y':'X';
+    const sSeC=isPx?sSeX:sSeY, sIeC=isPx?sIeX:sIeY, sTeC=isPx?sTeX:sTeY;
+    const sSeO=isPx?sSeY:sSeX, sIeO=isPx?sIeY:sIeX, sTeO=isPx?sTeY:sTeX;
+    const bigC=isPx?bigX:bigY, bigO=isPx?bigY:bigX;
+    const teXAmbC=isPx?teXAmb:teYAmb, teXAmbO=isPx?teYAmb:teXAmb;
+    const cInf=(isPx&&xInf)||(!isPx&&yInf);
+    const oInf=(isPx&&yInf)||(!isPx&&xInf);
+
+    e+=`<strong>Good ${changed}</strong> (price ${dir}): `;
+    e+=`<span class="se-tag">SE is ${sw(sSeC)}</span> — Good ${changed} is relatively ${dir==='falls'?'cheaper':'more expensive'}, so the consumer substitutes ${dir==='falls'?'toward':'away from'} it. `;
+    e+=`<span class="ie-tag">IE is ${sw(sIeC)}</span> — the price change ${dir==='falls'?'raises':'lowers'} real income; `;
+    e+=cInf?`as an <em>inferior</em> good, higher real income means buying <em>less</em> of it, so IE opposes SE.`:`as a normal good, IE points in the same direction as SE.`;
+    if(sSeC!==sIeC&&sSeC!=='0'&&sIeC!=='0'){
+      // SE and IE oppose each other
+      if(sTeC==='0'){
+        e+=` SE and IE point in <strong>opposite directions</strong> and are <strong>equal in magnitude</strong> — they exactly cancel, given <span class="te-tag">TE = 0</span>.`;
+      } else {
+        e+=` SE and IE oppose each other; the <strong>${bigC}</strong> effect wins, giving a <span class="te-tag">TE that is ${sw(sTeC)}</span>.`;
+      }
+    } else {
+      e+=` Both effects point the same direction: <span class="te-tag">TE is ${sw(sTeC)}</span>. Since SE and IE are in the same direction, <strong>we cannot tell which is larger</strong> from the bundles alone.`;
+    }
+    e+=`<br><br>`;
+
+    e+=`<strong>Good ${other}</strong>: `;
+    e+=`<span class="se-tag">SE is ${sw(sSeO)}</span> — consumers substitute ${dir==='falls'?'away from':'toward'} Good ${other}. `;
+    e+=`<span class="ie-tag">IE is ${sw(sIeO)}</span> — real income ${dir==='falls'?'rises':'falls'}; `;
+    e+=oInf?`as an inferior good, the IE is ${sw(sIeO)}.`:`as a normal good, the IE is ${sw(sIeO)}.`;
+    if(sSeO!==sIeO&&sSeO!=='0'&&sIeO!=='0'){
+      // SE and IE oppose each other
+      if(sTeO==='0'){
+        e+=` SE and IE point in <strong>opposite directions</strong> and are <strong>equal in magnitude</strong> — they exactly cancel, giving <span class="te-tag">TE = 0</span>.`;
+      } else {
+        e+=` SE and IE oppose each other; the <strong>${bigO}</strong> effect wins, given <span class="te-tag">TE is ${sw(sTeO)}</span>.`;
+      }
+    } else {
+      e+=` Both effects point the same direction: <span class="te-tag">TE is ${sw(sTeO)}</span>. Since SE and IE are in the same direction, <strong>we cannot tell which is larger</strong>.`;
+    }
+  }
+  return e;
+}
+
+// ── Scenario library ───────────────────────────────────────────────
+const NORMAL_SPECS=[
+  // Px falls — b=1,c=1,d=1 (IE slightly > SE on X; SE > IE on Y)
+  {b:1,c:1,d:1,px1:8,px2:4,py1:4,py2:4,I:80},
+  {b:1,c:1,d:1,px1:10,px2:5,py1:5,py2:5,I:100},
+  // Px falls — b=1,c=1,d=3 (SE > IE on X)
+  {b:1,c:1,d:3,px1:8,px2:4,py1:4,py2:4,I:80},
+  // Px rises
+  {b:1,c:1,d:1,px1:4,px2:8,py1:4,py2:4,I:80},
+  {b:1,c:1,d:1,px1:5,px2:10,py1:5,py2:5,I:100},
+  {b:1,c:1,d:3,px1:4,px2:8,py1:4,py2:4,I:80},
+  // Py falls
+  {b:1,c:1,d:1,px1:5,px2:5,py1:8,py2:4,I:80},
+  {b:1,c:3,d:1,px1:5,px2:5,py1:8,py2:4,I:80},
+  // Py rises
+  {b:1,c:1,d:1,px1:5,px2:5,py1:4,py2:8,I:80},
+  // Income changes (handled specially)
+  {b:1,c:1,d:1,px1:5,px2:5,py1:4,py2:4,I:60,  _I2:100},
+  {b:1,c:1,d:1,px1:5,px2:5,py1:4,py2:4,I:100, _I2:60},
+];
+
+// Pre-specified inferior-good scenarios
+// Theory signs hardcoded. A and B verified on budget lines.
+const INFERIOR_SCENARIOS=[
+  // Px falls 8->4, py=4, I=80; X inferior, Y normal
+  // SE_X=+ (toward cheaper X), IE_X=- (inferior: real income up→buy less X)
+  // SE_Y=- (away from Y), IE_Y=+ (normal: real income up→buy more Y)
+  // TE_X=+1>0 → SE wins on X; TE_Y=+4 → same direction on Y → unclear
+  makeInferior({
+    text:'P<sub>X</sub> falls from $8 to $4. P<sub>Y</sub>=$4, Income=$80. Good X is an inferior good. Good Y is a normal good.',
+    goodX:'Good X (inferior)',goodY:'Good Y (normal)',
+    A:{x:5,y:10},B:{x:6,y:14},
+    sSeX:'+',sIeX:'-',sSeY:'-',sIeY:'+',
+    explain:(sTeX,sTeY,bigX,bigY,teXAmb,teYAmb)=>{
+      const teX=1,teY=4;
+      return `<strong>Total effect from bundles:</strong> ΔX = +${teX}, ΔY = +${teY}.<br><br>` +
+        `<strong>Good X (inferior)</strong>: <span class="se-tag">SE is positive</span> — X is cheaper, so consumers substitute toward it. <span class="ie-tag">IE is negative</span> — real income rises; as an inferior good, higher real income means buying less X. SE and IE oppose each other; TE = +${teX} (positive), so <strong>SE wins</strong>.<br><br>` +
+        `<strong>Good Y (normal)</strong>: <span class="se-tag">SE is negative</span> — consumers substitute away from Y toward cheaper X. <span class="ie-tag">IE is positive</span> — real income rises; as a normal good, buy more Y. SE and IE oppose each other; TE = +${teY} (positive), so <strong>IE wins</strong>.`;
+    }
+  }),
+  // Px falls 8->4, py=4, I=80; X inferior — IE wins on X (Giffen): TE_X < 0
+  makeInferior({
+    text:'P<sub>X</sub> falls from $8 to $4. P<sub>Y</sub>=$4, Income=$80. Good X is an inferior good. Good Y is a normal good.',
+    goodX:'Good X (inferior)',goodY:'Good Y (normal)',
+    A:{x:5,y:10},B:{x:4,y:16},
+    sSeX:'+',sIeX:'-',sSeY:'-',sIeY:'+',
+    explain:(sTeX,sTeY,bigX,bigY)=>{
+      const teX=-1,teY=6;
+      return `<strong>Total effect from bundles:</strong> ΔX = ${teX}, ΔY = +${teY}.<br><br>` +
+        `<strong>Good X (inferior)</strong>: <span class="se-tag">SE is positive</span> — X is cheaper → substitute toward it. <span class="ie-tag">IE is negative</span> — real income rises; inferior good → buy less X. TE = ${teX} (negative), so <strong>IE wins</strong> — this is a <em>Giffen good</em>, where the negative IE dominates the positive SE.<br><br>` +
+        `<strong>Good Y (normal)</strong>: <span class="se-tag">SE is negative</span> — substitute away from Y. <span class="ie-tag">IE is positive</span> — normal good, real income rises. SE and IE oppose each other; TE = +${teY}, so <strong>IE wins</strong>.`;
+    }
+  }),
+  // Px rises 4->8, py=4, I=80; X inferior, Y normal
+  // SE_X=- (away from X), IE_X=+ (inferior: real income falls→buy more X)
+  // SE_Y=+ (toward Y), IE_Y=- (normal: real income falls→buy less Y)
+  // A=(10,10) on BC1: 4*10+4*10=80✓, B=(5,10) on BC2: 8*5+4*10=40+40=80✓
+  // TE_X=-5, TE_Y=0
+  makeInferior({
+    text:'P<sub>X</sub> rises from $4 to $8. P<sub>Y</sub>=$4, Income=$80. Good X is an inferior good. Good Y is a normal good.',
+    goodX:'Good X (inferior)',goodY:'Good Y (normal)',
+    A:{x:10,y:10},B:{x:5,y:10},
+    sSeX:'-',sIeX:'+',sSeY:'+',sIeY:'-',
+    explain:(sTeX,sTeY,bigX,bigY)=>{
+      const teX=-5,teY=0;
+      return `<strong>Total effect from bundles:</strong> ΔX = ${teX}, ΔY = ${teY}.<br><br>` +
+        `<strong>Good X (inferior)</strong>: <span class="se-tag">SE is negative</span> — X is more expensive → substitute away. <span class="ie-tag">IE is positive</span> — real income falls; inferior good → buy more X. SE and IE oppose each other; TE = ${teX} (negative), so <strong>SE wins</strong>.<br><br>` +
+        `<strong>Good Y (normal)</strong>: <span class="se-tag">SE is positive</span> — substitute toward Y. <span class="ie-tag">IE is negative</span> — real income falls; normal good → buy less Y. SE and IE oppose; TE = ${teY} = 0, meaning SE and IE are <strong>exactly equal in magnitude</strong> and cancel out.`;
+    }
+  }),
+  // Px rises 5->10, py=5, I=100; X inferior
+  // A: 5*10+5*10=100✓  B: 10*6+5*8=60+40=100✓
+  // TE_X=-4, TE_Y=-2: SE wins on X; Y: SE+ IE- TE-2 → IE wins
+  makeInferior({
+    text:'P<sub>X</sub> rises from $5 to $10. P<sub>Y</sub>=$5, Income=$100. Good X is an inferior good. Good Y is a normal good.',
+    goodX:'Good X (inferior)',goodY:'Good Y (normal)',
+    A:{x:10,y:10},B:{x:6,y:8},
+    sSeX:'-',sIeX:'+',sSeY:'+',sIeY:'-',
+    explain:(sTeX,sTeY,bigX,bigY)=>{
+      const teX=-4,teY=-2;
+      return `<strong>Total effect from bundles:</strong> ΔX = ${teX}, ΔY = ${teY}.<br><br>` +
+        `<strong>Good X (inferior)</strong>: <span class="se-tag">SE is negative</span> — X more expensive → substitute away. <span class="ie-tag">IE is positive</span> — real income falls; inferior → buy more X. SE and IE oppose; TE = ${teX} (negative), so <strong>SE wins</strong>.<br><br>` +
+        `<strong>Good Y (normal)</strong>: <span class="se-tag">SE is positive</span> — substitute toward Y. <span class="ie-tag">IE is negative</span> — real income falls; normal → buy less Y. SE and IE oppose; TE = ${teY} (negative), so <strong>IE wins</strong>.`;
+    }
+  }),
+];
+
+const CD_SPECS=[
+  // Px falls: TE_Y=0 (SE and IE on Y exactly equal) — 'equal in magnitude'
+  {px1:8,px2:2,py1:4,py2:4,I:80},
+  {px1:16,px2:4,py1:4,py2:4,I:80},
+  {px1:9,px2:1,py1:3,py2:3,I:90},
+  // Px rises: same equal-on-Y property
+  {px1:2,px2:8,py1:4,py2:4,I:80},
+  {px1:4,px2:16,py1:4,py2:4,I:80},
+  // Py falls: TE_X=0
+  {px1:4,px2:4,py1:8,py2:2,I:80},
+  {px1:4,px2:4,py1:16,py2:4,I:80},
+];
+
+function buildAll(){
+  const out=[];
+  for(const s of NORMAL_SPECS){
+    // Income change: adjust I
+    if(s._I2!==undefined){
+      const {b,c,d,px1,py1,_I2}=s;
+      const A=lqOpt(px1,py1,s.I,b,c,d), B=lqOpt(px1,py1,_I2,b,c,d);
+      if(A.x<0.5||A.y<0.5||B.x<0.5||B.y<0.5) continue;
+      const teX=rnd(B.x-A.x),teY=rnd(B.y-A.y);
+      const sTeX=sgn(teX),sTeY=sgn(teY);
+      const incUp=_I2>s.I;
+      const text=`Income ${incUp?'rises':'falls'} from $${s.I} to $${_I2}. P<sub>X</sub>=$${px1}, P<sub>Y</sub>=$${py1}. Both goods are normal goods. Prices are unchanged.`;
+      const e=`<strong>Total effect from bundles:</strong> ΔX = ${teX>=0?'+':''}${teX}, ΔY = ${teY>=0?'+':''}${teY}.<br><br>` +
+        `Since prices are unchanged, <span class="se-tag">SE = 0</span> for both goods — there is nothing to substitute toward or away from when relative prices don't change.<br><br>` +
+        `IE = TE for both goods. Both are normal, so IE is <strong>${incUp?'positive':'negative'}</strong> on X and <strong>${incUp?'positive':'negative'}</strong> on Y. With SE = 0, IE is trivially the larger effect.`;
+      out.push({text,goodX:'Good X (normal)',goodY:'Good Y (normal)',
+        A,B,sSeX:'0',sIeX:sTeX,sTeX,teXAmb:false,
+        sSeY:'0',sIeY:sTeY,sTeY,teYAmb:false,
+        biggerX:'IE',biggerY:'IE',explain:e});
+      continue;
+    }
+    const sc=makeNormal(s); if(sc) out.push(sc);
+  }
+  out.push(...INFERIOR_SCENARIOS);
+  // CD scenarios (give equal-in-magnitude cases)
+  for(const s of CD_SPECS){const sc=makeCDScenario(s);if(sc)out.push(sc);}
+  return shuffle(out);
+}
+
+function shuffle(a){
+  a=[...a];
+  for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}
+  return a;
+}
+
+// ── State ──────────────────────────────────────────────────────────
+let scenarios=buildAll(),qIdx=0,score={correct:0,total:0},answered=false;
+let selSigns={},selBigX=null,selBigY=null;
+
+const $scenText=$id('scenText'),$bundleRow=$id('bundleRow'),$signGrid=$id('signGrid');
+const $biggerSec=$id('biggerSection'),$checkBtn=$id('checkBtn'),$nextBtn=$id('nextBtn');
+const $scorePill=$id('scorePill'),$feedback=$id('feedbackBox');
+function $id(i){return document.getElementById(i);}
+
+// ── Render ─────────────────────────────────────────────────────────
+function renderQ(){
+  const sc=scenarios[qIdx%scenarios.length];
+  selSigns={};selBigX=null;selBigY=null;answered=false;
+  $feedback.style.display='none';$feedback.className='feedback-box';
+
+  $scenText.innerHTML=sc.text;
+  $bundleRow.innerHTML=`
+    <span class="bundle-label">Bundle A:</span>
+    <span class="bundle-chip chip-A">X=${sc.A.x}, Y=${sc.A.y}</span>
+    <span class="bundle-label" style="margin-left:8px;">Bundle B:</span>
+    <span class="bundle-chip chip-B">X=${sc.B.x}, Y=${sc.B.y}</span>`;
+
+  // Sign grid
+  $signGrid.innerHTML='';
+  ['','Substitution Effect','Income Effect','Total Effect'].forEach((h,i)=>{
+    const d=document.createElement('div');
+    d.className='grid-header'+(i===0?' left':'');d.textContent=h;$signGrid.appendChild(d);
+  });
+  [{label:sc.goodX,keys:['seX','ieX','teX']},{label:sc.goodY,keys:['seY','ieY','teY']}].forEach(row=>{
+    const l=document.createElement('div');l.className='good-label';l.textContent=row.label;$signGrid.appendChild(l);
+    row.keys.forEach(key=>{
+      const cell=document.createElement('div');cell.className='sign-choices';
+      ['+','-','0'].forEach(sign=>{
+        const btn=document.createElement('button');
+        btn.className='sign-btn';btn.dataset.key=key;btn.dataset.sign=sign;btn.textContent=sign;
+        btn.addEventListener('click',()=>{
+          if(answered)return;
+          cell.querySelectorAll('.sign-btn').forEach(b=>b.classList.remove('selected'));
+          btn.classList.add('selected');selSigns[key]=sign;
+        });
+        cell.appendChild(btn);
+      });
+      $signGrid.appendChild(cell);
+    });
+  });
+
+  // Bigger section
+  $biggerSec.innerHTML='';
+  const opts=[{label:'SE is larger',val:'SE'},{label:'IE is larger',val:'IE'},{label:'Equal in magnitude',val:'equal'},{label:'Cannot tell from this information',val:'unclear'}];
+
+  function makeBiggerBlock(goodLabel,id,setter){
+    const d=document.createElement('div');d.className='bigger-block';
+    d.innerHTML=`<div class="bigger-question">For <strong>${goodLabel}</strong>: which effect is larger in absolute value?</div><div class="bigger-choices" id="${id}"></div>`;
+    opts.forEach(o=>{
+      const btn=document.createElement('button');btn.className='bigger-btn';btn.textContent=o.label;btn.dataset.val=o.val;
+      btn.addEventListener('click',()=>{
+        if(answered)return;
+        d.querySelectorAll('.bigger-btn').forEach(b=>b.classList.remove('selected'));
+        btn.classList.add('selected');setter(o.val);
+      });
+      d.querySelector('#'+id).appendChild(btn);
+    });
+    return d;
+  }
+  $biggerSec.appendChild(makeBiggerBlock(sc.goodX,'bigX',v=>{selBigX=v;}));
+  $biggerSec.appendChild(makeBiggerBlock(sc.goodY,'bigY',v=>{selBigY=v;}));
+}
+
+// ── Check ──────────────────────────────────────────────────────────
+$checkBtn.addEventListener('click',()=>{
+  if(answered)return;
+  const sc=scenarios[qIdx%scenarios.length];
+  const keys=['seX','ieX','teX','seY','ieY','teY'];
+  if(keys.some(k=>!selSigns[k])||!selBigX||!selBigY){
+    $feedback.innerHTML='Please fill in all sign cells and both "which is larger" questions.';
+    $feedback.className='feedback-box wrong';$feedback.style.display='block';return;
+  }
+  answered=true;score.total++;
+
+  const signMap={seX:sc.sSeX,ieX:sc.sIeX,teX:sc.sTeX,seY:sc.sSeY,ieY:sc.sIeY,teY:sc.sTeY};
+  const ambMap={teX:sc.teXAmb,teY:sc.teYAmb};
+  let allOk=true;
+
+  keys.forEach(key=>{
+    const correct=signMap[key],amb=ambMap[key],sel=selSigns[key];
+    const isOk=amb?(sel==='+'||sel==='-'):(sel===correct);
+    if(!isOk)allOk=false;
+    $signGrid.querySelectorAll(`.sign-btn[data-key="${key}"]`).forEach(btn=>{
+      btn.disabled=true;
+      if(btn.classList.contains('selected')){btn.classList.remove('selected');btn.classList.add(isOk?'correct':'wrong');}
+      else if(!isOk&&amb&&(btn.dataset.sign==='+'||btn.dataset.sign==='-')) btn.classList.add('reveal');
+      else if(!isOk&&!amb&&btn.dataset.sign===correct) btn.classList.add('reveal');
+    });
+  });
+
+  [[selBigX,sc.biggerX,'bigX'],[selBigY,sc.biggerY,'bigY']].forEach(([sel,correct,id])=>{
+    const isOk=sel===correct;if(!isOk)allOk=false;
+    document.querySelectorAll('#'+id+' .bigger-btn').forEach(btn=>{
+      btn.disabled=true;
+      if(btn.classList.contains('selected')){btn.classList.remove('selected');btn.classList.add(isOk?'correct':'wrong');}
+      else if(btn.dataset.val===correct) btn.classList.add('reveal');
+    });
+  });
+
+  if(allOk)score.correct++;
+  $scorePill.textContent=`Score: ${score.correct} / ${score.total}`;
+  $feedback.innerHTML=(allOk?'✓ Correct! ':'✗ Not quite. ')+sc.explain;
+  $feedback.className='feedback-box '+(allOk?'correct':'wrong');
+  $feedback.style.display='block';
+});
+
+$nextBtn.addEventListener('click',()=>{
+  qIdx++;if(qIdx%scenarios.length===0)scenarios=buildAll();renderQ();
+});
+renderQ();
+})();
+</script>
+</body>
+</html>
