@@ -160,7 +160,7 @@
     <div class="leg" style="flex-direction:column;gap:6px;">
       <div class="li"><div class="ld" style="background:var(--col-bc1);"></div><span><strong>A</strong> — initial optimum (BC₁, U₁)</span></div>
       <div class="li"><div class="ld" style="background:var(--col-bc2);"></div><span><strong>B</strong> — new optimum (BC₂, U₂)</span></div>
-      <div class="li"><div class="ld" style="background:var(--col-bcp);"></div><span><strong>A′</strong> — BC′ tangent to U₁ at new prices</span></div>
+      <div class="li"><div class="ld" style="background:var(--col-bcp);"></div><span><strong>A′</strong> — Hicksian bundle: BC′ tangent to U₁ at new prices</span></div>
       <div class="li"><div class="ll" style="border-color:var(--col-SE);"></div><span style="color:var(--col-SE);font-weight:700;">Substitution effect</span>&nbsp;A→A′</div>
       <div class="li"><div class="ll" style="border-color:var(--col-IE);"></div><span style="color:var(--col-IE);font-weight:700;">Income effect</span>&nbsp;A′→B</div>
       <div class="li"><div class="ll dashed" style="border-color:var(--col-TE);"></div><span style="color:var(--col-TE);font-weight:700;">Total effect</span>&nbsp;A→B</div>
@@ -320,16 +320,18 @@ function compute(){
   const ieX=r(B.x-Ap.x), ieY=r(B.y-Ap.y);
   const teX=r(B.x-A.x),  teY=r(B.y-A.y);
 
-  // Dynamic axis
+  // Dynamic axes: X and Y sized independently to fit BC₁, BC₂, and all three points.
+  // BC′ intercepts excluded — it may be clipped at the edges.
   const xi1=I1/px1,yi1=I1/py1,xi2=I2/px2,yi2=I2/py2,xiC=Ip/npx,yiC=Ip/npy;
-  const vals=[xi1,yi1,xi2,yi2,xiC,yiC,A.x,A.y,B.x,B.y,Ap.x,Ap.y].filter(isFinite);
-  const raw=Math.max(...vals)*1.30;
   const snaps=[8,10,12,15,20,25,30,40,50,60,80,100,120];
-  const axisMax=snaps.find(s=>s>=raw)||Math.ceil(raw/10)*10;
+  function snapUp(raw){ return snaps.find(s=>s>=raw)||Math.ceil(raw/10)*10; }
+  const xRaw=Math.max(xi1,xi2,A.x,B.x,Ap.x)*1.05;
+  const yRaw=Math.max(yi1,yi2,A.y,B.y,Ap.y)*1.05;
+  const xMax=snapUp(xRaw), yMax=snapUp(yRaw);
 
   C={A,B,Ap,UA,UB,px1,py1,I1,px2,py2,I2,npx,npy,Ip,
      xi1,yi1,xi2,yi2,xiC,yiC,seX,seY,ieX,ieY,teX,teY,
-     axisMax,util,change,dir,icFn};
+     xMax,yMax,util,change,dir,icFn};
 
   // Problem box
   const uStr=util==='cd'?'U = X<sup>½</sup>Y<sup>½</sup>':'U = XY + X + Y';
@@ -338,7 +340,7 @@ function compute(){
   const to  =change==='px'?`$${px2}`:change==='py'?`$${py2}`:`$${I2}`;
   $prob.innerHTML=`<p><strong>Utility:</strong> ${uStr}&nbsp;&nbsp;</p>
 <p><strong>Baseline:</strong> P<sub>X</sub>=$${px1}, P<sub>Y</sub>=$${py1}, I=$${I1}</p>
-<p><strong>Change:</strong> ${chStr} ${dir==='down'?'falls':'rises'} from ${from} → ${to}</p`;
+<p><strong>Change:</strong> ${chStr} ${dir==='down'?'falls':'rises'} from ${from} → ${to}</p>`;
 }
 
 // ── Refresh UI ─────────────────────────────────────────────────────
@@ -384,10 +386,10 @@ function setup(){
   if($canvas.width!==W||$canvas.height!==H){$canvas.width=W;$canvas.height=H;}
   return{ctx:$canvas.getContext('2d'),dpr,W,H};
 }
-function mkCoords(W,H,dpr,aM){
+function mkCoords(W,H,dpr,xMax,yMax){
   const p={l:PAD.l*dpr,r:PAD.r*dpr,t:PAD.t*dpr,b:PAD.b*dpr};
   _layout={p,W,H};
-  return{xToC:x=>p.l+(x/aM)*(W-p.l-p.r), yToC:y=>H-p.b-(y/aM)*(H-p.t-p.b), p};
+  return{xToC:x=>p.l+(x/xMax)*(W-p.l-p.r), yToC:y=>H-p.b-(y/yMax)*(H-p.t-p.b), p};
 }
 
 function bcLine(ctx,dpr,xToC,yToC,xi,yi,color,dash,lw){
@@ -397,13 +399,13 @@ function bcLine(ctx,dpr,xToC,yToC,xi,yi,color,dash,lw){
   ctx.setLineDash([]);ctx.restore();
 }
 
-function icCurve(ctx,dpr,icFn,U,color,lw,xToC,yToC,aM){
+function icCurve(ctx,dpr,icFn,U,color,lw,xToC,yToC,aM,yM){
   ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=lw*dpr;ctx.setLineDash([]);
   let started=false;
   for(let k=0;k<=300;k++){
     const x=(k/300)*aM*0.99; if(x<0.05)continue;
     const y=icFn(x,U);
-    if(!isFinite(y)||y<0||y>aM*1.05){started=false;continue;}
+    if(!isFinite(y)||y<0||y>(yM||aM)*1.05){started=false;continue;}
     const cx=xToC(x),cy=yToC(y);
     if(!started){ctx.moveTo(cx,cy);started=true;}else ctx.lineTo(cx,cy);
   }
@@ -438,28 +440,45 @@ function drawDot(ctx,dpr,xToC,yToC,xv,yv,color,label,side){
 }
 
 // Horizontal arrow at canvas-y cy between canvas-x cx1 and cx2
+// If span is too small to draw an arrow, show a "= 0" marker instead
 function hArr(ctx,dpr,cx1,cx2,cy,color,label,above){
-  if(Math.abs(cx2-cx1)<3*dpr)return;
-  const dir=cx2>cx1?1:-1,h=7*dpr;
-  ctx.save();ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2*dpr;ctx.setLineDash([]);
-  ctx.beginPath();ctx.moveTo(cx1,cy);ctx.lineTo(cx2,cy);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(cx2,cy);ctx.lineTo(cx2-dir*h,cy-3*dpr);ctx.lineTo(cx2-dir*h,cy+3*dpr);ctx.closePath();ctx.fill();
-  ctx.font=`700 ${10*dpr}px "Inter",sans-serif`;ctx.textAlign='center';
+  ctx.save();ctx.strokeStyle=color;ctx.fillStyle=color;
+  ctx.font=`700 ${10*dpr}px "Inter",sans-serif`;
   ctx.textBaseline=above?'bottom':'top';
-  ctx.fillText(label,(cx1+cx2)/2,cy+(above?-4:4)*dpr);
+  const textY=cy+(above?-4:4)*dpr;
+  if(Math.abs(cx2-cx1)<3*dpr){
+    // Too small to draw arrow — show a dot and "≈ 0" label
+    ctx.beginPath();ctx.arc(cx1,cy,3*dpr,0,Math.PI*2);ctx.fill();
+    ctx.textAlign='center';
+    ctx.fillText(label+' ≈ 0',cx1,textY);
+  } else {
+    const dir=cx2>cx1?1:-1,h=7*dpr;
+    ctx.lineWidth=2*dpr;ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(cx1,cy);ctx.lineTo(cx2,cy);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx2,cy);ctx.lineTo(cx2-dir*h,cy-3*dpr);ctx.lineTo(cx2-dir*h,cy+3*dpr);ctx.closePath();ctx.fill();
+    ctx.textAlign='center';
+    ctx.fillText(label,(cx1+cx2)/2,textY);
+  }
   ctx.restore();
 }
 
 // Vertical arrow at canvas-x cx between canvas-y cy1 and cy2
 function vArr(ctx,dpr,cy1,cy2,cx,color,label,toLeft){
-  if(Math.abs(cy2-cy1)<5*dpr)return;
-  const dir=cy2>cy1?1:-1,h=7*dpr;
-  ctx.save();ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=2*dpr;ctx.setLineDash([]);
-  ctx.beginPath();ctx.moveTo(cx,cy1);ctx.lineTo(cx,cy2);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(cx,cy2);ctx.lineTo(cx-3*dpr,cy2-dir*h);ctx.lineTo(cx+3*dpr,cy2-dir*h);ctx.closePath();ctx.fill();
-  ctx.font=`700 ${10*dpr}px "Inter",sans-serif`;ctx.fillStyle=color;
+  ctx.save();ctx.strokeStyle=color;ctx.fillStyle=color;
+  ctx.font=`700 ${10*dpr}px "Inter",sans-serif`;
   ctx.textAlign=toLeft?'right':'left';ctx.textBaseline='middle';
-  ctx.fillText(label,cx+(toLeft?-5:5)*dpr,(cy1+cy2)/2);
+  const textX=cx+(toLeft?-5:5)*dpr;
+  if(Math.abs(cy2-cy1)<3*dpr){
+    // Too small to draw arrow — show a dot and "≈ 0" label
+    ctx.beginPath();ctx.arc(cx,cy1,3*dpr,0,Math.PI*2);ctx.fill();
+    ctx.fillText(label+' ≈ 0',textX,(cy1+cy2)/2);
+  } else {
+    const dir=cy2>cy1?1:-1,h=7*dpr;
+    ctx.lineWidth=2*dpr;ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(cx,cy1);ctx.lineTo(cx,cy2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx,cy2);ctx.lineTo(cx-3*dpr,cy2-dir*h);ctx.lineTo(cx+3*dpr,cy2-dir*h);ctx.closePath();ctx.fill();
+    ctx.fillText(label,textX,(cy1+cy2)/2);
+  }
   ctx.restore();
 }
 
@@ -467,8 +486,8 @@ function draw(){
   const {ctx,dpr,W,H}=setup();
   ctx.clearRect(0,0,W,H);
   if(!C.A)return;
-  const {axisMax,icFn,UA,UB,xi1,yi1,xi2,yi2,xiC,yiC,A,B,Ap}=C;
-  const co=mkCoords(W,H,dpr,axisMax);
+  const {xMax,yMax,icFn,UA,UB,xi1,yi1,xi2,yi2,xiC,yiC,A,B,Ap}=C;
+  const co=mkCoords(W,H,dpr,xMax,yMax);
   const {xToC,yToC,p}=co;
 
   // Background
@@ -489,18 +508,23 @@ function draw(){
   ctx.fillText('Good X',(p.l+W-p.r)/2,H-p.b+14*dpr);
   ctx.save();ctx.translate(p.l-34*dpr,(p.t+H-p.b)/2);ctx.rotate(-Math.PI/2);ctx.fillText('Good Y',0,0);ctx.restore();
 
-  // General tick marks
-  const ts=axisMax<=12?2:axisMax<=25?5:axisMax<=60?10:20;
+  // General tick marks — separate step for each axis
   ctx.font=`${10*dpr}px "Inter",sans-serif`;ctx.lineWidth=1*dpr;
-  for(let v=ts;v<axisMax;v+=ts){
-    const cx=xToC(v),cy=yToC(v);
-    ctx.strokeStyle='rgba(0,0,0,.15)';
+  ctx.strokeStyle='rgba(0,0,0,.15)';ctx.fillStyle='rgba(0,0,0,.40)';
+  function tickStep(mx){ return mx<=12?2:mx<=25?5:mx<=60?10:20; }
+  // X-axis ticks
+  const tsx=tickStep(xMax);
+  for(let v=tsx;v<xMax;v+=tsx){
+    const cx=xToC(v);
     ctx.beginPath();ctx.moveTo(cx,H-p.b-3*dpr);ctx.lineTo(cx,H-p.b+3*dpr);ctx.stroke();
-    ctx.fillStyle='rgba(0,0,0,.40)';ctx.textAlign='center';ctx.textBaseline='top';
-    ctx.fillText(v,cx,H-p.b+5*dpr);
+    ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(v,cx,H-p.b+5*dpr);
+  }
+  // Y-axis ticks
+  const tsy=tickStep(yMax);
+  for(let v=tsy;v<yMax;v+=tsy){
+    const cy=yToC(v);
     ctx.beginPath();ctx.moveTo(p.l-3*dpr,cy);ctx.lineTo(p.l+3*dpr,cy);ctx.stroke();
-    ctx.textAlign='right';ctx.textBaseline='middle';
-    ctx.fillText(v,p.l-5*dpr,cy);
+    ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(v,p.l-5*dpr,cy);
   }
 
   // Clip curves/lines to plot area
@@ -509,12 +533,12 @@ function draw(){
 
   // Always: BC1 + U1 + A
   bcLine(ctx,dpr,xToC,yToC,xi1,yi1,'rgba(47,93,124,.55)',[],2);
-  icCurve(ctx,dpr,icFn,UA,'rgba(47,93,124,.55)',2,xToC,yToC,axisMax);
+  icCurve(ctx,dpr,icFn,UA,'rgba(47,93,124,.55)',2,xToC,yToC,xMax,yMax);
 
   // Step 1+: BC2 + U2 + B
   if(step>=1){
     bcLine(ctx,dpr,xToC,yToC,xi2,yi2,'rgba(180,35,24,.45)',[],2);
-    icCurve(ctx,dpr,icFn,UB,'rgba(180,35,24,.45)',2,xToC,yToC,axisMax);
+    icCurve(ctx,dpr,icFn,UB,'rgba(180,35,24,.45)',2,xToC,yToC,xMax,yMax);
   }
 
   // Step 2+: BC' (dashed amber, tangent to U1 at new prices)
@@ -527,7 +551,7 @@ function draw(){
   ctx.font=`700 ${11*dpr}px "Inter",sans-serif`;
   function bcLabel(xi,yi,label,color,idx){
     if(!isFinite(xi)||!isFinite(yi)) return;
-    const xi_=Math.min(xi,axisMax), yi_=Math.min(yi,axisMax);
+    const xi_=Math.min(xi,xMax), yi_=Math.min(yi,yMax);
     // Stagger: move each label slightly further from x-intercept along the line
     const t=0.06 + (idx||0)*0.06;
     const xd=xi_*(1-t), yd=yi_*t;
