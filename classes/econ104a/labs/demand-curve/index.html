@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Deriving the Demand Curve — ECON 104A</title>
+  <link rel="stylesheet" href="/assets/style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea;--panel:#fff;
+      --ink:#1f2937;--ink-2:#374151;--muted:#6b7280;
+      --line:#e7dfd2;--line-2:#d9cfbf;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+      --accent:#2f5d7c;--good:#1b7f4b;--bad:#b42318;
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-sans);font-size:14px;line-height:1.5;}
+    .container{max-width:1100px;margin:0 auto;padding:0 18px;}
+    .page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(255,255,255,0));}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:13px;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{display:block;padding:18px 0 14px;}
+    .kicker{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;font-weight:700;}
+    h1{font-family:var(--font-serif);font-size:30px;line-height:1.1;margin:0 0 7px;}
+    .sub{color:var(--ink-2);line-height:1.55;max-width:74ch;margin:0;font-size:13px;}
+
+    .lab-grid{display:grid;grid-template-columns:290px 1fr;gap:18px;margin-top:20px;align-items:start;}
+    @media(max-width:800px){.lab-grid{grid-template-columns:1fr;}}
+
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);}
+    .card+.card{margin-top:14px;}
+    .sec{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0 0 10px;display:flex;align-items:center;gap:7px;}
+    .sec::after{content:'';flex:1;height:1px;background:var(--line);}
+
+    .param-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px;}
+    .param-chip{padding:5px 12px;border-radius:999px;font-size:12px;font-weight:800;border:1.5px solid var(--line-2);background:rgba(246,242,234,.6);color:var(--ink-2);}
+    .param-chip span{color:var(--accent);}
+
+    .price-track{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;}
+    .price-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:12px;border:1.5px solid var(--line-2);background:#fff;transition:all .15s;}
+    .price-item.active{border-color:var(--accent);background:rgba(47,93,124,.07);}
+    .price-item.done{border-color:rgba(27,127,75,.4);background:rgba(27,127,75,.06);}
+    .price-item.future{opacity:.35;}
+    .price-dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--line-2);flex-shrink:0;}
+    .price-item.active .price-dot{background:var(--accent);border-color:var(--accent);}
+    .price-item.done .price-dot{background:var(--good);border-color:var(--good);}
+    .price-label{font-size:12px;font-weight:800;color:rgba(47,93,124,.7);width:16px;flex-shrink:0;text-align:center;}
+    .price-px{font-size:13px;font-weight:800;color:var(--ink);}
+    .price-xstar{font-size:11px;color:var(--muted);margin-left:auto;}
+    .price-item.done .price-xstar{color:var(--good);font-weight:700;}
+
+    .step-nav{display:flex;gap:8px;}
+    .nav-btn{flex:1;padding:10px 8px;border-radius:12px;border:1.5px solid var(--line-2);background:#fff;font-family:var(--font-sans);font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .12s;text-align:center;}
+    .nav-btn:hover:not(:disabled){border-color:rgba(47,93,124,.4);color:var(--ink);}
+    .nav-btn.fwd{background:rgba(47,93,124,.10);border-color:rgba(47,93,124,.35);color:var(--accent);}
+    .nav-btn.fwd:hover{background:rgba(47,93,124,.18);}
+    .nav-btn:disabled{opacity:.35;cursor:not-allowed;}
+
+    .new-btn{width:100%;margin-top:8px;padding:10px;border-radius:12px;border:1.5px solid rgba(47,93,124,.35);background:rgba(47,93,124,.08);color:var(--accent);font-family:var(--font-sans);font-size:13px;font-weight:700;cursor:pointer;transition:all .12s;}
+    .new-btn:hover{background:rgba(47,93,124,.16);}
+
+    .interp-box{padding:11px 13px;border-radius:12px;font-size:12px;line-height:1.65;color:var(--ink-2);background:rgba(47,93,124,.05);border:1px solid rgba(47,93,124,.14);min-height:50px;}
+
+    .graphs-col{display:flex;flex-direction:column;gap:0;}
+    .graph-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-card+.graph-card{margin-top:14px;}
+    .graph-title{font-size:12px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .canvas-wrap{width:100%;border-radius:10px;overflow:hidden;background:rgba(246,242,234,.45);border:1px solid var(--line);}
+    #icCanvas{display:block;width:100%;aspect-ratio:1/1;}
+    #dcCanvas{display:block;width:100%;aspect-ratio:2/1;}
+
+    .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:11px;color:var(--ink-2);}
+    .li{display:flex;align-items:center;gap:4px;}
+    .ld{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+    .ll{width:16px;height:0;border-top:2.5px solid;flex-shrink:0;}
+
+    footer{margin-top:32px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);}
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  </style>
+</head>
+<body>
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar"><a class="crumb-link" href="/classes/econ104a/labs/">← Practice Labs</a></nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104A — Individual &amp; Market Demand</div>
+      <h1>Deriving the Demand Curve</h1>
+      <p class="sub">Step through a series of prices for Good X. Watch the budget line rotate and the optimal bundle shift — then see each (P<sub>X</sub>, X*) pair traced onto the demand curve below, labeled so you can track the correspondence.</p>
+    </div>
+  </div>
+</header>
+
+<main class="container" style="padding-bottom:32px;">
+<div class="lab-grid">
+
+  <!-- ── LEFT ── -->
+  <div>
+    <div class="card">
+      <div class="sec">Parameters</div>
+      <div class="param-row" id="paramRow"></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;" id="utilLabel"></div>
+    </div>
+
+    <div class="card">
+      <div class="sec">Price of X</div>
+      <div class="price-track" id="priceTrack"></div>
+      <div class="step-nav">
+        <button class="nav-btn" id="prevBtn" disabled>← Back</button>
+        <button class="nav-btn fwd" id="nextBtn">Lower P<sub>X</sub> →</button>
+      </div>
+      <button class="new-btn" id="newBtn">🔀 New Example</button>
+    </div>
+
+    <div class="card">
+      <div class="sec">What's happening</div>
+      <div class="interp-box" id="interpBox"></div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT: graphs ── -->
+  <div class="graphs-col">
+    <div class="graph-card">
+      <div class="graph-title">IC Diagram — Budget Lines &amp; Optimal Bundles</div>
+      <div class="canvas-wrap"><canvas id="icCanvas"></canvas></div>
+      <div class="legend">
+        <div class="li"><div class="ll" style="border-color:#2f5d7c;"></div><span>Current BC</span></div>
+        <div class="li"><div class="ll" style="border-color:rgba(47,93,124,.3);border-style:dashed;"></div><span>Previous BCs</span></div>
+        <div class="li"><div class="ll" style="border-color:#1b7f4b;"></div><span>Optimal IC</span></div>
+        <div class="li"><div class="ld" style="background:#b42318;"></div><span>Optimal bundles (A, B, C…)</span></div>
+      </div>
+    </div>
+
+    <div class="graph-card">
+      <div class="graph-title">Demand Curve for Good X</div>
+      <div class="canvas-wrap"><canvas id="dcCanvas"></canvas></div>
+      <div class="legend">
+        <div class="li"><div class="ld" style="background:#b42318;"></div><span>Demand points (A, B, C…)</span></div>
+        <div class="li"><div class="ll" style="border-color:#b42318;border-style:dashed;"></div><span>Demand curve (D)</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <span>ECON 104A — Intermediate Microeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+'use strict';
+
+// ── Randomisation pools ────────────────────────────────────────────
+const PRICE_SETS = [
+  [10,8,6,4,2],
+  [8,6,4,3,1],
+  [12,8,6,4,2],
+  [10,6,4,2,1],
+];
+const UTIL_OPTS = [
+  {b:1,c:1,d:1, label:'U = XY + X + Y'},
+  {b:2,c:1,d:1, label:'U = 2XY + X + Y'},
+  {b:1,c:2,d:1, label:'U = XY + 2X + Y'},
+  {b:1,c:1,d:2, label:'U = XY + X + 2Y'},
+];
+const PY_OPTS = [3,4,5,6];
+const I_OPTS  = [60,80,100,120];
+const LABELS  = ['A','B','C','D','E'];
+
+// ── State ──────────────────────────────────────────────────────────
+let ex = {};        // current example: {b,c,d,prices,py,I,label}
+let stepIdx = 0;
+
+// ── DOM ────────────────────────────────────────────────────────────
+const $icCanvas   = document.getElementById('icCanvas');
+const $dcCanvas   = document.getElementById('dcCanvas');
+const $icWrap     = $icCanvas.parentElement;
+const $dcWrap     = $dcCanvas.parentElement;
+const $priceTrack = document.getElementById('priceTrack');
+const $prevBtn    = document.getElementById('prevBtn');
+const $nextBtn    = document.getElementById('nextBtn');
+const $newBtn     = document.getElementById('newBtn');
+const $interp     = document.getElementById('interpBox');
+const $paramRow   = document.getElementById('paramRow');
+const $utilLabel  = document.getElementById('utilLabel');
+
+// ── Random example generator ───────────────────────────────────────
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function newExample(){
+  // Retry until all price points give positive X* and Y*
+  for(let tries=0;tries<200;tries++){
+    const u=pick(UTIL_OPTS), py=pick(PY_OPTS), I=pick(I_OPTS), prices=pick(PRICE_SETS);
+    const ok=prices.every(px=>rawOptX(u.b,u.c,u.d,px,py,I)>0.5
+                             &&rawOptY(u.b,u.c,u.d,px,py,I)>0.5);
+    if(ok){ ex={...u,prices,py,I}; return; }
+  }
+  // Fallback
+  ex={b:1,c:1,d:1,prices:[10,8,6,4,2],py:4,I:80,label:'U = XY + X + Y'};
+}
+
+// ── Math ───────────────────────────────────────────────────────────
+function rnd(v,dp){return parseFloat(v.toFixed(dp??2));}
+function rawOptX(b,c,d,px,py,I){ return (b*I+py*c-px*d)/(2*b*px); }
+function rawOptY(b,c,d,px,py,I){ return (b*I-py*c+px*d)/(2*b*py); }
+function optX(px){ return rnd(rawOptX(ex.b,ex.c,ex.d,px,ex.py,ex.I)); }
+function optY(px){ return rnd(rawOptY(ex.b,ex.c,ex.d,px,ex.py,ex.I)); }
+function utilAt(x,y){ return ex.b*x*y+ex.c*x+ex.d*y; }
+function icY(x,U){
+  // U = b*x*y + c*x + d*y  → y = (U - c*x)/(b*x + d)
+  if(x<0.01) return Infinity;
+  const denom=ex.b*x+ex.d; if(denom<=0) return Infinity;
+  const y=(U-ex.c*x)/denom;
+  return y<0?Infinity:y;
+}
+
+// ── Axis sizing (shared xMax for both graphs) ──────────────────────
+function snapUp(raw){
+  const s=[8,10,12,15,20,25,30,40,50,60,80];
+  return s.find(v=>v>=raw)||Math.ceil(raw/10)*10;
+}
+function tickStep(mx){ return mx<=12?2:mx<=25?5:mx<=60?10:20; }
+
+function getXMax(){
+  const maxX=optX(Math.min(...ex.prices));
+  return snapUp(maxX*1.30);
+}
+
+// ── UI updates ─────────────────────────────────────────────────────
+function updateParamRow(){
+  $paramRow.innerHTML=`
+    <span class="param-chip">P<sub>Y</sub> = <span>$${ex.py}</span></span>
+    <span class="param-chip">Income = <span>$${ex.I}</span></span>`;
+  $utilLabel.textContent='Utility: '+ex.label;
+}
+
+function buildPriceTrack(){
+  $priceTrack.innerHTML='';
+  ex.prices.forEach((px,i)=>{
+    const div=document.createElement('div');
+    div.className='price-item'+(i===stepIdx?' active':i<stepIdx?' done':' future');
+    const lbl=LABELS[i];
+    div.innerHTML=`<div class="price-dot"></div>
+      <span class="price-label">${i<=stepIdx?lbl:''}</span>
+      <span class="price-px">P<sub>X</sub> = $${px}</span>
+      <span class="price-xstar">${i<=stepIdx?'X* = '+optX(px):''}</span>`;
+    $priceTrack.appendChild(div);
+  });
+}
+
+function updateNav(){
+  $prevBtn.disabled=stepIdx===0;
+  $nextBtn.disabled=stepIdx>=ex.prices.length-1;
+  $nextBtn.innerHTML=stepIdx>=ex.prices.length-1?'Done ✓':'Lower P<sub>X</sub> →';
+}
+
+function updateInterp(){
+  const px=ex.prices[stepIdx];
+  const x=optX(px), y=optY(px);
+  const lbl=LABELS[stepIdx];
+  const isFirst=stepIdx===0, isLast=stepIdx===ex.prices.length-1;
+  let msg='';
+  if(isFirst){
+    msg=`At P<sub>X</sub> = $${px}, the budget line reaches ${rnd(ex.I/px,1)} on the X-axis and ${rnd(ex.I/ex.py,1)} on the Y-axis. The optimal bundle is <strong>${lbl} = (${x}, ${y})</strong>. This is the first point on the demand curve.`;
+  } else if(isLast){
+    msg=`P<sub>X</sub> = $${px} — the lowest price. The budget line has rotated to its widest position. Optimal bundle: <strong>${lbl} = (${x}, ${y})</strong>. The demand curve is now complete — each labeled point came directly from utility maximization.`;
+  } else {
+    msg=`P<sub>X</sub> falls to $${px}. The budget line rotates outward (X-intercept → ${rnd(ex.I/px,1)}, Y-intercept unchanged at ${rnd(ex.I/ex.py,1)}). The consumer moves to a higher IC. New optimal bundle: <strong>${lbl} = (${x}, ${y})</strong>.`;
+  }
+  $interp.innerHTML=msg;
+}
+
+// ── Navigation ─────────────────────────────────────────────────────
+$prevBtn.addEventListener('click',()=>{
+  if(stepIdx>0){ stepIdx--; buildPriceTrack(); updateNav(); updateInterp(); drawAll(); }
+});
+$nextBtn.addEventListener('click',()=>{
+  if(stepIdx<ex.prices.length-1){ stepIdx++; buildPriceTrack(); updateNav(); updateInterp(); drawAll(); }
+});
+$newBtn.addEventListener('click',()=>{ newExample(); stepIdx=0; updateParamRow(); buildPriceTrack(); updateNav(); updateInterp(); drawAll(); });
+
+// ── Drawing helpers ────────────────────────────────────────────────
+// Both canvases share the same left padding so x-axes align
+const PAD={l:56,r:20,t:14,b:44};
+
+function setupCanvas(canvas,wrap){
+  const dpr=window.devicePixelRatio||1;
+  const rect=wrap.getBoundingClientRect();
+  const W=rect.width*dpr, H=rect.height*dpr;
+  if(canvas.width!==W||canvas.height!==H){canvas.width=W;canvas.height=H;}
+  return{ctx:canvas.getContext('2d'),dpr,W,H};
+}
+
+function makeCoords(W,H,dpr,xMax,yMax){
+  const p={l:PAD.l*dpr,r:PAD.r*dpr,t:PAD.t*dpr,b:PAD.b*dpr};
+  const PW=W-p.l-p.r, PH=H-p.t-p.b;
+  const xToC=x=>p.l+(x/xMax)*PW;
+  const yToC=y=>H-p.b-(y/yMax)*PH;
+  return{xToC,yToC,p,PW,PH};
+}
+
+function drawAxesBase(ctx,dpr,W,H,co,xMax,yMax,xLabel,yLabel){
+  const{xToC,yToC,p}=co;
+  ctx.fillStyle='rgba(47,93,124,.03)';
+  ctx.fillRect(p.l,p.t,W-p.l-p.r,H-p.t-p.b);
+  // Axes
+  ctx.strokeStyle='rgba(0,0,0,.28)';ctx.lineWidth=1.5*dpr;
+  ctx.beginPath();ctx.moveTo(p.l,H-p.b);ctx.lineTo(W-p.r,H-p.b);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(p.l,p.t);ctx.lineTo(p.l,H-p.b);ctx.stroke();
+  // Arrows
+  ctx.fillStyle='rgba(0,0,0,.28)';
+  ctx.beginPath();ctx.moveTo(W-p.r,H-p.b);ctx.lineTo(W-p.r-8*dpr,H-p.b-4*dpr);ctx.lineTo(W-p.r-8*dpr,H-p.b+4*dpr);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(p.l,p.t);ctx.lineTo(p.l-4*dpr,p.t+8*dpr);ctx.lineTo(p.l+4*dpr,p.t+8*dpr);ctx.closePath();ctx.fill();
+  // Labels
+  ctx.fillStyle='rgba(0,0,0,.50)';ctx.font=`700 ${12*dpr}px "Inter",sans-serif`;
+  ctx.textAlign='center';ctx.textBaseline='top';
+  ctx.fillText(xLabel,(p.l+W-p.r)/2,H-p.b+16*dpr);
+  ctx.save();ctx.translate(p.l-34*dpr,(p.t+H-p.b)/2);ctx.rotate(-Math.PI/2);ctx.fillText(yLabel,0,0);ctx.restore();
+  // Ticks
+  ctx.font=`${10*dpr}px "Inter",sans-serif`;ctx.fillStyle='rgba(0,0,0,.36)';ctx.lineWidth=1*dpr;
+  const tsx=tickStep(xMax),tsy=tickStep(yMax);
+  for(let v=tsx;v<xMax;v+=tsx){
+    const cx=xToC(v);
+    ctx.strokeStyle='rgba(0,0,0,.1)';ctx.beginPath();ctx.moveTo(cx,H-p.b-3*dpr);ctx.lineTo(cx,H-p.b+3*dpr);ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,.36)';ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(v,cx,H-p.b+5*dpr);
+  }
+  for(let v=tsy;v<yMax;v+=tsy){
+    const cy=yToC(v);
+    ctx.strokeStyle='rgba(0,0,0,.1)';ctx.beginPath();ctx.moveTo(p.l-3*dpr,cy);ctx.lineTo(p.l+3*dpr,cy);ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,.36)';ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(v,p.l-5*dpr,cy);
+  }
+}
+
+function drawDot(ctx,dpr,cx,cy,color){
+  ctx.beginPath();ctx.arc(cx,cy,10*dpr,0,Math.PI*2);
+  ctx.fillStyle=color+'22';ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,5.5*dpr,0,Math.PI*2);
+  ctx.fillStyle=color;ctx.fill();
+  ctx.strokeStyle='#fff';ctx.lineWidth=1.5*dpr;ctx.stroke();
+}
+
+function dotLabel(ctx,dpr,cx,cy,lbl,color,above){
+  ctx.font=`800 ${11*dpr}px "Inter",sans-serif`;
+  ctx.fillStyle=color;
+  ctx.textAlign='center';
+  ctx.textBaseline=above?'bottom':'top';
+  ctx.fillText(lbl,cx,cy+(above?-9:9)*dpr);
+}
+
+function projLines(ctx,dpr,cx,cy,H,p,color){
+  ctx.setLineDash([4*dpr,3*dpr]);
+  ctx.strokeStyle=color||'rgba(0,0,0,.40)';ctx.lineWidth=1.2*dpr;
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx,H-p.b);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(p.l,cy);ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// ── IC diagram ─────────────────────────────────────────────────────
+function drawIC(){
+  const{ctx,dpr,W,H}=setupCanvas($icCanvas,$icWrap);
+  ctx.clearRect(0,0,W,H);
+  const xMax=getXMax();
+  const yiMax=ex.I/ex.py;
+  const yMax=snapUp(yiMax*1.30);
+  const co=makeCoords(W,H,dpr,xMax,yMax);
+  const{xToC,yToC,p,PW,PH}=co;
+
+  drawAxesBase(ctx,dpr,W,H,co,xMax,yMax,'Quantity of X','Quantity of Y');
+
+  // Clip zone for curves
+  ctx.save();
+  ctx.beginPath();ctx.rect(p.l,p.t,PW,PH);ctx.clip();
+
+  // Previous budget lines (dashed, faded)
+  for(let i=0;i<stepIdx;i++){
+    const px=ex.prices[i];
+    ctx.strokeStyle='rgba(47,93,124,.20)';ctx.lineWidth=1.5*dpr;ctx.setLineDash([5*dpr,4*dpr]);
+    ctx.beginPath();ctx.moveTo(xToC(ex.I/px),yToC(0));ctx.lineTo(xToC(0),yToC(ex.I/ex.py));ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Current budget line
+  const curPx=ex.prices[stepIdx];
+  ctx.strokeStyle='#2f5d7c';ctx.lineWidth=2.5*dpr;ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(xToC(ex.I/curPx),yToC(0));ctx.lineTo(xToC(0),yToC(ex.I/ex.py));ctx.stroke();
+
+  // Current IC (green)
+  const curX=optX(curPx), curY=optY(curPx);
+  const U=utilAt(curX,curY);
+  ctx.strokeStyle='#1b7f4b';ctx.lineWidth=2.5*dpr;ctx.setLineDash([]);
+  drawIcCurve(ctx,U,xMax,yMax,xToC,yToC);
+
+  // Previous ICs (faded)
+  for(let i=0;i<stepIdx;i++){
+    const px=ex.prices[i];
+    const Ui=utilAt(optX(px),optY(px));
+    ctx.strokeStyle='rgba(27,127,75,.18)';ctx.lineWidth=1.5*dpr;
+    drawIcCurve(ctx,Ui,xMax,yMax,xToC,yToC);
+  }
+
+  ctx.restore(); // end clip
+
+  // BC intercept ticks for current line
+  const xi=ex.I/curPx, yi=ex.I/ex.py;
+  ctx.font=`700 ${10*dpr}px "Inter",sans-serif`;
+  ctx.fillStyle='#2f5d7c';ctx.strokeStyle='#2f5d7c';ctx.lineWidth=1.5*dpr;
+  if(xi<=xMax){
+    ctx.beginPath();ctx.moveTo(xToC(xi),H-p.b-4*dpr);ctx.lineTo(xToC(xi),H-p.b+4*dpr);ctx.stroke();
+    ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(rnd(xi,1),xToC(xi),H-p.b+6*dpr);
+  }
+  if(yi<=yMax){
+    ctx.beginPath();ctx.moveTo(p.l-4*dpr,yToC(yi));ctx.lineTo(p.l+4*dpr,yToC(yi));ctx.stroke();
+    ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(rnd(yi,1),p.l-7*dpr,yToC(yi));
+  }
+
+  // Previous dots + labels (faded)
+  for(let i=0;i<stepIdx;i++){
+    const px=ex.prices[i];
+    const bx=xToC(optX(px)), by=yToC(optY(px));
+    ctx.beginPath();ctx.arc(bx,by,5*dpr,0,Math.PI*2);
+    ctx.fillStyle='rgba(180,35,24,.40)';ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=1.2*dpr;ctx.stroke();
+    ctx.font=`700 ${10*dpr}px "Inter",sans-serif`;
+    ctx.fillStyle='rgba(180,35,24,.55)';ctx.textAlign='left';ctx.textBaseline='bottom';
+    ctx.fillText(LABELS[i],bx+6*dpr,by-5*dpr);
+  }
+
+  // Current bundle: projection lines + dot + label
+  const cx=xToC(curX), cy=yToC(curY);
+  projLines(ctx,dpr,cx,cy,H,p,'rgba(0,0,0,.40)');
+  drawDot(ctx,dpr,cx,cy,'#b42318');
+  dotLabel(ctx,dpr,cx,cy,LABELS[stepIdx],'#b42318',true);
+
+  // Axis value labels for current bundle
+  ctx.font=`700 ${10*dpr}px "Inter",sans-serif`;
+  ctx.fillStyle='#b42318';ctx.strokeStyle='#b42318';ctx.lineWidth=1.5*dpr;
+  ctx.beginPath();ctx.moveTo(cx,H-p.b-4*dpr);ctx.lineTo(cx,H-p.b+4*dpr);ctx.stroke();
+  ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(curX,cx,H-p.b+6*dpr);
+  ctx.beginPath();ctx.moveTo(p.l-4*dpr,cy);ctx.lineTo(p.l+4*dpr,cy);ctx.stroke();
+  ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(curY,p.l-7*dpr,cy);
+
+  // BC label on current line
+  const t=0.08;
+  const bclx=xToC(xi*(1-t)), bcly=yToC(yi*t);
+  const ddx=xToC(0)-xToC(xi), ddy=yToC(yi)-yToC(0);
+  const llen=Math.sqrt(ddx*ddx+ddy*ddy)||1;
+  ctx.font=`700 ${11*dpr}px "Inter",sans-serif`;ctx.fillStyle='#2f5d7c';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('BC',bclx+ddy/llen*12*dpr,bcly-ddx/llen*12*dpr);
+}
+
+function drawIcCurve(ctx,U,xMax,yMax,xToC,yToC){
+  ctx.beginPath();
+  let started=false;
+  for(let k=0;k<=300;k++){
+    const x=(k/300)*xMax*0.99; if(x<0.05) continue;
+    const y=icY(x,U);
+    if(!isFinite(y)||y<0||y>yMax*1.05){started=false;continue;}
+    const cx=xToC(x), cy=yToC(y);
+    if(!started){ctx.moveTo(cx,cy);started=true;}else ctx.lineTo(cx,cy);
+  }
+  ctx.stroke();
+}
+
+// ── Demand curve ────────────────────────────────────────────────────
+function drawDC(){
+  const{ctx,dpr,W,H}=setupCanvas($dcCanvas,$dcWrap);
+  ctx.clearRect(0,0,W,H);
+  const xMax=getXMax();
+  const pMax=snapUp(ex.prices[0]*1.20);
+  const co=makeCoords(W,H,dpr,xMax,pMax);
+  const{xToC,yToC,p,PW,PH}=co;
+
+  drawAxesBase(ctx,dpr,W,H,co,xMax,pMax,'Quantity of X (X*)','Price of X');
+
+  // Full demand curve (dashed, full price range)
+  ctx.save();
+  ctx.beginPath();ctx.rect(p.l,p.t,PW,PH);ctx.clip();
+  ctx.strokeStyle='rgba(180,35,24,.30)';ctx.lineWidth=1.5*dpr;ctx.setLineDash([5*dpr,4*dpr]);
+  ctx.beginPath();
+  let started=false;
+  const pMin=ex.prices[ex.prices.length-1], pHigh=ex.prices[0];
+  for(let k=0;k<=200;k++){
+    const px=pHigh+(pMin-pHigh)*k/200;
+    const x=optX(px);
+    if(x<0||x>xMax){started=false;continue;}
+    const cx=xToC(x),cy=yToC(px);
+    if(!started){ctx.moveTo(cx,cy);started=true;}else ctx.lineTo(cx,cy);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // Previous dots + labels
+  for(let i=0;i<stepIdx;i++){
+    const px=ex.prices[i], x=optX(px);
+    const cx=xToC(x), cy=yToC(px);
+    ctx.beginPath();ctx.arc(cx,cy,4.5*dpr,0,Math.PI*2);
+    ctx.fillStyle='rgba(180,35,24,.40)';ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=1.2*dpr;ctx.stroke();
+    ctx.font=`700 ${10*dpr}px "Inter",sans-serif`;
+    ctx.fillStyle='rgba(180,35,24,.55)';ctx.textAlign='left';ctx.textBaseline='bottom';
+    ctx.fillText(LABELS[i],cx+6*dpr,cy-4*dpr);
+  }
+
+  // Current dot + projection + label + axis values
+  const curPx=ex.prices[stepIdx], curX=optX(curPx);
+  const cx=xToC(curX), cy=yToC(curPx);
+  projLines(ctx,dpr,cx,cy,H,p,'rgba(0,0,0,.40)');
+  drawDot(ctx,dpr,cx,cy,'#b42318');
+  dotLabel(ctx,dpr,cx,cy,LABELS[stepIdx],'#b42318',true);
+
+  ctx.font=`700 ${10*dpr}px "Inter",sans-serif`;
+  ctx.fillStyle='#b42318';ctx.strokeStyle='#b42318';ctx.lineWidth=1.5*dpr;
+  ctx.beginPath();ctx.moveTo(cx,H-p.b-4*dpr);ctx.lineTo(cx,H-p.b+4*dpr);ctx.stroke();
+  ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(curX,cx,H-p.b+6*dpr);
+  ctx.beginPath();ctx.moveTo(p.l-4*dpr,cy);ctx.lineTo(p.l+4*dpr,cy);ctx.stroke();
+  ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText('$'+curPx,p.l-7*dpr,cy);
+
+  // D label
+
+}
+
+function drawAll(){ drawIC(); drawDC(); }
+
+// ── Resize ─────────────────────────────────────────────────────────
+let rt;
+window.addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(drawAll,80); });
+
+// ── Init ───────────────────────────────────────────────────────────
+newExample();
+stepIdx=0;
+updateParamRow();
+buildPriceTrack();
+updateNav();
+updateInterp();
+drawAll();
+})();
+</script>
+</body>
+</html>
