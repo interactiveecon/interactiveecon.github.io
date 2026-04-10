@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Isoquant & Isocost Explorer — ECON 104A</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Source+Serif+4:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'\\(',right:'\\)',display:false},{left:'$',right:'$',display:false},{left:'\\[',right:'\\]',display:true},{left:'$$',right:'$$',display:true}],throwOnError:false})"></script>
+
+<style>
+/* ── Design tokens ─────────────────────────────────────────── */
+:root{
+  --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --font-serif:"Source Serif 4",ui-serif,Georgia,"Times New Roman",serif;
+  --paper:#f6f2ea; --panel:#ffffff;
+  --ink:#1f2937;   --ink-2:#374151; --muted:#6b7280;
+  --line:#e7dfd2;  --line-2:#d9cfbf;
+  --accent:#2f5d7c;
+  --good:#1b7f4b;  --bad:#b42318;
+  --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+}
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+.container{max-width:1120px;margin:0 auto;padding:18px;}
+
+/* ── Header ────────────────────────────────────────────────── */
+.page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+/* CRITICAL: override style.css two-column grid */
+.header-inner{display:block;padding:22px 0 14px;}
+.kicker{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+h1{font-family:var(--font-serif);font-size:34px;line-height:1.1;letter-spacing:-.01em;margin:0;}
+.sub{margin:10px 0 0;color:var(--ink-2);line-height:1.55;max-width:82ch;}
+
+/* ── How-to ─────────────────────────────────────────────────── */
+.howto{margin-top:14px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.70);padding:10px 12px;}
+.howto summary{cursor:pointer;font-weight:600;color:var(--accent);}
+.howto-body{margin-top:10px;color:var(--ink-2);line-height:1.55;}
+.howto-body ul{margin:0 0 8px 18px;}
+
+/* ── Layout ─────────────────────────────────────────────────── */
+.main-grid{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start;margin-top:18px;}
+@media(max-width:900px){.main-grid{grid-template-columns:1fr;}}
+
+/* ── Panel ──────────────────────────────────────────────────── */
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;}
+h2{margin:0;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);}
+
+/* ── Sliders ────────────────────────────────────────────────── */
+.slider-row{margin-bottom:14px;}
+.slider-row label{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:5px;}
+.slider-row label span{font-size:12px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;}
+input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;}
+
+/* ── Type tabs ──────────────────────────────────────────────── */
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.tab{border:1px solid var(--line-2);background:rgba(255,255,255,.9);color:var(--ink);padding:7px 12px;border-radius:999px;font-weight:700;font-size:13px;cursor:pointer;transition:background .12s,border-color .12s;}
+.tab.active{background:rgba(47,93,124,.10);border-color:rgba(47,93,124,.35);color:var(--accent);}
+
+/* ── Legend ─────────────────────────────────────────────────── */
+.legend{display:flex;flex-direction:column;gap:6px;margin-top:12px;font-size:12px;color:var(--ink-2);}
+.leg-row{display:flex;align-items:center;gap:8px;}
+.leg-swatch{width:28px;height:3px;border-radius:2px;flex-shrink:0;}
+.leg-swatch.isoquant{background:#2f5d7c;}
+.leg-swatch.isoquant-opt{background:#1b7f4b;}
+.leg-swatch.isocost{background:#374151;opacity:.45;}
+.leg-swatch.isocost-opt{background:rgba(230,159,0,.95);}
+.leg-dot-opt{width:10px;height:10px;border-radius:50%;background:#1b7f4b;flex-shrink:0;}
+
+/* ── Metrics ────────────────────────────────────────────────── */
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;}
+.metric{background:rgba(246,242,234,.55);border:1px solid var(--line);border-radius:14px;padding:10px 12px;}
+.metric .mlabel{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);}
+.metric .mvalue{margin-top:4px;font-size:15px;font-variant-numeric:tabular-nums;font-weight:800;color:var(--ink);}
+
+/* ── Insight box ────────────────────────────────────────────── */
+.insight{margin-top:12px;font-size:13px;line-height:1.55;color:var(--ink-2);background:rgba(246,242,234,.5);border:1px solid var(--line);border-radius:14px;padding:10px 12px;}
+
+/* ── Canvas wrapper ─────────────────────────────────────────── */
+.canvas-wrap{position:relative;width:100%;}
+canvas{display:block;width:100%;border-radius:14px;}
+
+/* ── Footer ─────────────────────────────────────────────────── */
+.footer{margin-top:18px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="container">
+    <div class="header-inner">
+      <div class="kicker">ECON 104A — Intermediate Microeconomic Theory</div>
+      <h1>Isoquant &amp; Isocost Explorer</h1>
+      <p class="sub">See how a firm minimizes cost to produce a target output. Adjust input prices, the target quantity, and the production type — then watch the optimal input bundle respond.</p>
+      <details class="howto">
+        <summary>How to use this explorer</summary>
+        <div class="howto-body">
+          <ul>
+            <li>Choose a <strong>production type</strong>: Cobb-Douglas, Perfect Substitutes, or Perfect Complements.</li>
+            <li>Drag the sliders to change the <strong>wage (W)</strong>, <strong>rental rate (R)</strong>, and <strong>target output (Q̄)</strong>.</li>
+            <li>The <strong>green dot</strong> is the cost-minimizing bundle $(K^*, L^*)$. The tangency condition $\frac{W}{R} = \frac{MP_L}{MP_K}$ (or its corner equivalent) holds there.</li>
+            <li>Watch how the optimal bundle shifts when you change input prices — this is the <strong>substitution effect</strong> in production.</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="main-grid">
+
+    <!-- ── Left: controls ──────────────────────────────────────── -->
+    <div>
+      <div class="panel">
+        <div class="panel-head"><h2>Production Type</h2></div>
+        <div class="tabs">
+          <button class="tab active" data-type="cd">Normal</button>
+          <button class="tab" data-type="ps">Perf. Substitutes</button>
+          <button class="tab" data-type="pc">Perf. Complements</button>
+        </div>
+
+        <div class="slider-row">
+          <label>Wage rate (W) <span id="wVal"></span></label>
+          <input type="range" id="wSlider" min="5" max="40" step="1"/>
+        </div>
+        <div class="slider-row">
+          <label>Rental rate (R) <span id="rVal"></span></label>
+          <input type="range" id="rSlider" min="5" max="40" step="1"/>
+        </div>
+        <div class="slider-row">
+          <label>Target output (Q̄) <span id="qVal"></span></label>
+          <input type="range" id="qSlider" min="1" max="10" step="0.5"/>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:14px;">
+        <div class="panel-head"><h2>Optimal Bundle</h2></div>
+        <div class="metrics">
+          <div class="metric"><div class="mlabel">L*</div><div class="mvalue" id="mLstar">—</div></div>
+          <div class="metric"><div class="mlabel">K*</div><div class="mvalue" id="mKstar">—</div></div>
+          <div class="metric"><div class="mlabel">Min Cost C*</div><div class="mvalue" id="mCstar">—</div></div>
+          <div class="metric"><div class="mlabel">MRTS<sub>LK</sub></div><div class="mvalue" id="mMrts">—</div></div>
+        </div>
+        <div class="insight" id="insightBox"></div>
+        <div class="legend">
+          <div class="leg-row"><div class="leg-swatch isoquant"></div><span>Target isoquant (Q = Q̄)</span></div>
+          <div class="leg-row"><div class="leg-swatch isocost"></div><span>Reference isocost lines</span></div>
+          <div class="leg-row"><div class="leg-swatch isocost-opt"></div><span>Optimal isocost (C*)</span></div>
+          <div class="leg-row"><div class="leg-dot-opt"></div><span>Cost-minimizing bundle (L*, K*)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Right: graph ────────────────────────────────────────── -->
+    <div class="panel">
+      <div class="panel-head"><h2>Isoquant–Isocost Diagram</h2></div>
+      <div class="canvas-wrap">
+        <canvas id="graph" height="520"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <footer class="footer">
+    <span>ECON 104A — Intermediate Microeconomic Theory</span>
+    <span>Use the sliders to explore cost minimization.</span>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const rnd = (v, dp=2) => parseFloat(v.toFixed(dp));
+
+  // ── State ──────────────────────────────────────────────────
+  let prodType = 'cd';
+  let wage = 20, rental = 20, Qbar = 4;
+  const alpha = 0.5;
+
+  // ── DOM ────────────────────────────────────────────────────
+  const canvas  = $('graph');
+  const wSlider = $('wSlider');
+  const rSlider = $('rSlider');
+  const qSlider = $('qSlider');
+  wSlider.value = wage;
+  rSlider.value = rental;
+  qSlider.value = Qbar;
+
+  // ── Production math ─────────────────────────────────────────
+  function cdOptimum(Q, w, r) {
+    const a = alpha;
+    const C = Q * Math.pow(w/a, a) * Math.pow(r/(1-a), 1-a);
+    return { Lstar: rnd(a*C/w), Kstar: rnd((1-a)*C/r), Cstar: rnd(C) };
+  }
+
+  function psOptimum(Q, w, r) {
+    const a = alpha;
+    const cL = w/a, cK = r/(1-a);
+    let Ls, Ks;
+    if (cL < cK - 1e-9)      { Ls = Q/a;     Ks = 0; }
+    else if (cK < cL - 1e-9) { Ls = 0;        Ks = Q/(1-a); }
+    else                      { Ls = Q/(2*a);  Ks = Q/(2*(1-a)); }
+    return { Lstar: rnd(Ls), Kstar: rnd(Ks), Cstar: rnd(w*Ls + r*Ks) };
+  }
+
+  function pcOptimum(Q, w, r) {
+    const a = alpha;
+    const Ls = Q/a, Ks = Q/(1-a);
+    return { Lstar: rnd(Ls), Kstar: rnd(Ks), Cstar: rnd(w*Ls + r*Ks) };
+  }
+
+  function getOptimum() {
+    if (prodType === 'cd') return cdOptimum(Qbar, wage, rental);
+    if (prodType === 'ps') return psOptimum(Qbar, wage, rental);
+    return pcOptimum(Qbar, wage, rental);
+  }
+
+  function isoquantK(L, Q) {
+    const a = alpha;
+    if (prodType === 'cd') {
+      if (L <= 0) return null;
+      return Math.pow(Q / Math.pow(L, a), 1/(1-a));
+    }
+    if (prodType === 'ps') {
+      const K = (Q - a*L)/(1-a);
+      return K >= 0 ? K : null;
+    }
+    return null;
+  }
+
+  // ── Static axis sizing ──────────────────────────────────────
+  function snapUp(raw) {
+    const s = [4,5,6,8,10,12,15,20,25,30,40,50,60,80,100];
+    return s.find(v => v >= raw) || Math.ceil(raw/5)*5;
+  }
+  function tickStep(mx) {
+    return mx<=6?1 : mx<=12?2 : mx<=25?5 : mx<=60?10 : 20;
+  }
+  function computeAxisMax(type) {
+    const Ws=[5,10,15,20,25,30,35,40], Rs=[5,10,15,20,25,30,35,40], Qs=[1,2,4,6,8,10];
+    let mx = 0;
+    for (const w of Ws) for (const r of Rs) for (const q of Qs) {
+      let o;
+      if (type==='cd') o=cdOptimum(q,w,r);
+      else if (type==='ps') o=psOptimum(q,w,r);
+      else o=pcOptimum(q,w,r);
+      if (isFinite(o.Lstar)) mx = Math.max(mx, o.Lstar);
+      if (isFinite(o.Kstar)) mx = Math.max(mx, o.Kstar);
+    }
+    return snapUp(mx * 1.35);
+  }
+  const AXIS = { cd: 30, ps: 30, pc: 30 };
+
+  // ── Draw ────────────────────────────────────────────────────
+  const PAD = { l:52, r:20, t:20, b:52 };
+
+  function drawIsocostLine(ctx, C, w, r, xTo, yTo, xMax, yMax) {
+    // K = C/r - (w/r)*L   — draw segment visible within [0,xMax]x[0,yMax]
+    const Kint = C/r;   // K-intercept (L=0)
+    const Lint = C/w;   // L-intercept (K=0)
+    // Clamp start/end to axis bounds
+    const L0 = 0,       K0 = Math.min(Kint, yMax);
+    const L1 = Math.min(Lint, xMax), K1 = Math.max(0, Kint - (w/r)*Math.min(Lint, xMax));
+    ctx.beginPath();
+    ctx.moveTo(xTo(L0), yTo(K0));
+    ctx.lineTo(xTo(L1), yTo(K1));
+    ctx.stroke();
+  }
+
+  function draw() {
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = canvas.clientWidth || canvas.parentElement.clientWidth || 600;
+    const cssH = 520;
+    canvas.width  = cssW * dpr;
+    canvas.height = cssH * dpr;
+    canvas.style.height = cssH + 'px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const cW = canvas.width, cH = canvas.height;
+    const X0 = PAD.l*dpr, X1 = cW - PAD.r*dpr;
+    const Y0 = PAD.t*dpr, Y1 = cH - PAD.b*dpr;
+
+    const opt = getOptimum();
+    const { Lstar, Kstar, Cstar } = opt;
+    const Cval = Cstar; // use the pre-computed Cstar directly
+
+    const axMax = AXIS[prodType];
+    const xMax = axMax, yMax = axMax;
+    const xTo = L => X0 + (L/xMax)*(X1-X0);
+    const yTo = K => Y0 + (1-K/yMax)*(Y1-Y0);
+    const ts = tickStep(axMax);
+
+    // Grid
+    ctx.strokeStyle = 'rgba(0,0,0,0.05)';
+    ctx.lineWidth = dpr;
+    for (let v=ts; v<xMax; v+=ts) {
+      ctx.beginPath(); ctx.moveTo(xTo(v),Y0); ctx.lineTo(xTo(v),Y1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(X0,yTo(v)); ctx.lineTo(X1,yTo(v)); ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+    ctx.lineWidth = 1.5*dpr;
+    ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0,Y1); ctx.lineTo(X1,Y1); ctx.stroke();
+
+    // Axis labels
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.font = `${12*dpr}px Inter,system-ui,sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText('Labor (L)', (X0+X1)/2, Y1+28*dpr);
+    ctx.save();
+    ctx.translate(X0-38*dpr, (Y0+Y1)/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.textBaseline='top'; ctx.textAlign='center';
+    ctx.fillText('Capital (K)', 0, 0);
+    ctx.restore();
+
+    // Tick labels
+    ctx.fillStyle='rgba(0,0,0,0.50)';
+    ctx.font=`${10*dpr}px Inter,system-ui,sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    for (let v=ts; v<=xMax; v+=ts) ctx.fillText(v, xTo(v), Y1+8*dpr);
+    ctx.textAlign='right'; ctx.textBaseline='middle';
+    for (let v=ts; v<=yMax; v+=ts) ctx.fillText(v, X0-6*dpr, yTo(v));
+
+    // Reference isocost lines (grey dashed)
+    ctx.save();
+    ctx.beginPath(); ctx.rect(X0, Y0, X1-X0, Y1-Y0); ctx.clip();
+    ctx.setLineDash([5*dpr, 4*dpr]);
+    ctx.lineWidth = 1.5*dpr;
+    ctx.strokeStyle = 'rgba(55,65,81,0.50)';
+    for (const frac of [0.6, 0.8, 1.4]) {
+      drawIsocostLine(ctx, Cval*frac, wage, rental, xTo, yTo, xMax, yMax);
+    }
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // Target isoquant (blue)
+    ctx.save();
+    ctx.beginPath(); ctx.rect(X0, Y0, X1-X0, Y1-Y0); ctx.clip();
+    ctx.strokeStyle = 'rgba(47,93,124,0.80)';
+    ctx.lineWidth = 2.5*dpr;
+    if (prodType === 'pc') {
+      const Lk=Qbar/alpha, Kk=Qbar/(1-alpha);
+      ctx.beginPath();
+      ctx.moveTo(xTo(Lk), Y0);
+      ctx.lineTo(xTo(Lk), yTo(Kk));
+      ctx.lineTo(X1, yTo(Kk));
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      let pen=false;
+      for (let i=1; i<=500; i++) {
+        const L=(i/500)*xMax*1.05;
+        const K=isoquantK(L, Qbar);
+        if (K===null||K<0||K>yMax*1.05||!isFinite(K)){pen=false;continue;}
+        if (!pen){ctx.moveTo(xTo(L),yTo(K));pen=true;}else ctx.lineTo(xTo(L),yTo(K));
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Optimal isocost (gold)
+    ctx.save();
+    ctx.beginPath(); ctx.rect(X0, Y0, X1-X0, Y1-Y0); ctx.clip();
+    ctx.strokeStyle = 'rgba(230,159,0,0.95)';
+    ctx.lineWidth = 2.5*dpr;
+    drawIsocostLine(ctx, Cval, wage, rental, xTo, yTo, xMax, yMax);
+    ctx.restore();
+
+    // Projection dashes
+    if (isFinite(Lstar) && isFinite(Kstar)) {
+      ctx.save();
+      ctx.strokeStyle='rgba(0,0,0,0.50)'; ctx.lineWidth=1.2*dpr;
+      ctx.setLineDash([4*dpr,3*dpr]);
+      ctx.beginPath(); ctx.moveTo(xTo(Lstar),yTo(Kstar)); ctx.lineTo(xTo(Lstar),Y1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(xTo(Lstar),yTo(Kstar)); ctx.lineTo(X0,yTo(Kstar)); ctx.stroke();
+      ctx.restore();
+      ctx.fillStyle='rgba(27,127,75,0.95)';
+      ctx.font=`bold ${11*dpr}px Inter,system-ui,sans-serif`;
+      ctx.textAlign='center'; ctx.textBaseline='top';
+      ctx.fillText('L*='+rnd(Lstar,1), xTo(Lstar), Y1+8*dpr);
+      ctx.textAlign='right'; ctx.textBaseline='middle';
+      ctx.fillText('K*='+rnd(Kstar,1), X0-6*dpr, yTo(Kstar));
+    }
+
+    // Optimal dot
+    if (isFinite(Lstar) && isFinite(Kstar)) {
+      ctx.beginPath();
+      ctx.arc(xTo(Lstar), yTo(Kstar), 7*dpr, 0, 2*Math.PI);
+      ctx.fillStyle='#1b7f4b'; ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=2*dpr; ctx.stroke();
+    }
+  }
+
+  // ── UI update ───────────────────────────────────────────────
+  function updateUI() {
+    const opt = getOptimum();
+    const { Lstar, Kstar, Cstar } = opt;
+    $('mLstar').textContent = isFinite(Lstar) ? rnd(Lstar,2) : '—';
+    $('mKstar').textContent = isFinite(Kstar) ? rnd(Kstar,2) : '—';
+    $('mCstar').textContent = isFinite(Cstar) ? '$'+rnd(Cstar,2) : '—';
+    if (prodType==='cd' && Lstar>0)
+      $('mMrts').textContent = rnd((alpha/(1-alpha))*(Kstar/Lstar),2);
+    else if (prodType==='ps')
+      $('mMrts').textContent = rnd(alpha/(1-alpha),2)+'';
+    else
+      $('mMrts').textContent = '∞ → 0';
+
+    const WR = rnd(wage/rental, 2);
+    let insight='';
+    if (prodType==='cd') {
+      const mrts = Lstar>0 ? rnd((alpha/(1-alpha))*(Kstar/Lstar),2) : null;
+      insight = `Tangency condition: MRTS<sub>LK</sub> = W/R = ${WR}.`
+              + (mrts!==null ? ` At (L*,K*), MRTS = ${mrts}.` : '')
+              + ` The firm equates bang-per-dollar: MP<sub>L</sub>/W = MP<sub>K</sub>/R.`;
+    } else if (prodType==='ps') {
+      const cL=rnd(wage/alpha,2), cK=rnd(rental/(1-alpha),2);
+      if (Math.abs(cL-cK)<0.5) insight=`Cost per unit output is equal via either input (≈ $${cL}). Any bundle on the isoquant is cost-minimizing.`;
+      else if (cL<cK) insight=`Labor is cheaper per unit of output ($${cL} vs. $${cK}). The firm uses <strong>only labor</strong>: K* = 0.`;
+      else insight=`Capital is cheaper per unit of output ($${cK} vs. $${cL}). The firm uses <strong>only capital</strong>: L* = 0.`;
+    } else {
+      insight=`Inputs are perfect complements. The optimum is always at the <strong>corner</strong> where αL* = (1−α)K*. Changing prices shifts cost but never the L*/K* ratio.`;
+    }
+    $('insightBox').innerHTML = insight;
+    $('wVal').textContent = '$'+wage;
+    $('rVal').textContent = '$'+rental;
+    $('qVal').textContent = rnd(Qbar,1);
+  }
+
+  function update() { updateUI(); draw(); }
+
+  // ── Events ──────────────────────────────────────────────────
+  wSlider.addEventListener('input', () => { wage   = +wSlider.value; update(); });
+  rSlider.addEventListener('input', () => { rental = +rSlider.value; update(); });
+  qSlider.addEventListener('input', () => { Qbar   = +qSlider.value; update(); });
+
+  document.querySelectorAll('.tab[data-type]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      prodType = btn.dataset.type;
+      document.querySelectorAll('.tab[data-type]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      wage=20; rental=20; Qbar=4;
+      wSlider.value=wage; rSlider.value=rental; qSlider.value=Qbar;
+      update();
+    });
+  });
+
+  window.addEventListener('resize', () => requestAnimationFrame(draw));
+  window.addEventListener('load', () => { update(); setTimeout(update, 120); });
+})();
+</script>
+
+</body>
+</html>
