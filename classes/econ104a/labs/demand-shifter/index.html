@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Demand Curve Shifter — ECON 104A</title>
+  <link rel="stylesheet" href="/assets/style.css"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea;--panel:#fff;
+      --ink:#1f2937;--ink-2:#374151;--muted:#6b7280;
+      --line:#e7dfd2;--line-2:#d9cfbf;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+      --accent:#2f5d7c;--good:#1b7f4b;--bad:#b42318;
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-sans);font-size:14px;line-height:1.5;}
+    .container{max-width:1100px;margin:0 auto;padding:0 18px;}
+    .page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.78),rgba(255,255,255,0));}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:13px;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{display:block;padding:18px 0 14px;}
+    .kicker{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;font-weight:700;}
+    h1{font-family:var(--font-serif);font-size:30px;line-height:1.1;margin:0 0 7px;}
+    .sub{color:var(--ink-2);line-height:1.55;max-width:74ch;margin:0;font-size:13px;}
+
+    .lab-grid{display:grid;grid-template-columns:300px 1fr;gap:18px;margin-top:20px;align-items:start;}
+    @media(max-width:800px){.lab-grid{grid-template-columns:1fr;}}
+
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);}
+    .card+.card{margin-top:14px;}
+    .sec{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0 0 10px;display:flex;align-items:center;gap:7px;}
+    .sec::after{content:'';flex:1;height:1px;background:var(--line);}
+
+    /* Relationship type buttons */
+    .rel-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;}
+    .rel-btn{padding:10px 8px;border-radius:12px;border:1.5px solid var(--line-2);background:rgba(255,255,255,.7);cursor:pointer;text-align:center;font-family:var(--font-sans);font-size:12px;font-weight:700;color:var(--muted);transition:all .12s;line-height:1.4;}
+    .rel-btn:hover{border-color:rgba(47,93,124,.4);color:var(--ink);}
+    .rel-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+    /* Px display */
+    .px-display{padding:10px 14px;border-radius:12px;background:rgba(47,93,124,.06);border:1px solid rgba(47,93,124,.18);font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+    .px-display span{font-size:16px;font-weight:900;color:var(--accent);}
+
+    /* Sliders */
+    .slider-block{margin-bottom:12px;}
+    .slider-block:last-child{margin-bottom:0;}
+    .slider-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
+    .slider-name{font-size:12px;font-weight:700;color:var(--ink);}
+    .slider-val{font-size:14px;font-weight:900;color:var(--accent);min-width:40px;text-align:right;}
+    input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;}
+
+    /* Interpretation */
+    .interp-box{padding:11px 13px;border-radius:12px;font-size:12px;line-height:1.65;color:var(--ink-2);background:rgba(47,93,124,.05);border:1px solid rgba(47,93,124,.14);min-height:50px;}
+    .shift-tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:800;margin-left:4px;}
+    .shift-right{background:rgba(27,127,75,.12);color:var(--good);}
+    .shift-left{background:rgba(180,35,24,.10);color:var(--bad);}
+    .shift-none{background:rgba(107,114,128,.10);color:var(--muted);}
+
+    /* Graphs */
+    .graphs-col{display:flex;flex-direction:column;gap:14px;}
+    .graph-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-title{font-size:12px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .canvas-wrap{width:100%;border-radius:10px;overflow:hidden;background:rgba(246,242,234,.45);border:1px solid var(--line);}
+    #icCanvas{display:block;width:100%;aspect-ratio:1/1;}
+    #dcCanvas{display:block;width:100%;aspect-ratio:2/1;}
+
+    .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:11px;color:var(--ink-2);}
+    .li{display:flex;align-items:center;gap:4px;}
+    .ld{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+    .ll{width:18px;height:0;border-top:2.5px solid;flex-shrink:0;}
+    .ll.dashed{border-top-style:dashed;}
+
+    sub,sup{font-size:.75em;line-height:0;position:relative;vertical-align:baseline;}
+    sub{bottom:-.25em;}
+    .reset-btn{width:100%;margin-top:8px;padding:9px;border-radius:12px;border:1px solid var(--line-2);background:#fff;font-family:var(--font-sans);font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .12s;}
+    .reset-btn:hover{border-color:rgba(180,35,24,.35);color:var(--bad);}
+    footer{margin-top:32px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);}
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  </style>
+</head>
+<body>
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar"><a class="crumb-link" href="/classes/econ104a/labs/">← Practice Labs</a></nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104A — Individual &amp; Market Demand</div>
+      <h1>Demand Curve Shifter</h1>
+      <p class="sub">The demand curve for Good X is already derived. Use the sliders and buttons to see how changes in the price of Good Y and income shift the curve — and how the relationship between X and Y (substitute vs. complement) determines the direction of the shift.</p>
+    </div>
+  </div>
+</header>
+
+<main class="container" style="padding-bottom:32px;">
+<div class="lab-grid">
+
+  <!-- ── LEFT ── -->
+  <div>
+    <div class="card">
+      <div class="sec">Relationship between X and Y</div>
+      <div class="rel-row">
+        <div class="rel-btn active" data-rel="sub">Substitutes<br><small>Py↑ → X demand↑</small></div>
+        <div class="rel-btn" data-rel="comp">Complements<br><small>Py↑ → X demand↓</small></div>
+      </div>
+
+      <div class="sec">Fixed price of X</div>
+      <div class="px-display"><span style="font-size:13px;font-weight:700;">P<span style="font-size:10px;vertical-align:sub;font-weight:800;">X</span> (current point)</span> <span id="pxVal">$6</span></div>
+
+      <div class="sec">Change these to shift the curve</div>
+      <div class="slider-block">
+        <div class="slider-header">
+          <span class="slider-name">Price of Y (P<sub>Y</sub>)</span>
+          <span class="slider-val" id="valPy">$4</span>
+        </div>
+        <input type="range" id="slPy" min="2" max="8" step="1" value="4">
+      </div>
+      <div class="slider-block">
+        <div class="slider-header">
+          <span class="slider-name">Income (I)</span>
+          <span class="slider-val" id="valI">$80</span>
+        </div>
+        <input type="range" id="slI" min="70" max="90" step="5" value="80">
+      </div>
+    </div>
+
+    <button class="reset-btn" id="resetBtn">↺ Reset to baseline</button>
+
+    <div class="card">
+      <div class="sec">What's happening</div>
+      <div class="interp-box" id="interpBox"></div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT ── -->
+  <div class="graphs-col">
+    <div class="graph-card">
+      <div class="graph-title">IC Diagram — Optimal Bundle at P<sub>X</sub> = $6</div>
+      <div class="canvas-wrap"><canvas id="icCanvas"></canvas></div>
+      <div class="legend">
+        <div class="li"><div class="ll" style="border-color:#2f5d7c;"></div><span>Budget line (BC)</span></div>
+        <div class="li"><div class="ll dashed" style="border-color:rgba(47,93,124,.4);"></div><span>Baseline BC</span></div>
+        <div class="li"><div class="ll" style="border-color:#1b7f4b;"></div><span>Optimal IC</span></div>
+        <div class="li"><div class="ld" style="background:#b42318;"></div><span>Optimal bundle</span></div>
+        <div class="li"><div class="ld" style="background:rgba(180,35,24,.35);"></div><span>Baseline bundle</span></div>
+      </div>
+    </div>
+
+    <div class="graph-card">
+      <div class="graph-title">Demand Curve for Good X</div>
+      <div class="canvas-wrap"><canvas id="dcCanvas"></canvas></div>
+      <div class="legend">
+        <div class="li"><div class="ll dashed" style="border-color:rgba(47,93,124,.5);"></div><span>Baseline demand (D)</span></div>
+        <div class="li"><div class="ll" style="border-color:#b42318;"></div><span>Current demand (D′)</span></div>
+        <div class="li"><div class="ld" style="background:#b42318;"></div><span>Current optimal point</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <span>ECON 104A — Intermediate Microeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+'use strict';
+
+// ── Baseline (always the reference) ───────────────────────────────
+const PX   = 6;       // fixed price of X for IC diagram
+let   BASE = { py:4, I:80, rel:'sub' };
+
+// ── State ──────────────────────────────────────────────────────────
+let state = { py:4, I:80, rel:'sub' };
+
+// ── DOM ────────────────────────────────────────────────────────────
+const $icCanvas = document.getElementById('icCanvas');
+const $dcCanvas = document.getElementById('dcCanvas');
+const $icWrap   = $icCanvas.parentElement;
+const $dcWrap   = $dcCanvas.parentElement;
+const $interp   = document.getElementById('interpBox');
+const $slPy     = document.getElementById('slPy');
+const $slI      = document.getElementById('slI');
+const $valPy    = document.getElementById('valPy');
+const $valI     = document.getElementById('valI');
+
+// ── Demand math ────────────────────────────────────────────────────
+// X*(Px; Py, I, rel) — derived from LQ utility with gamma=±3
+// Substitute: U = XY + 3X + Y  → X* = (I + 3Py - Px) / (2Px)
+// Complement: U = XY − 3X + Y  → X* = (I − 3Py − Px) / (2Px)
+// Y* from budget: Y* = (I − Px·X*) / Py
+function gamma(rel){ return rel==='sub'?3:-3; }
+
+function optX(px, py, I, rel){
+  const g=gamma(rel);
+  return Math.max(0.05, (I + g*py - px) / (2*px));
+}
+function optY(px, py, I, rel){
+  const x=optX(px,py,I,rel);
+  return Math.max(0.05, (I - px*x) / py);
+}
+
+// IC for substitute: U = XY + 3X + Y → y = (U - 3x)/(x+1)
+// IC for complement: U = XY - 3X + Y → y = (U + 3x)/(x+1) -- wait, need to check
+// Actually U = bXY + cX + dY, icY = (U - c*x)/(b*x + d)
+// Sub: b=1,c=3,d=1 → icY = (U-3x)/(x+1)
+// Comp: b=1,c=-3,d=1 → icY = (U+3x)/(x+1)
+function icY(x, U, rel){
+  if(x<0.01) return Infinity;
+  const c=gamma(rel);  // c=3 or c=-3
+  const y=(U - c*x)/(x + 1);
+  return y<0?Infinity:y;
+}
+function utilAt(x,y,rel){
+  const c=gamma(rel);
+  return x*y + c*x + y;
+}
+
+// ── Sliders & buttons ──────────────────────────────────────────────
+$slPy.addEventListener('input',()=>{ state.py=+$slPy.value; $valPy.textContent='$'+state.py; refresh(); });
+$slI.addEventListener('input', ()=>{ state.I =+$slI.value;  $valI.textContent ='$'+state.I;  refresh(); });
+
+document.querySelectorAll('.rel-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.rel-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const newRel=btn.dataset.rel;
+    // Switching relationship type resets to baseline Py/I so the
+    // new relationship type becomes the new baseline reference curve.
+    BASE.rel=newRel;
+    state.rel=newRel;
+    state.py=BASE.py;
+    state.I=BASE.I;
+    $slPy.value=BASE.py; $valPy.textContent='$'+BASE.py;
+    $slI.value=BASE.I;   $valI.textContent='$'+BASE.I;
+    refresh();
+  });
+});
+
+// ── Axis helpers ───────────────────────────────────────────────────
+function snapUp(raw){
+  const s=[8,10,12,15,20,25,30,40,50,60,80,100];
+  return s.find(v=>v>=raw)||Math.ceil(raw/10)*10;
+}
+function tickStep(mx){ return mx<=12?2:mx<=25?5:mx<=60?10:20; }
+
+// Py slider: 2–8. Income slider: 70–90 (step 5).
+// Axes sized from demand curve points only — BC may go off screen, which is fine.
+const PX_MIN=3, PX_MAX=12;
+
+function computeStaticBounds(){
+  let maxX=0, maxY=0;
+  [2,8].forEach(py=>{
+    [70,90].forEach(I=>{
+      ['sub','comp'].forEach(rel=>{
+        for(let px=PX_MIN;px<=PX_MAX;px+=0.5){
+          const x=optX(px,py,I,rel);
+          const y=optY(px,py,I,rel);
+          // Only demand-curve points — no budget line intercepts
+          if(isFinite(x)&&x>0) maxX=Math.max(maxX,x);
+          if(isFinite(y)&&y>0&&y<200) maxY=Math.max(maxY,y);
+        }
+      });
+    });
+  });
+  return { XMAX: snapUp(maxX*1.15), YMAX: snapUp(maxY*1.15) };
+}
+const BOUNDS = computeStaticBounds();
+const STATIC_XMAX = BOUNDS.XMAX;
+const STATIC_YMAX = BOUNDS.YMAX;
+const STATIC_PMAX = snapUp(PX_MAX*1.20);
+
+function getXMax(){ return STATIC_XMAX; }
+
+// ── Interpretation ─────────────────────────────────────────────────
+function refresh(){ updateInterp(); drawAll(); }
+
+function updateInterp(){
+  const {py,I,rel}=state;
+  const curX=optX(PX,py,I,rel);
+  const baseX=optX(PX,BASE.py,BASE.I,BASE.rel);
+  const dx=+(curX-baseX).toFixed(2);
+  const pyChanged=py!==BASE.py, iChanged=I!==BASE.I;
+  const relChanged=rel!==BASE.rel;
+
+  // Direction of demand curve shift
+  const curXlow=optX(PX_MIN,py,I,rel);
+  const baseXlow=optX(PX_MIN,BASE.py,BASE.I,BASE.rel);
+  const shifted=curXlow>baseXlow+0.1?'right':curXlow<baseXlow-0.1?'left':null;
+  const shiftTag=shifted
+    ?`<span class="shift-tag shift-${shifted}">Shifts ${shifted} ▶</span>`
+    :`<span class="shift-tag shift-none">No shift</span>`;
+
+  let msg='';
+  if(!pyChanged&&!iChanged&&!relChanged){
+    msg=`This is the baseline. P<sub>Y</sub>=$${BASE.py}, Income=$${BASE.I}. The optimal bundle at P<sub>X</sub>=$${PX} is <strong>X* = ${baseX.toFixed(2)}</strong>. Try moving the sliders to shift the demand curve.`;
+  } else {
+    const parts=[];
+    if(pyChanged){
+      const dir=py>BASE.py?'rose':'fell';
+      if(rel==='sub') parts.push(`P<sub>Y</sub> ${dir} from $${BASE.py} to $${py} — Good Y is a <strong>substitute</strong>, so demand for X shifts <strong>${py>BASE.py?'right':'left'}</strong>.`);
+      else            parts.push(`P<sub>Y</sub> ${dir} from $${BASE.py} to $${py} — Good Y is a <strong>complement</strong>, so demand for X shifts <strong>${py>BASE.py?'left':'right'}</strong>.`);
+    }
+    if(iChanged){
+      const dir=I>BASE.I?'rose':'fell';
+      parts.push(`Income ${dir} from $${BASE.I} to $${I} — as a normal good, demand for X shifts <strong>${I>BASE.I?'right':'left'}</strong>.`);
+    }
+    if(relChanged){
+      parts.push(`Good Y changed from ${rel==='sub'?'complement to substitute':'substitute to complement'} — the cross-price effect on X flips sign.`);
+    }
+    msg=parts.join(' ')+` ${shiftTag}<br><br>At P<sub>X</sub>=$${PX}: X* moved from ${baseX.toFixed(2)} → <strong>${curX.toFixed(2)}</strong> (Δ = ${dx>=0?'+':''}${dx}).`;
+  }
+  $interp.innerHTML=msg;
+}
+
+// ── Canvas setup ───────────────────────────────────────────────────
+const PAD={l:56,r:20,t:14,b:44};
+
+function setup(canvas,wrap){
+  const dpr=window.devicePixelRatio||1;
+  const rect=wrap.getBoundingClientRect();
+  const W=rect.width*dpr,H=rect.height*dpr;
+  if(canvas.width!==W||canvas.height!==H){canvas.width=W;canvas.height=H;}
+  return{ctx:canvas.getContext('2d'),dpr,W,H};
+}
+
+function coords(W,H,dpr,xMax,yMax){
+  const p={l:PAD.l*dpr,r:PAD.r*dpr,t:PAD.t*dpr,b:PAD.b*dpr};
+  const PW=W-p.l-p.r,PH=H-p.t-p.b;
+  return{
+    xToC:x=>p.l+(x/xMax)*PW,
+    yToC:y=>H-p.b-(y/yMax)*PH,
+    p,PW,PH
+  };
+}
+
+function axes(ctx,dpr,W,H,co,xMax,yMax,xLbl,yLbl){
+  const{xToC,yToC,p}=co;
+  ctx.fillStyle='rgba(47,93,124,.03)';ctx.fillRect(p.l,p.t,W-p.l-p.r,H-p.t-p.b);
+  ctx.strokeStyle='rgba(0,0,0,.28)';ctx.lineWidth=1.5*dpr;
+  ctx.beginPath();ctx.moveTo(p.l,H-p.b);ctx.lineTo(W-p.r,H-p.b);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(p.l,p.t);ctx.lineTo(p.l,H-p.b);ctx.stroke();
+  ctx.fillStyle='rgba(0,0,0,.28)';
+  ctx.beginPath();ctx.moveTo(W-p.r,H-p.b);ctx.lineTo(W-p.r-8*dpr,H-p.b-4*dpr);ctx.lineTo(W-p.r-8*dpr,H-p.b+4*dpr);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(p.l,p.t);ctx.lineTo(p.l-4*dpr,p.t+8*dpr);ctx.lineTo(p.l+4*dpr,p.t+8*dpr);ctx.closePath();ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,.50)';ctx.font=`700 ${12*dpr}px "Inter",sans-serif`;
+  ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(xLbl,(p.l+W-p.r)/2,H-p.b+16*dpr);
+  ctx.save();ctx.translate(p.l-34*dpr,(p.t+H-p.b)/2);ctx.rotate(-Math.PI/2);ctx.fillText(yLbl,0,0);ctx.restore();
+  ctx.font=`${10*dpr}px "Inter",sans-serif`;ctx.lineWidth=1*dpr;
+  const tsx=tickStep(xMax),tsy=tickStep(yMax);
+  for(let v=tsx;v<xMax;v+=tsx){
+    const cx=xToC(v);ctx.strokeStyle='rgba(0,0,0,.1)';
+    ctx.beginPath();ctx.moveTo(cx,H-p.b-3*dpr);ctx.lineTo(cx,H-p.b+3*dpr);ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,.36)';ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(v,cx,H-p.b+5*dpr);
+  }
+  for(let v=tsy;v<yMax;v+=tsy){
+    const cy=yToC(v);ctx.strokeStyle='rgba(0,0,0,.1)';
+    ctx.beginPath();ctx.moveTo(p.l-3*dpr,cy);ctx.lineTo(p.l+3*dpr,cy);ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,.36)';ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(v,p.l-5*dpr,cy);
+  }
+}
+
+function dot(ctx,dpr,cx,cy,color,r){
+  r=r||5.5;
+  ctx.beginPath();ctx.arc(cx,cy,r*1.8*dpr,0,Math.PI*2);ctx.fillStyle=color+'22';ctx.fill();
+  ctx.beginPath();ctx.arc(cx,cy,r*dpr,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();
+  ctx.strokeStyle='#fff';ctx.lineWidth=1.5*dpr;ctx.stroke();
+}
+
+function proj(ctx,dpr,cx,cy,H,p){
+  ctx.setLineDash([4*dpr,3*dpr]);
+  ctx.strokeStyle='rgba(0,0,0,.35)';ctx.lineWidth=1.2*dpr;
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx,H-p.b);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(p.l,cy);ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function axisTick(ctx,dpr,cx,cy,H,p,xVal,yVal,color){
+  ctx.fillStyle=color;ctx.strokeStyle=color;ctx.lineWidth=1.5*dpr;
+  ctx.font=`700 ${10*dpr}px "Inter",sans-serif`;
+  ctx.beginPath();ctx.moveTo(cx,H-p.b-4*dpr);ctx.lineTo(cx,H-p.b+4*dpr);ctx.stroke();
+  ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(xVal,cx,H-p.b+6*dpr);
+  ctx.beginPath();ctx.moveTo(p.l-4*dpr,cy);ctx.lineTo(p.l+4*dpr,cy);ctx.stroke();
+  ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(yVal,p.l-7*dpr,cy);
+}
+
+function icCurve(ctx,U,xMax,yMax,xToC,yToC,rel,color,lw){
+  ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.setLineDash([]);
+  let started=false;
+  for(let k=0;k<=300;k++){
+    const x=(k/300)*xMax*0.99;if(x<0.05)continue;
+    const y=icY(x,U,rel);
+    if(!isFinite(y)||y<0||y>yMax*1.05){started=false;continue;}
+    const cx=xToC(x),cy=yToC(y);
+    if(!started){ctx.moveTo(cx,cy);started=true;}else ctx.lineTo(cx,cy);
+  }
+  ctx.stroke();
+}
+
+// ── IC Diagram ─────────────────────────────────────────────────────
+function drawIC(){
+  const{ctx,dpr,W,H}=setup($icCanvas,$icWrap);
+  ctx.clearRect(0,0,W,H);
+
+  // Current and baseline bundles
+  const curX=optX(PX,state.py,state.I,state.rel);
+  const curY=optY(PX,state.py,state.I,state.rel);
+  const baseX=optX(PX,BASE.py,BASE.I,BASE.rel);
+  const baseY=optY(PX,BASE.py,BASE.I,BASE.rel);
+
+  // Static axes — never rescale so shifts are visually clear
+  const yiCur=state.I/state.py, yiBase=BASE.I/BASE.py;
+  const xiCur=state.I/PX,      xiBase=BASE.I/PX;
+  const xMax=STATIC_XMAX;
+  const yMax=STATIC_YMAX;
+
+  const co=coords(W,H,dpr,xMax,yMax);
+  const{xToC,yToC,p,PW,PH}=co;
+
+  axes(ctx,dpr,W,H,co,xMax,yMax,'Quantity of X','Quantity of Y');
+
+  ctx.save();
+  ctx.beginPath();ctx.rect(p.l,p.t,PW,PH);ctx.clip();
+
+  // Baseline BC (dashed, faded blue)
+  ctx.strokeStyle='rgba(47,93,124,.30)';ctx.lineWidth=1.5*dpr;ctx.setLineDash([5*dpr,4*dpr]);
+  ctx.beginPath();ctx.moveTo(xToC(xiBase),yToC(0));ctx.lineTo(xToC(0),yToC(yiBase));ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Baseline IC (faded green)
+  const Ubase=utilAt(baseX,baseY,BASE.rel);
+  icCurve(ctx,Ubase,xMax,yMax,xToC,yToC,BASE.rel,'rgba(27,127,75,.22)',1.5*dpr);
+
+  // Current BC (solid blue)
+  ctx.strokeStyle='#2f5d7c';ctx.lineWidth=2.5*dpr;ctx.setLineDash([]);
+  ctx.beginPath();ctx.moveTo(xToC(xiCur),yToC(0));ctx.lineTo(xToC(0),yToC(yiCur));ctx.stroke();
+
+  // Current IC (solid green)
+  const Ucur=utilAt(curX,curY,state.rel);
+  icCurve(ctx,Ucur,xMax,yMax,xToC,yToC,state.rel,'#1b7f4b',2.5*dpr);
+
+  ctx.restore();
+
+  // BC intercept ticks (current, blue)
+  ctx.font=`700 ${10*dpr}px "Inter",sans-serif`;
+  ctx.fillStyle='#2f5d7c';ctx.strokeStyle='#2f5d7c';ctx.lineWidth=1.5*dpr;
+  if(xiCur<=xMax){
+    ctx.beginPath();ctx.moveTo(xToC(xiCur),H-p.b-4*dpr);ctx.lineTo(xToC(xiCur),H-p.b+4*dpr);ctx.stroke();
+    ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(+(xiCur).toFixed(1),xToC(xiCur),H-p.b+6*dpr);
+  }
+  if(yiCur<=yMax){
+    ctx.beginPath();ctx.moveTo(p.l-4*dpr,yToC(yiCur));ctx.lineTo(p.l+4*dpr,yToC(yiCur));ctx.stroke();
+    ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(+(yiCur).toFixed(1),p.l-7*dpr,yToC(yiCur));
+  }
+
+  // Baseline bundle dot (faded red)
+  const bx=xToC(baseX),by=yToC(baseY);
+  ctx.beginPath();ctx.arc(bx,by,5*dpr,0,Math.PI*2);
+  ctx.fillStyle='rgba(180,35,24,.35)';ctx.fill();
+  ctx.strokeStyle='#fff';ctx.lineWidth=1.2*dpr;ctx.stroke();
+
+  // Current bundle: projection + dot + ticks
+  const cx=xToC(curX),cy=yToC(curY);
+  proj(ctx,dpr,cx,cy,H,p);
+  dot(ctx,dpr,cx,cy,'#b42318');
+  axisTick(ctx,dpr,cx,cy,H,p,+(curX).toFixed(1),+(curY).toFixed(1),'#b42318');
+
+  // BC label
+  const t=0.08,bclx=xToC(xiCur*(1-t)),bcly=yToC(yiCur*t);
+  const ddx=xToC(0)-xToC(xiCur),ddy=yToC(yiCur)-yToC(0);
+  const llen=Math.sqrt(ddx*ddx+ddy*ddy)||1;
+  ctx.font=`700 ${11*dpr}px "Inter",sans-serif`;ctx.fillStyle='#2f5d7c';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('BC',bclx+ddy/llen*12*dpr,bcly-ddx/llen*12*dpr);
+}
+
+// ── Demand Curve ────────────────────────────────────────────────────
+function drawDC(){
+  const{ctx,dpr,W,H}=setup($dcCanvas,$dcWrap);
+  ctx.clearRect(0,0,W,H);
+  const xMax=STATIC_XMAX;
+  const pMax=STATIC_PMAX;
+  const co=coords(W,H,dpr,xMax,pMax);
+  const{xToC,yToC,p,PW,PH}=co;
+
+  axes(ctx,dpr,W,H,co,xMax,pMax,'Quantity of X (X*)','Price of X');
+
+  ctx.save();
+  ctx.beginPath();ctx.rect(p.l,p.t,PW,PH);ctx.clip();
+
+  // Helper: draw a full demand curve from PX_MIN to PX_MAX
+  function demandCurve(py,I,rel,color,lw,dash){
+    ctx.strokeStyle=color;ctx.lineWidth=lw;
+    ctx.setLineDash(dash||[]);
+    ctx.beginPath();let started=false;
+    for(let k=0;k<=240;k++){
+      const px=PX_MIN+(PX_MAX-PX_MIN)*k/240;
+      const x=optX(px,py,I,rel);
+      if(x<0.05||x>xMax){started=false;continue;}
+      const cx=xToC(x),cy=yToC(px);
+      if(!started){ctx.moveTo(cx,cy);started=true;}else ctx.lineTo(cx,cy);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Baseline demand curve (dashed, faded blue)
+  demandCurve(BASE.py,BASE.I,BASE.rel,'rgba(47,93,124,.45)',1.8*dpr,[5*dpr,4*dpr]);
+
+  // Current demand curve (solid red)
+  demandCurve(state.py,state.I,state.rel,'#b42318',2.5*dpr);
+
+  ctx.restore();
+
+  // D label (baseline)
+  const dPx=PX_MIN+(PX_MAX-PX_MIN)*0.25;
+  const dX=optX(dPx,BASE.py,BASE.I,BASE.rel);
+
+  // D′ label (current)
+  const dPx2=PX_MIN+(PX_MAX-PX_MIN)*0.35;
+  const dX2=optX(dPx2,state.py,state.I,state.rel);
+
+
+  // Current optimal point at PX
+  const curX=optX(PX,state.py,state.I,state.rel);
+  const cx=xToC(curX),cy=yToC(PX);
+  proj(ctx,dpr,cx,cy,H,p);
+  dot(ctx,dpr,cx,cy,'#b42318');
+
+  ctx.font=`700 ${10*dpr}px "Inter",sans-serif`;
+  ctx.fillStyle='#b42318';ctx.strokeStyle='#b42318';ctx.lineWidth=1.5*dpr;
+  ctx.beginPath();ctx.moveTo(cx,H-p.b-4*dpr);ctx.lineTo(cx,H-p.b+4*dpr);ctx.stroke();
+  ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(+(curX).toFixed(1),cx,H-p.b+6*dpr);
+  ctx.beginPath();ctx.moveTo(p.l-4*dpr,cy);ctx.lineTo(p.l+4*dpr,cy);ctx.stroke();
+  ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText('$'+PX,p.l-7*dpr,cy);
+}
+
+function drawAll(){ drawIC(); drawDC(); }
+
+// ── Reset ───────────────────────────────────────────────────────────
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  BASE.rel='sub';
+  state.py=BASE.py; state.I=BASE.I; state.rel=BASE.rel;
+  document.getElementById('slPy').value=BASE.py;
+  document.getElementById('slI').value=BASE.I;
+  document.getElementById('valPy').textContent='$'+BASE.py;
+  document.getElementById('valI').textContent='$'+BASE.I;
+  document.querySelectorAll('.rel-btn').forEach(b=>b.classList.toggle('active',b.dataset.rel==='sub'));
+  refresh();
+});
+
+// ── Resize ───────────────────────────────────────────────────────────
+let rt;
+window.addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(drawAll,80); });
+
+// ── Init ────────────────────────────────────────────────────────────
+updateInterp(); drawAll();
+})();
+</script>
+</body>
+</html>
