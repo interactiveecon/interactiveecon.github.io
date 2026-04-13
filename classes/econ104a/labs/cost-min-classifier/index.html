@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Is This Cost-Minimizing? — ECON 104A</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Source+Serif+4:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+<style>
+:root {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Source Serif 4", ui-serif, Georgia, serif;
+  --paper: #f6f2ea; --panel: #fff;
+  --ink: #1f2937; --ink-2: #374151; --muted: #6b7280;
+  --line: #e7dfd2; --line-2: #d9cfbf;
+  --accent: #2f5d7c;
+  --good: #1b7f4b; --bad: #b42318;
+  --shadow: 0 1px 2px rgba(17,24,39,.06), 0 10px 24px rgba(17,24,39,.06);
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-sans); }
+
+.container { max-width: 760px; margin: 0 auto; padding: 18px; }
+
+/* Header */
+.page-header { border-bottom: 1px solid var(--line); background: linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0)); }
+.header-inner { display: block; padding: 22px 0 14px; }
+.crumbbar { margin: 6px 0 10px; }
+.crumb-link { color: var(--accent); text-decoration: none; font-weight: 700; font-size: 13px; }
+.crumb-link:hover { text-decoration: underline; }
+.kicker { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+h1 { font-family: var(--font-serif); font-size: 32px; line-height: 1.1; letter-spacing: -.01em; margin: 0; }
+.sub { margin: 10px 0 0; color: var(--ink-2); line-height: 1.55; max-width: 72ch; }
+
+.howto { margin-top: 14px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.70); padding: 10px 12px; }
+.howto summary { cursor: pointer; font-weight: 600; color: var(--accent); }
+.howto-body { margin-top: 10px; color: var(--ink-2); line-height: 1.55; font-size: 14px; }
+.howto-body ul { margin: 0 0 8px 18px; }
+
+/* Problem card */
+.problem-card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 18px; padding: 20px; box-shadow: var(--shadow);
+  margin-top: 18px;
+}
+.problem-header { margin: 0 0 14px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); }
+
+.param-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+@media(max-width:560px){ .param-grid { grid-template-columns: 1fr 1fr; } }
+.param { background: rgba(246,242,234,.6); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.param.wide { grid-column: 1 / -1; }
+.param .label { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.param .value { margin-top: 5px; font-size: 15px; font-weight: 700; color: var(--ink); }
+
+/* Bundle display */
+.bundle-row {
+  display: flex; gap: 12px; align-items: stretch;
+  margin: 16px 0; flex-wrap: wrap;
+}
+.bundle-box {
+  flex: 1; min-width: 130px;
+  background: rgba(47,93,124,.06); border: 1.5px solid rgba(47,93,124,.25);
+  border-radius: 14px; padding: 12px 14px; text-align: center;
+}
+.bundle-box .bl { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 4px; }
+.bundle-box .bv { font-size: 17px; font-weight: 800; color: var(--accent); }
+
+.ratio-row {
+  display: flex; gap: 12px; margin: 4px 0 16px; flex-wrap: wrap;
+}
+.ratio-box {
+  flex: 1; min-width: 130px;
+  background: rgba(246,242,234,.8); border: 1px solid var(--line);
+  border-radius: 14px; padding: 10px 14px; text-align: center;
+}
+.ratio-box .rl { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 4px; }
+.ratio-box .rv { font-size: 15px; font-weight: 700; color: var(--ink); }
+
+/* Question */
+.question-text {
+  font-size: 15px; font-weight: 600; color: var(--ink);
+  margin: 18px 0 12px; line-height: 1.5;
+}
+
+/* MC options */
+.mc-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.mc-option {
+  display: flex; align-items: center; gap: 12px;
+  border: 1.5px solid var(--line-2); border-radius: 12px;
+  padding: 11px 14px; cursor: pointer; background: #fff;
+  transition: border-color .12s, background .12s;
+  font-size: 14px; color: var(--ink);
+}
+.mc-option:hover:not(.disabled) { border-color: rgba(47,93,124,.4); background: rgba(47,93,124,.04); }
+.mc-option.disabled { cursor: default; }
+.mc-letter {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800;
+  background: rgba(246,242,234,.8); border: 1.5px solid var(--line-2);
+  color: var(--muted);
+}
+.mc-option.selected-correct { border-color: rgba(27,127,75,.6); background: rgba(27,127,75,.07); }
+.mc-option.selected-correct .mc-letter { background: #1b7f4b; border-color: #1b7f4b; color: #fff; }
+.mc-option.selected-wrong { border-color: rgba(180,35,24,.5); background: rgba(180,35,24,.06); }
+.mc-option.selected-wrong .mc-letter { background: #b42318; border-color: #b42318; color: #fff; }
+.mc-option.revealed-correct { border-color: rgba(27,127,75,.5); background: rgba(27,127,75,.05); }
+.mc-option.revealed-correct .mc-letter { background: rgba(27,127,75,.15); border-color: rgba(27,127,75,.5); color: #1b7f4b; }
+
+/* Result / explanation */
+.result-msg {
+  padding: 10px 14px; border-radius: 12px; font-size: 14px;
+  font-weight: 600; margin-bottom: 12px;
+}
+.result-msg.correct { background: rgba(27,127,75,.09); border: 1px solid rgba(27,127,75,.35); color: #1b7f4b; }
+.result-msg.wrong   { background: rgba(180,35,24,.08); border: 1px solid rgba(180,35,24,.30); color: #b42318; }
+.hidden { display: none !important; }
+
+/* Diagnostic */
+.diagnostic { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 18px; }
+.diag-step { margin-bottom: 20px; animation: fadeIn .22s ease; }
+.diag-step-header { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); margin-bottom: 8px; font-weight: 700; }
+.diag-question { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 10px; line-height: 1.5; }
+.explanation-box {
+  margin-top: 10px; padding: 10px 13px; border-radius: 11px;
+  background: rgba(246,242,234,.7); border: 1px solid var(--line);
+  font-size: 13px; color: var(--ink-2); line-height: 1.55;
+}
+.diag-complete {
+  padding: 12px 16px; border-radius: 13px;
+  background: rgba(27,127,75,.08); border: 1px solid rgba(27,127,75,.30);
+  color: #1b7f4b; font-size: 14px; font-weight: 600; margin-top: 10px;
+}
+
+/* Graph canvas */
+.graph-wrap { margin: 16px 0; border-radius: 14px; overflow: hidden; background: #fff; border: 1px solid var(--line); }
+canvas { display: block; width: 100%; }
+
+/* Btn */
+.btn {
+  border: 1px solid var(--line-2); background: #fff; color: var(--ink);
+  padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 14px;
+  cursor: pointer; transition: background .12s, border-color .12s;
+}
+.btn:hover { background: rgba(47,93,124,.06); border-color: rgba(47,93,124,.35); }
+.btn.primary { background: rgba(47,93,124,.10); border-color: rgba(47,93,124,.35); }
+.btn.primary:hover { background: rgba(47,93,124,.16); }
+.btn:disabled { opacity: .45; cursor: default; }
+
+.controls-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+/* Legend */
+.legend { display: flex; gap: 14px; flex-wrap: wrap; margin: 8px 0 4px; font-size: 12px; color: var(--ink-2); }
+.leg-row { display: flex; align-items: center; gap: 6px; }
+.leg-swatch { width: 26px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+.leg-swatch.iq      { background: rgba(47,93,124,0.75); }
+.leg-swatch.given   { background: #b42318; height: 10px; width: 10px; border-radius: 50%; }
+.leg-swatch.opt     { background: #1b7f4b; height: 10px; width: 10px; border-radius: 50%; }
+.leg-swatch.isocost { background: rgba(230,159,0,0.9); }
+.leg-swatch.given-iso { background: #b42318; height: 3px; width: 26px; border-radius: 2px; }
+
+/* Footer */
+.footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+@keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar"><a class="crumb-link" href="/classes/econ104a/">← ECON 104A Home</a></nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104A — Intermediate Microeconomic Theory</div>
+      <h1>Is This Cost-Minimizing?</h1>
+      <p class="sub">Given an input bundle (L, K), compare MP<sub>L</sub>/W to MP<sub>K</sub>/R and decide whether the firm should shift spending toward labor, toward capital, or is already at the optimum.</p>
+      <details class="howto">
+        <summary>How this works</summary>
+        <div class="howto-body">
+          <ul>
+            <li>You are given a production function (Cobb-Douglas, perfect substitutes, or perfect complements), input prices W and R, a target output Q̄, and a specific input bundle (L, K).</li>
+            <li>Compute MP<sub>L</sub>/W and MP<sub>K</sub>/R at the given bundle.</li>
+            <li>If MP<sub>L</sub>/W &gt; MP<sub>K</sub>/R, the firm gets more output per dollar from labor — it should use more L and less K.</li>
+            <li>If MP<sub>K</sub>/R &gt; MP<sub>L</sub>/W, use more K and less L.</li>
+            <li>If they are equal, the bundle is cost-minimizing.</li>
+            <li>If your answer is wrong, a step-by-step diagnostic walks you through the solution.</li>
+          </ul>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="problem-card" id="problemCard">
+    <div class="problem-header">Problem</div>
+
+    <div class="param-grid">
+      <div class="param wide">
+        <div class="label">Production Function</div>
+        <div class="value" id="prodDisplay"></div>
+      </div>
+      <div class="param">
+        <div class="label">Wage (W)</div>
+        <div class="value" id="wDisplay"></div>
+      </div>
+      <div class="param">
+        <div class="label">Rental Rate (R)</div>
+        <div class="value" id="rDisplay"></div>
+      </div>
+      <div class="param">
+        <div class="label">Target Output (Q̄)</div>
+        <div class="value" id="qDisplay"></div>
+      </div>
+    </div>
+
+    <!-- Given bundle -->
+    <div class="bundle-row">
+      <div class="bundle-box">
+        <div class="bl">Given Labor</div>
+        <div class="bv" id="bLDisplay"></div>
+      </div>
+      <div class="bundle-box">
+        <div class="bl">Given Capital</div>
+        <div class="bv" id="bKDisplay"></div>
+      </div>
+    </div>
+
+    <!-- Computed ratios (shown to student) -->
+    <div class="ratio-row">
+      <div class="ratio-box">
+        <div class="rl">MP<sub>L</sub> / W</div>
+        <div class="rv" id="ratioLDisplay"></div>
+      </div>
+      <div class="ratio-box">
+        <div class="rl">MP<sub>K</sub> / R</div>
+        <div class="rv" id="ratioKDisplay"></div>
+      </div>
+    </div>
+
+    <!-- Graph -->
+    <div class="graph-wrap">
+      <canvas id="graph" height="340"></canvas>
+    </div>
+    <div class="legend" id="graphLegend">
+      <div class="leg-row"><div class="leg-swatch iq"></div><span>Isoquant (Q = Q̄)</span></div>
+      <div class="leg-row"><div class="leg-swatch given"></div><span>Given bundle</span></div>
+      <div class="leg-row"><div class="leg-swatch given-iso"></div><span>Isocost through given bundle</span></div>
+      <div class="leg-row leg-opt hidden" id="legOpt"><div class="leg-swatch opt"></div><span>Optimal bundle (L*, K*)</span></div>
+      <div class="leg-row leg-opt hidden" id="legIso"><div class="leg-swatch isocost"></div><span>Optimal isocost (C*)</span></div>
+    </div>
+
+    <!-- Main question -->
+    <div class="question-text">Based on the ratios above, what should the firm do?</div>
+    <div class="mc-options" id="mainOptions"></div>
+    <div id="resultMsg" class="result-msg hidden"></div>
+
+    <!-- Diagnostic -->
+    <div id="diagnostic" class="diagnostic hidden">
+      <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:14px;">Let's work through this step by step.</div>
+      <div id="diagSteps"></div>
+      <div id="diagComplete" class="diag-complete hidden"></div>
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <button class="btn primary" id="newProblemBtn">New Problem</button>
+  </div>
+
+  <footer class="footer">
+    <span>ECON 104A — Intermediate Microeconomic Theory</span>
+    <span>interactiveecon.github.io</span>
+  </footer>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ── KaTeX helper ────────────────────────────────────────────
+  function kx(tex) {
+    try { return katex.renderToString(tex, { throwOnError: false }); }
+    catch(e) { return tex; }
+  }
+
+  // ── RNG (seeded via Math.random for practice lab) ───────────
+  let _seed = Date.now();
+  function rng() {
+    _seed = (_seed * 1664525 + 1013904223) & 0xffffffff;
+    return ((_seed >>> 0) / 0xffffffff);
+  }
+  function rngInt(lo, hi) { return lo + Math.floor(rng() * (hi - lo + 1)); }
+  function rngChoice(arr) { return arr[Math.floor(rng() * arr.length)]; }
+
+  const rnd = (v, dp=3) => parseFloat(v.toFixed(dp));
+
+  // ── State ───────────────────────────────────────────────────
+  let prob = {};
+  let diagStep = 0;
+  let diagStepsData = [];
+  let diagCorrectCount = 0;
+  let firstCorrect = null;
+  let revealed = false;
+
+  // ── DOM ─────────────────────────────────────────────────────
+  const $prod    = document.getElementById('prodDisplay');
+  const $w       = document.getElementById('wDisplay');
+  const $r       = document.getElementById('rDisplay');
+  const $q       = document.getElementById('qDisplay');
+  const $bL      = document.getElementById('bLDisplay');
+  const $bK      = document.getElementById('bKDisplay');
+  const $ratioL  = document.getElementById('ratioLDisplay');
+  const $ratioK  = document.getElementById('ratioKDisplay');
+  const $opts    = document.getElementById('mainOptions');
+  const $result  = document.getElementById('resultMsg');
+  const $diag    = document.getElementById('diagnostic');
+  const $dSteps  = document.getElementById('diagSteps');
+  const $dComp   = document.getElementById('diagComplete');
+  const $newBtn  = document.getElementById('newProblemBtn');
+  const canvas   = document.getElementById('graph');
+
+  // ── Production types ────────────────────────────────────────
+  // cd: Cobb-Douglas Q = L^a * K^(1-a)
+  // ps: Perfect substitutes Q = aL + (1-a)K  (corner solutions)
+  // pc: Perfect complements Q = min(aL, (1-a)K)
+
+  // Fraction display helpers
+  function fracStr(n, d) {
+    // Returns 'n/d' or integer string
+    if (d === 1) return String(n);
+    return n + '/' + d;
+  }
+  // Alpha candidates as {num,den} for clean display
+  const ALPHA_FRACS = [
+    {num:1,den:4},{num:1,den:3},{num:1,den:2},{num:2,den:3},{num:3,den:4}
+  ];
+
+  // ── Cobb-Douglas helpers ─────────────────────────────────────
+  function cdCstar(Q, W, R, a) {
+    return Q * Math.pow(W/a, a) * Math.pow(R/(1-a), 1-a);
+  }
+  function cdOptimum(Q, W, R, a) {
+    const C = cdCstar(Q, W, R, a);
+    return { Lstar: a*C/W, Kstar: (1-a)*C/R, Cstar: C };
+  }
+  function mpl_cd(L, K, a) { return a * Math.pow(L, a-1) * Math.pow(K, 1-a); }
+  function mpk_cd(L, K, a) { return (1-a) * Math.pow(L, a) * Math.pow(K, -a); }
+
+  // ── Perfect substitutes helpers ──────────────────────────────
+  // Q = a*L + (1-a)*K → MPL=a, MPK=(1-a), constant
+  // Optimum: corner solution depending on W/a vs R/(1-a)
+  // Off-optimum: any point on isoquant that is NOT the corner
+  function psOptimum(Q, W, R, a) {
+    const costL = W/a, costK = R/(1-a);
+    let Lstar, Kstar, Cstar;
+    if (costL < costK) { Lstar = Q/a;     Kstar = 0;        Cstar = W*Lstar; }
+    else               { Lstar = 0;        Kstar = Q/(1-a);  Cstar = R*Kstar; }
+    return { Lstar, Kstar, Cstar };
+  }
+  function mpl_ps(a) { return a; }       // constant
+  function mpk_ps(a) { return 1-a; }     // constant
+
+  // ── Perfect complements helpers ──────────────────────────────
+  // Q = min(a*L, (1-a)*K) → optimum at a*L=(1-a)*K
+  // L* = Q/a, K* = Q/(1-a)
+  // Off-optimum: displace along either axis (excess of one input)
+  // MPL and MPK at off-kink points:
+  //   If a*bL < (1-a)*bK (L is binding): MPL = a (increasing L increases Q), MPK = 0
+  //   If a*bL > (1-a)*bK (K is binding): MPK = 1-a, MPL = 0
+  //   At kink: MPL/MPK = W/R by construction (optimum)
+  function pcOptimum(Q, a) {
+    const Lstar = Q/a, Kstar = Q/(1-a);
+    return { Lstar, Kstar };
+  }
+  function mpl_pc(L, K, a) {
+    // min(aL,(1-a)K): MPL = a if aL < (1-a)K, else 0
+    return a*L < (1-a)*K ? a : (a*L === (1-a)*K ? a : 0);
+  }
+  function mpk_pc(L, K, a) {
+    return (1-a)*K < a*L ? (1-a) : ((1-a)*K === a*L ? (1-a) : 0);
+  }
+
+  // Generic MP wrappers — dispatch by prob.prodType
+  function mpl(L, K, a) {
+    const t = prob.prodType || 'cd';
+    if (t === 'ps') return mpl_ps(a);
+    if (t === 'pc') return mpl_pc(L, K, a);
+    return mpl_cd(L, K, a);
+  }
+  function mpk(L, K, a) {
+    const t = prob.prodType || 'cd';
+    if (t === 'ps') return mpk_ps(a);
+    if (t === 'pc') return mpk_pc(L, K, a);
+    return mpk_cd(L, K, a);
+  }
+
+  function generateProblem() {
+    // Pick production type: cd=Cobb-Douglas, ps=perfect substitutes, pc=perfect complements
+    // Weight: cd 60%, ps 20%, pc 20%
+    const typeRoll = rng();
+    const prodType = typeRoll < 0.6 ? 'cd' : typeRoll < 0.8 ? 'ps' : 'pc';
+
+    const af = rngChoice(ALPHA_FRACS);
+    const alpha = af.num / af.den;
+
+    // Wider parameter ranges
+    const W = rngInt(2, 15);
+    const R = rngInt(2, 15);
+    const Q = rngInt(3, 12);
+
+    const caseType = rngInt(0, 2); // 0=optimum, 1=shift to L, 2=shift to K
+
+    let bL, bK, Lstar, Kstar, Cstar;
+    let dispRatL, dispRatK;
+    let prodLabel, mpLFormula, mpKFormula;
+    let attempts = 0;
+
+    if (prodType === 'cd') {
+      const opt = cdOptimum(Q, W, R, alpha);
+      Lstar = opt.Lstar; Kstar = opt.Kstar; Cstar = opt.Cstar;
+
+      while (attempts < 200) {
+        attempts++;
+        let rawL, rawK;
+        if (caseType === 0) {
+          rawL = Lstar; rawK = Kstar;
+        } else if (caseType === 1) {
+          const fL = 0.40 + rng() * 0.40;
+          rawL = Lstar * fL;
+          rawK = Math.pow(Q / Math.pow(rawL, alpha), 1/(1-alpha));
+        } else {
+          const fL = 1.20 + rng() * 0.60;
+          rawL = Lstar * fL;
+          rawK = Math.pow(Q / Math.pow(rawL, alpha), 1/(1-alpha));
+        }
+        bL = rnd(rawL, 2); bK = rnd(rawK, 2);
+        if (bL <= 0 || bK <= 0) continue;
+        if (caseType === 0) { bL = rnd(Lstar,2); bK = rnd(Kstar,2); break; }
+        const mpLv = mpl_cd(bL, bK, alpha), mpKv = mpk_cd(bL, bK, alpha);
+        const gap = Math.abs(mpLv/W - mpKv/R);
+        if (gap < 0.05) continue;
+        if (caseType === 1 && mpLv/W <= mpKv/R) continue;
+        if (caseType === 2 && mpKv/R <= mpLv/W) continue;
+        break;
+      }
+      if (caseType === 0) {
+        const avg = rnd((mpl_cd(Lstar,Kstar,alpha)/W + mpk_cd(Lstar,Kstar,alpha)/R)/2, 3);
+        dispRatL = avg; dispRatK = avg;
+      } else {
+        dispRatL = rnd(mpl_cd(bL,bK,alpha)/W, 3);
+        dispRatK = rnd(mpk_cd(bL,bK,alpha)/R, 3);
+      }
+      const aStr = fracStr(af.num, af.den), oStr = fracStr(af.den-af.num, af.den);
+      prodLabel = 'Q = L^{' + aStr + '} K^{' + oStr + '}';
+      mpLFormula = 'MP_L = \tfrac{' + aStr + ' \cdot Q}{L}';
+      mpKFormula = 'MP_K = \tfrac{' + oStr + ' \cdot Q}{K}';
+
+    } else if (prodType === 'ps') {
+      // Perfect substitutes: Q = a*L + (1-a)*K
+      // MPL = a (const), MPK = 1-a (const)
+      // caseType 0: W/a = R/(1-a) (force this by adjusting W or R)
+      // caseType 1: MPL/W > MPK/R → W/a < R/(1-a) → all L
+      // caseType 2: MPK/R > MPL/W → all K
+      // For PS, generate W and R such that the ratio condition is met
+      let psW = W, psR = R;
+      const ratioLHS = alpha, ratioRHS = 1-alpha;
+      if (caseType === 0) {
+        // Force W/alpha = R/(1-alpha): pick W, compute R = W*(1-alpha)/alpha
+        psW = rngInt(2, 12);
+        psR = rnd(psW * (1-alpha) / alpha, 0);
+        if (psR < 1) psR = 1;
+        dispRatL = rnd(alpha/psW, 3); dispRatK = rnd((1-alpha)/psR, 3);
+        const avg = rnd((dispRatL+dispRatK)/2, 3); dispRatL=avg; dispRatK=avg;
+      } else if (caseType === 1) {
+        // MPL/W > MPK/R: alpha/W > (1-alpha)/R → use W and R where this holds
+        // Pick until condition satisfied with gap
+        psW = rngInt(2,12); psR = rngInt(2,12);
+        let tries = 0;
+        while (tries < 100 && (alpha/psW - (1-alpha)/psR) < 0.05) {
+          psW = rngInt(2,10); psR = rngInt(2,12); tries++;
+        }
+        dispRatL = rnd(alpha/psW, 3); dispRatK = rnd((1-alpha)/psR, 3);
+      } else {
+        psW = rngInt(2,12); psR = rngInt(2,12);
+        let tries = 0;
+        while (tries < 100 && ((1-alpha)/psR - alpha/psW) < 0.05) {
+          psW = rngInt(2,12); psR = rngInt(2,10); tries++;
+        }
+        dispRatL = rnd(alpha/psW, 3); dispRatK = rnd((1-alpha)/psR, 3);
+      }
+      const optPS = psOptimum(Q, psW, psR, alpha);
+      Lstar = optPS.Lstar; Kstar = optPS.Kstar; Cstar = optPS.Cstar;
+      // Given bundle: for PS, place bundle somewhere on the isoquant
+      if (caseType === 0) {
+        // Show a non-corner interior bundle (any combo summing to Q)
+        const frac = 0.3 + rng()*0.4;
+        bL = rnd(frac * Q / alpha, 2); bK = rnd((Q - alpha*bL)/(1-alpha), 2);
+        if (bK < 0) { bL = rnd(Q/(2*alpha),2); bK = rnd(Q/(2*(1-alpha)),2); }
+      } else if (caseType === 1) {
+        // Bundle with excess K (not yet shifted to L)
+        const fL = 0.2 + rng()*0.3;
+        bL = rnd(fL * Q / alpha, 2); bK = rnd((Q - alpha*bL)/(1-alpha), 2);
+        if (bK < 0) bK = 0;
+      } else {
+        const fL = 0.6 + rng()*0.3;
+        bL = rnd(fL * Q / alpha, 2); bK = rnd((Q - alpha*bL)/(1-alpha), 2);
+        if (bK < 0) bK = 0;
+      }
+      // Override global W,R with psW,psR via prob object below
+      const aStr = fracStr(af.num, af.den), oStr = fracStr(af.den-af.num, af.den);
+      prodLabel = 'Q = ' + aStr + 'L + ' + oStr + 'K';
+      mpLFormula = 'MP_L = ' + aStr + ' \text{ (constant)}';
+      mpKFormula = 'MP_K = ' + oStr + ' \text{ (constant)}';
+      // Store adjusted prices
+      prob = { _psW: psW, _psR: psR };
+
+    } else {
+      // Perfect complements: Q = min(a*L, (1-a)*K)
+      const aStr = fracStr(af.num, af.den), oStr = fracStr(af.den-af.num, af.den);
+      prodLabel = 'Q = \min(' + aStr + 'L,\,' + oStr + 'K)';
+      const optPC = pcOptimum(Q, alpha);
+      Lstar = optPC.Lstar; Kstar = optPC.Kstar;
+      Cstar = W*Lstar + R*Kstar;
+
+      if (caseType === 0) {
+        // At kink: bL = Q/a, bK = Q/(1-a)
+        bL = rnd(Q/alpha, 2); bK = rnd(Q/(1-alpha), 2);
+        dispRatL = rnd(alpha/W, 3); dispRatK = rnd((1-alpha)/R, 3);
+        const avg = rnd((dispRatL+dispRatK)/2,3); dispRatL=avg; dispRatK=avg;
+      } else if (caseType === 1) {
+        // Excess K: L is binding → a*bL = Q, bK > Q/(1-a)
+        // So bL = Q/a (on isoquant), bK = Kstar*(1.3..1.7)
+        bL = rnd(Q/alpha, 2);
+        bK = rnd(Kstar * (1.3 + rng()*0.4), 2);
+        dispRatL = rnd(alpha/W, 3); dispRatK = 0;
+      } else {
+        // Excess L: K is binding → (1-a)*bK = Q, bL > Q/a
+        // So bK = Q/(1-a) (on isoquant), bL = Lstar*(1.3..1.7)
+        bL = rnd(Lstar * (1.3 + rng()*0.4), 2);
+        bK = rnd(Q/(1-alpha), 2);
+        dispRatL = 0; dispRatK = rnd((1-alpha)/R, 3);
+      }
+      mpLFormula = caseType===1 ? 'MP_L = ' + aStr + ',\; MP_K = 0'
+                : caseType===2 ? 'MP_L = 0,\; MP_K = ' + oStr
+                : 'MP_L = ' + aStr + ',\; MP_K = ' + oStr;
+      mpKFormula = '';
+    }
+
+    // Build final prob (merge any PS price overrides)
+    const psOverride = (prodType === 'ps' && prob._psW) ? { W: prob._psW, R: prob._psR } : { W, R };
+    const aStr = fracStr(af.num, af.den), oStr = fracStr(af.den-af.num, af.den);
+
+    prob = {
+      prodType, alpha, alphaFrac: aStr, oneMinusAlphaFrac: oStr,
+      W: psOverride.W, R: psOverride.R, Q,
+      Lstar: rnd(Lstar, 2), Kstar: rnd(Kstar, 2), Cstar: rnd(Cstar, 2),
+      bL, bK,
+      dispRatL, dispRatK,
+      caseType,
+      prodLabel, mpLFormula, mpKFormula,
+    };
+  }
+
+  // ── Render problem ──────────────────────────────────────────
+  function renderProblem() {
+    const p = prob;
+
+    // Production function display
+    $prod.innerHTML = kx(p.prodLabel);
+    $w.textContent = '$' + p.W;
+    $r.textContent = '$' + p.R;
+    $q.textContent = p.Q;
+    $bL.innerHTML = kx('L = ' + p.bL);
+    $bK.innerHTML = kx('K = ' + p.bK);
+    $ratioL.innerHTML = kx('\\tfrac{MP_L}{W} = ' + p.dispRatL);
+    $ratioK.innerHTML = kx('\\tfrac{MP_K}{R} = ' + p.dispRatK);
+
+    // Main MC options
+    $opts.innerHTML = '';
+    const OPTIONS = [
+      { text: 'Shift spending toward labor (use more L, less K)', val: 1 },
+      { text: 'Shift spending toward capital (use more K, less L)', val: 2 },
+      { text: 'This bundle is cost-minimizing — no change needed', val: 0 },
+    ];
+    const letters = ['A', 'B', 'C'];
+    OPTIONS.forEach((opt, i) => {
+      const btn = document.createElement('div');
+      btn.className = 'mc-option';
+      btn.innerHTML = `<span class="mc-letter">${letters[i]}</span><span>${opt.text}</span>`;
+      btn.addEventListener('click', () => handleMainAnswer(opt.val, btn, OPTIONS));
+      $opts.appendChild(btn);
+    });
+
+    $result.className = 'result-msg hidden';
+    $result.textContent = '';
+    $diag.classList.add('hidden');
+    $dSteps.innerHTML = '';
+    $dComp.classList.add('hidden');
+    firstCorrect = null;
+    diagCorrectCount = 0;
+    revealed = false;
+
+    drawGraph();
+  }
+
+  // ── Main answer handler ─────────────────────────────────────
+  function handleMainAnswer(val, clickedBtn, OPTIONS) {
+    // Disable all
+    $opts.querySelectorAll('.mc-option').forEach(b => b.classList.add('disabled'));
+
+    const correct = val === prob.caseType;
+    firstCorrect = correct;
+
+    if (correct) {
+      clickedBtn.classList.add('selected-correct');
+      $result.innerHTML = '✓ Correct! ' + explanationText();
+      $result.className = 'result-msg correct';
+    } else {
+      clickedBtn.classList.add('selected-wrong');
+      // Reveal correct
+      const allBtns = $opts.querySelectorAll('.mc-option');
+      OPTIONS.forEach((opt, i) => {
+        if (opt.val === prob.caseType) allBtns[i].classList.add('revealed-correct');
+      });
+      $result.innerHTML = '✗ Not quite. Let\'s work through it step by step.';
+      $result.className = 'result-msg wrong';
+      startDiagnostic();
+    }
+    revealed = true;
+    drawGraph();
+    $result.classList.remove('hidden');
+  }
+
+  function explanationText() {
+    const p = prob;
+    if (p.caseType === 0) {
+      return `At this bundle, MP<sub>L</sub>/W = MP<sub>K</sub>/R = ${p.dispRatL}, so each dollar spent on either input yields the same additional output. The bundle is cost-minimizing.`;
+    } else if (p.caseType === 1) {
+      return `MP<sub>L</sub>/W = ${p.dispRatL} &gt; MP<sub>K</sub>/R = ${p.dispRatK}, so labor delivers more output per dollar. The firm should use more L and less K.`;
+    } else {
+      return `MP<sub>K</sub>/R = ${p.dispRatK} &gt; MP<sub>L</sub>/W = ${p.dispRatL}, so capital delivers more output per dollar. The firm should use more K and less L.`;
+    }
+  }
+
+  // ── Diagnostic steps ────────────────────────────────────────
+  function buildDiagnosticSteps() {
+    const p = prob;
+    const a = p.alpha;
+    const aF = p.alphaFrac, omF = p.oneMinusAlphaFrac;
+    const steps = [];
+
+    // Step 1: MPL at given bundle
+    // MPL = alpha * L^(alpha-1) * K^(1-alpha)
+    const mpLval = rnd(mpl(p.bL, p.bK, a), 3);
+    const mpKval = rnd(mpk(p.bL, p.bK, a), 3);
+
+    // Step 1: Compute MPL/W
+    const ratLval = p.dispRatL;
+    const ratKval = p.dispRatK;
+    steps.push({
+      header: 'Step 1: Bang-per-Dollar for Labor',
+      question: 'What is ' + kx('MP_L / W') + '?',
+      correctIdx: 0,
+      options: [
+        { tex: 'MP_L/W = ' + ratLval },
+        { tex: 'MP_L/W = ' + rnd(ratLval * p.W, 3) },
+        { tex: 'MP_L/W = ' + rnd(ratKval, 3) },
+        { tex: 'MP_L/W = ' + rnd(ratLval * 2, 3) },
+      ],
+      explanation: kx('MP_L / W = ' + mpLval + ' / ' + p.W + ' = ' + ratLval),
+    });
+
+    // Step 4: Compute MPK/R
+    steps.push({
+      header: 'Step 2: Bang-per-Dollar for Capital',
+      question: 'What is ' + kx('MP_K / R') + '?',
+      correctIdx: 0,
+      options: [
+        { tex: 'MP_K/R = ' + ratKval },
+        { tex: 'MP_K/R = ' + rnd(ratKval * p.R, 3) },
+        { tex: 'MP_K/R = ' + rnd(ratLval, 3) },
+        { tex: 'MP_K/R = ' + rnd(ratKval * 2, 3) },
+      ],
+      explanation: kx('MP_K / R = ' + mpKval + ' / ' + p.R + ' = ' + ratKval),
+    });
+
+    // Step 5: Compare and conclude
+    let compareQ, compareAns, compareExp;
+    if (p.caseType === 0) {
+      compareQ = 'Since ' + kx('MP_L/W = ' + ratLval) + ' and ' + kx('MP_K/R = ' + ratKval) + ', what should the firm do?';
+      compareAns = 'The bundle is cost-minimizing — the ratios are equal.';
+      compareExp = 'When ' + kx('MP_L/W = MP_K/R') + ', each dollar spent on either input yields the same marginal output. The firm cannot reduce cost while maintaining output — it is at the optimum.';
+    } else if (p.caseType === 1) {
+      compareQ = 'Since ' + kx('MP_L/W = ' + ratLval + ' > MP_K/R = ' + ratKval) + ', what should the firm do?';
+      compareAns = 'Shift spending toward labor: use more L, less K.';
+      compareExp = 'Labor delivers more output per dollar. The firm can cut costs by replacing some capital with labor while staying on the same isoquant.';
+    } else {
+      compareQ = 'Since ' + kx('MP_K/R = ' + ratKval + ' > MP_L/W = ' + ratLval) + ', what should the firm do?';
+      compareAns = 'Shift spending toward capital: use more K, less L.';
+      compareExp = 'Capital delivers more output per dollar. The firm can cut costs by replacing some labor with capital while staying on the same isoquant.';
+    }
+
+    const wrongOpts = p.caseType === 0
+      ? ['Shift spending toward labor.', 'Shift spending toward capital.']
+      : p.caseType === 1
+        ? ['Shift spending toward capital.', 'The bundle is already cost-minimizing.']
+        : ['Shift spending toward labor.', 'The bundle is already cost-minimizing.'];
+
+    steps.push({
+      header: 'Step 3: Conclusion',
+      question: compareQ,
+      correctIdx: 0,
+      options: [
+        { html: compareAns },
+        { html: wrongOpts[0] },
+        { html: wrongOpts[1] },
+      ],
+      explanation: compareExp,
+    });
+
+    // Shuffle wrong options within each step
+    steps.forEach(step => {
+      const opts = step.options.map((o, i) => ({ ...o, isCorrect: i === step.correctIdx }));
+      for (let i = opts.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [opts[i], opts[j]] = [opts[j], opts[i]];
+      }
+      step.options = opts;
+      step.correctIdx = opts.findIndex(o => o.isCorrect);
+    });
+
+    return steps;
+  }
+
+  function startDiagnostic() {
+    $diag.classList.remove('hidden');
+    diagStepsData = buildDiagnosticSteps();
+    diagStep = 0;
+    diagCorrectCount = 0;
+    $dSteps.innerHTML = '';
+    $dComp.classList.add('hidden');
+    showDiagStep(0);
+  }
+
+  function showDiagStep(idx) {
+    if (idx >= diagStepsData.length) {
+      $dComp.innerHTML = '✓ Diagnostic complete. ' + explanationText() +
+        ' You got ' + diagCorrectCount + '/' + diagStepsData.length + ' diagnostic questions correct.';
+      $dComp.classList.remove('hidden');
+      return;
+    }
+    const step = diagStepsData[idx];
+    const el = document.createElement('div');
+    el.className = 'diag-step';
+    el.innerHTML = `<div class="diag-step-header">${step.header}</div>
+      <div class="diag-question">${step.question}</div>
+      <div class="mc-options" id="dmc-${idx}"></div>`;
+    $dSteps.appendChild(el);
+
+    const mc = document.getElementById('dmc-' + idx);
+    const letters = ['A','B','C','D'];
+    step.options.forEach((opt, oi) => {
+      const btn = document.createElement('div');
+      btn.className = 'mc-option';
+      const label = opt.tex ? kx(opt.tex) : (opt.html || '');
+      btn.innerHTML = `<span class="mc-letter">${letters[oi]}</span><span>${label}</span>`;
+      btn.addEventListener('click', () => handleDiagAnswer(idx, oi));
+      mc.appendChild(btn);
+    });
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function handleDiagAnswer(stepIdx, optIdx) {
+    const step = diagStepsData[stepIdx];
+    const mc = document.getElementById('dmc-' + stepIdx);
+    const btns = mc.querySelectorAll('.mc-option');
+    btns.forEach(b => b.classList.add('disabled'));
+
+    const correct = optIdx === step.correctIdx;
+    if (correct) {
+      btns[optIdx].classList.add('selected-correct');
+      diagCorrectCount++;
+    } else {
+      btns[optIdx].classList.add('selected-wrong');
+      btns[step.correctIdx].classList.add('revealed-correct');
+      const box = document.createElement('div');
+      box.className = 'explanation-box';
+      box.innerHTML = '<strong>Explanation:</strong> ' + step.explanation;
+      mc.parentElement.appendChild(box);
+    }
+
+    setTimeout(() => showDiagStep(stepIdx + 1), correct ? 500 : 1800);
+  }
+
+  // ── Graph ───────────────────────────────────────────────────
+  const PAD = { l:52, r:20, t:20, b:48 };
+
+  function drawGraph() {
+    const p = prob;
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = canvas.parentElement.clientWidth || 600;
+    const cssH = 340;
+    canvas.width  = cssW * dpr;
+    canvas.height = cssH * dpr;
+    canvas.style.height = cssH + 'px';
+
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const cW = canvas.width, cH = canvas.height;
+    const X0 = PAD.l*dpr, X1 = cW - PAD.r*dpr;
+    const Y0 = PAD.t*dpr, Y1 = cH - PAD.b*dpr;
+
+    // Dynamic axis: size from optimal bundle * 2.4 headroom, snapped
+    const axRaw = Math.max(p.Lstar, p.Kstar) * 2.4;
+    function snapUp(v) {
+      const s=[4,5,6,8,10,12,15,20,25,30,40,50];
+      return s.find(x=>x>=v)||Math.ceil(v/5)*5;
+    }
+    const axMax = snapUp(axRaw);
+    function tickStep(mx){ return mx<=6?1:mx<=12?2:mx<=25?5:mx<=60?10:20; }
+    const ts = tickStep(axMax);
+
+    const xTo = L => X0 + (L/axMax)*(X1-X0);
+    const yTo = K => Y0 + (1-K/axMax)*(Y1-Y0);
+
+    // Grid
+    ctx.strokeStyle='rgba(0,0,0,0.05)'; ctx.lineWidth=dpr;
+    for (let v=ts; v<axMax; v+=ts){
+      ctx.beginPath(); ctx.moveTo(xTo(v),Y0); ctx.lineTo(xTo(v),Y1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(X0,yTo(v)); ctx.lineTo(X1,yTo(v)); ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle='rgba(0,0,0,0.45)'; ctx.lineWidth=1.5*dpr;
+    ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0,Y1); ctx.lineTo(X1,Y1); ctx.stroke();
+
+    // Axis labels
+    ctx.fillStyle='rgba(0,0,0,0.60)'; ctx.font=`${12*dpr}px Inter,sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText('Labor (L)',(X0+X1)/2,Y1+28*dpr);
+    ctx.save(); ctx.translate(X0-38*dpr,(Y0+Y1)/2); ctx.rotate(-Math.PI/2);
+    ctx.textBaseline='top'; ctx.textAlign='center';
+    ctx.fillText('Capital (K)',0,0); ctx.restore();
+
+    // Tick labels
+    ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.font=`${10*dpr}px Inter,sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    for(let v=ts;v<=axMax;v+=ts) ctx.fillText(v,xTo(v),Y1+8*dpr);
+    ctx.textAlign='right'; ctx.textBaseline='middle';
+    for(let v=ts;v<=axMax;v+=ts) ctx.fillText(v,X0-6*dpr,yTo(v));
+
+    // Isocost through given bundle (red dashed) — always shown
+    const Cgiven = p.W * p.bL + p.R * p.bK;
+    ctx.save(); ctx.beginPath(); ctx.rect(X0,Y0,X1-X0,Y1-Y0); ctx.clip();
+    ctx.strokeStyle='rgba(180,35,24,0.60)'; ctx.lineWidth=1.8*dpr;
+    ctx.setLineDash([5*dpr,4*dpr]);
+    ctx.beginPath();
+    ctx.moveTo(xTo(0), yTo(Cgiven/p.R));
+    ctx.lineTo(xTo(Cgiven/p.W), yTo(0));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    // Isoquant at Q
+    ctx.save(); ctx.beginPath(); ctx.rect(X0,Y0,X1-X0,Y1-Y0); ctx.clip();
+    ctx.strokeStyle='rgba(47,93,124,0.75)'; ctx.lineWidth=2*dpr;
+    if (p.prodType === 'ps') {
+      // Perfect substitutes: straight line Q = a*L + (1-a)*K
+      ctx.beginPath();
+      ctx.moveTo(xTo(p.Q / p.alpha), yTo(0));
+      ctx.lineTo(xTo(0), yTo(p.Q / (1-p.alpha)));
+      ctx.stroke();
+    } else if (p.prodType === 'pc') {
+      // Perfect complements: L-shaped
+      const Lkink = p.Q/p.alpha, Kkink = p.Q/(1-p.alpha);
+      ctx.beginPath();
+      ctx.moveTo(xTo(Lkink), Y0);
+      ctx.lineTo(xTo(Lkink), yTo(Kkink));
+      ctx.lineTo(X1, yTo(Kkink));
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      let pen=false;
+      for(let i=1;i<=500;i++){
+        const L=(i/500)*axMax*1.05;
+        if(L<=0){pen=false;continue;}
+        const K=Math.pow(p.Q/Math.pow(L,p.alpha),1/(1-p.alpha));
+        if(!isFinite(K)||K<0||K>axMax*1.05){pen=false;continue;}
+        if(!pen){ctx.moveTo(xTo(L),yTo(K));pen=true;}else ctx.lineTo(xTo(L),yTo(K));
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Optimal isocost + dot — only after answer revealed
+    if (revealed) {
+      const Copt = p.Cstar;
+      ctx.save(); ctx.beginPath(); ctx.rect(X0,Y0,X1-X0,Y1-Y0); ctx.clip();
+      ctx.strokeStyle='rgba(230,159,0,0.85)'; ctx.lineWidth=1.8*dpr;
+      ctx.setLineDash([5*dpr,4*dpr]);
+      ctx.beginPath();
+      ctx.moveTo(xTo(0), yTo(Copt/p.R));
+      ctx.lineTo(xTo(Copt/p.W), yTo(0));
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      // Optimal bundle dot (green)
+      ctx.beginPath();
+      ctx.arc(xTo(p.Lstar),yTo(p.Kstar),6*dpr,0,2*Math.PI);
+      ctx.fillStyle='#1b7f4b'; ctx.fill();
+      ctx.strokeStyle='#fff'; ctx.lineWidth=2*dpr; ctx.stroke();
+
+      // Show legend items for optimal
+      document.getElementById('legOpt').classList.remove('hidden');
+      document.getElementById('legIso').classList.remove('hidden');
+    } else {
+      document.getElementById('legOpt').classList.add('hidden');
+      document.getElementById('legIso').classList.add('hidden');
+    }
+
+    // Given bundle dot — always shown; red if off-optimum, green if at optimum & revealed
+    const dotColor = (p.caseType===0 && revealed) ? '#1b7f4b' : '#b42318';
+    ctx.beginPath();
+    ctx.arc(xTo(p.bL),yTo(p.bK),7*dpr,0,2*Math.PI);
+    ctx.fillStyle=dotColor; ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2*dpr; ctx.stroke();
+
+    // Update given-bundle legend swatch color
+    const givenSwatch = document.querySelector('.leg-swatch.given');
+    if (givenSwatch) givenSwatch.style.background = dotColor;
+  }
+
+  // ── New problem ─────────────────────────────────────────────
+  function newProblem() {
+    _seed = Date.now() ^ (Math.random() * 0x100000000);
+    generateProblem();
+    renderProblem();
+  }
+
+  $newBtn.addEventListener('click', newProblem);
+  window.addEventListener('resize', () => { if(prob.bL) drawGraph(); });
+
+  // Init
+  window.addEventListener('load', () => {
+    newProblem();
+    setTimeout(drawGraph, 120);
+  });
+
+})();
+</script>
+</body>
+</html>
