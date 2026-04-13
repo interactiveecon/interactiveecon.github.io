@@ -1,0 +1,956 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cost Minimization — ECON 104A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+  <style>
+    /* ── Design tokens ─────────────────────────────────────────── */
+    :root {
+      --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-serif: "Source Serif 4", ui-serif, Georgia, "Times New Roman", serif;
+      --paper: #f6f2ea; --panel: #ffffff;
+      --ink: #1f2937;   --ink-2: #374151; --muted: #6b7280;
+      --line: #e7dfd2;  --line-2: #d9cfbf;
+      --accent: #2f5d7c;
+      --good: #1b7f4b;  --bad: #b42318;
+      --shadow: 0 1px 2px rgba(17,24,39,.06), 0 10px 24px rgba(17,24,39,.06);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body { background: var(--paper); color: var(--ink); font-family: var(--font-sans); }
+
+    /* ── Header ────────────────────────────────────────────────── */
+    .page-header { border-bottom: 1px solid var(--line); background: linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0)); }
+    .container    { max-width: 1120px; margin: 0 auto; padding: 18px; }
+    .crumbbar     { margin: 8px 0 10px; }
+    .crumb-link   { color: var(--accent); text-decoration: none; font-weight: 800; font-size: 13px; }
+    .crumb-link:hover { text-decoration: underline; }
+    .header-inner { padding: 22px 0 14px; }
+    .kicker { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    h1  { font-family: var(--font-serif); font-size: 32px; line-height: 1.1; margin: 0 0 8px; }
+    .sub { margin: 0; color: var(--ink-2); line-height: 1.55; max-width: 80ch; font-size: 15px; }
+
+    /* ── Button ────────────────────────────────────────────────── */
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border: none; border-radius: 12px; font-family: var(--font-sans); font-size: 14px; font-weight: 700; cursor: pointer; transition: background .12s, opacity .12s; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn.primary  { background: var(--accent); color: #fff; }
+    .btn.primary:hover:not(:disabled) { background: #264d68; }
+
+    /* ── Lab layout ────────────────────────────────────────────── */
+    .lab-container { max-width: 960px; margin: 0 auto; padding: 18px; }
+    .lab-grid { display: grid; grid-template-columns: 1fr 400px; gap: 18px; align-items: start; }
+    @media (max-width: 860px) { .lab-grid { grid-template-columns: 1fr; } }
+
+    /* ── Problem card ──────────────────────────────────────────── */
+    .problem-card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 24px; box-shadow: var(--shadow); margin-bottom: 18px; }
+    .problem-header { font-family: var(--font-serif); font-size: 20px; font-weight: 700; color: var(--ink); margin: 0 0 14px; }
+    .param-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    @media (max-width: 500px) { .param-grid { grid-template-columns: 1fr; } }
+    .param { background: rgba(246,242,234,.55); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
+    .param .label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 3px; }
+    .param .value { font-size: 17px; font-weight: 700; color: var(--ink); }
+    .param.wide { grid-column: 1 / -1; }
+
+    /* ── Answer inputs ─────────────────────────────────────────── */
+    .answer-section { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .answer-row { display: flex; gap: 12px; align-items: end; flex-wrap: wrap; margin-bottom: 12px; }
+    .answer-field label { display: block; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+    .answer-field input { width: 130px; padding: 9px 11px; border: 1.5px solid var(--line-2); border-radius: 12px; font-size: 16px; font-family: var(--font-sans); color: var(--ink); background: #fafaf8; outline: none; transition: border-color .12s; }
+    .answer-field input:focus   { border-color: var(--accent); background: #fff; }
+    .answer-field input.correct { border-color: var(--good);   background: rgba(27,127,75,.06); }
+    .answer-field input.wrong   { border-color: var(--bad);    background: rgba(180,35,24,.06); }
+    .result-msg { margin-top: 8px; padding: 10px 14px; border-radius: 12px; font-size: 13px; font-weight: 600; line-height: 1.5; }
+    .result-msg.correct { background: rgba(27,127,75,.10); border: 1px solid rgba(27,127,75,.25); color: var(--good); }
+    .result-msg.wrong   { background: rgba(180,35,24,.08); border: 1px solid rgba(180,35,24,.25); color: var(--bad); }
+
+    /* ── Graph card ────────────────────────────────────────────── */
+    .graph-card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 18px; box-shadow: var(--shadow); position: sticky; top: 18px; }
+    .graph-title { font-size: 13px; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+    .graph-canvas-wrap { position: relative; width: 100%; aspect-ratio: 1/1; border-radius: 12px; overflow: hidden; background: rgba(246,242,234,.45); border: 1px solid var(--line); }
+    #graphCanvas { display: block; width: 100%; height: 100%; }
+    .graph-legend { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+    .legend-row   { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); }
+    .legend-swatch { width: 22px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+    .legend-dot    { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .graph-annotation { margin-top: 8px; padding: 8px 12px; border-radius: 10px; font-size: 12px; line-height: 1.55; color: var(--ink-2); background: rgba(47,93,124,.06); border: 1px solid rgba(47,93,124,.14); display: none; }
+
+    /* ── Diagnostic ────────────────────────────────────────────── */
+    .diagnostic { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .diag-step  { margin-bottom: 18px; animation: fadeSlide .22s ease; }
+    @keyframes fadeSlide { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
+    .diag-step-header { font-size: 12px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 7px; }
+    .diag-question    { font-size: 14px; color: var(--ink); margin-bottom: 10px; line-height: 1.5; }
+    .mc-options { display: flex; flex-direction: column; gap: 7px; }
+    .mc-option  { display: flex; align-items: center; gap: 9px; padding: 9px 13px; border: 1.5px solid var(--line-2); border-radius: 12px; background: #fff; cursor: pointer; transition: border-color .12s, background .12s, transform .06s; font-size: 13px; color: var(--ink); line-height: 1.45; }
+    .mc-option:hover:not(.disabled) { border-color: rgba(47,93,124,.5); background: rgba(47,93,124,.04); }
+    .mc-option:active:not(.disabled) { transform: translateY(1px); }
+    .mc-option.selected-correct { border-color: var(--good); background: rgba(27,127,75,.08); }
+    .mc-option.selected-wrong   { border-color: var(--bad);  background: rgba(180,35,24,.06); }
+    .mc-option.revealed-correct { border-color: var(--good); background: rgba(27,127,75,.12); }
+    .mc-option.disabled { cursor: default; opacity: .7; }
+    .mc-option .mc-letter { width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid var(--line-2); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--muted); flex-shrink: 0; }
+    .mc-option.selected-correct .mc-letter { background: var(--good); color: #fff; border-color: var(--good); }
+    .mc-option.selected-wrong   .mc-letter { background: var(--bad);  color: #fff; border-color: var(--bad);  }
+    .mc-option.revealed-correct .mc-letter { background: var(--good); color: #fff; border-color: var(--good); }
+    .explanation-box { margin-top: 8px; padding: 10px 14px; border-radius: 12px; background: rgba(47,93,124,.06); border: 1px solid rgba(47,93,124,.15); font-size: 12px; color: var(--ink-2); line-height: 1.6; animation: fadeSlide .2s ease; }
+    .diag-complete   { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: rgba(27,127,75,.08); border: 1px solid rgba(27,127,75,.20); color: var(--good); font-weight: 600; font-size: 13px; }
+
+    .katex  { font-size: 1.0em; }
+    .hidden { display: none !important; }
+    .footer-inner { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 12px; color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar">
+      <a class="crumb-link" href="/classes/econ104a/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104A — Producer Behavior</div>
+      <h1>Cost Minimization</h1>
+      <p class="sub">
+        Given a Cobb-Douglas production function, input prices, and a target output, find the
+        cost-minimizing input bundle (L*, K*). The graph shows the isoquant and isocost lines,
+        updating as you work.
+      </p>
+    </div>
+  </div>
+</header>
+
+<main class="lab-container">
+  <div class="lab-grid">
+
+    <!-- ── LEFT COLUMN ─────────────────────────────────────────── -->
+    <div>
+      <div class="problem-card" id="problemCard">
+        <h2 class="problem-header">Problem</h2>
+
+        <div class="param wide" style="margin-bottom:10px;">
+          <div class="label">Production Function</div>
+          <div class="value" id="prodDisplay"></div>
+        </div>
+        <div class="param-grid">
+          <div class="param">
+            <div class="label">Wage (W)</div>
+            <div class="value" id="wDisplay"></div>
+          </div>
+          <div class="param">
+            <div class="label">Rental Rate (R)</div>
+            <div class="value" id="rDisplay"></div>
+          </div>
+          <div class="param wide">
+            <div class="label">Target Output (Q̄)</div>
+            <div class="value" id="qDisplay"></div>
+          </div>
+        </div>
+
+        <div class="answer-section">
+          <div class="answer-row">
+            <div class="answer-field">
+              <label>Optimal L*</label>
+              <input type="text" id="ansL" placeholder="e.g. 45.2" autocomplete="off" />
+            </div>
+            <div class="answer-field">
+              <label>Optimal K*</label>
+              <input type="text" id="ansK" placeholder="e.g. 22.6" autocomplete="off" />
+            </div>
+            <div class="answer-field">
+              <label>Min Cost (C*)</label>
+              <input type="text" id="ansC" placeholder="e.g. 904" autocomplete="off" />
+            </div>
+            <button class="btn primary" id="checkBtn" style="height:42px;">Check Answers</button>
+          </div>
+          <div id="resultMsg" class="result-msg hidden"></div>
+        </div>
+
+        <!-- Diagnostic -->
+        <div id="diagnostic" class="diagnostic hidden">
+          <div style="font-size:14px;font-weight:700;color:var(--ink);margin-bottom:12px;">
+            Let's work through this step by step.
+          </div>
+          <div id="diagSteps"></div>
+          <div id="diagComplete" class="diag-complete hidden"></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn primary" id="newProblemBtn">New Problem</button>
+      </div>
+    </div>
+
+    <!-- ── RIGHT COLUMN ─────────────────────────────────────────── -->
+    <div>
+      <div class="graph-card">
+        <div class="graph-title">Isoquant &amp; Isocost Lines</div>
+        <div class="graph-canvas-wrap">
+          <canvas id="graphCanvas"></canvas>
+        </div>
+
+        <div class="graph-legend">
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#2f5d7c;height:2.5px;"></div>
+            <span>Isoquant (Q = Q̄)</span>
+          </div>
+          <div class="legend-row" id="legendStudentRow" style="display:none;">
+            <div class="legend-swatch" style="background:#b47200;height:2px;"></div>
+            <span id="legendStudentLabel">Your isocost line</span>
+          </div>
+          <div class="legend-row" id="legendOptICRow" style="display:none;">
+            <div class="legend-swatch" style="background:#1b7f4b;height:2px;"></div>
+            <span>Optimal isocost line</span>
+          </div>
+          <div class="legend-row" id="legendOptRow" style="display:none;">
+            <div class="legend-dot" style="background:#b42318;"></div>
+            <span>Optimal bundle (L*, K*)</span>
+          </div>
+          <div class="legend-row" id="legendStudentPtRow" style="display:none;">
+            <div class="legend-dot" style="background:#b47200;"></div>
+            <span>Your bundle</span>
+          </div>
+        </div>
+
+        <div class="graph-annotation" id="graphAnnotation"></div>
+      </div>
+    </div>
+
+  </div><!-- /.lab-grid -->
+</main>
+
+<footer style="margin-top:32px;padding-top:12px;border-top:1px solid var(--line);">
+  <div class="lab-container">
+    <div class="footer-inner">
+      <span>ECON 104A — Intermediate Microeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// COST MINIMIZATION LAB
+//
+// Analogy with the Optimal Consumer Choice lab:
+//   Consumer choice             →  Cost minimization
+//   Budget line  (blue, fixed)  →  Isoquant    (blue, fixed)   ← constraint
+//   Indifference curves         →  Isocost lines               ← what we optimize
+//   Maximise utility            →  Minimise cost
+//   MRS = Px/Py                 →  MRTS = W/R
+//   (X*, Y*)                    →  (L*, K*)
+// ═══════════════════════════════════════════════════════════════════════════
+(function () {
+  'use strict';
+
+  // ── State ────────────────────────────────────────────────────────────────
+  let prob = {};
+  let diagStep = 0;
+  let firstScore = null;
+  let studentL  = null;
+  let studentK  = null;
+  let showOptimal = false;
+
+  const LAB_ID    = 'cost-minimization';
+  const LAB_LABEL = 'Cost Minimization';
+
+  // ── DOM ──────────────────────────────────────────────────────────────────
+  const $prodDisplay  = document.getElementById('prodDisplay');
+  const $wDisplay     = document.getElementById('wDisplay');
+  const $rDisplay     = document.getElementById('rDisplay');
+  const $qDisplay     = document.getElementById('qDisplay');
+  const $ansL         = document.getElementById('ansL');
+  const $ansK         = document.getElementById('ansK');
+  const $ansC         = document.getElementById('ansC');
+  const $checkBtn     = document.getElementById('checkBtn');
+  const $resultMsg    = document.getElementById('resultMsg');
+  const $diagnostic   = document.getElementById('diagnostic');
+  const $diagSteps    = document.getElementById('diagSteps');
+  const $diagComplete = document.getElementById('diagComplete');
+  const $newBtn       = document.getElementById('newProblemBtn');
+  const $canvas       = document.getElementById('graphCanvas');
+  const $annotation   = document.getElementById('graphAnnotation');
+
+  // ── Math helpers ─────────────────────────────────────────────────────────
+  function gcd(a, b) {
+    a = Math.abs(a); b = Math.abs(b);
+    while (b) { [a, b] = [b, a % b]; }
+    return a;
+  }
+
+  function frac(num, den) {
+    if (den === 0) return '\\text{undef}';
+    if (num === 0) return '0';
+    const sign = (num < 0) !== (den < 0) ? '-' : '';
+    num = Math.abs(num); den = Math.abs(den);
+    const g = gcd(num, den); num /= g; den /= g;
+    return den === 1 ? sign + num : sign + '\\frac{' + num + '}{' + den + '}';
+  }
+
+  function roundNice(v, tolOrDp) {
+    let dp;
+    if (!tolOrDp || tolOrDp >= 1) { dp = tolOrDp || 2; }
+    else { dp = Math.round(-Math.log10(tolOrDp)); }
+    return parseFloat(v.toFixed(dp));
+  }
+
+  function approxEqual(a, b, tol) { return Math.abs(a - b) <= tol; }
+
+  function fracFromDecimal(d) {
+    d = roundNice(d, 0.01);
+    const map = {
+      '0.25':'\\frac{1}{4}','0.75':'\\frac{3}{4}',
+      '0.33':'\\frac{1}{3}','0.67':'\\frac{2}{3}',
+      '0.2':'\\frac{1}{5}', '0.4':'\\frac{2}{5}',
+      '0.6':'\\frac{3}{5}', '0.8':'\\frac{4}{5}',
+      '0.5':'\\frac{1}{2}', '1':'1', '0':'0',
+      '-0.25':'-\\frac{1}{4}','-0.75':'-\\frac{3}{4}',
+      '-0.5':'-\\frac{1}{2}','-0.33':'-\\frac{1}{3}',
+      '-0.67':'-\\frac{2}{3}','-0.6':'-\\frac{3}{5}',
+      '-0.8':'-\\frac{4}{5}','-0.4':'-\\frac{2}{5}',
+      '-0.2':'-\\frac{1}{5}',
+    };
+    return map[String(d)] || String(d);
+  }
+
+  // ── RNG ──────────────────────────────────────────────────────────────────
+  function rng() { return window._labRng ? window._labRng() : Math.random(); }
+  function randInt(lo, hi) { return lo + Math.floor(rng() * (hi - lo + 1)); }
+
+  // ── Problem generation ───────────────────────────────────────────────────
+  function generateProblem() {
+    if (window.Session && Session.rngForLab) {
+      window._labRng = Session.rngForLab(LAB_ID);
+    }
+
+    const alphaChoices = [0.25, 0.4, 0.5, 0.6, 0.75];
+    const alpha = alphaChoices[randInt(0, alphaChoices.length - 1)];
+    const A = randInt(1, 4);
+    const inputChoices = [5, 10, 15, 20];
+    const W = inputChoices[randInt(0, inputChoices.length - 1)];
+    const R = inputChoices[randInt(0, inputChoices.length - 1)];
+
+    // Reject: α=0.5 AND W=R → expansion-path coefficient = 1, all distractors collapse
+    if (Math.abs(alpha - 0.5) < 0.01 && W === R) return generateProblem();
+
+    // L* = (Q/A) · [(1-α)/α]^α · (R/W)^α
+    const c_L   = Math.pow((1 - alpha) / alpha, alpha) * Math.pow(R / W, alpha);
+    const Qraw  = A * 50 / c_L;              // target L* ≈ 50
+    const Q     = Math.max(10, Math.round(Qraw / 10) * 10);
+
+    const Lstar = (Q / A) * c_L;
+    const Kstar = (alpha / (1 - alpha)) * (W / R) * Lstar;
+
+    if (!isFinite(Lstar) || !isFinite(Kstar) || Lstar < 2 || Lstar > 500 || Kstar < 2 || Kstar > 500) {
+      return generateProblem();
+    }
+
+    prob = { alpha, A, W, R, Q, Lstar, Kstar };
+    return prob;
+  }
+
+  // ── Isoquant: K given L on curve Q = A·K^α·L^(1-α) ─────────────────────
+  function isoquantK(L) {
+    if (L <= 0) return Infinity;
+    const p = prob;
+    const inner = p.Q / (p.A * Math.pow(L, 1 - p.alpha));
+    if (inner <= 0) return Infinity;
+    return Math.pow(inner, 1 / p.alpha);
+  }
+
+  // ── KaTeX helpers ────────────────────────────────────────────────────────
+  function renderKatex(el, tex) {
+    if (window.katex) katex.render(tex, el, { throwOnError: false, displayMode: false });
+    else el.textContent = tex;
+  }
+  function katexHTML(tex) {
+    if (window.katex) return katex.renderToString(tex, { throwOnError: false, displayMode: false });
+    return tex;
+  }
+
+  // ── Render problem parameters ─────────────────────────────────────────────
+  function renderProblem() {
+    const p   = prob;
+    const aS  = p.A > 1 ? String(p.A) : '';
+    const aF  = fracFromDecimal(p.alpha);
+    const omF = fracFromDecimal(roundNice(1 - p.alpha, 0.01));
+
+    renderKatex($prodDisplay, 'Q = ' + aS + 'K^{' + aF + '} L^{' + omF + '}');
+    renderKatex($wDisplay,    'W = ' + p.W);
+    renderKatex($rDisplay,    'R = ' + p.R);
+    renderKatex($qDisplay,    '\\bar{Q} = ' + p.Q);
+
+    $ansL.value = ''; $ansK.value = ''; $ansC.value = '';
+    $ansL.className = ''; $ansK.className = ''; $ansC.className = '';
+    $resultMsg.className = 'result-msg hidden';
+    $diagnostic.classList.add('hidden');
+    $diagSteps.innerHTML = '';
+    $diagComplete.classList.add('hidden');
+    $checkBtn.disabled = false;
+    diagStep = 0; firstScore = null;
+
+    studentL = null; studentK = null; showOptimal = false;
+
+    ['legendStudentRow','legendOptICRow','legendOptRow','legendStudentPtRow'].forEach(id => {
+      document.getElementById(id).style.display = 'none';
+    });
+    $annotation.style.display = 'none';
+
+    drawGraph();
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // GRAPH DRAWING
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function setupCanvas(canvas) {
+    const dpr  = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const W = rect.width * dpr, H = rect.height * dpr;
+    if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+    return { ctx: canvas.getContext('2d'), dpr, W, H };
+  }
+
+  function drawGraph() {
+    const { ctx, dpr, W, H } = setupCanvas($canvas);
+    ctx.clearRect(0, 0, W, H);
+
+    const p = prob;
+    if (!p || !p.W) return;
+
+    const pad = { l: 58 * dpr, r: 22 * dpr, t: 16 * dpr, b: 52 * dpr };
+    const X0 = pad.l, X1 = W - pad.r, Y0 = pad.t, Y1 = H - pad.b;
+    const PW = X1 - X0, PH = Y1 - Y0;
+
+    // Axis bounds: expand the optimal-isocost intercepts by 40 %
+    const Cstar     = p.R * p.Kstar + p.W * p.Lstar;
+    const xMax_data = (Cstar / p.W) * 1.4;
+    const yMax_data = (Cstar / p.R) * 1.4;
+
+    const xToC = x => X0 + (x / xMax_data) * PW;
+    const yToC = y => Y1 - (y / yMax_data) * PH;
+
+    // ── Axes ─────────────────────────────────────────────────────────────────
+    ctx.strokeStyle = 'rgba(0,0,0,0.28)'; ctx.lineWidth = 1.5 * dpr;
+    ctx.beginPath(); ctx.moveTo(X0, Y1); ctx.lineTo(X1, Y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X0, Y0); ctx.lineTo(X0, Y1); ctx.stroke();
+
+    // Arrowheads
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.beginPath(); ctx.moveTo(X1,Y1); ctx.lineTo(X1-8*dpr,Y1-4*dpr); ctx.lineTo(X1-8*dpr,Y1+4*dpr); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0-4*dpr,Y0+8*dpr); ctx.lineTo(X0+4*dpr,Y0+8*dpr); ctx.closePath(); ctx.fill();
+
+    // Axis labels
+    ctx.fillStyle = 'rgba(0,0,0,0.50)';
+    ctx.font = `700 ${12 * dpr}px "Inter",sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('Labor (L)', (X0 + X1) / 2, Y1 + 14 * dpr);
+    ctx.save();
+    ctx.translate(X0 - 40 * dpr, (Y0 + Y1) / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textBaseline = 'top';
+    ctx.fillText('Capital (K)', 0, 0);
+    ctx.restore();
+
+    // ── Helper: colour utilities ──────────────────────────────────────────────
+    function hexToRgba(hex, a) {
+      if (!hex.startsWith('#')) return hex;
+      const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+      return `rgba(${r},${g},${b},${a})`;
+    }
+
+    // ── Helper: draw isocost line  C = R·K + W·L  (straight) ─────────────────
+    function drawIsocost(C, color, lineWidth) {
+      ctx.beginPath();
+      let started = false;
+      for (let i = 0; i <= 120; i++) {
+        const L = (i / 120) * xMax_data;
+        const K = C / p.R - (p.W / p.R) * L;
+        if (K < 0 || K > yMax_data * 1.08) { started = false; continue; }
+        const cx = xToC(L), cy = yToC(K);
+        if (!started) { ctx.moveTo(cx, cy); started = true; } else ctx.lineTo(cx, cy);
+      }
+      ctx.strokeStyle = color; ctx.lineWidth = lineWidth; ctx.stroke();
+    }
+
+    // ── Helper: draw isoquant  Q = A·K^α·L^(1-α)  (curve) ───────────────────
+    function drawIsoquant(color, lineWidth) {
+      ctx.beginPath();
+      let started = false;
+      for (let k = 1; k <= 300; k++) {
+        const L = (k / 300) * xMax_data * 0.999;
+        const K = isoquantK(L);
+        if (!isFinite(K) || K < 0 || K > yMax_data * 1.08) { started = false; continue; }
+        const cx = xToC(L), cy = yToC(K);
+        if (!started) { ctx.moveTo(cx, cy); started = true; } else ctx.lineTo(cx, cy);
+      }
+      ctx.strokeStyle = color; ctx.lineWidth = lineWidth; ctx.stroke();
+    }
+
+    // ── Helper: draw point with projection dashes ─────────────────────────────
+    function drawPoint(L, K, color, label, projections) {
+      if (!isFinite(L) || !isFinite(K) || L < 0 || K < 0 || L > xMax_data * 1.05 || K > yMax_data * 1.05) return;
+      const cx = xToC(L), cy = yToC(K);
+
+      if (projections) {
+        ctx.setLineDash([5 * dpr, 4 * dpr]);
+        ctx.strokeStyle = hexToRgba(color, 0.35);
+        ctx.lineWidth   = 1.5 * dpr;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, Y1); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(X0, cy); ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.strokeStyle = color; ctx.lineWidth = 1.5 * dpr;
+        ctx.beginPath(); ctx.moveTo(cx, Y1 - 4*dpr); ctx.lineTo(cx, Y1 + 4*dpr); ctx.stroke();
+        ctx.font = `700 ${11*dpr}px "Inter",sans-serif`;
+        ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        ctx.fillText(roundNice(L, 0.01), cx, Y1 + 6 * dpr);
+
+        ctx.beginPath(); ctx.moveTo(X0 - 4*dpr, cy); ctx.lineTo(X0 + 4*dpr, cy); ctx.stroke();
+        ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        ctx.fillText(roundNice(K, 0.01), X0 - 7 * dpr, cy);
+      }
+
+      ctx.beginPath(); ctx.arc(cx, cy, 9*dpr, 0, Math.PI*2);
+      ctx.fillStyle = hexToRgba(color, 0.15); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, 5.5*dpr, 0, Math.PI*2);
+      ctx.fillStyle = color; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, 5.5*dpr, 0, Math.PI*2);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5 * dpr; ctx.stroke();
+
+      if (label) {
+        ctx.font = `700 ${11*dpr}px "Inter",sans-serif`;
+        ctx.fillStyle = color; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+        const offX = (L < xMax_data * 0.65) ?  9*dpr : -66*dpr;
+        const offY = (K < yMax_data * 0.75) ? -10*dpr :  18*dpr;
+        ctx.fillText(label, cx + offX, cy + offY);
+      }
+    }
+
+    // ── Draw student isocost (shown right after Check) ────────────────────────
+    if (studentL !== null && studentK !== null && studentL > 0 && studentK > 0) {
+      const Cs = p.R * studentK + p.W * studentL;
+      drawIsocost(Cs, '#b47200', 2 * dpr);
+      drawPoint(studentL, studentK, '#b47200',
+        '(' + roundNice(studentL, 0.01) + ', ' + roundNice(studentK, 0.01) + ')', true);
+    }
+
+    // ── Draw optimal isocost + point (revealed when correct or after diagnostic)
+    if (showOptimal) {
+      drawIsocost(Cstar, '#1b7f4b', 2.5 * dpr);
+      drawPoint(p.Lstar, p.Kstar, '#b42318',
+        '(' + roundNice(p.Lstar, 0.01) + ', ' + roundNice(p.Kstar, 0.01) + ')', true);
+    }
+
+    // ── Isoquant drawn last → sits on top of isocost lines ───────────────────
+    drawIsoquant('#2f5d7c', 2.5 * dpr);
+  }
+
+  // Redraw on resize
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(drawGraph, 80);
+  });
+
+  // ── Check answer ──────────────────────────────────────────────────────────
+  $checkBtn.addEventListener('click', function () {
+    const userL = parseFloat($ansL.value);
+    const userK = parseFloat($ansK.value);
+    const userC = parseFloat($ansC.value);
+
+    if (isNaN(userL) || isNaN(userK) || isNaN(userC)) {
+      $resultMsg.textContent = 'Please enter numeric values for L*, K*, and C*.';
+      $resultMsg.className = 'result-msg wrong';
+      return;
+    }
+
+    studentL = userL; studentK = userK;
+
+    const Cstar = prob.R * prob.Kstar + prob.W * prob.Lstar;
+
+    // Tolerance: 2 % relative or 0.5 absolute, whichever is larger
+    const tolL = Math.max(0.5, prob.Lstar * 0.02);
+    const tolK = Math.max(0.5, prob.Kstar * 0.02);
+    const tolC = Math.max(1,   Cstar       * 0.02);
+    const lOk  = approxEqual(userL, prob.Lstar, tolL);
+    const kOk  = approxEqual(userK, prob.Kstar, tolK);
+    const cOk  = approxEqual(userC, Cstar,      tolC);
+
+    $checkBtn.disabled = true;
+
+    if (lOk && kOk && cOk) {
+      $ansL.classList.add('correct'); $ansK.classList.add('correct'); $ansC.classList.add('correct');
+      $resultMsg.innerHTML =
+        '✓ Correct! The cost-minimizing bundle is L* = ' + roundNice(prob.Lstar, 0.01) +
+        ', K* = ' + roundNice(prob.Kstar, 0.01) +
+        ', and minimum cost C* = ' + roundNice(Cstar, 0.01) +
+        '. Notice how the isocost line is tangent to the isoquant at this point.';
+      $resultMsg.className = 'result-msg correct';
+      firstScore = 1;
+      showOptimal = true;
+      document.getElementById('legendStudentRow').style.display    = 'flex';
+      document.getElementById('legendStudentLabel').textContent    = 'Your bundle (optimal)';
+      document.getElementById('legendStudentPtRow').style.display  = 'none';
+      document.getElementById('legendOptRow').style.display        = 'none';
+      updateAnnotation(true);
+      recordResult(true);
+    } else {
+      $ansL.classList.add(lOk ? 'correct' : 'wrong');
+      $ansK.classList.add(kOk ? 'correct' : 'wrong');
+      $ansC.classList.add(cOk ? 'correct' : 'wrong');
+      $resultMsg.innerHTML =
+        '✗ Not quite. Notice how your isocost line doesn\'t touch the isoquant at its tangency point. ' +
+        'Let\'s work through the solution step by step.';
+      $resultMsg.className = 'result-msg wrong';
+      firstScore = 0;
+      document.getElementById('legendStudentRow').style.display   = 'flex';
+      document.getElementById('legendStudentLabel').textContent   = 'Your bundle';
+      document.getElementById('legendStudentPtRow').style.display = 'flex';
+      startDiagnostic();
+    }
+    drawGraph();
+  });
+
+  $ansL.addEventListener('keydown', e => { if (e.key === 'Enter') $checkBtn.click(); });
+  $ansK.addEventListener('keydown', e => { if (e.key === 'Enter') $checkBtn.click(); });
+  $ansC.addEventListener('keydown', e => { if (e.key === 'Enter') $checkBtn.click(); });
+
+  // ── Reveal optimal after diagnostic ──────────────────────────────────────
+  function revealOptimal() {
+    showOptimal = true;
+    document.getElementById('legendOptICRow').style.display = 'flex';
+    document.getElementById('legendOptRow').style.display   = 'flex';
+    updateAnnotation(false);
+    drawGraph();
+  }
+
+  function updateAnnotation(wasCorrect) {
+    const wrRound = roundNice(prob.W / prob.R, 0.01);
+    $annotation.style.display = 'block';
+    if (wasCorrect) {
+      $annotation.innerHTML =
+        'The optimal isocost is <strong>tangent</strong> to the isoquant — the slope of the isocost ' +
+        '(' + katexHTML('-\\tfrac{W}{R} = -' + wrRound) + ') equals the MRTS at the optimal bundle.';
+    } else {
+      $annotation.innerHTML =
+        'The <strong>orange</strong> isocost passes through your bundle but misses the tangency point. ' +
+        'The <strong>green</strong> isocost is tangent to the isoquant at the true optimum, where ' +
+        'MRTS = ' + katexHTML('\\tfrac{W}{R} = ' + wrRound) + '.';
+    }
+  }
+
+  function recordResult(correct) {
+    if (window.Session && Session.recordResult) {
+      Session.recordResult({ labId: LAB_ID, labLabel: LAB_LABEL, correct, firstScore });
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // DIAGNOSTIC ENGINE  — 6 steps mirroring the consumer-choice diagnostic
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function buildDiagnosticSteps() {
+    const p   = prob;
+    const a   = p.alpha;
+    const omA = roundNice(1 - a, 0.01);
+    const aF  = fracFromDecimal(a);
+    const omF = fracFromDecimal(omA);
+    const aS  = p.A > 1 ? String(p.A) : '';
+
+    const optL = roundNice(p.Lstar, 2);
+    const optK = roundNice(p.Kstar, 2);
+
+    // Expansion-path fraction  K = [α·W / ((1-α)·R)] · L
+    const kCN  = Math.round(a * p.W * 1000);
+    const kCD  = Math.round(omA * p.R * 1000);
+    const kCoeff    = frac(kCN, kCD);
+    const kCoeffVal = (a * p.W) / (omA * p.R);
+    const kEqTeX    = 'K = ' + kCoeff + ' L';
+
+    // MRTS coefficient  (1-α)/α
+    const mCN = Math.round(omA * 1000);
+    const mCD = Math.round(a   * 1000);
+    const mrtsCoeff    = frac(mCN, mCD);
+    const mrtsCoeffInv = frac(mCD, mCN);
+    const mrtsTeX = 'MRTS_{LK} = ' + mrtsCoeff + ' \\cdot \\dfrac{K}{L}';
+
+    // Helper: generate 3 distinct wrong options for Step 3 (expansion path)
+    function expansionWrongs() {
+      const correct = kEqTeX;
+      const seen    = new Set([correct]);
+      const result  = [];
+
+      const candidates = [
+        'K = ' + frac(Math.round(omA * p.W * 1000), Math.round(a   * p.R * 1000)) + ' L', // inv α
+        'K = ' + frac(Math.round(a   * p.R * 1000), Math.round(omA * p.W * 1000)) + ' L', // inv W/R
+        'L = ' + kCoeff + ' K',                                                              // solve for L
+        'K = ' + frac(kCN * 2, kCD) + ' L',                                                  // 2× coeff
+        'K = ' + frac(kCN, kCD * 2) + ' L',                                                  // ½ coeff
+      ];
+      for (const c of candidates) {
+        if (!seen.has(c) && result.length < 3) { seen.add(c); result.push(c); }
+      }
+      return result;
+    }
+
+    const expWrongs = expansionWrongs();
+    const prodTex   = p.Q + ' = ' + aS + 'K^{' + aF + '} L^{' + omF + '}';
+
+    const steps = [];
+
+    // ── Step 1: Marginal Products ─────────────────────────────────────────────
+    const mplTeX = 'MP_L = ' + omF + (p.A > 1 ? ' \\cdot ' + p.A : '') +
+                   ' K^{' + aF + '} L^{' + fracFromDecimal(roundNice(-a, 0.01)) + '}';
+    const mpkTeX = 'MP_K = ' + aF + (p.A > 1 ? ' \\cdot ' + p.A : '') +
+                   ' K^{' + fracFromDecimal(roundNice(a - 1, 0.01)) + '} L^{' + omF + '}';
+
+    steps.push({
+      header: 'Step 1: Marginal Products',
+      question: 'Find ' + katexHTML('MP_L') + ' and ' + katexHTML('MP_K') + ' for ' +
+                katexHTML('Q = ' + aS + 'K^{' + aF + '} L^{' + omF + '}') + '.',
+      correctIdx: 0,
+      options: [
+        { tex: mplTeX + ',\\quad ' + mpkTeX },
+        // Wrong: MPL and MPK swapped
+        { tex: 'MP_L = ' + aF + (p.A>1?' \\cdot '+p.A:'') + ' K^{' + fracFromDecimal(roundNice(a-1,0.01)) + '} L^{' + omF + '}' +
+               ',\\quad MP_K = ' + omF + (p.A>1?' \\cdot '+p.A:'') + ' K^{' + aF + '} L^{' + fracFromDecimal(roundNice(-a,0.01)) + '}' },
+        // Wrong: exponents not reduced by 1
+        { tex: 'MP_L = ' + omF + (p.A>1?' \\cdot '+p.A:'') + ' K^{' + aF + '} L^{' + omF + '}' +
+               ',\\quad MP_K = ' + aF + (p.A>1?' \\cdot '+p.A:'') + ' K^{' + aF + '} L^{' + omF + '}' },
+        // Wrong: A omitted
+        { tex: 'MP_L = ' + omF + ' K^{' + aF + '} L^{' + fracFromDecimal(roundNice(-a,0.01)) + '}' +
+               ',\\quad MP_K = ' + aF + ' K^{' + fracFromDecimal(roundNice(a-1,0.01)) + '} L^{' + omF + '}' },
+      ],
+      explanation: 'Differentiate with respect to L and K: ' + katexHTML(mplTeX) + ' and ' + katexHTML(mpkTeX) + '.'
+    });
+
+    // ── Step 2: MRTS ─────────────────────────────────────────────────────────
+    // For α=0.5: mrtsCoeff = mrtsCoeffInv = 1, so use 2 as the "inverted α" distractor
+    const mrtsW1 = (mCN === mCD) ? '2' : mrtsCoeffInv;
+    const mrtsW3 = (mCN === mCD) ? '2' : mrtsCoeffInv;
+    steps.push({
+      header: 'Step 2: Marginal Rate of Technical Substitution',
+      question: 'Compute ' + katexHTML('MRTS_{LK} = \\dfrac{MP_L}{MP_K}') +
+                '. (Hint: A and common K, L factors cancel.)',
+      correctIdx: 0,
+      options: [
+        { tex: mrtsTeX },
+        { tex: 'MRTS_{LK} = ' + mrtsW1 + ' \\cdot \\dfrac{K}{L}' },   // wrong coeff
+        { tex: 'MRTS_{LK} = ' + mrtsCoeff + ' \\cdot \\dfrac{L}{K}' }, // K/L flipped
+        { tex: 'MRTS_{LK} = ' + mrtsW3 + ' \\cdot \\dfrac{L}{K}' },   // both wrong
+      ],
+      explanation:
+        'Dividing: ' +
+        katexHTML('\\dfrac{MP_L}{MP_K} = \\dfrac{(1-\\alpha) \\cdot A \\cdot K^{\\alpha} L^{-\\alpha}}{\\alpha \\cdot A \\cdot K^{\\alpha-1} L^{1-\\alpha}} = \\dfrac{1-\\alpha}{\\alpha} \\cdot \\dfrac{K}{L} = ' + mrtsTeX.replace('MRTS_{LK} = ','')) +
+        '. The coefficient A and shared exponent terms cancel.'
+    });
+
+    // ── Step 3: Expansion path ────────────────────────────────────────────────
+    steps.push({
+      header: 'Step 3: Expansion Path (Set MRTS = W/R)',
+      question: 'Set ' + katexHTML('MRTS_{LK} = \\dfrac{W}{R}') + ' and solve for K in terms of L.',
+      correctIdx: 0,
+      options: [
+        { tex: kEqTeX },
+        { tex: expWrongs[0] || 'K = 2 L' },
+        { tex: expWrongs[1] || 'L = ' + kCoeff + ' K' },
+        { tex: expWrongs[2] || 'K = ' + frac(kCD, kCN) + ' L' },
+      ],
+      explanation:
+        'Set ' + katexHTML(mrtsTeX + ' = \\dfrac{' + p.W + '}{' + p.R + '}') +
+        ': cross-multiply and solve for K → ' + katexHTML(kEqTeX) + '.'
+    });
+
+    // ── Step 4: Production constraint ─────────────────────────────────────────
+    steps.push({
+      header: 'Step 4: Production Constraint',
+      question: 'Write the production constraint with target output ' + katexHTML('\\bar{Q} = ' + p.Q) + '.',
+      correctIdx: 0,
+      options: [
+        { tex: prodTex },
+        { tex: p.Q + ' = ' + aS + 'L^{' + aF + '} K^{' + omF + '}' },     // L and K swapped
+        { tex: p.Q + ' = ' + aS + 'K^{' + omF + '} L^{' + aF + '}' },     // exponents swapped
+        { tex: p.Q + ' = ' + aS + '(K \\cdot L)^{' + aF + '}' },           // wrong form
+      ],
+      explanation: 'Substitute ' + katexHTML('Q = \\bar{Q} = ' + p.Q) + ' into the production function: ' + katexHTML(prodTex) + '.'
+    });
+
+    // ── Step 5: Solve for L* ──────────────────────────────────────────────────
+    // Substituting K = kCoeff·L into Q = A·K^α·L^(1-α):
+    //   Q = A·(kCoeff·L)^α·L^(1-α) = A·kCoeff^α·L  →  L* = Q/(A·kCoeff^α)
+    const kPowA = roundNice(Math.pow(kCoeffVal, a), 4);
+    steps.push({
+      header: 'Step 5: Solve for L*',
+      question: 'Substitute ' + katexHTML(kEqTeX) + ' into ' + katexHTML(prodTex) + ' and solve for ' + katexHTML('L^*') + '.',
+      correctIdx: 0,
+      options: [
+        { tex: 'L^* = ' + optL },
+        { tex: 'L^* = ' + optK },                       // swapped with K*
+        { tex: 'L^* = ' + roundNice(optL * 2, 2) },
+        { tex: 'L^* = ' + roundNice(p.Q / p.A, 2) },
+      ],
+      explanation:
+        katexHTML(p.Q + ' = ' + aS + '(' + kCoeff + ' L)^{' + aF + '} L^{' + omF + '} = ' + aS + ' \\cdot (' + kCoeff + ')^{' + aF + '} \\cdot L') +
+        ', so ' +
+        katexHTML('L^* = \\dfrac{' + p.Q + '}{' + (p.A > 1 ? p.A + ' \\cdot ' : '') + '(' + kCoeff + ')^{' + aF + '}} \\approx ' + optL) + '.'
+    });
+
+    // ── Step 6: Solve for K* ──────────────────────────────────────────────────
+    steps.push({
+      header: 'Step 6: Solve for K*',
+      question: 'Use ' + katexHTML(kEqTeX) + ' with ' + katexHTML('L^* = ' + optL) + ' to find ' + katexHTML('K^*') + '.',
+      correctIdx: 0,
+      options: [
+        { tex: 'K^* = ' + optK },
+        { tex: 'K^* = ' + optL },                       // swapped with L*
+        { tex: 'K^* = ' + roundNice(optK * 2, 2) },
+        { tex: 'K^* = ' + roundNice(p.Q / p.A, 2) },
+      ],
+      explanation:
+        'Substitute into the expansion path: ' +
+        katexHTML('K^* = ' + kCoeff + ' \\times ' + optL + ' = ' + optK) + '.'
+    });
+
+    // ── Step 7: Minimum cost C* = W·L* + R·K* ────────────────────────────────
+    const Cstar   = p.R * p.Kstar + p.W * p.Lstar;
+    const optC    = roundNice(Cstar, 2);
+    // Distractors: use L-only cost, K-only cost, and swapped W/R
+    const wrongC1 = roundNice(p.W * p.Lstar * 2, 2);           // forgot K term
+    const wrongC2 = roundNice(p.R * p.Kstar * 2, 2);           // forgot L term
+    const wrongC3 = roundNice(p.W * p.Kstar + p.R * p.Lstar, 2); // W and R swapped
+    steps.push({
+      header: 'Step 7: Minimum Cost',
+      question: 'Calculate the minimum cost ' + katexHTML('C^* = W \\cdot L^* + R \\cdot K^*') +
+                ' using ' + katexHTML('L^* = ' + optL) + ' and ' + katexHTML('K^* = ' + optK) + '.',
+      correctIdx: 0,
+      options: [
+        { tex: 'C^* = ' + optC },
+        { tex: 'C^* = ' + wrongC1 },
+        { tex: 'C^* = ' + wrongC2 },
+        { tex: 'C^* = ' + wrongC3 },
+      ],
+      explanation:
+        katexHTML('C^* = W \\cdot L^* + R \\cdot K^* = ' + p.W + ' \\times ' + optL + ' + ' + p.R + ' \\times ' + optK + ' = ' + optC) + '.'
+    });
+
+    return steps;
+  }
+
+  // ── Diagnostic state and renderer ────────────────────────────────────────
+  let _diagSteps = [];
+
+  function startDiagnostic() {
+    $diagnostic.classList.remove('hidden');
+    diagStep    = 0;
+    _diagSteps  = buildDiagnosticSteps();
+    $diagSteps.innerHTML = '';
+    renderDiagStep(0);
+  }
+
+  function renderDiagStep(idx) {
+    if (idx >= _diagSteps.length) {
+      const Cstar = prob.R * prob.Kstar + prob.W * prob.Lstar;
+      $diagComplete.textContent =
+        '✓ Great work! The cost-minimizing bundle is L* = ' + roundNice(prob.Lstar, 2) +
+        ', K* = ' + roundNice(prob.Kstar, 2) +
+        ', and minimum cost C* = ' + roundNice(Cstar, 2) + '.';
+      $diagComplete.classList.remove('hidden');
+      revealOptimal();
+      recordResult(false);
+      return;
+    }
+
+    const step   = _diagSteps[idx];
+    const stepEl = document.createElement('div');
+    stepEl.className = 'diag-step';
+
+    // Shuffle options while remembering which is correct
+    const indices = [0, 1, 2, 3];
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    const shuffled = indices.map(i => ({ ...step.options[i], isCorrect: i === step.correctIdx }));
+    const letters  = ['A','B','C','D'];
+
+    const optionsHTML = shuffled.map((opt, i) =>
+      `<div class="mc-option" data-correct="${opt.isCorrect}">
+        <div class="mc-letter">${letters[i]}</div>
+        <div>${katexHTML(opt.tex)}</div>
+      </div>`
+    ).join('');
+
+    stepEl.innerHTML = `
+      <div class="diag-step-header">${step.header}</div>
+      <div class="diag-question">${step.question}</div>
+      <div class="mc-options">${optionsHTML}</div>
+    `;
+
+    $diagSteps.appendChild(stepEl);
+    stepEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    // Attach click handlers
+    stepEl.querySelectorAll('.mc-option').forEach(btn => {
+      btn.addEventListener('click', function () {
+        if (btn.classList.contains('disabled')) return;
+        stepEl.querySelectorAll('.mc-option').forEach(b => b.classList.add('disabled'));
+
+        const correct = btn.dataset.correct === 'true';
+        if (correct) {
+          btn.classList.add('selected-correct');
+        } else {
+          btn.classList.add('selected-wrong');
+          stepEl.querySelectorAll('.mc-option').forEach(b => {
+            if (b.dataset.correct === 'true') b.classList.add('revealed-correct');
+          });
+        }
+
+        // Explanation
+        const expEl = document.createElement('div');
+        expEl.className = 'explanation-box';
+        expEl.innerHTML = step.explanation;
+        stepEl.appendChild(expEl);
+
+        setTimeout(() => renderDiagStep(idx + 1), 1200);
+      });
+    });
+  }
+
+  // ── New problem button ────────────────────────────────────────────────────
+  $newBtn.addEventListener('click', function () {
+    generateProblem();
+    renderProblem();
+  });
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  generateProblem();
+
+  function init() {
+    if (window.katex) {
+      renderProblem();
+    } else {
+      let tries = 0;
+      const poll = setInterval(() => {
+        tries++;
+        if (window.katex || tries > 40) { clearInterval(poll); renderProblem(); }
+      }, 80);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setTimeout(init, 50));
+  } else {
+    setTimeout(init, 50);
+  }
+
+})();
+</script>
+</body>
+</html>
