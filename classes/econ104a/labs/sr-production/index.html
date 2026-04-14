@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Short-Run Production — ECON 104A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+  <style>
+    /* ── Tokens ──────────────────────────────────────────────────── */
+    :root {
+      --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+      --font-serif: "Source Serif 4", ui-serif, Georgia, serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937; --ink-2:#374151; --muted:#6b7280;
+      --line:#e7dfd2; --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#1b7f4b; --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Header ──────────────────────────────────────────────────── */
+    .page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1120px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:13px;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{display:block;padding:22px 0 14px;}
+    .kicker{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:34px;line-height:1.1;letter-spacing:-.01em;margin:0;}
+    .sub{margin:10px 0 0;color:var(--ink-2);line-height:1.55;max-width:82ch;}
+
+    /* ── Layout ──────────────────────────────────────────────────── */
+    .main-grid{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start;margin-top:18px;}
+    @media(max-width:900px){.main-grid{grid-template-columns:1fr;}}
+
+    /* ── Panel ───────────────────────────────────────────────────── */
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .panel+.panel{margin-top:14px;}
+    .panel-head{margin-bottom:12px;}
+    h2{margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:800;}
+
+    /* ── Sliders ─────────────────────────────────────────────────── */
+    .slider-row{margin-bottom:14px;}
+    .slider-row:last-child{margin-bottom:0;}
+    .slider-label{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:5px;}
+    .slider-label span{font-size:13px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;min-width:36px;text-align:right;}
+    input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;}
+
+    /* ── Divider ─────────────────────────────────────────────────── */
+    .divider{border:none;border-top:1px solid var(--line);margin:14px 0;}
+
+    /* ── Metric boxes ────────────────────────────────────────────── */
+    .metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+    .metric{background:rgba(246,242,234,.55);border:1px solid var(--line);border-radius:14px;padding:10px 10px 8px;}
+    .metric .mlabel{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);}
+    .metric .mvalue{margin-top:4px;font-size:15px;font-variant-numeric:tabular-nums;font-weight:800;color:var(--ink);}
+    .metric.blue .mvalue{color:var(--accent);}
+    .metric.green .mvalue{color:var(--good);}
+    .metric.red .mvalue{color:var(--bad);}
+
+    /* ── Insight box ─────────────────────────────────────────────── */
+    .insight{margin-top:12px;font-size:12px;line-height:1.6;color:var(--ink-2);background:rgba(47,93,124,.05);border:1px solid rgba(47,93,124,.12);border-radius:12px;padding:10px 12px;}
+    .insight strong{color:var(--ink);}
+
+    /* ── Legend ──────────────────────────────────────────────────── */
+    .legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:10px;font-size:12px;color:var(--ink-2);}
+    .leg-row{display:flex;align-items:center;gap:6px;}
+    .leg-line{width:22px;height:3px;border-radius:2px;flex-shrink:0;}
+    .leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+    /* ── Canvas ──────────────────────────────────────────────────── */
+    .canvas-wrap{position:relative;width:100%;aspect-ratio:4/3;border-radius:12px;overflow:hidden;background:rgba(246,242,234,.35);border:1px solid var(--line);}
+    canvas{display:block;width:100%;height:100%;}
+
+    /* ── Data table ──────────────────────────────────────────────── */
+    .table-scroll{overflow-x:auto;margin-top:0;}
+    table.prod-table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;}
+    table.prod-table th{padding:6px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:2px solid var(--line-2);text-align:right;white-space:nowrap;}
+    table.prod-table th:first-child{text-align:center;}
+    table.prod-table td{padding:5px 10px;border-bottom:1px solid var(--line);color:var(--ink);text-align:right;}
+    table.prod-table td:first-child{text-align:center;font-weight:700;color:var(--ink-2);}
+    table.prod-table tr.hl td{background:rgba(47,93,124,.07);color:var(--accent);font-weight:700;}
+    table.prod-table tr.hl td:first-child{color:var(--accent);}
+    table.prod-table .dash{color:var(--muted);}
+
+    /* ── Footer ──────────────────────────────────────────────────── */
+    .footer{margin-top:18px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+
+    .katex{font-size:.95em;}
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar"><a class="crumb-link" href="/classes/econ104a/labs/">← Practice Labs</a></nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104A — Producer Behavior</div>
+      <h1>Short-Run Production</h1>
+      <p class="sub">
+        In the short run, capital is fixed at K̄. Drag <strong>Labor (L)</strong> to move along the production function
+        and see how output (Q), marginal product (MP<sub>L</sub>), and average product (AP<sub>L</sub>) respond.
+        Adjust K̄, α, and A to change the production technology.
+      </p>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="main-grid">
+
+    <!-- ── Left: controls ──────────────────────────────────── -->
+    <div>
+      <div class="panel">
+        <div class="panel-head"><h2>Production Technology</h2></div>
+
+        <div class="slider-row">
+          <div class="slider-label">Fixed Capital (K̄) <span id="kVal">4</span></div>
+          <input type="range" id="kSlider" min="1" max="9" step="1" value="4"/>
+        </div>
+        <div class="slider-row">
+          <div class="slider-label">Capital exponent (α) <span id="aVal">0.50</span></div>
+          <input type="range" id="aSlider" min="0.10" max="0.90" step="0.05" value="0.50"/>
+        </div>
+        <div class="slider-row">
+          <div class="slider-label">Technology (A) <span id="tVal">1</span></div>
+          <input type="range" id="tSlider" min="1" max="5" step="0.5" value="1"/>
+        </div>
+
+        <hr class="divider"/>
+
+        <div class="slider-row">
+          <div class="slider-label">Current Labor (L) <span id="lVal">4.0</span></div>
+          <input type="range" id="lSlider" min="0.5" max="10" step="0.5" value="4"/>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Values at Current L</h2></div>
+        <div class="metrics">
+          <div class="metric blue">
+            <div class="mlabel">Output Q</div>
+            <div class="mvalue" id="mQ">—</div>
+          </div>
+          <div class="metric green">
+            <div class="mlabel">MP<sub>L</sub></div>
+            <div class="mvalue" id="mMPL">—</div>
+          </div>
+          <div class="metric red">
+            <div class="mlabel">AP<sub>L</sub></div>
+            <div class="mvalue" id="mAPL">—</div>
+          </div>
+        </div>
+        <div class="insight" id="insightBox"></div>
+      </div>
+    </div>
+
+    <!-- ── Right: two graphs ───────────────────────────────── -->
+    <div>
+      <div class="panel">
+        <div class="panel-head"><h2>Production Function — Q vs L</h2></div>
+        <div class="canvas-wrap"><canvas id="canvasPF"></canvas></div>
+        <div class="legend">
+          <div class="leg-row">
+            <div class="leg-line" style="background:var(--accent);"></div>
+            <span id="pfLabel">Short-run PF (K̄ = 4)</span>
+          </div>
+          <div class="leg-row">
+            <div class="leg-line" style="background:var(--bad);height:2px;border-top:2px dashed var(--bad);background:none;"></div>
+            <span>Slope = MP<sub>L</sub> (tangent)</span>
+          </div>
+          <div class="leg-row">
+            <div class="leg-dot" style="background:var(--bad);"></div>
+            <span>Current point (L, Q)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Marginal &amp; Average Products — vs L</h2></div>
+        <div class="canvas-wrap"><canvas id="canvasMP"></canvas></div>
+        <div class="legend">
+          <div class="leg-row">
+            <div class="leg-line" style="background:var(--good);"></div>
+            <span>AP<sub>L</sub> = Q / L</span>
+          </div>
+          <div class="leg-row">
+            <div class="leg-line" style="background:var(--accent);"></div>
+            <span>MP<sub>L</sub> = dQ/dL</span>
+          </div>
+          <div class="leg-row">
+            <div class="leg-dot" style="background:var(--bad);"></div>
+            <span>Current L</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Full-width: data table ──────────────────────────── -->
+  <div class="panel" style="margin-top:14px;">
+    <div class="panel-head">
+      <h2>Data Table — <span id="tableLabel">Q = K̄<sup>0.5</sup> L<sup>0.5</sup></span></h2>
+    </div>
+    <div class="table-scroll">
+      <table class="prod-table">
+        <thead>
+          <tr>
+            <th>L</th>
+            <th>Output (Q)</th>
+            <th>MP<sub>L</sub> = ΔQ/ΔL</th>
+            <th>AP<sub>L</sub> = Q/L</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <span>ECON 104A — Intermediate Microeconomic Theory</span>
+    <span>Short-Run Production Function: Q = A · K̄<sup>α</sup> · L<sup>1−α</sup></span>
+  </footer>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// SHORT-RUN PRODUCTION FUNCTION EXPLORER
+// Production function: Q = A · K̄^α · L^(1-α)   (Cobb-Douglas)
+// Fixed capital K̄ → short-run production function in L only.
+//
+// Graphs:
+//   1. Production Function: Q vs L, with tangent line (slope = MPL)
+//   2. MPL & APL: both vs L, showing diminishing returns
+//
+// Key relationships (Cobb-Douglas):
+//   MPL = (1-α) · A · K̄^α · L^(-α) = (1-α) · Q/L = (1-α) · APL
+//   APL = A · K̄^α · L^(-α)
+//   MPL = (1-α) · APL  → always below APL since (1-α) < 1
+// ═══════════════════════════════════════════════════════════════════
+(() => {
+  'use strict';
+  // ── State ──────────────────────────────────────────────────────
+  let Kbar  = 4;
+  let alpha = 0.5;
+  let A     = 1;
+  let Lcur  = 4;
+
+  const L_MIN = 0.01;  // avoid division by zero
+  const L_MAX = 10;    // matches slider max
+
+  // ── Fixed axis bounds (computed once from initial params via hoisting) ──
+  // Q, APL, niceTicks are function declarations → available here immediately.
+  const PF_XMAX   = L_MAX;
+  const PF_XTICKS = niceTicks(PF_XMAX, 5);
+  const PF_YTICKS = niceTicks(Q(PF_XMAX) * 1.4, 5);
+  const PF_YMAX   = PF_YTICKS[PF_YTICKS.length - 1];
+
+  const MP_XMAX   = L_MAX;
+  const MP_XTICKS = niceTicks(MP_XMAX, 5);
+  const MP_YTICKS = niceTicks(APL(0.5) * 1.4, 5);
+  const MP_YMAX   = MP_YTICKS[MP_YTICKS.length - 1];
+
+  // ── DOM ────────────────────────────────────────────────────────
+  const kSlider  = document.getElementById('kSlider');
+  const aSlider  = document.getElementById('aSlider');
+  const tSlider  = document.getElementById('tSlider');
+  const lSlider  = document.getElementById('lSlider');
+  const kVal     = document.getElementById('kVal');
+  const aVal     = document.getElementById('aVal');
+  const tVal     = document.getElementById('tVal');
+  const lVal     = document.getElementById('lVal');
+  const mQ       = document.getElementById('mQ');
+  const mMPL     = document.getElementById('mMPL');
+  const mAPL     = document.getElementById('mAPL');
+  const insightBox = document.getElementById('insightBox');
+  const tableBody  = document.getElementById('tableBody');
+  const tableLabel = document.getElementById('tableLabel');
+  const pfLabel    = document.getElementById('pfLabel');
+  const canvasPF   = document.getElementById('canvasPF');
+  const canvasMP   = document.getElementById('canvasMP');
+
+  // ── Production functions ────────────────────────────────────────
+  function Q(L)   { return A * Math.pow(Kbar, alpha) * Math.pow(Math.max(L, L_MIN), 1 - alpha); }
+  function MPL(L) { return (1 - alpha) * A * Math.pow(Kbar, alpha) * Math.pow(Math.max(L, L_MIN), -alpha); }
+  function APL(L) { return Q(L) / Math.max(L, L_MIN); }
+
+  // ── Canvas helpers ──────────────────────────────────────────────
+  function setupCanvas(canvas) {
+    const dpr  = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const W    = Math.round(rect.width  * dpr);
+    const H    = Math.round(rect.height * dpr);
+    if (W === 0 || H === 0) return null;
+    if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+    return { ctx: canvas.getContext('2d'), dpr, W, H };
+  }
+
+  function drawAxes(ctx, dpr, X0, X1, Y0, Y1, xMax, yMax, xLabel, yLabel, xTicks, yTicks) {
+    // Axes
+    ctx.strokeStyle = 'rgba(0,0,0,0.28)'; ctx.lineWidth = 1.5 * dpr;
+    ctx.beginPath(); ctx.moveTo(X0, Y1); ctx.lineTo(X1, Y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X0, Y0); ctx.lineTo(X0, Y1); ctx.stroke();
+    // Arrowheads
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.beginPath(); ctx.moveTo(X1,Y1); ctx.lineTo(X1-7*dpr,Y1-3.5*dpr); ctx.lineTo(X1-7*dpr,Y1+3.5*dpr); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0-3.5*dpr,Y0+7*dpr); ctx.lineTo(X0+3.5*dpr,Y0+7*dpr); ctx.closePath(); ctx.fill();
+
+    const PW = X1 - X0, PH = Y1 - Y0;
+    const xToC = x => X0 + (x / xMax) * PW;
+    const yToC = y => Y1 - (y / yMax) * PH;
+
+    // X ticks
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.font = `600 ${10*dpr}px "Inter",sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = dpr;
+    for (const x of xTicks) {
+      if (x === 0) continue;
+      const cx = xToC(x);
+      // gridline
+      ctx.setLineDash([3*dpr, 3*dpr]);
+      ctx.beginPath(); ctx.moveTo(cx, Y0); ctx.lineTo(cx, Y1); ctx.stroke();
+      ctx.setLineDash([]);
+      // tick
+      ctx.strokeStyle = 'rgba(0,0,0,0.28)'; ctx.lineWidth = dpr;
+      ctx.beginPath(); ctx.moveTo(cx, Y1-3*dpr); ctx.lineTo(cx, Y1+3*dpr); ctx.stroke();
+      ctx.fillText(x, cx, Y1 + 5*dpr);
+      ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+    }
+    // Y ticks
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (const y of yTicks) {
+      if (y === 0) continue;
+      const cy = yToC(y);
+      ctx.setLineDash([3*dpr, 3*dpr]);
+      ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = dpr;
+      ctx.beginPath(); ctx.moveTo(X0, cy); ctx.lineTo(X1, cy); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(0,0,0,0.28)'; ctx.lineWidth = dpr;
+      ctx.beginPath(); ctx.moveTo(X0-3*dpr, cy); ctx.lineTo(X0+3*dpr, cy); ctx.stroke();
+      ctx.fillText(rnd(y), X0 - 6*dpr, cy);
+    }
+
+    // Axis labels
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.font = `700 ${11*dpr}px "Inter",sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText(xLabel, (X0+X1)/2, Y1+18*dpr);
+    ctx.save();
+    ctx.translate(X0 - 36*dpr, (Y0+Y1)/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.textBaseline = 'top';
+    ctx.fillText(yLabel, 0, 0);
+    ctx.restore();
+
+    return { xToC, yToC };
+  }
+
+  function niceTicks(max, count) {
+    const raw  = max / count;
+    const mag  = Math.pow(10, Math.floor(Math.log10(raw)));
+    const nice = [1,2,2.5,5,10].map(f => f * mag).find(f => f >= raw) || mag;
+    const ticks = [];
+    for (let t = nice; t < max * 1.01; t += nice) ticks.push(parseFloat(t.toFixed(6)));
+    return ticks;
+  }
+
+  function rnd(v, dp = 2) { return parseFloat(v.toFixed(dp)); }
+
+  // ── Draw production function ─────────────────────────────────────
+  function drawPF() {
+    const setup = setupCanvas(canvasPF);
+    if (!setup) return;
+    const { ctx, dpr, W, H } = setup;
+    ctx.clearRect(0, 0, W, H);
+
+    const pad  = { l:56*dpr, r:20*dpr, t:16*dpr, b:46*dpr };
+    const X0=pad.l, X1=W-pad.r, Y0=pad.t, Y1=H-pad.b;
+
+    const { xToC, yToC } = drawAxes(ctx, dpr, X0, X1, Y0, Y1, PF_XMAX, PF_YMAX, 'Labor (L)', 'Output (Q)', PF_XTICKS, PF_YTICKS);
+
+    // Clip all curve/line drawing to the plot area
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(X0, Y0, X1 - X0, Y1 - Y0);
+    ctx.clip();
+
+    // Production function curve
+    ctx.beginPath();
+    let started = false;
+    for (let k = 1; k <= 400; k++) {
+      const L = (k / 400) * L_MAX;
+      const q = Q(L);
+      if (!isFinite(q) || q < 0) { started = false; continue; }
+      const cx = xToC(L), cy = yToC(q);
+      if (!started) { ctx.moveTo(cx, cy); started = true; } else ctx.lineTo(cx, cy);
+    }
+    ctx.strokeStyle = '#2f5d7c'; ctx.lineWidth = 2.5*dpr; ctx.stroke();
+
+    // Tangent line at Lcur (unclipped values — canvas clip handles bounds)
+    const q0   = Q(Lcur);
+    const mpl0 = MPL(Lcur);
+    const span  = Math.min(2.5, Lcur - 0.1, L_MAX - Lcur + 0.5);
+    const L1t   = Math.max(0.05, Lcur - span);
+    const L2t   = Math.min(L_MAX, Lcur + span);
+    const q1t   = q0 + mpl0 * (L1t - Lcur);
+    const q2t   = q0 + mpl0 * (L2t - Lcur);
+
+    ctx.beginPath();
+    ctx.moveTo(xToC(L1t), yToC(q1t));
+    ctx.lineTo(xToC(L2t), yToC(q2t));
+    ctx.setLineDash([5*dpr, 4*dpr]);
+    ctx.strokeStyle = '#b42318'; ctx.lineWidth = 2*dpr; ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Projection dashes and dot only when point is within the plot
+    const cx0 = xToC(Lcur), cy0 = yToC(q0);
+    if (q0 <= PF_YMAX) {
+      ctx.setLineDash([4*dpr, 3*dpr]);
+      ctx.strokeStyle = 'rgba(180,35,24,0.35)'; ctx.lineWidth = 1.5*dpr;
+      ctx.beginPath(); ctx.moveTo(cx0, cy0); ctx.lineTo(cx0, Y1); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx0, cy0); ctx.lineTo(X0, cy0); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    ctx.restore(); // end plot-area clip
+
+    // Axis ticks and dot drawn outside clip so they aren't cut off
+    if (q0 <= PF_YMAX) {
+      const cy0c = yToC(q0);
+      ctx.strokeStyle = '#b42318'; ctx.lineWidth = 1.5*dpr;
+      ctx.beginPath(); ctx.moveTo(cx0, Y1-4*dpr); ctx.lineTo(cx0, Y1+4*dpr); ctx.stroke();
+      ctx.font = `700 ${10*dpr}px "Inter",sans-serif`;
+      ctx.fillStyle = '#b42318'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText(rnd(Lcur, 1), cx0, Y1+6*dpr);
+      ctx.beginPath(); ctx.moveTo(X0-4*dpr, cy0c); ctx.lineTo(X0+4*dpr, cy0c); ctx.stroke();
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText(rnd(q0, 2), X0-7*dpr, cy0c);
+
+      ctx.beginPath(); ctx.arc(cx0, cy0c, 9*dpr, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(180,35,24,0.15)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx0, cy0c, 5.5*dpr, 0, Math.PI*2);
+      ctx.fillStyle = '#b42318'; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx0, cy0c, 5.5*dpr, 0, Math.PI*2);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5*dpr; ctx.stroke();
+    }
+
+    // Slope label: SE corner pinned to NW of the dot (only when dot is visible)
+    if (q0 <= PF_YMAX) {
+      ctx.fillStyle = '#b42318';
+      ctx.font = `600 ${10*dpr}px "Inter",sans-serif`;
+      ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+      ctx.fillText('slope = MPL = ' + rnd(mpl0, 2), cx0 - 9*dpr, yToC(q0) - 9*dpr);
+    }
+  }
+
+  // ── Draw MPL & APL ───────────────────────────────────────────────
+  function drawMP() {
+    const setup = setupCanvas(canvasMP);
+    if (!setup) return;
+    const { ctx, dpr, W, H } = setup;
+    ctx.clearRect(0, 0, W, H);
+
+    const pad  = { l:56*dpr, r:20*dpr, t:16*dpr, b:46*dpr };
+    const X0=pad.l, X1=W-pad.r, Y0=pad.t, Y1=H-pad.b;
+
+    const L_start = 0.5;
+    const { xToC, yToC } = drawAxes(ctx, dpr, X0, X1, Y0, Y1, MP_XMAX, MP_YMAX, 'Labor (L)', '', MP_XTICKS, MP_YTICKS);
+
+    // APL curve (green, drawn first so MPL is on top)
+    ctx.beginPath();
+    let started = false;
+    for (let k = 1; k <= 400; k++) {
+      const L = L_start + (k / 400) * (L_MAX - L_start);
+      const apl = APL(L);
+      if (!isFinite(apl) || apl < 0 || apl > MP_YMAX) { started = false; continue; }
+      const cx = xToC(L), cy = yToC(apl);
+      if (!started) { ctx.moveTo(cx, cy); started = true; } else ctx.lineTo(cx, cy);
+    }
+    ctx.strokeStyle = '#1b7f4b'; ctx.lineWidth = 2.5*dpr; ctx.stroke();
+
+    // MPL curve (blue)
+    ctx.beginPath();
+    started = false;
+    for (let k = 1; k <= 400; k++) {
+      const L   = L_start + (k / 400) * (L_MAX - L_start);
+      const mpl = MPL(L);
+      if (!isFinite(mpl) || mpl < 0 || mpl > MP_YMAX) { started = false; continue; }
+      const cx = xToC(L), cy = yToC(mpl);
+      if (!started) { ctx.moveTo(cx, cy); started = true; } else ctx.lineTo(cx, cy);
+    }
+    ctx.strokeStyle = '#2f5d7c'; ctx.lineWidth = 2.5*dpr; ctx.stroke();
+
+    // Vertical line at Lcur
+    const cxL = xToC(Lcur);
+    ctx.setLineDash([5*dpr, 4*dpr]);
+    ctx.strokeStyle = 'rgba(180,35,24,0.45)'; ctx.lineWidth = 1.5*dpr;
+    ctx.beginPath(); ctx.moveTo(cxL, Y0); ctx.lineTo(cxL, Y1); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Dots at Lcur on both curves
+    const mpl0 = MPL(Lcur);
+    const apl0 = APL(Lcur);
+    [[mpl0, '#2f5d7c'], [apl0, '#1b7f4b']].forEach(([val, color]) => {
+      if (!isFinite(val) || val < 0 || val > MP_YMAX) return;
+      const cy = yToC(val);
+      ctx.beginPath(); ctx.arc(cxL, cy, 5.5*dpr, 0, Math.PI*2);
+      ctx.fillStyle = color; ctx.fill();
+      ctx.beginPath(); ctx.arc(cxL, cy, 5.5*dpr, 0, Math.PI*2);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5*dpr; ctx.stroke();
+    });
+
+    // Horizontal projection dashes + y-axis ticks for MPL and APL at current L
+    ctx.font = `700 ${10*dpr}px "Inter",sans-serif`;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    [[mpl0, '#2f5d7c'], [apl0, '#1b7f4b']].forEach(([val, color]) => {
+      if (!isFinite(val) || val < 0 || val > MP_YMAX) return;
+      const cy = yToC(val);
+      // dashed line from y-axis to dot
+      ctx.setLineDash([4*dpr, 3*dpr]);
+      ctx.strokeStyle = color; ctx.lineWidth = 1*dpr;
+      ctx.globalAlpha = 0.35;
+      ctx.beginPath(); ctx.moveTo(X0, cy); ctx.lineTo(cxL, cy); ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.setLineDash([]);
+      // tick mark on y-axis
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5*dpr;
+      ctx.beginPath(); ctx.moveTo(X0-4*dpr, cy); ctx.lineTo(X0+4*dpr, cy); ctx.stroke();
+      // value label
+      ctx.fillStyle = color;
+      ctx.fillText(rnd(val, 2), X0 - 7*dpr, cy);
+    });
+
+    // x-axis tick for Lcur
+    ctx.strokeStyle = '#b42318'; ctx.lineWidth = 1.5*dpr;
+    ctx.beginPath(); ctx.moveTo(cxL, Y1-4*dpr); ctx.lineTo(cxL, Y1+4*dpr); ctx.stroke();
+    ctx.font = `700 ${10*dpr}px "Inter",sans-serif`;
+    ctx.fillStyle = '#b42318'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText(rnd(Lcur, 1), cxL, Y1+6*dpr);
+  }
+
+  // ── Data table ───────────────────────────────────────────────────
+  function buildTable() {
+    const rows = [];
+    for (let L = 0; L <= 10; L++) {
+      const q   = L === 0 ? 0 : Q(L);
+      const qPrev = L <= 1 ? 0 : Q(L - 1);
+      const dq  = L === 0 ? null : (L === 1 ? Q(1) : Q(L) - Q(L - 1));
+      const apl = L === 0 ? null : q / L;
+      rows.push({ L, q, dq, apl });
+    }
+
+    const hlL = Math.round(Lcur);
+    tableBody.innerHTML = rows.map(r => {
+      const isHL = r.L === hlL;
+      const qStr  = r.L === 0 ? '0' : rnd(r.q, 2).toFixed(2);
+      const dqStr = r.dq === null ? '<span class="dash">—</span>' : rnd(r.dq, 2).toFixed(2);
+      const apStr = r.apl === null ? '<span class="dash">—</span>' : rnd(r.apl, 2).toFixed(2);
+      return `<tr class="${isHL ? 'hl' : ''}">
+        <td>${r.L}</td>
+        <td>${qStr}</td>
+        <td>${dqStr}</td>
+        <td>${apStr}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Insight text ─────────────────────────────────────────────────
+  function updateInsight() {
+    const mpl0 = rnd(MPL(Lcur), 2);
+    const apl0 = rnd(APL(Lcur), 2);
+    const q0   = rnd(Q(Lcur),   2);
+    const ratio = rnd(1 - alpha, 2);
+    insightBox.innerHTML =
+      `At L = ${rnd(Lcur, 1)}: output is <strong>${q0}</strong>. ` +
+      `Each additional unit of labor adds <strong>${mpl0}</strong> units (MP<sub>L</sub>), ` +
+      `while the average worker produces <strong>${apl0}</strong> units (AP<sub>L</sub>). ` +
+      `Because Q = AK̄<sup>α</sup>L<sup>1−α</sup>, we have ` +
+      `MP<sub>L</sub> = (1−α) · AP<sub>L</sub> = ${ratio} × ${apl0} = ${rnd(ratio * apl0, 2)}.`;
+  }
+
+  // ── Update label showing short-run PF formula ─────────────────────
+  function updateLabels() {
+    const fracAlpha    = rnd(alpha, 2);
+    const fracOneMinusAlpha = rnd(1 - alpha, 2);
+    pfLabel.textContent = `Short-run PF (K̄ = ${Kbar})`;
+
+    // Show with superscript in plain HTML
+    tableLabel.innerHTML =
+      `Q = ${A !== 1 ? A : ''}` +
+      `K&#x0305;<sup>${fracAlpha}</sup> L<sup>${fracOneMinusAlpha}</sup>` +
+      ` &nbsp;(K&#x0305; = ${Kbar}, A = ${A})`;
+  }
+
+  // ── Master update ─────────────────────────────────────────────────
+  function updateAll() {
+    const q0   = Q(Lcur);
+    const mpl0 = MPL(Lcur);
+    const apl0 = APL(Lcur);
+
+    mQ.textContent   = rnd(q0, 2).toFixed(2);
+    mMPL.textContent = rnd(mpl0, 2).toFixed(2);
+    mAPL.textContent = rnd(apl0, 2).toFixed(2);
+
+    updateInsight();
+    updateLabels();
+    buildTable();
+    drawPF();
+    drawMP();
+  }
+
+  // ── Slider event listeners ────────────────────────────────────────
+  function bind(slider, display, parse, decimals, stateSetter) {
+    const update = () => {
+      const v = parse(slider.value);
+      display.textContent = v.toFixed(decimals);
+      stateSetter(v);
+      updateAll();
+    };
+    slider.addEventListener('input', update);
+    // Sync display to slider's initial value immediately
+    display.textContent = parse(slider.value).toFixed(decimals);
+  }
+
+  bind(kSlider, kVal, v => parseInt(v),   0, v => { Kbar  = v; });
+  bind(aSlider, aVal, v => parseFloat(v), 2, v => { alpha = v; });
+  bind(tSlider, tVal, v => parseFloat(v), 1, v => { A     = v; });
+  bind(lSlider, lVal, v => parseFloat(v), 1, v => { Lcur  = v; });
+
+  // ── Resize handling ───────────────────────────────────────────────
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(updateAll, 80);
+  });
+
+  // ── Init ──────────────────────────────────────────────────────────
+  // Defer until after the browser has completed layout so
+  // getBoundingClientRect() returns real pixel dimensions.
+  function init() {
+    updateAll();
+    // ResizeObserver re-draws if the canvas gains size after fonts/images load
+    if (window.ResizeObserver) {
+      let roReady = false;
+      const ro = new ResizeObserver(() => {
+        if (!roReady) { roReady = true; return; } // skip first (init) call
+        updateAll();
+      });
+      ro.observe(canvasPF.parentElement);
+    }
+  }
+  // Two rAF calls guarantee layout is flushed before we measure.
+  requestAnimationFrame(() => requestAnimationFrame(init));
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Cost Curves — ECON 104A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Tokens ──────────────────────────────────────────────────── */
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937; --ink-2:#374151; --muted:#6b7280;
+      --line:#e7dfd2; --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#1b7f4b; --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+      /* curve colors */
+      --col-fc:#9ca3af;
+      --col-vc:#2f5d7c;
+      --col-tc:#0f2742;
+      --col-afc:#1b7f4b;
+      --col-avc:#c2690a;
+      --col-atc:#b42318;
+      --col-mc:#6d28d9;
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Header ──────────────────────────────────────────────────── */
+    .page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1120px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:13px;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{display:block;padding:22px 0 14px;}
+    .kicker{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:34px;line-height:1.1;letter-spacing:-.01em;margin:0;}
+    .sub{margin:10px 0 0;color:var(--ink-2);line-height:1.55;max-width:82ch;}
+
+    /* ── Layout ──────────────────────────────────────────────────── */
+    .main-grid{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start;margin-top:18px;}
+    @media(max-width:900px){.main-grid{grid-template-columns:1fr;}}
+
+    /* ── Panel ───────────────────────────────────────────────────── */
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .panel+.panel{margin-top:14px;}
+    .panel-head{margin-bottom:12px;}
+    h2{margin:0;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);font-weight:800;}
+
+    /* ── Sliders ─────────────────────────────────────────────────── */
+    .slider-row{margin-bottom:14px;}
+    .slider-row:last-child{margin-bottom:0;}
+    .slider-label{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:5px;}
+    .slider-label span{font-size:13px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;min-width:36px;text-align:right;}
+    input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;}
+
+    /* ── Divider ─────────────────────────────────────────────────── */
+    .divider{border:none;border-top:1px solid var(--line);margin:14px 0;}
+
+    /* ── Metric boxes ────────────────────────────────────────────── */
+    .metrics{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    .metrics-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+    .metric{background:rgba(246,242,234,.55);border:1px solid var(--line);border-radius:14px;padding:10px 10px 8px;}
+    .metric .mlabel{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);}
+    .metric .mvalue{margin-top:4px;font-size:15px;font-variant-numeric:tabular-nums;font-weight:800;color:var(--ink);}
+    .m-fc .mvalue{color:var(--col-fc);}
+    .m-vc .mvalue{color:var(--col-vc);}
+    .m-tc .mvalue{color:var(--col-tc);}
+    .m-afc .mvalue{color:var(--col-afc);}
+    .m-avc .mvalue{color:var(--col-avc);}
+    .m-atc .mvalue{color:var(--col-atc);}
+    .m-mc  .mvalue{color:var(--col-mc);}
+
+    /* ── Insight box ─────────────────────────────────────────────── */
+    .insight{margin-top:12px;font-size:12px;line-height:1.6;color:var(--ink-2);background:rgba(47,93,124,.05);border:1px solid rgba(47,93,124,.12);border-radius:12px;padding:10px 12px;}
+    .insight strong{color:var(--ink);}
+
+    /* ── Legend ──────────────────────────────────────────────────── */
+    .legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:10px;font-size:11.5px;color:var(--ink-2);}
+    .leg-row{display:flex;align-items:center;gap:6px;}
+    .leg-line{width:22px;height:3px;border-radius:2px;flex-shrink:0;}
+    .leg-dash{width:22px;height:0;border-top:2.5px dashed;flex-shrink:0;}
+    .leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+    /* ── Canvas ──────────────────────────────────────────────────── */
+    .canvas-wrap{position:relative;width:100%;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:rgba(246,242,234,.35);border:1px solid var(--line);}
+    canvas{display:block;width:100%;height:100%;}
+
+    /* ── Data table ──────────────────────────────────────────────── */
+    .table-scroll{overflow-x:auto;}
+    table.cost-table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;}
+    table.cost-table th{padding:6px 10px;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:2px solid var(--line-2);text-align:right;white-space:nowrap;}
+    table.cost-table th:first-child{text-align:center;}
+    table.cost-table td{padding:5px 10px;border-bottom:1px solid var(--line);color:var(--ink);text-align:right;}
+    table.cost-table td:first-child{text-align:center;font-weight:700;color:var(--ink-2);}
+    table.cost-table tr.hl td{background:rgba(47,93,124,.07);font-weight:700;}
+    table.cost-table tr.hl td:first-child{color:var(--accent);}
+    table.cost-table .dash{color:var(--muted);}
+
+    /* ── Footer ──────────────────────────────────────────────────── */
+    .footer{margin-top:18px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+
+    /* ── Badge for min ATC ───────────────────────────────────────── */
+    .badge{display:inline-block;background:rgba(180,35,24,.10);color:var(--bad);border:1px solid rgba(180,35,24,.25);border-radius:8px;padding:2px 7px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar"><a class="crumb-link" href="/classes/econ104a/labs/">← Practice Labs</a></nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104A — Costs</div>
+      <h1>Cost Curves Dashboard</h1>
+      <p class="sub">
+        Given a short-run Cobb-Douglas production function Q&nbsp;=&nbsp;K̄<sup>α</sup>&nbsp;L<sup>1−α</sup>,
+        optimize over labor to derive FC, VC, and TC — then see how AFC, AVC, ATC, and MC follow.
+        Drag the <strong>Quantity</strong> slider to read off values at any output level.
+      </p>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="main-grid">
+
+    <!-- ── Left: controls ──────────────────────────────────── -->
+    <div>
+      <div class="panel">
+        <div class="panel-head"><h2>Factor Prices</h2></div>
+        <div class="slider-row">
+          <div class="slider-label">Wage (w) <span id="wVal">4.00</span></div>
+          <input type="range" id="wSlider" min="1" max="20" step="0.5" value="4"/>
+        </div>
+        <div class="slider-row">
+          <div class="slider-label">Rental Rate (r) <span id="rVal">1.00</span></div>
+          <input type="range" id="rSlider" min="0.5" max="10" step="0.5" value="1"/>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Production Technology</h2></div>
+        <div class="slider-row">
+          <div class="slider-label">Fixed Capital (K̄) <span id="kVal">4</span></div>
+          <input type="range" id="kSlider" min="1" max="12" step="1" value="4"/>
+        </div>
+        <div class="slider-row">
+          <div class="slider-label">Capital Exponent (α) <span id="aVal">0.50</span></div>
+          <input type="range" id="aSlider" min="0.10" max="0.90" step="0.05" value="0.50"/>
+        </div>
+
+        <div class="insight" id="techNote" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Select a Quantity</h2></div>
+        <div class="slider-row">
+          <div class="slider-label">Quantity (Q) <span id="qVal">10.0</span></div>
+          <input type="range" id="qSlider" min="0.5" max="20" step="0.5" value="10"/>
+        </div>
+
+        <hr class="divider"/>
+
+        <div class="panel-head" style="margin-bottom:10px;"><h2>Total Costs at Q</h2></div>
+        <div class="metrics">
+          <div class="metric m-fc">
+            <div class="mlabel">FC = r · K̄</div>
+            <div class="mvalue" id="mFC">—</div>
+          </div>
+          <div class="metric m-vc">
+            <div class="mlabel">VC(Q)</div>
+            <div class="mvalue" id="mVC">—</div>
+          </div>
+        </div>
+        <div class="metrics" style="margin-top:8px;">
+          <div class="metric m-tc" style="grid-column:1/-1;">
+            <div class="mlabel">TC(Q) = FC + VC(Q)</div>
+            <div class="mvalue" id="mTC">—</div>
+          </div>
+        </div>
+
+        <hr class="divider"/>
+
+        <div class="panel-head" style="margin-bottom:10px;"><h2>Per-Unit Costs at Q</h2></div>
+        <div class="metrics" style="grid-template-columns:1fr 1fr;">
+          <div class="metric m-afc">
+            <div class="mlabel">AFC</div>
+            <div class="mvalue" id="mAFC">—</div>
+          </div>
+          <div class="metric m-avc">
+            <div class="mlabel">AVC</div>
+            <div class="mvalue" id="mAVC">—</div>
+          </div>
+          <div class="metric m-atc">
+            <div class="mlabel">ATC</div>
+            <div class="mvalue" id="mATC">—</div>
+          </div>
+          <div class="metric m-mc">
+            <div class="mlabel">MC</div>
+            <div class="mvalue" id="mMC">—</div>
+          </div>
+        </div>
+
+        <div class="insight" id="insightBox" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <!-- ── Right: two graphs ───────────────────────────────── -->
+    <div>
+      <div class="panel">
+        <div class="panel-head"><h2>Total Costs — FC, VC, TC vs. Q</h2></div>
+        <div class="canvas-wrap"><canvas id="canvasTC"></canvas></div>
+        <div class="legend">
+          <div class="leg-row">
+            <div class="leg-dash" style="border-color:var(--col-fc);"></div>
+            <span>FC = r · K̄ (fixed)</span>
+          </div>
+          <div class="leg-row">
+            <div class="leg-line" style="background:var(--col-vc);"></div>
+            <span>VC(Q) = w · L*(Q)</span>
+          </div>
+          <div class="leg-row">
+            <div class="leg-line" style="background:var(--col-tc);"></div>
+            <span>TC(Q) = FC + VC(Q)</span>
+          </div>
+          <div class="leg-row">
+            <div class="leg-dot" style="background:var(--accent);"></div>
+            <span>Selected Q</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:14px;">
+        <div class="panel-head"><h2>Per-Unit Costs — AFC, AVC, ATC, MC vs. Q</h2></div>
+        <div class="canvas-wrap"><canvas id="canvasAC"></canvas></div>
+        <div class="legend">
+          <div class="leg-row">
+            <div class="leg-line" style="background:var(--col-afc);"></div>
+            <span>AFC = FC/Q</span>
+          </div>
+          <div class="leg-row">
+            <div class="leg-line" style="background:var(--col-avc);"></div>
+            <span>AVC = VC/Q</span>
+          </div>
+          <div class="leg-row">
+            <div class="leg-line" style="background:var(--col-atc);"></div>
+            <span>ATC = TC/Q</span>
+          </div>
+          <div class="leg-row">
+            <div class="leg-line" style="background:var(--col-mc);"></div>
+            <span>MC = dTC/dQ</span>
+          </div>
+          <div class="leg-row">
+            <div class="leg-dot" style="background:var(--col-atc);border:2px solid var(--col-mc);"></div>
+            <span>MC = ATC (min ATC) &nbsp;<span class="badge">efficient scale</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Full-width: data table ──────────────────────────────── -->
+  <div class="panel" style="margin-top:14px;">
+    <div class="panel-head">
+      <h2>Data Table — <span id="tableLabel">Q = K̄<sup>0.5</sup> L<sup>0.5</sup></span></h2>
+    </div>
+    <div class="table-scroll">
+      <table class="cost-table">
+        <thead>
+          <tr>
+            <th>Q</th>
+            <th style="color:var(--col-fc)">FC</th>
+            <th style="color:var(--col-vc)">VC</th>
+            <th style="color:var(--col-tc)">TC</th>
+            <th style="color:var(--col-afc)">AFC</th>
+            <th style="color:var(--col-avc)">AVC</th>
+            <th style="color:var(--col-atc)">ATC</th>
+            <th style="color:var(--col-mc)">MC</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <span>ECON 104A — Intermediate Microeconomic Theory</span>
+    <span id="footerFormula">Short-Run Production: Q = K̄<sup>0.5</sup> · L<sup>0.5</sup></span>
+  </footer>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// COST CURVES DASHBOARD
+//
+// Production: Q = K̄^α · L^(1−α)  (Cobb-Douglas, K fixed in SR)
+//
+// Cost minimization given fixed K̄:
+//   L*(Q) = ( Q / K̄^α )^(1/(1−α))
+//   VC(Q) = w · L*(Q) = w · K̄^(−α/(1−α)) · Q^(1/(1−α))
+//   FC    = r · K̄
+//   TC(Q) = FC + VC(Q)
+//
+// Per-unit costs:
+//   AFC(Q) = FC / Q
+//   AVC(Q) = VC(Q) / Q  = w · K̄^(−α/(1−α)) · Q^(α/(1−α))
+//   ATC(Q) = TC(Q) / Q
+//   MC(Q)  = dVC/dQ     = [1/(1−α)] · AVC(Q)   (always > AVC)
+//
+// Key properties:
+//   • MC = [1/(1−α)] · AVC → MC always proportional to (and above) AVC
+//   • ATC is U-shaped: AFC falls, AVC rises, ATC has interior minimum
+//   • MC intersects ATC at minimum of ATC
+//   • Efficient scale Q* = K̄ · (r(1−α)/(w·α))^((1−α)/1) ... found numerically
+// ═══════════════════════════════════════════════════════════════════
+(() => {
+  'use strict';
+
+  // ── State ──────────────────────────────────────────────────────
+  let w     = 4;
+  let r     = 1;
+  let Kbar  = 4;
+  let alpha = 0.5;
+  let Qsel  = 10;
+
+  const Q_MIN    = 0.4;   // start of plotted range (avoid AFC→∞)
+  const Q_MAX    = 20;    // upper bound for Q axis
+  const N_POINTS = 300;   // smooth curves
+
+  // ── Cost functions ──────────────────────────────────────────────
+  function VC(q) {
+    // w · (q / K^α)^(1/(1-α))
+    const beta = 1 / (1 - alpha);
+    return w * Math.pow(q / Math.pow(Kbar, alpha), beta);
+  }
+  function FC() { return r * Kbar; }
+  function TC(q) { return FC() + VC(q); }
+  function MC(q) {
+    // (1/(1-α)) · VC(q)/q
+    return VC(q) / q / (1 - alpha);
+  }
+  function AVC(q) { return VC(q) / q; }
+  function ATC(q) { return TC(q) / q; }
+  function AFC(q) { return FC() / q; }
+
+  // ── niceTicks ───────────────────────────────────────────────────
+  function niceTicks(maxVal, count) {
+    if (maxVal <= 0) return [0, 1];
+    const raw  = maxVal / count;
+    const mag  = Math.pow(10, Math.floor(Math.log10(raw)));
+    const nice = [1, 2, 2.5, 5, 10].find(f => f * mag >= raw) * mag;
+    const ticks = [];
+    for (let i = 0; i <= count + 1; i++) {
+      const t = i * nice;
+      ticks.push(t);
+      if (t >= maxVal * 1.05) break;
+    }
+    return ticks;
+  }
+
+  // ── Build point arrays ─────────────────────────────────────────
+  function buildPoints() {
+    const pts = [];
+    for (let i = 0; i <= N_POINTS; i++) {
+      const q = Q_MIN + (Q_MAX - Q_MIN) * (i / N_POINTS);
+      pts.push({
+        q,
+        fc:  FC(),
+        vc:  VC(q),
+        tc:  TC(q),
+        afc: AFC(q),
+        avc: AVC(q),
+        atc: ATC(q),
+        mc:  MC(q),
+      });
+    }
+    return pts;
+  }
+
+  // ── Find minimum ATC index ──────────────────────────────────────
+  function findMinATC(pts) {
+    let minIdx = 0, minVal = Infinity;
+    for (let i = 0; i < pts.length; i++) {
+      if (pts[i].atc < minVal) { minVal = pts[i].atc; minIdx = i; }
+    }
+    return minIdx;
+  }
+
+  // ── Canvas setup ────────────────────────────────────────────────
+  function setupCanvas(canvas) {
+    const dpr  = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const W    = Math.round(rect.width  * dpr);
+    const H    = Math.round(rect.height * dpr);
+    if (W === 0 || H === 0) return null;
+    if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+    return { ctx: canvas.getContext('2d'), dpr, W, H };
+  }
+
+  // ── Draw axes ────────────────────────────────────────────────────
+  function drawAxes(ctx, dpr, X0, X1, Y0, Y1, xMax, yMax, xLabel, yLabel, xTicks, yTicks) {
+    const PW = X1 - X0, PH = Y1 - Y0;
+    const xToC = x => X0 + (x / xMax) * PW;
+    const yToC = y => Y1 - (y / yMax) * PH;
+
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1.5 * dpr;
+    ctx.beginPath(); ctx.moveTo(X0, Y1); ctx.lineTo(X1, Y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X0, Y0); ctx.lineTo(X0, Y1); ctx.stroke();
+    // Arrowheads
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath(); ctx.moveTo(X1,Y1); ctx.lineTo(X1-7*dpr,Y1-3.5*dpr); ctx.lineTo(X1-7*dpr,Y1+3.5*dpr); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0-3.5*dpr,Y0+7*dpr); ctx.lineTo(X0+3.5*dpr,Y0+7*dpr); ctx.closePath(); ctx.fill();
+
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.font = `${11*dpr}px Inter,system-ui,sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+
+    // X ticks
+    for (const t of xTicks) {
+      if (t <= 0 || t > xMax * 1.01) continue;
+      const cx = xToC(t);
+      ctx.strokeStyle = 'rgba(0,0,0,0.12)'; ctx.lineWidth = 1 * dpr;
+      ctx.setLineDash([4*dpr, 4*dpr]);
+      ctx.beginPath(); ctx.moveTo(cx, Y0); ctx.lineTo(cx, Y1); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1.5*dpr;
+      ctx.beginPath(); ctx.moveTo(cx, Y1); ctx.lineTo(cx, Y1+4*dpr); ctx.stroke();
+      ctx.fillText(t % 1 === 0 ? t : t.toFixed(1), cx, Y1 + 6*dpr);
+    }
+
+    // Y ticks
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (const t of yTicks) {
+      if (t <= 0 || t > yMax * 1.01) continue;
+      const cy = yToC(t);
+      ctx.strokeStyle = 'rgba(0,0,0,0.12)'; ctx.lineWidth = 1*dpr;
+      ctx.setLineDash([4*dpr, 4*dpr]);
+      ctx.beginPath(); ctx.moveTo(X0, cy); ctx.lineTo(X1, cy); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1.5*dpr;
+      ctx.beginPath(); ctx.moveTo(X0, cy); ctx.lineTo(X0-4*dpr, cy); ctx.stroke();
+      const label = t >= 1000 ? (t/1000).toFixed(1)+'k' : (t % 1 === 0 ? t : t.toFixed(1));
+      ctx.fillText(label, X0 - 7*dpr, cy);
+    }
+
+    // Axis labels
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.font = `600 ${12*dpr}px Inter,system-ui,sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText(xLabel, X0 + PW/2, Y1 + 22*dpr);
+    // Y label — rotated
+    ctx.save();
+    ctx.translate(X0 - 40*dpr, Y0 + PH/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(yLabel, 0, 0);
+    ctx.restore();
+  }
+
+  // ── Draw a curve (with clipping) ─────────────────────────────────
+  function drawCurve(ctx, dpr, X0, X1, Y0, Y1, xMax, yMax, pts, xKey, yKey, color, lw, dashed) {
+    const PW = X1 - X0, PH = Y1 - Y0;
+    const xToC = x => X0 + (x / xMax) * PW;
+    const yToC = y => Y1 - (y / yMax) * PH;
+
+    ctx.save();
+    // clip to plot area
+    ctx.beginPath();
+    ctx.rect(X0, Y0, PW, PH + 1);
+    ctx.clip();
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw * dpr;
+    ctx.lineJoin = 'round';
+    if (dashed) ctx.setLineDash([6*dpr, 4*dpr]);
+    else ctx.setLineDash([]);
+
+    ctx.beginPath();
+    let started = false;
+    for (const p of pts) {
+      const cx = xToC(p[xKey]);
+      const cy = yToC(p[yKey]);
+      if (!started) { ctx.moveTo(cx, cy); started = true; }
+      else ctx.lineTo(cx, cy);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  // ── Draw vertical selection line + dots ──────────────────────────
+  function drawSelector(ctx, dpr, X0, X1, Y0, Y1, xMax, yMax, qSel, dotDefs) {
+    const PW = X1 - X0, PH = Y1 - Y0;
+    const xToC = x => X0 + (x / xMax) * PW;
+    const yToC = y => Y1 - (y / yMax) * PH;
+
+    const cx = xToC(qSel);
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(X0, Y0, PW, PH + 1); ctx.clip();
+
+    // vertical dashed line
+    ctx.strokeStyle = 'rgba(47,93,124,0.4)';
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.setLineDash([5*dpr, 4*dpr]);
+    ctx.beginPath(); ctx.moveTo(cx, Y0); ctx.lineTo(cx, Y1); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // dots at each curve
+    for (const {yVal, color} of dotDefs) {
+      const cy = yToC(yVal);
+      if (cy < Y0 || cy > Y1) continue;  // skip out-of-range dots
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(cx, cy, 5*dpr, 0, 2*Math.PI); ctx.fill();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5*dpr;
+      ctx.beginPath(); ctx.arc(cx, cy, 5*dpr, 0, 2*Math.PI); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ── Draw minimum ATC dot ─────────────────────────────────────────
+  function drawMinDot(ctx, dpr, X0, X1, Y0, Y1, xMax, yMax, q, y) {
+    const PW = X1 - X0, PH = Y1 - Y0;
+    const cx = X0 + (q / xMax) * PW;
+    const cy = Y1 - (y / yMax) * PH;
+    if (cy < Y0 || cy > Y1) return;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(X0, Y0, PW, PH + 1); ctx.clip();
+    ctx.fillStyle = 'rgba(180,35,24,.15)';
+    ctx.beginPath(); ctx.arc(cx, cy, 7*dpr, 0, 2*Math.PI); ctx.fill();
+    ctx.strokeStyle = 'var(--col-mc)'; ctx.lineWidth = 2*dpr;
+    ctx.strokeStyle = '#6d28d9';
+    ctx.beginPath(); ctx.arc(cx, cy, 7*dpr, 0, 2*Math.PI); ctx.stroke();
+    ctx.fillStyle = '#b42318';
+    ctx.beginPath(); ctx.arc(cx, cy, 4*dpr, 0, 2*Math.PI); ctx.fill();
+    ctx.restore();
+  }
+
+  // ── DOM refs ─────────────────────────────────────────────────────
+  const wSlider = document.getElementById('wSlider');
+  const rSlider = document.getElementById('rSlider');
+  const kSlider = document.getElementById('kSlider');
+  const aSlider = document.getElementById('aSlider');
+  const qSlider = document.getElementById('qSlider');
+  const wVal = document.getElementById('wVal');
+  const rVal = document.getElementById('rVal');
+  const kVal = document.getElementById('kVal');
+  const aVal = document.getElementById('aVal');
+  const qVal = document.getElementById('qVal');
+  const mFC  = document.getElementById('mFC');
+  const mVC  = document.getElementById('mVC');
+  const mTC  = document.getElementById('mTC');
+  const mAFC = document.getElementById('mAFC');
+  const mAVC = document.getElementById('mAVC');
+  const mATC = document.getElementById('mATC');
+  const mMC  = document.getElementById('mMC');
+  const insightBox  = document.getElementById('insightBox');
+  const techNote    = document.getElementById('techNote');
+  const tableBody   = document.getElementById('tableBody');
+  const tableLabel  = document.getElementById('tableLabel');
+  const footerFormula = document.getElementById('footerFormula');
+  const canvasTC = document.getElementById('canvasTC');
+  const canvasAC = document.getElementById('canvasAC');
+
+  // ── fmt helpers ──────────────────────────────────────────────────
+  const f2 = v => v.toFixed(2);
+  const f1 = v => v.toFixed(1);
+
+  // ── Update labels & metrics ──────────────────────────────────────
+  function updateMetrics(pts, minIdx) {
+    const fc  = FC();
+    const vc  = VC(Qsel);
+    const tc  = TC(Qsel);
+    const afc = AFC(Qsel);
+    const avc = AVC(Qsel);
+    const atc = ATC(Qsel);
+    const mc  = MC(Qsel);
+
+    mFC.textContent  = `$${f2(fc)}`;
+    mVC.textContent  = `$${f2(vc)}`;
+    mTC.textContent  = `$${f2(tc)}`;
+    mAFC.textContent = `$${f2(afc)}`;
+    mAVC.textContent = `$${f2(avc)}`;
+    mATC.textContent = `$${f2(atc)}`;
+    mMC.textContent  = `$${f2(mc)}`;
+
+    // Insight
+    const minQ   = pts[minIdx].q;
+    const minATC = pts[minIdx].atc;
+    let ins = '';
+    if (Qsel < minQ - 0.5) {
+      ins = `<strong>Q = ${f1(Qsel)}</strong> is below efficient scale (Q* ≈ ${f1(minQ)}). ATC is still falling — increasing output lowers average costs.`;
+    } else if (Qsel > minQ + 0.5) {
+      ins = `<strong>Q = ${f1(Qsel)}</strong> is above efficient scale (Q* ≈ ${f1(minQ)}). ATC is rising — the fixed capital is being over-worked.`;
+    } else {
+      ins = `<strong>Q ≈ ${f1(Qsel)}</strong> is near efficient scale (Q* ≈ ${f1(minQ)}, ATC* ≈ $${f2(minATC)}). MC ≈ ATC — minimum average total cost.`;
+    }
+    insightBox.innerHTML = ins;
+
+    // Tech note
+    const beta = 1/(1-alpha);
+    techNote.innerHTML = `FC = r·K̄ = $${f2(fc)}&ensp;|&ensp;VC grows as Q<sup>${f2(beta)}</sup> (convex from origin)`;
+
+    // Labels
+    const aStr = alpha % 1 === 0 ? alpha : alpha.toFixed(2);
+    const baStr = (1-alpha) % 1 === 0 ? (1-alpha) : (1-alpha).toFixed(2);
+    tableLabel.innerHTML = `Q = K̄<sup>${aStr}</sup> L<sup>${baStr}</sup>, &nbsp;w = ${f2(w)}, &nbsp;r = ${f2(r)}, &nbsp;K̄ = ${Kbar}`;
+    footerFormula.innerHTML = `Short-Run: Q = K̄<sup>${aStr}</sup> · L<sup>${baStr}</sup> &nbsp;|&nbsp; w = ${f2(w)}, r = ${f2(r)}, K̄ = ${Kbar}`;
+  }
+
+  // ── Build data table ─────────────────────────────────────────────
+  function buildTable(minIdx, pts) {
+    const tableQs = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20];
+    const fc = FC();
+    tableBody.innerHTML = tableQs.map(q => {
+      // find nearest minIdx q
+      const minQ = pts[minIdx].q;
+      const isMin = Math.abs(q - minQ) < 0.8;
+      const isSel = Math.abs(q - Qsel) < 0.3;
+      const vc  = VC(q);
+      const tc  = TC(q);
+      const afc = AFC(q);
+      const avc = AVC(q);
+      const atc = ATC(q);
+      const mc  = MC(q);
+      const cls = (isMin || isSel) ? ' class="hl"' : '';
+      return `<tr${cls}>
+        <td>${q}</td>
+        <td>${f2(fc)}</td>
+        <td>${f2(vc)}</td>
+        <td>${f2(tc)}</td>
+        <td>${f2(afc)}</td>
+        <td>${f2(avc)}</td>
+        <td>${f2(atc)}</td>
+        <td>${f2(mc)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Draw TC canvas ───────────────────────────────────────────────
+  function drawTC(pts, minIdx) {
+    const cv = setupCanvas(canvasTC);
+    if (!cv) return;
+    const {ctx, dpr, W, H} = cv;
+
+    const PAD = { t: 22*dpr, r: 20*dpr, b: 52*dpr, l: 62*dpr };
+    const X0 = PAD.l, X1 = W - PAD.r, Y0 = PAD.t, Y1 = H - PAD.b;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Compute axis bounds
+    const tcMax  = TC(Q_MAX) * 1.15;
+    const xTicks = niceTicks(Q_MAX, 5);
+    const yTicks = niceTicks(tcMax, 6);
+    const yMax   = yTicks[yTicks.length - 1];
+
+    drawAxes(ctx, dpr, X0, X1, Y0, Y1, Q_MAX, yMax, 'Quantity (Q)', 'Cost ($)', xTicks, yTicks);
+
+    // FC flat dashed line
+    const fcVal = FC();
+    drawCurve(ctx, dpr, X0, X1, Y0, Y1, Q_MAX, yMax,
+      [{q:0, fc:fcVal}, {q:Q_MAX, fc:fcVal}], 'q', 'fc',
+      getComputedStyle(document.documentElement).getPropertyValue('--col-fc').trim() || '#9ca3af',
+      1.8, true);
+
+    // VC
+    drawCurve(ctx, dpr, X0, X1, Y0, Y1, Q_MAX, yMax, pts, 'q', 'vc',
+      getComputedStyle(document.documentElement).getPropertyValue('--col-vc').trim() || '#2f5d7c', 2.5, false);
+
+    // TC
+    drawCurve(ctx, dpr, X0, X1, Y0, Y1, Q_MAX, yMax, pts, 'q', 'tc',
+      getComputedStyle(document.documentElement).getPropertyValue('--col-tc').trim() || '#0f2742', 2.5, false);
+
+    // Selection line + dots
+    drawSelector(ctx, dpr, X0, X1, Y0, Y1, Q_MAX, yMax, Qsel, [
+      {yVal: fcVal,    color: '#9ca3af'},
+      {yVal: VC(Qsel), color: '#2f5d7c'},
+      {yVal: TC(Qsel), color: '#0f2742'},
+    ]);
+
+    // Curve labels (right side)
+    const PW = X1 - X0, PH = Y1 - Y0;
+    const xLab = Q_MAX * 0.82;
+    ctx.font = `700 ${10.5*dpr}px Inter,system-ui,sans-serif`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    const labX = X0 + (xLab / Q_MAX) * PW + 4*dpr;
+    const fcY  = Y1 - (fcVal / yMax) * PH;
+    const vcY  = Y1 - (VC(xLab) / yMax) * PH;
+    const tcY  = Y1 - (TC(xLab) / yMax) * PH;
+
+    if (fcY > Y0 && fcY < Y1) { ctx.fillStyle='#9ca3af'; ctx.fillText('FC', labX, fcY); }
+    if (vcY > Y0 && vcY < Y1) { ctx.fillStyle='#2f5d7c'; ctx.fillText('VC', labX, vcY); }
+    if (tcY > Y0 && tcY < Y1) { ctx.fillStyle='#0f2742'; ctx.fillText('TC', labX, tcY); }
+  }
+
+  // ── Draw AC canvas ───────────────────────────────────────────────
+  function drawAC(pts, minIdx) {
+    const cv = setupCanvas(canvasAC);
+    if (!cv) return;
+    const {ctx, dpr, W, H} = cv;
+
+    const PAD = { t: 22*dpr, r: 20*dpr, b: 52*dpr, l: 62*dpr };
+    const X0 = PAD.l, X1 = W - PAD.r, Y0 = PAD.t, Y1 = H - PAD.b;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Compute y-axis max: use ATC at Q_MIN (roughly) but cap it reasonably
+    // Cap so AFC at Q=1 doesn't blow out the chart — use ATC at Q_MIN*3
+    const atcStart  = ATC(Q_MIN * 3);
+    const mcEnd     = MC(Q_MAX);
+    const rawMax    = Math.max(atcStart, mcEnd) * 1.2;
+    const yTicks    = niceTicks(rawMax, 6);
+    const yMax      = yTicks[yTicks.length - 1];
+    const xTicks    = niceTicks(Q_MAX, 5);
+
+    drawAxes(ctx, dpr, X0, X1, Y0, Y1, Q_MAX, yMax, 'Quantity (Q)', '$ per unit', xTicks, yTicks);
+
+    // Filter pts to visible y range
+    const visPts = pts.filter(p => p.q >= Q_MIN);
+
+    // AFC
+    drawCurve(ctx, dpr, X0, X1, Y0, Y1, Q_MAX, yMax, visPts, 'q', 'afc',
+      '#1b7f4b', 2, false);
+    // AVC
+    drawCurve(ctx, dpr, X0, X1, Y0, Y1, Q_MAX, yMax, visPts, 'q', 'avc',
+      '#c2690a', 2.5, false);
+    // ATC
+    drawCurve(ctx, dpr, X0, X1, Y0, Y1, Q_MAX, yMax, visPts, 'q', 'atc',
+      '#b42318', 2.5, false);
+    // MC
+    drawCurve(ctx, dpr, X0, X1, Y0, Y1, Q_MAX, yMax, visPts, 'q', 'mc',
+      '#6d28d9', 2, false);
+
+    // Min ATC dot
+    const minPt = pts[minIdx];
+    drawMinDot(ctx, dpr, X0, X1, Y0, Y1, Q_MAX, yMax, minPt.q, minPt.atc);
+
+    // Selection line + dots
+    drawSelector(ctx, dpr, X0, X1, Y0, Y1, Q_MAX, yMax, Qsel, [
+      {yVal: AFC(Qsel),  color: '#1b7f4b'},
+      {yVal: AVC(Qsel),  color: '#c2690a'},
+      {yVal: ATC(Qsel),  color: '#b42318'},
+      {yVal: MC(Qsel),   color: '#6d28d9'},
+    ]);
+
+    // Curve labels (right side)
+    const PW = X1 - X0, PH = Y1 - Y0;
+    const xLab = Q_MAX * 0.9;
+    ctx.font = `700 ${10.5*dpr}px Inter,system-ui,sans-serif`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    const labX  = X0 + (xLab / Q_MAX) * PW + 2*dpr;
+    const afcY  = Y1 - (Math.min(AFC(xLab), yMax * 0.95) / yMax) * PH;
+    const avcY  = Y1 - (Math.min(AVC(xLab), yMax * 0.95) / yMax) * PH;
+    const atcY  = Y1 - (Math.min(ATC(xLab), yMax * 0.95) / yMax) * PH;
+    const mcY   = Y1 - (Math.min(MC(xLab),  yMax * 0.95) / yMax) * PH;
+
+    const cols = { afc:'#1b7f4b', avc:'#c2690a', atc:'#b42318', mc:'#6d28d9' };
+    const labDefs = [
+      {y: afcY, color: cols.afc, text: 'AFC'},
+      {y: avcY, color: cols.avc, text: 'AVC'},
+      {y: atcY, color: cols.atc, text: 'ATC'},
+      {y:  mcY, color: cols.mc,  text: 'MC'},
+    ];
+    for (const {y, color, text} of labDefs) {
+      if (y > Y0 && y < Y1) {
+        ctx.fillStyle = color;
+        ctx.fillText(text, labX, y);
+      }
+    }
+  }
+
+  // ── Master redraw ─────────────────────────────────────────────────
+  function redraw() {
+    const pts    = buildPoints();
+    const minIdx = findMinATC(pts);
+    drawTC(pts, minIdx);
+    drawAC(pts, minIdx);
+    updateMetrics(pts, minIdx);
+    buildTable(minIdx, pts);
+  }
+
+  // ── Bind sliders ─────────────────────────────────────────────────
+  function bind(slider, valEl, decimals, onSet) {
+    const update = () => {
+      const v = parseFloat(slider.value);
+      valEl.textContent = decimals === 0 ? v : v.toFixed(decimals);
+      onSet(v);
+      redraw();
+    };
+    slider.addEventListener('input', update);
+    update();
+  }
+
+  bind(wSlider, wVal, 2, v => { w = v; });
+  bind(rSlider, rVal, 2, v => { r = v; });
+  bind(kSlider, kVal, 0, v => { Kbar = v; });
+  bind(aSlider, aVal, 2, v => { alpha = v; });
+  bind(qSlider, qVal, 1, v => { Qsel = v; });
+
+  // ── Resize observer ───────────────────────────────────────────────
+  const ro = new ResizeObserver(() => redraw());
+  ro.observe(canvasTC);
+  ro.observe(canvasAC);
+
+  // ── Init ──────────────────────────────────────────────────────────
+  // Double-rAF to ensure canvas has layout dimensions before drawing
+  requestAnimationFrame(() => requestAnimationFrame(redraw));
+
+})();
+</script>
+</body>
+</html>
