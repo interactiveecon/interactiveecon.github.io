@@ -1,0 +1,1143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Cost Curve Quiz — ECON 104A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+  <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937; --ink-2:#374151; --muted:#6b7280;
+      --line:#e7dfd2; --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#1b7f4b; --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+      --col-afc:#1b7f4b;
+      --col-avc:#c2690a;
+      --col-atc:#b42318;
+      --col-mc:#6d28d9;
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Header ─────────────────────────────────────────────── */
+    .page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1120px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:13px;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:32px;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:15px;}
+
+    /* ── Layout ─────────────────────────────────────────────── */
+    .lab-wrap{max-width:980px;margin:0 auto;padding:18px;}
+    .main-cols{display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start;}
+    @media(max-width:820px){.main-cols{grid-template-columns:1fr;}}
+
+    /* ── Cards ──────────────────────────────────────────────── */
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px 24px;box-shadow:var(--shadow);margin-bottom:16px;}
+    .card-head{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--accent);margin:0 0 12px;}
+
+    /* ── TC display ─────────────────────────────────────────── */
+    .tc-box{background:rgba(47,93,124,.04);border:1px solid rgba(47,93,124,.14);border-radius:12px;padding:12px 16px;font-size:17px;text-align:center;}
+    .formula-list{margin-top:10px;padding:8px 14px;background:rgba(47,93,124,.03);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;gap:4px;}
+    .formula-row{font-size:13px;line-height:1.5;}
+
+    /* ── Progress ───────────────────────────────────────────── */
+    .progress-bar{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+    .progress-pip{flex:1;min-width:32px;height:6px;border-radius:99px;background:var(--line);transition:background .25s;}
+    .progress-pip.done{background:var(--good);}
+    .progress-pip.active{background:var(--accent);}
+
+    /* ── Section labels ─────────────────────────────────────── */
+    .section-label{font-size:13px;font-weight:700;color:var(--ink-2);margin:0 0 5px;}
+    .section-note{font-size:13px;color:var(--ink-2);margin:0 0 12px;line-height:1.5;}
+
+    /* ── Multiple choice ────────────────────────────────────── */
+    .mc-q{font-size:15px;color:var(--ink);line-height:1.5;margin-bottom:12px;}
+    .mc-options{display:flex;flex-direction:column;gap:8px;}
+    .mc-option{
+      display:flex;align-items:center;gap:10px;
+      padding:10px 14px;border:1.5px solid var(--line-2);border-radius:12px;
+      background:#fff;cursor:pointer;font-size:13.5px;color:var(--ink);
+      transition:border-color .12s,background .12s,transform .06s;
+      text-align:left;width:100%;
+    }
+    .mc-option:hover:not(.disabled){border-color:rgba(47,93,124,.5);background:rgba(47,93,124,.04);}
+    .mc-option:active:not(.disabled){transform:translateY(1px);}
+    .mc-option.selected-correct{border-color:var(--good);background:rgba(27,127,75,.08);}
+    .mc-option.selected-wrong  {border-color:var(--bad);background:rgba(180,35,24,.06);}
+    .mc-option.revealed-correct{border-color:var(--good);background:rgba(27,127,75,.1);}
+    .mc-option.disabled{cursor:default;opacity:.75;}
+    .mc-letter{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line-2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--muted);flex-shrink:0;}
+    .mc-option.selected-correct .mc-letter{background:var(--good);color:#fff;border-color:var(--good);}
+    .mc-option.selected-wrong   .mc-letter{background:var(--bad);color:#fff;border-color:var(--bad);}
+    .mc-option.revealed-correct .mc-letter{background:var(--good);color:#fff;border-color:var(--good);}
+    .expl-box{margin-top:10px;padding:10px 14px;border-radius:12px;background:rgba(47,93,124,.06);border:1px solid rgba(47,93,124,.15);font-size:12.5px;color:var(--ink-2);line-height:1.6;animation:fadeUp .2s ease;}
+
+    /* ── Inputs ─────────────────────────────────────────────── */
+    .answer-row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px;}
+    .answer-field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+    .answer-field input{width:110px;padding:9px 11px;border:1.5px solid var(--line-2);border-radius:12px;font-size:16px;font-family:var(--font-sans);color:var(--ink);background:#fafaf8;outline:none;transition:border-color .12s;}
+    .answer-field input:focus  {border-color:var(--accent);background:#fff;}
+    .answer-field input.correct{border-color:var(--good);background:rgba(27,127,75,.06);}
+    .answer-field input.wrong  {border-color:var(--bad);background:rgba(180,35,24,.06);}
+
+    /* ── Result messages ────────────────────────────────────── */
+    .result-msg{padding:10px 14px;border-radius:12px;font-size:13px;font-weight:600;line-height:1.5;margin-top:8px;}
+    .result-msg.correct{background:rgba(27,127,75,.10);border:1px solid rgba(27,127,75,.25);color:var(--good);}
+    .result-msg.wrong  {background:rgba(180,35,24,.08);border:1px solid rgba(180,35,24,.25);color:var(--bad);}
+    .result-msg.info   {background:rgba(47,93,124,.06);border:1px solid rgba(47,93,124,.18);color:var(--ink-2);}
+
+    /* ── Buttons ────────────────────────────────────────────── */
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:none;border-radius:12px;font-family:var(--font-sans);font-size:14px;font-weight:700;cursor:pointer;transition:background .12s,opacity .12s;}
+    .btn:disabled{opacity:.45;cursor:not-allowed;}
+    .btn.primary{background:var(--accent);color:#fff;}
+    .btn.primary:hover:not(:disabled){background:#264d68;}
+    .btn.ghost{background:rgba(47,93,124,.09);color:var(--accent);border:1.5px solid rgba(47,93,124,.35);}
+    .btn.ghost:hover:not(:disabled){background:rgba(47,93,124,.15);}
+
+    /* ── Diagnostic ─────────────────────────────────────────── */
+    .diag{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);}
+    .diag-title{font-size:13px;font-weight:700;color:var(--ink);margin:0 0 12px;}
+    .diag-step{margin-bottom:16px;animation:fadeUp .22s ease;}
+    .diag-step-head{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:7px;}
+    .diag-q{font-size:14px;color:var(--ink);margin-bottom:10px;line-height:1.5;}
+    .diag-complete{padding:12px 14px;border-radius:12px;background:rgba(27,127,75,.08);border:1px solid rgba(27,127,75,.20);color:var(--good);font-weight:600;font-size:13px;margin-top:10px;}
+
+    /* ── Divider ────────────────────────────────────────────── */
+    hr.section-div{border:none;border-top:1px solid var(--line);margin:20px 0;}
+
+    /* ── Graph ──────────────────────────────────────────────── */
+    .graph-head{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:10px;}
+    .graph-wrap{position:relative;width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;background:rgba(246,242,234,.45);border:1px solid var(--line);}
+    #graphCanvas{display:block;width:100%;height:100%;}
+    .graph-legend{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+    .legend-row{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-2);}
+    .legend-swatch{width:22px;height:3px;border-radius:2px;flex-shrink:0;}
+    .legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;border:1.5px solid #fff;box-shadow:0 0 0 1px currentColor;}
+    .graph-note{margin-top:10px;padding:8px 12px;border-radius:10px;font-size:12px;line-height:1.5;color:var(--ink-2);background:rgba(47,93,124,.06);border:1px solid rgba(47,93,124,.14);}
+
+    /* ── Completion ─────────────────────────────────────────── */
+    .complete-banner{padding:16px 20px;border-radius:14px;background:rgba(27,127,75,.10);border:1px solid rgba(27,127,75,.25);color:var(--good);font-weight:700;font-size:15px;text-align:center;margin-top:4px;animation:fadeUp .3s ease;}
+
+    /* ── Utilities ──────────────────────────────────────────── */
+    .hidden{display:none!important;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:translateY(0);}}
+    .katex{font-size:1em;}
+
+    footer{border-top:1px solid var(--line);margin-top:32px;}
+    .foot-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--muted);padding:14px 0;}
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar">
+      <a class="crumb-link" href="/classes/econ104a/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104A — Costs</div>
+      <h1>Cost Curve Quiz</h1>
+      <p class="sub">Given a total cost function, identify the cost curves, find minimum AVC and ATC, and determine the range of economies of scale.</p>
+    </div>
+  </div>
+</header>
+
+<main class="lab-wrap">
+  <div class="main-cols">
+
+    <!-- ── LEFT COLUMN ───────────────────────────────────────── -->
+    <div>
+
+      <!-- Problem card -->
+      <div class="card">
+        <div class="card-head">Total Cost Function</div>
+        <div class="tc-box" id="tcDisplay"></div>
+        <div id="formulaList" class="formula-list hidden"></div>
+      </div>
+
+      <!-- Progress bar -->
+      <div class="progress-bar" id="progressBar"></div>
+
+      <!-- Part 1: Formula MC -->
+      <div class="card" id="part1Card">
+        <div class="card-head">Part 1 — Identify the Cost Curves</div>
+        <p class="section-note" style="margin-bottom:14px;">Select the correct formula for each cost curve. Curves are revealed one at a time.</p>
+        <div id="mcContainer"></div>
+      </div>
+
+      <!-- Part 2: Minimum costs -->
+      <div class="card hidden" id="part2Card">
+        <div class="card-head">Part 2 — Find the Minimum Costs</div>
+        <p class="section-note" style="margin-bottom:14px;">Solve for the quantity at which average costs are minimized.</p>
+
+        <!-- AVC subsection -->
+        <div id="avcSection">
+
+          <!-- Entry UI (cubic) -->
+          <div id="avcEntryUI">
+            <div class="section-label">Minimum Average Variable Cost</div>
+            <p class="section-note">At what quantity Q is AVC minimized? <em>(Hint: set AVC = MC)</em></p>
+            <div class="answer-row">
+              <div class="answer-field">
+                <label>Q* (min AVC)</label>
+                <input type="text" id="ansAVC" placeholder="e.g. 3" autocomplete="off"/>
+              </div>
+              <button class="btn primary" id="checkAVC">Check</button>
+            </div>
+            <div id="msgAVC" class="result-msg hidden"></div>
+            <div id="diagAVC" class="diag hidden">
+              <div class="diag-title">Let's work through this step by step.</div>
+              <div id="diagAVCSteps"></div>
+              <div id="diagAVCComplete" class="diag-complete hidden"></div>
+            </div>
+          </div>
+
+          <!-- Note (quadratic: AVC is linear) -->
+          <div id="avcNoteUI" class="hidden">
+            <div class="section-label">Average Variable Cost</div>
+            <div class="result-msg info" id="avcNoteMsg"></div>
+          </div>
+
+        </div><!-- /#avcSection -->
+
+        <hr class="section-div hidden" id="avcAtcDivider"/>
+
+        <!-- ATC subsection -->
+        <div id="atcSection" class="hidden">
+          <div class="section-label">Minimum Average Total Cost</div>
+          <p class="section-note">At what quantity Q is ATC minimized? <em>(Hint: set ATC = MC)</em></p>
+          <div class="answer-row">
+            <div class="answer-field">
+              <label>Q* (min ATC)</label>
+              <input type="text" id="ansATC" placeholder="e.g. 5" autocomplete="off"/>
+            </div>
+            <button class="btn primary" id="checkATC">Check</button>
+          </div>
+          <div id="msgATC" class="result-msg hidden"></div>
+          <div id="diagATC" class="diag hidden">
+            <div class="diag-title">Let's work through this step by step.</div>
+            <div id="diagATCSteps"></div>
+            <div id="diagATCComplete" class="diag-complete hidden"></div>
+          </div>
+        </div>
+
+      </div><!-- /#part2Card -->
+
+      <!-- Part 3: Economies of scale -->
+      <div class="card hidden" id="part3Card">
+        <div class="card-head">Part 3 — Economies of Scale</div>
+        <p class="section-note" style="margin-bottom:14px;">The firm experiences economies of scale where ATC is <em>decreasing</em> — i.e., where MC &lt; ATC.</p>
+        <div class="mc-q" id="eosQ"></div>
+        <div class="mc-options" id="eosOptions"></div>
+        <div id="eosExpl" class="expl-box hidden"></div>
+      </div>
+
+      <!-- Completion -->
+      <div id="completeBanner" class="hidden">
+        <div class="complete-banner">🎉 All done! Great work.</div>
+        <div style="margin-top:14px;">
+          <button class="btn ghost" id="newProblemBtn">↺ New Problem</button>
+        </div>
+      </div>
+
+    </div><!-- /left column -->
+
+    <!-- ── RIGHT COLUMN ──────────────────────────────────────── -->
+    <div>
+      <div class="card" style="position:sticky;top:18px;">
+        <div class="graph-head">Per-Unit Cost Curves</div>
+        <div class="graph-wrap">
+          <canvas id="graphCanvas"></canvas>
+        </div>
+        <div class="graph-legend">
+          <div class="legend-row"><div class="legend-swatch" style="background:var(--col-afc);"></div><span>AFC</span></div>
+          <div class="legend-row"><div class="legend-swatch" style="background:var(--col-avc);"></div><span>AVC</span></div>
+          <div class="legend-row"><div class="legend-swatch" style="background:var(--col-atc);"></div><span>ATC</span></div>
+          <div class="legend-row"><div class="legend-swatch" style="background:var(--col-mc);"></div><span>MC</span></div>
+          <div class="legend-row hidden" id="legendGuessAVC"><div class="legend-dot" style="background:#c2690a;color:#c2690a;"></div><span>Your AVC guess</span></div>
+          <div class="legend-row hidden" id="legendMinAVC">  <div class="legend-dot" style="background:#1b7f4b;color:#1b7f4b;"></div><span>Min AVC</span></div>
+          <div class="legend-row hidden" id="legendGuessATC"><div class="legend-dot" style="background:#b42318;color:#b42318;"></div><span>Your ATC guess</span></div>
+          <div class="legend-row hidden" id="legendMinATC">  <div class="legend-dot" style="background:#1b7f4b;color:#1b7f4b;"></div><span>Min ATC</span></div>
+        </div>
+        <div class="graph-note hidden" id="graphNote"></div>
+      </div>
+    </div>
+
+  </div><!-- /.main-cols -->
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="foot-inner">
+      <span>ECON 104A — Intermediate Microeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════════════
+// PROBLEM GENERATION
+// ═══════════════════════════════════════════════════════════════════════
+
+function randInt(lo,hi){ return lo+Math.floor(Math.random()*(hi-lo+1)); }
+function pick(arr){ return arr[randInt(0,arr.length-1)]; }
+
+// CUBIC: TC = FC + aQ + bQ² + Q³  (c=1, b = -2·Qv < 0)
+// FC = 2·Qa²·(Qa−Qv) guarantees ATC min exactly at Qa
+// a > 4·Qv²/3 guarantees MC > 0 everywhere
+function genCubic(){
+  const Qv   = pick([2,3,4,5,6]);
+  const diff = pick([2,3,4,5]);
+  const Qa   = Qv + diff;
+  const b    = -2*Qv;
+  const c    = 1;
+  const FC   = 2*Qa*Qa*(Qa-Qv);
+  const aMin = Math.ceil(4*Qv*Qv/3)+2;
+  const a    = aMin + pick([0,5,10,15,20,30,40]);
+  const minAVC_val = a + b*Qv + c*Qv*Qv;
+  const minATC_val = FC/Qa + a + b*Qa + c*Qa*Qa;
+  return {type:'cubic', FC, a, b, c, Qv, Qa, minAVC_val, minATC_val};
+}
+
+// QUADRATIC: TC = FC + aQ + bQ²  (b > 0)
+// FC = b·Qa² guarantees ATC min exactly at Qa = √(FC/b)
+// AVC = a + bQ is linear → no interior minimum
+function genQuadratic(){
+  const Qa = pick([3,4,5,6,7,8,9,10]);
+  const b  = pick([1,2,3,4,5,6]);
+  const FC = b*Qa*Qa;
+  const a  = pick([5,8,10,12,15,18,20,25,30,40,50]);
+  const c  = 0;
+  const minATC_val = FC/Qa + a + b*Qa; // = a + 2b·Qa
+  return {type:'quadratic', FC, a, b, c, Qa, minATC_val};
+}
+
+function generateProblem(){
+  return Math.random() < 0.5 ? genCubic() : genQuadratic();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// KATEX HELPERS
+// ═══════════════════════════════════════════════════════════════════════
+
+function kHTML(tex){
+  if(typeof tex !== 'string') tex = String(tex);
+  return katex ? katex.renderToString(tex,{throwOnError:false}) : tex;
+}
+function kRender(el,tex){
+  if(typeof tex !== 'string') tex = String(tex);
+  if(katex) katex.render(tex,el,{throwOnError:false});
+  else el.textContent = tex;
+}
+
+// Format polynomial: [{coef, varStr}] → LaTeX string
+// e.g. [{coef:48,varStr:''},{coef:-10,varStr:'Q'},{coef:1,varStr:'Q^{2}'}] → "48 - 10Q + Q^{2}"
+function poly(terms){
+  let res='';
+  for(const {coef,varStr} of terms){
+    if(coef===0) continue;
+    const abs = Math.abs(coef);
+    const absStr = (abs===1 && varStr) ? '' : String(abs);
+    if(res===''){
+      res += (coef<0?'-':'') + absStr + varStr;
+    } else {
+      res += (coef>0?' + ':' - ') + absStr + varStr;
+    }
+  }
+  return res||'0';
+}
+
+// ── Formula TeX (option text — no label prefix) ────────────────────────
+function afcOptionTeX(p){ return '\\dfrac{'+p.FC+'}{Q}'; }
+function avcOptionTeX(p){ return poly([{coef:p.a,varStr:''},{coef:p.b,varStr:'Q'},{coef:p.c,varStr:'Q^{2}'}]); }
+function atcOptionTeX(p){ return '\\dfrac{'+p.FC+'}{Q} + '+avcOptionTeX(p); }
+function mcOptionTeX(p) { return poly([{coef:p.a,varStr:''},{coef:2*p.b,varStr:'Q'},{coef:3*p.c,varStr:'Q^{2}'}]); }
+
+// ── Formula TeX (with label — for reference list) ──────────────────────
+function afcTeX(p){ return 'AFC = '+afcOptionTeX(p); }
+function avcTeX(p){ return 'AVC = '+avcOptionTeX(p); }
+function atcTeX(p){ return 'ATC = '+atcOptionTeX(p); }
+function mcTeX(p) { return 'MC = '+mcOptionTeX(p); }
+
+function tcTeX(p){
+  if(p.type==='quadratic'){
+    return 'TC = '+poly([{coef:p.FC,varStr:''},{coef:p.a,varStr:'Q'},{coef:p.b,varStr:'Q^{2}'}]);
+  }
+  return 'TC = '+poly([{coef:p.FC,varStr:''},{coef:p.a,varStr:'Q'},{coef:p.b,varStr:'Q^{2}'},{coef:p.c,varStr:'Q^{3}'}]);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════
+
+let prob = {};
+let mcIndex   = 0;   // 0–3
+let mcDone    = false;
+let avcDone   = false;
+let atcDone   = false;
+let eosDone   = false;
+let diagAVCStep = 0;
+let diagATCStep = 0;
+let graphRevealed = false;
+
+// Graph point state
+let studentAVCq       = null;
+let studentAVCok      = false;
+let showCorrectAVCpt  = false;
+let studentATCq       = null;
+let studentATCok      = false;
+let showCorrectATCpt  = false;
+
+const MC_LABELS = ['AFC','AVC','ATC','MC'];
+const MC_COLORS = ['var(--col-afc)','var(--col-avc)','var(--col-atc)','var(--col-mc)'];
+
+// ═══════════════════════════════════════════════════════════════════════
+// DOM REFS
+// ═══════════════════════════════════════════════════════════════════════
+
+const $tc         = document.getElementById('tcDisplay');
+const $fmtList    = document.getElementById('formulaList');
+const $progress   = document.getElementById('progressBar');
+const $p1card     = document.getElementById('part1Card');
+const $mcCont     = document.getElementById('mcContainer');
+const $p2card     = document.getElementById('part2Card');
+const $avcEntryUI = document.getElementById('avcEntryUI');
+const $avcNoteUI  = document.getElementById('avcNoteUI');
+const $avcNoteMsg = document.getElementById('avcNoteMsg');
+const $avcAtcDiv  = document.getElementById('avcAtcDivider');
+const $atcSect    = document.getElementById('atcSection');
+const $p3card     = document.getElementById('part3Card');
+const $complete   = document.getElementById('completeBanner');
+const $ansAVC     = document.getElementById('ansAVC');
+const $ansATC     = document.getElementById('ansATC');
+const $checkAVC   = document.getElementById('checkAVC');
+const $checkATC   = document.getElementById('checkATC');
+const $msgAVC     = document.getElementById('msgAVC');
+const $msgATC     = document.getElementById('msgATC');
+const $diagAVC    = document.getElementById('diagAVC');
+const $diagATC    = document.getElementById('diagATC');
+const $diagAVCS   = document.getElementById('diagAVCSteps');
+const $diagATCS   = document.getElementById('diagATCSteps');
+const $diagAVCC   = document.getElementById('diagAVCComplete');
+const $diagATCC   = document.getElementById('diagATCComplete');
+const $eosQ       = document.getElementById('eosQ');
+const $eosOpts    = document.getElementById('eosOptions');
+const $eosExpl    = document.getElementById('eosExpl');
+const $canvas     = document.getElementById('graphCanvas');
+const $gNote      = document.getElementById('graphNote');
+
+// ═══════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════
+
+function init(){
+  prob = generateProblem();
+  mcIndex=0; mcDone=false; avcDone=false; atcDone=false; eosDone=false;
+  diagAVCStep=0; diagATCStep=0; graphRevealed=false;
+  studentAVCq=null; studentAVCok=false; showCorrectAVCpt=false;
+  studentATCq=null; studentATCok=false; showCorrectATCpt=false;
+
+  kRender($tc, tcTeX(prob));
+
+  // Formula list: clear & hide
+  $fmtList.innerHTML=''; $fmtList.classList.add('hidden');
+
+  // Reset visibility
+  $p1card.classList.remove('hidden');
+  $p2card.classList.add('hidden');
+  $atcSect.classList.add('hidden');
+  $p3card.classList.add('hidden');
+  $complete.classList.add('hidden');
+
+  // AVC/ATC section visibility reset (Part 2 not shown yet, but reset internals)
+  $avcEntryUI.classList.remove('hidden');
+  $avcNoteUI.classList.add('hidden');
+  $avcAtcDiv.classList.add('hidden');
+
+  // Reset inputs
+  [$ansAVC,$ansATC].forEach(el=>{el.value='';el.className='';el.disabled=false;});
+  [$checkAVC,$checkATC].forEach(el=>el.disabled=false);
+  [$msgAVC,$msgATC].forEach(el=>{el.className='result-msg hidden';el.innerHTML='';});
+  [$diagAVC,$diagATC].forEach(el=>el.classList.add('hidden'));
+  [$diagAVCS,$diagATCS].forEach(el=>el.innerHTML='');
+  [$diagAVCC,$diagATCC].forEach(el=>el.classList.add('hidden'));
+  $eosQ.innerHTML=''; $eosOpts.innerHTML=''; $eosExpl.classList.add('hidden');
+  $gNote.classList.add('hidden');
+  ['legendGuessAVC','legendMinAVC','legendGuessATC','legendMinATC'].forEach(id=>
+    document.getElementById(id).classList.add('hidden'));
+
+  updateProgress();
+  renderMCQuestion();
+  drawGraph();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// PROGRESS BAR
+// ═══════════════════════════════════════════════════════════════════════
+
+function updateProgress(){
+  const isQ = prob.type === 'quadratic';
+  const total = isQ ? 6 : 7;
+  const done  = (mcDone ? 4 : mcIndex)
+              + (!isQ ? (avcDone?1:0) : 0)
+              + (atcDone?1:0)
+              + (eosDone?1:0);
+  $progress.innerHTML='';
+  for(let i=0;i<total;i++){
+    const pip=document.createElement('div');
+    pip.className='progress-pip'+(i<done?' done':i===done?' active':'');
+    $progress.appendChild(pip);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// FORMULA REFERENCE LIST (under TC)
+// ═══════════════════════════════════════════════════════════════════════
+
+const FORMULA_COLORS = ['var(--col-afc)','var(--col-avc)','var(--col-atc)','var(--col-mc)'];
+function addFormulaToList(idx){
+  const p = prob;
+  const texFns = [afcTeX, avcTeX, atcTeX, mcTeX];
+  $fmtList.classList.remove('hidden');
+  const row = document.createElement('div');
+  row.className = 'formula-row';
+  row.style.color = FORMULA_COLORS[idx];
+  kRender(row, texFns[idx](p));
+  $fmtList.appendChild(row);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// MULTIPLE CHOICE — PART 1
+// ═══════════════════════════════════════════════════════════════════════
+
+function shuffle(arr){ return [...arr].sort(()=>Math.random()-.5); }
+
+function renderMCQuestion(){
+  $mcCont.innerHTML='';
+  const p = prob;
+  // Options show the FORMULA ONLY (no "AFC =" prefix)
+  const allOptions = [afcOptionTeX(p), avcOptionTeX(p), atcOptionTeX(p), mcOptionTeX(p)];
+  const correctIdx  = mcIndex; // 0=AFC,1=AVC,2=ATC,3=MC
+
+  const qEl = document.createElement('div');
+  qEl.className = 'mc-q';
+  qEl.innerHTML = 'Which of the following is <strong style="color:'+MC_COLORS[mcIndex]+';">'+MC_LABELS[mcIndex]+'</strong>?';
+  $mcCont.appendChild(qEl);
+
+  const indices = shuffle([0,1,2,3]);
+  const letters = ['A','B','C','D'];
+  const optsDiv = document.createElement('div');
+  optsDiv.className = 'mc-options';
+
+  indices.forEach((fIdx,pos)=>{
+    const btn = document.createElement('button');
+    btn.className='mc-option';
+    btn.innerHTML = '<div class="mc-letter">'+letters[pos]+'</div><div>'+kHTML(allOptions[fIdx])+'</div>';
+    btn.addEventListener('click',()=>handleMCClick(fIdx,correctIdx,indices,pos,letters,allOptions));
+    optsDiv.appendChild(btn);
+  });
+  $mcCont.appendChild(optsDiv);
+}
+
+function handleMCClick(chosen,correct,indices,clickedPos,letters,allOptions){
+  const btns = $mcCont.querySelectorAll('.mc-option');
+  btns.forEach(b=>b.classList.add('disabled'));
+  const clickedBtn = btns[clickedPos];
+
+  if(chosen===correct){
+    clickedBtn.classList.add('selected-correct');
+  } else {
+    clickedBtn.classList.add('selected-wrong');
+    indices.forEach((fIdx,p)=>{ if(fIdx===correct) btns[p].classList.add('revealed-correct'); });
+  }
+
+  const expl=document.createElement('div');
+  expl.className='expl-box';
+  expl.innerHTML = (chosen===correct?'':'✗ Not quite. ') + explanationFor(correct);
+  $mcCont.appendChild(expl);
+
+  setTimeout(advanceMC, chosen===correct ? 800 : 1400);
+}
+
+function explanationFor(idx){
+  const p = prob;
+  switch(idx){
+    case 0: return 'AFC is fixed cost divided by quantity. FC = '+p.FC+', so AFC = '+kHTML(afcOptionTeX(p))+'. It falls continuously as Q rises.';
+    case 1:
+      if(p.type==='quadratic')
+        return 'AVC is variable cost ÷ quantity. VC = TC − FC = '+kHTML(poly([{coef:p.a,varStr:'Q'},{coef:p.b,varStr:'Q^{2}'}]))+', so AVC = '+kHTML(avcOptionTeX(p))+'. This is linear — AVC rises at a constant rate.';
+      return 'AVC is variable cost ÷ quantity. VC = TC − FC = '+kHTML(poly([{coef:p.a,varStr:'Q'},{coef:p.b,varStr:'Q^{2}'},{coef:p.c,varStr:'Q^{3}'}]))+', so AVC = '+kHTML(avcOptionTeX(p))+'. This U-shaped curve reaches its minimum where MC = AVC.';
+    case 2: return 'ATC = AFC + AVC = '+kHTML(atcOptionTeX(p))+'. It is U-shaped; its minimum lies to the right of the AVC minimum.';
+    case 3: return 'MC = d(TC)/dQ = '+kHTML(mcOptionTeX(p))+'. The MC curve passes through the minimum of both AVC and ATC from below.';
+  }
+}
+
+function advanceMC(){
+  addFormulaToList(mcIndex);  // add identified formula to reference list
+  mcIndex++;
+  updateProgress();
+  if(mcIndex < 4){
+    renderMCQuestion();
+  } else {
+    mcDone = true;
+    $mcCont.innerHTML='<div class="diag-complete" style="margin-top:0;">✓ All four cost curves identified!</div>';
+    graphRevealed = true;
+    drawGraph();
+    $gNote.classList.remove('hidden');
+    $gNote.textContent = 'Enter your answers below — the minimum points will appear on the graph as you go.';
+    setTimeout(()=>{
+      $p2card.classList.remove('hidden');
+      renderPart2();
+      $p2card.scrollIntoView({behavior:'smooth',block:'nearest'});
+    },600);
+    updateProgress();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// PART 2 SETUP (cubic vs quadratic)
+// ═══════════════════════════════════════════════════════════════════════
+
+function renderPart2(){
+  const p = prob;
+  if(p.type==='quadratic'){
+    $avcEntryUI.classList.add('hidden');
+    $avcNoteUI.classList.remove('hidden');
+    $avcNoteMsg.innerHTML = '📌 Since AVC = '+kHTML(avcOptionTeX(p))+
+      ' is linear, it has no interior minimum — average variable cost rises steadily with output. Only ATC has a U-shaped curve with a minimum.';
+    $avcAtcDiv.classList.remove('hidden');
+    $atcSect.classList.remove('hidden');
+    avcDone = true;
+    updateProgress();
+    updateGraphNote();
+  } else {
+    $avcEntryUI.classList.remove('hidden');
+    $avcNoteUI.classList.add('hidden');
+    $avcAtcDiv.classList.add('hidden');
+    $atcSect.classList.add('hidden');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// CHECK AVC MIN
+// ═══════════════════════════════════════════════════════════════════════
+
+$checkAVC.addEventListener('click',()=>{
+  const val = parseFloat($ansAVC.value);
+  if(isNaN(val)){ showMsg($msgAVC,'Please enter a number.','wrong'); return; }
+
+  $checkAVC.disabled = true;
+  studentAVCq = val;
+
+  if(Math.abs(val - prob.Qv) < 0.01){
+    studentAVCok = true;
+    $ansAVC.classList.add('correct');
+    showMsg($msgAVC,'✓ Correct! AVC is minimized at Q = '+prob.Qv+'. At this point AVC = MC = '+prob.minAVC_val.toFixed(2)+'.','correct');
+    avcDone = true;
+    updateProgress();
+    drawGraph();
+    setTimeout(()=>{ $atcSect.classList.remove('hidden'); $avcAtcDiv.classList.remove('hidden'); },500);
+  } else {
+    studentAVCok = false;
+    $ansAVC.classList.add('wrong');
+    showMsg($msgAVC,'Not quite. Let\'s work through it step by step.','wrong');
+    drawGraph();
+    setTimeout(()=>{ $diagAVC.classList.remove('hidden'); buildDiagAVC(); },300);
+  }
+});
+
+function buildDiagAVC(){
+  $diagAVCS.innerHTML=''; diagAVCStep=0; nextDiagAVC();
+}
+
+function nextDiagAVC(){
+  const p = prob;
+  const steps = [
+    {
+      head:'Step 1 — The Condition',
+      q:'What condition identifies the minimum of the AVC curve?',
+      opts:['Set AVC equal to MC','Set AVC equal to zero','Set AVC equal to AFC','Differentiate TC twice'],
+      correct:0,
+      expl:'At the minimum of AVC, the MC curve passes through from below — so <strong>AVC = MC</strong> at that point.',
+    },
+    {
+      head:'Step 2 — Set Up the Equation',
+      q:'Setting AVC = MC:<br>'+kHTML(avcOptionTeX(p))+' = '+kHTML(mcOptionTeX(p))+
+        '<br><br>After canceling <em>a</em> from both sides, which equation remains?',
+      opts:[
+        kHTML(poly([{coef:p.b,varStr:'Q'},{coef:p.c,varStr:'Q^{2}'}])+' = '+poly([{coef:2*p.b,varStr:'Q'},{coef:3*p.c,varStr:'Q^{2}'}])),
+        kHTML(poly([{coef:-p.b,varStr:''},{coef:-p.c,varStr:'Q'}])+'= 0'),
+        kHTML(poly([{coef:p.b,varStr:''},{coef:p.c,varStr:'Q'}])+'= 0'),
+        kHTML('Q = '+p.Qv),
+      ],
+      correct:0,
+      expl:'Cancel <em>a</em>: '+kHTML(poly([{coef:p.b,varStr:'Q'},{coef:p.c,varStr:'Q^{2}'}]))+' = '+kHTML(poly([{coef:2*p.b,varStr:'Q'},{coef:3*p.c,varStr:'Q^{2}'}])),
+    },
+    {
+      head:'Step 3 — Solve for Q',
+      q:'Rearranging: '+kHTML(poly([{coef:-p.b,varStr:'Q'},{coef:-2*p.c,varStr:'Q^{2}'}])+' = 0')+
+        '<br>Factor out Q: '+kHTML('Q\\cdot('+(-p.b)+' - '+2*p.c+'Q) = 0')+
+        '<br><br>The positive solution is Q = ?',
+      opts:['Q = '+p.Qv, 'Q = '+p.Qa, 'Q = '+(p.Qv/2).toFixed(1), 'Q = '+(p.Qv*2)],
+      correct:0,
+      expl:'Q = '+kHTML('\\dfrac{'+(-p.b)+'}{'+2*p.c+'}')+'= '+p.Qv+
+        '. AVC is minimized at Q = '+p.Qv+', where AVC = MC = '+p.minAVC_val.toFixed(2)+'.',
+    },
+  ];
+
+  if(diagAVCStep >= steps.length){
+    $diagAVCC.classList.remove('hidden');
+    $diagAVCC.innerHTML='✓ AVC is minimized at Q = '+p.Qv+'.';
+    $ansAVC.value=String(p.Qv); $ansAVC.className='correct';
+    showMsg($msgAVC,'✓ AVC is minimized at Q = '+p.Qv+', where AVC = MC = '+p.minAVC_val.toFixed(2)+'.','correct');
+    avcDone=true; updateProgress();
+    showCorrectAVCpt=true; studentAVCok=false; drawGraph();
+    setTimeout(()=>{ $atcSect.classList.remove('hidden'); $avcAtcDiv.classList.remove('hidden'); },400);
+    return;
+  }
+  renderDiagStep($diagAVCS, steps[diagAVCStep], ()=>{ diagAVCStep++; nextDiagAVC(); });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// CHECK ATC MIN
+// ═══════════════════════════════════════════════════════════════════════
+
+$checkATC.addEventListener('click',()=>{
+  const val = parseFloat($ansATC.value);
+  if(isNaN(val)){ showMsg($msgATC,'Please enter a number.','wrong'); return; }
+
+  $checkATC.disabled = true;
+  studentATCq = val;
+
+  if(Math.abs(val - prob.Qa) < 0.01){
+    studentATCok = true;
+    $ansATC.classList.add('correct');
+    showMsg($msgATC,'✓ Correct! ATC is minimized at Q = '+prob.Qa+'. At this point ATC = MC = '+prob.minATC_val.toFixed(2)+'.','correct');
+    atcDone=true; updateProgress();
+    drawGraph();
+    setTimeout(()=>{ $p3card.classList.remove('hidden'); buildEOS(); },500);
+  } else {
+    studentATCok = false;
+    $ansATC.classList.add('wrong');
+    showMsg($msgATC,'Not quite. Let\'s work through it step by step.','wrong');
+    drawGraph();
+    setTimeout(()=>{ $diagATC.classList.remove('hidden'); buildDiagATC(); },300);
+  }
+});
+
+function buildDiagATC(){
+  $diagATCS.innerHTML=''; diagATCStep=0; nextDiagATC();
+}
+
+function nextDiagATC(){
+  const p  = prob;
+  const steps = p.type === 'quadratic' ? diagStepsQuadratic(p) : diagStepsCubic(p);
+
+  if(diagATCStep >= steps.length){
+    $diagATCC.classList.remove('hidden');
+    $diagATCC.innerHTML='✓ ATC is minimized at Q = '+p.Qa+'.';
+    $ansATC.value=String(p.Qa); $ansATC.className='correct';
+    showMsg($msgATC,'✓ ATC is minimized at Q = '+p.Qa+', where ATC = MC = '+p.minATC_val.toFixed(2)+'.','correct');
+    atcDone=true; updateProgress();
+    showCorrectATCpt=true; studentATCok=false; drawGraph();
+    setTimeout(()=>{ $p3card.classList.remove('hidden'); buildEOS(); },400);
+    return;
+  }
+  renderDiagStep($diagATCS, steps[diagATCStep], ()=>{ diagATCStep++; nextDiagATC(); });
+}
+
+// Diagnostic steps for QUADRATIC TC
+function diagStepsQuadratic(p){
+  return [
+    {
+      head:'Step 1 — The Condition',
+      q:'What condition identifies the minimum of the ATC curve?',
+      opts:['Set ATC equal to MC','Set ATC equal to zero','Set ATC equal to AFC','Set MC equal to zero'],
+      correct:0,
+      expl:'At the minimum of ATC, MC passes through from below — so <strong>ATC = MC</strong> at that point.',
+    },
+    {
+      head:'Step 2 — Simplify',
+      q:'Setting ATC = MC:<br>'+
+        kHTML('\\dfrac{'+p.FC+'}{Q}+'+avcOptionTeX(p))+' = '+kHTML(mcOptionTeX(p))+
+        '<br><br>Cancel <em>a</em>, then rearrange. What do you get?',
+      opts:[
+        kHTML('\\dfrac{'+p.FC+'}{Q}') + ' = ' + kHTML(String(p.b)+'Q'),
+        kHTML(String(p.FC)+' = '+String(p.b)+'Q'),
+        kHTML('\\dfrac{'+p.FC+'}{Q}') + ' = ' + kHTML(String(2*p.b)+'Q'),
+        kHTML(String(p.b)+'Q = 0'),
+      ],
+      correct:0,
+      expl:'After canceling <em>a</em>: '+kHTML('\\dfrac{'+p.FC+'}{Q}')+'= '+kHTML(String(p.b)+'Q'),
+    },
+    {
+      head:'Step 3 — Multiply Through and Solve',
+      q:'Multiplying both sides by Q: '+kHTML(String(p.FC)+' = '+String(p.b)+'Q^{2}')+
+        '<br><br>Solving for Q gives Q = ?',
+      opts:[
+        'Q = '+p.Qa,
+        'Q = '+(p.Qa+1),
+        'Q = '+Math.round(Math.sqrt(p.FC/(p.b+1))),
+        'Q = '+Math.round(p.Qa*1.5),
+      ],
+      correct:0,
+      expl:'Q = '+kHTML('\\sqrt{\\dfrac{'+p.FC+'}{'+p.b+'}}')+'= '+p.Qa+
+        '. ATC is minimized at Q = '+p.Qa+', where ATC = MC = '+p.minATC_val.toFixed(2)+'.',
+    },
+  ];
+}
+
+// Diagnostic steps for CUBIC TC
+function diagStepsCubic(p){
+  const c3 = 2*p.c; // = 2
+  const checkVal = p.b*p.Qa*p.Qa + c3*p.Qa*p.Qa*p.Qa; // should equal p.FC
+
+  return [
+    {
+      head:'Step 1 — The Condition',
+      q:'What condition identifies the minimum of the ATC curve?',
+      opts:['Set ATC equal to MC','Set ATC equal to zero','Set ATC equal to AVC','Set MC equal to zero'],
+      correct:0,
+      expl:'At the minimum of ATC, MC passes through from below — so <strong>ATC = MC</strong> at that point.',
+    },
+    {
+      head:'Step 2 — Cancel and Rearrange',
+      q:'Setting ATC = MC and canceling <em>a</em> from both sides, then moving terms:<br>'+
+        kHTML('\\dfrac{'+p.FC+'}{Q}')+' = '+kHTML(poly([{coef:p.b,varStr:'Q'},{coef:c3,varStr:'Q^{2}'}]))+
+        '<br><br>Multiply both sides by Q. Which equation do you get?',
+      opts:[
+        kHTML(String(p.FC)+' = '+poly([{coef:p.b,varStr:'Q^{2}'},{coef:c3,varStr:'Q^{3}'}])),
+        kHTML(String(p.FC)+' = '+poly([{coef:p.b,varStr:'Q'},{coef:c3,varStr:'Q^{2}'}])),
+        kHTML(String(p.FC)+'\\cdot Q = '+poly([{coef:p.b,varStr:'Q^{2}'},{coef:c3,varStr:'Q^{3}'}])),
+        kHTML(poly([{coef:p.b,varStr:'Q^{2}'},{coef:c3,varStr:'Q^{3}'}])+' = 0'),
+      ],
+      correct:0,
+      expl:'Multiplying by Q: '+kHTML(String(p.FC)+' = '+poly([{coef:p.b,varStr:'Q^{2}'},{coef:c3,varStr:'Q^{3}'}])),
+    },
+    {
+      head:'Step 3 — Find Q',
+      q:'We have: '+kHTML(String(p.FC)+' = '+poly([{coef:p.b,varStr:'Q^{2}'},{coef:c3,varStr:'Q^{3}'}]))+
+        '<br><br>Check Q = '+p.Qa+': '+
+        kHTML('('+p.b+')('+p.Qa+')^2 + ('+c3+')('+p.Qa+')^3 = '+String(checkVal))+
+        '<br>Does Q = '+p.Qa+' satisfy the equation?',
+      opts:[
+        'Yes — Q = '+p.Qa+' is the solution',
+        'No — try Q = '+(p.Qa-1),
+        'No — try Q = '+(p.Qa+1),
+        'Cannot be solved analytically',
+      ],
+      correct:0,
+      expl:String(checkVal)+' = '+p.FC+' ✓. So ATC is minimized at Q = '+p.Qa+
+        ', where ATC = MC = '+p.minATC_val.toFixed(2)+'.',
+    },
+  ];
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// GENERIC DIAGNOSTIC STEP RENDERER
+// ═══════════════════════════════════════════════════════════════════════
+
+function renderDiagStep(container, step, onNext){
+  const div = document.createElement('div');
+  div.className = 'diag-step';
+
+  const head = document.createElement('div');
+  head.className = 'diag-step-head';
+  head.textContent = step.head;
+  div.appendChild(head);
+
+  const q = document.createElement('div');
+  q.className = 'diag-q';
+  q.innerHTML = step.q;
+  div.appendChild(q);
+
+  const optsDiv = document.createElement('div');
+  optsDiv.className = 'mc-options';
+  const letters = ['A','B','C','D'];
+  const shuffled = shuffle(step.opts.map((o,i)=>({text:o,origIdx:i})));
+
+  shuffled.forEach(({text,origIdx},pos)=>{
+    const btn = document.createElement('button');
+    btn.className = 'mc-option';
+    btn.innerHTML = '<div class="mc-letter">'+letters[pos]+'</div><div>'+text+'</div>';
+    btn.addEventListener('click',()=>{
+      optsDiv.querySelectorAll('.mc-option').forEach(b=>b.classList.add('disabled'));
+      if(origIdx===step.correct){
+        btn.classList.add('selected-correct');
+      } else {
+        btn.classList.add('selected-wrong');
+        shuffled.forEach(({origIdx:oi},p2)=>{
+          if(oi===step.correct) optsDiv.querySelectorAll('.mc-option')[p2].classList.add('revealed-correct');
+        });
+      }
+      const expl=document.createElement('div');
+      expl.className='expl-box';
+      expl.innerHTML=step.expl;
+      div.appendChild(expl);
+      setTimeout(onNext, origIdx===step.correct ? 700 : 1200);
+    });
+    optsDiv.appendChild(btn);
+  });
+  div.appendChild(optsDiv);
+  container.appendChild(div);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// PART 3 — ECONOMIES OF SCALE
+// ═══════════════════════════════════════════════════════════════════════
+
+function buildEOS(){
+  const p = prob;
+  $eosQ.innerHTML = 'Over what range of output does this firm experience <strong>economies of scale</strong>?';
+
+  const opts = shuffle([
+    {text:'0 &lt; Q &lt; '+p.Qa, isCorrect:true},
+    {text:'Q &gt; '+p.Qa,        isCorrect:false},
+    ...(p.type==='cubic' ? [
+      {text:'0 &lt; Q &lt; '+p.Qv, isCorrect:false},
+      {text:'Q &gt; '+p.Qv,        isCorrect:false},
+    ] : [
+      {text:'All Q &gt; 0',         isCorrect:false},
+      {text:'0 &lt; Q &lt; '+Math.round(p.Qa/2), isCorrect:false},
+    ]),
+  ]);
+
+  const letters=['A','B','C','D'];
+  opts.forEach(({text,isCorrect},pos)=>{
+    const btn=document.createElement('button');
+    btn.className='mc-option';
+    btn.innerHTML='<div class="mc-letter">'+letters[pos]+'</div><div>'+text+'</div>';
+    btn.addEventListener('click',()=>{
+      $eosOpts.querySelectorAll('.mc-option').forEach(b=>b.classList.add('disabled'));
+      if(isCorrect){
+        btn.classList.add('selected-correct');
+        $eosExpl.innerHTML='✓ Correct! Economies of scale exist where ATC is <em>decreasing</em>, i.e., where MC &lt; ATC. This holds for 0 &lt; Q &lt; '+p.Qa+'. Beyond Q = '+p.Qa+', MC &gt; ATC so the firm faces <em>diseconomies of scale</em>.';
+      } else {
+        btn.classList.add('selected-wrong');
+        opts.forEach(({isCorrect:ic},p2)=>{ if(ic) $eosOpts.querySelectorAll('.mc-option')[p2].classList.add('revealed-correct'); });
+        $eosExpl.innerHTML='✗ Not quite. Economies of scale occur where ATC is <em>decreasing</em>, i.e., MC &lt; ATC. That range is 0 &lt; Q &lt; '+p.Qa+'. At Q = '+p.Qa+', ATC hits its minimum (ATC = MC), and for Q &gt; '+p.Qa+' the firm faces <em>diseconomies of scale</em>.';
+      }
+      $eosExpl.classList.remove('hidden');
+      eosDone=true; updateProgress();
+      setTimeout(()=>{ $complete.classList.remove('hidden'); $complete.scrollIntoView({behavior:'smooth',block:'nearest'}); },600);
+    });
+    $eosOpts.appendChild(btn);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// GRAPH
+// ═══════════════════════════════════════════════════════════════════════
+
+function setupCanvas(canvas){
+  const dpr=window.devicePixelRatio||1;
+  const rect=canvas.getBoundingClientRect();
+  const W=rect.width*dpr, H=rect.height*dpr;
+  if(canvas.width!==W||canvas.height!==H){canvas.width=W;canvas.height=H;}
+  return{ctx:canvas.getContext('2d'),dpr,W,H};
+}
+
+function hexToRgba(hex,a){
+  if(!hex.startsWith('#')) return hex;
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+function updateGraphNote(){
+  if(!graphRevealed) return;
+  const p = prob;
+  const isQ = p.type === 'quadratic';
+  if(!avcDone && !atcDone){
+    $gNote.textContent = 'Enter your answers below — minimum points will appear on the graph as you go.';
+  } else if((!isQ && avcDone && !atcDone) || (isQ && !atcDone)){
+    $gNote.textContent = 'AVC minimum marked. Now find where ATC is minimized.';
+  } else if(avcDone && atcDone){
+    $gNote.textContent = isQ
+      ? 'Dashed line marks where ATC is minimized (Q = '+p.Qa+').'
+      : 'Dashed lines mark where AVC (Q = '+p.Qv+') and ATC (Q = '+p.Qa+') are minimized.';
+  }
+}
+
+function drawGraph(){
+  const{ctx,dpr,W,H}=setupCanvas($canvas);
+  ctx.clearRect(0,0,W,H);
+  const p=prob;
+  if(!p.FC) return;
+
+  const pad={l:52*dpr,r:18*dpr,t:14*dpr,b:44*dpr};
+  const X0=pad.l,X1=W-pad.r,Y0=pad.t,Y1=H-pad.b;
+  const PW=X1-X0,PH=Y1-Y0;
+
+  const Qmax = p.Qa * 1.9;
+
+  // ── Y range: sample curves, cap at 3.5× minATC ────────────────────
+  let yMax=0;
+  for(let i=2;i<=300;i++){
+    const q=(i/300)*Qmax;
+    const atc=p.FC/q+p.a+p.b*q+p.c*q*q;
+    const mc =p.a+2*p.b*q+3*p.c*q*q;
+    const avc=p.a+p.b*q+p.c*q*q;
+    [atc,mc,avc].forEach(v=>{ if(isFinite(v)&&v>0) yMax=Math.max(yMax,v); });
+  }
+  yMax = Math.min(yMax, p.minATC_val*3.5)*1.12;
+
+  const xToC=x=>X0+(x/Qmax)*PW;
+  const yToC=y=>Y1-(y/yMax)*PH;
+
+  // ── Axes ───────────────────────────────────────────────────────────
+  ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=1.5*dpr;
+  ctx.beginPath(); ctx.moveTo(X0,Y1); ctx.lineTo(X1,Y1); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0,Y1); ctx.stroke();
+  ctx.fillStyle='rgba(0,0,0,0.25)';
+  ctx.beginPath(); ctx.moveTo(X1,Y1); ctx.lineTo(X1-8*dpr,Y1-4*dpr); ctx.lineTo(X1-8*dpr,Y1+4*dpr); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0-4*dpr,Y0+8*dpr); ctx.lineTo(X0+4*dpr,Y0+8*dpr); ctx.closePath(); ctx.fill();
+
+  ctx.fillStyle='rgba(0,0,0,0.42)';
+  ctx.font=`600 ${11*dpr}px "Inter",sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText('Output (Q)',(X0+X1)/2,Y1+14*dpr);
+  ctx.save(); ctx.translate(X0-36*dpr,(Y0+Y1)/2); ctx.rotate(-Math.PI/2);
+  ctx.textBaseline='top'; ctx.fillText('Cost per unit',0,0); ctx.restore();
+
+  if(!graphRevealed){
+    ctx.fillStyle='rgba(0,0,0,0.18)';
+    ctx.font=`600 ${12*dpr}px "Inter",sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('Graph reveals after Part 1',(X0+X1)/2,(Y0+Y1)/2);
+    return;
+  }
+
+  // ── Draw a curve ────────────────────────────────────────────────────
+  function drawCurve(fn,color,lw){
+    ctx.beginPath(); ctx.strokeStyle=color; ctx.lineWidth=lw*dpr;
+    let started=false;
+    for(let i=1;i<=400;i++){
+      const q=(i/400)*Qmax;
+      const y=fn(q);
+      if(!isFinite(y)||y<0||y>yMax*1.05){started=false;continue;}
+      const cx=xToC(q),cy=yToC(y);
+      if(!started){ctx.moveTo(cx,cy);started=true;}else ctx.lineTo(cx,cy);
+    }
+    ctx.stroke();
+  }
+
+  drawCurve(q=>p.FC/q,                               '#1b7f4b',1.8);
+  drawCurve(q=>p.a+p.b*q+p.c*q*q,                   '#c2690a',2);
+  drawCurve(q=>p.FC/q+p.a+p.b*q+p.c*q*q,            '#b42318',2);
+  drawCurve(q=>p.a+2*p.b*q+3*p.c*q*q,               '#6d28d9',2);
+
+  // ── Dashed vertical lines ───────────────────────────────────────────
+  function vLine(qx,color,labelStr){
+    const cx=xToC(qx);
+    if(cx<X0||cx>X1) return;
+    ctx.setLineDash([5*dpr,4*dpr]);
+    ctx.strokeStyle=color; ctx.lineWidth=1.5*dpr; ctx.globalAlpha=0.5;
+    ctx.beginPath(); ctx.moveTo(cx,Y0); ctx.lineTo(cx,Y1); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha=1;
+    ctx.fillStyle=color; ctx.font=`700 ${10*dpr}px "Inter",sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText(labelStr,cx,Y1+6*dpr);
+  }
+  // Only reveal min-point lines once the student has answered each question
+  if(p.type==='cubic' && avcDone) vLine(p.Qv,'#c2690a','Q='+p.Qv);
+  if(atcDone) vLine(p.Qa,'#b42318','Q='+p.Qa);
+
+  // ── Student guess dots ──────────────────────────────────────────────
+  function plotDot(Q,y,color){
+    if(!isFinite(y)||y<0||y>yMax*1.05) return;
+    const cx=xToC(Q),cy=yToC(y);
+    if(cx<X0-4*dpr||cx>X1+4*dpr||cy<Y0-4*dpr||cy>Y1+4*dpr) return;
+
+    ctx.beginPath(); ctx.arc(cx,cy,8.5*dpr,0,Math.PI*2);
+    ctx.fillStyle=hexToRgba(color,.18); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx,cy,5*dpr,0,Math.PI*2);
+    ctx.fillStyle=color; ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=1.5*dpr; ctx.stroke();
+  }
+
+  // AVC guess
+  const $lgGuessAVC = document.getElementById('legendGuessAVC');
+  const $lgMinAVC   = document.getElementById('legendMinAVC');
+  if(studentAVCq!==null){
+    const y=p.a+p.b*studentAVCq+p.c*studentAVCq*studentAVCq;
+    if(studentAVCok){
+      plotDot(studentAVCq,y,'#1b7f4b');
+      $lgGuessAVC.classList.add('hidden');
+      $lgMinAVC.classList.remove('hidden');
+    } else {
+      plotDot(studentAVCq,y,'#c2690a');
+      $lgGuessAVC.classList.remove('hidden');
+    }
+  }
+  if(showCorrectAVCpt&&!studentAVCok){
+    const y=p.a+p.b*p.Qv+p.c*p.Qv*p.Qv;
+    plotDot(p.Qv,y,'#1b7f4b');
+    $lgMinAVC.classList.remove('hidden');
+  }
+
+  // ATC guess
+  const $lgGuessATC = document.getElementById('legendGuessATC');
+  const $lgMinATC   = document.getElementById('legendMinATC');
+  if(studentATCq!==null){
+    const y=p.FC/studentATCq+p.a+p.b*studentATCq+p.c*studentATCq*studentATCq;
+    if(studentATCok){
+      plotDot(studentATCq,y,'#1b7f4b');
+      $lgGuessATC.classList.add('hidden');
+      $lgMinATC.classList.remove('hidden');
+    } else {
+      plotDot(studentATCq,y,'#b42318');
+      $lgGuessATC.classList.remove('hidden');
+    }
+  }
+  if(showCorrectATCpt&&!studentATCok){
+    const y=p.FC/p.Qa+p.a+p.b*p.Qa+p.c*p.Qa*p.Qa;
+    plotDot(p.Qa,y,'#1b7f4b');
+    $lgMinATC.classList.remove('hidden');
+  }
+
+  updateGraphNote();
+}
+
+let resizeTimer;
+window.addEventListener('resize',()=>{ clearTimeout(resizeTimer); resizeTimer=setTimeout(drawGraph,80); });
+
+// ═══════════════════════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════════════════════
+
+function showMsg(el,html,cls){
+  el.innerHTML=html;
+  el.className='result-msg '+cls;
+}
+
+document.getElementById('newProblemBtn').addEventListener('click',init);
+
+// ── KaTeX readiness ────────────────────────────────────────────────────
+function waitForKatex(cb){
+  if(window.katex){ cb(); }
+  else{ document.querySelector('script[src*="katex.min.js"]').addEventListener('load',cb); }
+}
+waitForKatex(init);
+
+})();
+</script>
+</body>
+</html>
