@@ -1,0 +1,820 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Perfect Competition Solver — ECON 104A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+  <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#6b7280;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#1b7f4b;  --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1120px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:13px;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:32px;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:15px;}
+
+    /* Buttons */
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:none;border-radius:12px;font-family:var(--font-sans);font-size:14px;font-weight:700;cursor:pointer;transition:background .12s;}
+    .btn.primary{background:var(--accent);color:#fff;}
+    .btn.primary:hover{background:#264d68;}
+
+    /* Layout */
+    .lab-container{max-width:980px;margin:0 auto;padding:18px;}
+    .lab-grid{display:grid;grid-template-columns:1fr 370px;gap:18px;align-items:start;}
+    @media(max-width:860px){.lab-grid{grid-template-columns:1fr;}}
+
+    /* Problem card */
+    .problem-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow);margin-bottom:14px;}
+    .problem-header{font-family:var(--font-serif);font-size:20px;font-weight:700;color:var(--ink);margin:0;}
+    .param-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;}
+    .param{background:rgba(246,242,234,.55);border:1px solid var(--line);border-radius:12px;padding:8px 12px;}
+    .param .label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px;}
+    .param .value{font-size:16px;font-weight:700;color:var(--ink);}
+    .param.wide{grid-column:1/-1;}
+
+    /* Type toggle */
+    .type-toggle{display:flex;gap:4px;background:rgba(246,242,234,.9);border:1px solid var(--line);border-radius:12px;padding:4px;flex-shrink:0;}
+    .type-btn{padding:6px 12px;border:none;border-radius:9px;font-size:12px;font-weight:700;font-family:var(--font-sans);cursor:pointer;background:transparent;color:var(--muted);transition:background .12s,color .12s;}
+    .type-btn.active{background:var(--accent);color:#fff;}
+    .type-btn:hover:not(.active){background:rgba(47,93,124,.12);color:var(--accent);}
+
+    /* Step cards */
+    .step-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);margin-bottom:12px;}
+    .step-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+    .step-num{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);background:rgba(47,93,124,.08);border:1px solid rgba(47,93,124,.18);border-radius:6px;padding:2px 7px;margin-bottom:4px;}
+    .step-title{font-size:14px;font-weight:700;color:var(--ink);line-height:1.3;}
+    .step-instruction{font-size:13px;color:var(--ink-2);line-height:1.55;margin:8px 0 0;}
+
+    /* Step button cycles: Check → Show Formula → Show Answer → Done */
+    .step-btn{flex-shrink:0;padding:6px 12px;border:1.5px solid rgba(47,93,124,.35);background:rgba(47,93,124,.06);color:var(--accent);border-radius:10px;font-size:12px;font-weight:700;font-family:var(--font-sans);cursor:pointer;transition:background .12s,border-color .12s;white-space:nowrap;}
+    .step-btn:hover:not(:disabled){background:rgba(47,93,124,.14);border-color:rgba(47,93,124,.55);}
+    .step-btn:disabled{opacity:.55;cursor:default;}
+    .step-btn.done{background:rgba(27,127,75,.08);border-color:rgba(27,127,75,.3);color:var(--good);}
+
+    /* Entry area */
+    .entry-area{margin-top:12px;padding:10px 12px;background:rgba(246,242,234,.5);border:1px solid var(--line);border-radius:12px;}
+    .entry-row{display:flex;align-items:center;flex-wrap:wrap;gap:5px;font-size:15px;font-weight:600;color:var(--ink);line-height:2.2;}
+    .entry-sym{color:var(--ink-2);white-space:nowrap;font-size:15px;}
+
+    /* Inline formula inputs */
+    .fi{width:56px;padding:4px 6px;border:1.5px solid var(--line-2);border-radius:8px;font-size:15px;font-family:var(--font-sans);font-weight:700;text-align:center;background:#fff;color:var(--ink);outline:none;transition:border-color .12s,background .12s;}
+    .fi:focus{border-color:var(--accent);}
+    .fi.correct{border-color:var(--good);background:rgba(27,127,75,.06);}
+    .fi.wrong{border-color:var(--bad);background:rgba(180,35,24,.06);}
+    .fi:disabled{background:rgba(246,242,234,.9);color:var(--muted);cursor:not-allowed;}
+
+    /* Entry/exit select */
+    .entry-select{padding:5px 10px;border:1.5px solid var(--line-2);border-radius:8px;font-size:13px;font-family:var(--font-sans);font-weight:600;background:#fff;color:var(--ink);cursor:pointer;outline:none;transition:border-color .12s;}
+    .entry-select:focus{border-color:var(--accent);}
+    .entry-select.correct{border-color:var(--good);background:rgba(27,127,75,.06);}
+    .entry-select.wrong{border-color:var(--bad);background:rgba(180,35,24,.06);}
+    .entry-select:disabled{background:rgba(246,242,234,.9);color:var(--muted);cursor:not-allowed;}
+
+    /* Feedback */
+    .entry-fb{margin-top:8px;padding:7px 11px;border-radius:10px;font-size:13px;font-weight:600;line-height:1.4;animation:fadeSlide .18s ease;}
+    .entry-fb.correct{background:rgba(27,127,75,.08);border:1px solid rgba(27,127,75,.2);color:var(--good);}
+    .entry-fb.wrong{background:rgba(180,35,24,.06);border:1px solid rgba(180,35,24,.2);color:var(--bad);}
+
+    /* Revealed content */
+    .step-formula{margin-top:10px;padding:9px 13px;background:rgba(47,93,124,.04);border:1px solid rgba(47,93,124,.14);border-radius:12px;animation:fadeSlide .2s ease;}
+    .step-answer{margin-top:8px;padding:11px 13px;background:rgba(27,127,75,.05);border:1px solid rgba(27,127,75,.2);border-radius:12px;animation:fadeSlide .2s ease;}
+    .answer-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--good);margin-bottom:7px;}
+    .step-formula .formula-content,
+    .step-answer .answer-content{font-size:13px;line-height:1.8;color:var(--ink);overflow-x:auto;}
+    .katex-line{display:block;}
+
+    /* Entry/Exit badge */
+    .ee-badge{display:inline-block;margin-top:8px;padding:5px 11px;border-radius:8px;font-size:13px;font-weight:700;}
+    .ee-badge.enter{background:rgba(27,127,75,.12);color:var(--good);border:1px solid rgba(27,127,75,.25);}
+    .ee-badge.exit{background:rgba(180,35,24,.08);color:var(--bad);border:1px solid rgba(180,35,24,.2);}
+    .ee-badge.neutral{background:rgba(107,114,128,.08);color:var(--muted);border:1px solid rgba(107,114,128,.2);}
+
+    @keyframes fadeSlide{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+    .hidden{display:none !important;}
+
+    /* Graph card */
+    .graph-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);position:sticky;top:18px;}
+    .graph-title{font-size:13px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+    .graph-canvas-wrap{position:relative;width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;background:rgba(246,242,234,.45);border:1px solid var(--line);}
+    #graphCanvas{display:block;width:100%;height:100%;}
+    .graph-legend{display:flex;flex-direction:column;gap:5px;margin-top:10px;}
+    .legend-row{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-2);}
+    .legend-swatch{width:22px;height:3px;border-radius:2px;flex-shrink:0;}
+    .legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+    .katex{font-size:1.0em;}
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--muted);}
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar">
+      <a class="crumb-link" href="/classes/econ104a/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104A — Perfect Competition</div>
+      <h1>Perfect Competition Solver</h1>
+      <p class="sub">
+        Given a long-run total cost function and a market price, work through the five-step
+        analysis: derive LAC and LMC, find the firm's optimal quantity, determine whether
+        firms enter or exit, and compute the long-run equilibrium price.
+      </p>
+    </div>
+  </div>
+</header>
+
+<main class="lab-container">
+  <div class="lab-grid">
+
+    <!-- LEFT COLUMN -->
+    <div>
+      <div class="problem-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <h2 class="problem-header">Problem</h2>
+          <div class="type-toggle">
+            <button class="type-btn active" id="typeBtn0">Quadratic LTC</button>
+            <button class="type-btn"        id="typeBtn1">Cubic LTC</button>
+          </div>
+        </div>
+        <div class="param-grid">
+          <div class="param wide">
+            <div class="label">Long-Run Total Cost</div>
+            <div class="value" id="ltcDisplay"></div>
+          </div>
+          <div class="param wide">
+            <div class="label">Market Price (P*)</div>
+            <div class="value" id="priceDisplay"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Steps built by JS -->
+      <div id="stepsContainer"></div>
+
+      <div style="margin-top:6px;">
+        <button class="btn primary" id="newProblemBtn">New Problem</button>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div>
+      <div class="graph-card">
+        <div class="graph-title">Cost Curves &amp; Market Price</div>
+        <div class="graph-canvas-wrap">
+          <canvas id="graphCanvas"></canvas>
+        </div>
+        <div class="graph-legend">
+          <div class="legend-row">
+            <div style="width:22px;height:0;border-top:2.5px dashed #b42318;flex-shrink:0;"></div>
+            <span>P* (market price)</span>
+          </div>
+          <div class="legend-row hidden" id="lgLAC">
+            <div class="legend-swatch" style="background:#2f5d7c;"></div>
+            <span>LAC (Long-Run Avg. Cost)</span>
+          </div>
+          <div class="legend-row hidden" id="lgLMC">
+            <div class="legend-swatch" style="background:#1b7f4b;"></div>
+            <span>LMC (Long-Run Marginal Cost)</span>
+          </div>
+          <div class="legend-row hidden" id="lgQstar">
+            <div class="legend-dot" style="background:#b42318;"></div>
+            <span id="lgQstarLabel">Q* (firm optimum)</span>
+          </div>
+          <div class="legend-row hidden" id="lgLRline">
+            <div style="width:22px;height:0;border-top:2px dashed #6d28d9;flex-shrink:0;"></div>
+            <span id="lgLRlineLabel">P′ (LR equilibrium price)</span>
+          </div>
+          <div class="legend-row hidden" id="lgLRdot">
+            <div class="legend-dot" style="background:#6d28d9;"></div>
+            <span id="lgLRdotLabel">Q′ (LR equilibrium qty.)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer style="margin-top:32px;padding-top:12px;border-top:1px solid var(--line);">
+  <div class="lab-container">
+    <div class="footer-inner">
+      <span>ECON 104A — Intermediate Microeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let type   = 0;   // 0 = quadratic, 1 = cubic
+  let params = {};
+  let comp   = {};
+  // per-step state: 'check' | 'formula' | 'answer' | 'done'
+  const stepMeta = [{s:'check'},{s:'check'},{s:'check'},{s:'check'},{s:'check'}];
+  const revealed = { lac:false, lmc:false, qstar:false, lreq:false };
+  let _steps = [];
+
+  // ── DOM ───────────────────────────────────────────────────────────────────
+  const $ltc    = document.getElementById('ltcDisplay');
+  const $price  = document.getElementById('priceDisplay');
+  const $canvas = document.getElementById('graphCanvas');
+  const $tb0    = document.getElementById('typeBtn0');
+  const $tb1    = document.getElementById('typeBtn1');
+  const $sc     = document.getElementById('stepsContainer');
+
+  // ── Utilities ──────────────────────────────────────────────────────────────
+  function rnd(v,dp=2){ return parseFloat(v.toFixed(dp)); }
+  function ri(lo,hi)  { return lo + Math.floor(Math.random()*(hi-lo+1)); }
+  // omit leading 1 coefficient in display
+  function cf(n){ return Math.abs(n)===1 ? '' : String(Math.abs(n)); }
+
+  function katexH(tex){
+    return window.katex ? katex.renderToString(tex,{throwOnError:false}) : '<span>'+tex+'</span>';
+  }
+  function renderK(el,tex){
+    if(window.katex) katex.render(tex,el,{throwOnError:false}); else el.textContent=tex;
+  }
+
+  // ── Cost functions ─────────────────────────────────────────────────────────
+  function lacAt(Q){
+    if(type===0){ if(Q<=0) return Infinity; return params.a*Q - params.b + params.FC/Q; }
+    return params.a*Q*Q - params.b*Q + params.c;
+  }
+  function lmcAt(Q){
+    if(type===0) return 2*params.a*Q - params.b;
+    return 3*params.a*Q*Q - 2*params.b*Q + params.c;
+  }
+
+  // ── Compute answers ────────────────────────────────────────────────────────
+  function compute(){
+    const {a,b,c,FC,P}=params;
+    let Qstar,Qprime;
+    if(type===0){
+      Qstar  = (P+b)/(2*a);
+      Qprime = Math.sqrt(FC/a);
+    } else {
+      const disc=4*b*b-12*a*(c-P);
+      if(disc<0) return null;
+      Qstar  = (2*b+Math.sqrt(disc))/(6*a);
+      Qprime = b/(2*a);
+    }
+    const LACstar=lacAt(Qstar);
+    const profit =(P-LACstar)*Qstar;
+    const Pprime =lacAt(Qprime);
+    if(!isFinite(Qstar)||Qstar<=0.1)   return null;
+    if(!isFinite(Qprime)||Qprime<=0.1) return null;
+    if(!isFinite(Pprime)||Pprime<=0)   return null;
+    const entryExit=profit>0.05?'enter':profit<-0.05?'exit':'neutral';
+    return {Qstar:rnd(Qstar),LACstar:rnd(LACstar),profit:rnd(profit),Qprime:rnd(Qprime),Pprime:rnd(Pprime),entryExit};
+  }
+
+  // ── Problem generation ─────────────────────────────────────────────────────
+  function generateProblem(){
+    for(let tries=0; tries<200; tries++){
+      const a=ri(1,5),b=ri(1,10),c=ri(15,25),FC=ri(50,100),P=ri(25,35);
+      params={a,b,c,FC,P};
+      if(type===1 && (c-b*b/(4*a))<2) continue;
+      const res=compute();
+      if(!res) continue;
+      comp=res; return;
+    }
+    if(type===0) params={a:2,b:4,FC:72,c:20,P:28};
+    else         params={a:1,b:6,c:20,FC:72,P:30};
+    comp=compute()||{};
+  }
+
+  // ── Build step descriptors ─────────────────────────────────────────────────
+  function buildSteps(){
+    const {a,b,c,FC,P}=params;
+    const {Qstar,LACstar,profit,Qprime,Pprime,entryExit}=comp;
+    const s=[];
+
+    // ── Step 1: LAC ──────────────────────────────────────────────────────────
+    // Quadratic LTC=aQ²-bQ+FC → LAC=aQ-b+FC/Q  (3 boxes: a, b, FC)
+    // Cubic    LTC=aQ³-bQ²+cQ → LAC=aQ²-bQ+c   (3 boxes: a, b, c)
+    {
+      let eHTML,ids,answers,tols,ansTex;
+      if(type===0){
+        ids=['s1a','s1b','s1c'];
+        eHTML=`<div class="entry-row">
+          <span class="entry-sym">LAC&nbsp;=&nbsp;</span>
+          <input class="fi" id="s1a" placeholder="?" autocomplete="off"/>
+          <span class="entry-sym">Q&nbsp;&minus;&nbsp;</span>
+          <input class="fi" id="s1b" placeholder="?" autocomplete="off"/>
+          <span class="entry-sym">&nbsp;+&nbsp;</span>
+          <input class="fi" id="s1c" placeholder="?" autocomplete="off"/>
+          <span class="entry-sym">/Q</span>
+        </div>`;
+        answers=[a,b,FC]; tols=[0.01,0.01,0.01];
+        ansTex=`LAC = ${cf(a)}Q - ${b} + \\dfrac{${FC}}{Q}`;
+      } else {
+        ids=['s1a','s1b','s1c'];
+        eHTML=`<div class="entry-row">
+          <span class="entry-sym">LAC&nbsp;=&nbsp;</span>
+          <input class="fi" id="s1a" placeholder="?" autocomplete="off"/>
+          <span class="entry-sym">Q<sup>2</sup>&nbsp;&minus;&nbsp;</span>
+          <input class="fi" id="s1b" placeholder="?" autocomplete="off"/>
+          <span class="entry-sym">Q&nbsp;+&nbsp;</span>
+          <input class="fi" id="s1c" placeholder="?" autocomplete="off"/>
+        </div>`;
+        answers=[a,b,c]; tols=[0.01,0.01,0.01];
+        ansTex=`LAC = ${cf(a)}Q^2 - ${cf(b)}Q + ${c}`;
+      }
+      s.push({n:1,title:'Long-Run Average Total Cost',
+        instruction:'',
+        eHTML,ids,answers,tols,selects:[],selAns:[],
+        fmlLines:['LAC = \\dfrac{LTC}{Q}'],
+        ansLines:[ansTex],
+        graphKey:'lac'});
+    }
+
+    // ── Step 2: LMC ──────────────────────────────────────────────────────────
+    // Quadratic LMC=2aQ-b   (2 boxes: 2a, b)
+    // Cubic    LMC=3aQ²-2bQ+c (3 boxes: 3a, 2b, c)
+    {
+      let eHTML,ids,answers,tols,ansTex;
+      if(type===0){
+        ids=['s2a','s2b'];
+        eHTML=`<div class="entry-row">
+          <span class="entry-sym">LMC&nbsp;=&nbsp;</span>
+          <input class="fi" id="s2a" placeholder="?" autocomplete="off"/>
+          <span class="entry-sym">Q&nbsp;&minus;&nbsp;</span>
+          <input class="fi" id="s2b" placeholder="?" autocomplete="off"/>
+        </div>`;
+        answers=[2*a,b]; tols=[0.01,0.01];
+        ansTex=`LMC = ${2*a}Q - ${b}`;
+      } else {
+        ids=['s2a','s2b','s2c'];
+        eHTML=`<div class="entry-row">
+          <span class="entry-sym">LMC&nbsp;=&nbsp;</span>
+          <input class="fi" id="s2a" placeholder="?" autocomplete="off"/>
+          <span class="entry-sym">Q<sup>2</sup>&nbsp;&minus;&nbsp;</span>
+          <input class="fi" id="s2b" placeholder="?" autocomplete="off"/>
+          <span class="entry-sym">Q&nbsp;+&nbsp;</span>
+          <input class="fi" id="s2c" placeholder="?" autocomplete="off"/>
+        </div>`;
+        answers=[3*a,2*b,c]; tols=[0.01,0.01,0.01];
+        ansTex=`LMC = ${3*a}Q^2 - ${2*b}Q + ${c}`;
+      }
+      s.push({n:2,title:'Long-Run Marginal Cost',
+        instruction:'',
+        eHTML,ids,answers,tols,selects:[],selAns:[],
+        fmlLines:['LMC = \\dfrac{\\partial LTC}{\\partial Q}'],
+        ansLines:[ansTex],
+        graphKey:'lmc'});
+    }
+
+    // ── Step 3: Q* ───────────────────────────────────────────────────────────
+    {
+      let ansLines;
+      if(type===0){
+        ansLines=[
+          `${2*a}Q - ${b} = ${P}`,
+          `Q^* = \\dfrac{${P+b}}{${2*a}} = ${Qstar}`,
+        ];
+      } else {
+        const cMinP=c-P;
+        const cTex=cMinP>=0?`+\\,${cMinP}`:`-\\,${Math.abs(cMinP)}`;
+        ansLines=[
+          `${3*a}Q^2 - ${2*b}Q \\;${cTex} = 0`,
+          `Q^* = ${Qstar}`,
+        ];
+      }
+      s.push({n:3,title:'Profit-Maximizing Quantity Q*',
+        instruction:"",
+        eHTML:`<div class="entry-row">
+          <span class="entry-sym">Q*&nbsp;=&nbsp;</span>
+          <input class="fi" id="s3a" placeholder="?" autocomplete="off" style="width:70px;"/>
+        </div>`,
+        ids:['s3a'],answers:[Qstar],tols:[0.05],
+        selects:[],selAns:[],
+        fmlLines:['\\text{Set LMC} = P^*\\text{ and solve for }Q'],
+        ansLines,
+        graphKey:'qstar'});
+    }
+
+    // ── Step 4: Profit + Entry/Exit ──────────────────────────────────────────
+    {
+      const profTol=0.05;
+      const eeText=entryExit==='enter'
+        ? 'Since <strong>&pi; &gt; 0</strong>, new firms will <strong>enter</strong> the market'
+        : entryExit==='exit'
+        ? 'Since <strong>&pi; &lt; 0</strong>, existing firms will <strong>exit</strong> the market'
+        : 'Since <strong>&pi; = 0</strong>, no entry or exit — already in LR equilibrium';
+      s.push({n:4,title:'Long-Run Entry or Exit?',
+        instruction:'',
+        eHTML:`<div class="entry-row" style="column-gap:14px;">
+          <div style="display:flex;align-items:center;gap:5px;">
+            <span class="entry-sym">&pi;&nbsp;=&nbsp;</span>
+            <input class="fi" id="s4p" placeholder="?" autocomplete="off" style="width:70px;"/>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="entry-sym" style="font-size:13px;">Firms will:</span>
+            <select class="entry-select" id="s4ee">
+              <option value="">Select…</option>
+              <option value="enter">Enter</option>
+              <option value="exit">Exit</option>
+              <option value="neutral">Neither (LR eq.)</option>
+            </select>
+          </div>
+        </div>`,
+        ids:['s4p'],answers:[profit],tols:[profTol],
+        selects:['s4ee'],selAns:[entryExit],
+        fmlLines:['\\pi = (P^* - LAC(Q^*)) \\times Q^*'],
+        ansLines:[
+          `LAC(Q^*) = LAC(${Qstar}) = ${LACstar}`,
+          `\\pi = (${P} - ${LACstar}) \\times ${Qstar} = ${profit}`,
+        ],
+        entryExit,eeText,
+        graphKey:null});
+    }
+
+    // ── Step 5: LR Equilibrium Price ─────────────────────────────────────────
+    {
+      let ansLines;
+      if(type===0){
+        ansLines=[
+          `${2*a}Q - ${b} = ${cf(a)}Q - ${b} + \\dfrac{${FC}}{Q}`,
+          `${cf(a)}Q^2 = ${FC} \\implies Q' = \\sqrt{\\dfrac{${FC}}{${a}}} = ${Qprime}`,
+          `P' = LAC(${Qprime}) = ${Pprime}`,
+        ];
+      } else {
+        ansLines=[
+          `${2*a}Q^2 - ${b}Q = 0 \\implies Q' = \\dfrac{${b}}{${2*a}} = ${Qprime}`,
+          `P' = LAC(${Qprime}) = ${Pprime}`,
+        ];
+      }
+      s.push({n:5,title:'Long-Run Equilibrium Price',
+        instruction:"",
+        eHTML:`<div class="entry-row">
+          <span class="entry-sym">P&prime;&nbsp;=&nbsp;</span>
+          <input class="fi" id="s5a" placeholder="?" autocomplete="off" style="width:70px;"/>
+        </div>`,
+        ids:['s5a'],answers:[Pprime],tols:[0.05],
+        selects:[],selAns:[],
+        fmlLines:["\\text{Set LAC = LMC, solve for }Q'\\text{, then }P' = LAC(Q')"],
+        ansLines,
+        graphKey:'lreq'});
+    }
+
+    return s;
+  }
+
+  // ── Render step card ───────────────────────────────────────────────────────
+  function cardHTML(step){
+    return `<div class="step-card" id="sc${step.n}">
+      <div class="step-card-header">
+        <div>
+          <div class="step-num">Step ${step.n}</div>
+          <div class="step-title">${step.title}</div>
+        </div>
+        <button class="step-btn" id="btn${step.n}">Check Answer</button>
+      </div>
+      <p class="step-instruction">${step.instruction}</p>
+      <div class="entry-area">${step.eHTML}</div>
+      <div id="fb${step.n}" class="hidden"></div>
+      <div class="step-formula hidden" id="fml${step.n}">
+        <div class="formula-content" id="fc${step.n}"></div>
+      </div>
+      <div class="step-answer hidden" id="ans${step.n}">
+        <div class="answer-label">Answer</div>
+        <div class="answer-content" id="ac${step.n}"></div>
+      </div>
+    </div>`;
+  }
+
+  // ── Check inputs for a step ────────────────────────────────────────────────
+  function checkStep(step){
+    // empty check
+    for(const id of step.ids){
+      if(document.getElementById(id).value.trim()==='') return {ok:false,empty:true};
+    }
+    for(const id of step.selects){
+      if(document.getElementById(id).value==='') return {ok:false,empty:true};
+    }
+    // value check — mark each input correct/wrong
+    let all=true;
+    step.ids.forEach((id,i)=>{
+      const v=parseFloat(document.getElementById(id).value);
+      const ok=!isNaN(v) && Math.abs(v-step.answers[i])<=step.tols[i];
+      if(!ok) all=false;
+      document.getElementById(id).classList.toggle('correct',ok);
+      document.getElementById(id).classList.toggle('wrong',!ok);
+    });
+    step.selects.forEach((id,i)=>{
+      const ok=document.getElementById(id).value===step.selAns[i];
+      if(!ok) all=false;
+      document.getElementById(id).classList.toggle('correct',ok);
+      document.getElementById(id).classList.toggle('wrong',!ok);
+    });
+    return {ok:all};
+  }
+
+  function showFB(n,ok,msg){
+    const el=document.getElementById('fb'+n);
+    el.className='entry-fb '+(ok?'correct':'wrong');
+    el.textContent=msg;
+  }
+
+  function lockInputs(step){
+    step.ids.forEach(id=>{ document.getElementById(id).disabled=true; });
+    step.selects.forEach(id=>{ document.getElementById(id).disabled=true; });
+  }
+
+  function revealFml(n){
+    const el=document.getElementById('fml'+n);
+    if(!el.classList.contains('hidden')) return;
+    const inner=document.getElementById('fc'+n);
+    inner.innerHTML=_steps[n-1].fmlLines.map(l=>'<span class="katex-line">'+katexH(l)+'</span>').join('');
+    el.classList.remove('hidden');
+  }
+
+  function revealAns(n){
+    const el=document.getElementById('ans'+n);
+    if(!el.classList.contains('hidden')) return;
+    const step=_steps[n-1];
+    const inner=document.getElementById('ac'+n);
+    let html=step.ansLines.map(l=>'<span class="katex-line">'+katexH(l)+'</span>').join('');
+    if(step.eeText) html+=`<div class="ee-badge ${step.entryExit}" style="margin-top:8px;">${step.eeText}</div>`;
+    inner.innerHTML=html;
+    el.classList.remove('hidden');
+  }
+
+  function markDone(n,wasCorrect){
+    const step=_steps[n-1];
+    stepMeta[n-1].s='done';
+    revealFml(n);
+    revealAns(n);
+    lockInputs(step);
+    if(wasCorrect){
+      step.ids.forEach(id=>document.getElementById(id).classList.add('correct'));
+      step.selects.forEach(id=>document.getElementById(id).classList.add('correct'));
+      showFB(n,true,'✓ Correct!');
+    }
+    const btn=document.getElementById('btn'+n);
+    btn.textContent='✓ Done'; btn.disabled=true; btn.classList.add('done');
+    if(step.graphKey){
+      revealed[step.graphKey]=true;
+      updateLegend();
+      drawGraph();
+    }
+  }
+
+  // ── Button handler ─────────────────────────────────────────────────────────
+  function handleBtn(n){
+    const meta=stepMeta[n-1];
+    const step=_steps[n-1];
+    const btn=document.getElementById('btn'+n);
+
+    if(meta.s==='check'){
+      const res=checkStep(step);
+      if(res.empty){ showFB(n,false,'Please fill in all fields before checking.'); return; }
+      if(res.ok){
+        markDone(n,true);
+      } else {
+        meta.s='formula';
+        showFB(n,false,'Not quite — check your work.');
+        lockInputs(step);
+        btn.textContent='Show Formula';
+      }
+    } else if(meta.s==='formula'){
+      revealFml(n);
+      meta.s='answer';
+      btn.textContent='Show Answer';
+    } else if(meta.s==='answer'){
+      revealAns(n);
+      markDone(n,false);
+    }
+  }
+
+  // ── Legend sync ────────────────────────────────────────────────────────────
+  function updateLegend(){
+    document.getElementById('lgLAC').classList.toggle('hidden',!revealed.lac);
+    document.getElementById('lgLMC').classList.toggle('hidden',!revealed.lmc);
+    document.getElementById('lgQstar').classList.toggle('hidden',!revealed.qstar);
+    document.getElementById('lgLRline').classList.toggle('hidden',!revealed.lreq);
+    document.getElementById('lgLRdot').classList.toggle('hidden',!revealed.lreq);
+    if(revealed.qstar)
+      document.getElementById('lgQstarLabel').textContent='Q* = '+comp.Qstar+' (firm optimum)';
+    if(revealed.lreq){
+      document.getElementById('lgLRlineLabel').textContent="P\u2032 = "+comp.Pprime+' (LR eq. price)';
+      document.getElementById('lgLRdotLabel').textContent ="Q\u2032 = "+comp.Qprime+' (LR eq. qty.)';
+    }
+  }
+
+  // ── Render problem ─────────────────────────────────────────────────────────
+  function renderProblem(){
+    const {a,b,c,FC,P}=params;
+    const ltcTeX=type===0
+      ?`LTC = ${cf(a)}Q^2 - ${cf(b)}Q + ${FC}`
+      :`LTC = ${cf(a)}Q^3 - ${cf(b)}Q^2 + ${cf(c)}Q`;
+    renderK($ltc,ltcTeX);
+    renderK($price,`P^* = ${P}`);
+
+    stepMeta.forEach(m=>{ m.s='check'; });
+    revealed.lac=false; revealed.lmc=false; revealed.qstar=false; revealed.lreq=false;
+
+    _steps=buildSteps();
+    $sc.innerHTML=_steps.map(cardHTML).join('');
+
+    _steps.forEach(step=>{
+      document.getElementById('btn'+step.n).addEventListener('click',()=>handleBtn(step.n));
+      step.ids.forEach(id=>{
+        document.getElementById(id).addEventListener('keydown',e=>{
+          if(e.key==='Enter') handleBtn(step.n);
+        });
+      });
+    });
+
+    updateLegend();
+    drawGraph();
+  }
+
+  // ── Type toggle & new problem ──────────────────────────────────────────────
+  function setType(t){
+    if(type===t) return;
+    type=t;
+    $tb0.classList.toggle('active',t===0);
+    $tb1.classList.toggle('active',t===1);
+    if(type===1&&(params.c-params.b*params.b/(4*params.a))<2) generateProblem();
+    else { const r=compute(); if(r) comp=r; else generateProblem(); }
+    renderProblem();
+  }
+  $tb0.addEventListener('click',()=>setType(0));
+  $tb1.addEventListener('click',()=>setType(1));
+  document.getElementById('newProblemBtn').addEventListener('click',()=>{ generateProblem(); renderProblem(); });
+
+  // ── Canvas helper ──────────────────────────────────────────────────────────
+  function setupCanvas(){
+    const dpr=window.devicePixelRatio||1;
+    const rect=$canvas.getBoundingClientRect();
+    const W=rect.width*dpr,H=rect.height*dpr;
+    if($canvas.width!==W||$canvas.height!==H){ $canvas.width=W; $canvas.height=H; }
+    return {ctx:$canvas.getContext('2d'),dpr,W,H};
+  }
+
+  // ── Draw graph ─────────────────────────────────────────────────────────────
+  function drawGraph(){
+    const {ctx,dpr,W,H}=setupCanvas();
+    ctx.clearRect(0,0,W,H);
+    if(!comp.Qstar) return;
+
+    const pad={l:60*dpr,r:24*dpr,t:16*dpr,b:52*dpr};
+    const X0=pad.l,X1=W-pad.r,Y0=pad.t,Y1=H-pad.b;
+    const PW=X1-X0,PH=Y1-Y0;
+
+    const P=params.P,{Qstar,Qprime,Pprime}=comp;
+    const Qmax=Math.max(Qstar,Qprime)*2.6;
+    const Qs=type===0?Qmax*0.015:0;
+
+    // Always compute full y range so axis is stable
+    let yMax=P*1.8;
+    for(let k=1;k<=120;k++){
+      const Q=Qs+(k/120)*(Qmax-Qs);
+      const lac=lacAt(Q),lmc=lmcAt(Q);
+      if(isFinite(lac)&&lac>0&&lac<P*6) yMax=Math.max(yMax,lac);
+      if(isFinite(lmc)&&lmc>0&&lmc<P*6) yMax=Math.max(yMax,lmc);
+    }
+    yMax=Math.ceil(yMax*1.25/5)*5;
+
+    const xC=x=>X0+(x/Qmax)*PW;
+    const yC=y=>Y1-(y/yMax)*PH;
+
+    // Axes
+    ctx.strokeStyle='rgba(0,0,0,0.28)'; ctx.lineWidth=1.5*dpr;
+    ctx.beginPath(); ctx.moveTo(X0,Y1); ctx.lineTo(X1,Y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0,Y1); ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,0.28)';
+    ctx.beginPath(); ctx.moveTo(X1,Y1); ctx.lineTo(X1-8*dpr,Y1-4*dpr); ctx.lineTo(X1-8*dpr,Y1+4*dpr); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0-4*dpr,Y0+8*dpr); ctx.lineTo(X0+4*dpr,Y0+8*dpr); ctx.closePath(); ctx.fill();
+
+    ctx.fillStyle='rgba(0,0,0,0.50)'; ctx.font=`700 ${12*dpr}px "Inter",sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText('Quantity (Q)',(X0+X1)/2,Y1+14*dpr);
+    ctx.save(); ctx.translate(X0-42*dpr,(Y0+Y1)/2); ctx.rotate(-Math.PI/2);
+    ctx.textBaseline='top'; ctx.fillText('Price / Cost ($)',0,0); ctx.restore();
+
+    // Y ticks
+    ctx.font=`600 ${10*dpr}px "Inter",sans-serif`;
+    ctx.textAlign='right'; ctx.textBaseline='middle';
+    for(let t=1;t<=4;t++){
+      const v=Math.round(yMax/4*t),cy=yC(v);
+      if(cy<Y0||cy>Y1) continue;
+      ctx.strokeStyle='rgba(0,0,0,0.09)'; ctx.lineWidth=1*dpr;
+      ctx.beginPath(); ctx.moveTo(X0,cy); ctx.lineTo(X1,cy); ctx.stroke();
+      ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fillText(v,X0-7*dpr,cy);
+    }
+
+    // Helpers
+    function curve(fn,color,lw){
+      ctx.beginPath(); let go=false;
+      for(let k=0;k<=250;k++){
+        const Q=Qs+(k/250)*(Qmax-Qs),v=fn(Q);
+        if(!isFinite(v)||v<0||v>yMax*1.06){go=false;continue;}
+        const cx=xC(Q),cy=yC(v);
+        if(!go){ctx.moveTo(cx,cy);go=true;}else ctx.lineTo(cx,cy);
+      }
+      ctx.strokeStyle=color; ctx.lineWidth=lw; ctx.stroke();
+    }
+
+    function hdash(v,color,label,below){
+      const cy=yC(v); if(cy<Y0||cy>Y1) return;
+      ctx.setLineDash([8*dpr,5*dpr]); ctx.strokeStyle=color; ctx.lineWidth=2*dpr;
+      ctx.beginPath(); ctx.moveTo(X0,cy); ctx.lineTo(X1,cy); ctx.stroke(); ctx.setLineDash([]);
+      if(label){
+        ctx.font=`600 ${11*dpr}px "Inter",sans-serif`; ctx.fillStyle=color;
+        ctx.textAlign='right'; ctx.textBaseline=below?'top':'bottom';
+        ctx.fillText(label,X1-4*dpr,cy+(below?3:-3)*dpr);
+      }
+    }
+
+    function vdash(Q,fromV,color){
+      const cx=xC(Q),cyF=yC(fromV);
+      ctx.setLineDash([5*dpr,4*dpr]); ctx.strokeStyle=color; ctx.lineWidth=1.5*dpr;
+      ctx.beginPath(); ctx.moveTo(cx,Y1); ctx.lineTo(cx,cyF); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle=color; ctx.lineWidth=1.5*dpr;
+      ctx.beginPath(); ctx.moveTo(cx,Y1-4*dpr); ctx.lineTo(cx,Y1+4*dpr); ctx.stroke();
+    }
+
+    function dot(Q,v,hex){
+      const cx=xC(Q),cy=yC(v);
+      const r2=parseInt(hex.slice(1,3),16),g2=parseInt(hex.slice(3,5),16),b2=parseInt(hex.slice(5,7),16);
+      ctx.beginPath(); ctx.arc(cx,cy,9*dpr,0,Math.PI*2);
+      ctx.fillStyle=`rgba(${r2},${g2},${b2},0.15)`; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx,cy,5.5*dpr,0,Math.PI*2);
+      ctx.fillStyle=hex; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx,cy,5.5*dpr,0,Math.PI*2);
+      ctx.strokeStyle='#fff'; ctx.lineWidth=1.5*dpr; ctx.stroke();
+    }
+
+    // Draw order: LMC → P* → LAC → markers
+    if(revealed.lmc) curve(lmcAt,'#1b7f4b',2*dpr);
+
+    // P* always visible
+    hdash(P,'#b42318','P* = '+P,false);
+
+    if(revealed.lac) curve(lacAt,'#2f5d7c',2.5*dpr);
+
+    if(revealed.qstar){
+      vdash(Qstar,P,'rgba(180,35,24,0.45)');
+      const cx=xC(Qstar);
+      ctx.font=`700 ${10*dpr}px "Inter",sans-serif`;
+      ctx.fillStyle='#b42318'; ctx.textAlign='center'; ctx.textBaseline='top';
+      ctx.fillText('Q*',cx,Y1+6*dpr);
+      dot(Qstar,P,'#b42318');
+    }
+
+    if(revealed.lreq){
+      hdash(Pprime,'#6d28d9',"P\u2032 = "+Pprime,true);
+      vdash(Qprime,Pprime,'rgba(109,40,217,0.4)');
+      const cx=xC(Qprime);
+      ctx.font=`700 ${10*dpr}px "Inter",sans-serif`;
+      ctx.fillStyle='#6d28d9'; ctx.textAlign='center'; ctx.textBaseline='top';
+      ctx.fillText("Q\u2032",cx,Y1+6*dpr);
+      dot(Qprime,Pprime,'#6d28d9');
+    }
+  }
+
+  let _rt;
+  window.addEventListener('resize',()=>{ clearTimeout(_rt); _rt=setTimeout(drawGraph,80); });
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  function init(){ generateProblem(); renderProblem(); }
+  if(window.katex) init();
+  else {
+    let _p=0;
+    const _iv=setInterval(()=>{ _p++; if(window.katex||_p>60){clearInterval(_iv);init();} },80);
+  }
+
+})();
+</script>
+</body>
+</html>
