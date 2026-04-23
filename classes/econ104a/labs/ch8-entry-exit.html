@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Long-Run Entry/Exit Simulator — ECON 104A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151;
+      --muted:#596878;          /* darkened from #6b7280 → 5.85:1 on white ✓ */
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;           /* darkened from #1b7f4b → 7.72:1 on white ✓ */
+      --bad:#b42318;            /* unchanged — 6.18:1 on white ✓ */
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;text-decoration:none;
+      border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ──────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Header ─────────────────────────────────────────────── */
+    .page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* ── Lab ────────────────────────────────────────────────── */
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+
+    /* Two canvases side by side */
+    .canvas-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+    @media(max-width:700px){.canvas-row{grid-template-columns:1fr;}}
+
+    .graph-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;overflow:hidden;background:rgba(246,242,234,.45);border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+
+    /* ── Stats strip ────────────────────────────────────────── */
+    .stats-strip{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+    .stat-chip{display:flex;align-items:baseline;gap:5px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px 13px;box-shadow:var(--shadow);font-size:0.8125rem;}
+    .stat-label{font-size:0.6875rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700;}
+    .stat-value{font-size:1rem;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;}
+    .stat-value.positive{color:var(--good);}
+    .stat-value.negative{color:var(--bad);}
+
+    /* ── Phase label ────────────────────────────────────────── */
+    .phase-strip{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:11px 16px;box-shadow:var(--shadow);margin-bottom:12px;font-size:0.875rem;font-weight:600;color:var(--ink-2);line-height:1.5;}
+    .phase-tag{display:inline-block;padding:2px 9px;border-radius:6px;font-size:0.6875rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;margin-right:8px;background:rgba(47,93,124,.10);color:var(--accent);border:1px solid rgba(47,93,124,.2);}
+    .phase-tag.sr{background:rgba(140,72,0,.09);color:#8c4800;border-color:rgba(140,72,0,.25);}  /* #8c4800 = 6.28:1 on white ✓ */
+    .phase-tag.lr{background:rgba(21,92,56,.10);color:var(--good);border-color:rgba(21,92,56,.2);}
+
+    /* ── Controls ───────────────────────────────────────────── */
+    .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+
+    .shock-group{display:flex;gap:6px;flex-wrap:wrap;}
+    /* border darkened to #8c7f72 = 3.53:1 on white for non-text contrast (WCAG 1.4.11) */
+    .shock-btn{padding:8px 14px;border-radius:10px;border:1.5px solid #8c7f72;background:var(--panel);font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .shock-btn:hover:not(:disabled){border-color:var(--accent);background:rgba(47,93,124,.07);color:var(--accent);}
+    .shock-btn:disabled{opacity:.38;cursor:not-allowed;}  /* disabled excluded from contrast req */
+    .shock-btn.active{background:rgba(47,93,124,.12);border-color:var(--accent);color:var(--accent);}
+    .shock-btn.active.demand-up{background:rgba(21,92,56,.10);border-color:var(--good);color:var(--good);}
+    .shock-btn.active.demand-dn{background:rgba(180,35,24,.08);border-color:var(--bad);color:var(--bad);}
+    .shock-btn.active.cost-dn{background:rgba(109,40,217,.09);border-color:#6d28d9;color:#6d28d9;}
+    .shock-btn.active.cost-up{background:rgba(140,72,0,.09);border-color:#8c4800;color:#8c4800;}   /* #8c4800 = 6.28:1 on white ✓ */
+
+    .next-btn{padding:10px 22px;border-radius:12px;border:none;background:var(--accent);color:#fff;font-family:var(--font-sans);font-size:0.875rem;font-weight:700;cursor:pointer;transition:background .12s;white-space:nowrap;}
+    .next-btn:hover{background:#264d68;}
+    .next-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+
+    /* Visually hidden but readable by screen readers (WCAG 1.1.1) */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+      overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+
+    .hidden{display:none!important;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
+    /* Respect reduced-motion preference (WCAG 2.3.3 AAA + good practice) */
+    @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;}}
+  </style>
+</head>
+<body>
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ104a/">← ECON 104A</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104A — Perfect Competition</div>
+      <h1>Long-Run Entry/Exit Simulator</h1>
+      <p class="sub">Choose a shock, then step through how the industry and representative firm
+        transition from short-run disequilibrium to a new long-run equilibrium.</p>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- ── Two-panel canvas row ────────────────────────────────── -->
+  <div class="canvas-row">
+    <div class="graph-card">
+      <div class="graph-title" id="industryTitle">Industry (Market)</div>
+      <div class="canvas-wrap" id="industryWrap">
+        <canvas id="industryCanvas" role="img"
+          aria-labelledby="industryTitle"
+          aria-describedby="industryDescText"
+          style="aspect-ratio:1/1;"></canvas>
+      </div>
+    </div>
+    <div class="graph-card">
+      <div class="graph-title" id="firmTitle">Representative Firm</div>
+      <div class="canvas-wrap" id="firmWrap">
+        <canvas id="firmCanvas" role="img"
+          aria-labelledby="firmTitle"
+          aria-describedby="firmDescText"
+          style="aspect-ratio:1/1;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Screen-reader graph descriptions (WCAG 1.1.1) ─────────── -->
+  <!-- aria-atomic: announce both paragraphs as a unit on each update -->
+  <section class="sr-only" id="graphsDesc" aria-live="polite" aria-atomic="true">
+    <p id="industryDescText">Select a shock type to begin the simulation.</p>
+    <p id="firmDescText"></p>
+  </section>
+
+  <!-- ── Stats strip ──────────────────────────────────────────── -->
+  <div class="stats-strip" id="statsStrip">
+    <div class="stat-chip">
+      <span class="stat-label">Price</span>
+      <span class="stat-value" id="statP">—</span>
+    </div>
+    <div class="stat-chip">
+      <span class="stat-label">Firms (N)</span>
+      <span class="stat-value" id="statN">—</span>
+    </div>
+    <div class="stat-chip">
+      <span class="stat-label">q* (firm)</span>
+      <span class="stat-value" id="statQ">—</span>
+    </div>
+    <div class="stat-chip" id="profitChip">
+      <span class="stat-label">Profit (π)</span>
+      <span class="stat-value" id="statPi">—</span>
+    </div>
+  </div>
+
+  <!-- ── Phase label ────────────────────────────────────────── -->
+  <div class="phase-strip" id="phaseStrip" aria-live="polite" aria-atomic="true">
+    <span class="phase-tag" id="phaseTag">Phase 0</span>
+    <span id="phaseText">Choose a shock below, then click <strong>Next Step →</strong> to begin.</span>
+  </div>
+
+  <!-- ── Controls ─────────────────────────────────────────────── -->
+  <div class="controls">
+    <div class="shock-group" role="group" aria-label="Select a shock type">
+      <button class="shock-btn demand-up" id="btnDemandUp" aria-pressed="false" title="Shift demand right">Demand ↑</button>
+      <button class="shock-btn demand-dn" id="btnDemandDn" aria-pressed="false" title="Shift demand left">Demand ↓</button>
+      <button class="shock-btn cost-dn"   id="btnCostDn"   aria-pressed="false" title="Reduce fixed cost">Cost ↓</button>
+      <button class="shock-btn cost-up"   id="btnCostUp"   aria-pressed="false" title="Increase fixed cost">Cost ↑</button>
+    </div>
+    <button class="next-btn" id="btnNext">Next Step →</button>
+  </div>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 104A — Intermediate Microeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+const LAB_ID    = 'ch8-entry-exit';
+const LAB_LABEL = 'Long-Run Entry/Exit Simulator';
+
+// ── RNG ────────────────────────────────────────────────────────────
+let _rng = null;
+function rng(){ return _rng ? _rng() : Math.random(); }
+function pick(arr){ return arr[Math.floor(rng()*arr.length)]; }
+
+// ── Axis helpers ───────────────────────────────────────────────────
+function tickStep(mx){
+  if(mx<=10) return 1; if(mx<=20) return 2; if(mx<=50) return 5;
+  if(mx<=100) return 10; if(mx<=200) return 20; if(mx<=500) return 50;
+  return 100;
+}
+function snapUp(raw){
+  const s=[5,8,10,12,15,20,25,30,40,50,60,80,100,120,150,200,250,300,400,500,600,800,1000];
+  return s.find(v=>v>=raw) || Math.ceil(raw/100)*100;
+}
+
+// ── State ──────────────────────────────────────────────────────────
+let params  = {};
+let phase   = 0;    // 0=LR eq, 1=SR adj, 2=LR new eq
+let shock   = null; // 'demandUp'|'demandDn'|'costDn'|'costUp'
+let derived = {};
+
+// Font scale: respects the user's browser default font-size preference (WCAG 1.4.4).
+// Recomputed at the start of every redraw so canvas text scales with HTML text.
+let _fs = 1;
+
+// ── DOM ────────────────────────────────────────────────────────────
+const $iCanvas = document.getElementById('industryCanvas');
+const $fCanvas = document.getElementById('firmCanvas');
+const $iWrap   = document.getElementById('industryWrap');
+const $fWrap   = document.getElementById('firmWrap');
+const $phaseTag  = document.getElementById('phaseTag');
+const $phaseText = document.getElementById('phaseText');
+const $statP  = document.getElementById('statP');
+const $statN  = document.getElementById('statN');
+const $statQ  = document.getElementById('statQ');
+const $statPi = document.getElementById('statPi');
+const $btnNext     = document.getElementById('btnNext');
+const $btnDemandUp = document.getElementById('btnDemandUp');
+const $btnDemandDn = document.getElementById('btnDemandDn');
+const $btnCostDn   = document.getElementById('btnCostDn');
+const $btnCostUp   = document.getElementById('btnCostUp');
+const ALL_SHOCK_BTNS = [$btnDemandUp, $btnDemandDn, $btnCostDn, $btnCostUp];
+const $industryDescText = document.getElementById('industryDescText');
+const $firmDescText     = document.getElementById('firmDescText');
+
+// ── Math helpers ───────────────────────────────────────────────────
+// SR supply Q = N·P/(2a)  →  P*(N/(2a)+B) = A'  →  P = A'/(N/(2a)+B)
+function srEquilibrium(A_prime, N, a, B){
+  const denom = N/(2*a) + B;
+  const P2 = A_prime / denom;
+  return { P2, Q2: (N/(2*a)) * P2 };
+}
+
+// Demand shock: LR price unchanged (same costs), new N from Q_d(P1)=N2·q*
+function lrAfterDemand(A_new){
+  const { P1, qstar, B } = params;
+  // Q3 is exact intersection of D2 with LR price P1 — no rounding distortion
+  const Q3 = Math.max(0, A_new - B * P1);
+  const N2 = Math.max(1, Math.round(Q3 / qstar));
+  return { P3: P1, Q3, N2 };
+}
+
+// Cost shock: new min ATC = new LR price, new N from Q_d(P3)=N2·q*_new
+function lrAfterCost(F_new){
+  const { a, A, B } = params;
+  const qstar_new  = Math.sqrt(F_new / a);
+  const minATC_new = 2 * Math.sqrt(F_new * a);
+  const P3 = minATC_new;
+  // Q3 is exact intersection of D1 with new LR price — no rounding distortion
+  const Q3 = Math.max(0, A - B * P3);
+  const N2 = Math.max(1, Math.round(Q3 / qstar_new));
+  return { P3, Q3, N2, qstar_new, minATC_new };
+}
+
+// ── Param generation ───────────────────────────────────────────────
+function generateParams(){
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+
+  const F  = pick([20, 25, 30, 36, 40]);
+  const a  = pick([1, 1.5, 2, 2.5]);
+  const N1 = pick([8, 10, 12, 15]);
+
+  const qstar  = Math.sqrt(F / a);
+  const minATC = 2 * Math.sqrt(F * a);   // P1 = min ATC
+  const P1 = minATC;
+  const Q1 = N1 * qstar;
+  const B  = Q1 / (P1 * 1.5);            // demand slope
+  const A  = Q1 + B * P1;               // demand intercept
+
+  params = { F, a, N1, P1, qstar, minATC, A, B, Q1 };
+  computeAxisRanges();
+}
+
+// ── Static axis ranges — evaluated once across all shock worst cases ──
+function computeAxisRanges(){
+  const { F, a, N1, P1, qstar, minATC, A, B, Q1 } = params;
+
+  let iQMax = Q1 * 1.5, iPMax = P1 * 1.6;
+  let fQMax = qstar * 2.6, fPMax = P1 * 1.7;
+
+  function accDemand(A2){
+    const sr = srEquilibrium(A2, N1, a, B);
+    const lr = lrAfterDemand(A2);
+    iQMax = Math.max(iQMax, sr.Q2, lr.Q3);
+    iPMax = Math.max(iPMax, sr.P2);
+    const q2 = sr.P2 / (2*a);
+    fQMax = Math.max(fQMax, q2 * 1.4);
+    fPMax = Math.max(fPMax, sr.P2, F/q2 + a*q2);
+  }
+
+  function accCost(F2){
+    const lr = lrAfterCost(F2);
+    iQMax = Math.max(iQMax, lr.Q3);
+    iPMax = Math.max(iPMax, lr.P3);
+    fQMax = Math.max(fQMax, lr.qstar_new * 2.6);
+    // show both old and new curves: evaluate old ATC at new qstar and vice-versa
+    fPMax = Math.max(fPMax, lr.minATC_new,
+                     F2/qstar + a*qstar,   // new ATC at old q*
+                     F/lr.qstar_new + a*lr.qstar_new); // old ATC at new q*
+  }
+
+  accDemand(A * 1.40);  // demand up max
+  accDemand(A * 0.70);  // demand down max
+  accCost(F * 0.70);    // cost down max
+  accCost(F * 1.30);    // cost up max
+
+  // Shared y-axis: same price scale on both panels so P lines up visually
+  const sharedYMax = snapUp(Math.max(iPMax * 1.25, fPMax * 1.30));
+  params.iXMax = snapUp(iQMax * 1.25);
+  params.iYMax = sharedYMax;
+  params.fXMax = snapUp(fQMax * 1.20);
+  params.fYMax = sharedYMax;
+}
+
+// ── Derive all phase values when shock is selected ─────────────────
+function computeDerived(){
+  const { F, a, N1, P1, qstar, minATC, A, B, Q1 } = params;
+  const d = { F, a, N1, P1, qstar, minATC, A, B, Q1 };
+
+  if(shock === 'demandUp'){
+    const A2 = A * (1 + 0.20 + rng()*0.20);
+    d.A2 = A2;
+    const sr = srEquilibrium(A2, N1, a, B);
+    d.P2 = sr.P2; d.Q2 = sr.Q2; d.q2 = sr.P2/(2*a);
+    d.ATC2 = F/d.q2 + a*d.q2; d.pi2 = (d.P2 - d.ATC2)*d.q2;
+    const lr = lrAfterDemand(A2);
+    d.P3=lr.P3; d.Q3=lr.Q3; d.N2=lr.N2; d.qstar_new=qstar; d.minATC_new=minATC; d.F_new=F;
+
+  } else if(shock === 'demandDn'){
+    const A2 = A * (1 - 0.15 - rng()*0.15);
+    d.A2 = A2;
+    const sr = srEquilibrium(A2, N1, a, B);
+    d.P2 = sr.P2; d.Q2 = sr.Q2; d.q2 = sr.P2/(2*a);
+    d.ATC2 = F/d.q2 + a*d.q2; d.pi2 = (d.P2 - d.ATC2)*d.q2;
+    const lr = lrAfterDemand(A2);
+    d.P3=lr.P3; d.Q3=lr.Q3; d.N2=lr.N2; d.qstar_new=qstar; d.minATC_new=minATC; d.F_new=F;
+
+  } else if(shock === 'costDn'){
+    const F_new = F * (1 - 0.20 - rng()*0.10);
+    d.F_new = F_new;
+    d.A2 = A;
+    const sr = srEquilibrium(A, N1, a, B); // SR supply unchanged
+    d.P2 = sr.P2; d.Q2 = sr.Q2; d.q2 = sr.P2/(2*a);
+    d.ATC2 = F_new/d.q2 + a*d.q2; d.pi2 = (d.P2 - d.ATC2)*d.q2;
+    const lr = lrAfterCost(F_new);
+    d.P3=lr.P3; d.Q3=lr.Q3; d.N2=lr.N2; d.qstar_new=lr.qstar_new; d.minATC_new=lr.minATC_new;
+
+  } else if(shock === 'costUp'){
+    const F_new = F * (1 + 0.20 + rng()*0.10);
+    d.F_new = F_new;
+    d.A2 = A;
+    const sr = srEquilibrium(A, N1, a, B); // SR supply unchanged
+    d.P2 = sr.P2; d.Q2 = sr.Q2; d.q2 = sr.P2/(2*a);
+    d.ATC2 = F_new/d.q2 + a*d.q2; d.pi2 = (d.P2 - d.ATC2)*d.q2;
+    const lr = lrAfterCost(F_new);
+    d.P3=lr.P3; d.Q3=lr.Q3; d.N2=lr.N2; d.qstar_new=lr.qstar_new; d.minATC_new=lr.minATC_new;
+  }
+
+  derived = d;
+}
+
+// ── Canvas setup ───────────────────────────────────────────────────
+function setupCanvas(canvas, wrap){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  const W = Math.round(rect.width * dpr), H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){ canvas.width = W; canvas.height = H; }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+const PAD = { l:52, r:16, t:16, b:48 };
+
+function makeCoords(W, H, dpr, xMax, yMax){
+  const p = { l:PAD.l*dpr, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr };
+  const PW = W-p.l-p.r, PH = H-p.t-p.b;
+  return { xC: x => p.l+(x/xMax)*PW, yC: y => H-p.b-(y/yMax)*PH, p, PW, PH };
+}
+
+// ── Draw primitives ────────────────────────────────────────────────
+function drawAxes(ctx, dpr, W, H, co, xMax, yMax, xLabel, yLabel){
+  const { xC, yC, p, PW, PH } = co;
+  ctx.fillStyle='rgba(246,242,234,.45)'; ctx.fillRect(p.l,p.t,PW,PH);
+  ctx.strokeStyle='rgba(0,0,0,.28)'; ctx.lineWidth=1.5*dpr;
+  ctx.beginPath(); ctx.moveTo(p.l,H-p.b); ctx.lineTo(W-p.r,H-p.b); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(p.l,p.t); ctx.lineTo(p.l,H-p.b); ctx.stroke();
+  ctx.fillStyle='rgba(0,0,0,.28)';
+  ctx.beginPath(); ctx.moveTo(W-p.r,H-p.b); ctx.lineTo(W-p.r-8*dpr,H-p.b-4*dpr); ctx.lineTo(W-p.r-8*dpr,H-p.b+4*dpr); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(p.l,p.t); ctx.lineTo(p.l-4*dpr,p.t+8*dpr); ctx.lineTo(p.l+4*dpr,p.t+8*dpr); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,.50)'; ctx.font=`700 ${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText(xLabel,(p.l+W-p.r)/2,H-p.b+18*dpr);
+  ctx.save(); ctx.translate(p.l-36*dpr,(p.t+H-p.b)/2); ctx.rotate(-Math.PI/2);
+  ctx.textBaseline='middle'; ctx.fillText(yLabel,0,0); ctx.restore();
+  ctx.font=`${Math.round(10*dpr*_fs)}px "Inter",sans-serif`; ctx.fillStyle='rgba(0,0,0,.35)'; ctx.lineWidth=1*dpr;
+  const tsx=tickStep(xMax), tsy=tickStep(yMax);
+  for(let v=tsx; v<xMax*0.99; v+=tsx){
+    const cx=xC(v);
+    ctx.strokeStyle='rgba(0,0,0,.08)'; ctx.setLineDash([3*dpr,3*dpr]);
+    ctx.beginPath(); ctx.moveTo(cx,p.t); ctx.lineTo(cx,H-p.b); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle='rgba(0,0,0,.25)';
+    ctx.beginPath(); ctx.moveTo(cx,H-p.b); ctx.lineTo(cx,H-p.b+4*dpr); ctx.stroke();
+    ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText(v,cx,H-p.b+5*dpr);
+  }
+  for(let v=tsy; v<yMax*0.99; v+=tsy){
+    const cy=yC(v);
+    ctx.strokeStyle='rgba(0,0,0,.08)'; ctx.setLineDash([3*dpr,3*dpr]);
+    ctx.beginPath(); ctx.moveTo(p.l,cy); ctx.lineTo(W-p.r,cy); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle='rgba(0,0,0,.25)';
+    ctx.beginPath(); ctx.moveTo(p.l,cy); ctx.lineTo(p.l-4*dpr,cy); ctx.stroke();
+    ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.fillText(v>=1000?(v/1000).toFixed(1)+'k':v, p.l-6*dpr,cy);
+  }
+}
+
+function drawLine(ctx, dpr, co, W, H, x1, y1, x2, y2, color, lw, dashed){
+  const { xC, yC, p } = co;
+  ctx.save(); ctx.beginPath(); ctx.rect(p.l,p.t,W-p.l-p.r,H-p.t-p.b); ctx.clip();
+  ctx.strokeStyle=color; ctx.lineWidth=lw*dpr;
+  ctx.setLineDash(dashed?[6*dpr,4*dpr]:[]);
+  ctx.beginPath(); ctx.moveTo(xC(x1),yC(y1)); ctx.lineTo(xC(x2),yC(y2)); ctx.stroke();
+  ctx.setLineDash([]); ctx.restore();
+}
+
+function drawHLine(ctx, dpr, co, W, H, yVal, color, lw, dashed, label, labelRight){
+  const { xC, yC, p } = co;
+  const cy=yC(yVal); if(cy<p.t||cy>H-p.b) return;
+  ctx.save(); ctx.beginPath(); ctx.rect(p.l,p.t,W-p.l-p.r,H-p.t-p.b); ctx.clip();
+  ctx.strokeStyle=color; ctx.lineWidth=lw*dpr;
+  ctx.setLineDash(dashed?[7*dpr,5*dpr]:[]);
+  ctx.beginPath(); ctx.moveTo(p.l,cy); ctx.lineTo(W-p.r,cy); ctx.stroke();
+  ctx.setLineDash([]); ctx.restore();
+  if(label){
+    ctx.font=`700 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`; ctx.fillStyle=color;
+    ctx.textBaseline='bottom'; ctx.textAlign=labelRight?'right':'left';
+    ctx.fillText(label, labelRight?W-p.r-4*dpr:p.l+4*dpr, cy-3*dpr);
+  }
+}
+
+function drawCurve(ctx, dpr, co, W, H, fn, xMax, yMax, color, lw){
+  const { xC, yC, p } = co;
+  ctx.save(); ctx.beginPath(); ctx.rect(p.l,p.t,W-p.l-p.r,H-p.t-p.b); ctx.clip();
+  ctx.strokeStyle=color; ctx.lineWidth=lw*dpr; ctx.setLineDash([]);
+  ctx.beginPath(); let go=false;
+  for(let k=0; k<=400; k++){
+    const x=(k/400)*xMax, v=fn(x);
+    if(!isFinite(v)||v<0||v>yMax*1.08){go=false;continue;}
+    const cx=xC(x),cy=yC(v);
+    if(!go){ctx.moveTo(cx,cy);go=true;}else ctx.lineTo(cx,cy);
+  }
+  ctx.stroke(); ctx.restore();
+}
+
+function drawDot(ctx, dpr, co, x, y, hex){
+  const cx=co.xC(x), cy=co.yC(y);
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  ctx.beginPath(); ctx.arc(cx,cy,8*dpr,0,Math.PI*2);
+  ctx.fillStyle=`rgba(${r},${g},${b},.15)`; ctx.fill();
+  ctx.beginPath(); ctx.arc(cx,cy,5*dpr,0,Math.PI*2);
+  ctx.fillStyle=hex; ctx.fill();
+  ctx.strokeStyle='#fff'; ctx.lineWidth=1.5*dpr; ctx.stroke();
+}
+
+function drawDotGhost(ctx, dpr, co, x, y, hex){
+  ctx.save(); ctx.globalAlpha=0.30; drawDot(ctx,dpr,co,x,y,hex); ctx.restore();
+}
+
+function drawCurveGhost(ctx, dpr, co, W, H, fn, xMax, yMax, color, lw){
+  ctx.save(); ctx.globalAlpha=0.28; drawCurve(ctx,dpr,co,W,H,fn,xMax,yMax,color,lw); ctx.restore();
+}
+
+function projLines(ctx, dpr, co, W, H, x, y, color){
+  const { xC, yC, p } = co;
+  const cx=xC(x), cy=yC(y);
+  ctx.save(); ctx.beginPath(); ctx.rect(p.l,p.t,W-p.l-p.r,H-p.t-p.b); ctx.clip();
+  ctx.setLineDash([4*dpr,3*dpr]); ctx.strokeStyle=color||'rgba(0,0,0,.40)'; ctx.lineWidth=1.2*dpr;
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx,H-p.b); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(p.l,cy); ctx.stroke();
+  ctx.setLineDash([]); ctx.restore();
+}
+
+function labelAt(ctx, dpr, co, x, y, text, color, dx, dy){
+  ctx.font=`700 ${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  const tx = co.xC(x)+(dx||0)*dpr, ty = co.yC(y)+(dy||0)*dpr;
+  // White halo so label is legible over any curve/line it straddles
+  const m = ctx.measureText(text);
+  const pd = 2.5*dpr;
+  const th = Math.round(7*dpr*_fs); // half-height scales with font
+  ctx.fillStyle='rgba(255,255,255,0.82)';
+  ctx.fillRect(tx - pd, ty - th - pd, m.width + 2*pd, 2*th + 2*pd);
+  ctx.fillStyle=color;
+  ctx.fillText(text, tx, ty);
+}
+
+// ── Industry canvas ────────────────────────────────────────────────
+function drawIndustry(){
+  const cv=setupCanvas($iCanvas,$iWrap); if(!cv) return;
+  const { ctx, dpr, W, H } = cv;
+  ctx.clearRect(0,0,W,H);
+
+  const { a, N1, P1, qstar, A, B, Q1, iXMax: xMax, iYMax: yMax } = params;
+  const d = derived;
+  const isCostShock_i = shock==='costDn' || shock==='costUp';
+  const co = makeCoords(W,H,dpr,xMax,yMax);
+  const { p } = co;
+
+  drawAxes(ctx,dpr,W,H,co,xMax,yMax,'Quantity (Q)','Price (P)');
+
+  // D1 — always shown
+  drawLine(ctx,dpr,co,W,H, 0,A/B, Math.min(A,xMax*1.1),0, '#b42318',2.2,false);
+  { const lQ=Math.min(xMax*0.70,A*0.85), lP=(A-lQ)/B;
+    if(lP>0&&lP<yMax*0.94) labelAt(ctx,dpr,co,lQ,lP,'D₁','#b42318',5,-12); }
+
+  // D2 — shown from phase 1 for demand shocks
+  if(phase>=1 && (shock==='demandUp'||shock==='demandDn') && d.A2!==undefined){
+    const A2=d.A2;
+    drawLine(ctx,dpr,co,W,H, 0,A2/B, Math.min(A2,xMax*1.1),0, '#6d28d9',2,true);
+    const lQ=Math.min(xMax*0.70,A2*0.85), lP=(A2-lQ)/B;
+    if(lP>0&&lP<yMax*0.94) labelAt(ctx,dpr,co,lQ,lP,'D₂','#6d28d9',5,-12);
+    else labelAt(ctx,dpr,co,xMax*0.03,A2/B*0.96,'D₂','#6d28d9',4,0);
+  }
+
+  // S1 — always shown (parallel-shift baseline)
+  const slope1 = 2*a/N1;   // dP/dQ for SR supply
+  drawLine(ctx,dpr,co,W,H, 0,0, xMax,xMax*slope1, '#2f5d7c',2.2,false);
+  { const lQ=xMax*0.72, lP=lQ*slope1;
+    if(lP<yMax*0.94) labelAt(ctx,dpr,co,lQ,lP,'S₁','#2f5d7c',5,-10); }
+
+  // S2 — parallel shift through exact LR eq point (d.Q3, d.P3) (phase 2)
+  if(phase>=2 && d.Q3!==undefined && d.P3!==undefined){
+    // dQ derived from exact intersection so S2 passes exactly through (d.Q3, d.P3)
+    const dQ = d.Q3 - d.P3 / slope1;
+    drawLine(ctx,dpr,co,W,H, dQ,0, xMax,slope1*(xMax-dQ), '#1b7f4b',2,true);
+    // Label: pick a visible point along S2
+    const lQ = Math.max(dQ, 0) + xMax*0.50;
+    const lP = slope1*(lQ-dQ);
+    if(lP>0&&lP<yMax*0.94) labelAt(ctx,dpr,co,lQ,lP,'S₂','#1b7f4b',5,-10);
+  }
+
+  // Current price — full-width dashed guide, same y-level as firm panel price line
+  // Phase-matched color mirrors the active equilibrium dot
+  const P_cur_i = phase>=2 && d.P3!==undefined ? d.P3 : P1;
+  const Pcol_i  = phase>=2 ? '#1b7f4b' :
+                  (phase===1 && !isCostShock_i) ? '#c2690a' : '#2f5d7c';
+  drawHLine(ctx,dpr,co,W,H, P_cur_i, Pcol_i, 1.5, true, `P = ${P_cur_i.toFixed(2)}`, true);
+
+  // Phase 0 dot — always shown (it's the LR baseline)
+  projLines(ctx,dpr,co,W,H,Q1,P1,'rgba(0,0,0,.35)');
+  drawDot(ctx,dpr,co,Q1,P1,'#2f5d7c');
+
+  // Phase 1 SR dot — demand shocks only (cost shocks don't move SR industry eq)
+  if(phase>=1 && !isCostShock_i && d.P2!==undefined){
+    if(phase===1){
+      projLines(ctx,dpr,co,W,H,d.Q2,d.P2,'rgba(0,0,0,.30)');
+      drawDot(ctx,dpr,co,d.Q2,d.P2,'#c2690a');
+    } else {
+      drawDotGhost(ctx,dpr,co,d.Q2,d.P2,'#c2690a');
+    }
+  }
+
+  // Phase 2 LR dot
+  if(phase>=2 && d.P3!==undefined){
+    projLines(ctx,dpr,co,W,H,d.Q3,d.P3,'rgba(0,0,0,.30)');
+    drawDot(ctx,dpr,co,d.Q3,d.P3,'#1b7f4b');
+  }
+}
+
+// ── Firm canvas ────────────────────────────────────────────────────
+function drawFirm(){
+  const cv=setupCanvas($fCanvas,$fWrap); if(!cv) return;
+  const { ctx, dpr, W, H } = cv;
+  ctx.clearRect(0,0,W,H);
+
+  const { F, a, P1, qstar, fXMax: xMax, fYMax: yMax } = params;
+  const d = derived;
+  const isCostShock = shock==='costDn' || shock==='costUp';
+
+  // Active cost function parameters
+  // New cost curves only revealed once "Next Step" is clicked (phase >= 1)
+  const F_eff = (isCostShock && phase >= 1 && d.F_new!==undefined) ? d.F_new : F;
+  const MC  = q => 2*a*q;
+  const ATC = (Fv) => q => q>0.001 ? Fv/q + a*q : Infinity;
+  const AVC = q => a*q;
+
+  // Active price & quantity for this phase
+  let P_cur=P1, q_cur=qstar;
+  if(phase>=1 && d.P2!==undefined){ P_cur=d.P2; q_cur=d.q2||(d.P2/(2*a)); }
+  if(phase>=2 && d.P3!==undefined){
+    P_cur=d.P3;
+    q_cur = isCostShock ? (d.qstar_new||qstar) : qstar;
+  }
+
+  const co = makeCoords(W,H,dpr,xMax,yMax);
+  const { xC, yC, p } = co;
+
+  drawAxes(ctx,dpr,W,H,co,xMax,yMax,'q (firm)','P / Cost');
+
+  // Ghost old ATC in phase >= 1 for cost shocks (AVC and MC don't depend on F)
+  if(phase >= 1 && isCostShock){
+    drawCurveGhost(ctx,dpr,co,W,H,ATC(F),xMax,yMax,'#b42318',2.2);
+  }
+
+  // Active AVC
+  drawCurve(ctx,dpr,co,W,H,AVC,xMax,yMax,'#c2690a',1.8);
+  { const qL=xMax*0.90, v=AVC(qL); if(v<yMax*0.94) labelAt(ctx,dpr,co,qL,v,'AVC','#c2690a',4,-10); }
+
+  // Active ATC (uses F_eff)
+  drawCurve(ctx,dpr,co,W,H,ATC(F_eff),xMax,yMax,'#b42318',2.2);
+  { const qL=xMax*0.85, v=ATC(F_eff)(qL); if(v<yMax*0.94) labelAt(ctx,dpr,co,qL,v,'ATC','#b42318',4,-10); }
+
+  // Active MC
+  drawCurve(ctx,dpr,co,W,H,MC,xMax,yMax,'#6d28d9',2.0);
+  { const qL=xMax*0.88, v=MC(qL); if(v<yMax*0.94) labelAt(ctx,dpr,co,qL,v,'MC','#6d28d9',4,5); }
+
+  // Price line — phase-matched color mirrors the active industry equilibrium dot
+  const P_color = phase>=2 ? '#1b7f4b' :
+                  (phase===1 && !isCostShock) ? '#c2690a' : '#2f5d7c';
+  drawHLine(ctx,dpr,co,W,H, P_cur, P_color, 2, false, `P = ${P_cur.toFixed(2)}`, true);
+
+  // Profit / loss rectangle in phase 1
+  if(phase===1 && d.q2!==undefined){
+    const q2=d.q2, atc2=ATC(F_eff)(q2);
+    const pTop=Math.max(d.P2,atc2), pBot=Math.min(d.P2,atc2);
+    const isProfit=d.P2>=atc2;
+    const cy_top=yC(pTop), cy_bot=yC(pBot), cx0=xC(0), cxq=xC(q2);
+    ctx.save(); ctx.beginPath(); ctx.rect(p.l,p.t,W-p.l-p.r,H-p.t-p.b); ctx.clip();
+    ctx.fillStyle=isProfit?'rgba(27,127,75,.18)':'rgba(180,35,24,.15)';
+    ctx.fillRect(cx0,cy_top,cxq-cx0,cy_bot-cy_top);
+    ctx.strokeStyle=isProfit?'#1b7f4b':'#b42318'; ctx.lineWidth=1.2*dpr;
+    ctx.setLineDash([4*dpr,3*dpr]); ctx.strokeRect(cx0,cy_top,cxq-cx0,cy_bot-cy_top); ctx.setLineDash([]);
+    ctx.restore();
+    const piLabel=(d.pi2>=0?'π = +':'π = ')+d.pi2.toFixed(2);
+    ctx.font=`700 ${10*dpr}px "Inter",sans-serif`; ctx.fillStyle=isProfit?'#1b7f4b':'#b42318';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(piLabel,(cx0+cxq)/2,(cy_top+cy_bot)/2);
+  }
+
+  // Ghost of phase 0 eq dot on firm panel (demand shocks, phase 1+)
+  if(phase>=1 && !isCostShock){
+    drawDotGhost(ctx,dpr,co,qstar,P1,'#2f5d7c');
+  }
+
+  // Ghost of phase 1 SR dot on firm panel (demand shocks, phase 2)
+  if(phase>=2 && !isCostShock && d.q2!==undefined){
+    drawDotGhost(ctx,dpr,co,d.q2,d.P2,'#c2690a');
+  }
+
+  // Active projection lines + dot
+  projLines(ctx,dpr,co,W,H,q_cur,P_cur,'rgba(0,0,0,.40)');
+  drawDot(ctx,dpr,co,q_cur,P_cur,'#2f5d7c');
+}
+
+// ── Stats strip ────────────────────────────────────────────────────
+function updateStats(){
+  const { P1, qstar, N1 } = params;
+  const d = derived;
+  let P_=P1, N_=N1, q_=qstar, pi_=0;
+  if(phase===1 && d.P2!==undefined){ P_=d.P2; q_=d.q2||qstar; pi_=d.pi2||0; }
+  else if(phase>=2 && d.P3!==undefined){ P_=d.P3; N_=d.N2||N1; q_=d.qstar_new||qstar; }
+  $statP.textContent  = P_.toFixed(2);
+  $statN.textContent  = N_;
+  $statQ.textContent  = q_.toFixed(2);
+  $statPi.textContent = (pi_>=0?'+':'')+pi_.toFixed(2);
+  $statPi.className   = 'stat-value '+(pi_>0.01?'positive':pi_<-0.01?'negative':'');
+}
+
+// ── Phase label ────────────────────────────────────────────────────
+function updatePhaseLabel(){
+  const { P1, N1 } = params;
+  const d = derived;
+  if(phase===0){
+    $phaseTag.textContent='Phase 0'; $phaseTag.className='phase-tag';
+    $phaseText.innerHTML=`<strong>Long-Run Equilibrium</strong>: P = min ATC = ${P1.toFixed(2)}, π = 0. `
+      +`Choose a shock, then click <strong>Next Step →</strong>.`;
+  } else if(phase===1){
+    $phaseTag.textContent='Phase 1 — Short Run'; $phaseTag.className='phase-tag sr';
+    const pi=d.pi2||0;
+    const profStr=pi>0.01?`earning <strong>profit π = ${pi.toFixed(2)}</strong>`
+                 :pi<-0.01?`incurring <strong>loss π = ${pi.toFixed(2)}</strong>`:'breaking even';
+    $phaseText.innerHTML=`<strong>Short-Run Adjustment</strong>: Price = ${(d.P2||0).toFixed(2)}. `
+      +`Firms are ${profStr}. No entry or exit yet — N = ${N1}.`;
+  } else {
+    $phaseTag.textContent='Phase 2 — Long Run'; $phaseTag.className='phase-tag lr';
+    const N2=d.N2||N1, delta=N2-N1;
+    const ee=delta>0?`${delta} firm${delta===1?'':'s'} <strong>entered</strong>`
+            :delta<0?`${Math.abs(delta)} firm${Math.abs(delta)===1?'':'s'} <strong>exited</strong>`
+            :'no entry or exit';
+    $phaseText.innerHTML=`<strong>Long-Run Equilibrium</strong>: π → 0, ${ee}. `
+      +`N = ${N2}, P = ${(d.P3||P1).toFixed(2)}.`;
+  }
+}
+
+// ── Buttons ────────────────────────────────────────────────────────
+function updateButtons(){
+  const locked=phase>0;
+  ALL_SHOCK_BTNS.forEach(b=>{ b.disabled=locked; });
+  if(phase>=2)           { $btnNext.textContent='New Problem'; $btnNext.disabled=false; }
+  else if(!shock)        { $btnNext.textContent='Next Step →'; $btnNext.disabled=true;  }
+  else                   { $btnNext.textContent='Next Step →'; $btnNext.disabled=false; }
+}
+
+// ── Screen-reader graph descriptions (WCAG 1.1.1) ──────────────────
+// Generates plain-language equivalents of both canvas graphs,
+// covering curves, intersections, profit/loss, and entry/exit reasoning.
+function describeGraphs(){
+  if(!params.P1) return { iDesc:'', fDesc:'' };
+  const { F, a, N1, P1, qstar, A, B, Q1 } = params;
+  const d = derived;
+  const isCostShock = shock==='costDn' || shock==='costUp';
+  const fmt = v => (+v).toFixed(2);
+
+  let iDesc='', fDesc='';
+
+  if(phase===0){
+    iDesc = `Supply curve S₁ and demand curve D₁ intersect at price ${fmt(P1)}, `
+          + `quantity ${fmt(Q1)}. Long-run equilibrium with ${N1} firms. `
+          + `Economic profit is zero.`;
+    fDesc = `Marginal cost (MC), average total cost (ATC), and average variable cost (AVC) `
+          + `curves are shown. At long-run equilibrium price ${fmt(P1)}, the firm produces `
+          + `${fmt(qstar)} units at the minimum of ATC, earning zero economic profit.`;
+    if(shock){
+      const names={demandUp:'demand increase',demandDn:'demand decrease',
+                   costDn:'fixed cost decrease',costUp:'fixed cost increase'};
+      iDesc += ` A ${names[shock]} shock is selected. Click Next Step to advance.`;
+    }
+
+  } else if(phase===1){
+    if(!isCostShock){
+      const dir    = shock==='demandUp' ? 'increased' : 'decreased';
+      const relP   = d.P2 > P1 ? 'above' : 'below';
+      const piAbs  = Math.abs(d.pi2||0);
+      const piWord = (d.pi2||0) >= 0 ? 'profit' : 'loss';
+      const drive  = (d.pi2||0) >= 0 ? 'attract firm entry' : 'cause firm exit';
+      iDesc = `Demand shifted to D₂. Short-run equilibrium: price ${fmt(d.P2)} `
+            + `(${dir} from ${fmt(P1)}), quantity ${fmt(d.Q2)}, `
+            + `still ${N1} firms — no entry or exit yet.`;
+      fDesc = `Price line at ${fmt(d.P2)} is ${relP} ATC. Firm produces ${fmt(d.q2)} units, `
+            + `earning ${piWord} of ${fmt(piAbs)}. This ${piWord} will ${drive} in the long run.`;
+    } else {
+      const costDir = shock==='costDn' ? 'decreased' : 'increased';
+      const curveDir= shock==='costDn' ? 'shifted down' : 'shifted up';
+      const piAbs   = Math.abs(d.pi2||0);
+      const piWord  = (d.pi2||0) >= 0 ? 'profit' : 'loss';
+      const drive   = (d.pi2||0) >= 0 ? 'attract firm entry' : 'cause firm exit';
+      iDesc = `Market supply and demand are unchanged in the short run — MC is unaffected by `
+            + `fixed cost, so S₁ does not shift. Price remains ${fmt(P1)}, quantity ${fmt(Q1)}, `
+            + `${N1} firms.`;
+      fDesc = `Fixed cost ${costDir} to ${fmt(d.F_new)}, so the ATC curve has ${curveDir}. `
+            + `Market price ${fmt(P1)} is now ${(d.pi2||0)>=0?'above':'below'} the new ATC. `
+            + `Firm earns ${piWord} of ${fmt(piAbs)}, which will ${drive} in the long run.`;
+    }
+
+  } else if(phase===2){
+    const N2    = d.N2 || N1;
+    const delta = N2 - N1;
+    const ee    = delta > 0 ? `${delta} firm${delta===1?'':'s'} entered`
+                : delta < 0 ? `${Math.abs(delta)} firm${Math.abs(delta)===1?'':'s'} exited`
+                : 'no change in number of firms';
+    if(!isCostShock){
+      iDesc = `Long-run adjustment complete: ${ee}. New supply S₂ (parallel shift of S₁) `
+            + `intersects demand D₂ at price ${fmt(d.P3)}, quantity ${fmt(d.Q3)}. `
+            + `${N2} firms. Economic profit is zero.`;
+      fDesc = `Price returned to long-run equilibrium ${fmt(d.P3)}, equal to minimum ATC. `
+            + `Firm produces ${fmt(qstar)} units with zero economic profit.`;
+    } else {
+      const priceDir = d.P3 > P1 ? 'higher' : 'lower';
+      iDesc = `Long-run adjustment complete: ${ee}. New supply S₂ intersects demand D₁ `
+            + `at new price ${fmt(d.P3)} (${priceDir} than original, reflecting changed costs), `
+            + `quantity ${fmt(d.Q3)}. ${N2} firms. Economic profit is zero.`;
+      fDesc = `New long-run equilibrium with updated cost structure. Price ${fmt(d.P3)} equals `
+            + `new minimum ATC. Firm produces ${fmt(d.qstar_new)} units with zero economic profit.`;
+    }
+  }
+
+  return { iDesc, fDesc };
+}
+
+function updateGraphDesc(){
+  const { iDesc, fDesc } = describeGraphs();
+  $industryDescText.textContent = iDesc;
+  $firmDescText.textContent     = fDesc;
+}
+
+function redraw(){
+  // Recompute font scale so canvas text respects the user's browser font-size preference
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  drawIndustry(); drawFirm(); updateStats(); updatePhaseLabel(); updateButtons();
+  updateGraphDesc();
+}
+
+// ── Shock selection ────────────────────────────────────────────────
+function selectShock(s){
+  if(phase>0) return;
+  shock=s;
+  ALL_SHOCK_BTNS.forEach(b=>{ b.classList.remove('active'); b.setAttribute('aria-pressed','false'); });
+  const map={demandUp:$btnDemandUp,demandDn:$btnDemandDn,costDn:$btnCostDn,costUp:$btnCostUp};
+  map[s].classList.add('active');
+  map[s].setAttribute('aria-pressed','true');
+  computeDerived();
+  redraw();
+}
+
+$btnDemandUp.addEventListener('click',()=>selectShock('demandUp'));
+$btnDemandDn.addEventListener('click',()=>selectShock('demandDn'));
+$btnCostDn.addEventListener  ('click',()=>selectShock('costDn'));
+$btnCostUp.addEventListener  ('click',()=>selectShock('costUp'));
+
+// ── Next / New ─────────────────────────────────────────────────────
+$btnNext.addEventListener('click',()=>{
+  if(phase>=2){ newProblem(); return; }
+  if(!shock) return;
+  phase++;
+  if(phase===1 && window.Session && Session.recordQuestion)
+    Session.recordQuestion(LAB_ID,0,'Shock: '+shock,shock,true,shock,true);
+  if(phase===2 && window.Session && Session.recordLabDone)
+    Session.recordLabDone(LAB_ID,LAB_LABEL,1,1,1);
+  redraw();
+});
+
+function newProblem(){
+  phase=0; shock=null; derived={};
+  ALL_SHOCK_BTNS.forEach(b=>{ b.classList.remove('active'); b.setAttribute('aria-pressed','false'); });
+  generateParams();
+  redraw();
+}
+
+let _rt;
+window.addEventListener('resize',()=>{ clearTimeout(_rt); _rt=setTimeout(redraw,80); });
+
+generateParams();
+redraw();
+
+})();
+</script>
+</body>
+</html>
