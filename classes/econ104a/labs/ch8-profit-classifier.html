@@ -1,0 +1,953 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Profit Diagram Classifier — ECON 104A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"/>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151;
+      --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;
+      --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3 / good practice) ────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* ── Header ─────────────────────────────────────────────── */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;
+      font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{display:block;padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;
+      line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;
+      max-width:80ch;font-size:0.9375rem;}
+
+    /* ── Lab layout ─────────────────────────────────────────── */
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+    .lab-inner{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
+    @media(max-width:700px){.lab-inner{grid-template-columns:1fr;}}
+
+    /* ── Graph card ─────────────────────────────────────────── */
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;
+      overflow:hidden;background:rgba(246,242,234,.45);border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+
+    /* Legend */
+    .legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;
+      font-size:0.75rem;color:var(--ink-2);}
+    .leg-row{display:flex;align-items:center;gap:5px;}
+    .leg-line{width:22px;height:3px;border-radius:2px;flex-shrink:0;}
+
+    /* ── Question panel ─────────────────────────────────────── */
+    .question-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px;box-shadow:var(--shadow);}
+    .prob-header{font-size:0.75rem;text-transform:uppercase;
+      letter-spacing:.08em;color:var(--accent);font-weight:700;margin-bottom:12px;}
+
+    /* Param chips */
+    .param-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+    @media(max-width:500px){.param-grid{grid-template-columns:repeat(2,1fr);}}
+    .param{background:rgba(246,242,234,.6);border:1px solid var(--line);
+      border-radius:10px;padding:8px 10px;}
+    .param .plabel{font-size:0.625rem;text-transform:uppercase;letter-spacing:.07em;
+      color:var(--muted);margin-bottom:3px;}
+    .param .pvalue{font-size:0.9375rem;font-weight:700;color:var(--ink);}
+
+    /* Step heading */
+    .step-heading{font-size:0.875rem;font-weight:700;color:var(--ink);
+      margin:0 0 10px;line-height:1.4;}
+
+    /* Classification buttons */
+    .class-group{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+    .class-btn{padding:10px 14px;border-radius:10px;border:1.5px solid #8c7f72;
+      background:var(--panel);font-family:var(--font-sans);font-size:0.875rem;
+      font-weight:700;color:var(--ink-2);cursor:pointer;transition:all .12s;
+      text-align:left;width:100%;}
+    .class-btn .hint{font-weight:400;font-size:0.8125rem;}
+    .class-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .class-btn:disabled{cursor:not-allowed;}
+    .class-btn.correct{border-color:var(--good);background:rgba(21,92,56,.08);
+      color:var(--good);}
+    .class-btn.wrong{border-color:var(--bad);background:rgba(180,35,24,.07);
+      color:var(--bad);}
+    .class-btn.revealed{border-color:var(--good);background:rgba(21,92,56,.05);
+      color:var(--good);}
+
+    /* Feedback */
+    .feedback{padding:10px 13px;border-radius:10px;font-size:0.875rem;
+      font-weight:600;margin:10px 0 12px;line-height:1.45;}
+    .feedback.correct{background:rgba(21,92,56,.08);
+      border:1px solid rgba(21,92,56,.3);color:var(--good);}
+    .feedback.wrong{background:rgba(180,35,24,.07);
+      border:1px solid rgba(180,35,24,.25);color:var(--bad);}
+    .feedback.info{background:rgba(47,93,124,.07);
+      border:1px solid rgba(47,93,124,.2);color:var(--accent);}
+
+    /* Divider */
+    .step-divider{border:none;border-top:1px solid var(--line);margin:16px 0;}
+
+    /* Formula / solution box */
+    .formula-box{background:rgba(246,242,234,.6);border:1px solid var(--line);
+      border-radius:10px;padding:12px 14px;font-size:0.875rem;color:var(--ink-2);
+      line-height:1.8;margin-bottom:12px;}
+    .formula-box .math-line{display:block;margin:2px 0;}
+
+    /* Profit input */
+    .input-row{display:flex;gap:8px;align-items:center;margin:10px 0 8px;flex-wrap:wrap;}
+    .profit-input{padding:9px 12px;border-radius:10px;border:1.5px solid #8c7f72;
+      font-family:var(--font-sans);font-size:0.875rem;font-weight:600;color:var(--ink);
+      background:var(--panel);width:130px;}
+    .profit-input:focus{outline:3px solid var(--accent);outline-offset:2px;
+      border-color:var(--accent);}
+
+    /* Buttons */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover{background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* Footer */
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+
+    .hidden{display:none!important;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ104a/">← ECON 104A</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104A — Perfect Competition</div>
+      <h1>Profit Diagram Classifier</h1>
+      <p class="sub">Given a firm's cost curves and the market price, classify the outcome as profit, loss-but-operate, or shut down — then compute the dollar value of profit or loss.</p>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+  <div class="lab-inner">
+
+    <!-- ── Graph column ──────────────────────────────────────── -->
+    <div>
+      <div class="graph-card">
+        <div class="graph-title" id="firmGraphTitle">Firm Cost Diagram</div>
+        <div class="canvas-wrap" id="firmWrap">
+          <canvas id="firmCanvas"
+                  role="img"
+                  aria-labelledby="firmGraphTitle"
+                  aria-describedby="firmCanvasDesc"
+                  style="aspect-ratio:1/1;"></canvas>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <div class="leg-row">
+            <div class="leg-line" style="background:#6d28d9;"></div>
+            <span>MC</span>
+          </div>
+          <div class="leg-row">
+            <div class="leg-line" style="background:#b42318;"></div>
+            <span>ATC</span>
+          </div>
+          <div class="leg-row">
+            <div class="leg-line" style="background:#8c4800;"></div>
+            <span>AVC</span>
+          </div>
+          <div class="leg-row">
+            <div class="leg-line" style="background:#2f5d7c;height:2px;"></div>
+            <span>P = MR = d</span>
+          </div>
+        </div>
+      </div>
+      <!-- SR live description for canvas (WCAG 1.1.1 + 4.1.3) -->
+      <section class="sr-only" aria-live="polite" aria-atomic="true">
+        <p id="firmCanvasDesc">Graph loading.</p>
+      </section>
+    </div>
+
+    <!-- ── Question column ──────────────────────────────────── -->
+    <div>
+      <div class="question-card" id="questionCard">
+
+        <div class="prob-header" id="probHeader">Problem 1</div>
+
+        <!-- Param chips -->
+        <div class="param-grid">
+          <div class="param" style="grid-column:1/-1;">
+            <div class="plabel">Cost Function</div>
+            <div class="pvalue" id="tcFormula" style="font-size:0.875rem;overflow:visible;"></div>
+          </div>
+          <div class="param">
+            <div class="plabel">Market Price (P)</div>
+            <div class="pvalue" id="dispP">—</div>
+          </div>
+          <div class="param">
+            <div class="plabel">Min AVC (shutdown if P &lt;)</div>
+            <div class="pvalue" id="dispMinAVC">—</div>
+          </div>
+          <div class="param">
+            <div class="plabel">Min ATC</div>
+            <div class="pvalue" id="dispMinATC">—</div>
+          </div>
+        </div>
+
+        <!-- Step 1: Classification ──────────────────────────── -->
+        <div id="step1Section">
+          <p class="step-heading" id="classLabel">Step 1 — Classify this firm's situation:</p>
+          <div class="class-group" role="group" aria-labelledby="classLabel">
+            <button class="class-btn" id="btnProfit" aria-pressed="false">
+              Profit <span class="hint">(P &gt; ATC at q*)</span>
+            </button>
+            <button class="class-btn" id="btnLoss" aria-pressed="false">
+              Loss, but operate <span class="hint">(AVC &lt; P &lt; ATC)</span>
+            </button>
+            <button class="class-btn" id="btnShutdown" aria-pressed="false">
+              Shut down <span class="hint">(P &lt; min AVC)</span>
+            </button>
+          </div>
+          <div id="step1Feedback" class="feedback hidden"
+               role="status" aria-live="polite" aria-atomic="true"></div>
+          <div id="step1Advance" class="hidden">
+            <button class="option-btn" id="btnAdvance">Continue →</button>
+          </div>
+        </div>
+
+        <!-- Step 2: Profit calculation ─────────────────────── -->
+        <div id="step2Section" class="hidden">
+          <hr class="step-divider"/>
+          <p class="step-heading" id="calcLabel">Step 2 — Calculate profit or loss:</p>
+          <div class="formula-box" id="formulaBox"></div>
+          <div class="input-row">
+            <label for="profitInput" class="sr-only">Enter the value of profit (can be negative)</label>
+            <input type="number" id="profitInput" class="profit-input"
+                   placeholder="Enter π" step="any"
+                   aria-describedby="calcLabel"/>
+            <button class="option-btn" id="btnCheck">Check</button>
+          </div>
+          <div id="step2Feedback" class="feedback hidden"
+               role="status" aria-live="polite" aria-atomic="true"></div>
+          <div class="formula-box hidden" id="workedSolution"></div>
+          <div id="nextArea" class="hidden" style="margin-top:12px;">
+            <button class="primary-btn" id="btnNext">Next Problem →</button>
+          </div>
+        </div>
+
+        <!-- Shutdown completion (replaces step 2 for shutdown) -->
+        <div id="shutdownSection" class="hidden">
+          <hr class="step-divider"/>
+          <div class="feedback info" id="shutdownMsg"
+               role="status" aria-live="polite" aria-atomic="true"></div>
+          <button class="primary-btn" id="btnNextShutdown">Next Problem →</button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <div class="footer-inner">
+      <span>ECON 104A — Intermediate Microeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </footer>
+</main>
+
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+const LAB_ID    = 'ch8-profit-classifier';
+const LAB_LABEL = 'Profit Diagram Classifier';
+
+// ── RNG ────────────────────────────────────────────────────────────
+let _rng = null;
+function rng(){ return _rng ? _rng() : Math.random(); }
+function pick(arr){ return arr[Math.floor(rng() * arr.length)]; }
+
+// ── KaTeX helper ───────────────────────────────────────────────────
+function kx(tex){
+  if(window.katex){
+    try{ return katex.renderToString(tex, { throwOnError:false }); }
+    catch(e){ return tex; }
+  }
+  return tex;
+}
+
+// ── Number formatting ──────────────────────────────────────────────
+// Strip trailing ".0" so clean integers display without decimals.
+function fmt(n){
+  if(Number.isInteger(n)) return String(n);
+  const s = n.toFixed(1);
+  return s.endsWith('.0') ? String(Math.round(n)) : s;
+}
+
+// ── Axis helpers ───────────────────────────────────────────────────
+function tickStep(mx){
+  if(mx<=10) return 1; if(mx<=20) return 2; if(mx<=50) return 5;
+  if(mx<=100) return 10; if(mx<=200) return 20; if(mx<=500) return 50;
+  return 100;
+}
+function snapUp(raw){
+  const s=[5,8,10,12,15,20,25,30,40,50,60,80,100,120,
+           150,200,250,300,400,500,600,800,1000];
+  return s.find(u=>u>=raw) || Math.ceil(raw/100)*100;
+}
+
+// ── Canvas setup ───────────────────────────────────────────────────
+function setupCanvas(canvas, wrap){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  const W = Math.round(rect.width * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+const PAD = { l:52, r:16, t:16, b:48 };
+
+function makeCoords(W, H, dpr, xMax, yMax){
+  const p = { l:PAD.l*dpr, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  return {
+    xC: x => p.l + (x / xMax) * PW,
+    yC: y => H - p.b - (y / yMax) * PH,
+    p, PW, PH
+  };
+}
+
+// ── State ──────────────────────────────────────────────────────────
+let _fs = 1;
+let prob = null;
+let qIndex = 1;
+let step1FirstTry = true;
+let step1Done = false;
+let step2Done = false;
+
+// ── DOM refs ───────────────────────────────────────────────────────
+const $canvas      = document.getElementById('firmCanvas');
+const $wrap        = document.getElementById('firmWrap');
+const $canvasDesc  = document.getElementById('firmCanvasDesc');
+const $probHeader  = document.getElementById('probHeader');
+const $tcFormula   = document.getElementById('tcFormula');
+const $dispP       = document.getElementById('dispP');
+const $dispMinAVC  = document.getElementById('dispMinAVC');
+const $dispMinATC  = document.getElementById('dispMinATC');
+const $btnProfit   = document.getElementById('btnProfit');
+const $btnLoss     = document.getElementById('btnLoss');
+const $btnShutdown = document.getElementById('btnShutdown');
+const CLASS_BTNS   = [$btnProfit, $btnLoss, $btnShutdown];
+const $s1Feedback  = document.getElementById('step1Feedback');
+const $s1Advance   = document.getElementById('step1Advance');
+const $btnAdvance  = document.getElementById('btnAdvance');
+const $step2       = document.getElementById('step2Section');
+const $formulaBox  = document.getElementById('formulaBox');
+const $profitInput = document.getElementById('profitInput');
+const $btnCheck    = document.getElementById('btnCheck');
+const $s2Feedback  = document.getElementById('step2Feedback');
+const $workedSol   = document.getElementById('workedSolution');
+const $nextArea    = document.getElementById('nextArea');
+const $btnNext     = document.getElementById('btnNext');
+const $shutdownSec = document.getElementById('shutdownSection');
+const $shutdownMsg = document.getElementById('shutdownMsg');
+const $btnNextSD   = document.getElementById('btnNextShutdown');
+
+// ── Cost model ─────────────────────────────────────────────────────
+// TC  = FC + aa·q + bb·q² + cc·q³
+// AVC = aa + bb·q + cc·q²          (quadratic, U-shaped)
+// MC  = aa + 2bb·q + 3cc·q²        (quadratic, U-shaped)
+// ATC = FC/q + aa + bb·q + cc·q²
+//
+// Parameterised by (FC, Qv, avcMin, cc):
+//   bb = -2·cc·Qv   (AVC minimum at q = Qv)
+//   aa = avcMin + cc·Qv²
+//   → AVC(Qv) = aa + bb·Qv + cc·Qv² = avcMin  ✓
+//
+// Min ATC at Q where FC = q²·(bb + 2·cc·q)  — found by binary search.
+// q* given P: solve 3cc·q² + 2bb·q + (aa−P) = 0
+//   → q* = (−bb + √(bb²−3cc·(aa−P))) / (3cc)   [upward-sloping root]
+
+function findMinATCq(FC, bb, cc, Qv){
+  // Binary search for Q > Qv where Q²·(bb + 2·cc·Q) = FC
+  let lo = Qv, hi = 200;
+  while(hi * hi * (bb + 2 * cc * hi) < FC) hi *= 2;
+  for(let i = 0; i < 64; i++){
+    const mid = (lo + hi) / 2;
+    if(mid * mid * (bb + 2 * cc * mid) < FC) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+function solveQstar(aa, bb, cc, P){
+  const disc = bb * bb - 3 * cc * (aa - P);
+  if(disc < 0) return null;
+  return (-bb + Math.sqrt(disc)) / (3 * cc);
+}
+
+// ── Generate problem ───────────────────────────────────────────────
+function generateParams(){
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+
+  const FC_vals     = [50, 100, 150, 200];
+  const Qv_vals     = [3, 4, 5, 6];
+  const avcMin_vals = [5, 8, 10, 12];
+  const cc_vals     = [0.1, 0.2, 0.3];
+
+  for(let attempt = 0; attempt < 300; attempt++){
+    const FC     = pick(FC_vals);
+    const Qv     = pick(Qv_vals);
+    const avcMin = pick(avcMin_vals);
+    const cc     = pick(cc_vals);
+
+    const bb = -2 * cc * Qv;
+    const aa = avcMin + cc * Qv * Qv;
+
+    // Find min ATC numerically
+    const qMinATC = findMinATCq(FC, bb, cc, Qv);
+    const minATC  = FC / qMinATC + aa + bb * qMinATC + cc * qMinATC * qMinATC;
+
+    const caseRoll = Math.floor(rng() * 3);
+    let P, caseType;
+
+    if(caseRoll === 0){
+      P = minATC * (1.15 + rng() * 0.35);
+      caseType = 'profit';
+    } else if(caseRoll === 1){
+      const lo = avcMin * 1.05, hi = minATC * 0.92;
+      if(hi - lo < 0.5) continue;
+      P = lo + rng() * (hi - lo);
+      caseType = 'loss';
+    } else {
+      P = avcMin * (0.30 + rng() * 0.55);
+      caseType = 'shutdown';
+    }
+
+    // Require unambiguous gap at displayed precision
+    if(caseType === 'profit'   && P < minATC + 0.3) continue;
+    if(caseType === 'loss'     && (P < avcMin + 0.3 || P > minATC - 0.3)) continue;
+    if(caseType === 'shutdown' && P > avcMin - 0.3) continue;
+
+    let qStar = null, atcStar = null, piStar = null;
+    if(caseType !== 'shutdown'){
+      qStar = solveQstar(aa, bb, cc, P);
+      if(qStar == null || qStar <= 0.01) continue;
+      atcStar = FC / qStar + aa + bb * qStar + cc * qStar * qStar;
+      piStar  = (P - atcStar) * qStar;
+      if(caseType === 'profit' && piStar <= 0) continue;
+      if(caseType === 'loss'   && piStar >= 0) continue;
+    }
+
+    return { FC, aa, bb, cc, Qv, avcMin, P, caseType,
+             qMinATC, minATC, qStar, atcStar, piStar };
+  }
+
+  // Fallback
+  const FC=100, Qv=5, avcMin=10, cc=0.1;
+  const bb=-1, aa=12.5;
+  const qMinATC=findMinATCq(FC,bb,cc,Qv);
+  const minATC=FC/qMinATC+aa+bb*qMinATC+cc*qMinATC*qMinATC;
+  const P=minATC*1.3;
+  const qStar=solveQstar(aa,bb,cc,P);
+  const atcStar=FC/qStar+aa+bb*qStar+cc*qStar*qStar;
+  return { FC, aa, bb, cc, Qv, avcMin, P, caseType:'profit',
+           qMinATC, minATC, qStar, atcStar, piStar:(P-atcStar)*qStar };
+}
+
+// ── Display param chips ────────────────────────────────────────────
+function displayParams(){
+  const { FC, aa, bb, cc, P, avcMin, minATC } = prob;
+  $probHeader.textContent = 'Problem ' + qIndex;
+
+  // TC formula rendered with KaTeX
+  const bSign  = bb < 0 ? '-' : '+';
+  const bAbs   = fmt(Math.abs(bb));
+  $tcFormula.innerHTML = kx(
+    `TC = ${FC} + ${fmt(aa)}q ${bSign} ${bAbs}q^2 + ${fmt(cc)}q^3`
+  );
+
+  $dispP.textContent      = P.toFixed(2);
+  $dispMinAVC.textContent = avcMin.toFixed(2);
+  $dispMinATC.textContent = minATC.toFixed(2);
+}
+
+// ── Canvas drawing ─────────────────────────────────────────────────
+function drawCanvas(){
+  const cv = setupCanvas($canvas, $wrap);
+  if(!cv) return;
+  const { ctx, dpr, W, H } = cv;
+  ctx.clearRect(0, 0, W, H);
+
+  const { FC, aa, bb, cc, P, caseType, qStar, atcStar, piStar,
+          Qv, avcMin, qMinATC, minATC } = prob;
+
+  // Static axis bounds from current problem
+  const xMax = snapUp(Math.max(qMinATC * 2.2, qStar ? qStar * 1.4 : 0, Qv * 3.5));
+  const yMax = snapUp(Math.max(P * 1.25, minATC * 1.8));
+
+  const co = makeCoords(W, H, dpr, xMax, yMax);
+  const { xC, yC, p } = co;
+
+  // Plot area background
+  ctx.fillStyle = 'rgba(246,242,234,.45)';
+  ctx.fillRect(p.l, p.t, W - p.l - p.r, H - p.t - p.b);
+
+  // Grid lines
+  const tsx = tickStep(xMax), tsy = tickStep(yMax);
+  ctx.strokeStyle = 'rgba(0,0,0,.06)'; ctx.lineWidth = dpr;
+  ctx.setLineDash([3*dpr, 3*dpr]);
+  for(let tv = tsx; tv < xMax * 0.99; tv += tsx){
+    ctx.beginPath(); ctx.moveTo(xC(tv), p.t); ctx.lineTo(xC(tv), H - p.b); ctx.stroke();
+  }
+  for(let tv = tsy; tv < yMax * 0.99; tv += tsy){
+    ctx.beginPath(); ctx.moveTo(p.l, yC(tv)); ctx.lineTo(W - p.r, yC(tv)); ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Axes
+  ctx.strokeStyle = 'rgba(0,0,0,.28)'; ctx.lineWidth = 1.5 * dpr;
+  ctx.beginPath(); ctx.moveTo(p.l, p.t); ctx.lineTo(p.l, H - p.b); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(p.l, H - p.b); ctx.lineTo(W - p.r, H - p.b); ctx.stroke();
+  ctx.fillStyle = 'rgba(0,0,0,.28)';
+  ctx.beginPath();
+    ctx.moveTo(W - p.r, H - p.b);
+    ctx.lineTo(W - p.r - 8*dpr, H - p.b - 4*dpr);
+    ctx.lineTo(W - p.r - 8*dpr, H - p.b + 4*dpr);
+  ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+    ctx.moveTo(p.l, p.t);
+    ctx.lineTo(p.l - 4*dpr, p.t + 8*dpr);
+    ctx.lineTo(p.l + 4*dpr, p.t + 8*dpr);
+  ctx.closePath(); ctx.fill();
+
+  // Axis labels — rgba(0,0,0,.62) ≈ 5.5:1 on cream canvas bg (WCAG 1.4.3 ✓)
+  ctx.fillStyle = 'rgba(0,0,0,.62)';
+  ctx.font = `700 ${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('q', (p.l + W - p.r) / 2, H - p.b + 18*dpr);
+  ctx.save();
+  ctx.translate(p.l - 36*dpr, (p.t + H - p.b) / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textBaseline = 'middle';
+  ctx.fillText('P / Cost', 0, 0);
+  ctx.restore();
+
+  // Tick labels — rgba(0,0,0,.56) ≈ 4.6:1 on cream canvas bg (WCAG 1.4.3 ✓)
+  ctx.fillStyle = 'rgba(0,0,0,.56)';
+  ctx.font = `${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for(let tv = tsx; tv <= xMax * 0.99; tv += tsx)
+    ctx.fillText(tv, xC(tv), H - p.b + 5*dpr);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for(let tv = tsy; tv <= yMax * 0.99; tv += tsy)
+    ctx.fillText(tv, p.l - 6*dpr, yC(tv));
+
+  // ── Cost curve functions ───────────────────────────────────────
+  const AVC_fn = q => aa + bb * q + cc * q * q;
+  const ATC_fn = q => q > 0.01 ? FC / q + aa + bb * q + cc * q * q : Infinity;
+  const MC_fn  = q => aa + 2 * bb * q + 3 * cc * q * q;
+
+  // Generic clipped curve drawer
+  function drawCurve(fn, color, lw){
+    ctx.save();
+    ctx.beginPath(); ctx.rect(p.l, p.t, W - p.l - p.r, H - p.t - p.b); ctx.clip();
+    ctx.strokeStyle = color; ctx.lineWidth = lw * dpr; ctx.setLineDash([]);
+    ctx.beginPath();
+    let pen = false;
+    for(let k = 1; k <= 500; k++){
+      const x = (k / 500) * xMax;
+      const y = fn(x);
+      if(!isFinite(y) || y < 0 || y > yMax * 1.05){ pen = false; continue; }
+      if(!pen){ ctx.moveTo(xC(x), yC(y)); pen = true; }
+      else       ctx.lineTo(xC(x), yC(y));
+    }
+    ctx.stroke(); ctx.restore();
+  }
+
+  drawCurve(AVC_fn, '#8c4800', 1.8);
+  drawCurve(ATC_fn, '#b42318', 2.2);
+  drawCurve(MC_fn,  '#6d28d9', 2.0);
+
+  // Curve labels with white halo
+  function curveLabel(qFrac, fn, label, color, dxPx, dyPx){
+    const qv = xMax * qFrac;
+    const yv = fn(qv);
+    if(!isFinite(yv) || yv < 0 || yv > yMax * 0.95) return;
+    ctx.font = `700 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+    const m  = ctx.measureText(label);
+    const cx = xC(qv) + dxPx * dpr;
+    const cy = yC(yv) + dyPx * dpr;
+    const th = Math.round(7 * dpr * _fs), pd = 2 * dpr;
+    ctx.fillStyle = 'rgba(255,255,255,.82)';
+    ctx.fillRect(cx - pd, cy - th - pd, m.width + 2*pd, 2*th + 2*pd);
+    ctx.fillStyle = color;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(label, cx, cy);
+  }
+  curveLabel(0.88, MC_fn,  'MC',  '#6d28d9',  3,  6);
+  curveLabel(0.82, ATC_fn, 'ATC', '#b42318',  3, -10);
+  curveLabel(0.72, AVC_fn, 'AVC', '#8c4800',  3,  8);
+
+  // ── Horizontal price line ──────────────────────────────────────
+  const Py = yC(P);
+  if(Py >= p.t && Py <= H - p.b){
+    ctx.save();
+    ctx.beginPath(); ctx.rect(p.l, p.t, W - p.l - p.r, H - p.t - p.b); ctx.clip();
+    ctx.strokeStyle = '#2f5d7c'; ctx.lineWidth = 2 * dpr; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(p.l, Py); ctx.lineTo(W - p.r, Py); ctx.stroke();
+    ctx.restore();
+    ctx.font = `700 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+    ctx.fillStyle = '#2f5d7c';
+    ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+    ctx.fillText('P = MR = d', W - p.r - 4*dpr, Py - 3*dpr);
+  }
+
+  // ── Profit/loss rectangle + projection lines ───────────────────
+  if(caseType !== 'shutdown' && qStar != null && atcStar != null){
+    const qx   = xC(qStar);
+    const Py2  = yC(P);
+    const ATCy = yC(atcStar);
+    const topY = Math.min(Py2, ATCy);
+    const botY = Math.max(Py2, ATCy);
+
+    const rectFill   = step1Done
+      ? (caseType === 'profit' ? 'rgba(27,127,75,.18)'  : 'rgba(180,35,24,.18)')
+      : 'rgba(47,93,124,.13)';
+    const rectStroke = step1Done
+      ? (caseType === 'profit' ? '#155c38' : '#b42318')
+      : '#2f5d7c';
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(p.l, p.t, W - p.l - p.r, H - p.t - p.b); ctx.clip();
+    ctx.fillStyle = rectFill;
+    ctx.fillRect(p.l, topY, qx - p.l, botY - topY);
+    ctx.strokeStyle = rectStroke;
+    ctx.lineWidth = 1.2 * dpr; ctx.setLineDash([4*dpr, 3*dpr]);
+    ctx.strokeRect(p.l, topY, qx - p.l, botY - topY);
+    ctx.setLineDash([]);
+    // Black dashed projection lines
+    ctx.strokeStyle = 'rgba(0,0,0,.42)'; ctx.lineWidth = 1.2 * dpr;
+    ctx.setLineDash([4*dpr, 3*dpr]);
+    ctx.beginPath(); ctx.moveTo(qx, Py2); ctx.lineTo(qx, H - p.b); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(qx, Py2); ctx.lineTo(p.l, Py2);    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+
+    ctx.font = `700 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+    ctx.fillStyle = 'rgba(0,0,0,.55)';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('q*', qx, H - p.b + 5*dpr);
+
+    if(step2Done && botY - topY > 18 * dpr){
+      const piLabel = piStar >= 0
+        ? 'π = +' + piStar.toFixed(2) : 'π = ' + piStar.toFixed(2);
+      ctx.font = `700 ${Math.round(9*dpr*_fs)}px "Inter",sans-serif`;
+      ctx.fillStyle = caseType === 'profit' ? '#155c38' : '#b42318';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(piLabel, (p.l + qx) / 2, (topY + botY) / 2);
+    }
+  }
+
+  // ── Shutdown: dashed line at min AVC ──────────────────────────
+  if(caseType === 'shutdown'){
+    const avy = yC(avcMin);
+    if(avy >= p.t && avy <= H - p.b){
+      ctx.save();
+      ctx.beginPath(); ctx.rect(p.l, p.t, W - p.l - p.r, H - p.t - p.b); ctx.clip();
+      ctx.strokeStyle = 'rgba(140,72,0,.45)'; ctx.lineWidth = 1.5 * dpr;
+      ctx.setLineDash([6*dpr, 4*dpr]);
+      ctx.beginPath(); ctx.moveTo(p.l, avy); ctx.lineTo(W - p.r, avy); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+      ctx.font = `700 ${Math.round(9*dpr*_fs)}px "Inter",sans-serif`;
+      ctx.fillStyle = '#8c4800';
+      ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+      ctx.fillText('min AVC = ' + avcMin.toFixed(2), W - p.r - 4*dpr, avy + 3*dpr);
+    }
+  }
+}
+
+// ── Canvas description for screen readers ──────────────────────────
+function updateCanvasDesc(){
+  if(!prob) return;
+  const { FC, aa, bb, cc, P, caseType, qStar, atcStar, piStar, avcMin, minATC } = prob;
+  let desc = `Firm cost diagram. U-shaped MC, ATC, and AVC curves with horizontal price line at P = ${P.toFixed(2)}. `;
+  desc += `TC = ${FC} + ${fmt(aa)}q + ${fmt(bb)}q² + ${fmt(cc)}q³. `;
+  desc += `Min AVC = ${avcMin.toFixed(2)}, min ATC = ${minATC.toFixed(2)}. `;
+  if(caseType === 'profit'){
+    desc += `Price ${P.toFixed(2)} exceeds ATC at q* = ${qStar.toFixed(2)} (ATC = ${atcStar.toFixed(2)}). Green rectangle shows profit = ${piStar.toFixed(2)}.`;
+  } else if(caseType === 'loss'){
+    desc += `Price ${P.toFixed(2)} is above min AVC but below ATC at q* = ${qStar.toFixed(2)} (ATC = ${atcStar.toFixed(2)}). Red rectangle shows loss = ${piStar.toFixed(2)}. Firm operates because P covers variable costs.`;
+  } else {
+    desc += `Price ${P.toFixed(2)} lies below min AVC = ${avcMin.toFixed(2)}. Dashed line marks min AVC. Firm shuts down to limit losses to fixed costs only.`;
+  }
+  $canvasDesc.textContent = desc;
+}
+
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  drawCanvas();
+  updateCanvasDesc();
+}
+
+// ── Reset UI for a new problem ─────────────────────────────────────
+function renderProblem(){
+  displayParams();
+  CLASS_BTNS.forEach(b => {
+    b.classList.remove('correct', 'wrong', 'revealed');
+    b.setAttribute('aria-pressed', 'false');
+    b.disabled = false;
+  });
+  $s1Feedback.className = 'feedback hidden'; $s1Feedback.innerHTML = '';
+  $s1Advance.classList.add('hidden');
+  $step2.classList.add('hidden');
+  $formulaBox.innerHTML = '';
+  $profitInput.value = '';
+  $s2Feedback.className = 'feedback hidden'; $s2Feedback.innerHTML = '';
+  $workedSol.classList.add('hidden'); $workedSol.innerHTML = '';
+  $nextArea.classList.add('hidden');
+  $btnCheck.disabled = false;
+  $shutdownSec.classList.add('hidden'); $shutdownMsg.innerHTML = '';
+  step1FirstTry = true;
+  step1Done = false;
+  step2Done = false;
+  redraw();
+}
+
+// ── Classification handler ─────────────────────────────────────────
+function handleClassification(chosen){
+  if(step1Done) return;
+  step1Done = true;
+  const correct = (chosen === prob.caseType);
+  CLASS_BTNS.forEach(b => { b.disabled = true; });
+  const btnMap = { profit: $btnProfit, loss: $btnLoss, shutdown: $btnShutdown };
+  btnMap[chosen].setAttribute('aria-pressed', 'true');
+  if(correct){
+    btnMap[chosen].classList.add('correct');
+    $s1Feedback.className = 'feedback correct';
+    $s1Feedback.innerHTML = '✓ Correct! ' + classificationExplanation();
+    $s1Feedback.classList.remove('hidden');
+    recordStep1(true);
+    proceedAfterStep1();
+  } else {
+    step1FirstTry = false;
+    btnMap[chosen].classList.add('wrong');
+    btnMap[prob.caseType].classList.add('revealed');
+    $s1Feedback.className = 'feedback wrong';
+    $s1Feedback.innerHTML = '✗ Not quite. ' + classificationExplanation();
+    $s1Feedback.classList.remove('hidden');
+    recordStep1(false);
+    $s1Advance.classList.remove('hidden');
+  }
+}
+
+function classificationExplanation(){
+  const { P, avcMin, minATC, caseType } = prob;
+  if(caseType === 'profit'){
+    return `P = ${P.toFixed(2)} &gt; min ATC = ${minATC.toFixed(2)}, so the firm earns positive economic profit.`;
+  } else if(caseType === 'loss'){
+    return `min AVC = ${avcMin.toFixed(2)} &lt; P = ${P.toFixed(2)} &lt; min ATC = ${minATC.toFixed(2)}, so the firm operates but incurs a loss — it covers variable costs but not all fixed costs.`;
+  } else {
+    return `P = ${P.toFixed(2)} &lt; min AVC = ${avcMin.toFixed(2)}, so the firm cannot cover variable costs. Shutting down limits losses to fixed costs only.`;
+  }
+}
+
+function recordStep1(isCorrect){
+  if(window.Session && Session.recordQuestion){
+    const { FC, P, avcMin, minATC } = prob;
+    const prompt = `Classify: FC=${FC}, P=${P.toFixed(2)}, minAVC=${avcMin.toFixed(2)}, minATC=${minATC.toFixed(2)}`;
+    Session.recordQuestion(LAB_ID, qIndex, prompt, prob.caseType, isCorrect, null, true);
+  }
+}
+
+$btnAdvance.addEventListener('click', () => {
+  $s1Advance.classList.add('hidden');
+  proceedAfterStep1();
+});
+
+function proceedAfterStep1(){
+  if(prob.caseType === 'shutdown') showShutdownCompletion();
+  else showStep2();
+}
+
+// ── Shutdown completion ────────────────────────────────────────────
+function showShutdownCompletion(){
+  const { P, avcMin, FC } = prob;
+  $shutdownMsg.innerHTML =
+    `Since P = ${P.toFixed(2)} &lt; min AVC = ${avcMin.toFixed(2)}, `
+    + `the firm cannot cover its variable costs on any unit. `
+    + `Shutting down limits losses to FC = ${FC} (fixed costs only). `
+    + `Operating would add further losses on each unit sold.`;
+  $shutdownSec.classList.remove('hidden');
+  finishProblem();
+}
+
+$btnNextSD.addEventListener('click', nextProblem);
+
+// ── Step 2: profit calculation ─────────────────────────────────────
+function showStep2(){
+  const { FC, aa, bb, cc, P, qStar, atcStar } = prob;
+  const Ps   = P.toFixed(2);
+  const qs   = qStar.toFixed(3);
+  const atcs = atcStar.toFixed(3);
+  const aas  = fmt(aa), bbs = fmt(bb), ccs = fmt(cc);
+  const FCs  = String(FC);
+
+  // Discriminant components for display
+  const negbb  = fmt(-bb);                              // −bb  (positive since bb<0)
+  const disc   = bb*bb - 3*cc*(aa - P);
+  const discS  = (bb*bb).toFixed(3) + ' - 3(' + ccs + ')(' + fmt(aa) + ' - ' + Ps + ')';
+
+  $formulaBox.innerHTML =
+    'Find: ' + kx('\\pi = (P - ATC(q^*))\\cdot q^*')
+    + '<br><span class="math-line">Set '
+    + kx('P = MC')
+    + ' and solve: '
+    + kx(`q^* = \\dfrac{-b + \\sqrt{b^2 - 3c(a-P)}}{3c}`)
+    + '</span><span class="math-line">'
+    + kx(`q^* = \\dfrac{${negbb} + \\sqrt{${discS}}}{3(${ccs})} = ${qs}`)
+    + '</span><span class="math-line">'
+    + kx(`ATC(q^*) = \\dfrac{${FCs}}{${qs}} + ${aas} + ${bbs}(${qs}) + ${ccs}(${qs})^2 = ${atcs}`)
+    + '</span>';
+
+  $step2.classList.remove('hidden');
+  $profitInput.focus();
+}
+
+$btnCheck.addEventListener('click', checkProfit);
+$profitInput.addEventListener('keydown', e => { if(e.key === 'Enter') checkProfit(); });
+
+function checkProfit(){
+  const entered = parseFloat($profitInput.value);
+  if(isNaN(entered)){
+    $s2Feedback.innerHTML = 'Please enter a number.';
+    $s2Feedback.className = 'feedback wrong';
+    $s2Feedback.classList.remove('hidden');
+    return;
+  }
+  const correct = Math.abs(entered - prob.piStar) <= 1.0;
+  $btnCheck.disabled = true;
+  step2Done = true;
+  redraw();
+  $s2Feedback.innerHTML = correct ? '✓ Correct!' : '✗ Not quite — see the worked solution below.';
+  $s2Feedback.className = 'feedback ' + (correct ? 'correct' : 'wrong');
+  $s2Feedback.classList.remove('hidden');
+  showWorkedSolution();
+  $nextArea.classList.remove('hidden');
+  finishProblem();
+}
+
+function showWorkedSolution(){
+  const { FC, aa, bb, cc, P, qStar, atcStar, piStar } = prob;
+  const Ps   = P.toFixed(2), qs = qStar.toFixed(3), atcs = atcStar.toFixed(3);
+  const aas  = fmt(aa), bbs = fmt(bb), ccs = fmt(cc), FCs = String(FC);
+  const negbb = fmt(-bb);
+  const discFull = `${(bb*bb).toFixed(3)} - 3(${ccs})(${fmt(aa)} - ${Ps})`;
+  const piS  = piStar >= 0 ? '+' + piStar.toFixed(2) : piStar.toFixed(2);
+
+  $workedSol.innerHTML =
+    '<strong>Worked solution:</strong>'
+    + '<span class="math-line">'
+    + kx(`q^* = \\dfrac{${negbb} + \\sqrt{${discFull}}}{3(${ccs})} = ${qs}`)
+    + '</span><span class="math-line">'
+    + kx(`ATC(q^*) = \\dfrac{${FCs}}{${qs}} + ${aas} + ${bbs}(${qs}) + ${ccs}(${qs})^2 = ${atcs}`)
+    + '</span><span class="math-line">'
+    + kx(`\\pi = (${Ps} - ${atcs})\\times ${qs} = ${piS}`)
+    + '</span>';
+  $workedSol.classList.remove('hidden');
+}
+
+$btnNext.addEventListener('click', nextProblem);
+
+function finishProblem(){
+  if(window.Session && Session.recordLabDone)
+    Session.recordLabDone(LAB_ID, LAB_LABEL, step1FirstTry ? 1 : 0, 1, 1);
+}
+
+// ── Next problem ───────────────────────────────────────────────────
+function nextProblem(){
+  qIndex++;
+  prob = generateParams();
+  renderProblem();
+}
+
+$btnProfit.addEventListener(  'click', () => handleClassification('profit'));
+$btnLoss.addEventListener(    'click', () => handleClassification('loss'));
+$btnShutdown.addEventListener('click', () => handleClassification('shutdown'));
+
+let _rt;
+window.addEventListener('resize', () => { clearTimeout(_rt); _rt = setTimeout(redraw, 80); });
+
+prob = generateParams();
+renderProblem();
+
+})();
+</script>
+</body>
+</html>
