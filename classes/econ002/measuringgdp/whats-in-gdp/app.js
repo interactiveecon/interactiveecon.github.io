@@ -34,6 +34,7 @@ const els = {
 
 let currentItems = [];
 let draggedId = null;
+let keyboardSelectedCard = null; // tracks which card is keyboard-picked-up
 
 function money(millions) {
   return `$${millions.toFixed(0)}m`;
@@ -60,7 +61,55 @@ function correctBin(item) {
   return item.bucket; // IN, INT, TF, USED, IMP
 }
 
+function getAllDropzones() {
+  return [els.pool, ...Object.values(els.bins)];
+}
+
+function setKbdTargets(active) {
+  getAllDropzones().forEach(z => z.classList.toggle("kbd-target", active));
+}
+
+function cancelKeyboardSelect() {
+  if (!keyboardSelectedCard) return;
+  const prev = document.getElementById(`card_${keyboardSelectedCard}`);
+  if (prev) {
+    prev.classList.remove("kbd-selected");
+    prev.setAttribute("aria-pressed", "false");
+  }
+  keyboardSelectedCard = null;
+  setKbdTargets(false);
+}
+
+function toggleKeyboardSelect(itemId, cardEl) {
+  if (keyboardSelectedCard === itemId) {
+    // deselect
+    cardEl.classList.remove("kbd-selected");
+    cardEl.setAttribute("aria-pressed", "false");
+    keyboardSelectedCard = null;
+    setKbdTargets(false);
+    setStatus("Card deselected.");
+    return;
+  }
+  // deselect any previously selected card
+  if (keyboardSelectedCard) {
+    const prev = document.getElementById(`card_${keyboardSelectedCard}`);
+    if (prev) {
+      prev.classList.remove("kbd-selected");
+      prev.setAttribute("aria-pressed", "false");
+    }
+  }
+  keyboardSelectedCard = itemId;
+  cardEl.classList.add("kbd-selected");
+  cardEl.setAttribute("aria-pressed", "true");
+  setKbdTargets(true);
+  const item = currentItems.find(it => it.id === itemId);
+  setStatus(
+    `${item ? item.title : "Card"} selected. Tab to a bin and press Enter or Space to place it. Press Escape to cancel.`
+  );
+}
+
 function clearFeedback() {
+  cancelKeyboardSelect();
   document.querySelectorAll(".card").forEach(c => {
     c.classList.remove("good", "bad");
     const fb = c.querySelector(".feedback");
@@ -97,7 +146,15 @@ function makeCard(item) {
   div.draggable = true;
   div.id = `card_${item.id}`;
 
-  // NO tag pill (per your request)
+  // Keyboard accessibility (WCAG 2.1.1, 4.1.2)
+  div.tabIndex = 0;
+  div.setAttribute("role", "button");
+  div.setAttribute(
+    "aria-label",
+    `${item.title}: ${item.desc}. Value: ${money(item.value)}.`
+  );
+  div.setAttribute("aria-pressed", "false");
+
   div.innerHTML = `
     <div class="top">
       <span class="money">${money(item.value)}</span>
@@ -112,10 +169,22 @@ function makeCard(item) {
     e.dataTransfer.effectAllowed = "move";
   });
 
+  div.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      toggleKeyboardSelect(item.id, div);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancelKeyboardSelect();
+      setStatus("Selection cancelled.");
+    }
+  });
+
   return div;
 }
 
 function setupDropzone(zone) {
+  // Mouse drag-and-drop
   zone.addEventListener("dragover", (e) => {
     e.preventDefault();
     zone.classList.add("dragover");
@@ -136,12 +205,40 @@ function setupDropzone(zone) {
     const cardEl = document.getElementById(`card_${id}`);
     if (cardEl) zone.appendChild(cardEl);
 
-    // clear grading visuals on move
     cardEl?.classList.remove("good", "bad");
     const fb = cardEl?.querySelector(".feedback");
     if (fb) fb.textContent = "";
 
     updateProgressAndButtons();
+  });
+
+  // Keyboard drop (WCAG 2.1.1)
+  zone.tabIndex = 0;
+
+  zone.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && keyboardSelectedCard) {
+      e.preventDefault();
+      const cardEl = document.getElementById(`card_${keyboardSelectedCard}`);
+      if (!cardEl) return;
+
+      zone.appendChild(cardEl);
+      cardEl.classList.remove("good", "bad", "kbd-selected");
+      cardEl.setAttribute("aria-pressed", "false");
+      const fb = cardEl.querySelector(".feedback");
+      if (fb) fb.textContent = "";
+
+      const item = currentItems.find(it => it.id === keyboardSelectedCard);
+      const binLabel = zone.getAttribute("aria-label") || zone.dataset.bin;
+      setStatus(`${item ? item.title : "Card"} placed in ${binLabel}.`);
+
+      keyboardSelectedCard = null;
+      setKbdTargets(false);
+      updateProgressAndButtons();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancelKeyboardSelect();
+      setStatus("Selection cancelled.");
+    }
   });
 }
 

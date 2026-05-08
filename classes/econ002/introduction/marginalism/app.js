@@ -61,6 +61,12 @@ function drawParamsForTemplate(t){
   return { a,b,c,d, qs };
 }
 
+  let _fs = 1; // canvas font-scale factor (WCAG 1.4.4)
+
+  const $chart1Desc = document.getElementById('chart1Desc');
+  const $chart2Desc = document.getElementById('chart2Desc');
+  const $chart3Desc = document.getElementById('chart3Desc');
+
   let cur = null;
   let q = 0;
   let checked = false;
@@ -200,7 +206,7 @@ function drawParamsForTemplate(t){
     }
 
     ctx.fillStyle = "rgba(0,0,0,0.70)";
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.font = `${Math.round(12*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillText(xLabel, (X0+X1)/2, Y1 + 18*dpr);
 
@@ -261,7 +267,7 @@ function drawParamsForTemplate(t){
 
   function drawValueAtYAxis(ctx, X0, yDot, valueText, dpr){
   ctx.fillStyle = "rgba(0,0,0,0.65)";
-  ctx.font = `${11*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`; // slightly smaller
+  ctx.font = `${Math.round(11*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   ctx.fillText(valueText, X0 - 12*dpr, yDot); // farther left from axis
@@ -276,7 +282,7 @@ function drawParamsForTemplate(t){
     ctx.stroke();
 
     ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.font = `${Math.round(12*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillText(label, x, Y1 + 8*dpr);
@@ -287,7 +293,7 @@ function drawParamsForTemplate(t){
     const lineW = 18*dpr;
     const lineH = 16*dpr;
 
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.font = `${Math.round(12*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     const widths = items.map(it => ctx.measureText(it.label).width);
     const boxW = pad*2 + lineW + 8*dpr + Math.max(...widths);
     const boxH = pad*2 + items.length*lineH;
@@ -332,7 +338,24 @@ function drawParamsForTemplate(t){
     };
   }
 
+  function updateGraphDesc(){
+    if (!cur) return;
+    const qs = qStar();
+    const mbQ = MB(q), mcQ = MC(q), mbStar = MB(qs);
+    const direction = mbQ > mcQ ? "MB exceeds MC — doing a little more would increase net benefit."
+                    : mbQ < mcQ ? "MC exceeds MB — doing a little less would increase net benefit."
+                    : "MB equals MC — this is the optimum.";
+    $chart1Desc.textContent =
+      `MB and MC curves for the current scenario. At q = ${fmt(q)}: MB = ${fmt(mbQ)}, MC = ${fmt(mcQ)}. ${direction} Optimal q* = ${fmt(qs)} where MB = MC = ${fmt(mbStar)}.`;
+    $chart3Desc.textContent =
+      `Total benefit (TB) and total cost (TC) curves. At q = ${fmt(q)}: TB = ${fmt(TB(q))}, TC = ${fmt(TC(q))}. Optimal q* = ${fmt(qs)}.`;
+    $chart2Desc.textContent =
+      `Cumulative net benefit (CNB = TB − TC) curve. At q = ${fmt(q)}: CNB = ${fmt(CNB(q))}. Maximum CNB = ${fmt(CNB(qs))} at optimal q* = ${fmt(qs)}.`;
+  }
+
   function drawCharts(){
+    _fs = Math.max(0.75, Math.min(2.5,
+      parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
     const qs = qStar();
 
     // Chart 1: MB & MC
@@ -378,7 +401,7 @@ function drawParamsForTemplate(t){
       if (checked){
         drawMarker(ctx, xTo(qs), yTo(MB(qs)), "rgba(34,120,34,0.95)", dpr);
         ctx.fillStyle = "rgba(34,120,34,0.95)";
-        ctx.font = `${12*dpr}px system-ui`;
+        ctx.font = `${Math.round(12*dpr*_fs)}px system-ui`;
         ctx.textAlign="left"; ctx.textBaseline="bottom";
         ctx.fillText("MB=MC", xTo(qs)+8*dpr, yTo(MB(qs))-6*dpr);
       }
@@ -464,7 +487,7 @@ function drawParamsForTemplate(t){
       if (checked){
         drawMarker(ctx, xTo(qs), yTo(CNB(qs)), "rgba(34,120,34,0.95)", dpr);
         ctx.fillStyle = "rgba(34,120,34,0.95)";
-        ctx.font = `${12*dpr}px system-ui`;
+        ctx.font = `${Math.round(12*dpr*_fs)}px system-ui`;
         ctx.textAlign="left"; ctx.textBaseline="bottom";
         ctx.fillText("Max", xTo(qs)+8*dpr, yTo(CNB(qs))-6*dpr);
       }
@@ -476,6 +499,7 @@ function drawParamsForTemplate(t){
     renderStep();
     renderTable();
     drawCharts();
+    updateGraphDesc();
   }
 
   function reset(){

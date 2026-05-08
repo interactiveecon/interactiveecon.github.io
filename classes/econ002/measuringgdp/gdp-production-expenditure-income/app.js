@@ -34,6 +34,7 @@ let activeTab = "production";
 let scenario = null;
 let placements = { production:{}, expenditure:{}, income:{} };
 let draggedId = null;
+let _selectedCard = null;
 
 function setStatus(msg){ els.status.textContent = msg; }
 function money(x){ return `$${x.toFixed(0)}m`; }
@@ -57,6 +58,47 @@ function clearBins(){
   }
 }
 
+function clearCardSelection(){
+  if (_selectedCard) {
+    _selectedCard.classList.remove("selected");
+    _selectedCard.setAttribute("aria-pressed", "false");
+    _selectedCard = null;
+  }
+}
+
+function toggleCardSelect(cardEl){
+  if (_selectedCard === cardEl) {
+    clearCardSelection();
+    setStatus("Card deselected.");
+    return;
+  }
+  if (cardEl.dataset.ledger !== activeTab) {
+    setStatus("Switch to the correct ledger tab first.");
+    return;
+  }
+  clearCardSelection();
+  _selectedCard = cardEl;
+  cardEl.classList.add("selected");
+  cardEl.setAttribute("aria-pressed", "true");
+  setStatus("Card selected. Click or press Enter on a bin to place it, or press Escape to cancel.");
+}
+
+function placeSelectedCard(zone){
+  if (!_selectedCard) return;
+  if (_selectedCard.dataset.ledger !== activeTab) return;
+
+  zone.appendChild(_selectedCard);
+  placements[activeTab][_selectedCard.dataset.cardId] = zone.dataset.bin;
+  _selectedCard.classList.remove("good", "bad", "selected");
+  _selectedCard.setAttribute("aria-pressed", "false");
+  const fb = _selectedCard.querySelector(".feedback");
+  if (fb) fb.textContent = "";
+  const binLabel = zone.getAttribute("aria-label") || "bin";
+  setStatus(`Card placed in ${binLabel}.`);
+  _selectedCard = null;
+  updateTotals();
+}
+
 function makeCard(card){
   const div = document.createElement("div");
   div.className = "card";
@@ -65,6 +107,10 @@ function makeCard(card){
   div.dataset.cardId = card.id;
   div.dataset.amount = String(card.amount);
   div.dataset.ledger = card.ledger;
+  div.setAttribute("tabindex", "0");
+  div.setAttribute("role", "button");
+  div.setAttribute("aria-pressed", "false");
+  div.setAttribute("aria-label", `${money(card.amount)}: ${card.text}`);
 
   div.innerHTML = `
     <div class="top"><span class="money">${money(card.amount)}</span></div>
@@ -76,12 +122,32 @@ function makeCard(card){
     draggedId = card.id;
     e.dataTransfer.setData("text/plain", card.id);
     e.dataTransfer.effectAllowed = "move";
+    clearCardSelection();
+  });
+
+  div.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleCardSelect(div);
+  });
+
+  div.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      toggleCardSelect(div);
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      clearCardSelection();
+      setStatus("Card deselected.");
+    }
   });
 
   return div;
 }
 
 function setupDropzone(zone){
+  zone.setAttribute("tabindex", "0");
+
   zone.addEventListener("dragover", (e) => {
     e.preventDefault();
     zone.classList.add("dragover");
@@ -103,12 +169,36 @@ function setupDropzone(zone){
     zone.appendChild(cardEl);
     placements[activeTab][id] = zone.dataset.bin;
 
-    cardEl.classList.remove("good","bad");
+    cardEl.classList.remove("good","bad","selected");
+    cardEl.setAttribute("aria-pressed", "false");
     const fb = cardEl.querySelector(".feedback");
     if (fb) fb.textContent = "";
 
     updateTotals();
   });
+
+  zone.addEventListener("click", (e) => {
+    if (_selectedCard && !e.target.closest(".card")) {
+      placeSelectedCard(zone);
+    }
+  });
+
+  zone.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && _selectedCard) {
+      e.preventDefault();
+      placeSelectedCard(zone);
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      clearCardSelection();
+      setStatus("Card deselected.");
+    }
+  });
+
+  zone.addEventListener("focus", () => {
+    if (_selectedCard) zone.classList.add("kb-target");
+  });
+  zone.addEventListener("blur", () => zone.classList.remove("kb-target"));
 }
 
 function initDnD(){
@@ -116,6 +206,7 @@ function initDnD(){
 }
 
 function setActiveTab(tab){
+  clearCardSelection();
   activeTab = tab;
 
   [els.tabProduction, els.tabExpenditure, els.tabIncome].forEach(btn => btn.classList.remove("active"));
@@ -141,9 +232,8 @@ function ledgerCards(){
 function renderTabPool(){
   els.pool.innerHTML = "";
 
-  // Ensure all cards exist in DOM
   const cards = ledgerCards();
-  const order = shuffle(cards.map(c => c.id)); // SHUFFLED pool order each time
+  const order = shuffle(cards.map(c => c.id));
 
   for (const id of order) {
     const c = cards.find(x => x.id === id);
@@ -151,7 +241,6 @@ function renderTabPool(){
     els.pool.appendChild(el);
   }
 
-  // Apply placements for active ledger
   for (const [cid, binId] of Object.entries(placements[activeTab])) {
     const el = document.getElementById(`card_${cid}`);
     const bin = document.querySelector(`[data-bin="${binId}"]`);
@@ -235,14 +324,13 @@ function checkAnswers(){
     if (bin === c.correctBin){
       correct++;
       el.classList.add("good");
-      el.querySelector(".feedback").textContent = "✓";
+      el.querySelector(".feedback").textContent = "✓ Correct";
     } else {
       el.classList.add("bad");
-      el.querySelector(".feedback").textContent = "✗";
+      el.querySelector(".feedback").textContent = "✗ Incorrect";
     }
   }
 
-  // Inventory check: any card flagged inventoryInvestment must be in E_I
   const invIds = scenario.meta.inventoryCardIds || [];
   if (invIds.length){
     const ok = invIds.every(id => placements.expenditure[id] === "E_I");
@@ -265,11 +353,11 @@ function checkAnswers(){
 }
 
 function newScenario(){
+  clearCardSelection();
   scenario = generateScenario();
   resetAllPlacements();
   clearBins();
 
-  // Create all card DOM nodes once
   for (const c of [...scenario.productionCards, ...scenario.expenditureCards, ...scenario.incomeCards]) {
     if (!document.getElementById(`card_${c.id}`)) makeCard(c);
   }
@@ -281,6 +369,7 @@ function newScenario(){
 }
 
 function resetRound(){
+  clearCardSelection();
   resetAllPlacements();
   renderTabPool();
   clearFeedbackStyles();
@@ -291,6 +380,24 @@ function resetRound(){
 function init(){
   initDnD();
 
+  /* aria-hidden on decorative color dots (1.1.1 / 1.4.1) */
+  document.querySelectorAll(".bin-accent").forEach(el => el.setAttribute("aria-hidden", "true"));
+
+  /* accessible names for bin dropzones (4.1.2) */
+  document.querySelectorAll(".bin").forEach(bin => {
+    const h3 = bin.querySelector("h3");
+    const zone = bin.querySelector(".dropzone");
+    if (h3 && zone) zone.setAttribute("aria-label", h3.textContent.trim() + " — drop bin");
+  });
+
+  /* keyboard Escape anywhere deselects */
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && _selectedCard) {
+      clearCardSelection();
+      setStatus("Card deselected.");
+    }
+  });
+
   els.tabProduction.addEventListener("click", () => setActiveTab("production"));
   els.tabExpenditure.addEventListener("click", () => setActiveTab("expenditure"));
   els.tabIncome.addEventListener("click", () => setActiveTab("income"));
@@ -299,8 +406,8 @@ function init(){
   els.resetBtn.addEventListener("click", resetRound);
   els.checkBtn.addEventListener("click", checkAnswers);
 
-  setActiveTab("production");
   newScenario();
+  setActiveTab("production");
 }
 
 init();

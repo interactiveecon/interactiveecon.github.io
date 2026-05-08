@@ -18,6 +18,14 @@
    - Initial y-scale set using K=max, A/L at initial (baseline) values
 */
 
+/* WCAG 1.4.4 — scale Chart.js font sizes with the user's browser font preference */
+let _fs = 1;
+function updateFontScale() {
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  Chart.defaults.font.size = Math.round(12 * _fs);
+}
+
 const A_MIN = 1, A_MAX = 5;
 const K_MIN = 0, K_MAX = 10;
 const L_MIN = 0, L_MAX = 10;
@@ -272,7 +280,37 @@ function ensureCharts() {
   [chYL, chYK, chMPL, chMPK].forEach(styleChart);
 }
 
+/* WCAG 4.1.3 / 1.1.1 — update aria-live canvas descriptions */
+function updateCanvasDescs() {
+  const s = state();
+  const A = s.A, K = s.K, L = s.L;
+  const y   = F(A, K, L);
+  const mpl = (L > 0) ? F(A, K, L) - F(A, K, L - 1) : null;
+  const mpk = (K > 0) ? F(A, K, L) - F(A, K - 1, L) : null;
+
+  document.getElementById('descYL').textContent =
+    `Output vs Labor chart with K fixed at ${K}. ` +
+    `Current point: Labor = ${L}, Output = ${fmt2(y)}.` +
+    (mpl !== null ? ` MPL = ${fmt2(mpl)}.` : ' L must be ≥ 1 to show MPL.');
+
+  document.getElementById('descYK').textContent =
+    `Output vs Capital chart with L fixed at ${L}. ` +
+    `Current point: Capital = ${K}, Output = ${fmt2(y)}.` +
+    (mpk !== null ? ` MPK = ${fmt2(mpk)}.` : ' K must be ≥ 1 to show MPK.');
+
+  document.getElementById('descMPL').textContent =
+    mpl !== null
+      ? `Marginal Product of Labor chart. At L = ${L} with K = ${K} and A = ${A}: MPL = ${fmt2(mpl)}.`
+      : `Marginal Product of Labor chart. Increase L to at least 1 to define MPL.`;
+
+  document.getElementById('descMPK').textContent =
+    mpk !== null
+      ? `Marginal Product of Capital chart. At K = ${K} with L = ${L} and A = ${A}: MPK = ${fmt2(mpk)}.`
+      : `Marginal Product of Capital chart. Increase K to at least 1 to define MPK.`;
+}
+
 function update() {
+  updateFontScale();
   ensureCharts();
   const s = state();
   const A = s.A, K = s.K, L = s.L;
@@ -382,6 +420,7 @@ function update() {
     : `Increase K to at least 1 to define MPK.`;
 
   setStatus("Axes start with a wide initial scale (K at max, A/L at initial), then expand if needed. They don’t shrink until Reset.");
+  updateCanvasDescs();
 }
 
 function resetToBaseline() {
@@ -408,3 +447,9 @@ els.resetBtn.addEventListener("click", resetToBaseline);
 
 // init
 resetToBaseline();
+
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => { updateFontScale(); }, 80);
+});

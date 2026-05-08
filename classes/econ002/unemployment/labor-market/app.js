@@ -21,6 +21,7 @@ window.addEventListener("DOMContentLoaded", () => {
     Lact: $("Lact"),
     Unemp: $("Unemp"),
     explainBox: $("explainBox"),
+    lmChartDesc: $("lmChartDesc"),
   };
 
   const missing = Object.entries(els).filter(([k,v]) => v == null).map(([k]) => k);
@@ -52,6 +53,9 @@ window.addEventListener("DOMContentLoaded", () => {
     wbar: 0,
     wStickyDown: null   // real wage that is sticky downward in cyclical mode
   };
+
+  // Font-scale factor — recomputed at start of every draw (WCAG 1.4.4)
+  let _fs = 1;
 
   function setStatus(msg){ els.status.textContent = msg; }
   function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
@@ -107,8 +111,31 @@ window.addEventListener("DOMContentLoaded", () => {
     return { eq, wEq, wAct, LAct, U };
   }
 
+  // ----- Canvas description for screen readers (WCAG 1.1.1 / 4.1.3) -----
+  function updateChartDesc(){
+    const { eq, wEq, wAct, LAct, U } = outcome();
+    const modeName = state.mode === "cyc" ? "cyclical" : "structural";
+    let desc = `Labor market graph. `;
+    desc += `Blue solid curves: current labor demand (downward sloping) and labor supply (upward sloping). `;
+    desc += `Grey dashed curves: reference/baseline demand and supply. `;
+    desc += `Orange horizontal line: actual real wage = ${wAct.toFixed(2)}. `;
+    desc += `Market-clearing equilibrium: employment = ${eq.L.toFixed(2)}, real wage = ${eq.w.toFixed(2)}. `;
+    desc += `Mode: ${modeName} unemployment. `;
+    desc += `Actual employment = ${LAct.toFixed(2)}. `;
+    if (U > 1e-9) {
+      desc += `Unemployment = ${U.toFixed(2)} (shaded region shows excess labor supply at the actual wage).`;
+    } else {
+      desc += `No unemployment: labor market is at or near the market-clearing wage.`;
+    }
+    els.lmChartDesc.textContent = desc;
+  }
+
   // ----- Drawing -----
   function draw(){
+    // Compute font-scale factor from root font size (WCAG 1.4.4)
+    _fs = Math.max(0.75, Math.min(2.5,
+      parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+
     const canvas = els.lmChart;
     const ctx = canvas.getContext("2d");
 
@@ -124,8 +151,6 @@ window.addEventListener("DOMContentLoaded", () => {
     const Lmin = 0, Lmax = 12;
     const wmin = 0, wmax = 4.2;
 
-    // Increase left padding a bit so tick labels have room
-    // and move x-label up so it doesn't get clipped.
     const pad = { l: 58*dpr, r: 16*dpr, t: 18*dpr, b: 48*dpr };
     const X0 = pad.l, X1 = W - pad.r;
     const Y0 = pad.t, Y1 = H - pad.b;
@@ -154,12 +179,12 @@ window.addEventListener("DOMContentLoaded", () => {
 
     // Axis labels
     ctx.fillStyle = "rgba(0,0,0,0.75)";
-    ctx.font = `${13*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.font = `${Math.round(13*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "center";
     ctx.fillText("Employment (L)", (X0+X1)/2, Y1 + 22*dpr);
 
     ctx.save();
-    ctx.translate(X0 - 64*dpr, (Y0+Y1)/2); // move farther left so it doesn't cover tick
+    ctx.translate(X0 - 64*dpr, (Y0+Y1)/2);
     ctx.rotate(-Math.PI/2);
     ctx.fillText("Real wage (w)", 0, 0);
     ctx.restore();
@@ -183,7 +208,6 @@ window.addEventListener("DOMContentLoaded", () => {
     }
 
     // Baseline / old curves (grey dashed)
-    // Demand uses aRef (high-water mark), not baseline.a
     plotLine((L)=> aRef - b*L, "rgba(0,0,0,0.25)", 2, true);
     plotLine((L)=> baseline.c + d*L, "rgba(0,0,0,0.25)", 2, true);
 
@@ -208,7 +232,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
     // tick label
     ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.font = `${Math.round(12*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
     ctx.fillText(wTick.toFixed(2), X0 - 10*dpr, yTick);
@@ -253,7 +277,7 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.fillRect(Math.min(x1,x2), y, Math.abs(x2-x1), Y1 - y);
 
       ctx.fillStyle = "rgba(0,0,0,0.70)";
-      ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+      ctx.font = `${Math.round(12*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
       ctx.textAlign = "left";
       ctx.textBaseline = "top";
       ctx.fillText("Unemployment (excess supply)", Math.min(x1,x2) + 6*dpr, y + 6*dpr);
@@ -261,7 +285,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
     // Legend
     ctx.fillStyle = "rgba(0,0,0,0.60)";
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.font = `${Math.round(12*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
     ctx.fillText("Blue: current supply & demand", X0, Y0);
@@ -287,8 +311,10 @@ window.addEventListener("DOMContentLoaded", () => {
       `<strong>Numbers:</strong> equilibrium w*=${wEq.toFixed(2)}, actual w=${wAct.toFixed(2)}.<br>` +
       `<strong>Interpretation:</strong> ${expl}`;
 
-    // Remove old helper sentence under chart
     els.chartNote.textContent = "";
+
+    // Update canvas screen-reader description (WCAG 1.1.1)
+    updateChartDesc();
   }
 
   // ----- Mode & controls -----
@@ -386,6 +412,13 @@ window.addEventListener("DOMContentLoaded", () => {
   els.resetBtn.addEventListener("click", reset);
   els.shockNegBtn.addEventListener("click", () => applyDemandShock(-1));
   els.shockPosBtn.addEventListener("click", () => applyDemandShock(+1));
+
+  // Resize handler
+  let _resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(draw, 80);
+  });
 
   // Init
   reset();

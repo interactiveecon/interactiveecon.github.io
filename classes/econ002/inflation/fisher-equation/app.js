@@ -233,7 +233,7 @@ window.addEventListener("DOMContentLoaded", () => {
             </label>
           `).join("")}
         </div>
-        <div class="feedback" id="${q.id}_fb"></div>
+        <div class="feedback" id="${q.id}_fb" role="status" aria-live="polite" aria-atomic="true"></div>
       `;
       els.mcqList.appendChild(wrap);
     });

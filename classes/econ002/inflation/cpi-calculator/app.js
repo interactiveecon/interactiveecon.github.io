@@ -21,12 +21,17 @@ window.addEventListener("DOMContentLoaded", () => {
 
     cpiChart: $("cpiChart"),
     piChart: $("piChart"),
+    cpiChartDesc: $("cpiChartDesc"),
+    piChartDesc: $("piChartDesc"),
 
     mcqMeta: $("mcqMeta"),
     mcqList: $("mcqList"),
     newQsBtn: $("newQsBtn"),
     submitQsBtn: $("submitQsBtn"),
   };
+
+  // Font scale factor — updated at the start of each draw (WCAG 1.4.4)
+  let _fs = 1;
 
   function setStatus(msg){ els.status.textContent = msg; }
 
@@ -335,6 +340,9 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function drawCpiChart(baseCpi, curCpi){
+    _fs = Math.max(0.75, Math.min(2.5,
+      parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+
     const { ctx, dpr, W, H } = prepareCanvas(els.cpiChart);
 
     const pad = { l: 44*dpr, r: 16*dpr, t: 14*dpr, b: 34*dpr };
@@ -359,8 +367,8 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.beginPath(); ctx.moveTo(X0,py); ctx.lineTo(X1,py); ctx.stroke();
     }
 
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.fillStyle = "#596878";
+    ctx.font = `${Math.round(12*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
     for (let k=0;k<=5;k++){
@@ -374,10 +382,10 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.fillText(lab, xToPix(i), Y1 + 8*dpr);
     });
 
-    ctx.fillStyle = "rgba(0,0,0,0.70)";
+    ctx.fillStyle = "#1f2937";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
-    ctx.font = `${13*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.font = `700 ${Math.round(13*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.fillText("CPI (base year = 100)", X0, 0);
 
     if (baseCpi && baseCpi.every(Number.isFinite)){
@@ -419,9 +427,25 @@ window.addEventListener("DOMContentLoaded", () => {
         ctx.fill();
       }
     }
+
+    if (els.cpiChartDesc){
+      if (!curCpi || !curCpi.every(Number.isFinite)){
+        els.cpiChartDesc.textContent = "No CPI data loaded yet. Click Load example to begin.";
+      } else {
+        const base = (baseCpi && baseCpi.every(Number.isFinite))
+          ? ` Baseline: Year 1 = ${baseCpi[0].toFixed(2)}, Year 2 = ${baseCpi[1].toFixed(2)}, Year 3 = ${baseCpi[2].toFixed(2)}.`
+          : "";
+        els.cpiChartDesc.textContent =
+          `CPI chart: Year 1 = ${curCpi[0].toFixed(2)} (base year), ` +
+          `Year 2 = ${curCpi[1].toFixed(2)}, Year 3 = ${curCpi[2].toFixed(2)}.${base}`;
+      }
+    }
   }
 
   function drawPiChart(basePi, curPi){
+    _fs = Math.max(0.75, Math.min(2.5,
+      parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+
     const { ctx, dpr, W, H } = prepareCanvas(els.piChart);
 
     const pad = { l: 44*dpr, r: 16*dpr, t: 14*dpr, b: 34*dpr };
@@ -451,8 +475,8 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.lineWidth = 2*dpr;
     ctx.beginPath(); ctx.moveTo(X0, yToPix(0)); ctx.lineTo(X1, yToPix(0)); ctx.stroke();
 
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.fillStyle = "#596878";
+    ctx.font = `${Math.round(12*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
     for (let k=0;k<=6;k+=2){
@@ -466,10 +490,10 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.fillText(lab, xToPix(i), Y1 + 8*dpr);
     });
 
-    ctx.fillStyle = "rgba(0,0,0,0.70)";
+    ctx.fillStyle = "#1f2937";
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
-    ctx.font = `${13*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.font = `700 ${Math.round(13*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.fillText("Inflation (one-year % change in CPI)", X0, 0);
 
     function plotPiSeries(series, strokeStyle, pointStyle, dashed){
@@ -493,6 +517,19 @@ window.addEventListener("DOMContentLoaded", () => {
 
     plotPiSeries(basePi, "rgba(0,0,0,0.35)", "rgba(0,0,0,0.35)", true);
     plotPiSeries(curPi, "rgba(31,119,180,0.85)", "rgba(31,119,180,0.85)", false);
+
+    if (els.piChartDesc){
+      if (!curPi || !Number.isFinite(curPi[1]) || !Number.isFinite(curPi[2])){
+        els.piChartDesc.textContent = "No inflation data loaded yet. Click Load example to begin.";
+      } else {
+        const base = (basePi && Number.isFinite(basePi[1]) && Number.isFinite(basePi[2]))
+          ? ` Baseline: Year 1→2 = ${(100*basePi[1]).toFixed(2)}%, Year 2→3 = ${(100*basePi[2]).toFixed(2)}%.`
+          : "";
+        els.piChartDesc.textContent =
+          `Inflation chart: Year 1→2 = ${(100*curPi[1]).toFixed(2)}%, ` +
+          `Year 2→3 = ${(100*curPi[2]).toFixed(2)}%.${base}`;
+      }
+    }
   }
 
   // =========================
@@ -553,7 +590,7 @@ window.addEventListener("DOMContentLoaded", () => {
             </label>
           `).join("")}
         </div>
-        <div class="feedback" id="${q.id}_fb"></div>
+        <div class="feedback" id="${q.id}_fb" aria-live="polite" aria-atomic="true"></div>
       `;
       els.mcqList.appendChild(wrap);
     });

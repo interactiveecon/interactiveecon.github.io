@@ -188,7 +188,43 @@ window.addEventListener("DOMContentLoaded", () => {
     return { excess, pMove, qMove, Qd, Qs, eq1 };
   }
 
+  // ---------- Canvas description (WCAG 1.1.1) ----------
+  const $chartDesc = document.getElementById('chartDesc');
+
+  function updateChartDesc(){
+    if (!$chartDesc) return;
+    if (stage === 0) {
+      $chartDesc.textContent = 'Supply and demand graph. Click New Scenario to begin.';
+      return;
+    }
+    let text = `Supply and demand graph. Initial equilibrium at price P₁ ≈ ${eq0.P.toFixed(1)} and quantity Q₁ ≈ ${eq0.Q.toFixed(1)}.`;
+    if (stage >= 1 && scenario) {
+      text += ` Scenario: ${scenario.title}.`;
+    }
+    if (stage >= 2 && scenario) {
+      if (scenario.demand.action === 'SHIFT') {
+        text += ` Demand has shifted ${scenario.demand.dir === 'R' ? 'right (increase)' : 'left (decrease)'}.`;
+      }
+      if (scenario.supply.action === 'SHIFT') {
+        text += ` Supply has shifted ${scenario.supply.dir === 'R' ? 'right (increase)' : 'left (decrease)'}.`;
+      }
+    }
+    if (stage >= 3 && scenario) {
+      const out = computeOutcome(scenario);
+      if (out.excess === 'ED') {
+        text += ` At price P₁, there is excess demand (shortage): quantity demanded ≈ ${out.Qd.toFixed(1)}, quantity supplied ≈ ${out.Qs.toFixed(1)}.`;
+      } else if (out.excess === 'ES') {
+        text += ` At price P₁, there is excess supply (surplus): quantity demanded ≈ ${out.Qd.toFixed(1)}, quantity supplied ≈ ${out.Qs.toFixed(1)}.`;
+      }
+      const out2 = computeOutcome(scenario);
+      text += ` New equilibrium at price P₂ ≈ ${out2.eq1.P.toFixed(1)} and quantity Q₂ ≈ ${out2.eq1.Q.toFixed(1)}.`;
+    }
+    $chartDesc.textContent = text;
+  }
+
   // ---------- Drawing ----------
+  let _fs = 1;
+
   function drawArrow(ctx, x1,y1,x2,y2, dpr){
     ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
     const ang = Math.atan2(y2-y1, x2-x1);
@@ -202,6 +238,9 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   function draw(){
+    _fs = Math.max(0.75, Math.min(2.5,
+      parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+
     const canvas = els.chart;
     const ctx = canvas.getContext("2d");
 
@@ -234,7 +273,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
     // labels
     ctx.fillStyle = "rgba(0,0,0,0.70)";
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.font = `${Math.round(12*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillText("Quantity", (X0+X1)/2, Y1 + 26*dpr); // moved down so it won't cover Q₁/Q₂ ticks
@@ -269,7 +308,7 @@ window.addEventListener("DOMContentLoaded", () => {
       const qL = 96;
       const pL = isDemand ? (params.a - params.b*qL) : (params.c + params.d*qL);
       ctx.fillStyle = style;
-      ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+      ctx.font = `${Math.round(12*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
       ctx.textAlign = "left";
       ctx.textBaseline = "middle";
       ctx.fillText(isDemand ? "D" : "S", qToX(qL) + 6*dpr, pToY(pL));
@@ -302,7 +341,7 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.setLineDash([]);
 
       ctx.fillStyle = "rgba(0,0,0,0.70)";
-      ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+      ctx.font = `${Math.round(12*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
 
       ctx.textAlign = "center";
       ctx.textBaseline = "top";
@@ -359,7 +398,7 @@ window.addEventListener("DOMContentLoaded", () => {
         ctx.fill();
 
         ctx.fillStyle = "rgba(0,0,0,0.65)";
-        ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+        ctx.font = `${Math.round(12*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
         ctx.textAlign = "center";
 
         if (out.excess === "ED") {
@@ -373,6 +412,8 @@ window.addEventListener("DOMContentLoaded", () => {
 
       markEq(out.eq1, "P₂", "Q₂");
     }
+
+    updateChartDesc();
   }
 
   // ---------- Scenarios ----------
@@ -400,14 +441,12 @@ window.addEventListener("DOMContentLoaded", () => {
     els.dDir.value = "";
     els.sDir.value = "";
 
-    els.fb1.style.display = "none";
     els.fb1.innerHTML = "";
 
     els.stage2.style.display = "none";
     els.excess.value = "";
     els.pMove.value = "";
     els.qMove.value = "";
-    els.fb2.style.display = "none";
     els.fb2.innerHTML = "";
 
     renderWhyLists(null);
@@ -435,9 +474,9 @@ window.addEventListener("DOMContentLoaded", () => {
     els.dDir.value = "";
     els.sDir.value = "";
 
-    els.fb1.style.display = "none"; els.fb1.innerHTML = "";
+    els.fb1.innerHTML = "";
     els.stage2.style.display = "none";
-    els.fb2.style.display = "none"; els.fb2.innerHTML = "";
+    els.fb2.innerHTML = "";
 
     renderWhyLists(null);
     els.whyBox.style.display = "none";
@@ -467,7 +506,6 @@ window.addEventListener("DOMContentLoaded", () => {
       sA === scenario.supply.action &&
       sD === scenario.supply.dir;
 
-    els.fb1.style.display = "block";
     els.fb1.innerHTML = ok
       ? `<span class="tagOK">Correct</span> Great — now predict the market outcome (Stage 2).`
       : `<span class="tagBad">Not quite</span> If one curve shifts, the equilibrium price changes, causing a movement along the other curve.`;
@@ -511,7 +549,6 @@ window.addEventListener("DOMContentLoaded", () => {
 
     const ok = okEx && okP && okQ;
 
-    els.fb2.style.display = "block";
     els.fb2.innerHTML = ok
       ? `<span class="tagOK">Correct</span> Nice — revealing the shortage/surplus and new equilibrium.`
       : `<span class="tagBad">Not quite</span> At P₁ compare Qd and Qs. Shortage (Qd > Qs) → price rises; surplus (Qs > Qd) → price falls.`;
@@ -527,7 +564,9 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // Why toggle
   els.whyBtn.addEventListener("click", () => {
-    els.whyBox.style.display = (els.whyBox.style.display === "none") ? "block" : "none";
+    const isHidden = els.whyBox.style.display === "none";
+    els.whyBox.style.display = isHidden ? "block" : "none";
+    els.whyBtn.setAttribute("aria-expanded", String(isHidden));
   });
 
   // Buttons
@@ -535,6 +574,13 @@ window.addEventListener("DOMContentLoaded", () => {
   els.resetBtn.addEventListener("click", reset);
   els.check1Btn.addEventListener("click", checkStage1);
   els.check2Btn.addEventListener("click", checkStage2);
+
+  // Resize handler
+  let _resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(draw, 80);
+  });
 
   // init
   reset();

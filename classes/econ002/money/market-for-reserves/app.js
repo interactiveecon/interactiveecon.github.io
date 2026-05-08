@@ -59,6 +59,7 @@
 
   let scenario = null; // { kind:"OMO"|"IOR", dir:"up"|"down", dR, dIOR }
   let appliedOnce = false;
+  let _fs = 1; // font-scale factor (WCAG 1.4.4 for canvas text)
 
   function fmt2(x){ return Number.isFinite(x) ? x.toFixed(2) : "—"; }
   function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
@@ -246,7 +247,7 @@ Changes in reserves (OMO) or demand shifts can change the Federal Funds Rate and
     els.iorVal.textContent = `${fmt2(ior)}%`;
 
     els.scenarioTitle.textContent = "Scenario";
-    els.scenarioDesc.textContent = "Click “New Scenario” to start.";
+    els.scenarioDesc.textContent = 'Click “New Scenario” to start.';
     els.dRVal.textContent = "—";
 
     clearPredictions();
@@ -397,7 +398,7 @@ Changes in reserves (OMO) or demand shifts can change the Federal Funds Rate and
     }
 
     ctx.fillStyle = INK;
-    ctx.font = `${12*dpr}px system-ui`;
+    ctx.font = `${Math.round(12*dpr*_fs)}px system-ui`;
     ctx.textAlign="center"; ctx.textBaseline="top";
     ctx.fillText(xLabel, (X0+X1)/2, Y1 + 20*dpr);
 
@@ -427,7 +428,7 @@ Changes in reserves (OMO) or demand shifts can change the Federal Funds Rate and
     ctx.lineWidth = 2*dpr;
     ctx.beginPath(); ctx.moveTo(x, Y1); ctx.lineTo(x, Y1 + 6*dpr); ctx.stroke();
     ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = `${12*dpr}px system-ui`;
+    ctx.font = `${Math.round(12*dpr*_fs)}px system-ui`;
     ctx.textAlign="center"; ctx.textBaseline="top";
     ctx.fillText(label, x, Y1 + 8*dpr);
   }
@@ -436,7 +437,7 @@ Changes in reserves (OMO) or demand shifts can change the Federal Funds Rate and
     ctx.lineWidth = 2*dpr;
     ctx.beginPath(); ctx.moveTo(X0-6*dpr, y); ctx.lineTo(X0, y); ctx.stroke();
     ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = `${12*dpr}px system-ui`;
+    ctx.font = `${Math.round(12*dpr*_fs)}px system-ui`;
     ctx.textAlign="right"; ctx.textBaseline="middle";
     ctx.fillText(label, X0 - 10*dpr, y);
   }
@@ -496,6 +497,31 @@ Changes in reserves (OMO) or demand shifts can change the Federal Funds Rate and
       xTick(ctx, x1, Y1, "R₁", dpr);
       yTick(ctx, X0, y1p, "FF₁", dpr);
     }
+
+    // Curve labels — secondary non-color indicator (WCAG 1.4.1)
+    const labelFont = `700 ${Math.round(10*dpr*_fs)}px system-ui`;
+    ctx.textBaseline = "bottom";
+    ctx.textAlign = "center";
+
+    // Supply line labels: S₀ (baseline) and S₁ (current, if shifted)
+    ctx.font = labelFont;
+    ctx.fillStyle = BLUE;
+    ctx.fillText("S₀", xTo(R_base), Y0 + 20*dpr);
+    if (Math.abs(R - R_base) > 1e-9){
+      ctx.fillStyle = ORANGE;
+      const sOffset = Math.abs(xTo(R) - xTo(R_base)) < 28*dpr ? 36*dpr : 20*dpr;
+      ctx.fillText("S₁", xTo(R), Y0 + sOffset);
+    }
+
+    // Demand floor labels: D₀ at right edge of baseline floor, D₁ if IOR shifted
+    const floorRx = xTo(clamp(Rmax - 5, Rmin, Rmax));
+    ctx.textBaseline = "top";
+    ctx.fillStyle = BLUE;
+    ctx.fillText("D₀", floorRx, yTo(ior_base) + 4*dpr);
+    if (Math.abs(ior - ior_base) > 1e-9){
+      ctx.fillStyle = ORANGE;
+      ctx.fillText("D₁", floorRx, yTo(ior) + 4*dpr);
+    }
   }
 
   function drawMoney(){
@@ -545,6 +571,19 @@ Changes in reserves (OMO) or demand shifts can change the Federal Funds Rate and
       xTick(ctx, x1, Y1, "R₁", dpr);
       yTick(ctx, X0, y1p, "M₁", dpr);
     }
+
+    // Curve labels — secondary non-color indicator (WCAG 1.4.1)
+    const labelRx = Rmin + (Rmax - Rmin) * 0.10;
+    const labelFont = `700 ${Math.round(10*dpr*_fs)}px system-ui`;
+    ctx.font = labelFont;
+    ctx.textBaseline = "bottom";
+    ctx.textAlign = "left";
+    ctx.fillStyle = BLUE;
+    ctx.fillText("M₀", xTo(labelRx), yTo(moneySupply(labelRx, ior_base)) - 4*dpr);
+    if (Math.abs(ior - ior_base) > 1e-9){
+      ctx.fillStyle = ORANGE;
+      ctx.fillText("M₁", xTo(labelRx), yTo(moneySupply(labelRx, ior)) - 4*dpr);
+    }
   }
 
   function renderStats(){
@@ -562,14 +601,42 @@ Changes in reserves (OMO) or demand shifts can change the Federal Funds Rate and
     els.MVal.textContent = fmt2(M);
   }
 
+  function updateCanvasDesc(){
+    const resDesc   = document.getElementById("resCanvasDesc");
+    const moneyDesc = document.getElementById("moneyCanvasDesc");
+    if (!resDesc || !moneyDesc) return;
+
+    const i0 = iStar(R_base, ior_base);
+    const i1 = iStar(R, ior);
+    const M0 = moneySupply(R_base, ior_base);
+    const M1 = moneySupply(R, ior);
+    const reg = region(R, ior);
+    const changed = Math.abs(R - R_base) > 1e-9 || Math.abs(ior - ior_base) > 1e-9;
+
+    resDesc.textContent =
+      `Reserves market. Baseline supply at R₀ = ${fmt2(R_base)}, ` +
+      `baseline federal funds rate FF₀ = ${fmt2(i0)}%. ` +
+      (changed
+        ? `Current supply at R₁ = ${fmt2(R)}, current rate FF₁ = ${fmt2(i1)}%. ` +
+          `Equilibrium in the ${reg} region.`
+        : `No shock applied. Equilibrium in the ${reg} region.`);
+
+    moneyDesc.textContent =
+      `Money supply. Baseline M₀ = ${fmt2(M0)} at R₀ = ${fmt2(R_base)}.` +
+      (changed ? ` Current M₁ = ${fmt2(M1)} at R₁ = ${fmt2(R)}.` : "");
+  }
+
   function renderAll(){
+    _fs = Math.max(0.75, Math.min(2.5,
+      parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
     renderStats();
     requestAnimationFrame(() => {
       drawReserves();
       drawMoney();
     });
+    updateCanvasDesc();
 
-    // Only show pinned note when a scenario exists (prevents “pinned” before predicting)
+    // Only show pinned note when a scenario exists (prevents "pinned" before predicting)
     if (scenario) setPinnedNote(pinnedNoteHTML());
   }
 
@@ -580,7 +647,7 @@ Changes in reserves (OMO) or demand shifts can change the Federal Funds Rate and
     els.dRVal.textContent = "—";
 
     els.scenarioTitle.textContent = "Scenario";
-    els.scenarioDesc.textContent = "Click “New Scenario” to start.";
+    els.scenarioDesc.textContent = 'Click “New Scenario” to start.';
 
     enableControls(false);
     setPinnedNote("");          // no pinned note at start

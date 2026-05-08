@@ -1,6 +1,9 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
+  let _fs = 1;
+  let keyboardSelectedPill = null;
+
   // -----------------------
   // KaTeX render (safe)
   // -----------------------
@@ -73,7 +76,7 @@
     return { Y, r };
   }
 
-  // Unclamped equilibrium for AD curve generation (prevents vertical “sticking”)
+  // Unclamped equilibrium for AD curve generation (prevents vertical "sticking")
   function eqmUnclamped(G, T, C, I, P, Z) {
     const A0 = IS_r(0, G, T, C, I);
     const C0 = FR_r(0, P, Z);
@@ -166,7 +169,7 @@
   const mechKeyFor = (varName, dir) => `${varName}_${dir === "up" ? "up" : "dn"}`;
 
   // -----------------------
-  // Expanded scenarios (~60), with clearer G “government buys goods/services”
+  // Expanded scenarios (~60), with clearer G "government buys goods/services"
   // -----------------------
   const SCEN = [
     // G up
@@ -197,7 +200,7 @@
     { var:"T", dir:"down", source:"Policy Desk", headline:"Tax cut takes effect; withholding falls", brief:"Households keep more after-tax income." },
     { var:"T", dir:"down", source:"Policy Desk", headline:"Payroll tax holiday announced", brief:"Take-home pay rises for most workers." },
     { var:"T", dir:"down", source:"Policy Desk", headline:"Child tax credit expansion begins", brief:"Net taxes paid by households decline." },
-    { var:"T", dir:"down", source:"Policy Desk", headline:"Standard deduction raised", brief:"Typical households’ tax liability falls." },
+    { var:"T", dir:"down", source:"Policy Desk", headline:"Standard deduction raised", brief:"Typical households' tax liability falls." },
     { var:"T", dir:"down", source:"Policy Desk", headline:"Temporary rebate checks issued", brief:"Effective net taxes fall this period." },
     { var:"T", dir:"down", source:"Policy Desk", headline:"Withholding tables updated", brief:"Paychecks rise as taxes withheld fall." },
     { var:"T", dir:"down", source:"Policy Desk", headline:"Tax relief extended", brief:"Households face lower tax payments this quarter." },
@@ -361,6 +364,10 @@
     // canvases
     isfrCanvas: $("isfrCanvas"),
     adCanvas: $("adCanvas"),
+
+    // canvas accessible descriptions
+    isfrDesc: $("isfrDesc"),
+    adDesc: $("adDesc"),
   };
 
   // Guard: if index is missing required ids, fail gracefully.
@@ -371,7 +378,8 @@
     "Gdisp","Tdisp","Cdisp","Idisp","Pdisp","Zdisp",
     "slots","poolGroups","checkMechBtn","clearMechBtn",
     "mechBadge","mechMsg",
-    "isfrCanvas","adCanvas"
+    "isfrCanvas","adCanvas",
+    "isfrDesc","adDesc"
   ];
   for (const id of required) {
     if (!els[id]) {
@@ -501,6 +509,17 @@
   }
 
   // -----------------------
+  // Keyboard pill selection
+  // -----------------------
+  function resetKeyboardSelection() {
+    document.querySelectorAll(".pill.kb-selected").forEach(p => {
+      p.classList.remove("kb-selected");
+      p.setAttribute("aria-pressed", "false");
+    });
+    keyboardSelectedPill = null;
+  }
+
+  // -----------------------
   // Mechanism UI
   // -----------------------
   function makePill(token) {
@@ -508,11 +527,32 @@
     d.className = "pill";
     d.textContent = token;
     d.draggable = true;
+    d.tabIndex = 0;
+    d.setAttribute("role", "button");
+    d.setAttribute("aria-pressed", "false");
     d.dataset.tok = token;
+
     d.addEventListener("dragstart", (e) => {
       e.dataTransfer.setData("text/plain", token);
       e.dataTransfer.effectAllowed = "move";
     });
+
+    d.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        if (keyboardSelectedPill === token) {
+          resetKeyboardSelection();
+          setStatus("Pill deselected.");
+        } else {
+          resetKeyboardSelection();
+          d.classList.add("kb-selected");
+          d.setAttribute("aria-pressed", "true");
+          keyboardSelectedPill = token;
+          setStatus(`Selected: ${token}. Tab to a slot and press Enter or Space to place it.`);
+        }
+      }
+    });
+
     return d;
   }
 
@@ -545,6 +585,9 @@
       slot.className = "slot";
       slot.textContent = "Drop";
       slot.dataset.idx = String(i);
+      slot.tabIndex = 0;
+      slot.setAttribute("role", "button");
+      slot.setAttribute("aria-label", `Mechanism step ${i + 1}: empty`);
 
       slot.addEventListener("dragover", (e) => {
         e.preventDefault();
@@ -558,6 +601,7 @@
         slotsState[i] = tok;
         slot.classList.add("filled");
         slot.textContent = tok;
+        slot.setAttribute("aria-label", `Mechanism step ${i + 1}: ${tok}`);
         clearMechResult();
       });
 
@@ -565,7 +609,29 @@
         slotsState[i] = null;
         slot.classList.remove("filled");
         slot.textContent = "Drop";
+        slot.setAttribute("aria-label", `Mechanism step ${i + 1}: empty`);
         clearMechResult();
+      });
+
+      slot.addEventListener("keydown", (e) => {
+        if ((e.key === "Enter" || e.key === " ") && keyboardSelectedPill) {
+          e.preventDefault();
+          const tok = keyboardSelectedPill;
+          slotsState[i] = tok;
+          slot.classList.add("filled");
+          slot.textContent = tok;
+          slot.setAttribute("aria-label", `Mechanism step ${i + 1}: ${tok}`);
+          resetKeyboardSelection();
+          setStatus(`Placed "${tok}" in step ${i + 1}.`);
+          clearMechResult();
+        } else if ((e.key === "Delete" || e.key === "Backspace") && slotsState[i]) {
+          e.preventDefault();
+          slotsState[i] = null;
+          slot.classList.remove("filled");
+          slot.textContent = "Drop";
+          slot.setAttribute("aria-label", `Mechanism step ${i + 1}: empty`);
+          clearMechResult();
+        }
       });
 
       els.slots.appendChild(slot);
@@ -574,6 +640,7 @@
         const arr = document.createElement("span");
         arr.className = "arrowTok";
         arr.textContent = "→";
+        arr.setAttribute("aria-hidden", "true");
         els.slots.appendChild(arr);
       }
     }
@@ -586,7 +653,9 @@
       slotsState[idx] = null;
       s.classList.remove("filled");
       s.textContent = "Drop";
+      s.setAttribute("aria-label", `Mechanism step ${idx + 1}: empty`);
     }
+    resetKeyboardSelection();
     clearMechResult();
   }
 
@@ -846,7 +915,7 @@
     ctx.lineTo(x, yAxisBottom + 6 * dpr);
     ctx.stroke();
     ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = `${12 * dpr}px system-ui`;
+    ctx.font = `${Math.round(12 * dpr * _fs)}px system-ui`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillText(label, x, yAxisBottom + 8 * dpr);
@@ -860,7 +929,7 @@
     ctx.lineTo(xAxisLeft, y);
     ctx.stroke();
     ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = `${12 * dpr}px system-ui`;
+    ctx.font = `${Math.round(12 * dpr * _fs)}px system-ui`;
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
     ctx.fillText(label, xAxisLeft - 10 * dpr, y);
@@ -895,7 +964,7 @@
 
     // labels
     ctx.fillStyle = "rgba(0,0,0,0.70)";
-    ctx.font = `${12*dpr}px system-ui`;
+    ctx.font = `${Math.round(12*dpr*_fs)}px system-ui`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillText("Output (Y)", (X0 + X1) / 2, Y1 + 22*dpr);
@@ -910,13 +979,13 @@
 
     const YL = Ymin, YR = Ymax;
 
-    // baseline curves
+    // baseline curves — dashed for non-color distinction (WCAG 1.4.1)
     const isL0 = IS_r(YL, M.base.G, M.base.T, M.base.C, M.base.I);
     const isR0 = IS_r(YR, M.base.G, M.base.T, M.base.C, M.base.I);
     const frL0 = FR_r(YL, M.base.P, M.base.Z);
     const frR0 = FR_r(YR, M.base.P, M.base.Z);
-    drawLine(ctx, xTo(YL), yTo(isL0), xTo(YR), yTo(isR0), "rgba(0,0,0,0.22)", 3, dpr);
-    drawLine(ctx, xTo(YL), yTo(frL0), xTo(YR), yTo(frR0), "rgba(0,0,0,0.22)", 3, dpr);
+    drawLine(ctx, xTo(YL), yTo(isL0), xTo(YR), yTo(isR0), "rgba(0,0,0,0.35)", 3, dpr, [8, 5]);
+    drawLine(ctx, xTo(YL), yTo(frL0), xTo(YR), yTo(frR0), "rgba(0,0,0,0.35)", 3, dpr, [8, 5]);
 
     // baseline point
     const x1p = xTo(baseEq.Y), y1p = yTo(baseEq.r);
@@ -928,7 +997,7 @@
 
     if (!revealed) return;
 
-    // current curves
+    // current curves — solid
     const isL1 = IS_r(YL, cur.G, cur.T, cur.C, cur.I);
     const isR1 = IS_r(YR, cur.G, cur.T, cur.C, cur.I);
     const frL1 = FR_r(YL, cur.P, cur.Z);
@@ -963,7 +1032,7 @@
 
     // labels
     ctx.fillStyle = "rgba(0,0,0,0.70)";
-    ctx.font = `${12*dpr}px system-ui`;
+    ctx.font = `${Math.round(12*dpr*_fs)}px system-ui`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillText("Output (Y)", (X0 + X1) / 2, Y1 + 22*dpr);
@@ -976,9 +1045,10 @@
     ctx.fillText("Price level (P)", 0, 0);
     ctx.restore();
 
-    // baseline AD (clip out-of-range Y so it "disappears" instead of vertical)
-    ctx.strokeStyle = "rgba(0,0,0,0.22)";
+    // baseline AD — dashed for non-color distinction (WCAG 1.4.1)
+    ctx.strokeStyle = "rgba(0,0,0,0.35)";
     ctx.lineWidth = 3*dpr;
+    ctx.setLineDash([8*dpr, 5*dpr]);
     ctx.beginPath();
     let penDown = false;
     for (const pt of baseAD) {
@@ -988,6 +1058,7 @@
       else ctx.lineTo(x, y);
     }
     ctx.stroke();
+    ctx.setLineDash([]);
 
     // baseline point
     const x1p = xTo(baseEq.Y), y1p = yTo(M.base.P);
@@ -999,10 +1070,11 @@
 
     if (!revealed) return;
 
-    // current AD
+    // current AD — solid
     const curAD = buildADCurve({ G: cur.G, T: cur.T, C: cur.C, I: cur.I, Z: cur.Z }, 80);
     ctx.strokeStyle = "rgba(230,159,0,0.95)";
     ctx.lineWidth = 3*dpr;
+    ctx.setLineDash([]);
     ctx.beginPath();
     penDown = false;
     for (const pt of curAD) {
@@ -1021,15 +1093,39 @@
     drawLine(ctx, x2p, y2p, xTo(Ymin), y2p, "rgba(0,0,0,0.30)", 2, dpr, [4, 6]);
     if (!approxEq(eq2.Y, baseEq.Y, 1e-6)) xTick(ctx, x2p, Y1, "Y₂", dpr);
 
-    // Skip P₂ if price didn’t change (prevents overlap with P₁)
+    // Skip P₂ if price didn't change (prevents overlap with P₁)
     if (!approxEq(cur.P, M.base.P, 1e-6)) yTick(ctx, X0, y2p, "P₂", dpr);
 
     arrow(ctx, x1p, y1p, x2p, y2p, "rgba(230,159,0,0.95)", dpr);
   }
 
+  function updateGraphDesc() {
+    if (!els.isfrDesc || !els.adDesc) return;
+
+    let isfrText, adText;
+
+    if (!scenario) {
+      isfrText = "IS-FR diagram showing baseline equilibrium. No scenario loaded yet.";
+      adText = "Aggregate Demand diagram showing baseline AD curve. No scenario loaded yet.";
+    } else if (!revealed) {
+      isfrText = `IS-FR diagram. Baseline equilibrium (dashed curves) at output Y₁ = ${baseEq.Y.toFixed(0)} and interest rate r₁ = ${baseEq.r.toFixed(1)}. Scenario: ${scenario.headline}. Move the unlocked slider to reveal the new equilibrium.`;
+      adText = `Aggregate Demand diagram. Baseline AD curve shown (dashed). Scenario: ${scenario.headline}. Move the unlocked slider to reveal the shifted AD curve.`;
+    } else {
+      const eq2 = eqm(cur.G, cur.T, cur.C, cur.I, cur.P, cur.Z);
+      isfrText = `IS-FR diagram. Baseline equilibrium (dashed curves) at Y₁ = ${baseEq.Y.toFixed(0)}, r₁ = ${baseEq.r.toFixed(1)}. Current equilibrium (solid curves) at Y₂ = ${eq2.Y.toFixed(0)}, r₂ = ${eq2.r.toFixed(1)}.`;
+      adText = `Aggregate Demand diagram. Baseline AD (dashed) and current AD (solid). Current price level P = ${cur.P.toFixed(1)}. Current equilibrium output Y₂ = ${eq2.Y.toFixed(0)}.`;
+    }
+
+    els.isfrDesc.textContent = isfrText;
+    els.adDesc.textContent = adText;
+  }
+
   function drawAll() {
+    _fs = Math.max(0.75, Math.min(2.5,
+      parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
     drawISFR();
     drawAD();
+    updateGraphDesc();
   }
 
   // -----------------------
@@ -1073,6 +1169,7 @@
 
   function resetAll() {
     scenario = null;
+    resetKeyboardSelection();
     resetToBaseline();
     els.scenarioDesc.textContent = "Click “New Scenario” to start.";
     els.slots.innerHTML = "";
@@ -1107,6 +1204,7 @@
     renderSlots(seq.length);
 
     setStatus("Scenario ready. Build the mechanism and make predictions.");
+    updateGraphDesc(); // update canvas descriptions now that scenario is set
     typeset(document.body);
   }
 

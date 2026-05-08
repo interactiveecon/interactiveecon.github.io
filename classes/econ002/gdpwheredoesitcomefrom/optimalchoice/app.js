@@ -2,6 +2,14 @@
 // Baseline is ALWAYS BASELINE = {A=5,P=5,W=10,R=10}
 // Y-axes fixed to 0..20 (both charts).
 
+// Scale Chart.js text with the user's browser font-size preference (WCAG 1.4.4).
+// Chart.js renders to canvas, so it can't use rem — we derive a scale factor instead.
+{
+  const _rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  const _fs = Math.max(0.75, Math.min(2.5, _rootPx / 16));
+  Chart.defaults.font.size = Math.round(12 * _fs);
+}
+
 const alpha = 0.35;
 const beta  = 0.55; // alpha+beta < 1
 

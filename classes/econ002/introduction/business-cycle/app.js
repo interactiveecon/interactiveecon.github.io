@@ -55,6 +55,46 @@ function initApp() {
   function showFeedback(html) { els.feedback.style.display = "block"; els.feedback.innerHTML = html; }
   function hideFeedback()     { els.feedback.style.display = "none";  els.feedback.innerHTML = ""; }
 
+  // ── Canvas font scale (WCAG 1.4.4) ───────────────────────────────────────
+  // Recomputed at the start of every full redraw so canvas text respects the
+  // user's browser font-size preference.
+  let _fs = 1;
+
+  // ── Canvas accessibility descriptions ─────────────────────────────────────
+  const $gdpDesc = $('gdpChartDesc');
+  const $uDesc   = $('uChartDesc');
+
+  function updateGraphDesc() {
+    if (!$gdpDesc || !$uDesc) return;
+    if (!gdp.length) {
+      $gdpDesc.textContent = 'Real GDP chart not yet loaded. Click New Scenario to begin.';
+      $uDesc.textContent   = 'Unemployment rate chart not yet loaded.';
+      return;
+    }
+    const showTrue = (phase === 'first-submitted' && firstWasCorrect)
+                   || phase === 'revising'
+                   || phase === 'done';
+
+    let gdpTxt = `Real GDP over ${T} time periods. `;
+    if (gdpCursor !== null) {
+      gdpTxt += `Keyboard cursor at time ${gdpCursor} (GDP index ${gdp[gdpCursor].toFixed(1)}). `;
+    }
+    if (placedPeakIdx   != null) gdpTxt += `Your peak marker at time ${placedPeakIdx}. `;
+    if (placedTroughIdx != null) gdpTxt += `Your trough marker at time ${placedTroughIdx}. `;
+    if (showTrue && truePeakIdx != null && trueTroughIdx != null) {
+      gdpTxt += `Correct peak at time ${truePeakIdx}, correct trough at time ${trueTroughIdx}. `
+              + `Recession shaded from time ${truePeakIdx} to ${trueTroughIdx}.`;
+    }
+    $gdpDesc.textContent = gdpTxt;
+
+    let uTxt = `Unemployment rate over ${T} time periods. `
+             + `Unemployment rises during recessions and typically peaks after the GDP trough.`;
+    if (showTrue && truePeakIdx != null && trueTroughIdx != null) {
+      uTxt += ` Recession period (time ${truePeakIdx} to ${trueTroughIdx}) is shaded.`;
+    }
+    $uDesc.textContent = uTxt;
+  }
+
   const DATA = window.BCYCLE_DATA;
   if (!DATA) { setStatus("ERROR: data.js did not load."); return; }
 
@@ -66,6 +106,9 @@ function initApp() {
   let truePeakIdx = null, trueTroughIdx = null;
   let placedPeakIdx = null, placedTroughIdx = null;
   let mode = "PEAK";
+
+  // Keyboard cursor position on the GDP time axis (null = no cursor)
+  let gdpCursor = null;
 
   // phase: 'placing' | 'first-submitted' | 'revising' | 'done'
   let phase = 'placing';
@@ -84,10 +127,8 @@ function initApp() {
 
   function rand(lo, hi, rng) { return lo + (rng ? rng() : Math.random())*(hi-lo); }
 
-  // Returns a seeded rng for a specific scenario index in disc mode
   function scenarioRng(idx) {
     if (!DISC_MODE || !window.Session) return null;
-    // Each scenario index gets its own deterministic RNG stream
     return Session.rngForLab(LAB_ID + '|scenario' + idx);
   }
   function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
@@ -119,7 +160,6 @@ function initApp() {
   }
 
   function makeCycle(metaId, rng) {
-    // rng: seeded random function in disc mode, null otherwise (falls back to Math.random)
     t = Array.from({length:T}, (_,i)=>i);
     const base=100, trendSlope=rand(0.10,0.22,rng);
     let amp=rand(4,7,rng), width=rand(10,16,rng), dropAmp=rand(5,9,rng), dropWidth=rand(8,14,rng);
@@ -142,9 +182,10 @@ function initApp() {
     unemp = t.map(i => clamp(uBase-uAmp*gap[Math.max(0,i-lag)]+rand(-0.10,0.10,rng), 3.0, 10.0));
 
     placedPeakIdx = null; placedTroughIdx = null;
+    gdpCursor = null;
     firstPeakIdx = null; firstTroughIdx = null; firstWasCorrect = false;
     phase = 'placing'; mode = "PEAK";
-    updateModeUI(); hideFeedback(); drawAll();
+    updateModeUI(); hideFeedback(); drawAll(false);
 
     const sNum = DISC_MODE ? ` (Scenario ${scenariosCompleted+1} of ${DISC_LIMIT})` : '';
     setStatus(`Click on the GDP chart to place the Peak.${sNum}`);
@@ -164,7 +205,7 @@ function initApp() {
     for(let i=0;i<=5;i++){const x=X0+i*(X1-X0)/5;ctx.beginPath();ctx.moveTo(x,Y0);ctx.lineTo(x,Y1);ctx.stroke();}
     for(let i=0;i<=4;i++){const y=Y0+i*(Y1-Y0)/4;ctx.beginPath();ctx.moveTo(X0,y);ctx.lineTo(X1,y);ctx.stroke();}
     ctx.fillStyle="rgba(0,0,0,0.70)";
-    ctx.font=`${12*dpr}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial`;
+    ctx.font=`${Math.round(12*dpr*_fs)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial`;
     ctx.textAlign="center"; ctx.textBaseline="top";
     ctx.fillText(xLabel,(X0+X1)/2,Y1+14*dpr);
     ctx.save();ctx.translate(X0-40*dpr,(Y0+Y1)/2);ctx.rotate(-Math.PI/2);
@@ -193,23 +234,38 @@ function initApp() {
   }
   function labelAtTop(ctx,x,Y0,text,dpr) {
     ctx.fillStyle="rgba(0,0,0,0.70)";
-    ctx.font=`${12*dpr}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial`;
+    ctx.font=`${Math.round(12*dpr*_fs)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial`;
     ctx.textAlign="center"; ctx.textBaseline="bottom"; ctx.fillText(text,x,Y0-2*dpr);
   }
   function labelAtXAxis(ctx,x,Y1,text,dpr) {
     ctx.fillStyle="rgba(0,0,0,0.70)";
-    ctx.font=`${12*dpr}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial`;
+    ctx.font=`${Math.round(12*dpr*_fs)}px system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial`;
     ctx.textAlign="center"; ctx.textBaseline="top"; ctx.fillText(text,x,Y1+8*dpr);
   }
 
-  // showTrue: whether to draw the true peak/trough markers and shading
+  function currentShowTrue() {
+    return (phase === 'first-submitted' && firstWasCorrect)
+        || phase === 'revising'
+        || phase === 'done';
+  }
+
   function drawAll(showTrue) {
+    _fs = Math.max(0.75, Math.min(2.5,
+      parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
     drawGDP(showTrue);
     drawUnemp(showTrue);
+    updateGraphDesc();
   }
 
   function drawGDP(showTrue) {
-    const {ctx,W,H,dpr}=setupCanvas(els.gdpCanvas); ctx.clearRect(0,0,W,H);
+    // Recompute _fs so standalone calls (focus/blur/keydown) stay calibrated
+    _fs = Math.max(0.75, Math.min(2.5,
+      parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+
+    const {ctx,W,H,dpr}=setupCanvas(els.gdpCanvas);
+    ctx.clearRect(0,0,W,H);
+    if (!gdp.length) return;
+
     const {X0,X1,Y0,Y1}=drawAxes(ctx,W,H,dpr,"Time","Real GDP (index)");
     const yMin=Math.min(...gdp)-1, yMax=Math.max(...gdp)+1;
     const map=drawLine(ctx,X0,X1,Y0,Y1,t,gdp,yMin,yMax,"rgba(0,0,0,0.70)",dpr);
@@ -236,10 +292,27 @@ function initApp() {
       drawMarker(ctx,x,y,"rgba(31,119,180,0.90)",dpr);
       if (!showTrue) labelAtXAxis(ctx,x,Y1,"Trough",dpr);
     }
+
+    // Keyboard cursor — shown only when the canvas has keyboard focus
+    if (gdpCursor !== null && document.activeElement === els.gdpCanvas) {
+      const cx = xTo(gdpCursor), cy = yTo(gdp[gdpCursor]);
+      ctx.save();
+      ctx.strokeStyle = 'rgba(47,93,124,0.65)';
+      ctx.lineWidth = 1.5 * dpr;
+      ctx.setLineDash([3 * dpr, 4 * dpr]);
+      ctx.beginPath(); ctx.moveTo(cx, Y0); ctx.lineTo(cx, Y1); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(47,93,124,1)';
+      ctx.lineWidth = 2 * dpr;
+      ctx.beginPath(); ctx.arc(cx, cy, 6 * dpr, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
   }
 
   function drawUnemp(showTrue) {
-    const {ctx,W,H,dpr}=setupCanvas(els.uCanvas); ctx.clearRect(0,0,W,H);
+    const {ctx,W,H,dpr}=setupCanvas(els.uCanvas);
+    ctx.clearRect(0,0,W,H);
+    if (!unemp.length) return;
     const {X0,X1,Y0,Y1}=drawAxes(ctx,W,H,dpr,"Time","Unemployment (%)");
     const map=drawLine(ctx,X0,X1,Y0,Y1,t,unemp,3.0,10.0,"rgba(230,159,0,0.95)",dpr);
     const xTo=map.xTo;
@@ -258,10 +331,14 @@ function initApp() {
     els.modeTrough.classList.toggle("primary", mode==="TROUGH");
     els.modeTrough.classList.toggle("subtle",  mode!=="TROUGH");
     els.stepText.textContent = (mode==="PEAK") ? "Place Peak" : "Place Trough";
+    // WCAG 4.1.2 — keep aria-pressed in sync with visual state
+    els.modePeak.setAttribute('aria-pressed',   mode==="PEAK"   ? 'true' : 'false');
+    els.modeTrough.setAttribute('aria-pressed', mode==="TROUGH" ? 'true' : 'false');
   }
 
   function resetMarkers() {
     placedPeakIdx=null; placedTroughIdx=null;
+    gdpCursor=null;
     phase='placing'; mode="PEAK";
     updateModeUI(); hideFeedback(); drawAll(false);
     setStatus("Markers cleared. Place the Peak.");
@@ -287,16 +364,16 @@ function initApp() {
     `;
     banner.innerHTML = `
       <div>
-        <div style="font-weight:800;color:#1b7f4b;font-size:14px;">
+        <div style="font-weight:800;color:#155c38;font-size:0.875rem;">
           ✓ Lab complete — Final score: ${finalCorrectCount} / ${DISC_LIMIT}</div>
-        <div style="font-size:12px;color:#6b7280;margin-top:3px;">
+        <div style="font-size:0.75rem;color:#596878;margin-top:3px;">
           First-attempt score: ${firstCorrectCount} / ${DISC_LIMIT} &nbsp;·&nbsp;
           Return to Week 1 when your TA is ready.
         </div>
       </div>
       <a href="${WEEK_URL}"
-         style="padding:10px 20px;background:#1b7f4b;color:#fff;border-radius:12px;
-                font-weight:800;font-size:13px;text-decoration:none;white-space:nowrap;">
+         style="padding:10px 20px;background:#155c38;color:#fff;border-radius:12px;
+                font-weight:800;font-size:0.8125rem;text-decoration:none;white-space:nowrap;">
         ← Return to Week 1
       </a>
     `;
@@ -323,7 +400,6 @@ function initApp() {
       firstWasCorrect = okPeak && okTrough;
       if (firstWasCorrect) firstCorrectCount++;
 
-      // Reveal shading only if correct; wrong answer waits until Revise
       drawAll(firstWasCorrect);
       phase = 'first-submitted';
 
@@ -349,13 +425,12 @@ function initApp() {
           : "Click Revise to try again.");
       }
 
-    // ── Open revision — NOW reveal the correct answer ────────────────────
+    // ── Open revision — reveal the correct answer ─────────────────────────
     } else if (phase === 'first-submitted' && els.checkBtn.textContent === 'Revise') {
       phase = 'revising';
-      // Reset placed markers so student re-places
       placedPeakIdx = null; placedTroughIdx = null;
+      gdpCursor = null;
       mode = "PEAK"; updateModeUI();
-      // Reveal correct peak/trough for the first time
       drawAll(true);
       showFeedback(`<em>The correct peak and trough are marked in green. Re-place your markers, then click <strong>Submit Final</strong>.</em>`);
       els.checkBtn.textContent = 'Submit Final';
@@ -428,26 +503,11 @@ function initApp() {
     els.scTitle.textContent = curMeta.title;
     els.scDesc.textContent  = curMeta.desc;
     els.checkBtn.textContent = 'Check';
-    // In disc mode, use a seeded rng per scenario so all students see identical graphs
     makeCycle(curMeta.id, DISC_MODE ? scenarioRng(scenariosCompleted) : null);
   }
 
-  function handleGDPClick(ev) {
-    if (phase !== 'placing' && phase !== 'revising') return;
-    if (discDone) return;
-
-    const rect  = els.gdpCanvas.getBoundingClientRect();
-    const dpr   = window.devicePixelRatio || 1;
-    // The axes are drawn with a left pad of 54 CSS px and right pad of 12 CSS px.
-    // Map click x within that plot area to a time index.
-    const padL  = 54;   // must match drawAxes pad.l
-    const padR  = 12;
-    const plotW = rect.width - padL - padR;
-    const clickX = ev.clientX - rect.left - padL;
-    const frac  = Math.max(0, Math.min(1, clickX / plotW));
-    const rawIdx = Math.round(frac * (T-1));
-    const i = clamp(rawIdx, 0, T-1);
-
+  // ── Marker placement ──────────────────────────────────────────────────────
+  function placeMarker(i) {
     if (mode==="PEAK") {
       placedPeakIdx = snapToLocalExtremum(gdp, i, "max");
       setStatus("Peak placed. Now place the Trough.");
@@ -459,17 +519,63 @@ function initApp() {
     drawAll(phase === 'revising');
   }
 
+  function handleGDPClick(ev) {
+    if (phase !== 'placing' && phase !== 'revising') return;
+    if (discDone) return;
+
+    const rect  = els.gdpCanvas.getBoundingClientRect();
+    const padL  = 54;
+    const padR  = 12;
+    const plotW = rect.width - padL - padR;
+    const clickX = ev.clientX - rect.left - padL;
+    const frac  = Math.max(0, Math.min(1, clickX / plotW));
+    const rawIdx = Math.round(frac * (T-1));
+    const i = clamp(rawIdx, 0, T-1);
+
+    gdpCursor = i;
+    placeMarker(i);
+  }
+
   // ── Button wiring ─────────────────────────────────────────────────────────
   els.newBtn.addEventListener("click",    loadNextScenario);
-  els.modePeak.addEventListener("click",  () => { if(phase==='placing'||phase==='revising'){mode="PEAK";  updateModeUI();setStatus("Click on GDP to place Peak.");} });
-  els.modeTrough.addEventListener("click",() => { if(phase==='placing'||phase==='revising'){mode="TROUGH";updateModeUI();setStatus("Click on GDP to place Trough.");} });
+  els.modePeak.addEventListener("click",  () => {
+    if (phase==='placing'||phase==='revising') { mode="PEAK";   updateModeUI(); setStatus("Click on GDP to place Peak."); }
+  });
+  els.modeTrough.addEventListener("click",() => {
+    if (phase==='placing'||phase==='revising') { mode="TROUGH"; updateModeUI(); setStatus("Click on GDP to place Trough."); }
+  });
   els.resetBtn.addEventListener("click",  resetMarkers);
   els.checkBtn.addEventListener("click",  handleCheck);
   els.gdpCanvas.addEventListener("click", handleGDPClick);
 
+  // ── Keyboard navigation for GDP canvas (WCAG 2.1.1) ──────────────────────
+  els.gdpCanvas.addEventListener('keydown', (e) => {
+    if (phase !== 'placing' && phase !== 'revising') return;
+    if (discDone) return;
+    if (gdpCursor === null) gdpCursor = Math.floor(T / 2);
+
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      gdpCursor = Math.max(0, gdpCursor - 1);
+      drawGDP(currentShowTrue());
+      updateGraphDesc();
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      gdpCursor = Math.min(T - 1, gdpCursor + 1);
+      drawGDP(currentShowTrue());
+      updateGraphDesc();
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      placeMarker(gdpCursor);
+    }
+  });
+
+  // Redraw cursor indicator when the canvas gains/loses focus
+  els.gdpCanvas.addEventListener('focus', () => drawGDP(currentShowTrue()));
+  els.gdpCanvas.addEventListener('blur',  () => drawGDP(currentShowTrue()));
+
   // ── Init ──────────────────────────────────────────────────────────────────
   function startDiscMode() {
-    // Called after Session.start() so seed is available
     const pool = DATA.scenarios.slice();
     const rng  = Session.rngForLab(LAB_ID);
     for (let i=pool.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
@@ -481,17 +587,14 @@ function initApp() {
   }
 
   if (DISC_MODE) {
-    // Render a placeholder until the student enters their code
     els.scTitle.textContent = 'Waiting for session…';
     els.scDesc.textContent  = 'Enter your name and session code to begin.';
-    // DiscussionModal will call onReady once session is started
     if (window.DiscussionModal) {
       DiscussionModal.init({
         weekLabel: 'Week 1 — Introduction',
         onReady: startDiscMode
       });
     } else {
-      // fallback: modal already shown by week page, session already active
       if (window.Session && Session.isActive()) startDiscMode();
     }
   } else {

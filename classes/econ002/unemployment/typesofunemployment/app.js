@@ -38,6 +38,19 @@ window.addEventListener("DOMContentLoaded", () => {
   function setStatus(msg){ els.status.textContent = msg; }
   function fmtPct(x){ return (100*x).toFixed(2) + "%"; }
 
+  let _fs = 1;
+  function updateFs(){
+    _fs = Math.max(0.75, Math.min(2.5,
+      parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  }
+
+  function zoneName(z){
+    if (z === "STAGE") return "Staging pile";
+    if (z === "FRIC") return "Frictional";
+    if (z === "STRU") return "Structural";
+    return "Cyclical";
+  }
+
   if (missing.length){
     console.error("Missing element IDs:", missing);
     if (els.status) els.status.textContent = `Missing IDs: ${missing.join(", ")}`;
@@ -163,12 +176,24 @@ window.addEventListener("DOMContentLoaded", () => {
       if (c.checked === false) el.classList.add("bad");
 
       el.draggable = true;
+      el.tabIndex = 0;
+      el.setAttribute("role", "button");
       el.dataset.cardId = c.id;
+
+      const checkedLabel = c.checked === true ? " Correct." : c.checked === false ? " Incorrect." : "";
+      el.setAttribute("aria-label",
+        `${c.text} Currently in ${zoneName(c.zone)}.${checkedLabel} Press Enter or Space to move to the next bucket.`);
 
       const showBaselineLine = (c.zone === "FRIC" && c.correct === "FRIC");
       const baselineLine = showBaselineLine ? `<div class="baselineLine">baseline: ${c.baselinePeople}</div>` : "";
+      const statusBadge = c.checked === true
+        ? `<div class="card-status ok-text" aria-hidden="true">✓ Correct</div>`
+        : c.checked === false
+        ? `<div class="card-status bad-text" aria-hidden="true">✗ Incorrect</div>`
+        : "";
 
       el.innerHTML = `
+        ${statusBadge}
         <div class="badge">${c.people} people</div>
         ${baselineLine}
         <div class="desc">${c.text}</div>
@@ -177,6 +202,21 @@ window.addEventListener("DOMContentLoaded", () => {
       el.addEventListener("dragstart", (ev) => {
         ev.dataTransfer.setData("text/plain", c.id);
         ev.dataTransfer.effectAllowed = "move";
+      });
+
+      el.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          const zones = ["STAGE", "FRIC", "STRU", "CYC"];
+          const idx = zones.indexOf(c.zone);
+          c.zone = zones[(idx + 1) % zones.length];
+          c.checked = null;
+          els.checkMsg.textContent = "";
+          renderZones();
+          recomputeAll();
+          const movedCard = document.querySelector(`[data-card-id="${c.id}"]`);
+          if (movedCard) movedCard.focus();
+        }
       });
 
       const zoneEl =
@@ -236,6 +276,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // ---- Cycle drawing (growth) ----
   function drawGrowth(){
+    updateFs();
     const canvas = els.growthChart;
     const ctx = canvas.getContext("2d");
 
@@ -263,8 +304,8 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.beginPath(); ctx.moveTo(X0,py); ctx.lineTo(X1,py); ctx.stroke();
     }
 
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.font = `${Math.round(12*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
     for (const y of ticks){
@@ -307,16 +348,21 @@ window.addEventListener("DOMContentLoaded", () => {
     ctx.fillStyle = "rgba(230,159,0,0.95)";
     ctx.beginPath(); ctx.arc(hx,hy,6.5*dpr,0,Math.PI*2); ctx.fill();
 
-    // title
-    ctx.fillStyle = "rgba(0,0,0,0.70)";
-    ctx.font = `${13*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-    ctx.fillText("Growth rate of output (%)", X0, 0);
+    updateGrowthDesc();
+  }
+
+  function updateGrowthDesc(){
+    const el = document.getElementById("growthChartDesc");
+    if (!el) return;
+    const gNow = g[tCur].toFixed(2);
+    const state = g[tCur] > G_STAR ? "above trend (expansion)" :
+                  g[tCur] < G_STAR ? "below trend (recession)" : "at trend (neutral)";
+    el.textContent = `Growth rate of output chart, 12 quarters. Q${tCur+1} is highlighted at ${gNow}%, ${state}. Trend line is at ${G_STAR.toFixed(1)}%.`;
   }
 
   // ---- Unemployment chart (u and u*) ----
   function drawUChart(uSeries, uStar){
+    updateFs();
     const canvas = els.uChart;
     const ctx = canvas.getContext("2d");
 
@@ -348,8 +394,8 @@ window.addEventListener("DOMContentLoaded", () => {
       ctx.beginPath(); ctx.moveTo(X0,py); ctx.lineTo(X1,py); ctx.stroke();
     }
 
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.fillStyle = "rgba(0,0,0,0.65)";
+    ctx.font = `${Math.round(12*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
     for (const y of tickPcts){
@@ -404,19 +450,22 @@ window.addEventListener("DOMContentLoaded", () => {
     // label
     const gap = uSeries[tCur] - uStar; // cyclical rate
     ctx.fillStyle = "rgba(0,0,0,0.72)";
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
+    ctx.font = `${Math.round(12*dpr*_fs)}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
     const labelY = (top + bot)/2;
     const labelX = Math.min(X1 - 140*dpr, hx + 10*dpr);
     ctx.fillText(`cyclical: ${(gap*100).toFixed(2)} pp`, labelX, labelY);
 
-    // title
-    ctx.fillStyle = "rgba(0,0,0,0.70)";
-    ctx.font = `${13*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-    ctx.fillText("Unemployment rate u and natural rate u*", X0, 0);
+    updateUChartDesc(uSeries, uStar);
+  }
+
+  function updateUChartDesc(uSeries, uStar){
+    const el = document.getElementById("uChartDesc");
+    if (!el) return;
+    const u = uSeries[tCur];
+    const cyc = u - uStar;
+    el.textContent = `Unemployment rate chart. At Q${tCur+1}: u = ${fmtPct(u)}, natural rate u* = ${fmtPct(uStar)}, cyclical gap = ${(cyc*100).toFixed(2)} percentage points.`;
   }
 
   function resetCycle(){

@@ -13,6 +13,23 @@
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
 
   <style>
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Reduced motion (WCAG 2.3.3 / good practice) ────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
     .stack { display: grid; gap: 14px; margin-top: 18px; }
 
     .scenario-box {
@@ -23,16 +40,16 @@
       margin-bottom: 18px;
     }
     .scenario-stamp {
-      font-size: 11px; text-transform: uppercase;
+      font-size: 0.6875rem; text-transform: uppercase;
       letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px;
     }
     .scenario-headline {
       font-family: var(--font-serif, "Source Serif 4", Georgia, serif);
-      font-size: 20px; font-weight: 700; color: var(--ink);
+      font-size: 1.25rem; font-weight: 700; color: var(--ink);
       line-height: 1.25; margin: 0 0 6px;
     }
-    .scenario-brief { font-size: 14px; color: var(--ink-2); line-height: 1.5; margin: 0; }
-    .scenario-placeholder { font-size: 14px; color: var(--muted); font-style: italic; margin: 0; }
+    .scenario-brief { font-size: 0.875rem; color: var(--ink-2); line-height: 1.5; margin: 0; }
+    .scenario-placeholder { font-size: 0.875rem; color: var(--muted); font-style: italic; margin: 0; }
 
     /* 2 rows × 3 cols: Y↑ P↑ Z↑ / Y↓ P↓ Z↓ */
     .choice-grid {
@@ -47,7 +64,8 @@
       width: 100%;
       padding: 14px 10px;
       border-radius: 14px;
-      border: 1px solid var(--line-2);
+      /* #8c7f72 = 3.5:1 on white — WCAG 1.4.11 ✓ */
+      border: 1.5px solid #8c7f72;
       background: rgba(255,255,255,0.85);
       color: var(--ink);
       font-family: var(--font-sans, "Inter", sans-serif);
@@ -57,11 +75,11 @@
       line-height: 1.2;
     }
     .choice-btn .var-label {
-      display: block; font-size: 11px; font-weight: 600;
+      display: block; font-size: 0.6875rem; font-weight: 600;
       color: var(--muted); text-transform: uppercase;
       letter-spacing: 0.06em; margin-bottom: 4px;
     }
-    .choice-btn .var-sym { display: block; font-size: 22px; font-weight: 900; }
+    .choice-btn .var-sym { display: block; font-size: 1.375rem; font-weight: 900; }
 
     .choice-btn:hover:not(:disabled) {
       background: rgba(47,93,124,0.08);
@@ -71,15 +89,16 @@
     .choice-btn:active:not(:disabled) { transform: translateY(1px); }
     .choice-btn.correct-reveal {
       background: rgba(27,127,75,0.10);
-      border-color: rgba(27,127,75,0.45);
+      border-color: #1b7f4b;
       color: #1b7f4b;
     }
     .choice-btn.wrong-reveal {
       background: rgba(180,35,24,0.08);
-      border-color: rgba(180,35,24,0.35);
+      border-color: #b42318;
       color: #b42318;
     }
     .choice-btn:disabled { cursor: default; }
+    button:focus-visible { border-radius: 10px; }
 
     .feedback-panel {
       border: 1px solid var(--line);
@@ -90,12 +109,12 @@
     }
     .feedback-panel.visible { display: block; }
 
-    .verdict { font-size: 14px; font-weight: 800; margin-bottom: 8px; }
+    .verdict { font-size: 0.875rem; font-weight: 800; margin-bottom: 8px; }
     .verdict.good { color: #1b7f4b; }
     .verdict.bad  { color: #b42318; }
 
     .explain-text {
-      font-size: 13px; color: var(--ink-2); line-height: 1.65;
+      font-size: 0.8125rem; color: var(--ink-2); line-height: 1.65;
     }
 
     .chain-row {
@@ -103,17 +122,17 @@
       align-items: center; margin-top: 12px;
     }
     .chain-tok {
-      font-size: 12px; font-weight: 800; padding: 3px 9px;
+      font-size: 0.75rem; font-weight: 800; padding: 3px 9px;
       border-radius: 999px;
       background: rgba(47,93,124,0.10);
       border: 1px solid rgba(47,93,124,0.25);
       color: var(--accent, #2f5d7c);
     }
-    .chain-arrow { color: var(--muted); font-size: 13px; font-weight: 700; }
+    .chain-arrow { color: var(--muted); font-size: 0.8125rem; font-weight: 700; }
 
     .score-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
     .score-chip {
-      font-size: 13px; font-weight: 700; padding: 4px 10px;
+      font-size: 0.8125rem; font-weight: 700; padding: 4px 10px;
       border-radius: 999px; border: 1px solid var(--line-2);
       background: rgba(255,255,255,0.8); color: var(--ink);
     }
@@ -143,15 +162,18 @@
     }
     .fade-in { animation: fadeIn 0.25s ease forwards; }
 
-    .footer { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+    .footer { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.75rem; }
     .footer-inner { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   </style>
 </head>
 <body>
 
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
 <header class="page-header">
   <div class="container">
-    <nav class="crumbbar">
+    <nav class="crumbbar" aria-label="Breadcrumb">
       <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
     </nav>
     <div class="header-inner">
@@ -196,7 +218,7 @@
   </div>
 </header>
 
-<main class="container stack">
+<main id="main-content" class="container stack">
   <div class="panel fade-in">
     <div class="panel-head">
       <h2>Identify the Variable</h2>
@@ -209,30 +231,37 @@
 
     <!-- Y↑  P↑  Z↑  (top row) -->
     <!-- Y↓  P↓  Z↓  (bottom row) -->
-    <div class="choice-grid" id="choiceGrid">
+    <div class="choice-grid" id="choiceGrid"
+         role="group" aria-label="Select the variable that changed">
       <button class="choice-btn" data-value="Y-up"   disabled>
         <span class="var-label">Output</span>
         <span class="var-sym">\(Y\uparrow\)</span>
+        <span class="sr-only choice-status"></span>
       </button>
       <button class="choice-btn" data-value="P-up"   disabled>
         <span class="var-label">Price level</span>
         <span class="var-sym">\(P\uparrow\)</span>
+        <span class="sr-only choice-status"></span>
       </button>
       <button class="choice-btn" data-value="Z-up"   disabled>
         <span class="var-label">Other factors</span>
         <span class="var-sym">\(Z\uparrow\)</span>
+        <span class="sr-only choice-status"></span>
       </button>
       <button class="choice-btn" data-value="Y-down" disabled>
         <span class="var-label">Output</span>
         <span class="var-sym">\(Y\downarrow\)</span>
+        <span class="sr-only choice-status"></span>
       </button>
       <button class="choice-btn" data-value="P-down" disabled>
         <span class="var-label">Price level</span>
         <span class="var-sym">\(P\downarrow\)</span>
+        <span class="sr-only choice-status"></span>
       </button>
       <button class="choice-btn" data-value="Z-down" disabled>
         <span class="var-label">Other factors</span>
         <span class="var-sym">\(Z\downarrow\)</span>
+        <span class="sr-only choice-status"></span>
       </button>
     </div>
 
@@ -438,9 +467,11 @@
 
   function updateProgress() {
     progressRow.innerHTML = "";
-    history.forEach(ok => {
+    history.forEach((ok, i) => {
       const d = document.createElement("div");
       d.className = "prog-dot " + (ok ? "correct" : "wrong");
+      d.setAttribute("role", "img");
+      d.setAttribute("aria-label", `Question ${i + 1}: ${ok ? "Correct" : "Incorrect"}`);
       progressRow.appendChild(d);
     });
   }
@@ -474,6 +505,8 @@
     choiceBtns.forEach(btn => {
       btn.disabled = false;
       btn.className = "choice-btn";
+      const statusSpan = btn.querySelector(".choice-status");
+      if (statusSpan) statusSpan.textContent = "";
     });
 
     feedbackPanel.className = "feedback-panel";
@@ -496,8 +529,14 @@
 
     choiceBtns.forEach(b => {
       b.disabled = true;
-      if (b.dataset.value === correct)         b.classList.add("correct-reveal");
-      else if (b === btn && !isRight)          b.classList.add("wrong-reveal");
+      const statusSpan = b.querySelector(".choice-status");
+      if (b.dataset.value === correct) {
+        b.classList.add("correct-reveal");
+        if (statusSpan) statusSpan.textContent = " — correct answer";
+      } else if (b === btn && !isRight) {
+        b.classList.add("wrong-reveal");
+        if (statusSpan) statusSpan.textContent = " — your answer, incorrect";
+      }
     });
 
     if (!isRight) {
@@ -530,7 +569,12 @@
     history = []; recentIds = [];
 
     scenarioBox.innerHTML = `<p class="scenario-placeholder">Click "New Scenario" to start.</p>`;
-    choiceBtns.forEach(btn => { btn.disabled = true; btn.className = "choice-btn"; });
+    choiceBtns.forEach(btn => {
+      btn.disabled = true;
+      btn.className = "choice-btn";
+      const statusSpan = btn.querySelector(".choice-status");
+      if (statusSpan) statusSpan.textContent = "";
+    });
     feedbackPanel.className = "feedback-panel";
     verdictEl.textContent = ""; explainEl.textContent = ""; chainEl.innerHTML = "";
     progressRow.innerHTML = "";

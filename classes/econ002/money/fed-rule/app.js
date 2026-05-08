@@ -1,6 +1,10 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
+  // Canvas font scale — recomputed each draw so text respects the user's
+  // browser font-size preference (WCAG 1.4.4).
+  let _fs = 1;
+
   const D = {
     params: { a: 0.08, b: 0.6, c: 0.6 },
     baseline: { Y: 50, P: 5, Z: 5 },
@@ -314,10 +318,11 @@
 
   // Canvas drawing
   function getCtx() {
+    const wrap = document.getElementById("canvasWrap");
     const ctx = els.canvas.getContext("2d");
     const dpr = window.devicePixelRatio || 1;
-    const Wcss = els.canvas.clientWidth || 900;
-    const Hcss = els.canvas.clientHeight || 560;
+    const Wcss = (wrap ? wrap.clientWidth : els.canvas.clientWidth) || 900;
+    const Hcss = (wrap ? wrap.clientHeight : els.canvas.clientHeight) || 560;
     const W = Math.floor(Wcss * dpr);
     const H = Math.floor(Hcss * dpr);
     if (els.canvas.width !== W || els.canvas.height !== H) {
@@ -366,7 +371,7 @@
   ctx.stroke();
 
   ctx.fillStyle = "rgba(0,0,0,0.65)";
-  ctx.font = `${12 * dpr}px system-ui`;
+  ctx.font = `${Math.round(12 * dpr * _fs)}px system-ui`;
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
   ctx.fillText(label, x + dx, yAxisBottom + 8 * dpr + dy);
@@ -381,7 +386,7 @@
     ctx.stroke();
 
     ctx.fillStyle = "rgba(0,0,0,0.65)";
-    ctx.font = `${12 * dpr}px system-ui`;
+    ctx.font = `${Math.round(12 * dpr * _fs)}px system-ui`;
     ctx.textAlign = "right";
     ctx.textBaseline = "middle";
     ctx.fillText(label, xAxisLeft - 10 * dpr, y + dy);
@@ -410,6 +415,9 @@
   }
 
   function draw() {
+    _fs = Math.max(0.75, Math.min(2.5,
+      parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+
     const { ctx, dpr, W, H } = getCtx();
     ctx.clearRect(0, 0, W, H);
 
@@ -435,7 +443,7 @@
 
     // axis labels
     ctx.fillStyle = INK;
-    ctx.font = `${12 * dpr}px system-ui`;
+    ctx.font = `${Math.round(12 * dpr * _fs)}px system-ui`;
     ctx.textAlign = "center"; ctx.textBaseline = "top";
     ctx.fillText("Output (Y)", (X0 + X1) / 2, Y1 + 22 * dpr);
 
@@ -461,7 +469,18 @@
     xTick(ctx, x1p, Y1, "Y₁", dpr, 0);
     yTick(ctx, X0, y1p, "r₁", dpr, 0);
 
-    if (!scenario) return;
+    // Line label — non-color indicator for the baseline line (WCAG 1.4.1)
+    const lblX = Ymin + (Ymax - Ymin) * 0.65;
+    ctx.font = `700 ${Math.round(10 * dpr * _fs)}px system-ui`;
+    ctx.textAlign = "center";
+
+    if (!scenario) {
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
+      ctx.textBaseline = "top";
+      ctx.fillText("Fed Rule", xTo(lblX), yTo(rOf(lblX, base.P, base.Z)) + 4 * dpr);
+      updateCanvasDesc();
+      return;
+    }
 
     // current line + point
     const rL1 = rOf(Ymin, cur.P, cur.Z);
@@ -473,6 +492,24 @@
     dot(ctx, x2p, y2p, ORANGE, dpr);
     line(ctx, x2p, y2p, x2p, yTo(rmin), DASH, 2, dpr, [4, 6]);
     line(ctx, x2p, y2p, xTo(Ymin), y2p, DASH, 2, dpr, [4, 6]);
+
+    // Line labels — non-color distinction between lines (WCAG 1.4.1)
+    ctx.font = `700 ${Math.round(10 * dpr * _fs)}px system-ui`;
+    ctx.textAlign = "center";
+    if (scenario.var === 'P' || scenario.var === 'Z') {
+      // Two different lines — label both
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
+      ctx.textBaseline = "top";
+      ctx.fillText("Baseline", xTo(lblX), yTo(rOf(lblX, base.P, base.Z)) + 4 * dpr);
+      ctx.fillStyle = "rgba(200,130,0,0.90)";
+      ctx.textBaseline = "bottom";
+      ctx.fillText("New rule", xTo(lblX), yTo(rOf(lblX, cur.P, cur.Z)) - 4 * dpr);
+    } else {
+      // Movement along — same line; label it once
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
+      ctx.textBaseline = "top";
+      ctx.fillText("Fed Rule", xTo(lblX), yTo(rOf(lblX, base.P, base.Z)) + 4 * dpr);
+    }
 
     // Reveal labels/arrow once unlocked slider moved correctly (any magnitude)
     if (revealed) {
@@ -495,6 +532,8 @@
         arrow(ctx, x1p, yTo(rOldAtY1), x1p, yTo(rNewAtY1), ORANGE, dpr);
       }
     }
+
+    updateCanvasDesc();
   }
 
   function newScenario() {
@@ -587,6 +626,44 @@
         showFeedback(`<span class="tagOK">Nice</span> You matched the scenario’s size too.`);
       }
     }
+  }
+
+  function updateCanvasDesc() {
+    const el = document.getElementById("fedRuleChartDesc");
+    if (!el) return;
+    const r1 = rOf(base.Y, base.P, base.Z).toFixed(2);
+    if (!scenario) {
+      el.textContent = `Fed Rule graph. Horizontal axis: Output (Y) from ${D.axes.Ymin} to ${D.axes.Ymax}. Vertical axis: Policy rate (r) from ${D.axes.rmin} to ${D.axes.rmax}. One Fed Rule line is shown. Baseline point: Y₁ = ${base.Y}, r₁ = ${r1}.`;
+      return;
+    }
+    const r2 = rOf(cur.Y, cur.P, cur.Z).toFixed(2);
+    const isShift = scenario.var === "P" || scenario.var === "Z";
+    let desc = `Fed Rule graph. Baseline point: Y₁ = ${base.Y}, r₁ = ${r1}. `;
+    if (isShift) {
+      desc += `A new rule line is also shown. `;
+      if (revealed) {
+        desc += `The rule has shifted ${scenario.dir === "up" ? "upward" : "downward"} — r is now ${r2} at the same output level.`;
+      } else {
+        desc += `Move the unlocked slider to reveal the change.`;
+      }
+    } else {
+      desc += `One Fed Rule line is shown (movement along). `;
+      if (revealed) {
+        desc += `Current point: Y = ${cur.Y.toFixed(0)}, r = ${r2}. Output has moved ${scenario.dir === "up" ? "right (increased)" : "left (decreased)"} along the same rule.`;
+      } else {
+        desc += `Move the unlocked slider to reveal the change.`;
+      }
+    }
+    el.textContent = desc;
+  }
+
+  function matchesTarget() {
+    if (!scenario) return false;
+    const v = scenario.var;
+    if (v === "Y") return approxEq(cur.Y, scenario.target.Y, 1);
+    if (v === "P") return approxEq(cur.P, scenario.target.P, 0.05);
+    if (v === "Z") return approxEq(cur.Z, scenario.target.Z, 0.05);
+    return false;
   }
 
   // Wire events

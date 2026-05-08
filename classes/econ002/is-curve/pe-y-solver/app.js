@@ -45,6 +45,9 @@
 
   // Multiplier scenario state
   let multScenario = null;
+
+  // Keyboard card-selection state (click-to-select, then click slot to place)
+  let _selectedCard = null;
   // { type:"G"|"T"|"I", shockName, dShock, multType:"GI"|"TAX", multVal, dY }
 
   function setStatus(msg){ els.status.textContent = msg; }
@@ -104,6 +107,8 @@
     els.sol2.innerHTML = "";
     els.show1.textContent = "Show solution";
     els.show2.textContent = "Show solution";
+    els.show1.setAttribute("aria-expanded", "false");
+    els.show2.setAttribute("aria-expanded", "false");
   }
 
   function buildSol1(){
@@ -183,20 +188,24 @@ Y* = ${fmt2(YstarVal)}
       if (open){
         els.sol1.style.display = "none";
         els.show1.textContent = "Show solution";
+        els.show1.setAttribute("aria-expanded", "false");
       } else {
         if (!els.sol1.innerHTML) buildSol1();
         els.sol1.style.display = "block";
         els.show1.textContent = "Hide solution";
+        els.show1.setAttribute("aria-expanded", "true");
       }
     } else {
       const open = els.sol2.style.display === "block";
       if (open){
         els.sol2.style.display = "none";
         els.show2.textContent = "Show solution";
+        els.show2.setAttribute("aria-expanded", "false");
       } else {
         if (!els.sol2.innerHTML) buildSol2();
         els.sol2.style.display = "block";
         els.show2.textContent = "Hide solution";
+        els.show2.setAttribute("aria-expanded", "true");
       }
     }
   }
@@ -218,15 +227,61 @@ Y* = ${fmt2(YstarVal)}
   }
 
   // -------------------- Multiplier Practice (3-step with separate pools) --------------------
+
+  function selectCard(el){
+    if (_selectedCard && _selectedCard !== el){
+      _selectedCard.classList.remove("selected");
+      _selectedCard.setAttribute("aria-pressed", "false");
+    }
+    if (_selectedCard === el){
+      _selectedCard.classList.remove("selected");
+      _selectedCard.setAttribute("aria-pressed", "false");
+      _selectedCard = null;
+    } else {
+      _selectedCard = el;
+      el.classList.add("selected");
+      el.setAttribute("aria-pressed", "true");
+    }
+  }
+
+  function placeCardInSlot(slot){
+    if (!_selectedCard) return;
+    const raw = _selectedCard.dataset.payload;
+    const payload = JSON.parse(raw);
+
+    // same type enforcement as drag-drop
+    if (slot.dataset.m1){
+      if (slot.dataset.m1 === "mult" && payload.kind !== "multSym") return;
+      if (slot.dataset.m1 === "shock" && payload.kind !== "shockSym") return;
+    }
+    if (slot.dataset.m2 && payload.kind !== "num") return;
+    if (slot.dataset.m3 && payload.kind !== "num") return;
+
+    slot.textContent = payload.label;
+    slot.classList.add("filled");
+    slot.dataset.payload = raw;
+    _selectedCard.classList.remove("selected");
+    _selectedCard.setAttribute("aria-pressed", "false");
+    _selectedCard = null;
+    setMultFeedback("");
+  }
+
   function mkCard(text, payload){
     const el = document.createElement("div");
     el.className = "mcard";
     el.textContent = text;
     el.draggable = true;
+    el.tabIndex = 0;
+    el.setAttribute("role", "button");
+    el.setAttribute("aria-pressed", "false");
     el.dataset.payload = JSON.stringify(payload);
     el.addEventListener("dragstart", (ev) => {
       ev.dataTransfer.setData("application/json", el.dataset.payload);
       ev.dataTransfer.effectAllowed = "move";
+    });
+    el.addEventListener("click", () => selectCard(el));
+    el.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); selectCard(el); }
     });
     return el;
   }
@@ -248,6 +303,7 @@ Y* = ${fmt2(YstarVal)}
 
   function resetMultiplierUI(){
     multScenario = null;
+    if (_selectedCard){ _selectedCard.classList.remove("selected"); _selectedCard = null; }
     if (els.multPrompt) els.multPrompt.textContent = "Click “New Multiplier Scenario” to begin.";
     if (els.pool1) els.pool1.innerHTML = "";
     if (els.pool2) els.pool2.innerHTML = "";
@@ -258,7 +314,7 @@ Y* = ${fmt2(YstarVal)}
     setMultFeedback("");
   }
 
-  // Drag/drop setup for multiplier section
+  // Drag/drop + click/keyboard setup for multiplier section
   function setupDropZones(){
     const zones = document.querySelectorAll("[data-m1],[data-m2],[data-m3]");
     zones.forEach(z => {
@@ -276,17 +332,18 @@ Y* = ${fmt2(YstarVal)}
           if (z.dataset.m1 === "mult" && payload.kind !== "multSym") return;
           if (z.dataset.m1 === "shock" && payload.kind !== "shockSym") return;
         }
-        if (z.dataset.m2){
-          if (payload.kind !== "num") return;
-        }
-        if (z.dataset.m3){
-          if (payload.kind !== "num") return;
-        }
+        if (z.dataset.m2 && payload.kind !== "num") return;
+        if (z.dataset.m3 && payload.kind !== "num") return;
 
         z.textContent = payload.label;
         z.classList.add("filled");
         z.dataset.payload = raw;
         setMultFeedback("");
+      });
+      // Keyboard / click-to-place alternative (WCAG 2.1.1)
+      z.addEventListener("click", () => placeCardInSlot(z));
+      z.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); placeCardInSlot(z); }
       });
     });
   }

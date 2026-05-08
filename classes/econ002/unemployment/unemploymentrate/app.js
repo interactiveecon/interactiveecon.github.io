@@ -107,6 +107,8 @@ const TEMPLATE_BY_TYPE = new Map(CARD_TEMPLATES.map(t => [t.type, t]));
 
 let cards = []; // {id,type,text,correct,zone,people,checked}
 let nextId = 1;
+let kbSelected = null; // card id currently selected via keyboard
+let draggedId = null;  // fallback for browsers where dataTransfer.getData() returns "" in drop
 
 function drawPeople(){
   // Reasonable classroom numbers, varying each round.
@@ -152,6 +154,37 @@ function chooseRandomSample(){
    Rendering & Drag/Drop
 ------------------------ */
 
+const ZONE_NAMES = { S: "Staging pile", E: "Employed", U: "Unemployed", N: "Not in labor force" };
+
+function toggleKbSelect(cardId) {
+  if (kbSelected === cardId) {
+    kbSelected = null;
+    setStatus("Selection cleared.");
+  } else {
+    kbSelected = cardId;
+    const c = cards.find(x => x.id === cardId);
+    setStatus(c ? `Card selected: ${c.people} people — ${c.text.substring(0, 60)}... Press a "Place selected card here" button to move it.` : "");
+  }
+  renderZones();
+}
+
+function kbPlaceInZone(zoneKey) {
+  if (!kbSelected) {
+    setStatus("No card selected. Press Enter or Space on a card to select it first.");
+    return;
+  }
+  const c = cards.find(x => x.id === kbSelected);
+  if (!c) { kbSelected = null; return; }
+  c.zone = zoneKey;
+  c.checked = null;
+  kbSelected = null;
+  if (els.checkMsg) els.checkMsg.textContent = "";
+  renderZones();
+  updateMetricsFromZones();
+  setStatus(`Card placed in ${ZONE_NAMES[zoneKey] || zoneKey}.`);
+  if (snapshotSet) rerollMoves();
+}
+
 function renderZones(){
   if (!els.zoneS) return;
 
@@ -167,18 +200,43 @@ function renderZones(){
     if (c.checked === false) el.classList.add("bad");
 
     el.draggable = true;
+    el.tabIndex = 0;
+    el.setAttribute("role", "button");
+    el.setAttribute("aria-pressed", kbSelected === c.id ? "true" : "false");
+
+    const zoneName = ZONE_NAMES[c.zone] || c.zone;
+    const stateLabel = c.checked === true ? " Correctly classified." : c.checked === false ? " Incorrectly classified." : "";
+    const selectedLabel = kbSelected === c.id ? " Selected — press Place here button to move." : "";
+    el.setAttribute("aria-label",
+      `${c.people} people. ${c.text} Zone: ${zoneName}.${stateLabel}${selectedLabel}`);
+
     el.dataset.cardId = c.id;
+
+    const statusIcon = c.checked === true
+      ? `<span class="status-icon ok-icon" aria-hidden="true">✓</span>`
+      : c.checked === false
+        ? `<span class="status-icon bad-icon" aria-hidden="true">✗</span>`
+        : "";
 
     el.innerHTML = `
       <div class="top">
         <div class="badge">${c.people} people</div>
+        ${statusIcon}
       </div>
       <div class="desc">${c.text}</div>
     `;
 
     el.addEventListener("dragstart", (ev) => {
+      draggedId = c.id;
       ev.dataTransfer.setData("text/plain", c.id);
       ev.dataTransfer.effectAllowed = "move";
+    });
+
+    el.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter" || ev.key === " ") {
+        ev.preventDefault();
+        toggleKbSelect(c.id);
+      }
     });
 
     const zoneEl = c.zone === "S" ? els.zoneS
@@ -191,26 +249,35 @@ function renderZones(){
 }
 
 function setupDropzone(zoneEl){
-  zoneEl.addEventListener("dragover", (ev) => {
+  // Attach to the parent bucket so the entire bucket area (header + dashed zone)
+  // is a valid drop target, not just the inner dropzone div.
+  const target = zoneEl.closest('.bucket') || zoneEl;
+
+  target.addEventListener("dragover", (ev) => {
     ev.preventDefault();
+    ev.dataTransfer.dropEffect = "move";
     zoneEl.classList.add("dragover");
   });
-  zoneEl.addEventListener("dragleave", () => zoneEl.classList.remove("dragover"));
-  zoneEl.addEventListener("drop", (ev) => {
+  target.addEventListener("dragleave", (ev) => {
+    if (!target.contains(ev.relatedTarget)) {
+      zoneEl.classList.remove("dragover");
+    }
+  });
+  target.addEventListener("drop", (ev) => {
     ev.preventDefault();
     zoneEl.classList.remove("dragover");
-    const id = ev.dataTransfer.getData("text/plain");
+    const id = ev.dataTransfer.getData("text/plain") || draggedId;
+    draggedId = null;
     const zone = zoneEl.dataset.zone;
     const c = cards.find(x => x.id === id);
     if (!c) return;
 
     c.zone = zone;
-    c.checked = null; // classification changed
+    c.checked = null;
     if (els.checkMsg) els.checkMsg.textContent = "";
     renderZones();
     updateMetricsFromZones();
 
-    // changing zones can make some story moves feasible now
     if (snapshotSet) rerollMoves();
   });
 }
@@ -462,17 +529,21 @@ function rerollMoves(){
 function renderMoveDeck(){
   els.moveDeck.innerHTML = "";
   for (const mc of moveCards){
-    const div = document.createElement("div");
+    const div = document.createElement("button");
+    div.type = "button";
     div.className = "moveCard";
     div.dataset.moveId = mc.id;
-    if (mc.disabled) div.style.opacity = "0.65";
+    if (mc.disabled) {
+      div.disabled = true;
+      div.style.opacity = "0.65";
+    }
 
     div.innerHTML = `
       <div class="hdr">
         <div class="title">${mc.text}</div>
         <div class="amt">${mc.people ? mc.people + " ppl" : ""}</div>
       </div>
-      <div class="hint">${mc.disabled ? "Adjust your sorting so a source card exists in the right bucket." : "Click to apply."}</div>
+      <div class="hint">${mc.disabled ? "Adjust your sorting so a source card exists in the right bucket." : "Click or press Enter to apply."}</div>
     `;
 
     div.addEventListener("click", () => applyMoveCard(mc.id));
@@ -609,6 +680,7 @@ function applyMoveCard(moveId){
 function resetAll(){
   snapshotSet = false;
   moveCards = [];
+  kbSelected = null;
 
   if (els.moveDeck) els.moveDeck.innerHTML = `<div class="mini">Set a snapshot first.</div>`;
   if (els.snapshotBox) els.snapshotBox.innerHTML = `<strong>Snapshot:</strong> not set yet (click “Use these counts for move cards”).`;
@@ -644,6 +716,7 @@ els.resetBtn.addEventListener("click", resetAll);
 els.newSetBtn.addEventListener("click", () => {
   snapshotSet = false;
   moveCards = [];
+  kbSelected = null;
   if (els.moveDeck) els.moveDeck.innerHTML = `<div class="mini">Set a snapshot first.</div>`;
   if (els.snapshotBox) els.snapshotBox.innerHTML = `<strong>Snapshot:</strong> not set yet (click “Use these counts for move cards”).`;
   if (els.explainBox) els.explainBox.innerHTML = `Click <strong>Use these counts for move cards</strong>, then click a move card.`;
@@ -657,6 +730,10 @@ els.newSetBtn.addEventListener("click", () => {
 
   const top = document.getElementById("mathBoxTop");
   if (top) safeTypeset([top]);
+});
+
+document.querySelectorAll(".kb-place-btn").forEach(btn => {
+  btn.addEventListener("click", () => kbPlaceInZone(btn.dataset.kbZone));
 });
 
 // start

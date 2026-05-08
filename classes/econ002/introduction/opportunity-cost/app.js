@@ -113,16 +113,16 @@
       `;
       banner.innerHTML = `
         <div>
-          <div style="font-weight:800;color:#1b7f4b;font-size:14px;">
+          <div style="font-weight:800;color:#155c38;font-size:0.875rem;">
             ✓ Lab complete — Final score: ${sessionFinalScore} / ${DISC_LIMIT}</div>
-          <div style="font-size:12px;color:#6b7280;margin-top:3px;">
+          <div style="font-size:0.75rem;color:#596878;margin-top:3px;">
             First-attempt score: ${sessionFirstScore} / ${DISC_LIMIT} &nbsp;·&nbsp;
             Return to Week 1 when your TA is ready.
           </div>
         </div>
         <a href="${WEEK_URL}"
-           style="padding:10px 20px;background:#1b7f4b;color:#fff;border-radius:12px;
-                  font-weight:800;font-size:13px;text-decoration:none;white-space:nowrap;">
+           style="padding:10px 20px;background:#155c38;color:#fff;border-radius:12px;
+                  font-weight:800;font-size:0.8125rem;text-decoration:none;white-space:nowrap;">
           ← Return to Week 1
         </a>
       `;
@@ -173,15 +173,17 @@
       const opts = current._opts;
       els.choices.innerHTML = opts.map((o, k) => {
         let style = '';
+        let indicator = '';
         if (k === firstAnswerIdx) {
-          // Their original wrong answer: red border as a reminder
           style = 'border-color:rgba(180,35,24,0.5);background:rgba(180,35,24,0.05);';
+          indicator = '<span class="choice-indicator incorrect" aria-hidden="true">✗</span>';
         }
         const checked = k === firstAnswerIdx ? 'checked' : '';
         return `
           <label class="choice" id="choiceLabel-${k}" style="${style}">
             <input type="radio" name="oc" value="${k}" ${checked}>
             <div class="choiceText">${escapeHtml(o.text)}</div>
+            ${indicator}
           </label>
         `;
       }).join("");
@@ -192,16 +194,20 @@
       const opts = current._opts;
       els.choices.innerHTML = opts.map((o, k) => {
         let style = '';
+        let indicator = '';
         if (k === current._correctPos) {
           style = 'border-color:rgba(27,127,75,0.6);background:rgba(27,127,75,0.07);';
+          indicator = '<span class="choice-indicator correct" aria-hidden="true">✓</span>';
         } else if (k === finalIdx && k !== current._correctPos) {
           style = 'border-color:rgba(180,35,24,0.6);background:rgba(180,35,24,0.07);';
+          indicator = '<span class="choice-indicator incorrect" aria-hidden="true">✗</span>';
         }
         const checked = k === finalIdx ? 'checked' : '';
         return `
           <label class="choice" id="choiceLabel-${k}" style="${style}">
             <input type="radio" name="oc" value="${k}" ${checked} disabled>
             <div class="choiceText">${escapeHtml(o.text)}</div>
+            ${indicator}
           </label>
         `;
       }).join("");
@@ -224,16 +230,31 @@
         els.choices.querySelectorAll('input[name="oc"]').forEach(inp => inp.disabled = true);
         if (!firstCorrect) {
           const lbl = $(`choiceLabel-${firstAnswerIdx}`);
-          if (lbl) { lbl.style.borderColor = 'rgba(180,35,24,0.6)'; lbl.style.background = 'rgba(180,35,24,0.07)'; }
+          if (lbl) {
+            lbl.style.borderColor = 'rgba(180,35,24,0.6)';
+            lbl.style.background = 'rgba(180,35,24,0.07)';
+            const ind = document.createElement('span');
+            ind.className = 'choice-indicator incorrect';
+            ind.setAttribute('aria-hidden', 'true');
+            ind.textContent = '✗';
+            lbl.appendChild(ind);
+          }
         }
 
         els.feedback.style.display = "block";
         phase = 'first-submitted';
 
         if (firstCorrect) {
-          // Show green immediately for correct first answer
           const lbl = $(`choiceLabel-${firstAnswerIdx}`);
-          if (lbl) { lbl.style.borderColor = 'rgba(27,127,75,0.6)'; lbl.style.background = 'rgba(27,127,75,0.07)'; }
+          if (lbl) {
+            lbl.style.borderColor = 'rgba(27,127,75,0.6)';
+            lbl.style.background = 'rgba(27,127,75,0.07)';
+            const ind = document.createElement('span');
+            ind.className = 'choice-indicator correct';
+            ind.setAttribute('aria-hidden', 'true');
+            ind.textContent = '✓';
+            lbl.appendChild(ind);
+          }
           els.feedback.innerHTML = `
             <span class="tagOK">Correct</span>
             <strong>Opportunity cost:</strong> ${escapeHtml(current._opts[current._correctPos].text)}<br>
@@ -343,8 +364,10 @@
     els.newBtn.addEventListener("click",   newScenario);
     els.checkBtn.addEventListener("click", handleSubmit);
     els.resetBtn.addEventListener("click", resetChoice);
-    els.whyBtn.addEventListener("click",  () => {
-      els.whyBox.style.display = els.whyBox.style.display === "none" ? "block" : "none";
+    els.whyBtn.addEventListener("click", () => {
+      const isVisible = els.whyBox.style.display === "block";
+      els.whyBox.style.display = isVisible ? "none" : "block";
+      els.whyBtn.setAttribute("aria-expanded", String(!isVisible));
     });
 
     updateScoreDisplay();

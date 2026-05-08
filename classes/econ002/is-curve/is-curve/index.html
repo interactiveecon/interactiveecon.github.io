@@ -3,205 +3,273 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>KC + IS Mechanism Lab</title>
+  <title>KC + IS Mechanism Lab — ECON 002</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="/assets/style.css">
 
   <style>
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
     .stack{ display:grid; gap:14px; margin-top:18px; }
     .grid2{ display:grid; grid-template-columns: 1.05fr 0.95fr; gap:12px; align-items:start; }
     @media (max-width: 980px){ .grid2{ grid-template-columns: 1fr; } }
 
     .box{ border:1px solid var(--line); border-radius:16px; background:rgba(246,242,234,0.35); padding:12px; }
-    .scenarioTitle{ font-weight:900; color:var(--ink); font-size:16px; margin:0; }
-    .scenarioDesc{ margin-top:8px; color:var(--ink-2); font-size:13px; line-height:1.5; white-space:pre-line; }
+    .scenarioTitle{ font-weight:900; color:var(--ink); font-size:1rem; margin:0; }
+    .scenarioDesc{ margin-top:8px; color:var(--ink-2); font-size:0.8125rem; line-height:1.5; white-space:pre-line; }
 
     .charts{ display:grid; gap:12px; }
     .chartCard{ height:260px; border:1px solid rgba(0,0,0,0.08); border-radius:14px; background:rgba(255,255,255,0.78); padding:10px; }
     .chartCard.small{ height:230px; }
     canvas{ width:100%; height:100%; display:block; }
 
-    .mini{ font-size:12px; color:var(--muted); margin-top:6px; }
+    /* Color legend — satisfies 1.4.1 by adding text labels alongside swatches */
+    .chartLegend{ display:flex; gap:14px; margin-top:6px; font-size:0.75rem; color:var(--ink-2); align-items:center; }
+    .legend-swatch{ display:inline-block; width:18px; height:3px; border-radius:2px; vertical-align:middle; margin-right:4px; }
+    .legend-swatch.blue { background:rgba(31,119,180,0.92); }
+    .legend-swatch.orange{ background:rgba(230,159,0,0.95); }
+
+    .mini{ font-size:0.75rem; font-weight:700; color:var(--accent); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
 
     .controlsGrid{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; margin-top:10px; }
     @media (max-width: 980px){ .controlsGrid{ grid-template-columns: 1fr; } }
     .control{ border:1px solid rgba(0,0,0,0.08); border-radius:14px; background:rgba(255,255,255,0.68); padding:10px; }
-    .control label{ display:block; font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:6px; }
-    .control .row{ display:flex; justify-content:space-between; align-items:center; font-variant-numeric:tabular-nums; color:var(--ink); font-weight:800; font-size:12px; margin-bottom:6px; }
+    .control label{ display:block; font-size:0.6875rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:6px; }
+    .control .row{ display:flex; justify-content:space-between; align-items:center; font-variant-numeric:tabular-nums; color:var(--ink); font-weight:800; font-size:0.75rem; margin-bottom:6px; }
     input[type="range"]{ width:100%; }
 
     .pillRow{ display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
-    .pill{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid rgba(0,0,0,0.10); background:rgba(255,255,255,0.75); color:var(--ink); font-variant-numeric:tabular-nums; font-weight:800; font-size:12px; }
+    .pill{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; border:1px solid rgba(0,0,0,0.10); background:rgba(255,255,255,0.75); color:var(--ink); font-variant-numeric:tabular-nums; font-weight:800; font-size:0.75rem; }
 
     .mechWrap{ margin-top:12px; }
-    .mechTitle{ font-weight:900; color:var(--ink); font-size:14px; margin:0 0 6px 0; }
-    .mechSub{ color:var(--ink-2); font-size:12px; line-height:1.45; margin:0 0 10px 0; }
+    .mechTitle{ font-weight:900; color:var(--ink); font-size:0.875rem; margin:0 0 6px 0; }
+    .mechSub{ color:var(--ink-2); font-size:0.75rem; line-height:1.45; margin:0 0 10px 0; }
 
     .cardPile{ display:flex; flex-wrap:wrap; gap:8px; padding:10px; border-radius:14px; border:1px solid rgba(0,0,0,0.08); background:rgba(255,255,255,0.65); margin-bottom:10px; }
-    .mcard{ display:inline-flex; align-items:center; justify-content:center; padding:6px 10px; border-radius:999px; border:1px solid rgba(0,0,0,0.12); background:rgba(255,255,255,0.85); cursor:grab; user-select:none; font-weight:900; color:var(--ink); font-size:12px; min-width:96px; }
+    /* #8c7f72 = 3.53:1 on white — WCAG 1.4.11 ✓ */
+    .mcard{ display:inline-flex; align-items:center; justify-content:center; padding:6px 10px; border-radius:999px; border:1.5px solid #8c7f72; background:rgba(255,255,255,0.85); cursor:grab; user-select:none; font-weight:900; color:var(--ink); font-size:0.75rem; min-width:96px; transition:border-color .12s, background .12s; }
     .mcard:active{ cursor:grabbing; }
+    .mcard:hover{ border-color:var(--accent); background:rgba(47,93,124,0.07); }
+    .mcard.selected{ border-color:var(--accent); background:rgba(47,93,124,0.12); color:var(--accent); outline:2px solid var(--accent); outline-offset:1px; }
 
     .chain{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px; border-radius:14px; border:1px solid rgba(0,0,0,0.08); background:rgba(255,255,255,0.68); }
-    .slot{ width:120px; height:34px; border-radius:10px; border:2px dashed rgba(0,0,0,0.18); background:rgba(255,255,255,0.75); display:flex; align-items:center; justify-content:center; font-weight:900; color:rgba(0,0,0,0.45); font-size:12px; }
-    .slot.filled{ border-style:solid; border-color:rgba(0,0,0,0.12); color:var(--ink); }
-    .slot.dragover{ outline:2px dashed rgba(0,0,0,0.25); outline-offset:4px; }
-    .arrow{ font-size:16px; color:rgba(0,0,0,0.45); font-weight:900; }
+    /* slot border #8c7f72 = 3.53:1 on white — WCAG 1.4.11 ✓; color var(--muted) = 4.95:1 — WCAG 1.4.3 ✓ */
+    .slot{ width:120px; height:34px; border-radius:10px; border:2px dashed #8c7f72; background:rgba(255,255,255,0.75); display:flex; align-items:center; justify-content:center; font-weight:900; color:var(--muted); font-size:0.75rem; cursor:pointer; transition:border-color .12s; }
+    .slot.filled{ border-style:solid; border-color:#8c7f72; color:var(--ink); }
+    .slot.dragover{ outline:2px dashed var(--accent); outline-offset:4px; }
+    .arrow{ font-size:1rem; color:var(--muted); font-weight:900; }
 
-    .feedback{ margin-top:12px; border-top:1px solid rgba(0,0,0,0.08); padding-top:10px; display:none; color:var(--ink-2); font-size:13px; line-height:1.5; }
-    .tagOK{ display:inline-block; padding:2px 8px; border-radius:999px; background:rgba(34,139,34,0.12); border:1px solid rgba(34,139,34,0.25); color:rgba(34,120,34,1); font-weight:800; font-size:12px; margin-right:8px; }
-    .tagBad{ display:inline-block; padding:2px 8px; border-radius:999px; background:rgba(178,34,34,0.10); border:1px solid rgba(178,34,34,0.25); color:rgba(140,0,0,0.95); font-weight:800; font-size:12px; margin-right:8px; }
+    /* always in DOM so aria-live works (never display:none) */
+    .feedback{ margin-top:12px; border-top:1px solid rgba(0,0,0,0.08); padding-top:10px; color:var(--ink-2); font-size:0.8125rem; line-height:1.5; min-height:1.5em; }
+    /* #155c38 = 7.7:1 on white — WCAG 1.4.3 ✓ */
+    .tagOK{ display:inline-block; padding:2px 8px; border-radius:999px; background:rgba(21,92,56,0.10); border:1px solid rgba(21,92,56,0.30); color:#155c38; font-weight:800; font-size:0.75rem; margin-right:8px; }
+    /* #b42318 = 6.2:1 on white — WCAG 1.4.3 ✓ */
+    .tagBad{ display:inline-block; padding:2px 8px; border-radius:999px; background:rgba(180,35,24,0.10); border:1px solid rgba(180,35,24,0.25); color:#b42318; font-weight:800; font-size:0.75rem; margin-right:8px; }
+
+    .lab-wrap{ max-width:1100px; margin:0 auto; padding:18px; }
+    .footer-inner{ display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; font-size:0.75rem; color:var(--muted); padding-top:12px; border-top:1px solid var(--line); margin-top:24px; }
   </style>
 </head>
 
 <body>
-  <header class="page-header">
-    <div class="container">
-      <nav class="crumbbar">
-        <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
-      </nav>
 
-      <div class="header-inner">
-        <div class="title-block">
-          <div class="kicker">Macroeconomics Practice Lab</div>
-          <h1>Keynesian Cross, IS Curve, and Fiscal Policy</h1>
-          <details class="howto">
-  <summary>Instructions</summary>
-  <div class="howto-body">
-    <ol>
-      <li>
-        <strong>Start a round.</strong> Click <strong>New Scenario</strong>.
-        The app will tell you which policy variable changed: <strong>r</strong>, <strong>G</strong>, or <strong>T</strong>, and whether it moved <strong>up</strong> or <strong>down</strong>.
-        (The sliders reset to baseline each round.)
-      </li>
+<a class="skip-link" href="#main-content">Skip to main content</a>
 
-      <li>
-        <strong>Apply the shock with the sliders.</strong>
-        Move the relevant slider(s) to reflect the scenario shock.
-        As you move sliders, both graphs update:
-        <ul>
-          <li><strong>Blue</strong> = baseline (original) lines and equilibrium.</li>
-          <li><strong>Orange</strong> = current lines and new equilibrium.</li>
-        </ul>
-      </li>
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
+    </nav>
 
-      <li>
-        <strong>Read the Keynesian Cross (top graph).</strong>
-        The top graph plots <strong>Planned Expenditure (PE)</strong> against <strong>Output (Y)</strong>.
-        The <strong>45° line</strong> is where <strong>PE = Y</strong>.
-        The economy is in equilibrium at the intersection:
-        <ul>
-          <li><strong>Y₀</strong> = baseline equilibrium output (blue dot).</li>
-          <li><strong>Y₁</strong> = new equilibrium output (orange dot, after your slider change).</li>
-        </ul>
-        The dashed vertical lines show the equilibrium output on the x-axis.
-      </li>
+    <div class="header-inner">
+      <div class="title-block">
+        <div class="kicker">Macroeconomics Practice Lab</div>
+        <h1>Keynesian Cross, IS Curve, and Fiscal Policy</h1>
+        <details class="howto">
+          <summary>Instructions</summary>
+          <div class="howto-body">
+            <ol>
+              <li>
+                <strong>Start a round.</strong> Click <strong>New Scenario</strong>.
+                The app will tell you which policy variable changed: <strong>r</strong>, <strong>G</strong>, or <strong>T</strong>, and whether it moved <strong>up</strong> or <strong>down</strong>.
+                (The sliders reset to baseline each round.)
+              </li>
+              <li>
+                <strong>Apply the shock with the sliders.</strong>
+                Move the relevant slider(s) to reflect the scenario shock.
+                As you move sliders, both graphs update:
+                <ul>
+                  <li><strong>Blue</strong> = baseline (original) lines and equilibrium.</li>
+                  <li><strong>Orange</strong> = current lines and new equilibrium.</li>
+                </ul>
+              </li>
+              <li>
+                <strong>Read the Keynesian Cross (top graph).</strong>
+                The top graph plots <strong>Planned Expenditure (PE)</strong> against <strong>Output (Y)</strong>.
+                The <strong>45° line</strong> is where <strong>PE = Y</strong>.
+                The economy is in equilibrium at the intersection:
+                <ul>
+                  <li><strong>Y₀</strong> = baseline equilibrium output (blue dot).</li>
+                  <li><strong>Y₁</strong> = new equilibrium output (orange dot, after your slider change).</li>
+                </ul>
+                The dashed vertical lines show the equilibrium output on the x-axis.
+              </li>
+              <li>
+                <strong>Read the IS curve (bottom graph).</strong>
+                The IS curve shows combinations of <strong>(Y, r)</strong> consistent with goods-market equilibrium.
+                The dots show the linked equilibrium points:
+                <ul>
+                  <li><strong>(Y₀, r₀)</strong> is the baseline point (blue).</li>
+                  <li><strong>(Y₁, r₁)</strong> is the new point (orange).</li>
+                </ul>
+                The dashed lines project each dot to the <strong>x-axis (output)</strong> and <strong>y-axis (interest rate)</strong>.
+              </li>
+              <li>
+                <strong>Build the mechanism chain.</strong>
+                Use the pill cards to explain <em>why</em> output changes.
+                Drag the cards into the slots, or click a card to select it then click a slot to place it (keyboard-friendly).
+              </li>
+              <li>
+                <strong>Check your reasoning.</strong>
+                Click <strong>Check Mechanism</strong> to see if your chain matches the scenario.
+                Use <strong>Clear Chain</strong> to try again, or <strong>Reset</strong> to return everything to baseline.
+              </li>
+            </ol>
+            <p class="howto-note">
+              Tip: The key idea is that shocks first change <strong>planned expenditure</strong>.
+              When spending and production don't match, firms experience an <strong>unplanned inventory change</strong>,
+              which leads them to adjust production, changing <strong>output (Y)</strong>.
+            </p>
+          </div>
+        </details>
+      </div>
 
-      <li>
-        <strong>Read the IS curve (bottom graph).</strong>
-        The IS curve shows combinations of <strong>(Y, r)</strong> consistent with goods-market equilibrium.
-        The dots show the linked equilibrium points:
-        <ul>
-          <li><strong>(Y₀, r₀)</strong> is the baseline point (blue).</li>
-          <li><strong>(Y₁, r₁)</strong> is the new point (orange).</li>
-        </ul>
-        The dashed lines project each dot to the <strong>x-axis (output)</strong> and <strong>y-axis (interest rate)</strong>.
-      </li>
-
-      <li>
-        <strong>Build the mechanism chain.</strong>
-        Use the pill cards to explain <em>why</em> output changes.
-        Drag the correct cards into the blanks (the chain depends on the shock).
-      </li>
-
-      <li>
-        <strong>Check your reasoning.</strong>
-        Click <strong>Check Mechanism</strong> to see if your chain matches the scenario.
-        Use <strong>Clear Chain</strong> to try again, or <strong>Reset</strong> to return everything to baseline.
-      </li>
-    </ol>
-
-    <p class="howto-note">
-      Tip: The key idea is that shocks first change <strong>planned expenditure</strong>.
-      When spending and production don’t match, firms experience an <strong>unplanned inventory change</strong>,
-      which leads them to adjust production, changing <strong>output (Y)</strong>.
-    </p>
+      <div class="controls-card">
+        <div class="controls-actions">
+          <button id="newBtn" class="btn primary">New Scenario</button>
+          <button id="resetBtn" class="btn subtle">Reset</button>
+          <button id="checkMechBtn" class="btn">Check Mechanism</button>
+          <button id="clearMechBtn" class="btn subtle">Clear Chain</button>
+        </div>
+        <div id="status" class="status" aria-live="polite" aria-atomic="true"></div>
+      </div>
+    </div>
   </div>
-</details>
+</header>
+
+<main id="main-content" class="container stack">
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Graphs + Mechanism</h2>
+    </div>
+
+    <div class="grid2">
+      <div class="box">
+        <p class="scenarioTitle" id="scenarioTitle">Scenario</p>
+        <div class="scenarioDesc" id="scenarioDesc">Click "New Scenario" to start.</div>
+
+        <div class="controlsGrid">
+          <div class="control">
+            <label for="rSlider">Interest rate (r)</label>
+            <div class="row"><span>r</span><span id="rVal">—</span></div>
+            <input id="rSlider" type="range" min="0" max="10" step="0.1" value="4">
+          </div>
+          <div class="control">
+            <label for="gSlider">Government purchases (G)</label>
+            <div class="row"><span>G</span><span id="gVal">—</span></div>
+            <input id="gSlider" type="range" min="50" max="250" step="5" value="150">
+          </div>
+          <div class="control">
+            <label for="tSlider">Taxes (T)</label>
+            <div class="row"><span>T</span><span id="tVal">—</span></div>
+            <input id="tSlider" type="range" min="50" max="250" step="5" value="150">
+          </div>
         </div>
 
-        <div class="controls-card">
-          <div class="controls-actions">
-            <button id="newBtn" class="btn primary">New Scenario</button>
-            <button id="resetBtn" class="btn subtle">Reset</button>
-            <button id="checkMechBtn" class="btn">Check Mechanism</button>
-            <button id="clearMechBtn" class="btn subtle">Clear Chain</button>
+        <div class="pillRow">
+          <span class="pill">Baseline Y₀: <span id="y0">—</span></span>
+          <span class="pill">Current Y₁: <span id="y1">—</span></span>
+        </div>
+
+        <div class="mechWrap">
+          <p class="mechTitle">Build the mechanism</p>
+          <p class="mechSub" id="mechPrompt">Click New Scenario to generate a shock.</p>
+
+          <div class="cardPile" id="pile"
+               role="group"
+               aria-label="Mechanism cards — click or press Enter to select, then activate a slot to place"></div>
+          <div class="chain" id="chain"
+               role="group"
+               aria-label="Mechanism chain — activate a slot to place your selected card"></div>
+          <div class="feedback" id="mechFeedback"
+               aria-live="polite" aria-atomic="true"></div>
+        </div>
+      </div>
+
+      <div class="box">
+        <div class="charts">
+          <div class="mini" id="kcTitle">Keynesian Cross</div>
+          <div class="chartCard">
+            <canvas id="kcCanvas"
+                    role="img"
+                    aria-labelledby="kcTitle"
+                    aria-describedby="kcDesc"></canvas>
           </div>
-          <div id="status" class="status" aria-live="polite"></div>
+
+          <div class="mini" id="isTitle">IS Curve</div>
+          <div class="chartCard small">
+            <canvas id="isCanvas"
+                    role="img"
+                    aria-labelledby="isTitle"
+                    aria-describedby="isDesc"></canvas>
+          </div>
+
+          <!-- Color legend: text labels alongside swatches satisfy 1.4.1 -->
+          <div class="chartLegend">
+            <span><span class="legend-swatch blue" aria-hidden="true"></span>Baseline</span>
+            <span><span class="legend-swatch orange" aria-hidden="true"></span>Current</span>
+          </div>
         </div>
       </div>
     </div>
-  </header>
+  </section>
 
-  <main class="container stack">
-    <section class="panel">
-      <div class="panel-head">
-        <h2>Graphs + Mechanism</h2>
-      </div>
+  <!-- Canvas descriptions for screen readers (WCAG 1.1.1) -->
+  <section class="sr-only" aria-live="polite" aria-atomic="true">
+    <p id="kcDesc">Keynesian Cross graph. No scenario loaded yet.</p>
+    <p id="isDesc">IS Curve graph. No scenario loaded yet.</p>
+  </section>
+</main>
 
-      <div class="grid2">
-        <div class="box">
-          <p class="scenarioTitle" id="scenarioTitle">Scenario</p>
-          <div class="scenarioDesc" id="scenarioDesc">Click “New Scenario” to start.</div>
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 002 — Macroeconomics</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
 
-          <div class="controlsGrid">
-            <div class="control">
-              <label for="rSlider">Interest rate (r)</label>
-              <div class="row"><span>r</span><span id="rVal">—</span></div>
-              <input id="rSlider" type="range" min="0" max="10" step="0.1" value="4">
-            </div>
-
-            <div class="control">
-              <label for="gSlider">Government purchases (G)</label>
-              <div class="row"><span>G</span><span id="gVal">—</span></div>
-              <input id="gSlider" type="range" min="50" max="250" step="5" value="150">
-            </div>
-
-            <div class="control">
-              <label for="tSlider">Taxes (T)</label>
-              <div class="row"><span>T</span><span id="tVal">—</span></div>
-              <input id="tSlider" type="range" min="50" max="250" step="5" value="150">
-            </div>
-          </div>
-
-          <div class="pillRow">
-            <span class="pill">Baseline Y₀: <span id="y0">—</span></span>
-            <span class="pill">Current Y₁: <span id="y1">—</span></span>
-          </div>
-
-          <div class="mechWrap">
-            <p class="mechTitle">Build the mechanism</p>
-            <p class="mechSub" id="mechPrompt">Click New Scenario to generate a shock.</p>
-
-            <div class="cardPile" id="pile"></div>
-            <div class="chain" id="chain"></div>
-            <div class="feedback" id="mechFeedback"></div>
-          </div>
-        </div>
-
-        <div class="box">
-          <div class="charts">
-            <div class="mini"><strong>Keynesian Cross</strong></div>
-            <div class="chartCard"><canvas id="kcCanvas"></canvas></div>
-
-            <div class="mini"><strong>IS curve</strong></div>
-            <div class="chartCard small"><canvas id="isCanvas"></canvas></div>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <script src="./data.js"></script>
-  <script src="./app.js"></script>
+<script src="./data.js"></script>
+<script src="./app.js"></script>
 </body>
 </html>

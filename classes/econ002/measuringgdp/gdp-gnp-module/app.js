@@ -35,6 +35,18 @@ const els = {
 
 let currentItems = [];
 let draggedId = null;
+let selectedCardId = null;
+
+function clearSelection() {
+  if (!selectedCardId) return;
+  const prev = document.getElementById(`card_${selectedCardId}`);
+  if (prev) {
+    prev.classList.remove('selected');
+    prev.setAttribute('aria-pressed', 'false');
+  }
+  selectedCardId = null;
+  document.querySelectorAll('.dropzone').forEach(z => z.classList.remove('kb-target'));
+}
 
 function money(millions) {
   return `$${millions.toFixed(0)}m`;

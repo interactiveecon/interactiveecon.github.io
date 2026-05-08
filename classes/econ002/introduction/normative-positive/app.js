@@ -98,6 +98,7 @@ function initApp() {
 
     const banner = document.createElement('div');
     banner.id = 'discFinishBanner';
+    banner.setAttribute('role', 'status');
     banner.style.cssText = `
       margin-top:16px; padding:16px 20px; border-radius:16px;
       background:rgba(27,127,75,0.08); border:1.5px solid rgba(27,127,75,0.35);
@@ -106,16 +107,16 @@ function initApp() {
     `;
     banner.innerHTML = `
       <div>
-        <div style="font-weight:800;color:#1b7f4b;font-size:14px;">
+        <div style="font-weight:800;color:#1b7f4b;font-size:0.875rem;">
           ✓ Lab complete — Final score: ${finalCorrectCount} / ${total}</div>
-        <div style="font-size:12px;color:#6b7280;margin-top:3px;">
+        <div style="font-size:0.75rem;color:#596878;margin-top:3px;">
           First-attempt score: ${firstCorrectCount} / ${total} &nbsp;·&nbsp;
           Return to Week 1 when your TA is ready.
         </div>
       </div>
       <a href="${WEEK_URL}"
          style="padding:10px 20px;background:#1b7f4b;color:#fff;border-radius:12px;
-                font-weight:800;font-size:13px;text-decoration:none;white-space:nowrap;">
+                font-weight:800;font-size:0.8125rem;text-decoration:none;white-space:nowrap;">
         ← Return to Week 1
       </a>
     `;
@@ -149,6 +150,15 @@ function initApp() {
    els.zoneGRW,  els.zoneSTB].forEach(setupDropzone);
 
   // ── Render ────────────────────────────────────────────────────────────────
+  const ZONES = [
+    ['STAGE', 'Staging'],
+    ['POS',   'Positive'],
+    ['EFF',   'Normative: Efficiency'],
+    ['EQT',   'Normative: Equity'],
+    ['GRW',   'Normative: Growth'],
+    ['STB',   'Normative: Stability'],
+  ];
+
   function renderBoard() {
     [els.zoneStage, els.zonePOS, els.zoneEFF, els.zoneEQT,
      els.zoneGRW,  els.zoneSTB].forEach(z => z.innerHTML = '');
@@ -172,10 +182,28 @@ function initApp() {
                         (phase === 'revising' && c.checked === false);
       el.draggable = draggable;
       if (!draggable) el.style.cursor = 'default';
+      if (draggable)  el.setAttribute('tabindex', '0');
+
+      // Non-color state badge (WCAG 1.4.1)
+      const badge = c.checked === true
+        ? '<span class="card-status ok-badge" aria-hidden="true">✓</span>'
+        : c.checked === false
+          ? '<span class="card-status bad-badge" aria-hidden="true">✗</span>'
+          : '';
+
+      // Zone select — keyboard alternative for drag-and-drop (WCAG 2.1.1)
+      const opts = ZONES.map(([v, l]) =>
+        `<option value="${v}"${c.zone === v ? ' selected' : ''}>${escapeHtml(l)}</option>`
+      ).join('');
+      const selectHTML = draggable ? `
+        <label class="sr-only" for="zs-${c.id}">Move this card to zone</label>
+        <select class="zone-select" id="zs-${c.id}" draggable="false">${opts}</select>
+      ` : '';
 
       el.innerHTML = `
-        <div class="ctitle">${escapeHtml(c.title)}</div>
+        <div class="ctitle">${badge}${escapeHtml(c.title)}</div>
         ${c.revealDesc ? `<div class="cdesc">${escapeHtml(c.desc)}</div>` : ''}
+        ${selectHTML}
       `;
 
       if (draggable) {
@@ -183,6 +211,16 @@ function initApp() {
           ev.dataTransfer.setData('text/plain', c.id);
           ev.dataTransfer.effectAllowed = 'move';
         });
+        const sel = el.querySelector('.zone-select');
+        if (sel) {
+          sel.addEventListener('change', (ev) => {
+            c.zone = ev.target.value;
+            renderBoard();
+            updateProgress();
+          });
+          // Prevent mousedown on the select from initiating a drag on the card
+          sel.addEventListener('mousedown', (ev) => ev.stopPropagation());
+        }
       }
 
       const zoneEl =
