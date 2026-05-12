@@ -1,0 +1,1593 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Production Edgeworth Box & PPF Mapper — ECON 104B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937; --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2; --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38; --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ───────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* ── Header ──────────────────────────────────────────────── */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),
+      rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;
+      font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;
+      line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0 0 14px;color:var(--ink-2);line-height:1.55;
+      max-width:80ch;font-size:0.9375rem;}
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+    .hidden{display:none!important;}
+
+    /* ── Instructions dropdown ───────────────────────────────── */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* ── Cards ───────────────────────────────────────────────── */
+    .card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px;box-shadow:var(--shadow);
+      margin-bottom:16px;}
+    .card-title{font-family:var(--font-serif);font-size:1.125rem;
+      font-weight:700;color:var(--ink);margin:0 0 10px;
+      display:flex;align-items:center;gap:10px;}
+    .qbadge{font-size:0.625rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.08em;background:var(--accent);color:#fff;
+      padding:3px 8px;border-radius:999px;font-family:var(--font-sans);}
+
+    /* ── Canvas row / cards ─────────────────────────────────── */
+    .canvas-card{display:flex;flex-direction:column;align-items:stretch;}
+    .canvas-row{display:grid;grid-template-columns:1fr 1fr;
+      gap:14px;margin-bottom:0;}
+    @media(max-width:700px){.canvas-row{grid-template-columns:1fr;}}
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;padding:12px;box-shadow:none;
+      display:flex;flex-direction:column;}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .canvas-wrap{position:relative;width:100%;aspect-ratio:1/1;
+      border-radius:10px;overflow:hidden;
+      background:rgba(246,242,234,.45);border:1px solid var(--line);
+      touch-action:none;}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+    .canvas-wrap.draggable canvas{cursor:grab;}
+    .canvas-wrap.draggable.locked canvas{cursor:not-allowed;}
+    .canvas-wrap.draggable canvas.dragging{cursor:grabbing;}
+
+    .pref-strip{margin-top:8px;width:100%;
+      font-size:0.75rem;color:var(--muted);text-align:center;
+      font-variant-numeric:tabular-nums;}
+
+    .canvas-legend{display:flex;gap:14px;flex-wrap:wrap;
+      margin-top:12px;width:100%;justify-content:center;}
+    .legend-row{display:flex;align-items:center;gap:6px;
+      font-size:0.75rem;color:var(--ink-2);}
+    .legend-swatch{width:20px;height:3px;border-radius:2px;flex-shrink:0;}
+    .legend-swatch.amber{background:#8c4800;}
+    .legend-swatch.dashed{background:none;
+      border-top:2px dashed var(--muted);height:0;}
+    .legend-swatch.dotted{background:none;
+      border-top:2px dotted rgba(31,41,55,0.6);height:0;}
+    .legend-swatch.lens{height:10px;background:rgba(21,92,56,.18);
+      border:1px solid rgba(21,92,56,.35);border-radius:3px;}
+    .legend-orig-dot{width:11px;height:11px;border-radius:50%;
+      background:rgba(255,255,255,0.7);
+      border:2px solid rgba(31,41,55,0.6);flex-shrink:0;}
+
+    /* ── Status strip ─────────────────────────────────────────── */
+    .status-strip{margin-top:12px;padding:10px 14px;border-radius:10px;
+      background:rgba(246,242,234,.55);border:1px solid var(--line);
+      font-size:0.8125rem;color:var(--ink-2);line-height:1.5;
+      width:100%;text-align:center;}
+    .status-eff{color:var(--good);font-weight:700;}
+    .status-ineff{color:var(--bad);font-weight:700;}
+
+    /* ── Buttons ──────────────────────────────────────────────── */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+    .option-btn.active{border-color:var(--accent);
+      background:rgba(47,93,124,.12);color:var(--accent);}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover:not(:disabled){background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* ── Question / radio styling ─────────────────────────────── */
+    .question-text{font-size:0.9375rem;color:var(--ink);
+      line-height:1.5;margin:0 0 12px;}
+    .radio-group{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+    .radio-stack{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+    .radio-option{display:flex;align-items:flex-start;gap:10px;
+      padding:10px 14px;border:1.5px solid #8c7f72;border-radius:10px;
+      background:var(--panel);cursor:pointer;font-size:0.875rem;
+      font-weight:600;color:var(--ink-2);transition:all .12s;line-height:1.45;}
+    .radio-option:hover:not(.locked){border-color:var(--accent);
+      background:rgba(47,93,124,.05);}
+    .radio-option input{margin:2px 0 0 0;accent-color:var(--accent);
+      flex-shrink:0;}
+    .radio-option .opt-text{flex:1;}
+    .radio-option.selected{border-color:var(--accent);
+      background:rgba(47,93,124,.10);color:var(--accent);}
+    .radio-option.locked{cursor:not-allowed;}
+    .radio-option.correct{border-color:var(--good);
+      background:rgba(21,92,56,.10);color:var(--good);}
+    .radio-option.wrong{border-color:var(--bad);
+      background:rgba(180,35,24,.08);color:var(--bad);}
+
+    .feedback-msg{margin-top:10px;padding:10px 14px;border-radius:10px;
+      font-size:0.8125rem;font-weight:600;line-height:1.5;}
+    .feedback-msg.correct{background:rgba(21,92,56,.10);
+      border:1px solid rgba(21,92,56,.25);color:var(--good);}
+    .feedback-msg.wrong{background:rgba(180,35,24,.08);
+      border:1px solid rgba(180,35,24,.25);color:var(--bad);}
+    .feedback-msg.hint{background:rgba(140,72,0,.08);
+      border:1px solid rgba(140,72,0,.30);color:#8c4800;}
+
+    .submit-row{display:flex;justify-content:flex-end;margin-top:10px;}
+    .lab-done{margin-top:12px;padding:12px 14px;border-radius:10px;
+      background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.25);
+      color:var(--good);font-weight:700;font-size:0.875rem;}
+
+    /* ── Bottom actions ───────────────────────────────────────── */
+    .bottom-actions{display:flex;justify-content:center;gap:10px;
+      margin-top:6px;padding-top:6px;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ104b/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104B — General Equilibrium</div>
+      <h1>Production Edgeworth Box & PPF Mapper</h1>
+      <p class="sub">
+        Cereal, Inc. and Pancake, Inc. share 20 units of labor and 12 units of
+        capital. Drag the input allocation point inside the production
+        Edgeworth box to see how each firm's isoquants shift, when input
+        efficiency is achieved, and how the allocation maps onto the
+        production possibilities frontier.
+      </p>
+
+      <details id="instructionsBox" class="instructions-box">
+        <summary class="instructions-toggle">How to use this lab</summary>
+        <div class="instructions-body">
+          <ol>
+            <li><strong>Cereal Inc.'s origin</strong> is the bottom-left
+                corner of the box; <strong>Pancake Inc.'s origin</strong> is
+                the top-right corner.</li>
+            <li><strong style="color:#2f5d7c;">Blue isoquants</strong> are
+                Cereal Inc.'s; <strong style="color:#8c4800;">amber
+                isoquants</strong> are Pancake, Inc.'s. Each isoquant traces
+                input combinations that yield the same output for that firm.</li>
+            <li>An allocation is <strong>input-efficient</strong> when the
+                two firms' isoquants are tangent — that is, the marginal
+                rates of technical substitution (MRTS) are equal. Inefficient
+                points lie <strong>inside</strong> the production
+                possibilities frontier on the right panel.</li>
+            <li>Questions unlock in order. Press <strong>New Problem</strong>
+                at the bottom of the page to regenerate the production
+                weights and starting allocation at any time.</li>
+          </ol>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- ── Q1 card ───────────────────────────────────────────── -->
+  <section class="card" id="q1Card" aria-labelledby="q1Heading">
+    <h2 class="card-title" id="q1Heading">
+      <span class="qbadge">Q1</span>
+      Initial allocation
+    </h2>
+    <p class="question-text">
+      Look at the starting allocation shown in the box. Is this input
+      allocation <strong>input-efficient</strong>?
+    </p>
+    <div class="radio-group" role="radiogroup" aria-labelledby="q1Heading">
+      <label class="radio-option" id="q1OptYesLbl">
+        <input type="radio" name="q1" value="yes" id="q1OptYes">
+        <span class="opt-text">Yes — efficient</span>
+      </label>
+      <label class="radio-option" id="q1OptNoLbl">
+        <input type="radio" name="q1" value="no" id="q1OptNo">
+        <span class="opt-text">No — inefficient</span>
+      </label>
+    </div>
+    <div class="submit-row">
+      <button class="primary-btn" id="submitQ1Btn">Submit Q1</button>
+    </div>
+    <div id="q1Feedback" class="feedback-msg hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+  </section>
+
+  <!-- ── Canvas card ───────────────────────────────────────── -->
+  <section class="card canvas-card" aria-labelledby="boxTitle">
+    <div class="canvas-row">
+      <div class="graph-card">
+        <div class="graph-title" id="boxTitle">Production Edgeworth Box</div>
+        <div class="canvas-wrap draggable locked" id="boxWrap">
+          <canvas id="boxCanvas"
+                  role="img"
+                  aria-labelledby="boxTitle"
+                  aria-describedby="boxDesc"></canvas>
+        </div>
+        <div class="pref-strip" id="prefStrip" aria-live="polite" aria-atomic="true">
+          Capital intensity: a (Cereal Inc.) = —, b (Pancake Inc.) = —
+        </div>
+      </div>
+      <div class="graph-card">
+        <div class="graph-title" id="ppfTitle">Production Possibilities Frontier</div>
+        <div class="canvas-wrap" id="ppfWrap">
+          <canvas id="ppfCanvas"
+                  role="img"
+                  aria-labelledby="ppfTitle"
+                  aria-describedby="ppfDesc"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="canvas-legend" aria-hidden="true">
+      <div class="legend-row">
+        <div class="legend-swatch" style="background:#2f5d7c;"></div>
+        <span>Cereal Inc.'s isoquants</span>
+      </div>
+      <div class="legend-row">
+        <div class="legend-swatch amber"></div>
+        <span>Pancake, Inc.'s isoquants</span>
+      </div>
+      <div class="legend-row">
+        <div class="legend-swatch lens"></div>
+        <span>Inefficiency lens</span>
+      </div>
+      <div class="legend-row">
+        <div class="legend-swatch dashed"></div>
+        <span>Contract curve</span>
+      </div>
+      <div class="legend-row" id="originalLegendRow" style="display:none;">
+        <div class="legend-orig-dot"></div>
+        <span>Original allocation (faded)</span>
+      </div>
+    </div>
+
+    <div class="status-strip" id="statusStrip"
+         role="status" aria-live="polite" aria-atomic="true">
+      Answer Q1 to unlock dragging.
+    </div>
+
+    <section class="sr-only" aria-live="polite" aria-atomic="true">
+      <p id="boxDesc">Production Edgeworth box for two firms.</p>
+      <p id="ppfDesc">Production possibilities frontier.</p>
+    </section>
+  </section>
+
+  <!-- ── Q2 card (hidden until needed) ─────────────────────── -->
+  <section class="card hidden" id="q2Card" aria-labelledby="q2Heading">
+    <h2 class="card-title" id="q2Heading">
+      <span class="qbadge">Q2</span>
+      Find an efficient allocation
+    </h2>
+    <p class="question-text">
+      Drag the allocation point to an <strong>input-efficient</strong>
+      location — where Cereal Inc.'s MRTS equals Pancake Inc.'s MRTS —
+      then submit.
+    </p>
+    <div class="submit-row">
+      <button class="primary-btn" id="submitQ2Btn" disabled>Submit Q2</button>
+    </div>
+    <div id="q2Feedback" class="feedback-msg hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+  </section>
+
+  <!-- ── Q3 card (hidden until needed) ─────────────────────── -->
+  <section class="card hidden" id="q3Card" aria-labelledby="q3Heading">
+    <h2 class="card-title" id="q3Heading">
+      <span class="qbadge">Q3</span>
+      Moving along the contract curve
+    </h2>
+    <p class="question-text">
+      Use the <strong>contract curve</strong> (the dashed grey line) to
+      select another <strong>input-efficient allocation</strong>. Drag the
+      dot to a different point on the contract curve. The
+      <strong>original allocation</strong> and its isoquants remain
+      visible (faded, dotted) for comparison.
+    </p>
+    <p class="question-text">
+      Compared to the original allocation, which firm produces more output
+      at the new allocation?
+    </p>
+    <div class="radio-stack" id="q3Options"
+         role="radiogroup" aria-labelledby="q3Heading">
+      <!-- option buttons injected by JS, shuffled per problem -->
+    </div>
+    <div class="submit-row">
+      <button class="primary-btn" id="submitQ3Btn" disabled>Submit Final Answer</button>
+    </div>
+    <div id="q3Feedback" class="feedback-msg hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+    <div id="labDoneMsg" class="lab-done hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+  </section>
+
+  <!-- ── New problem ───────────────────────────────────────── -->
+  <div class="bottom-actions">
+    <button class="option-btn" id="newProblemBtn">↻ New Problem</button>
+  </div>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 104B — General Equilibrium</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+// LAB_ID:    'production-edgeworth-ppf'
+// LAB_LABEL: 'Production Edgeworth Box & PPF Mapper'
+// url:       '/classes/econ104b/labs/production-edgeworth-ppf/?disc=1'
+
+const LAB_ID      = 'production-edgeworth-ppf';
+const LAB_LABEL   = 'Production Edgeworth Box & PPF Mapper';
+const WEEK_LABEL  = 'Week 9 — General Equilibrium';
+const SESSION_KEY = 'econ002_session';
+
+// ── Constants ─────────────────────────────────────────────────────────────
+const L_TOT    = 20;
+const K_TOT    = 12;
+const EFF_TOL  = 0.15;
+const MIN_MOVE = 0.5;                              // min Q3 move
+const PAD      = { l: 50, r: 50, t: 44, b: 50 };   // CSS px (both canvases)
+
+// ── Q3 options ────────────────────────────────────────────────────────────
+const Q3_OPTIONS = [
+  { value: 'cMore',
+    text: 'Cereal Inc. produces more; Pancake Inc. produces less.' },
+  { value: 'pMore',
+    text: 'Pancake Inc. produces more; Cereal Inc. produces less.' },
+  { value: 'bothMore',
+    text: 'Both firms produce more output than before.' },
+  { value: 'bothLess',
+    text: 'Both firms produce less output than before.' },
+];
+
+// ── State ─────────────────────────────────────────────────────────────────
+let _rng         = null;
+let _seededInit  = true;
+let _fs          = 1;
+
+let lC           = 10;     // Cereal's labor (current)
+let kC           = 6;      // Cereal's capital (current)
+let lC0          = 10;     // seeded starting allocation
+let kC0          = 6;
+let lC_orig      = 0;      // saved at start of Q3
+let kC_orig      = 0;
+
+let aL           = 0.5;    // Cereal's labor weight in Q_C = L^a * K^(1-a)
+let bL           = 0.5;    // Pancake's labor weight in Q_P = L^b * K^(1-b)
+let _initialEff  = false;
+
+let _qCAxisMax   = 20;
+let _qPAxisMax   = 20;
+
+let showOriginal = false;  // ghost original during Q3
+let canvasLocked = true;
+let phase        = 'q1';
+let totalQs      = 3;
+
+let q1Locked     = false;
+let q1Correct    = false;
+let q2Locked     = false;
+let q2Correct    = false;
+let q3Locked     = false;
+let q3Correct    = false;
+let _firstScore  = 0;
+
+let _q3Order     = [0,1,2,3];
+
+// ── DOM ───────────────────────────────────────────────────────────────────
+const $box           = document.getElementById('boxCanvas');
+const $boxWrap       = document.getElementById('boxWrap');
+const $ppf           = document.getElementById('ppfCanvas');
+const $status        = document.getElementById('statusStrip');
+const $prefStrip     = document.getElementById('prefStrip');
+const $boxDesc       = document.getElementById('boxDesc');
+const $ppfDesc       = document.getElementById('ppfDesc');
+const $originalLegend= document.getElementById('originalLegendRow');
+
+const $q1OptYes      = document.getElementById('q1OptYes');
+const $q1OptNo       = document.getElementById('q1OptNo');
+const $q1OptYesLbl   = document.getElementById('q1OptYesLbl');
+const $q1OptNoLbl    = document.getElementById('q1OptNoLbl');
+const $submitQ1      = document.getElementById('submitQ1Btn');
+const $q1Feedback    = document.getElementById('q1Feedback');
+
+const $q2Card        = document.getElementById('q2Card');
+const $submitQ2      = document.getElementById('submitQ2Btn');
+const $q2Feedback    = document.getElementById('q2Feedback');
+
+const $q3Card        = document.getElementById('q3Card');
+const $q3Options     = document.getElementById('q3Options');
+const $submitQ3      = document.getElementById('submitQ3Btn');
+const $q3Feedback    = document.getElementById('q3Feedback');
+const $labDoneMsg    = document.getElementById('labDoneMsg');
+
+const $newProblem    = document.getElementById('newProblemBtn');
+
+// ── RNG ───────────────────────────────────────────────────────────────────
+function rng(){ return _rng ? _rng() : Math.random(); }
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function snapUp(raw){
+  const s = [5,8,10,12,15,20,25,30,40,50,60,80,100,120,
+             150,200,250,300,400,500,600,800,1000];
+  return s.find(v => v >= raw) || Math.ceil(raw/100)*100;
+}
+
+function tickStep(mx){
+  if(mx <= 10) return 1;
+  if(mx <= 20) return 2;
+  if(mx <= 50) return 5;
+  if(mx <= 100) return 10;
+  if(mx <= 200) return 20;
+  if(mx <= 500) return 50;
+  return 100;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// PARAMS
+// ══════════════════════════════════════════════════════════════════════════
+function generateParams(){
+  if(_seededInit && window.Session && Session.rngForLab){
+    _rng = Session.rngForLab(LAB_ID);
+  } else {
+    _rng = Math.random;
+  }
+  _seededInit = false;
+
+  // Random Cobb-Douglas labor weights — sampled from disjoint ranges so the
+  // two firms always have meaningfully different factor intensities, which
+  // guarantees a visibly bowed PPF. One firm draws from [0.30, 0.45] and
+  // the other from [0.55, 0.70]; the roles are randomly swapped.
+  const lowSteps  = Math.floor(rng() * 4);   // 0..3 → 0.30..0.45
+  const highSteps = Math.floor(rng() * 4);   // 0..3 → 0.55..0.70
+  const low  = 0.30 + lowSteps  * 0.05;
+  const high = 0.55 + highSteps * 0.05;
+  if(rng() < 0.5){
+    aL = low;  bL = high;
+  } else {
+    aL = high; bL = low;
+  }
+
+  const wantEfficient = rng() < 0.4;
+
+  if(wantEfficient){
+    const l  = 4 + rng() * 12;
+    const A  = aL / (1 - aL);
+    const B  = bL / (1 - bL);
+    // K_C on contract curve given L_C: K_C = B*K_TOT*L_C / (A*L_TOT + (B-A)*L_C)
+    const k  = (B * K_TOT * l) / (A * L_TOT + (B - A) * l);
+    if(k >= 0.8 && k <= K_TOT - 0.8){
+      lC0 = l; kC0 = k;
+    } else {
+      lC0 = l;
+      kC0 = 2 + rng() * (K_TOT - 4);
+    }
+  } else {
+    lC0 = 3 + rng() * 14;
+    kC0 = 2 + rng() * 8;
+    if(isEfficientAt(lC0, kC0)){
+      kC0 = Math.max(1, Math.min(K_TOT - 1,
+        kC0 + (rng() < 0.5 ? -1 : 1) * 2.0));
+    }
+  }
+
+  lC = lC0;
+  kC = kC0;
+  _initialEff = isEfficientAt(lC0, kC0);
+
+  // PPF axis maxima — corners of the contract curve give max single-firm output
+  _qCAxisMax = snapUp(Math.pow(L_TOT, aL) * Math.pow(K_TOT, 1 - aL));
+  _qPAxisMax = snapUp(Math.pow(L_TOT, bL) * Math.pow(K_TOT, 1 - bL));
+
+  _q3Order = shuffle([0,1,2,3]);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// PRODUCTION MATH
+// ══════════════════════════════════════════════════════════════════════════
+function qC(l, k){
+  if(l <= 0 || k <= 0) return 0;
+  return Math.pow(l, aL) * Math.pow(k, 1 - aL);
+}
+function qP(l, k){
+  if(l <= 0 || k <= 0) return 0;
+  return Math.pow(l, bL) * Math.pow(k, 1 - bL);
+}
+function mrtsC(l, k){
+  if(l <= 0) return Infinity;
+  return (aL / (1 - aL)) * (k / l);
+}
+function mrtsP(l, k){
+  if(l <= 0) return Infinity;
+  return (bL / (1 - bL)) * (k / l);
+}
+function isEfficientAt(l, k){
+  const lp = L_TOT - l, kp = K_TOT - k;
+  const mC = mrtsC(l, k), mP = mrtsP(lp, kp);
+  if(!isFinite(mC) || !isFinite(mP)) return false;
+  return Math.abs(mC - mP) < EFF_TOL;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CANVAS — shared setup
+// ══════════════════════════════════════════════════════════════════════════
+function setupCanvas(canvas){
+  const dpr  = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W    = Math.round(rect.width  * dpr);
+  const H    = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+function boxCoords(W, H, dpr){
+  const pad = { l: PAD.l*dpr, r: PAD.r*dpr, t: PAD.t*dpr, b: PAD.b*dpr };
+  const BW  = W - pad.l - pad.r;
+  const BH  = H - pad.t - pad.b;
+  return {
+    pad, BW, BH,
+    xC: v => pad.l + (v / L_TOT) * BW,
+    yC: v => H - pad.b - (v / K_TOT) * BH,
+  };
+}
+
+function ppfCoords(W, H, dpr){
+  const pad = { l: PAD.l*dpr, r: PAD.r*dpr, t: PAD.t*dpr, b: PAD.b*dpr };
+  const PW  = W - pad.l - pad.r;
+  const PH  = H - pad.t - pad.b;
+  return {
+    pad, PW, PH,
+    xC: v => pad.l + (v / _qCAxisMax) * PW,
+    yC: v => H - pad.b - (v / _qPAxisMax) * PH,
+  };
+}
+
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  drawBox();
+  drawPPF();
+  updateStatus();
+  updatePrefStrip();
+  updateBoxDesc();
+  updatePPFDesc();
+
+  // Q2 submit enables only when current allocation is input-efficient
+  if(phase === 'q2' && !q2Locked){
+    $submitQ2.disabled = !isEfficientAt(lC, kC);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// BOX CANVAS
+// ══════════════════════════════════════════════════════════════════════════
+function drawBox(){
+  const s = setupCanvas($box);
+  if(!s) return;
+  const { ctx, dpr, W, H } = s;
+  const c = boxCoords(W, H, dpr);
+
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.lineWidth   = 1.5 * dpr;
+  ctx.strokeRect(c.pad.l, c.pad.t, c.BW, c.BH);
+
+  if(!isEfficientAt(lC, kC)){
+    drawLens(ctx, c, dpr, W, H);
+  }
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(c.pad.l, c.pad.t, c.BW, c.BH);
+  ctx.clip();
+
+  // Contract curve — always visible
+  drawContractCurve(ctx, c, dpr);
+
+  // Original allocation's isoquants (Q3 only) — dotted, faded
+  if(showOriginal){
+    ctx.setLineDash([3 * dpr, 3 * dpr]);
+    const qC_o = qC(lC_orig, kC_orig);
+    const qP_o = qP(L_TOT - lC_orig, K_TOT - kC_orig);
+    drawCerealIsoquant(ctx, c, dpr, qC_o, 'rgba(47,93,124,0.55)', 1.7 * dpr);
+    drawPancakeIsoquant(ctx, c, dpr, qP_o, 'rgba(140,72,0,0.55)', 1.7 * dpr);
+    ctx.setLineDash([]);
+  }
+
+  // Current allocation's isoquants
+  const qC0 = qC(lC, kC);
+  const qP0 = qP(L_TOT - lC, K_TOT - kC);
+  if(!showOriginal){
+    // ±25% bands during Q1/Q2; dropped during Q3 to reduce clutter
+    drawCerealIsoquant (ctx, c, dpr, qC0 * 0.75, 'rgba(47,93,124,0.32)', 1.5 * dpr);
+    drawCerealIsoquant (ctx, c, dpr, qC0 * 1.25, 'rgba(47,93,124,0.32)', 1.5 * dpr);
+    drawPancakeIsoquant(ctx, c, dpr, qP0 * 0.75, 'rgba(140,72,0,0.32)', 1.5 * dpr);
+    drawPancakeIsoquant(ctx, c, dpr, qP0 * 1.25, 'rgba(140,72,0,0.32)', 1.5 * dpr);
+  }
+  drawCerealIsoquant (ctx, c, dpr, qC0, '#2f5d7c', 2.5 * dpr);
+  drawPancakeIsoquant(ctx, c, dpr, qP0, '#8c4800', 2.5 * dpr);
+
+  ctx.restore();
+
+  drawBoxAxisLabels(ctx, c, dpr);
+  drawBoxOriginLabels(ctx, c, dpr);
+
+  if(showOriginal){
+    drawOriginalDotBox(ctx, c, dpr);
+  }
+  drawAllocationDot(ctx, c, dpr);
+  drawBoxCurveLabels(ctx, c, dpr);
+}
+
+// Cereal Inc. isoquant (origin bottom-left, axes L_C, K_C):
+//   K_C = (Q / L_C^a)^(1/(1-a))
+function drawCerealIsoquant(ctx, c, dpr, Q, color, lw){
+  if(Q <= 0) return;
+  ctx.beginPath();
+  let started = false;
+  const N = 240;
+  for(let i = 0; i <= N; i++){
+    const l = (i / N) * L_TOT;
+    if(l <= 1e-6){ started = false; continue; }
+    const k = Math.pow(Q / Math.pow(l, aL), 1 / (1 - aL));
+    if(!isFinite(k) || k < -0.5 || k > K_TOT + 0.5){ started = false; continue; }
+    const x = c.xC(l), y = c.yC(k);
+    if(!started){ ctx.moveTo(x, y); started = true; }
+    else         { ctx.lineTo(x, y); }
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = lw;
+  ctx.stroke();
+}
+
+// Pancake Inc. isoquant (origin top-right). Parametrise in Cereal's L:
+//   L_P = L_TOT - L_C; K_P = (Q / L_P^b)^(1/(1-b)); K_C = K_TOT - K_P
+function drawPancakeIsoquant(ctx, c, dpr, Q, color, lw){
+  if(Q <= 0) return;
+  ctx.beginPath();
+  let started = false;
+  const N = 240;
+  for(let i = 0; i <= N; i++){
+    const l = (i / N) * L_TOT;
+    const lp = L_TOT - l;
+    if(lp <= 1e-6){ started = false; continue; }
+    const kp = Math.pow(Q / Math.pow(lp, bL), 1 / (1 - bL));
+    const k  = K_TOT - kp;
+    if(!isFinite(k) || k < -0.5 || k > K_TOT + 0.5){ started = false; continue; }
+    const x = c.xC(l), y = c.yC(k);
+    if(!started){ ctx.moveTo(x, y); started = true; }
+    else         { ctx.lineTo(x, y); }
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = lw;
+  ctx.stroke();
+}
+
+// Contract curve, with A = a/(1-a), B = b/(1-b):
+//   K_C = (K_TOT * B * L_C) / (L_TOT * A + (B - A) * L_C)
+function drawContractCurve(ctx, c, dpr){
+  const A = aL / (1 - aL);
+  const B = bL / (1 - bL);
+  ctx.beginPath();
+  let started = false;
+  const N = 240;
+  for(let i = 0; i <= N; i++){
+    const l   = (i / N) * L_TOT;
+    const num = K_TOT * B * l;
+    const den = L_TOT * A + (B - A) * l;
+    if(Math.abs(den) < 1e-9){ started = false; continue; }
+    const k = num / den;
+    if(!isFinite(k) || k < 0 || k > K_TOT){ started = false; continue; }
+    const x = c.xC(l), y = c.yC(k);
+    if(!started){ ctx.moveTo(x, y); started = true; }
+    else         { ctx.lineTo(x, y); }
+  }
+  ctx.strokeStyle = '#596878';
+  ctx.lineWidth   = 2 * dpr;
+  ctx.setLineDash([6 * dpr, 4 * dpr]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// Inefficiency lens: shade allocations where both firms could produce more
+function drawLens(ctx, c, dpr, W, H){
+  const qC0 = qC(lC, kC);
+  const qP0 = qP(L_TOT - lC, K_TOT - kC);
+  if(qC0 <= 0 || qP0 <= 0) return;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(21,92,56,0.12)';
+  const STEP = Math.max(4, Math.round(5 * dpr));
+  const x0 = c.pad.l, x1 = c.pad.l + c.BW;
+  const y0 = c.pad.t, y1 = c.pad.t + c.BH;
+  for(let py = y0; py < y1; py += STEP){
+    for(let px = x0; px < x1; px += STEP){
+      const l = ((px - c.pad.l) / c.BW) * L_TOT;
+      const k = ((H - c.pad.b - py) / c.BH) * K_TOT;
+      const lp = L_TOT - l, kp = K_TOT - k;
+      if(lp <= 0 || kp <= 0 || l <= 0 || k <= 0) continue;
+      if(qC(l, k) > qC0 && qP(lp, kp) > qP0){
+        ctx.fillRect(px, py, STEP, STEP);
+      }
+    }
+  }
+  ctx.restore();
+}
+
+function drawBoxAxisLabels(ctx, c, dpr){
+  const lTicks = [0,2,4,6,8,10,12,14,16,18,20];
+  const kTicks = [0,2,4,6,8,10,12];
+
+  // Bottom — Cereal Inc.'s labor →
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText("Cereal Inc.'s labor  →",
+    c.pad.l + c.BW / 2, c.pad.t + c.BH + 24 * dpr);
+  ctx.font = `600 ${Math.round(9.5 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  lTicks.forEach(v => {
+    ctx.fillText(String(v), c.xC(v), c.pad.t + c.BH + 6 * dpr);
+  });
+
+  // Top — ← Pancake Inc.'s labor
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText("←  Pancake Inc.'s labor",
+    c.pad.l + c.BW / 2, c.pad.t - 22 * dpr);
+  ctx.font = `600 ${Math.round(9.5 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  lTicks.forEach(v => {
+    ctx.fillText(String(v), c.xC(L_TOT - v), c.pad.t - 6 * dpr);
+  });
+
+  // Left — Cereal Inc.'s capital ↑
+  ctx.save();
+  ctx.translate(c.pad.l - 30 * dpr, c.pad.t + c.BH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText("Cereal Inc.'s capital  ↑", 0, 0);
+  ctx.restore();
+  ctx.font = `600 ${Math.round(9.5 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  kTicks.forEach(v => {
+    ctx.fillText(String(v), c.pad.l - 6 * dpr, c.yC(v));
+  });
+
+  // Right — Pancake Inc.'s capital ↓
+  ctx.save();
+  ctx.translate(c.pad.l + c.BW + 32 * dpr, c.pad.t + c.BH / 2);
+  ctx.rotate(Math.PI / 2);
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText("Pancake Inc.'s capital  ↓", 0, 0);
+  ctx.restore();
+  ctx.font = `600 ${Math.round(9.5 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  kTicks.forEach(v => {
+    ctx.fillText(String(v), c.pad.l + c.BW + 6 * dpr, c.yC(K_TOT - v));
+  });
+}
+
+function drawBoxOriginLabels(ctx, c, dpr){
+  ctx.font = `800 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  // Cereal Inc. origin — bottom-left, amber
+  ctx.fillStyle = '#8c4800';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('0꜀', c.pad.l + 4 * dpr, c.pad.t + c.BH - 4 * dpr);
+  // Pancake Inc. origin — top-right, accent
+  ctx.fillStyle = '#2f5d7c';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillText('0ₚ', c.pad.l + c.BW - 4 * dpr, c.pad.t + 4 * dpr);
+}
+
+function drawBoxCurveLabels(ctx, c, dpr){
+  const cx = c.xC(lC), cy = c.yC(kC);
+  ctx.font = `700 ${Math.round(9.5 * dpr * _fs)}px "Inter",sans-serif`;
+  // Cereal Inc. — upper-right of dot, accent
+  ctx.fillStyle = '#2f5d7c';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('Qᴄ',
+    Math.min(cx + 14 * dpr, c.pad.l + c.BW - 18 * dpr),
+    Math.max(cy - 12 * dpr, c.pad.t + 14 * dpr));
+  // Pancake Inc. — lower-left of dot, amber
+  ctx.fillStyle = '#8c4800';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillText('Qₚ',
+    Math.max(cx - 14 * dpr, c.pad.l + 18 * dpr),
+    Math.min(cy + 12 * dpr, c.pad.t + c.BH - 14 * dpr));
+}
+
+function drawOriginalDotBox(ctx, c, dpr){
+  const cx = c.xC(lC_orig), cy = c.yC(kC_orig);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 8 * dpr, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.72)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(31,41,55,0.65)';
+  ctx.lineWidth   = 2.5 * dpr;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawAllocationDot(ctx, c, dpr){
+  const cx = c.xC(lC), cy = c.yC(kC);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 11 * dpr, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(47,93,124,0.18)';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 8 * dpr, 0, Math.PI * 2);
+  ctx.fillStyle = '#2f5d7c';
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth   = 2 * dpr;
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// PPF CANVAS
+// ══════════════════════════════════════════════════════════════════════════
+function drawPPF(){
+  const s = setupCanvas($ppf);
+  if(!s) return;
+  const { ctx, dpr, W, H } = s;
+  const c = ppfCoords(W, H, dpr);
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Plot frame (axes)
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.lineWidth   = 1.5 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(c.pad.l, c.pad.t);
+  ctx.lineTo(c.pad.l, c.pad.t + c.PH);
+  ctx.lineTo(c.pad.l + c.PW, c.pad.t + c.PH);
+  ctx.stroke();
+
+  // PPF curve — walk the contract curve
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(c.pad.l, c.pad.t, c.PW, c.PH);
+  ctx.clip();
+
+  drawPPFCurve(ctx, c, dpr);
+
+  ctx.restore();
+
+  drawPPFAxisLabels(ctx, c, dpr);
+
+  // Original output point (faded open circle), shown during Q3
+  if(showOriginal){
+    drawOriginalDotPPF(ctx, c, dpr);
+  }
+
+  // Current output point
+  drawOutputDot(ctx, c, dpr);
+}
+
+function drawPPFCurve(ctx, c, dpr){
+  const A = aL / (1 - aL);
+  const B = bL / (1 - bL);
+  ctx.beginPath();
+  let started = false;
+  const N = 240;
+  for(let i = 0; i <= N; i++){
+    const l   = (i / N) * L_TOT;
+    const num = K_TOT * B * l;
+    const den = L_TOT * A + (B - A) * l;
+    if(Math.abs(den) < 1e-9){ started = false; continue; }
+    const k = num / den;
+    if(!isFinite(k) || k < 0 || k > K_TOT){ started = false; continue; }
+    const qc = qC(l, k);
+    const qp = qP(L_TOT - l, K_TOT - k);
+    if(!isFinite(qc) || !isFinite(qp)){ started = false; continue; }
+    const x = c.xC(qc), y = c.yC(qp);
+    if(!started){ ctx.moveTo(x, y); started = true; }
+    else         { ctx.lineTo(x, y); }
+  }
+  ctx.strokeStyle = '#596878';
+  ctx.lineWidth   = 2 * dpr;
+  ctx.setLineDash([6 * dpr, 4 * dpr]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawPPFAxisLabels(ctx, c, dpr){
+  const xStep = tickStep(_qCAxisMax);
+  const yStep = tickStep(_qPAxisMax);
+
+  // X axis — Quantity of cereal →
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText("Quantity of cereal  →",
+    c.pad.l + c.PW / 2, c.pad.t + c.PH + 24 * dpr);
+  ctx.font = `600 ${Math.round(9.5 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  for(let v = 0; v <= _qCAxisMax + 1e-9; v += xStep){
+    ctx.fillText(String(v), c.xC(v), c.pad.t + c.PH + 6 * dpr);
+  }
+
+  // Y axis — Quantity of pancakes ↑
+  ctx.save();
+  ctx.translate(c.pad.l - 30 * dpr, c.pad.t + c.PH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText("Quantity of pancakes  ↑", 0, 0);
+  ctx.restore();
+  ctx.font = `600 ${Math.round(9.5 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for(let v = 0; v <= _qPAxisMax + 1e-9; v += yStep){
+    ctx.fillText(String(v), c.pad.l - 6 * dpr, c.yC(v));
+  }
+}
+
+function drawOutputDot(ctx, c, dpr){
+  const qc = qC(lC, kC);
+  const qp = qP(L_TOT - lC, K_TOT - kC);
+  const cx = c.xC(qc), cy = c.yC(qp);
+  const onPPF = isEfficientAt(lC, kC);
+  const fill  = onPPF ? '#2f5d7c' : '#b42318';
+  const halo  = onPPF ? 'rgba(47,93,124,0.18)' : 'rgba(180,35,24,0.18)';
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 11 * dpr, 0, Math.PI * 2);
+  ctx.fillStyle = halo;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 8 * dpr, 0, Math.PI * 2);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth   = 2 * dpr;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawOriginalDotPPF(ctx, c, dpr){
+  const qc = qC(lC_orig, kC_orig);
+  const qp = qP(L_TOT - lC_orig, K_TOT - kC_orig);
+  const cx = c.xC(qc), cy = c.yC(qp);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 8 * dpr, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.72)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(31,41,55,0.65)';
+  ctx.lineWidth   = 2.5 * dpr;
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// STATUS / DESCRIPTIONS
+// ══════════════════════════════════════════════════════════════════════════
+function fmt(n){
+  if(!isFinite(n)) return '∞';
+  return n.toFixed(2);
+}
+
+function updatePrefStrip(){
+  $prefStrip.textContent =
+    `Capital intensity: a (Cereal Inc.) = ${aL.toFixed(2)}, ` +
+    `b (Pancake Inc.) = ${bL.toFixed(2)}`;
+}
+
+function updateStatus(){
+  const lp = L_TOT - lC, kp = K_TOT - kC;
+  const qc = qC(lC, kC);
+  const qp = qP(lp, kp);
+  const mC = mrtsC(lC, kC);
+  const mP = mrtsP(lp, kp);
+  const eff = isEfficientAt(lC, kC);
+
+  // Efficiency flag hidden until Q1 submitted
+  let flag = '';
+  if(q1Locked){
+    flag = eff
+      ? ' &nbsp;|&nbsp; <span class="status-eff">✓ Efficient — MRTS equal</span>'
+      : ' &nbsp;|&nbsp; <span class="status-ineff">✗ Inefficient — gains from reallocation exist</span>';
+  }
+
+  $status.innerHTML =
+    `Cereal Inc.: L=${fmt(lC)}, K=${fmt(kC)} → ` +
+    `Q<sub>C</sub>=${fmt(qc)} &nbsp;|&nbsp; ` +
+    `Pancake Inc.: L=${fmt(lp)}, K=${fmt(kp)} → ` +
+    `Q<sub>P</sub>=${fmt(qp)} &nbsp;|&nbsp; ` +
+    `MRTS<sub>C</sub>=${fmt(mC)} &nbsp;|&nbsp; ` +
+    `MRTS<sub>P</sub>=${fmt(mP)}${flag}`;
+}
+
+function updateBoxDesc(){
+  const lp = L_TOT - lC, kp = K_TOT - kC;
+  const qc = qC(lC, kC);
+  const qp = qP(lp, kp);
+  const mC = mrtsC(lC, kC);
+  const mP = mrtsP(lp, kp);
+  const eff = isEfficientAt(lC, kC);
+
+  let flagText;
+  if(!q1Locked){
+    flagText = 'Compare the two MRTS values to decide if this allocation is input-efficient.';
+  } else if(eff){
+    flagText = 'The allocation is input-efficient: the two MRTS values are equal, so the isoquants are tangent.';
+  } else {
+    flagText = 'The allocation is not input-efficient: the two MRTS values differ, so the firms could reallocate inputs and both produce more. The light-green region marks input combinations strictly preferred by both firms.';
+  }
+
+  let origText = '';
+  if(showOriginal){
+    origText = ` The original allocation (faded) is at L_C = ${fmt(lC_orig)}, K_C = ${fmt(kC_orig)}.`;
+  }
+
+  $boxDesc.textContent =
+    `Production Edgeworth box. Total inputs are ${L_TOT} labor and ${K_TOT} capital. ` +
+    `Cereal Inc. has ${fmt(lC)} labor and ${fmt(kC)} capital, producing Q_C = ${fmt(qc)}. ` +
+    `Pancake Inc. has ${fmt(lp)} labor and ${fmt(kp)} capital, producing Q_P = ${fmt(qp)}. ` +
+    `Cereal Inc.'s MRTS is ${fmt(mC)}. Pancake Inc.'s MRTS is ${fmt(mP)}. ` +
+    `${flagText} ` +
+    `Cereal Inc.'s labor weight a = ${aL.toFixed(2)}. ` +
+    `Pancake Inc.'s labor weight b = ${bL.toFixed(2)}.` +
+    origText +
+    ' The contract curve is shown as a dashed grey line connecting the two firms\' origins.';
+}
+
+function updatePPFDesc(){
+  const qc = qC(lC, kC);
+  const qp = qP(L_TOT - lC, K_TOT - kC);
+  const eff = isEfficientAt(lC, kC);
+  let frontierText;
+  if(eff){
+    frontierText = 'The current output point sits on the production possibilities frontier.';
+  } else {
+    frontierText = 'The current output point sits inside the production possibilities frontier — reallocating inputs to an efficient point would increase output for both firms.';
+  }
+  let origText = '';
+  if(showOriginal){
+    const qco = qC(lC_orig, kC_orig);
+    const qpo = qP(L_TOT - lC_orig, K_TOT - kC_orig);
+    origText = ` The original output point (faded) is at Q_C = ${fmt(qco)}, Q_P = ${fmt(qpo)}.`;
+  }
+  $ppfDesc.textContent =
+    `Production possibilities frontier. The horizontal axis is the quantity of cereal, ` +
+    `from 0 to ${_qCAxisMax}; the vertical axis is the quantity of pancakes, from 0 to ${_qPAxisMax}. ` +
+    `The dashed grey curve is the frontier — the maximum quantity of pancakes attainable ` +
+    `for each quantity of cereal under input efficiency. ` +
+    `The current allocation produces ${fmt(qc)} units of cereal and ${fmt(qp)} units of pancakes. ` +
+    frontierText +
+    origText;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// DRAGGING (box canvas only)
+// ══════════════════════════════════════════════════════════════════════════
+let _dragging = false;
+
+function pointerToCoords(ev){
+  const rect = $box.getBoundingClientRect();
+  const dpr  = window.devicePixelRatio || 1;
+  const x    = (ev.clientX - rect.left) * dpr;
+  const y    = (ev.clientY - rect.top)  * dpr;
+  const W    = $box.width, H = $box.height;
+  const c    = boxCoords(W, H, dpr);
+  let l = ((x - c.pad.l) / c.BW) * L_TOT;
+  let k = ((H - c.pad.b - y) / c.BH) * K_TOT;
+  l = Math.max(0.3, Math.min(L_TOT - 0.3, l));
+  k = Math.max(0.3, Math.min(K_TOT - 0.3, k));
+  return { l, k };
+}
+
+function onPointerDown(ev){
+  if(canvasLocked) return;
+  ev.preventDefault();
+  _dragging = true;
+  $box.classList.add('dragging');
+  if($box.setPointerCapture && ev.pointerId !== undefined){
+    try{ $box.setPointerCapture(ev.pointerId); }catch(e){}
+  }
+  const p = pointerToCoords(ev);
+  lC = p.l; kC = p.k;
+  redraw();
+}
+function onPointerMove(ev){
+  if(!_dragging) return;
+  ev.preventDefault();
+  const p = pointerToCoords(ev);
+  lC = p.l; kC = p.k;
+  redraw();
+}
+function onPointerUp(ev){
+  if(!_dragging) return;
+  _dragging = false;
+  $box.classList.remove('dragging');
+  if($box.releasePointerCapture && ev.pointerId !== undefined){
+    try{ $box.releasePointerCapture(ev.pointerId); }catch(e){}
+  }
+}
+
+$box.addEventListener('pointerdown',  onPointerDown);
+$box.addEventListener('pointermove',  onPointerMove);
+$box.addEventListener('pointerup',    onPointerUp);
+$box.addEventListener('pointercancel',onPointerUp);
+
+// ══════════════════════════════════════════════════════════════════════════
+// QUESTION 1
+// ══════════════════════════════════════════════════════════════════════════
+function updateQ1Selection(){
+  $q1OptYesLbl.classList.toggle('selected', $q1OptYes.checked);
+  $q1OptNoLbl .classList.toggle('selected', $q1OptNo.checked);
+}
+$q1OptYes.addEventListener('change', updateQ1Selection);
+$q1OptNo .addEventListener('change', updateQ1Selection);
+
+$submitQ1.addEventListener('click', () => {
+  if(q1Locked) return;
+  const sel = document.querySelector('input[name="q1"]:checked');
+  if(!sel){
+    $q1Feedback.textContent = 'Please select Yes or No before submitting.';
+    $q1Feedback.className   = 'feedback-msg wrong';
+    return;
+  }
+
+  const ans   = sel.value;
+  const truth = _initialEff;
+  q1Correct = (ans === 'yes' &&  truth) ||
+              (ans === 'no'  && !truth);
+  if(q1Correct) _firstScore += 1;
+  q1Locked = true;
+
+  [$q1OptYes, $q1OptNo].forEach(el => el.disabled = true);
+  [$q1OptYesLbl, $q1OptNoLbl].forEach(el => el.classList.add('locked'));
+  const chosenLbl = ans === 'yes' ? $q1OptYesLbl : $q1OptNoLbl;
+  chosenLbl.classList.remove('selected');
+  chosenLbl.classList.add(q1Correct ? 'correct' : 'wrong');
+  if(!q1Correct){
+    const truthLbl = truth ? $q1OptYesLbl : $q1OptNoLbl;
+    truthLbl.classList.add('correct');
+  }
+
+  const mC0 = mrtsC(lC0, kC0);
+  const mP0 = mrtsP(L_TOT - lC0, K_TOT - kC0);
+  const truthSentence = truth
+    ? 'the allocation IS input-efficient'
+    : 'the allocation is NOT input-efficient';
+  $q1Feedback.innerHTML =
+    `${q1Correct ? '✓ Correct' : '✗ Not quite'} — at the starting allocation ` +
+    `MRTS<sub>C</sub> = ${fmt(mC0)} and MRTS<sub>P</sub> = ${fmt(mP0)}, ` +
+    `so ${truthSentence}.`;
+  $q1Feedback.className = 'feedback-msg ' + (q1Correct ? 'correct' : 'wrong');
+  $submitQ1.disabled = true;
+
+  const qText   = 'Is the initial allocation input-efficient?';
+  const ansText = ans === 'yes' ? 'Yes — efficient' : 'No — inefficient';
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(LAB_ID, 0, qText,
+                           ansText, q1Correct,
+                           ansText, q1Correct);
+  }
+
+  unlockCanvas();
+  redraw();
+  if(truth){
+    totalQs = 2;
+    showQ3();
+  } else {
+    totalQs = 3;
+    showQ2();
+  }
+});
+
+function unlockCanvas(){
+  canvasLocked = false;
+  $boxWrap.classList.remove('locked');
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// QUESTION 2 — drag to optimal
+// ══════════════════════════════════════════════════════════════════════════
+function showQ2(){
+  phase = 'q2';
+  $q2Card.classList.remove('hidden');
+  $submitQ2.disabled = !isEfficientAt(lC, kC);
+  $q2Card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+$submitQ2.addEventListener('click', () => {
+  if(q2Locked || phase !== 'q2') return;
+  q2Correct = isEfficientAt(lC, kC);
+  if(q2Correct) _firstScore += 1;
+  q2Locked = true;
+
+  const lp = L_TOT - lC, kp = K_TOT - kC;
+  const gap = Math.abs(mrtsC(lC, kC) - mrtsP(lp, kp));
+  $q2Feedback.innerHTML = q2Correct
+    ? `✓ Correct — the allocation is input-efficient. ` +
+      `|MRTS<sub>C</sub> − MRTS<sub>P</sub>| = ${fmt(gap)} (within tolerance 0.15).`
+    : `✗ Not quite — |MRTS<sub>C</sub> − MRTS<sub>P</sub>| = ${fmt(gap)}, ` +
+      `which exceeds the tolerance of 0.15. The contract curve traces every ` +
+      `input-efficient allocation.`;
+  $q2Feedback.className = 'feedback-msg ' + (q2Correct ? 'correct' : 'wrong');
+  $submitQ2.disabled = true;
+
+  const q2Text = 'Drag the allocation to an input-efficient point.';
+  const q2Ans =
+    `Cereal: (L=${fmt(lC)}, K=${fmt(kC)}); ` +
+    `Pancake: (L=${fmt(lp)}, K=${fmt(kp)}); ` +
+    `MRTS_C = ${fmt(mrtsC(lC, kC))}, ` +
+    `MRTS_P = ${fmt(mrtsP(lp, kp))}`;
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(LAB_ID, 1, q2Text, q2Ans, q2Correct, q2Ans, q2Correct);
+  }
+
+  showQ3();
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// QUESTION 3 — moving along the contract curve
+// ══════════════════════════════════════════════════════════════════════════
+function buildQ3Options(){
+  $q3Options.innerHTML = '';
+  _q3Order.forEach((srcIdx, displayIdx) => {
+    const opt = Q3_OPTIONS[srcIdx];
+    const id  = 'q3opt_' + displayIdx;
+    const lbl = document.createElement('label');
+    lbl.className = 'radio-option';
+    lbl.innerHTML =
+      `<input type="radio" name="q3" value="${opt.value}" id="${id}">` +
+      `<span class="opt-text">${opt.text}</span>`;
+    $q3Options.appendChild(lbl);
+
+    const input = lbl.querySelector('input');
+    input.addEventListener('change', () => {
+      [...$q3Options.querySelectorAll('.radio-option')].forEach(el =>
+        el.classList.remove('selected'));
+      lbl.classList.add('selected');
+      $submitQ3.disabled = q3Locked;
+    });
+  });
+  $submitQ3.disabled = true;
+}
+
+function showQ3(){
+  phase = 'q3';
+  // Save the "original" allocation Q3 compares against
+  lC_orig = lC;
+  kC_orig = kC;
+  showOriginal = true;
+  $originalLegend.style.display = 'flex';
+
+  $q3Card.classList.remove('hidden');
+  buildQ3Options();
+  $q3Card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  redraw();
+}
+
+$submitQ3.addEventListener('click', () => {
+  if(q3Locked || phase !== 'q3') return;
+  const sel = $q3Options.querySelector('input[name="q3"]:checked');
+  if(!sel){
+    $q3Feedback.textContent = 'Please select an option before submitting.';
+    $q3Feedback.className   = 'feedback-msg wrong';
+    return;
+  }
+
+  // Require a noticeable move from the original
+  const moveDist = Math.hypot(lC - lC_orig, kC - kC_orig);
+  if(moveDist < MIN_MOVE){
+    $q3Feedback.innerHTML =
+      'Drag the blue dot to a <strong>different</strong> point on the contract ' +
+      'curve before submitting — you haven\'t moved it yet.';
+    $q3Feedback.className = 'feedback-msg hint';
+    return;
+  }
+
+  // Require the new point be on the contract curve
+  const lp = L_TOT - lC, kp = K_TOT - kC;
+  const gap = Math.abs(mrtsC(lC, kC) - mrtsP(lp, kp));
+  if(!isEfficientAt(lC, kC)){
+    $q3Feedback.innerHTML =
+      `The new allocation is <strong>not</strong> input-efficient ` +
+      `(|MRTS<sub>C</sub> − MRTS<sub>P</sub>| = ${fmt(gap)}, above the 0.15 ` +
+      `tolerance). Drag the dot onto the dashed grey contract curve, then submit.`;
+    $q3Feedback.className = 'feedback-msg hint';
+    return;
+  }
+
+  // Truth: compare outputs at original vs new
+  const qC_orig = qC(lC_orig, kC_orig);
+  const qP_orig = qP(L_TOT - lC_orig, K_TOT - kC_orig);
+  const qC_new  = qC(lC, kC);
+  const qP_new  = qP(lp, kp);
+  const EPS = 0.005;
+  const cMoreFlag = qC_new > qC_orig + EPS;
+  const cLessFlag = qC_new < qC_orig - EPS;
+  const pMoreFlag = qP_new > qP_orig + EPS;
+  const pLessFlag = qP_new < qP_orig - EPS;
+
+  let truthVal;
+  if      (cMoreFlag && pLessFlag) truthVal = 'cMore';
+  else if (pMoreFlag && cLessFlag) truthVal = 'pMore';
+  else if (cMoreFlag && pMoreFlag) truthVal = 'bothMore';
+  else if (cLessFlag && pLessFlag) truthVal = 'bothLess';
+  else if (cMoreFlag)              truthVal = 'cMore';
+  else if (pMoreFlag)              truthVal = 'pMore';
+  else                              truthVal = 'cMore';
+
+  const studentVal = sel.value;
+  q3Correct = (studentVal === truthVal);
+  if(q3Correct) _firstScore += 1;
+  q3Locked = true;
+
+  [...$q3Options.querySelectorAll('input[name="q3"]')].forEach(i => i.disabled = true);
+  [...$q3Options.querySelectorAll('.radio-option')].forEach(lbl => {
+    const i = lbl.querySelector('input');
+    lbl.classList.add('locked');
+    lbl.classList.remove('selected');
+    if(i.value === truthVal){
+      lbl.classList.add('correct');
+    } else if(i.checked){
+      lbl.classList.add('wrong');
+    }
+  });
+
+  const truthOpt = Q3_OPTIONS.find(o => o.value === truthVal);
+  const cChange  = cMoreFlag ? '↑ more' : cLessFlag ? '↓ less' : '≈ unchanged';
+  const pChange  = pMoreFlag ? '↑ more' : pLessFlag ? '↓ less' : '≈ unchanged';
+  $q3Feedback.innerHTML =
+    (q3Correct ? '✓ Correct — ' : '✗ Not quite — the correct answer is ') +
+    `"<em>${truthOpt.text}</em>". ` +
+    `Cereal Inc.'s output: ${qC_orig.toFixed(3)} → ${qC_new.toFixed(3)} (${cChange}). ` +
+    `Pancake Inc.'s output: ${qP_orig.toFixed(3)} → ${qP_new.toFixed(3)} (${pChange}).`;
+  $q3Feedback.className = 'feedback-msg ' + (q3Correct ? 'correct' : 'wrong');
+  $submitQ3.disabled = true;
+
+  const q3Index = (totalQs === 3) ? 2 : 1;
+  const q3Text  =
+    'Move along the contract curve to another input-efficient allocation. ' +
+    'Compared to the original, which firm produces more output?';
+  const studentText = Q3_OPTIONS.find(o => o.value === studentVal).text;
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(LAB_ID, q3Index, q3Text,
+                           studentText, q3Correct,
+                           studentText, q3Correct);
+  }
+  if(window.Session && Session.recordLabDone){
+    Session.recordLabDone(LAB_ID, LAB_LABEL,
+                          _firstScore, _firstScore, totalQs);
+  }
+
+  $labDoneMsg.textContent =
+    `Lab submitted. Final score: ${_firstScore} of ${totalQs}.`;
+  $labDoneMsg.classList.remove('hidden');
+  phase = 'done';
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// NEW PROBLEM
+// ══════════════════════════════════════════════════════════════════════════
+function clearLabSessionData(){
+  try{
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    if(d && d.labs && d.labs[LAB_ID]){
+      delete d.labs[LAB_ID];
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(d));
+    }
+  }catch(e){}
+}
+
+function resetUI(){
+  // Q1
+  $q1OptYes.checked = false;
+  $q1OptNo.checked  = false;
+  $q1OptYes.disabled = false;
+  $q1OptNo.disabled  = false;
+  [$q1OptYesLbl, $q1OptNoLbl].forEach(el => {
+    el.classList.remove('selected','correct','wrong','locked');
+  });
+  $submitQ1.disabled = false;
+  $q1Feedback.className = 'feedback-msg hidden';
+  $q1Feedback.innerHTML = '';
+
+  // Q2
+  $q2Card.classList.add('hidden');
+  $submitQ2.disabled = true;
+  $q2Feedback.className = 'feedback-msg hidden';
+  $q2Feedback.innerHTML = '';
+
+  // Q3
+  $q3Card.classList.add('hidden');
+  $q3Options.innerHTML = '';
+  $submitQ3.disabled = true;
+  $q3Feedback.className = 'feedback-msg hidden';
+  $q3Feedback.innerHTML = '';
+  $labDoneMsg.classList.add('hidden');
+  $labDoneMsg.textContent = '';
+
+  // Canvas state
+  canvasLocked = true;
+  $boxWrap.classList.add('locked');
+  showOriginal = false;
+  $originalLegend.style.display = 'none';
+  lC_orig = 0; kC_orig = 0;
+
+  // Question state
+  phase       = 'q1';
+  totalQs     = 3;
+  q1Locked    = false; q1Correct = false;
+  q2Locked    = false; q2Correct = false;
+  q3Locked    = false; q3Correct = false;
+  _firstScore = 0;
+}
+
+$newProblem.addEventListener('click', () => {
+  clearLabSessionData();
+  resetUI();
+  generateParams();
+  redraw();
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// RESIZE
+// ══════════════════════════════════════════════════════════════════════════
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════════════
+if(window.DiscussionModal){
+  DiscussionModal.init({
+    weekLabel: WEEK_LABEL,
+    onReady: function(){
+      generateParams();
+      redraw();
+    }
+  });
+} else {
+  generateParams();
+  redraw();
+}
+
+})();
+</script>
+</body>
+</html>

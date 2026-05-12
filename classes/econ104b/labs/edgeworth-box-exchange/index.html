@@ -1,0 +1,1350 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Edgeworth Box Explorer — Exchange Efficiency — ECON 104B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937; --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2; --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38; --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ───────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* ── Header ──────────────────────────────────────────────── */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),
+      rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;
+      font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;
+      line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0 0 14px;color:var(--ink-2);line-height:1.55;
+      max-width:80ch;font-size:0.9375rem;}
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+    .hidden{display:none!important;}
+
+    /* ── Instructions dropdown ───────────────────────────────── */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* ── Cards ───────────────────────────────────────────────── */
+    .card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px;box-shadow:var(--shadow);
+      margin-bottom:16px;}
+    .card-title{font-family:var(--font-serif);font-size:1.125rem;
+      font-weight:700;color:var(--ink);margin:0 0 10px;
+      display:flex;align-items:center;gap:10px;}
+    .qbadge{font-size:0.625rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.08em;background:var(--accent);color:#fff;
+      padding:3px 8px;border-radius:999px;font-family:var(--font-sans);}
+
+    /* ── Canvas card ─────────────────────────────────────────── */
+    .canvas-card{display:flex;flex-direction:column;align-items:center;}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;
+      align-self:flex-start;}
+    .canvas-wrap{position:relative;width:100%;max-width:560px;
+      aspect-ratio:1/1;border-radius:12px;overflow:hidden;
+      background:rgba(246,242,234,.45);border:1px solid var(--line);
+      touch-action:none;}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;
+      cursor:grab;}
+    .canvas-wrap.locked canvas{cursor:not-allowed;}
+    .canvas-wrap canvas.dragging{cursor:grabbing;}
+
+    .pref-strip{margin-top:8px;width:100%;max-width:560px;
+      font-size:0.75rem;color:var(--muted);text-align:center;
+      font-variant-numeric:tabular-nums;}
+
+    .canvas-legend{display:flex;gap:14px;flex-wrap:wrap;
+      margin-top:10px;width:100%;max-width:560px;
+      justify-content:center;}
+    .legend-row{display:flex;align-items:center;gap:6px;
+      font-size:0.75rem;color:var(--ink-2);}
+    .legend-swatch{width:20px;height:3px;border-radius:2px;flex-shrink:0;}
+    .legend-swatch.dashed{background:none;
+      border-top:2px dashed var(--muted);height:0;}
+    .legend-swatch.dotted{background:none;
+      border-top:2px dotted rgba(31,41,55,0.6);height:0;}
+    .legend-swatch.lens{height:10px;background:rgba(21,92,56,.18);
+      border:1px solid rgba(21,92,56,.35);border-radius:3px;}
+    .legend-orig-dot{width:11px;height:11px;border-radius:50%;
+      background:rgba(255,255,255,0.7);
+      border:2px solid rgba(31,41,55,0.6);flex-shrink:0;}
+
+    /* ── Status strip ─────────────────────────────────────────── */
+    .status-strip{margin-top:12px;padding:10px 14px;border-radius:10px;
+      background:rgba(246,242,234,.55);border:1px solid var(--line);
+      font-size:0.8125rem;color:var(--ink-2);line-height:1.5;
+      width:100%;max-width:560px;text-align:center;}
+    .status-eff{color:var(--good);font-weight:700;}
+    .status-ineff{color:var(--bad);font-weight:700;}
+
+    /* ── Buttons ──────────────────────────────────────────────── */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+    .option-btn.active{border-color:var(--accent);
+      background:rgba(47,93,124,.12);color:var(--accent);}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover:not(:disabled){background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* ── Question / radio styling ─────────────────────────────── */
+    .question-text{font-size:0.9375rem;color:var(--ink);
+      line-height:1.5;margin:0 0 12px;}
+    .radio-group{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+    .radio-stack{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+    .radio-option{display:flex;align-items:flex-start;gap:10px;
+      padding:10px 14px;border:1.5px solid #8c7f72;border-radius:10px;
+      background:var(--panel);cursor:pointer;font-size:0.875rem;
+      font-weight:600;color:var(--ink-2);transition:all .12s;line-height:1.45;}
+    .radio-option:hover:not(.locked){border-color:var(--accent);
+      background:rgba(47,93,124,.05);}
+    .radio-option input{margin:2px 0 0 0;accent-color:var(--accent);
+      flex-shrink:0;}
+    .radio-option .opt-text{flex:1;}
+    .radio-option.selected{border-color:var(--accent);
+      background:rgba(47,93,124,.10);color:var(--accent);}
+    .radio-option.locked{cursor:not-allowed;}
+    .radio-option.correct{border-color:var(--good);
+      background:rgba(21,92,56,.10);color:var(--good);}
+    .radio-option.wrong{border-color:var(--bad);
+      background:rgba(180,35,24,.08);color:var(--bad);}
+
+    .feedback-msg{margin-top:10px;padding:10px 14px;border-radius:10px;
+      font-size:0.8125rem;font-weight:600;line-height:1.5;}
+    .feedback-msg.correct{background:rgba(21,92,56,.10);
+      border:1px solid rgba(21,92,56,.25);color:var(--good);}
+    .feedback-msg.wrong{background:rgba(180,35,24,.08);
+      border:1px solid rgba(180,35,24,.25);color:var(--bad);}
+    .feedback-msg.hint{background:rgba(140,72,0,.08);
+      border:1px solid rgba(140,72,0,.30);color:#8c4800;}
+
+    .submit-row{display:flex;justify-content:flex-end;margin-top:10px;}
+    .lab-done{margin-top:12px;padding:12px 14px;border-radius:10px;
+      background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.25);
+      color:var(--good);font-weight:700;font-size:0.875rem;}
+
+    /* ── Bottom actions ───────────────────────────────────────── */
+    .bottom-actions{display:flex;justify-content:center;gap:10px;
+      margin-top:6px;padding-top:6px;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ104b/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104B — General Equilibrium</div>
+      <h1>Edgeworth Box Explorer — Exchange Efficiency</h1>
+      <p class="sub">
+        Jerry and Elaine split a fixed bundle of 10 bowls of cereal and 8 pancakes.
+        Drag the allocation point inside the Edgeworth box to see how the two
+        consumers' indifference curves shift, where gains from trade still exist,
+        and when an allocation is Pareto-efficient.
+      </p>
+
+      <details id="instructionsBox" class="instructions-box">
+        <summary class="instructions-toggle">How to use this lab</summary>
+        <div class="instructions-body">
+          <p>The Edgeworth box visualises every possible way to divide the total
+             endowment of 10 cereal and 8 pancakes between Jerry and Elaine.
+             Jerry's origin is the <strong>top-right</strong> corner; Elaine's
+             origin is the <strong>bottom-left</strong> corner.</p>
+          <ol>
+            <li>The <strong style="color:#2f5d7c;">blue curves</strong> are
+                Jerry's indifference curves; the
+                <strong style="color:#b42318;">red curves</strong> are Elaine's.
+                Each curve traces allocations the consumer ranks equally.</li>
+            <li>The blue dot is the current allocation. Read the consumers'
+                holdings on each axis, or look at the status strip below the box.</li>
+            <li>When the allocation is inefficient, a light-green
+                <strong>lens region</strong> appears — those are allocations
+                strictly preferred by <em>both</em> consumers, i.e. mutually
+                beneficial trades from the current point.</li>
+            <li>An allocation is <strong>Pareto-efficient</strong> when Jerry's
+                marginal rate of substitution (MRS) equals Elaine's MRS, so no
+                trade can make either consumer better off without hurting the other.</li>
+            <li>Answer the questions in order. Each new problem randomises both
+                consumers' preferences (the Cobb-Douglas weights α and β shown
+                under the box) and the starting allocation. The contract curve
+                is hidden until you finish question 2.</li>
+            <li>Press <strong>New Problem</strong> at the bottom of the page to
+                generate a fresh randomized setup at any time.</li>
+          </ol>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- ── Q1 card ───────────────────────────────────────────── -->
+  <section class="card" id="q1Card" aria-labelledby="q1Heading">
+    <h2 class="card-title" id="q1Heading">
+      <span class="qbadge">Q1</span>
+      Initial allocation
+    </h2>
+    <p class="question-text">
+      Look at the starting allocation shown in the box. Is this allocation
+      <strong>Pareto-efficient</strong>?
+    </p>
+    <div class="radio-group" role="radiogroup" aria-labelledby="q1Heading">
+      <label class="radio-option" id="q1OptYesLbl">
+        <input type="radio" name="q1" value="yes" id="q1OptYes">
+        <span class="opt-text">Yes — efficient</span>
+      </label>
+      <label class="radio-option" id="q1OptNoLbl">
+        <input type="radio" name="q1" value="no" id="q1OptNo">
+        <span class="opt-text">No — inefficient</span>
+      </label>
+    </div>
+    <div class="submit-row">
+      <button class="primary-btn" id="submitQ1Btn">Submit Q1</button>
+    </div>
+    <div id="q1Feedback" class="feedback-msg hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+  </section>
+
+  <!-- ── Canvas card ───────────────────────────────────────── -->
+  <section class="card canvas-card" aria-labelledby="canvasTitle">
+    <div class="graph-title" id="canvasTitle">Edgeworth Box</div>
+    <div class="canvas-wrap locked" id="canvasWrap">
+      <canvas id="ebCanvas"
+              role="img"
+              aria-labelledby="canvasTitle"
+              aria-describedby="ebDesc"></canvas>
+    </div>
+    <div class="pref-strip" id="prefStrip" aria-live="polite" aria-atomic="true">
+      Preferences: α = —, β = —
+    </div>
+    <div class="canvas-legend" aria-hidden="true">
+      <div class="legend-row">
+        <div class="legend-swatch" style="background:#2f5d7c;"></div>
+        <span>Jerry's indifference curves</span>
+      </div>
+      <div class="legend-row">
+        <div class="legend-swatch" style="background:#b42318;"></div>
+        <span>Elaine's indifference curves</span>
+      </div>
+      <div class="legend-row">
+        <div class="legend-swatch lens"></div>
+        <span>Gains-from-trade lens</span>
+      </div>
+      <div class="legend-row" id="contractLegendRow" style="display:none;">
+        <div class="legend-swatch dashed"></div>
+        <span>Contract curve</span>
+      </div>
+      <div class="legend-row" id="originalLegendRow" style="display:none;">
+        <div class="legend-orig-dot"></div>
+        <span>Original allocation (faded)</span>
+      </div>
+    </div>
+    <div class="status-strip" id="statusStrip"
+         role="status" aria-live="polite" aria-atomic="true">
+      Answer Q1 to unlock dragging.
+    </div>
+    <section class="sr-only" aria-live="polite" aria-atomic="true">
+      <p id="ebDesc">Edgeworth box for two consumers.</p>
+    </section>
+  </section>
+
+  <!-- ── Q2 card (hidden until needed) ─────────────────────── -->
+  <section class="card hidden" id="q2Card" aria-labelledby="q2Heading">
+    <h2 class="card-title" id="q2Heading">
+      <span class="qbadge">Q2</span>
+      Find an efficient allocation
+    </h2>
+    <p class="question-text">
+      Drag the allocation point to a Pareto-efficient location — a place where
+      Jerry's MRS equals Elaine's MRS — then submit your answer.
+    </p>
+    <div class="submit-row">
+      <button class="primary-btn" id="submitQ2Btn" disabled>Submit Q2</button>
+    </div>
+    <div id="q2Feedback" class="feedback-msg hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+  </section>
+
+  <!-- ── Q3 card (hidden until needed) ─────────────────────── -->
+  <section class="card hidden" id="q3Card" aria-labelledby="q3Heading">
+    <h2 class="card-title" id="q3Heading">
+      <span class="qbadge">Q3</span>
+      Moving along the contract curve
+    </h2>
+    <p class="question-text">
+      Use the <strong>contract curve</strong> (the dashed grey line now visible
+      in the box) to select <strong>another Pareto-efficient allocation</strong>.
+      Drag the blue dot to a different point on the contract curve. The
+      <strong>original allocation</strong> and its indifference curves remain
+      visible (shown faded with dotted lines) for comparison.
+    </p>
+    <p class="question-text">
+      Compared to the original allocation, who is better off and who is worse
+      off at the new allocation?
+    </p>
+    <div class="radio-stack" id="q3Options"
+         role="radiogroup" aria-labelledby="q3Heading">
+      <!-- option buttons injected by JS, shuffled per problem -->
+    </div>
+    <div class="submit-row">
+      <button class="primary-btn" id="submitQ3Btn" disabled>Submit Final Answer</button>
+    </div>
+    <div id="q3Feedback" class="feedback-msg hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+    <div id="labDoneMsg" class="lab-done hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+  </section>
+
+  <!-- ── New problem ───────────────────────────────────────── -->
+  <div class="bottom-actions">
+    <button class="option-btn" id="newProblemBtn">↻ New Problem</button>
+  </div>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 104B — General Equilibrium</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+// LAB_ID:    'edgeworth-box-exchange'
+// LAB_LABEL: 'Edgeworth Box — Exchange Efficiency'
+// url:       '/classes/econ104b/labs/edgeworth-box-exchange/?disc=1'
+
+const LAB_ID      = 'edgeworth-box-exchange';
+const LAB_LABEL   = 'Edgeworth Box — Exchange Efficiency';
+const WEEK_LABEL  = 'Week 9 — General Equilibrium';
+const SESSION_KEY = 'econ002_session';
+
+// ── Constants ─────────────────────────────────────────────────────────────
+const C_TOT     = 10;
+const P_TOT     = 8;
+const EFF_TOL   = 0.15;
+const Q3_MIN_MOVE = 0.5;                         // min distance from original
+const PAD       = { l: 50, r: 50, t: 44, b: 50 };// CSS px
+
+// ── Q3 options ────────────────────────────────────────────────────────────
+const Q3_OPTIONS = [
+  { value: 'jBetter',
+    text: 'Jerry is better off; Elaine is worse off.' },
+  { value: 'eBetter',
+    text: 'Elaine is better off; Jerry is worse off.' },
+  { value: 'bothBetter',
+    text: 'Both Jerry and Elaine are better off than before.' },
+  { value: 'bothWorse',
+    text: 'Both Jerry and Elaine are worse off than before.' },
+];
+
+// ── State ─────────────────────────────────────────────────────────────────
+let _rng         = null;
+let _seededInit  = true;
+let _fs          = 1;
+let cE           = 5;          // Elaine's cereal (current)
+let pE           = 4;          // Elaine's pancakes (current)
+let cE0          = 5;          // seeded starting allocation
+let pE0          = 4;
+let cE_orig      = 0;          // "original" for Q3 (saved at start of Q3)
+let pE_orig      = 0;
+let alpha        = 0.5;
+let beta         = 0.5;
+let _initialEff  = false;
+
+let showContract = false;
+let showOriginal = false;      // ghost original during Q3
+let canvasLocked = true;
+let phase        = 'q1';
+let totalQs      = 3;
+
+let q1Locked     = false;
+let q1Correct    = false;
+let q2Locked     = false;
+let q2Correct    = false;
+let q3Locked     = false;
+let q3Correct    = false;
+let _firstScore  = 0;
+
+let _q3Order     = [0,1,2,3];
+
+// ── DOM ───────────────────────────────────────────────────────────────────
+const $canvas        = document.getElementById('ebCanvas');
+const $canvasWrap    = document.getElementById('canvasWrap');
+const $status        = document.getElementById('statusStrip');
+const $prefStrip     = document.getElementById('prefStrip');
+const $desc          = document.getElementById('ebDesc');
+const $contractLegend= document.getElementById('contractLegendRow');
+const $originalLegend= document.getElementById('originalLegendRow');
+
+const $q1OptYes      = document.getElementById('q1OptYes');
+const $q1OptNo       = document.getElementById('q1OptNo');
+const $q1OptYesLbl   = document.getElementById('q1OptYesLbl');
+const $q1OptNoLbl    = document.getElementById('q1OptNoLbl');
+const $submitQ1      = document.getElementById('submitQ1Btn');
+const $q1Feedback    = document.getElementById('q1Feedback');
+
+const $q2Card        = document.getElementById('q2Card');
+const $submitQ2      = document.getElementById('submitQ2Btn');
+const $q2Feedback    = document.getElementById('q2Feedback');
+
+const $q3Card        = document.getElementById('q3Card');
+const $q3Options     = document.getElementById('q3Options');
+const $submitQ3      = document.getElementById('submitQ3Btn');
+const $q3Feedback    = document.getElementById('q3Feedback');
+const $labDoneMsg    = document.getElementById('labDoneMsg');
+
+const $newProblem    = document.getElementById('newProblemBtn');
+
+// ── RNG ───────────────────────────────────────────────────────────────────
+function rng(){ return _rng ? _rng() : Math.random(); }
+
+// ══════════════════════════════════════════════════════════════════════════
+// PARAMS
+// ══════════════════════════════════════════════════════════════════════════
+function generateParams(){
+  if(_seededInit && window.Session && Session.rngForLab){
+    _rng = Session.rngForLab(LAB_ID);
+  } else {
+    _rng = Math.random;
+  }
+  _seededInit = false;
+
+  // Random Cobb-Douglas weights snapped to step 0.05 in [0.30, 0.70]
+  const aSteps = Math.floor(rng() * 9);
+  const bSteps = Math.floor(rng() * 9);
+  alpha = 0.30 + aSteps * 0.05;
+  beta  = 0.30 + bSteps * 0.05;
+
+  const wantEfficient = rng() < 0.4;
+
+  if(wantEfficient){
+    const ce  = 3 + rng() * 4;
+    const A   = alpha / (1 - alpha);
+    const B   = beta  / (1 - beta);
+    const pe  = (P_TOT * A * ce) / (C_TOT * B + (A - B) * ce);
+    if(pe >= 0.8 && pe <= P_TOT - 0.8){
+      cE0 = ce; pE0 = pe;
+    } else {
+      cE0 = ce;
+      pE0 = 1.5 + rng() * (P_TOT - 3);
+    }
+  } else {
+    const cJ = 2 + rng() * 5;
+    const pJ = 1 + rng() * 5;
+    cE0 = C_TOT - cJ;
+    pE0 = P_TOT - pJ;
+    if(isEfficientAt(cE0, pE0)){
+      pE0 = Math.max(1, Math.min(P_TOT - 1,
+        pE0 + (rng() < 0.5 ? -1 : 1) * 1.2));
+    }
+  }
+
+  cE = cE0;
+  pE = pE0;
+  _initialEff = isEfficientAt(cE0, pE0);
+
+  _q3Order = shuffle([0,1,2,3]);
+}
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// MATH
+// ══════════════════════════════════════════════════════════════════════════
+function utilityJ(cJ, pJ){
+  if(cJ <= 0 || pJ <= 0) return 0;
+  return Math.pow(cJ, alpha) * Math.pow(pJ, 1 - alpha);
+}
+function utilityE(c, p){
+  if(c <= 0 || p <= 0) return 0;
+  return Math.pow(c, beta) * Math.pow(p, 1 - beta);
+}
+function mrsJ(cJ, pJ){
+  if(cJ <= 0) return Infinity;
+  return (alpha / (1 - alpha)) * (pJ / cJ);
+}
+function mrsE(c, p){
+  if(c <= 0) return Infinity;
+  return (beta / (1 - beta)) * (p / c);
+}
+function isEfficientAt(ce, pe){
+  const cJ = C_TOT - ce, pJ = P_TOT - pe;
+  const mJ = mrsJ(cJ, pJ), mE = mrsE(ce, pe);
+  if(!isFinite(mJ) || !isFinite(mE)) return false;
+  return Math.abs(mJ - mE) < EFF_TOL;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CANVAS
+// ══════════════════════════════════════════════════════════════════════════
+function setupCanvas(){
+  const dpr  = window.devicePixelRatio || 1;
+  const rect = $canvas.getBoundingClientRect();
+  const W    = Math.round(rect.width  * dpr);
+  const H    = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if($canvas.width !== W || $canvas.height !== H){
+    $canvas.width = W; $canvas.height = H;
+  }
+  return { ctx: $canvas.getContext('2d'), dpr, W, H };
+}
+
+function boxCoords(W, H, dpr){
+  const pad = { l: PAD.l*dpr, r: PAD.r*dpr, t: PAD.t*dpr, b: PAD.b*dpr };
+  const BW  = W - pad.l - pad.r;
+  const BH  = H - pad.t - pad.b;
+  return {
+    pad, BW, BH,
+    xC: v => pad.l + (v / C_TOT) * BW,
+    yC: v => H - pad.b - (v / P_TOT) * BH,
+  };
+}
+
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  drawCanvas();
+  updateStatus();
+  updateDesc();
+  updatePrefStrip();
+}
+
+function drawCanvas(){
+  const s = setupCanvas();
+  if(!s) return;
+  const { ctx, dpr, W, H } = s;
+  const c = boxCoords(W, H, dpr);
+
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.lineWidth   = 1.5 * dpr;
+  ctx.strokeRect(c.pad.l, c.pad.t, c.BW, c.BH);
+
+  if(!isEfficientAt(cE, pE)){
+    drawLens(ctx, c, dpr, W, H);
+  }
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(c.pad.l, c.pad.t, c.BW, c.BH);
+  ctx.clip();
+
+  if(showContract){
+    drawContractCurve(ctx, c, dpr);
+  }
+
+  // Original allocation's indifference curves (Q3 only) — dotted, faded
+  if(showOriginal){
+    ctx.setLineDash([3 * dpr, 3 * dpr]);
+    const uJ_o = utilityJ(C_TOT - cE_orig, P_TOT - pE_orig);
+    const uE_o = utilityE(cE_orig, pE_orig);
+    drawJerryIC(ctx, c, dpr, uJ_o, 'rgba(47,93,124,0.55)', 1.7 * dpr);
+    drawElaineIC(ctx, c, dpr, uE_o, 'rgba(180,35,24,0.55)', 1.7 * dpr);
+    ctx.setLineDash([]);
+  }
+
+  // Current allocation's indifference curves
+  const uJ0 = utilityJ(C_TOT - cE, P_TOT - pE);
+  const uE0 = utilityE(cE, pE);
+  if(!showOriginal){
+    // ±20% bands shown during Q1/Q2; dropped during Q3 to reduce clutter
+    drawJerryIC(ctx, c, dpr, uJ0 * 0.8, 'rgba(47,93,124,0.32)', 1.5 * dpr);
+    drawJerryIC(ctx, c, dpr, uJ0 * 1.2, 'rgba(47,93,124,0.32)', 1.5 * dpr);
+    drawElaineIC(ctx, c, dpr, uE0 * 0.8, 'rgba(180,35,24,0.32)', 1.5 * dpr);
+    drawElaineIC(ctx, c, dpr, uE0 * 1.2, 'rgba(180,35,24,0.32)', 1.5 * dpr);
+  }
+  drawJerryIC(ctx, c, dpr, uJ0, '#2f5d7c', 2.5 * dpr);
+  drawElaineIC(ctx, c, dpr, uE0, '#b42318', 2.5 * dpr);
+
+  ctx.restore();
+
+  drawAxisLabels(ctx, c, dpr);
+  drawOriginLabels(ctx, c, dpr);
+
+  if(showOriginal){
+    drawOriginalDot(ctx, c, dpr);
+  }
+  drawAllocationDot(ctx, c, dpr);
+  drawCurveLabels(ctx, c, dpr);
+}
+
+function drawJerryIC(ctx, c, dpr, U, color, lw){
+  if(U <= 0) return;
+  ctx.beginPath();
+  let started = false;
+  const N = 240;
+  for(let i = 0; i <= N; i++){
+    const ce = (i / N) * C_TOT;
+    const cJ = C_TOT - ce;
+    if(cJ <= 1e-6){ started = false; continue; }
+    const pJ = Math.pow(U / Math.pow(cJ, alpha), 1 / (1 - alpha));
+    const pe = P_TOT - pJ;
+    if(!isFinite(pe) || pe < -0.5 || pe > P_TOT + 0.5){ started = false; continue; }
+    const x = c.xC(ce), y = c.yC(pe);
+    if(!started){ ctx.moveTo(x, y); started = true; }
+    else         { ctx.lineTo(x, y); }
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = lw;
+  ctx.stroke();
+}
+
+function drawElaineIC(ctx, c, dpr, U, color, lw){
+  if(U <= 0) return;
+  ctx.beginPath();
+  let started = false;
+  const N = 240;
+  for(let i = 0; i <= N; i++){
+    const ce = (i / N) * C_TOT;
+    if(ce <= 1e-6){ started = false; continue; }
+    const pe = Math.pow(U / Math.pow(ce, beta), 1 / (1 - beta));
+    if(!isFinite(pe) || pe < -0.5 || pe > P_TOT + 0.5){ started = false; continue; }
+    const x = c.xC(ce), y = c.yC(pe);
+    if(!started){ ctx.moveTo(x, y); started = true; }
+    else         { ctx.lineTo(x, y); }
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = lw;
+  ctx.stroke();
+}
+
+function drawContractCurve(ctx, c, dpr){
+  const A = alpha / (1 - alpha);
+  const B = beta  / (1 - beta);
+  ctx.beginPath();
+  let started = false;
+  const N = 240;
+  for(let i = 0; i <= N; i++){
+    const ce  = (i / N) * C_TOT;
+    const num = P_TOT * A * ce;
+    const den = C_TOT * B + (A - B) * ce;
+    if(Math.abs(den) < 1e-9){ started = false; continue; }
+    const pe = num / den;
+    if(!isFinite(pe) || pe < 0 || pe > P_TOT){ started = false; continue; }
+    const x = c.xC(ce), y = c.yC(pe);
+    if(!started){ ctx.moveTo(x, y); started = true; }
+    else         { ctx.lineTo(x, y); }
+  }
+  ctx.strokeStyle = '#596878';
+  ctx.lineWidth   = 2 * dpr;
+  ctx.setLineDash([6 * dpr, 4 * dpr]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawLens(ctx, c, dpr, W, H){
+  const uJ0 = utilityJ(C_TOT - cE, P_TOT - pE);
+  const uE0 = utilityE(cE, pE);
+  if(uJ0 <= 0 || uE0 <= 0) return;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(21,92,56,0.12)';
+  const STEP = Math.max(4, Math.round(5 * dpr));
+  const x0 = c.pad.l, x1 = c.pad.l + c.BW;
+  const y0 = c.pad.t, y1 = c.pad.t + c.BH;
+  for(let py = y0; py < y1; py += STEP){
+    for(let px = x0; px < x1; px += STEP){
+      const ce = ((px - c.pad.l) / c.BW) * C_TOT;
+      const pe = ((H - c.pad.b - py) / c.BH) * P_TOT;
+      const cJ = C_TOT - ce, pJ = P_TOT - pe;
+      if(cJ <= 0 || pJ <= 0 || ce <= 0 || pe <= 0) continue;
+      if(utilityJ(cJ, pJ) > uJ0 && utilityE(ce, pe) > uE0){
+        ctx.fillRect(px, py, STEP, STEP);
+      }
+    }
+  }
+  ctx.restore();
+}
+
+function drawAxisLabels(ctx, c, dpr){
+  const ceTicks = [0, 2, 4, 6, 8, 10];
+  const peTicks = [0, 2, 4, 6, 8];
+
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText("Elaine's cereal  →",
+    c.pad.l + c.BW / 2, c.pad.t + c.BH + 24 * dpr);
+  ctx.font = `600 ${Math.round(9.5 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ceTicks.forEach(v => {
+    ctx.fillText(String(v), c.xC(v), c.pad.t + c.BH + 6 * dpr);
+  });
+
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText("←  Jerry's cereal",
+    c.pad.l + c.BW / 2, c.pad.t - 22 * dpr);
+  ctx.font = `600 ${Math.round(9.5 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ceTicks.forEach(v => {
+    ctx.fillText(String(v), c.xC(C_TOT - v), c.pad.t - 6 * dpr);
+  });
+
+  ctx.save();
+  ctx.translate(c.pad.l - 30 * dpr, c.pad.t + c.BH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText("Elaine's pancakes  →", 0, 0);
+  ctx.restore();
+  ctx.font = `600 ${Math.round(9.5 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  peTicks.forEach(v => {
+    ctx.fillText(String(v), c.pad.l - 6 * dpr, c.yC(v));
+  });
+
+  ctx.save();
+  ctx.translate(c.pad.l + c.BW + 32 * dpr, c.pad.t + c.BH / 2);
+  ctx.rotate(Math.PI / 2);
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText("Jerry's pancakes  →", 0, 0);
+  ctx.restore();
+  ctx.font = `600 ${Math.round(9.5 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  peTicks.forEach(v => {
+    ctx.fillText(String(v), c.pad.l + c.BW + 6 * dpr, c.yC(P_TOT - v));
+  });
+}
+
+function drawOriginLabels(ctx, c, dpr){
+  ctx.font = `800 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = '#b42318';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('0ₑ', c.pad.l + 4 * dpr, c.pad.t + c.BH - 4 * dpr);
+  ctx.fillStyle = '#2f5d7c';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillText('0ⱼ', c.pad.l + c.BW - 4 * dpr, c.pad.t + 4 * dpr);
+}
+
+function drawCurveLabels(ctx, c, dpr){
+  const cx = c.xC(cE), cy = c.yC(pE);
+  ctx.font = `700 ${Math.round(9.5 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = '#2f5d7c';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('Uⱼ',
+    Math.min(cx + 14 * dpr, c.pad.l + c.BW - 18 * dpr),
+    Math.max(cy - 12 * dpr, c.pad.t + 14 * dpr));
+  ctx.fillStyle = '#b42318';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  ctx.fillText('Uₑ',
+    Math.max(cx - 14 * dpr, c.pad.l + 18 * dpr),
+    Math.min(cy + 12 * dpr, c.pad.t + c.BH - 14 * dpr));
+}
+
+function drawOriginalDot(ctx, c, dpr){
+  const cx = c.xC(cE_orig), cy = c.yC(pE_orig);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 8 * dpr, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.72)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(31,41,55,0.65)';
+  ctx.lineWidth   = 2.5 * dpr;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawAllocationDot(ctx, c, dpr){
+  const cx = c.xC(cE), cy = c.yC(pE);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 11 * dpr, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(47,93,124,0.18)';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx, cy, 8 * dpr, 0, Math.PI * 2);
+  ctx.fillStyle = '#2f5d7c';
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth   = 2 * dpr;
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// STATUS / DESCRIPTION
+// ══════════════════════════════════════════════════════════════════════════
+function fmt(n){
+  if(!isFinite(n)) return '∞';
+  return n.toFixed(2);
+}
+
+function updatePrefStrip(){
+  $prefStrip.textContent =
+    `Preferences: α (Jerry's cereal weight) = ${alpha.toFixed(2)}, ` +
+    `β (Elaine's cereal weight) = ${beta.toFixed(2)}`;
+}
+
+function updateStatus(){
+  const cJ = C_TOT - cE, pJ = P_TOT - pE;
+  const mJ = mrsJ(cJ, pJ), mE = mrsE(cE, pE);
+  const eff = isEfficientAt(cE, pE);
+
+  // The efficient/inefficient flag is hidden until Q1 is submitted.
+  let flag = '';
+  if(q1Locked){
+    flag = eff
+      ? ' &nbsp;|&nbsp; <span class="status-eff">✓ Efficient — MRS equal</span>'
+      : ' &nbsp;|&nbsp; <span class="status-ineff">✗ Inefficient — gains from trade exist</span>';
+  }
+
+  $status.innerHTML =
+    `Jerry: ${fmt(cJ)} cereal, ${fmt(pJ)} pancakes &nbsp;|&nbsp; ` +
+    `Elaine: ${fmt(cE)} cereal, ${fmt(pE)} pancakes &nbsp;|&nbsp; ` +
+    `MRS<sub>J</sub> = ${fmt(mJ)} &nbsp;|&nbsp; ` +
+    `MRS<sub>E</sub> = ${fmt(mE)}${flag}`;
+}
+
+function updateDesc(){
+  const cJ = C_TOT - cE, pJ = P_TOT - pE;
+  const mJ = mrsJ(cJ, pJ), mE = mrsE(cE, pE);
+  const eff = isEfficientAt(cE, pE);
+
+  let flagText;
+  if(!q1Locked){
+    flagText = 'Compare the two MRS values to decide if this allocation is Pareto-efficient.';
+  } else if(eff){
+    flagText = 'The allocation is Pareto-efficient: the two MRS values are equal.';
+  } else {
+    flagText = 'The allocation is not Pareto-efficient: the two MRS values differ, so gains from trade still exist. The light-green region marks allocations preferred by both consumers.';
+  }
+
+  let origText = '';
+  if(showOriginal){
+    origText = ` The original allocation (faded) is at cE = ${fmt(cE_orig)}, pE = ${fmt(pE_orig)}.`;
+  }
+
+  $desc.textContent =
+    `Edgeworth box. Total endowment is ${C_TOT} cereal and ${P_TOT} pancakes. ` +
+    `Jerry has ${fmt(cJ)} cereal and ${fmt(pJ)} pancakes. ` +
+    `Elaine has ${fmt(cE)} cereal and ${fmt(pE)} pancakes. ` +
+    `Jerry's marginal rate of substitution is ${fmt(mJ)}. ` +
+    `Elaine's marginal rate of substitution is ${fmt(mE)}. ` +
+    `${flagText} ` +
+    `Jerry's cereal weight α = ${alpha.toFixed(2)}. ` +
+    `Elaine's cereal weight β = ${beta.toFixed(2)}.` +
+    origText +
+    (showContract
+      ? ' The contract curve is shown as a dashed grey line connecting the two consumers\' origins.'
+      : ' The contract curve is hidden until question 2 is submitted.');
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// DRAGGING
+// ══════════════════════════════════════════════════════════════════════════
+let _dragging = false;
+
+function pointerToCoords(ev){
+  const rect = $canvas.getBoundingClientRect();
+  const dpr  = window.devicePixelRatio || 1;
+  const x    = (ev.clientX - rect.left) * dpr;
+  const y    = (ev.clientY - rect.top)  * dpr;
+  const W    = $canvas.width, H = $canvas.height;
+  const c    = boxCoords(W, H, dpr);
+  let ce = ((x - c.pad.l) / c.BW) * C_TOT;
+  let pe = ((H - c.pad.b - y) / c.BH) * P_TOT;
+  ce = Math.max(0.3, Math.min(C_TOT - 0.3, ce));
+  pe = Math.max(0.3, Math.min(P_TOT - 0.3, pe));
+  return { ce, pe };
+}
+
+function onPointerDown(ev){
+  if(canvasLocked) return;
+  ev.preventDefault();
+  _dragging = true;
+  $canvas.classList.add('dragging');
+  if($canvas.setPointerCapture && ev.pointerId !== undefined){
+    try{ $canvas.setPointerCapture(ev.pointerId); }catch(e){}
+  }
+  const p = pointerToCoords(ev);
+  cE = p.ce; pE = p.pe;
+  redraw();
+}
+function onPointerMove(ev){
+  if(!_dragging) return;
+  ev.preventDefault();
+  const p = pointerToCoords(ev);
+  cE = p.ce; pE = p.pe;
+  redraw();
+}
+function onPointerUp(ev){
+  if(!_dragging) return;
+  _dragging = false;
+  $canvas.classList.remove('dragging');
+  if($canvas.releasePointerCapture && ev.pointerId !== undefined){
+    try{ $canvas.releasePointerCapture(ev.pointerId); }catch(e){}
+  }
+}
+
+$canvas.addEventListener('pointerdown',  onPointerDown);
+$canvas.addEventListener('pointermove',  onPointerMove);
+$canvas.addEventListener('pointerup',    onPointerUp);
+$canvas.addEventListener('pointercancel',onPointerUp);
+
+// ══════════════════════════════════════════════════════════════════════════
+// QUESTION 1
+// ══════════════════════════════════════════════════════════════════════════
+function updateQ1Selection(){
+  $q1OptYesLbl.classList.toggle('selected', $q1OptYes.checked);
+  $q1OptNoLbl .classList.toggle('selected', $q1OptNo.checked);
+}
+$q1OptYes.addEventListener('change', updateQ1Selection);
+$q1OptNo .addEventListener('change', updateQ1Selection);
+
+$submitQ1.addEventListener('click', () => {
+  if(q1Locked) return;
+  const sel = document.querySelector('input[name="q1"]:checked');
+  if(!sel){
+    $q1Feedback.textContent = 'Please select Yes or No before submitting.';
+    $q1Feedback.className   = 'feedback-msg wrong';
+    return;
+  }
+
+  const ans   = sel.value;
+  const truth = _initialEff;
+  q1Correct = (ans === 'yes' &&  truth) ||
+              (ans === 'no'  && !truth);
+  if(q1Correct) _firstScore += 1;
+  q1Locked = true;
+
+  [$q1OptYes, $q1OptNo].forEach(el => el.disabled = true);
+  [$q1OptYesLbl, $q1OptNoLbl].forEach(el => el.classList.add('locked'));
+  const chosenLbl = ans === 'yes' ? $q1OptYesLbl : $q1OptNoLbl;
+  chosenLbl.classList.remove('selected');
+  chosenLbl.classList.add(q1Correct ? 'correct' : 'wrong');
+  if(!q1Correct){
+    const truthLbl = truth ? $q1OptYesLbl : $q1OptNoLbl;
+    truthLbl.classList.add('correct');
+  }
+
+  const mJ0 = mrsJ(C_TOT - cE0, P_TOT - pE0);
+  const mE0 = mrsE(cE0, pE0);
+  const truthSentence = truth
+    ? 'the allocation IS Pareto-efficient'
+    : 'the allocation is NOT Pareto-efficient';
+  $q1Feedback.innerHTML =
+    `${q1Correct ? '✓ Correct' : '✗ Not quite'} — at the starting allocation ` +
+    `MRS<sub>J</sub> = ${fmt(mJ0)} and MRS<sub>E</sub> = ${fmt(mE0)}, ` +
+    `so ${truthSentence}.`;
+  $q1Feedback.className = 'feedback-msg ' + (q1Correct ? 'correct' : 'wrong');
+  $submitQ1.disabled = true;
+
+  const qText   = 'Is the initial allocation Pareto-efficient?';
+  const ansText = ans === 'yes' ? 'Yes — efficient' : 'No — inefficient';
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(LAB_ID, 0, qText,
+                           ansText, q1Correct,
+                           ansText, q1Correct);
+  }
+
+  unlockCanvas();
+  // Refresh now that q1Locked is true so the efficiency flag appears
+  redraw();
+  if(truth){
+    totalQs = 2;
+    revealContractCurve();
+    showQ3();
+  } else {
+    totalQs = 3;
+    showQ2();
+  }
+});
+
+function unlockCanvas(){
+  canvasLocked = false;
+  $canvasWrap.classList.remove('locked');
+}
+
+function revealContractCurve(){
+  showContract = true;
+  $contractLegend.style.display = 'flex';
+  redraw();
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// QUESTION 2 — drag to optimal
+// ══════════════════════════════════════════════════════════════════════════
+function showQ2(){
+  phase = 'q2';
+  $q2Card.classList.remove('hidden');
+  $submitQ2.disabled = false;
+  $q2Card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+$submitQ2.addEventListener('click', () => {
+  if(q2Locked || phase !== 'q2') return;
+  q2Correct = isEfficientAt(cE, pE);
+  if(q2Correct) _firstScore += 1;
+  q2Locked = true;
+
+  const cJ = C_TOT - cE, pJ = P_TOT - pE;
+  const gap = Math.abs(mrsJ(cJ, pJ) - mrsE(cE, pE));
+  $q2Feedback.innerHTML = q2Correct
+    ? `✓ Correct — the allocation is Pareto-efficient. ` +
+      `|MRS<sub>J</sub> − MRS<sub>E</sub>| = ${fmt(gap)} (within tolerance 0.15).`
+    : `✗ Not quite — |MRS<sub>J</sub> − MRS<sub>E</sub>| = ${fmt(gap)}, ` +
+      `which exceeds the tolerance of 0.15. The contract curve, ` +
+      `revealed now, traces every Pareto-efficient allocation.`;
+  $q2Feedback.className = 'feedback-msg ' + (q2Correct ? 'correct' : 'wrong');
+  $submitQ2.disabled = true;
+
+  const q2Text = 'Drag the allocation to a Pareto-efficient point.';
+  const q2Ans =
+    `Jerry: (${fmt(cJ)}, ${fmt(pJ)}); ` +
+    `Elaine: (${fmt(cE)}, ${fmt(pE)}); ` +
+    `MRS_J = ${fmt(mrsJ(cJ, pJ))}, ` +
+    `MRS_E = ${fmt(mrsE(cE, pE))}`;
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(LAB_ID, 1, q2Text, q2Ans, q2Correct, q2Ans, q2Correct);
+  }
+
+  revealContractCurve();
+  showQ3();
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// QUESTION 3 — moving along the contract curve
+// ══════════════════════════════════════════════════════════════════════════
+function buildQ3Options(){
+  $q3Options.innerHTML = '';
+  _q3Order.forEach((srcIdx, displayIdx) => {
+    const opt = Q3_OPTIONS[srcIdx];
+    const id  = 'q3opt_' + displayIdx;
+    const lbl = document.createElement('label');
+    lbl.className = 'radio-option';
+    lbl.innerHTML =
+      `<input type="radio" name="q3" value="${opt.value}" id="${id}">` +
+      `<span class="opt-text">${opt.text}</span>`;
+    $q3Options.appendChild(lbl);
+
+    const input = lbl.querySelector('input');
+    input.addEventListener('change', () => {
+      [...$q3Options.querySelectorAll('.radio-option')].forEach(el =>
+        el.classList.remove('selected'));
+      lbl.classList.add('selected');
+      $submitQ3.disabled = q3Locked;   // enabled once an option is picked
+    });
+  });
+  $submitQ3.disabled = true;
+}
+
+function showQ3(){
+  phase = 'q3';
+  // Save the "original" allocation that Q3 compares against
+  cE_orig = cE;
+  pE_orig = pE;
+  showOriginal = true;
+  $originalLegend.style.display = 'flex';
+
+  $q3Card.classList.remove('hidden');
+  buildQ3Options();
+  $q3Card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  redraw();
+}
+
+$submitQ3.addEventListener('click', () => {
+  if(q3Locked || phase !== 'q3') return;
+  const sel = $q3Options.querySelector('input[name="q3"]:checked');
+  if(!sel){
+    $q3Feedback.textContent = 'Please select an option before submitting.';
+    $q3Feedback.className   = 'feedback-msg wrong';
+    return;
+  }
+
+  // Require a noticeable move from the original
+  const moveDist = Math.hypot(cE - cE_orig, pE - pE_orig);
+  if(moveDist < Q3_MIN_MOVE){
+    $q3Feedback.innerHTML =
+      'Drag the blue dot to a <strong>different</strong> point on the contract ' +
+      'curve before submitting — you haven\'t moved it yet.';
+    $q3Feedback.className = 'feedback-msg hint';
+    return;
+  }
+
+  // Require the new point be on the contract curve
+  const cJ = C_TOT - cE, pJ = P_TOT - pE;
+  const gap = Math.abs(mrsJ(cJ, pJ) - mrsE(cE, pE));
+  if(!isEfficientAt(cE, pE)){
+    $q3Feedback.innerHTML =
+      `The new allocation is <strong>not</strong> Pareto-efficient ` +
+      `(|MRS<sub>J</sub> − MRS<sub>E</sub>| = ${fmt(gap)}, above the 0.15 ` +
+      `tolerance). Drag the dot onto the dashed grey contract curve, then submit.`;
+    $q3Feedback.className = 'feedback-msg hint';
+    return;
+  }
+
+  // Truth: compare utilities at original vs new
+  const uJ_orig = utilityJ(C_TOT - cE_orig, P_TOT - pE_orig);
+  const uE_orig = utilityE(cE_orig, pE_orig);
+  const uJ_new  = utilityJ(cJ, pJ);
+  const uE_new  = utilityE(cE, pE);
+  const EPS = 0.005;
+  const jBetter = uJ_new > uJ_orig + EPS;
+  const jWorse  = uJ_new < uJ_orig - EPS;
+  const eBetter = uE_new > uE_orig + EPS;
+  const eWorse  = uE_new < uE_orig - EPS;
+
+  let truthVal;
+  if      (jBetter && eWorse)  truthVal = 'jBetter';
+  else if (eBetter && jWorse)  truthVal = 'eBetter';
+  else if (jBetter && eBetter) truthVal = 'bothBetter';
+  else if (jWorse  && eWorse)  truthVal = 'bothWorse';
+  else if (jBetter)            truthVal = 'jBetter';
+  else if (eBetter)            truthVal = 'eBetter';
+  else                          truthVal = 'jBetter';
+
+  const studentVal = sel.value;
+  q3Correct = (studentVal === truthVal);
+  if(q3Correct) _firstScore += 1;
+  q3Locked = true;
+
+  // Lock + visually mark options
+  [...$q3Options.querySelectorAll('input[name="q3"]')].forEach(i => i.disabled = true);
+  [...$q3Options.querySelectorAll('.radio-option')].forEach(lbl => {
+    const i = lbl.querySelector('input');
+    lbl.classList.add('locked');
+    lbl.classList.remove('selected');
+    if(i.value === truthVal){
+      lbl.classList.add('correct');
+    } else if(i.checked){
+      lbl.classList.add('wrong');
+    }
+  });
+
+  const truthOpt  = Q3_OPTIONS.find(o => o.value === truthVal);
+  const jChange   = jBetter ? '↑ better off' : jWorse ? '↓ worse off' : '≈ unchanged';
+  const eChange   = eBetter ? '↑ better off' : eWorse ? '↓ worse off' : '≈ unchanged';
+  $q3Feedback.innerHTML =
+    (q3Correct ? '✓ Correct — ' : '✗ Not quite — the correct answer is ') +
+    `"<em>${truthOpt.text}</em>". ` +
+    `Jerry's utility: ${uJ_orig.toFixed(3)} → ${uJ_new.toFixed(3)} (${jChange}). ` +
+    `Elaine's utility: ${uE_orig.toFixed(3)} → ${uE_new.toFixed(3)} (${eChange}).`;
+  $q3Feedback.className = 'feedback-msg ' + (q3Correct ? 'correct' : 'wrong');
+  $submitQ3.disabled = true;
+
+  const q3Index = (totalQs === 3) ? 2 : 1;
+  const q3Text  =
+    'Move along the contract curve to another Pareto-efficient allocation. ' +
+    'Compared to the original, who is better off and who is worse off?';
+  const studentText = Q3_OPTIONS.find(o => o.value === studentVal).text;
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(LAB_ID, q3Index, q3Text,
+                           studentText, q3Correct,
+                           studentText, q3Correct);
+  }
+  if(window.Session && Session.recordLabDone){
+    Session.recordLabDone(LAB_ID, LAB_LABEL,
+                          _firstScore, _firstScore, totalQs);
+  }
+
+  $labDoneMsg.textContent =
+    `Lab submitted. Final score: ${_firstScore} of ${totalQs}.`;
+  $labDoneMsg.classList.remove('hidden');
+  phase = 'done';
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// NEW PROBLEM
+// ══════════════════════════════════════════════════════════════════════════
+function clearLabSessionData(){
+  // Wipe any prior submission of THIS lab so a fresh problem starts clean.
+  try{
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    if(d && d.labs && d.labs[LAB_ID]){
+      delete d.labs[LAB_ID];
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(d));
+    }
+  }catch(e){}
+}
+
+function resetUI(){
+  // Q1
+  $q1OptYes.checked = false;
+  $q1OptNo.checked  = false;
+  $q1OptYes.disabled = false;
+  $q1OptNo.disabled  = false;
+  [$q1OptYesLbl, $q1OptNoLbl].forEach(el => {
+    el.classList.remove('selected','correct','wrong','locked');
+  });
+  $submitQ1.disabled = false;
+  $q1Feedback.className = 'feedback-msg hidden';
+  $q1Feedback.innerHTML = '';
+
+  // Q2
+  $q2Card.classList.add('hidden');
+  $submitQ2.disabled = true;
+  $q2Feedback.className = 'feedback-msg hidden';
+  $q2Feedback.innerHTML = '';
+
+  // Q3
+  $q3Card.classList.add('hidden');
+  $q3Options.innerHTML = '';
+  $submitQ3.disabled = true;
+  $q3Feedback.className = 'feedback-msg hidden';
+  $q3Feedback.innerHTML = '';
+  $labDoneMsg.classList.add('hidden');
+  $labDoneMsg.textContent = '';
+
+  // Canvas state
+  canvasLocked = true;
+  $canvasWrap.classList.add('locked');
+  showContract = false;
+  showOriginal = false;
+  $contractLegend.style.display = 'none';
+  $originalLegend.style.display = 'none';
+  cE_orig = 0; pE_orig = 0;
+
+  // Question state
+  phase       = 'q1';
+  totalQs     = 3;
+  q1Locked    = false; q1Correct = false;
+  q2Locked    = false; q2Correct = false;
+  q3Locked    = false; q3Correct = false;
+  _firstScore = 0;
+}
+
+$newProblem.addEventListener('click', () => {
+  clearLabSessionData();
+  resetUI();
+  generateParams();
+  redraw();
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// RESIZE
+// ══════════════════════════════════════════════════════════════════════════
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════════════
+if(window.DiscussionModal){
+  DiscussionModal.init({
+    weekLabel: WEEK_LABEL,
+    onReady: function(){
+      generateParams();
+      redraw();
+    }
+  });
+} else {
+  generateParams();
+  redraw();
+}
+
+})();
+</script>
+</body>
+</html>

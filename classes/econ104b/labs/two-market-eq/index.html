@@ -1,0 +1,1080 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Two-Market Equilibrium — ECON 104B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+  <style>
+    /* ── Design tokens ─────────────────────────────────────────── */
+    :root {
+      --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+      --font-serif: "Source Serif 4", ui-serif, Georgia, serif;
+      --paper: #f6f2ea; --panel: #ffffff;
+      --ink: #1f2937;   --ink-2: #374151; --muted: #596878;
+      --line: #e7dfd2;  --line-2: #d9cfbf;
+      --accent: #2f5d7c;
+      --good: #155c38;  --bad: #b42318;
+      --shadow: 0 1px 2px rgba(17,24,39,.06), 0 10px 24px rgba(17,24,39,.06);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body { background: var(--paper); color: var(--ink); font-family: var(--font-sans); }
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3 / good practice) ────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* ── Header ────────────────────────────────────────────────── */
+    .page-header { border-bottom: 1px solid var(--line); background: linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0)); }
+    .container    { max-width: 1120px; margin: 0 auto; padding: 18px; }
+    .crumbbar     { margin: 8px 0 10px; }
+    .crumb-link   { color: var(--accent); text-decoration: none; font-weight: 800; font-size: 0.8125rem; }
+    .crumb-link:hover { text-decoration: underline; }
+    .header-inner { padding: 22px 0 14px; }
+    .kicker { font-size: 0.75rem; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    h1  { font-family: var(--font-serif); font-size: 2rem; line-height: 1.1; margin: 0 0 8px; }
+    .sub { margin: 0; color: var(--ink-2); line-height: 1.55; max-width: 80ch; font-size: 0.9375rem; }
+
+    /* ── Button ────────────────────────────────────────────────── */
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border: none; border-radius: 12px; font-family: var(--font-sans); font-size: 0.875rem; font-weight: 700; cursor: pointer; transition: background .12s, opacity .12s; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn.primary  { background: var(--accent); color: #fff; }
+    .btn.primary:hover:not(:disabled) { background: #264d68; }
+
+    /* ── Lab layout ────────────────────────────────────────────── */
+    .lab-container { max-width: 1060px; margin: 0 auto; padding: 18px; }
+    .lab-grid { display: grid; grid-template-columns: 1fr 420px; gap: 18px; align-items: start; }
+    @media (max-width: 900px) { .lab-grid { grid-template-columns: 1fr; } }
+
+    /* ── Problem card ──────────────────────────────────────────── */
+    .problem-card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 24px; box-shadow: var(--shadow); margin-bottom: 18px; }
+    .problem-header { font-family: var(--font-serif); font-size: 1.25rem; font-weight: 700; color: var(--ink); margin: 0 0 14px; }
+
+    .eq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+    @media (max-width: 500px) { .eq-grid { grid-template-columns: 1fr; } }
+    .eq-block { background: rgba(246,242,234,.55); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+    .eq-block .label { font-size: 0.6875rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 4px; }
+    .eq-block .value { font-size: 0.9375rem; font-weight: 600; color: var(--ink); }
+
+    /* ── Answer section ────────────────────────────────────────── */
+    .answer-section { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .answer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    @media (max-width: 480px) { .answer-grid { grid-template-columns: 1fr; } }
+    .answer-field label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+    .answer-field input { width: 100%; padding: 9px 11px; border: 1.5px solid #8c7f72; border-radius: 12px; font-size: 1rem; font-family: var(--font-sans); color: var(--ink); background: #fafaf8; outline: none; transition: border-color .12s; }
+    .answer-field input:focus   { border-color: var(--accent); background: #fff; }
+    .answer-field input.correct { border-color: var(--good);   background: rgba(21,92,56,.06); }
+    .answer-field input.wrong   { border-color: var(--bad);    background: rgba(180,35,24,.06); }
+    .check-row { display: flex; justify-content: flex-end; margin-top: 4px; }
+    .result-msg { margin-top: 10px; padding: 10px 14px; border-radius: 12px; font-size: 0.8125rem; font-weight: 600; line-height: 1.5; }
+    .result-msg.correct { background: rgba(21,92,56,.10); border: 1px solid rgba(21,92,56,.25); color: var(--good); }
+    .result-msg.wrong   { background: rgba(180,35,24,.08); border: 1px solid rgba(180,35,24,.25); color: var(--bad); }
+
+    /* ── Diagnostic ────────────────────────────────────────────── */
+    .diagnostic { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .diag-step  { margin-bottom: 18px; animation: fadeSlide .22s ease; }
+    @keyframes fadeSlide { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
+    .diag-step-header { font-size: 0.75rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 7px; }
+    .diag-question    { font-size: 0.875rem; color: var(--ink); margin-bottom: 10px; line-height: 1.5; }
+    .mc-options { display: flex; flex-direction: column; gap: 7px; }
+    .mc-option  { display: flex; align-items: center; gap: 9px; padding: 9px 13px; border: 1.5px solid #8c7f72; border-radius: 12px; background: #fff; cursor: pointer; transition: border-color .12s, background .12s, transform .06s; font-size: 0.8125rem; color: var(--ink); line-height: 1.45; width: 100%; text-align: left; font-family: var(--font-sans); }
+    .mc-option:hover:not(.disabled) { border-color: rgba(47,93,124,.5); background: rgba(47,93,124,.04); }
+    .mc-option:active:not(.disabled) { transform: translateY(1px); }
+    .mc-option.selected-correct { border-color: var(--good); background: rgba(21,92,56,.08); }
+    .mc-option.selected-wrong   { border-color: var(--bad);  background: rgba(180,35,24,.06); }
+    .mc-option.revealed-correct { border-color: var(--good); background: rgba(21,92,56,.12); }
+    .mc-option.disabled { cursor: default; opacity: .7; }
+    .mc-option .mc-letter { width: 22px; height: 22px; border-radius: 999px; border: 1.5px solid #8c7f72; display: flex; align-items: center; justify-content: center; font-size: 0.6875rem; font-weight: 700; color: var(--muted); flex-shrink: 0; }
+    .mc-option.selected-correct .mc-letter { background: var(--good); color: #fff; border-color: var(--good); }
+    .mc-option.selected-wrong   .mc-letter { background: var(--bad);  color: #fff; border-color: var(--bad);  }
+    .mc-option.revealed-correct .mc-letter { background: var(--good); color: #fff; border-color: var(--good); }
+    .explanation-box { margin-top: 8px; padding: 10px 14px; border-radius: 12px; background: rgba(47,93,124,.06); border: 1px solid rgba(47,93,124,.15); font-size: 0.75rem; color: var(--ink-2); line-height: 1.6; animation: fadeSlide .2s ease; }
+    .diag-complete { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: rgba(21,92,56,.08); border: 1px solid rgba(21,92,56,.20); color: var(--good); font-weight: 600; font-size: 0.8125rem; }
+
+    /* ── Graph side panel ──────────────────────────────────────── */
+    .graph-panel { position: sticky; top: 18px; display: flex; flex-direction: column; gap: 14px; }
+    .graph-card { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 16px; box-shadow: var(--shadow); }
+    .graph-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .graph-title { font-size: 0.75rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; }
+    .graph-canvas-wrap { position: relative; width: 100%; aspect-ratio: 4/3; border-radius: 12px; overflow: hidden; background: rgba(246,242,234,.45); border: 1px solid var(--line); }
+    .graph-canvas-wrap canvas { display: block; width: 100%; height: 100%; }
+    .graph-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
+    .legend-row   { display: flex; align-items: center; gap: 6px; font-size: 0.6875rem; color: var(--ink-2); }
+    .legend-swatch { width: 20px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+    .legend-dot    { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+
+    .katex  { font-size: 1.0em; }
+    .hidden { display: none !important; }
+    .footer-inner { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 0.75rem; color: var(--muted); }
+
+    /* ── Example dropdown ──────────────────────────────────────── */
+    .example-box { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; margin-top: 16px; overflow: hidden; box-shadow: var(--shadow); }
+    .example-box summary.example-toggle { list-style: none; display: flex; align-items: center; gap: 8px; padding: 12px 18px; cursor: pointer; font-size: 0.8125rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .07em; user-select: none; }
+    .example-box summary.example-toggle::-webkit-details-marker { display: none; }
+    .example-box summary.example-toggle::before { content: '▶'; display: inline-block; font-size: 0.625rem; transition: transform .18s; }
+    .example-box[open] summary.example-toggle::before { transform: rotate(90deg); }
+    .example-body { padding: 0 20px 18px; border-top: 1px solid var(--line); }
+    .ex-prose { font-size: 0.875rem; color: var(--ink-2); line-height: 1.6; margin: 12px 0 8px; }
+    .ex-eq-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; margin: 10px 0 12px; }
+    @media (max-width: 540px) { .ex-eq-grid { grid-template-columns: 1fr; } }
+    .ex-eq { font-size: 0.9375rem; padding: 5px 0; }
+    .ex-step-label { font-size: 0.75rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .07em; margin: 16px 0 4px; }
+    .ex-step-prose { font-size: 0.8125rem; color: var(--ink-2); margin: 0 0 6px; line-height: 1.5; }
+    .ex-math-lines { display: flex; flex-direction: column; gap: 4px; padding: 8px 12px; background: rgba(246,242,234,.55); border-radius: 10px; border: 1px solid var(--line); }
+    .ex-math-lines > div { font-size: 0.9375rem; }
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ104b/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104B — General Equilibrium</div>
+      <h1>Two-Market Equilibrium</h1>
+      <p class="sub">
+        Find the equilibrium prices and quantities for two related markets. Set supply equal
+        to demand in each market, then solve the resulting system of equations.
+      </p>
+
+      <details id="exampleBox" class="example-box">
+        <summary class="example-toggle">Example</summary>
+        <div class="example-body">
+          <p class="ex-prose">Suppose we exist in a world where there are only two goods (good 1 and good 2). The supply and demand for each good depends not only on its own price but also on the price of the other good. Assume the supply and demand for each good is given by:</p>
+          <div class="ex-eq-grid">
+            <div class="ex-eq"><span data-tex="Q_1^D = 64 - 8p_1 + 5p_2"></span></div>
+            <div class="ex-eq"><span data-tex="Q_2^D = 83 + p_1 - 8p_2"></span></div>
+            <div class="ex-eq"><span data-tex="Q_1^S = 8p_1 - 5p_2"></span></div>
+            <div class="ex-eq"><span data-tex="Q_2^S = 9p_2 - 3p_1"></span></div>
+          </div>
+          <p class="ex-prose">What are the equilibrium prices and quantities of both goods?</p>
+
+          <p class="ex-step-label">Step 1 — Find p₁ as a function of p₂</p>
+          <p class="ex-step-prose">Set supply equal to demand in market 1:</p>
+          <div class="ex-math-lines">
+            <div><span data-tex="Q_1^D = Q_1^S"></span></div>
+            <div><span data-tex="64 - 8p_1 + 5p_2 = 8p_1 - 5p_2"></span></div>
+            <div><span data-tex="64 + 10p_2 = 16p_1"></span></div>
+            <div><span data-tex="p_1 = 4 + \tfrac{5}{8}\,p_2"></span></div>
+          </div>
+
+          <p class="ex-step-label">Step 2 — Find p₂ as a function of p₁</p>
+          <p class="ex-step-prose">Set supply equal to demand in market 2:</p>
+          <div class="ex-math-lines">
+            <div><span data-tex="Q_2^D = Q_2^S"></span></div>
+            <div><span data-tex="83 + p_1 - 8p_2 = 9p_2 - 3p_1"></span></div>
+            <div><span data-tex="83 + 4p_1 = 17p_2"></span></div>
+            <div><span data-tex="p_2 = \tfrac{83}{17} + \tfrac{4}{17}\,p_1"></span></div>
+          </div>
+
+          <p class="ex-step-label">Step 3 — Solve for p₁*</p>
+          <p class="ex-step-prose">Substitute the expression from Step 2 into Step 1:</p>
+          <div class="ex-math-lines">
+            <div><span data-tex="p_1 = 4 + \tfrac{5}{8}\left(\tfrac{83}{17} + \tfrac{4}{17}\,p_1\right)"></span></div>
+            <div><span data-tex="p_1 = 4 + 3.052 + 0.147\,p_1"></span></div>
+            <div><span data-tex="0.853\,p_1 = 7.052"></span></div>
+            <div><span data-tex="p_1^{\,*} \approx 8.267"></span></div>
+          </div>
+
+          <p class="ex-step-label">Step 4 — Solve for p₂*</p>
+          <p class="ex-step-prose">Substitute p₁* into the expression from Step 2:</p>
+          <div class="ex-math-lines">
+            <div><span data-tex="p_2 = \tfrac{83}{17} + \tfrac{4}{17}(8.267)"></span></div>
+            <div><span data-tex="p_2^{\,*} \approx 6.828"></span></div>
+          </div>
+
+          <p class="ex-step-label">Step 5 — Find equilibrium quantities</p>
+          <p class="ex-step-prose">Plug equilibrium prices into the demand curves:</p>
+          <div class="ex-math-lines">
+            <div><span data-tex="Q_1^* = 64 - 8(8.267) + 5(6.828) \approx 32.0"></span></div>
+            <div><span data-tex="Q_2^* = 83 + 8.267 - 8(6.828) \approx 36.6"></span></div>
+          </div>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-container">
+  <div class="lab-grid">
+
+    <!-- ── LEFT COLUMN ───────────────────────────────────────── -->
+    <div>
+      <div class="problem-card" id="problemCard">
+        <h2 class="problem-header">Problem</h2>
+        <div class="eq-grid">
+          <div class="eq-block">
+            <div class="label">Demand — Good 1</div>
+            <div class="value" id="d1Display"></div>
+          </div>
+          <div class="eq-block">
+            <div class="label">Demand — Good 2</div>
+            <div class="value" id="d2Display"></div>
+          </div>
+          <div class="eq-block">
+            <div class="label">Supply — Good 1</div>
+            <div class="value" id="s1Display"></div>
+          </div>
+          <div class="eq-block">
+            <div class="label">Supply — Good 2</div>
+            <div class="value" id="s2Display"></div>
+          </div>
+        </div>
+
+        <div class="answer-section">
+          <div class="answer-grid">
+            <div class="answer-field">
+              <label for="ansP1">Equilibrium price p₁*</label>
+              <input type="text" id="ansP1" placeholder="e.g. 8.5" autocomplete="off" />
+            </div>
+            <div class="answer-field">
+              <label for="ansP2">Equilibrium price p₂*</label>
+              <input type="text" id="ansP2" placeholder="e.g. 7.2" autocomplete="off" />
+            </div>
+            <div class="answer-field">
+              <label for="ansQ1">Equilibrium quantity q₁*</label>
+              <input type="text" id="ansQ1" placeholder="e.g. 42.0" autocomplete="off" />
+            </div>
+            <div class="answer-field">
+              <label for="ansQ2">Equilibrium quantity q₂*</label>
+              <input type="text" id="ansQ2" placeholder="e.g. 38.5" autocomplete="off" />
+            </div>
+          </div>
+          <div class="check-row">
+            <button class="btn primary" id="checkBtn">Check Answers</button>
+          </div>
+          <div id="resultMsg" class="result-msg hidden"
+               role="status" aria-live="polite" aria-atomic="true"></div>
+        </div>
+
+        <!-- Diagnostic -->
+        <div id="diagnostic" class="diagnostic hidden">
+          <div style="font-size:0.875rem;font-weight:700;color:var(--ink);margin-bottom:12px;">
+            Let's work through this step by step.
+          </div>
+          <div id="diagSteps" aria-live="polite" aria-atomic="false"></div>
+          <div id="diagComplete" class="diag-complete hidden"
+               role="status" aria-live="polite" aria-atomic="true"></div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn primary" id="newProblemBtn">New Problem</button>
+      </div>
+    </div>
+
+    <!-- ── RIGHT COLUMN ──────────────────────────────────────── -->
+    <div class="graph-panel">
+
+      <!-- Market 1 graph -->
+      <div class="graph-card">
+        <div class="graph-title-row">
+          <div class="graph-title" id="g1Title">Market 1</div>
+        </div>
+        <div class="graph-canvas-wrap">
+          <canvas id="canvas1"
+                  role="img"
+                  aria-labelledby="g1Title"
+                  aria-describedby="g1Desc"></canvas>
+        </div>
+        <div class="graph-legend">
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#2f5d7c;"></div>
+            <span>D₁</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#8c4800;"></div>
+            <span>S₁</span>
+          </div>
+          <div class="legend-row" id="eqRow1" style="display:none;">
+            <div class="legend-dot" style="background:#b42318;"></div>
+            <span>Equilibrium</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Market 2 graph -->
+      <div class="graph-card">
+        <div class="graph-title-row">
+          <div class="graph-title" id="g2Title">Market 2</div>
+        </div>
+        <div class="graph-canvas-wrap">
+          <canvas id="canvas2"
+                  role="img"
+                  aria-labelledby="g2Title"
+                  aria-describedby="g2Desc"></canvas>
+        </div>
+        <div class="graph-legend">
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#2f5d7c;"></div>
+            <span>D₂</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#8c4800;"></div>
+            <span>S₂</span>
+          </div>
+          <div class="legend-row" id="eqRow2" style="display:none;">
+            <div class="legend-dot" style="background:#b42318;"></div>
+            <span>Equilibrium</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live descriptions for screen readers (WCAG 1.1.1 + 4.1.3) -->
+      <section class="sr-only" aria-live="polite" aria-atomic="true">
+        <p id="g1Desc">Market 1 supply and demand graph.</p>
+        <p id="g2Desc">Market 2 supply and demand graph.</p>
+      </section>
+    </div>
+
+  </div><!-- /.lab-grid -->
+</main>
+
+<footer style="margin-top:32px;padding-top:12px;border-top:1px solid var(--line);">
+  <div class="lab-container">
+    <div class="footer-inner">
+      <span>ECON 104B — Intermediate Microeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function () {
+'use strict';
+
+// LAB_ID = 'two-market-eq'
+// LAB_LABEL = 'Two-Market Equilibrium'
+// url: '/classes/econ104b/labs/two-market-eq/?disc=1'
+
+const LAB_ID    = 'two-market-eq';
+const LAB_LABEL = 'Two-Market Equilibrium';
+
+// ── State ──────────────────────────────────────────────────────────────────
+let prob = {};
+let _rng = null;
+let diagStep = 0;
+let _diagSteps = [];
+let firstScore = null;
+let showEq = false;
+let _fs = 1;
+
+// ── DOM ───────────────────────────────────────────────────────────────────
+const $d1   = document.getElementById('d1Display');
+const $d2   = document.getElementById('d2Display');
+const $s1   = document.getElementById('s1Display');
+const $s2   = document.getElementById('s2Display');
+const $ansP1 = document.getElementById('ansP1');
+const $ansP2 = document.getElementById('ansP2');
+const $ansQ1 = document.getElementById('ansQ1');
+const $ansQ2 = document.getElementById('ansQ2');
+const $checkBtn  = document.getElementById('checkBtn');
+const $resultMsg = document.getElementById('resultMsg');
+const $diag      = document.getElementById('diagnostic');
+const $diagSteps = document.getElementById('diagSteps');
+const $diagComplete = document.getElementById('diagComplete');
+const $newBtn    = document.getElementById('newProblemBtn');
+const $c1        = document.getElementById('canvas1');
+const $c2        = document.getElementById('canvas2');
+const $g1Desc    = document.getElementById('g1Desc');
+const $g2Desc    = document.getElementById('g2Desc');
+
+// ── RNG ───────────────────────────────────────────────────────────────────
+function rng()          { return _rng ? _rng() : Math.random(); }
+function randInt(lo,hi) { return lo + Math.floor(rng() * (hi - lo + 1)); }
+
+// ── Problem generation ────────────────────────────────────────────────────
+function generateProblem() {
+  if (window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+
+  let p;
+  do {
+    p = tryGenerate();
+  } while (!p);
+  prob = p;
+}
+
+function tryGenerate() {
+  const A1 = randInt(50, 100);
+  const A2 = randInt(50, 100);
+  const b1 = randInt(1, 5);
+  const b2 = randInt(1, 5);
+  const c1 = randInt(5, 10);
+  const c2 = randInt(5, 10);
+  const d1 = randInt(5, 10);
+  const d2 = randInt(5, 10);
+  const e1 = randInt(0, 5);
+  const e2 = randInt(0, 5);
+
+  // Stability condition: (b1+e1)*(b2+e2) < (c1+d1)*(c2+d2)
+  const num = (b1 + e1) * (b2 + e2);
+  const den = (c1 + d1) * (c2 + d2);
+  if (num >= den) return null;
+
+  // p1e(p2) = A1/(c1+d1) + (b1+e1)/(c1+d1) * p2
+  const alpha1 = (b1 + e1) / (c1 + d1);   // coefficient on p2 in p1e
+  const beta1  = A1 / (c1 + d1);           // intercept of p1e
+
+  // p2e(p1) = A2/(c2+d2) + (b2+e2)/(c2+d2) * p1
+  const alpha2 = (b2 + e2) / (c2 + d2);   // coefficient on p1 in p2e
+  const beta2  = A2 / (c2 + d2);           // intercept of p2e
+
+  // p1* = (beta1 + alpha1*beta2) / (1 - alpha1*alpha2)
+  const denom = 1 - alpha1 * alpha2;
+  if (Math.abs(denom) < 1e-9) return null;
+
+  const p1s = (beta1 + alpha1 * beta2) / denom;
+  const p2s = beta2 + alpha2 * p1s;
+
+  // q1* = A1 + b1*p2s - c1*p1s
+  const q1s = A1 + b1 * p2s - c1 * p1s;
+  // q2* = A2 + b2*p1s - c2*p2s
+  const q2s = A2 + b2 * p1s - c2 * p2s;
+
+  if (p1s <= 0 || p2s <= 0 || q1s <= 0 || q2s <= 0) return null;
+  if (!isFinite(p1s) || !isFinite(p2s) || !isFinite(q1s) || !isFinite(q2s)) return null;
+
+  return { A1, A2, b1, b2, c1, c2, d1, d2, e1, e2,
+           alpha1, beta1, alpha2, beta2,
+           p1s, p2s, q1s, q2s };
+}
+
+// ── KaTeX helpers ─────────────────────────────────────────────────────────
+function renderKatex(el, tex) {
+  if (window.katex) katex.render(tex, el, { throwOnError: false, displayMode: false });
+  else el.textContent = tex;
+}
+function katexHTML(tex) {
+  if (window.katex) return katex.renderToString(tex, { throwOnError: false, displayMode: false });
+  return tex;
+}
+
+// ── Sign helper: formats "+N" or "-N" for display ─────────────────────────
+function showTerm(coef, varName, leading) {
+  if (coef === 0) return '';
+  const sign = (leading || coef > 0) ? (coef > 0 ? (leading ? '' : '+') : '-') : '-';
+  const abs  = Math.abs(coef);
+  return (leading ? (coef < 0 ? '-' : '') : (coef > 0 ? '+' : '-')) + abs + varName;
+}
+
+// ── Render problem ────────────────────────────────────────────────────────
+function renderProblem() {
+  const p = prob;
+
+  // Build equation strings
+  // Q1D = A1 + b1*p2 - c1*p1
+  const d1tex = 'Q_1^D = ' + p.A1 + showTerm(p.b1,'p_2',false) + showTerm(-p.c1,'p_1',false);
+  const d2tex = 'Q_2^D = ' + p.A2 + showTerm(p.b2,'p_1',false) + showTerm(-p.c2,'p_2',false);
+  // Q1S = d1*p1 - e1*p2
+  const s1tex = p.e1 === 0
+    ? 'Q_1^S = ' + p.d1 + 'p_1'
+    : 'Q_1^S = ' + p.d1 + 'p_1' + showTerm(-p.e1,'p_2',false);
+  const s2tex = p.e2 === 0
+    ? 'Q_2^S = ' + p.d2 + 'p_2'
+    : 'Q_2^S = ' + p.d2 + 'p_2' + showTerm(-p.e2,'p_1',false);
+
+  renderKatex($d1, d1tex);
+  renderKatex($d2, d2tex);
+  renderKatex($s1, s1tex);
+  renderKatex($s2, s2tex);
+
+  [$ansP1,$ansP2,$ansQ1,$ansQ2].forEach(i => {
+    i.value = ''; i.className = '';
+  });
+  $resultMsg.className = 'result-msg hidden';
+  $diag.classList.add('hidden');
+  $diagSteps.innerHTML = '';
+  $diagComplete.classList.add('hidden');
+  $checkBtn.disabled = false;
+  diagStep = 0; firstScore = null; showEq = false;
+
+  document.getElementById('eqRow1').style.display = 'none';
+  document.getElementById('eqRow2').style.display = 'none';
+
+  drawGraphs();
+}
+
+// ── Approx equality ───────────────────────────────────────────────────────
+function approxEq(a, b, tol) { return Math.abs(a - b) <= tol; }
+function r3(v) { return Math.round(v * 1000) / 1000; }
+function r2(v) { return Math.round(v * 100)  / 100;  }
+
+// ── Check answers ──────────────────────────────────────────────────────────
+$checkBtn.addEventListener('click', function () {
+  const up1 = parseFloat($ansP1.value);
+  const up2 = parseFloat($ansP2.value);
+  const uq1 = parseFloat($ansQ1.value);
+  const uq2 = parseFloat($ansQ2.value);
+
+  if ([up1,up2,uq1,uq2].some(isNaN)) {
+    $resultMsg.textContent = 'Please enter numeric values for all four fields.';
+    $resultMsg.className = 'result-msg wrong';
+    return;
+  }
+
+  const p = prob;
+  const tolP = 0.05;
+  const tolQ = 0.5;
+  const p1ok = approxEq(up1, p.p1s, tolP);
+  const p2ok = approxEq(up2, p.p2s, tolP);
+  const q1ok = approxEq(uq1, p.q1s, tolQ);
+  const q2ok = approxEq(uq2, p.q2s, tolQ);
+
+  $checkBtn.disabled = true;
+
+  if (p1ok && p2ok && q1ok && q2ok) {
+    [$ansP1,$ansP2,$ansQ1,$ansQ2].forEach(i => i.classList.add('correct'));
+    $resultMsg.innerHTML = '✓ Correct! p₁* = ' + r3(p.p1s) + ', p₂* = ' + r3(p.p2s) +
+      ', q₁* = ' + r3(p.q1s) + ', q₂* = ' + r3(p.q2s) + '.';
+    $resultMsg.className = 'result-msg correct';
+    firstScore = 1;
+    revealEq();
+    recordResult(true);
+  } else {
+    $ansP1.classList.add(p1ok ? 'correct' : 'wrong');
+    $ansP2.classList.add(p2ok ? 'correct' : 'wrong');
+    $ansQ1.classList.add(q1ok ? 'correct' : 'wrong');
+    $ansQ2.classList.add(q2ok ? 'correct' : 'wrong');
+    $resultMsg.innerHTML = '✗ Not quite. Let\'s work through the solution step by step.';
+    $resultMsg.className = 'result-msg wrong';
+    firstScore = 0;
+    startDiagnostic();
+  }
+  drawGraphs();
+});
+
+[$ansP1,$ansP2,$ansQ1,$ansQ2].forEach(inp => {
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') $checkBtn.click(); });
+});
+
+// ── Reveal equilibrium on graphs ─────────────────────────────────────────
+function revealEq() {
+  showEq = true;
+  document.getElementById('eqRow1').style.display = 'flex';
+  document.getElementById('eqRow2').style.display = 'flex';
+  drawGraphs();
+}
+
+function recordResult(correct) {
+  if (window.Session && Session.recordResult)
+    Session.recordResult({ labId: LAB_ID, labLabel: LAB_LABEL, correct, firstScore });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CANVAS DRAWING
+// ══════════════════════════════════════════════════════════════════════════
+
+function setupCanvas(canvas) {
+  const dpr  = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W    = Math.round(rect.width  * dpr);
+  const H    = Math.round(rect.height * dpr);
+  if (!W || !H) return null;
+  if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+function drawMarket(canvas, market) {
+  const s = setupCanvas(canvas);
+  if (!s) return;
+  const { ctx, dpr, W, H } = s;
+  ctx.clearRect(0, 0, W, H);
+
+  const p = prob;
+  if (!p || !p.p1s) return;
+
+  // Font scale (WCAG 1.4.4)
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+
+  const pad = { l: 62*dpr, r: 36*dpr, t: 14*dpr, b: 56*dpr };
+  const X0 = pad.l, X1 = W - pad.r, Y0 = pad.t, Y1 = H - pad.b;
+  const PW = X1 - X0, PH = Y1 - Y0;
+
+  // Determine axis ranges
+  // Market 1: x=q, y=p1. D1 at p2=p2*: p1 = (A1 + b1*p2* - q1) / c1
+  //           S1 at p2=p2*: p1 = (q1 + e1*p2*) / d1
+  // Market 2: x=q, y=p2. D2 at p1=p1*: p2 = (A2 + b2*p1* - q2) / c2
+  //           S2 at p1=p1*: p2 = (q2 + e2*p1*) / d2
+
+  let eqP, eqQ, demandP, supplyP;
+  if (market === 1) {
+    eqP = p.p1s; eqQ = p.q1s;
+    // D1 inverted: p1 = (A1 + b1*p2s - Q) / c1
+    demandP = q => (p.A1 + p.b1 * p.p2s - q) / p.c1;
+    // S1 inverted: p1 = (Q + e1*p2s) / d1
+    supplyP = q => (q + p.e1 * p.p2s) / p.d1;
+  } else {
+    eqP = p.p2s; eqQ = p.q2s;
+    demandP = q => (p.A2 + p.b2 * p.p1s - q) / p.c2;
+    supplyP = q => (q + p.e2 * p.p1s) / p.d2;
+  }
+
+  // Find q-intercept of demand (p=0): Q = A + b*p_other
+  const qMax_d  = market === 1 ? p.A1 + p.b1 * p.p2s : p.A2 + p.b2 * p.p1s;
+  const qMax_raw = qMax_d * 1.3;
+  const qMax    = Math.ceil(qMax_raw / 10) * 10;
+  const pMax    = Math.ceil(demandP(0) * 1.4 / 2) * 2;
+
+  const xC = q => X0 + (q / qMax) * PW;
+  const yC = pr => Y1 - (pr / pMax) * PH;
+
+  // Axes
+  ctx.strokeStyle = 'rgba(0,0,0,0.28)'; ctx.lineWidth = 1.5 * dpr;
+  ctx.beginPath(); ctx.moveTo(X0, Y1); ctx.lineTo(X1, Y1); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(X0, Y0); ctx.lineTo(X0, Y1); ctx.stroke();
+
+  // Arrowheads
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.beginPath(); ctx.moveTo(X1,Y1); ctx.lineTo(X1-7*dpr,Y1-3.5*dpr); ctx.lineTo(X1-7*dpr,Y1+3.5*dpr); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0-3.5*dpr,Y0+7*dpr); ctx.lineTo(X0+3.5*dpr,Y0+7*dpr); ctx.closePath(); ctx.fill();
+
+  // Axis labels
+  ctx.fillStyle = 'rgba(0,0,0,0.50)';
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('Quantity (Q' + market + ')', (X0 + X1) / 2, Y1 + 26*dpr);
+  ctx.save();
+  ctx.translate(X0 - 48*dpr, (Y0 + Y1) / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText('Price (p' + market + ')', 0, 0);
+  ctx.restore();
+
+  // Clip to plot area
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(X0, Y0, PW, PH);
+  ctx.clip();
+
+  // Helper: draw a linear curve Q→P
+  function drawCurve(fn, color, steps) {
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i <= steps; i++) {
+      const q  = (i / steps) * qMax;
+      const pr = fn(q);
+      if (!isFinite(pr) || pr < 0 || pr > pMax * 1.1) { started = false; continue; }
+      const cx = xC(q), cy = yC(pr);
+      if (!started) { ctx.moveTo(cx, cy); started = true; } else ctx.lineTo(cx, cy);
+    }
+    ctx.strokeStyle = color; ctx.lineWidth = 2.5 * dpr; ctx.stroke();
+  }
+
+  drawCurve(demandP, '#2f5d7c', 80);
+  drawCurve(supplyP, '#8c4800', 80);
+
+  // Equilibrium dashes + dot (inside clip)
+  let eqCX = null, eqCY = null;
+  if (showEq) {
+    eqCX = xC(eqQ); eqCY = yC(eqP);
+    ctx.setLineDash([5*dpr, 4*dpr]);
+    ctx.strokeStyle = 'rgba(180,35,24,0.35)';
+    ctx.lineWidth   = 1.5 * dpr;
+    ctx.beginPath(); ctx.moveTo(eqCX, eqCY); ctx.lineTo(eqCX, Y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(eqCX, eqCY); ctx.lineTo(X0, eqCY); ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.beginPath(); ctx.arc(eqCX, eqCY, 6.5*dpr, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(180,35,24,0.15)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(eqCX, eqCY, 4*dpr, 0, Math.PI*2);
+    ctx.fillStyle = '#b42318'; ctx.fill();
+  }
+
+  ctx.restore();
+
+  // Equilibrium tick marks + labels (outside clip so they render in the axis padding)
+  if (showEq) {
+    ctx.strokeStyle = '#b42318'; ctx.lineWidth = 1.5*dpr;
+    ctx.font = `700 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+    ctx.fillStyle = '#b42318';
+
+    ctx.beginPath(); ctx.moveTo(eqCX, Y1-4*dpr); ctx.lineTo(eqCX, Y1+4*dpr); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText(r2(eqQ), eqCX, Y1 + 6*dpr);
+
+    ctx.beginPath(); ctx.moveTo(X0-4*dpr, eqCY); ctx.lineTo(X0+4*dpr, eqCY); ctx.stroke();
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText(r2(eqP), X0 - 8*dpr, eqCY);
+  }
+
+  // Curve labels: placed PAST the endpoint so they never sit on the line
+  ctx.font = `700 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+
+  // Demand exits where p = 0: q_D = A + b*p_other (always < qMax by construction)
+  // Label goes just to the right of that x-intercept, slightly above the x-axis.
+  const qDemandEnd = market === 1
+    ? (p.A1 + p.b1 * p.p2s)
+    : (p.A2 + p.b2 * p.p1s);
+  {
+    const lx = xC(Math.min(qDemandEnd, qMax));
+    ctx.fillStyle = '#2f5d7c';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('D' + market, lx + 8*dpr, Y1 - 10*dpr);
+  }
+
+  // Supply exits at the top edge (p = pMax) or right edge (q = qMax).
+  // Label goes just past that endpoint into the padding area.
+  const qSupplyTop = market === 1
+    ? (p.d1 * pMax - p.e1 * p.p2s)
+    : (p.d2 * pMax - p.e2 * p.p1s);
+  const sExitsTop = qSupplyTop > 0 && qSupplyTop <= qMax;
+  {
+    ctx.fillStyle = '#8c4800';
+    ctx.textAlign = 'left';
+    if (sExitsTop) {
+      // Exits top: label to the right of the exit point, just inside the top margin
+      ctx.textBaseline = 'top';
+      ctx.fillText('S' + market, xC(qSupplyTop) + 8*dpr, Y0 + 4*dpr);
+    } else {
+      // Exits right: label in the right padding at the exit height
+      ctx.textBaseline = 'middle';
+      ctx.fillText('S' + market, X1 + 8*dpr, yC(Math.min(supplyP(qMax), pMax)));
+    }
+  }
+}
+
+function drawGraphs() {
+  drawMarket($c1, 1);
+  drawMarket($c2, 2);
+  updateGraphDescs();
+}
+
+function updateGraphDescs() {
+  const p = prob;
+  if (!p || !p.p1s) return;
+
+  let base1 = 'Market 1 supply and demand at equilibrium p₂* = ' + r3(p.p2s) + '.';
+  let base2 = 'Market 2 supply and demand at equilibrium p₁* = ' + r3(p.p1s) + '.';
+  if (showEq) {
+    base1 += ' Equilibrium: p₁* = ' + r3(p.p1s) + ', q₁* = ' + r3(p.q1s) + '.';
+    base2 += ' Equilibrium: p₂* = ' + r3(p.p2s) + ', q₂* = ' + r3(p.q2s) + '.';
+  }
+  $g1Desc.textContent = base1;
+  $g2Desc.textContent = base2;
+}
+
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(drawGraphs, 80);
+});
+
+// ══════════════════════════════════════════════════════════════════════════
+// DIAGNOSTIC — 6 steps
+// ══════════════════════════════════════════════════════════════════════════
+
+function buildDiagSteps() {
+  const p = prob;
+
+  // Helper: format coefficient as fraction string for display
+  function numStr(v) {
+    const r = Math.round(v * 1000) / 1000;
+    return r % 1 === 0 ? String(r) : r.toFixed(3);
+  }
+
+  const cd1 = p.c1 + p.d1;  // denominator in p1e
+  const cd2 = p.c2 + p.d2;  // denominator in p2e
+  const be1 = p.b1 + p.e1;  // numerator of p2 coefficient in p1e
+  const be2 = p.b2 + p.e2;  // numerator of p1 coefficient in p2e
+
+  // p1e = A1/cd1 + (be1/cd1)*p2
+  const p1eA = p.A1 / cd1;  // intercept
+  const p1eB = be1  / cd1;  // slope on p2
+
+  // p2e = A2/cd2 + (be2/cd2)*p1
+  const p2eA = p.A2 / cd2;
+  const p2eB = be2  / cd2;
+
+  const p1s_r = r3(p.p1s);
+  const p2s_r = r3(p.p2s);
+  const q1s_r = r3(p.q1s);
+  const q2s_r = r3(p.q2s);
+
+  // Build TeX for the four equations
+  function signedTerm(coef, varTex) {
+    if (coef === 0) return '';
+    return (coef > 0 ? ' + ' : ' - ') + Math.abs(coef) + varTex;
+  }
+
+  const q1dTeX = 'Q_1^D = ' + p.A1 + signedTerm(p.b1,' p_2') + signedTerm(-p.c1,' p_1');
+  const q1sTeX = 'Q_1^S = ' + p.d1 + ' p_1' + signedTerm(-p.e1,' p_2');
+  const q2dTeX = 'Q_2^D = ' + p.A2 + signedTerm(p.b2,' p_1') + signedTerm(-p.c2,' p_2');
+  const q2sTeX = 'Q_2^S = ' + p.d2 + ' p_2' + signedTerm(-p.e2,' p_1');
+
+  // p1e formula
+  const p1eTeX = 'p_1^e = \\dfrac{' + p.A1 + '}{' + cd1 + '} + \\dfrac{' + be1 + '}{' + cd1 + '} p_2';
+
+  // p2e formula
+  const p2eTeX = 'p_2^e = \\dfrac{' + p.A2 + '}{' + cd2 + '} + \\dfrac{' + be2 + '}{' + cd2 + '} p_1';
+
+  const steps = [];
+
+  // ── Step 1: Set Q1D = Q1S, solve for p1 in terms of p2 ─────────────────
+  steps.push({
+    header: 'Step 1: Clear Market 1',
+    question: 'Set ' + katexHTML('Q_1^D = Q_1^S') + ' and solve for ' + katexHTML('p_1') +
+              ' as a function of ' + katexHTML('p_2') + '.',
+    correctIdx: 0,
+    options: [
+      { tex: p1eTeX },
+      { tex: 'p_1^e = \\dfrac{' + p.A1 + '}{' + cd1 + '} - \\dfrac{' + be1 + '}{' + cd1 + '} p_2' },
+      { tex: 'p_1^e = \\dfrac{' + p.A1 + '}{' + p.c1 + '} + \\dfrac{' + p.b1 + '}{' + p.c1 + '} p_2' },
+      { tex: 'p_1^e = \\dfrac{' + p.A1 + '}{' + p.d1 + '} + \\dfrac{' + p.e1 + '}{' + p.d1 + '} p_2' },
+    ],
+    explanation: 'Setting ' + katexHTML(q1dTeX + ' = ' + q1sTeX) +
+      ', move all ' + katexHTML('p_1') + ' terms left: ' +
+      katexHTML('(c_1 + d_1)p_1 = A_1 + (b_1 + e_1)p_2') + ', so ' +
+      katexHTML(p1eTeX) + '.'
+  });
+
+  // ── Step 2: Set Q2D = Q2S, solve for p2 in terms of p1 ─────────────────
+  steps.push({
+    header: 'Step 2: Clear Market 2',
+    question: 'Set ' + katexHTML('Q_2^D = Q_2^S') + ' and solve for ' + katexHTML('p_2') +
+              ' as a function of ' + katexHTML('p_1') + '.',
+    correctIdx: 0,
+    options: [
+      { tex: p2eTeX },
+      { tex: 'p_2^e = \\dfrac{' + p.A2 + '}{' + cd2 + '} - \\dfrac{' + be2 + '}{' + cd2 + '} p_1' },
+      { tex: 'p_2^e = \\dfrac{' + p.A2 + '}{' + p.c2 + '} + \\dfrac{' + p.b2 + '}{' + p.c2 + '} p_1' },
+      { tex: 'p_2^e = \\dfrac{' + p.A2 + '}{' + p.d2 + '} + \\dfrac{' + p.e2 + '}{' + p.d2 + '} p_1' },
+    ],
+    explanation: 'Setting ' + katexHTML(q2dTeX + ' = ' + q2sTeX) +
+      ', move all ' + katexHTML('p_2') + ' terms left: ' +
+      katexHTML('(c_2 + d_2)p_2 = A_2 + (b_2 + e_2)p_1') + ', so ' +
+      katexHTML(p2eTeX) + '.'
+  });
+
+  // ── Step 3: Solve for p1* ───────────────────────────────────────────────
+  // Substituting p2e into p1e:
+  // p1 = beta1 + alpha1*(beta2 + alpha2*p1)
+  // p1*(1 - alpha1*alpha2) = beta1 + alpha1*beta2
+  const lhsCoef = Math.round((1 - p1eB * p2eB) * 1000) / 1000;
+  const rhsVal  = Math.round((p1eA + p1eB * p2eA) * 1000) / 1000;
+
+  steps.push({
+    header: 'Step 3: Find p₁*',
+    question: 'Substitute your answer for Step 2 into your answer for Step 1, then solve for ' +
+              katexHTML('p_1^*') + '.',
+    correctIdx: 0,
+    options: [
+      { tex: 'p_1^* = ' + p1s_r },
+      { tex: 'p_1^* = ' + p2s_r },
+      { tex: 'p_1^* = ' + numStr(p1eA) },
+      { tex: 'p_1^* = ' + numStr(p1eA + p2eA) },
+    ],
+    explanation: 'Plugging ' + katexHTML(p2eTeX) + ' into ' + katexHTML(p1eTeX) + ' and collecting ' +
+      katexHTML('p_1') + ' terms: ' +
+      katexHTML(lhsCoef + ' p_1 = ' + rhsVal) + ', giving ' +
+      katexHTML('p_1^* = ' + p1s_r) + '.'
+  });
+
+  // ── Step 4: Solve for p2* ───────────────────────────────────────────────
+  steps.push({
+    header: 'Step 4: Find p₂*',
+    question: 'Substitute ' + katexHTML('p_1^* = ' + p1s_r) + ' into your answer for Step 2.',
+    correctIdx: 0,
+    options: [
+      { tex: 'p_2^* = ' + p2s_r },
+      { tex: 'p_2^* = ' + p1s_r },
+      { tex: 'p_2^* = ' + numStr(p2eA) },
+      { tex: 'p_2^* = ' + numStr(p2eA + p2eB) },
+    ],
+    explanation: katexHTML('p_2^* = ' + numStr(p2eA) + ' + ' + numStr(p2eB) +
+      ' \\times ' + p1s_r + ' = ' + p2s_r) + '.'
+  });
+
+  // ── Step 5: Find q1* ────────────────────────────────────────────────────
+  steps.push({
+    header: 'Step 5: Find q₁*',
+    question: 'Plug ' + katexHTML('p_1^* = ' + p1s_r) + ' and ' + katexHTML('p_2^* = ' + p2s_r) +
+              ' into the demand curve for good 1.',
+    correctIdx: 0,
+    options: [
+      { tex: 'q_1^* = ' + q1s_r },
+      { tex: 'q_1^* = ' + q2s_r },
+      { tex: 'q_1^* = ' + numStr(p.A1 - p.c1 * p.p1s) },
+      { tex: 'q_1^* = ' + numStr(p.d1 * p.p1s) },
+    ],
+    explanation: katexHTML('q_1^* = ' + p.A1 + (p.b1 > 0 ? ' + ' + p.b1 + '(' + p2s_r + ')' : '') +
+      ' - ' + p.c1 + '(' + p1s_r + ') = ' + q1s_r) + '.'
+  });
+
+  // ── Step 6: Find q2* ────────────────────────────────────────────────────
+  steps.push({
+    header: 'Step 6: Find q₂*',
+    question: 'Plug ' + katexHTML('p_1^* = ' + p1s_r) + ' and ' + katexHTML('p_2^* = ' + p2s_r) +
+              ' into the demand curve for good 2.',
+    correctIdx: 0,
+    options: [
+      { tex: 'q_2^* = ' + q2s_r },
+      { tex: 'q_2^* = ' + q1s_r },
+      { tex: 'q_2^* = ' + numStr(p.A2 - p.c2 * p.p2s) },
+      { tex: 'q_2^* = ' + numStr(p.d2 * p.p2s) },
+    ],
+    explanation: katexHTML('q_2^* = ' + p.A2 + (p.b2 > 0 ? ' + ' + p.b2 + '(' + p1s_r + ')' : '') +
+      ' - ' + p.c2 + '(' + p2s_r + ') = ' + q2s_r) + '.'
+  });
+
+  return steps;
+}
+
+// ── Diagnostic engine ─────────────────────────────────────────────────────
+function startDiagnostic() {
+  $diag.classList.remove('hidden');
+  diagStep   = 0;
+  _diagSteps = buildDiagSteps();
+  $diagSteps.innerHTML = '';
+  renderDiagStep(0);
+}
+
+function renderDiagStep(idx) {
+  if (idx >= _diagSteps.length) {
+    const p = prob;
+    $diagComplete.textContent = '✓ Great work! p₁* = ' + r3(p.p1s) +
+      ', p₂* = ' + r3(p.p2s) + ', q₁* = ' + r3(p.q1s) + ', q₂* = ' + r3(p.q2s) + '.';
+    $diagComplete.classList.remove('hidden');
+    revealEq();
+    recordResult(false);
+    return;
+  }
+
+  const step   = _diagSteps[idx];
+  const stepEl = document.createElement('div');
+  stepEl.className = 'diag-step';
+
+  // Shuffle options
+  const indices = [0,1,2,3];
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  const shuffled = indices.map(i => ({ ...step.options[i], isCorrect: i === step.correctIdx }));
+  const letters  = ['A','B','C','D'];
+
+  const optHTML = shuffled.map((opt, i) =>
+    `<button class="mc-option" type="button" aria-pressed="false" data-correct="${opt.isCorrect}">
+       <div class="mc-letter">${letters[i]}</div>
+       <div>${katexHTML(opt.tex)}</div>
+     </button>`
+  ).join('');
+
+  stepEl.innerHTML = `
+    <div class="diag-step-header">${step.header}</div>
+    <div class="diag-question">${step.question}</div>
+    <div class="mc-options" role="group" aria-label="${step.header}">${optHTML}</div>
+  `;
+
+  $diagSteps.appendChild(stepEl);
+  stepEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  stepEl.querySelectorAll('.mc-option').forEach(btn => {
+    btn.addEventListener('click', function () {
+      if (btn.classList.contains('disabled')) return;
+      stepEl.querySelectorAll('.mc-option').forEach(b => {
+        b.classList.add('disabled');
+        b.setAttribute('aria-disabled', 'true');
+        b.setAttribute('aria-pressed', 'false');
+      });
+
+      const correct  = btn.dataset.correct === 'true';
+      const letterEl = btn.querySelector('.mc-letter');
+      btn.setAttribute('aria-pressed', 'true');
+
+      if (correct) {
+        btn.classList.add('selected-correct');
+        if (letterEl) letterEl.textContent = '✓';
+      } else {
+        btn.classList.add('selected-wrong');
+        if (letterEl) letterEl.textContent = '✗';
+        stepEl.querySelectorAll('.mc-option').forEach(b => {
+          if (b.dataset.correct === 'true') {
+            b.classList.add('revealed-correct');
+            const lEl = b.querySelector('.mc-letter');
+            if (lEl) lEl.textContent = '✓';
+          }
+        });
+      }
+
+      const expEl = document.createElement('div');
+      expEl.className = 'explanation-box';
+      expEl.innerHTML = step.explanation;
+      stepEl.appendChild(expEl);
+
+      setTimeout(() => renderDiagStep(idx + 1), 1200);
+    });
+  });
+}
+
+// ── New problem button ────────────────────────────────────────────────────
+$newBtn.addEventListener('click', function () {
+  generateProblem();
+  renderProblem();
+});
+
+// ── Example math rendering ────────────────────────────────────────────────
+function renderExampleMath() {
+  document.querySelectorAll('#exampleBox [data-tex]').forEach(el => {
+    try {
+      katex.render(el.getAttribute('data-tex'), el, { throwOnError: false, displayMode: false });
+    } catch(e) {}
+  });
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+generateProblem();
+
+function init() {
+  if (window.katex) {
+    renderProblem();
+    renderExampleMath();
+  } else {
+    let tries = 0;
+    const poll = setInterval(() => {
+      tries++;
+      if (window.katex || tries > 40) { clearInterval(poll); renderProblem(); renderExampleMath(); }
+    }, 80);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => setTimeout(init, 50));
+} else {
+  setTimeout(init, 50);
+}
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1761 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Cross-Market Spillover Explorer — ECON 104B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937; --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2; --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38; --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ───────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* ── Header ──────────────────────────────────────────────── */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;
+      font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;
+      line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0 0 14px;color:var(--ink-2);line-height:1.55;
+      max-width:80ch;font-size:0.9375rem;}
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+    .hidden{display:none!important;}
+
+    /* ── Instructions dropdown ───────────────────────────────── */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* ── Cards ───────────────────────────────────────────────── */
+    .card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px;box-shadow:var(--shadow);
+      margin-bottom:16px;}
+    .card-title{font-family:var(--font-serif);font-size:1.125rem;
+      font-weight:700;color:var(--ink);margin:0 0 10px;
+      display:flex;align-items:center;gap:10px;}
+    .qbadge{font-size:0.625rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.08em;background:var(--accent);color:#fff;
+      padding:3px 8px;border-radius:999px;font-family:var(--font-sans);}
+
+    /* ── Canvas row ──────────────────────────────────────────── */
+    .canvas-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+    @media(max-width:700px){.canvas-row{grid-template-columns:1fr;}}
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;
+      overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+
+    /* ── Status / equation strip ─────────────────────────────────── */
+    .status-strip{margin:12px 0 0;padding:10px 14px;border-radius:10px;
+      background:rgba(246,242,234,.55);border:1px solid var(--line);
+      font-size:0.8125rem;color:var(--ink-2);line-height:1.65;}
+    .status-label{font-size:0.6875rem;font-weight:700;text-transform:uppercase;
+      letter-spacing:.07em;color:var(--muted);margin-right:4px;}
+    .eq-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 24px;
+      margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--line-2);}
+    .eq-cell{font-size:0.8125rem;color:var(--ink);white-space:nowrap;}
+    .eq-head{font-size:0.6875rem;font-weight:700;text-transform:uppercase;
+      letter-spacing:.07em;color:var(--muted);grid-column:1/-1;margin-bottom:2px;}
+
+    /* ── Buttons ──────────────────────────────────────────────── */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover:not(:disabled){background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* ── Question / radio styling ─────────────────────────────── */
+    .question-text{font-size:0.9375rem;color:var(--ink);
+      line-height:1.5;margin:0 0 12px;}
+    .question-narrative{font-style:italic;color:var(--ink-2);
+      margin:0 0 10px;font-size:0.9375rem;line-height:1.5;}
+    .radio-group{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+    .radio-stack{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+    .radio-option{display:flex;align-items:flex-start;gap:10px;
+      padding:10px 14px;border:1.5px solid #8c7f72;border-radius:10px;
+      background:var(--panel);cursor:pointer;font-size:0.875rem;
+      font-weight:600;color:var(--ink-2);transition:all .12s;line-height:1.45;}
+    .radio-option:hover:not(.locked){border-color:var(--accent);
+      background:rgba(47,93,124,.05);}
+    .radio-option input{margin:2px 0 0 0;accent-color:var(--accent);flex-shrink:0;}
+    .radio-option .opt-text{flex:1;}
+    .radio-option.selected{border-color:var(--accent);
+      background:rgba(47,93,124,.10);color:var(--accent);}
+    .radio-option.locked{cursor:not-allowed;}
+    .radio-option.correct{border-color:var(--good);
+      background:rgba(21,92,56,.10);color:var(--good);}
+    .radio-option.wrong{border-color:var(--bad);
+      background:rgba(180,35,24,.08);color:var(--bad);}
+
+    .feedback-msg{margin-top:10px;padding:10px 14px;border-radius:10px;
+      font-size:0.8125rem;font-weight:600;line-height:1.5;}
+    .feedback-msg.correct{background:rgba(21,92,56,.10);
+      border:1px solid rgba(21,92,56,.25);color:var(--good);}
+    .feedback-msg.wrong{background:rgba(180,35,24,.08);
+      border:1px solid rgba(180,35,24,.25);color:var(--bad);}
+    .feedback-msg.hint{background:rgba(140,72,0,.08);
+      border:1px solid rgba(140,72,0,.30);color:#8c4800;}
+
+    .submit-row{display:flex;justify-content:flex-end;margin-top:10px;}
+    .lab-done{margin-top:12px;padding:12px 14px;border-radius:10px;
+      background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.25);
+      color:var(--good);font-weight:700;font-size:0.875rem;}
+
+    /* ── Bottom actions ───────────────────────────────────────── */
+    .bottom-actions{display:flex;justify-content:center;gap:10px;
+      margin-top:6px;padding-top:6px;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ104b/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104B — General Equilibrium</div>
+      <h1>Cross-Market Spillover Explorer</h1>
+      <p class="sub">
+        A shock in one market ripples into a linked market through substitution effects.
+        Predict each step of the adjustment — which curve shifts, which direction, and what
+        happens to price — then watch the diagram update to confirm.
+      </p>
+
+      <details id="instructionsBox" class="instructions-box">
+        <summary class="instructions-toggle">How to use this lab</summary>
+        <div class="instructions-body">
+          <ol>
+            <li>Read the scenario and the equations printed on each diagram.</li>
+            <li>The two panels show only the initial equilibrium at the start. Curves are
+                added as you answer each question correctly.</li>
+            <li>Answer questions about the shocked market first, then the spillover market.</li>
+            <li>Press <strong>New Problem</strong> at any time to get a fresh scenario.</li>
+          </ol>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- ── Canvas card ───────────────────────────────────────── -->
+  <div class="canvas-row" id="canvasRow">
+    <div class="graph-card">
+      <div class="graph-title" id="cornTitle">Corn Market</div>
+      <div class="canvas-wrap" style="aspect-ratio:4/3;">
+        <canvas id="cornCanvas"
+                role="img"
+                aria-labelledby="cornTitle"
+                aria-describedby="cornDesc"
+                style="aspect-ratio:4/3;"></canvas>
+      </div>
+    </div>
+    <div class="graph-card">
+      <div class="graph-title" id="wheatTitle">Wheat Market</div>
+      <div class="canvas-wrap" style="aspect-ratio:4/3;">
+        <canvas id="wheatCanvas"
+                role="img"
+                aria-labelledby="wheatTitle"
+                aria-describedby="wheatDesc"
+                style="aspect-ratio:4/3;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Status strip ──────────────────────────────────────── -->
+  <div id="statusStrip" class="status-strip"
+       aria-live="polite" aria-atomic="true">
+    Loading…
+  </div>
+
+  <!-- ── SR descriptions ────────────────────────────────────── -->
+  <section class="sr-only" aria-live="polite" aria-atomic="true">
+    <p id="cornDesc">Corn market diagram.</p>
+    <p id="wheatDesc">Wheat market diagram.</p>
+  </section>
+
+  <!-- ── Q1 card ───────────────────────────────────────────── -->
+  <section class="card" id="q1Card" aria-labelledby="q1Heading">
+    <h2 class="card-title" id="q1Heading">
+      <span class="qbadge">Q1</span>
+      Which curve shifts?
+    </h2>
+    <p class="question-narrative" id="q1Narrative"></p>
+    <p class="question-text" id="q1Text"></p>
+    <div class="radio-group" id="q1Options" role="radiogroup" aria-labelledby="q1Heading"></div>
+    <div class="submit-row">
+      <button class="primary-btn" id="submitQ1Btn">Submit Q1</button>
+    </div>
+    <div id="q1Feedback" class="feedback-msg hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+  </section>
+
+  <!-- ── Q2 card ───────────────────────────────────────────── -->
+  <section class="card hidden" id="q2Card" aria-labelledby="q2Heading">
+    <h2 class="card-title" id="q2Heading">
+      <span class="qbadge">Q2</span>
+      Which direction does it shift?
+    </h2>
+    <p class="question-text" id="q2Text"></p>
+    <div class="radio-group" id="q2Options" role="radiogroup" aria-labelledby="q2Heading"></div>
+    <div class="submit-row">
+      <button class="primary-btn" id="submitQ2Btn">Submit Q2</button>
+    </div>
+    <div id="q2Feedback" class="feedback-msg hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+  </section>
+
+  <!-- ── Q3 card ───────────────────────────────────────────── -->
+  <section class="card hidden" id="q3Card" aria-labelledby="q3Heading">
+    <h2 class="card-title" id="q3Heading">
+      <span class="qbadge">Q3</span>
+      What happens to price?
+    </h2>
+    <p class="question-text" id="q3Text"></p>
+    <div class="radio-stack" id="q3Options" role="radiogroup" aria-labelledby="q3Heading"></div>
+    <div class="submit-row">
+      <button class="primary-btn" id="submitQ3Btn">Submit Q3</button>
+    </div>
+    <div id="q3Feedback" class="feedback-msg hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+  </section>
+
+  <!-- ── Q4 card ───────────────────────────────────────────── -->
+  <section class="card hidden" id="q4Card" aria-labelledby="q4Heading">
+    <h2 class="card-title" id="q4Heading">
+      <span class="qbadge">Q4</span>
+      Spillover: which curve shifts?
+    </h2>
+    <p class="question-text" id="q4Text"></p>
+    <div class="radio-group" id="q4Options" role="radiogroup" aria-labelledby="q4Heading"></div>
+    <div class="submit-row">
+      <button class="primary-btn" id="submitQ4Btn">Submit Q4</button>
+    </div>
+    <div id="q4Feedback" class="feedback-msg hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+  </section>
+
+  <!-- ── Q5 card ───────────────────────────────────────────── -->
+  <section class="card hidden" id="q5Card" aria-labelledby="q5Heading">
+    <h2 class="card-title" id="q5Heading">
+      <span class="qbadge">Q5</span>
+      Spillover: which direction?
+    </h2>
+    <p class="question-text" id="q5Text"></p>
+    <div class="radio-group" id="q5Options" role="radiogroup" aria-labelledby="q5Heading"></div>
+    <div class="submit-row">
+      <button class="primary-btn" id="submitQ5Btn">Submit Q5</button>
+    </div>
+    <div id="q5Feedback" class="feedback-msg hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+  </section>
+
+  <!-- ── Q6 card ───────────────────────────────────────────── -->
+  <section class="card hidden" id="q6Card" aria-labelledby="q6Heading">
+    <h2 class="card-title" id="q6Heading">
+      <span class="qbadge">Q6</span>
+      Spillover: what happens to price?
+    </h2>
+    <p class="question-text" id="q6Text"></p>
+    <div class="radio-stack" id="q6Options" role="radiogroup" aria-labelledby="q6Heading"></div>
+    <div class="submit-row">
+      <button class="primary-btn" id="submitQ6Btn">Submit Q6</button>
+    </div>
+    <div id="q6Feedback" class="feedback-msg hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+    <div id="labDoneMsg" class="lab-done hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+  </section>
+
+  <!-- ── New problem ───────────────────────────────────────── -->
+  <div class="bottom-actions">
+    <button class="option-btn" id="newProblemBtn">↻ New Problem</button>
+  </div>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 104B — General Equilibrium</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+// LAB_ID:    'cross-market-spillover'
+// LAB_LABEL: 'Cross-Market Spillover Explorer'
+// url:       '/classes/econ104b/labs/cross-market-spillover/?disc=1'
+
+const LAB_ID      = 'cross-market-spillover';
+const LAB_LABEL   = 'Cross-Market Spillover Explorer';
+const WEEK_LABEL  = 'Week 9 — General Equilibrium';
+const SESSION_KEY = 'econ002_session';
+
+// ── Padding (CSS px) ──────────────────────────────────────────────────────
+const PAD = { l:52, r:16, t:48, b:48 };
+
+// ── Scenario banks ────────────────────────────────────────────────────────
+const SCENARIOS_A = [
+  { id:'a01', shockedMarket:'corn',  shockedCurve:'demand', direction:'right', deltaA:+6,
+    narrative:'The government introduces an ethanol mandate, increasing demand for corn at every price.' },
+  { id:'a02', shockedMarket:'corn',  shockedCurve:'demand', direction:'left',  deltaA:-6,
+    narrative:'A popular low-carb diet trend sharply reduces consumer demand for corn.' },
+  { id:'a03', shockedMarket:'corn',  shockedCurve:'supply', direction:'right', deltaA:+6,
+    narrative:'Improved drought-resistant seed technology raises corn yields.' },
+  { id:'a04', shockedMarket:'corn',  shockedCurve:'supply', direction:'left',  deltaA:-6,
+    narrative:'A severe drought destroys a large share of the corn harvest.' },
+  { id:'a05', shockedMarket:'wheat', shockedCurve:'demand', direction:'right', deltaA:+6,
+    narrative:'Rising global incomes increase demand for wheat-based foods.' },
+  { id:'a06', shockedMarket:'wheat', shockedCurve:'demand', direction:'left',  deltaA:-6,
+    narrative:'A gluten-free movement sharply reduces demand for wheat.' },
+  { id:'a07', shockedMarket:'wheat', shockedCurve:'supply', direction:'right', deltaA:+6,
+    narrative:'Favorable weather produces a bumper wheat harvest.' },
+  { id:'a08', shockedMarket:'wheat', shockedCurve:'supply', direction:'left',  deltaA:-6,
+    narrative:'A fungal blight destroys much of the wheat crop.' },
+  { id:'a09', shockedMarket:'corn',  shockedCurve:'demand', direction:'right', deltaA:+8,
+    narrative:'The corn-based sweetener industry expands, boosting demand.' },
+  { id:'a10', shockedMarket:'corn',  shockedCurve:'supply', direction:'left',  deltaA:-5,
+    narrative:'A new environmental regulation raises corn production costs.' },
+  { id:'a11', shockedMarket:'wheat', shockedCurve:'supply', direction:'right', deltaA:+7,
+    narrative:'A government subsidy lowers production costs for wheat farmers.' },
+  { id:'a12', shockedMarket:'wheat', shockedCurve:'demand', direction:'left',  deltaA:-5,
+    narrative:'A trade agreement opens cheaper wheat imports, reducing domestic demand.' },
+];
+
+const SCENARIOS_B = [
+  { id:'b01', shockedMarket:'corn',  shockedCurve:'supply', direction:'right', deltaA:+6,
+    narrative:'Better farming techniques increase corn yields, expanding supply.' },
+  { id:'b02', shockedMarket:'corn',  shockedCurve:'supply', direction:'left',  deltaA:-6,
+    narrative:'Higher fertilizer prices raise corn production costs, reducing supply.' },
+  { id:'b03', shockedMarket:'wheat', shockedCurve:'supply', direction:'right', deltaA:+6,
+    narrative:'New high-yield wheat varieties boost production.' },
+  { id:'b04', shockedMarket:'wheat', shockedCurve:'supply', direction:'left',  deltaA:-6,
+    narrative:'A drought reduces wheat supply.' },
+  { id:'b05', shockedMarket:'corn',  shockedCurve:'supply', direction:'left',  deltaA:-8,
+    narrative:'A new pollution regulation sharply raises corn production costs.' },
+  { id:'b06', shockedMarket:'wheat', shockedCurve:'supply', direction:'right', deltaA:+8,
+    narrative:'A large government subsidy to wheat farmers expands supply.' },
+];
+
+// ── State ─────────────────────────────────────────────────────────────────
+let _rng        = null;
+let _seededInit = true;
+let _fs         = 1;
+let _firstScore = 0;
+
+let modelType   = 'A';  // 'A' or 'B'
+let scenario    = null;
+let A_c = 20, A_w = 20;
+
+// Before/after GE values
+let Pc0, Pw0, Qc0, Qw0;   // initial
+let Pc1, Pw1, Qc1, Qw1;   // after shock
+
+// Derived
+let priceEffect         = 'up';  // shocked market
+let spilloverPriceEffect= 'up';  // other market
+let spilloverCurve      = 'demand';
+let spilloverDirection  = 'right';
+
+// Draw phase: 'scenario' | 'shocked' | 'done'
+let phase = 'scenario';
+
+// Per-question locks
+let qLocked = [false,false,false,false,false,false];
+let q3ShuffleOrder = [0,1,2];
+let q6ShuffleOrder = [0,1,2];
+
+// ── DOM ───────────────────────────────────────────────────────────────────
+const $cornCanvas  = document.getElementById('cornCanvas');
+const $wheatCanvas = document.getElementById('wheatCanvas');
+const $cornDesc    = document.getElementById('cornDesc');
+const $wheatDesc   = document.getElementById('wheatDesc');
+const $status      = document.getElementById('statusStrip');
+
+const $q1Card = document.getElementById('q1Card');
+const $q2Card = document.getElementById('q2Card');
+const $q3Card = document.getElementById('q3Card');
+const $q4Card = document.getElementById('q4Card');
+const $q5Card = document.getElementById('q5Card');
+const $q6Card = document.getElementById('q6Card');
+
+const $q1Narrative = document.getElementById('q1Narrative');
+const $q1Text      = document.getElementById('q1Text');
+const $q1Options   = document.getElementById('q1Options');
+const $submitQ1    = document.getElementById('submitQ1Btn');
+const $q1Feedback  = document.getElementById('q1Feedback');
+
+const $q2Text     = document.getElementById('q2Text');
+const $q2Options  = document.getElementById('q2Options');
+const $submitQ2   = document.getElementById('submitQ2Btn');
+const $q2Feedback = document.getElementById('q2Feedback');
+
+const $q3Text     = document.getElementById('q3Text');
+const $q3Options  = document.getElementById('q3Options');
+const $submitQ3   = document.getElementById('submitQ3Btn');
+const $q3Feedback = document.getElementById('q3Feedback');
+
+const $q4Text     = document.getElementById('q4Text');
+const $q4Options  = document.getElementById('q4Options');
+const $submitQ4   = document.getElementById('submitQ4Btn');
+const $q4Feedback = document.getElementById('q4Feedback');
+
+const $q5Text     = document.getElementById('q5Text');
+const $q5Options  = document.getElementById('q5Options');
+const $submitQ5   = document.getElementById('submitQ5Btn');
+const $q5Feedback = document.getElementById('q5Feedback');
+
+const $q6Text     = document.getElementById('q6Text');
+const $q6Options  = document.getElementById('q6Options');
+const $submitQ6   = document.getElementById('submitQ6Btn');
+const $q6Feedback = document.getElementById('q6Feedback');
+const $labDoneMsg = document.getElementById('labDoneMsg');
+
+const $newProblem = document.getElementById('newProblemBtn');
+
+// ── RNG ───────────────────────────────────────────────────────────────────
+function rng(){ return _rng ? _rng() : Math.random(); }
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i = a.length-1; i > 0; i--){
+    const j = Math.floor(rng() * (i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+// ── Axis helpers ──────────────────────────────────────────────────────────
+function snapUp(raw){
+  const s=[5,8,10,12,15,20,25,30,40,50,60,80,100,120,
+           150,200,250,300,400,500,600,800,1000];
+  return s.find(v => v >= raw) || Math.ceil(raw/100)*100;
+}
+
+function tickStep(mx){
+  if(mx<=10) return 1; if(mx<=20) return 2; if(mx<=50) return 5;
+  if(mx<=100) return 10; if(mx<=200) return 20; if(mx<=500) return 50;
+  return 100;
+}
+
+// ── GE solvers ────────────────────────────────────────────────────────────
+function solveModelA(ac, aw){
+  // Qd_c = ac - Pc + Pw,  Qs_c = Pc
+  // Qd_w = aw - Pw + Pc,  Qs_w = Pw
+  // GE: Pc* = (2ac + aw)/3,  Pw* = (2aw + ac)/3
+  const pc = (2*ac + aw) / 3;
+  const pw = (2*aw + ac) / 3;
+  return { pc, pw, qc: pc, qw: pw };
+}
+
+function solveModelB(ac, aw){
+  // Qd_c = ac - Pc,  Qs_c = 2Pc - Pw
+  // Qd_w = aw - Pw,  Qs_w = 2Pw - Pc
+  // Setting Qd=Qs in each market and solving jointly:
+  // Pc* = (3ac + aw) / 8,  Pw* = (3aw + ac) / 8
+  const pc = (3*ac + aw) / 8;
+  const pw = (3*aw + ac) / 8;
+  // Quantities from demand side (demand is unchanged by supply shocks)
+  // Qc* = Ac - Pc = (5ac-aw)/8,  Qw* = Aw - Pw = (5aw-ac)/8
+  return { pc, pw, qc: ac - pc, qw: aw - pw };
+}
+
+function solve(ac, aw){
+  return modelType === 'A' ? solveModelA(ac, aw) : solveModelB(ac, aw);
+}
+
+// ── generateParams ────────────────────────────────────────────────────────
+function generateParams(){
+  if(_seededInit && window.Session && Session.rngForLab){
+    _rng = Session.rngForLab(LAB_ID);
+  } else {
+    _rng = Math.random;
+  }
+  _seededInit = false;
+
+  modelType = rng() < 0.5 ? 'A' : 'B';
+  A_c = 16 + Math.floor(rng() * 9);  // [16,24]
+  A_w = 16 + Math.floor(rng() * 9);
+
+  const bank = modelType === 'A' ? SCENARIOS_A : SCENARIOS_B;
+  scenario = bank[Math.floor(rng() * bank.length)];
+
+  // Initial equilibrium prices
+  const init = solve(A_c, A_w);
+  Pc0 = init.pc; Pw0 = init.pw;
+  // Quantities from demand side (always well-defined)
+  if(modelType === 'A'){
+    Qc0 = A_c - Pc0 + Pw0;   // = Pc0 at initial (same result, but explicit)
+    Qw0 = A_w - Pw0 + Pc0;
+  } else {
+    Qc0 = A_c - Pc0;
+    Qw0 = A_w - Pw0;
+  }
+
+  // Apply shock to the GE intercept parameter.
+  // For SUPPLY shocks: a rightward supply shift raises quantity at each price,
+  // which is equivalent to *reducing* the effective A in the GE formula
+  // (lower A → lower price, consistent with more supply driving price down).
+  // So negate deltaA for supply shocks.
+  const signedDelta = scenario.shockedCurve === 'supply'
+    ? -scenario.deltaA
+    : scenario.deltaA;
+  let ac1 = A_c, aw1 = A_w;
+  if(scenario.shockedMarket === 'corn') ac1 = A_c + signedDelta;
+  else aw1 = A_w + signedDelta;
+
+  const after = solve(ac1, aw1);
+  Pc1 = after.pc; Pw1 = after.pw;
+
+  // After-shock quantities — demand side uses original A when only supply shifts
+  const acDem1 = (scenario.shockedMarket === 'corn' && scenario.shockedCurve === 'demand')
+    ? ac1 : A_c;
+  const awDem1 = (scenario.shockedMarket === 'wheat' && scenario.shockedCurve === 'demand')
+    ? aw1 : A_w;
+  if(modelType === 'A'){
+    Qc1 = acDem1 - Pc1 + Pw1;
+    Qw1 = awDem1 - Pw1 + Pc1;
+  } else {
+    Qc1 = A_c - Pc1;   // demand never shocked in Model B
+    Qw1 = A_w - Pw1;
+  }
+
+  priceEffect = (scenario.shockedMarket === 'corn')
+    ? (Pc1 > Pc0 ? 'up' : 'down')
+    : (Pw1 > Pw0 ? 'up' : 'down');
+
+  spilloverPriceEffect = (scenario.shockedMarket === 'corn')
+    ? (Pw1 > Pw0 ? 'up' : 'down')
+    : (Pc1 > Pc0 ? 'up' : 'down');
+
+  // Spillover curve type
+  spilloverCurve = modelType === 'A' ? 'demand' : 'supply';
+
+  // Spillover direction
+  if(modelType === 'A'){
+    // Cross-price on demand side: other market demand shifts same direction as shocked price
+    spilloverDirection = priceEffect === 'up' ? 'right' : 'left';
+  } else {
+    // Cross-price on supply side: other market supply shifts opposite to shocked price
+    // (resources pulled toward more profitable market)
+    spilloverDirection = priceEffect === 'up' ? 'left' : 'right';
+  }
+
+  q3ShuffleOrder = shuffle([0,1,2]);
+  q6ShuffleOrder = shuffle([0,1,2]);
+}
+
+// ── Canvas helpers ────────────────────────────────────────────────────────
+function setupCanvas(canvas){
+  const dpr  = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W    = Math.round(rect.width  * dpr);
+  const H    = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+function makeCoords(W, H, dpr, xMax, yMax){
+  const p = { l:PAD.l*dpr, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  return {
+    xC: x => p.l + (x / xMax) * PW,
+    yC: y => H - p.b - (y / yMax) * PH,
+    p, PW, PH
+  };
+}
+
+// Draw a supply or demand line: price = intercept + slope*qty  (supply)
+// or price = intercept - slope*qty (demand), expressed as P on y, Q on x.
+// We parameterize by P: for supply P = a + b*Q → Q = (P-a)/b
+//                       for demand P = a - b*Q → Q = (a-P)/b
+// Here both supply and demand have slope 1 in price per quantity.
+// Supply (Model A corn): Qs_c = Pc  → Pc = Qs_c (slope 1, intercept 0)
+// Demand (Model A corn): Qd_c = ac - Pc + Pw → Pc = ac + Pw - Qd_c
+// We draw lines as P vs Q with known P-intercept and slope.
+
+function drawLine(ctx, c, dpr, pIntercept, slope, color, lw, dash){
+  // P = pIntercept + slope * Q  (on the (Q,P) plane, supply upward, demand downward)
+  // slope > 0 → supply, slope < 0 → demand
+  const xMax = (c.PW / (c.p.l < 0 ? 1 : 1));  // unused — using c directly
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(c.p.l, c.p.t, c.PW, c.PH);
+  ctx.clip();
+
+  if(dash) ctx.setLineDash(dash.map(v => v*dpr));
+
+  // Sweep Q from 0 to qMax (we recover it from the coord system)
+  const qMax = (c.PW / c.PW) * 1; // placeholder — we use pixel sweep
+  // Instead, sweep pixels across x-axis
+  const steps = 200;
+  ctx.beginPath();
+  let started = false;
+  for(let i=0; i<=steps; i++){
+    const qPx = c.p.l + (i/steps)*c.PW;
+    const q   = (i/steps) * _qMax;
+    const p   = pIntercept + slope * q;
+    if(p < 0 || p > _pMax){ started = false; continue; }
+    const x = qPx;
+    const y = c.yC(p);
+    if(!started){ ctx.moveTo(x, y); started = true; }
+    else         { ctx.lineTo(x, y); }
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = lw;
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+// Module-level axis maxima — set per-canvas inside drawMarket
+let _pMax = 30, _qMax = 30;
+
+function drawMarket(canvas, showShifted,
+                    pInit, qInit, pNew, qNew,
+                    supplyIntercept, supplySlope,
+                    demandIntercept,
+                    shiftedIsSupply, shiftedIntercept){
+
+  const s = setupCanvas(canvas);
+  if(!s) return;
+  const { ctx, dpr, W, H } = s;
+
+  // Always set axis limits from after-shock values so the scale is stable
+  _pMax = snapUp(Math.max(pInit, pNew) * 1.35);
+  _qMax = snapUp(Math.max(qInit, qNew) * 1.35);
+
+  const c = makeCoords(W, H, dpr, _qMax, _pMax);
+
+  ctx.clearRect(0,0,W,H);
+
+  // Axes
+  ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+  ctx.lineWidth   = 1.5 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(c.p.l, c.p.t);
+  ctx.lineTo(c.p.l, c.p.t + c.PH);
+  ctx.lineTo(c.p.l + c.PW, c.p.t + c.PH);
+  ctx.stroke();
+
+  // Axis labels
+  ctx.font = `700 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText('Quantity', c.p.l + c.PW/2, c.p.t + c.PH + 28*dpr);
+
+  ctx.save();
+  ctx.translate(c.p.l - 36*dpr, c.p.t + c.PH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('Price', 0, 0);
+  ctx.restore();
+
+  // Tick marks
+  const ts = tickStep(_qMax);
+  ctx.font = `600 ${Math.round(9 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for(let q=0; q<=_qMax; q+=ts){
+    const x = c.xC(q);
+    ctx.fillText(String(q), x, c.p.t + c.PH + 6*dpr);
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.lineWidth = 1*dpr;
+    ctx.beginPath();
+    ctx.moveTo(x, c.p.t + c.PH);
+    ctx.lineTo(x, c.p.t + c.PH + 4*dpr);
+    ctx.stroke();
+  }
+  const ps = tickStep(_pMax);
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for(let p=0; p<=_pMax; p+=ps){
+    const y = c.yC(p);
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillText(String(p), c.p.l - 6*dpr, y);
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.lineWidth = 1*dpr;
+    ctx.beginPath();
+    ctx.moveTo(c.p.l - 4*dpr, y);
+    ctx.lineTo(c.p.l, y);
+    ctx.stroke();
+  }
+
+  // Supply line (initial)
+  drawLine(ctx, c, dpr, supplyIntercept, supplySlope, '#2f5d7c', 2.5*dpr, null);
+
+  // Demand line (initial) — slope always -1
+  drawLine(ctx, c, dpr, demandIntercept, -1, '#b42318', 2.5*dpr, null);
+
+  // Curve labels
+  labelCurve(ctx, c, dpr, supplyIntercept, supplySlope, 'S', '#2f5d7c', 'right');
+  labelCurve(ctx, c, dpr, demandIntercept, -1, 'D', '#b42318', 'left');
+
+  // Initial equilibrium dot
+  drawEquilDot(ctx, c, dpr, qInit, pInit, '#2f5d7c', false);
+  drawDropLines(ctx, c, dpr, qInit, pInit, '#2f5d7c');
+  drawEqTicks(ctx, c, dpr, qInit, pInit, '#2f5d7c');
+
+  // Shifted curve + new equilibrium
+  if(showShifted){
+    if(shiftedIsSupply){
+      drawLine(ctx, c, dpr, shiftedIntercept, supplySlope, '#2f5d7c', 3.5*dpr, null);
+      labelCurve(ctx, c, dpr, shiftedIntercept, supplySlope, "S′", '#2f5d7c', 'right');
+    } else {
+      drawLine(ctx, c, dpr, shiftedIntercept, -1, '#b42318', 3.5*dpr, null);
+      labelCurve(ctx, c, dpr, shiftedIntercept, -1, "D′", '#b42318', 'left');
+    }
+
+    drawEquilDot(ctx, c, dpr, qNew, pNew, '#b42318', true);
+    drawDropLines(ctx, c, dpr, qNew, pNew, '#b42318');
+    drawEqTicks(ctx, c, dpr, qNew, pNew, '#b42318');
+  }
+}
+
+function labelCurve(ctx, c, dpr, intercept, slope, label, color){
+  // Place label at the far (rightmost) visible end of the line.
+  // Supply (slope>0): end is where P=pMax or Q=qMax, whichever comes first.
+  // Demand (slope=-1): end is where P=0 or Q=qMax, whichever comes first.
+  let qEnd;
+  if(slope > 0){
+    // Supply: top of chart (P=pMax) may clip before right edge
+    const qAtTop = (_pMax - intercept) / slope;
+    qEnd = Math.min(_qMax, qAtTop);
+  } else {
+    // Demand: bottom of chart (P=0) may clip before right edge
+    const qAtBot = intercept / (-slope); // intercept - 1*Q=0 → Q=intercept
+    qEnd = Math.min(_qMax, qAtBot);
+  }
+  qEnd = Math.max(0, qEnd);
+
+  // Step back slightly so the label isn't cut off at the edge
+  qEnd = qEnd * 0.97;
+  const p = intercept + slope * qEnd;
+  if(p < 0 || p > _pMax * 1.05) return;
+
+  const x = c.xC(qEnd);
+  const y = c.yC(Math.min(_pMax, Math.max(0, p)));
+  ctx.save();
+  ctx.font = `700 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = color;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(label, x - 4*dpr, y - 5*dpr);
+  ctx.restore();
+}
+
+function drawEquilDot(ctx, c, dpr, q, p, color, isNew){
+  const x = c.xC(q), y = c.yC(p);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, 11*dpr, 0, Math.PI*2);
+  ctx.fillStyle = isNew ? 'rgba(180,35,24,0.15)' : 'rgba(47,93,124,0.15)';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(x, y, 7*dpr, 0, Math.PI*2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.8*dpr;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawDropLines(ctx, c, dpr, q, p, color){
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = 1.2*dpr;
+  ctx.setLineDash([4*dpr, 3*dpr]);
+  ctx.globalAlpha = 0.5;
+  const x = c.xC(q), y = c.yC(p);
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x, c.p.t + c.PH);
+  ctx.moveTo(x, y);
+  ctx.lineTo(c.p.l, y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function drawEqTicks(ctx, c, dpr, q, p, color){
+  const x = c.xC(q), y = c.yC(p);
+  ctx.font = `600 ${Math.round(9*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText(p.toFixed(1), x, c.p.t + c.PH + 8*dpr);
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(q.toFixed(1), c.p.l - 8*dpr, y);
+}
+
+// ── Build curve params from model ─────────────────────────────────────────
+// Returns {supplyIntercept, supplySlope, demandIntercept, demandSlope}
+// All lines expressed as P = intercept + slope*Q
+// Supply slope > 0, demand slope < 0
+
+function getCurveParams(market, ac, aw, pwOrPc){
+  // pwOrPc = the other market's equilibrium price (used in cross-price terms)
+  if(modelType === 'A'){
+    if(market === 'corn'){
+      // Qs_c = Pc → Pc = 0 + 1*Qs_c
+      // Qd_c = ac - Pc + Pw → Pc = ac + Pw - Qd_c  (intercept = ac+Pw, slope = -1)
+      return { supplyIntercept:0, supplySlope:1, demandIntercept:ac+pwOrPc, demandSlope:-1 };
+    } else {
+      // Qs_w = Pw → Pw = 0 + 1*Qs_w
+      // Qd_w = aw - Pw + Pc → Pw = aw + Pc - Qd_w
+      return { supplyIntercept:0, supplySlope:1, demandIntercept:aw+pwOrPc, demandSlope:-1 };
+    }
+  } else {
+    // Model B
+    if(market === 'corn'){
+      // Qs_c = 2Pc - Pw → Pc = Pw/2 + Qs_c/2 → P = Pw/2 + 0.5*Q
+      // Qd_c = ac - Pc → Pc = ac - Qd_c
+      return { supplyIntercept:pwOrPc/2, supplySlope:0.5, demandIntercept:ac, demandSlope:-1 };
+    } else {
+      // Qs_w = 2Pw - Pc → Pw = Pc/2 + Qs_w/2
+      // Qd_w = aw - Pw → Pw = aw - Qd_w
+      return { supplyIntercept:pwOrPc/2, supplySlope:0.5, demandIntercept:aw, demandSlope:-1 };
+    }
+  }
+}
+
+// ── redraw ────────────────────────────────────────────────────────────────
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  drawBothMarkets();
+  updateStatus();
+  updateDescs();
+}
+
+function drawBothMarkets(){
+  if(!scenario) return;
+
+  const shockedIsCorn = scenario.shockedMarket === 'corn';
+  const showCornShifted  = (phase === 'shocked' || phase === 'done') && shockedIsCorn;
+  const showWheatShifted = (phase === 'shocked' || phase === 'done') && !shockedIsCorn;
+  const showCornSpill    = phase === 'done' && !shockedIsCorn;
+  const showWheatSpill   = phase === 'done' && shockedIsCorn;
+
+  const supplySlope = modelType === 'A' ? 1 : 0.5;
+
+  // ── Initial curve intercepts ──
+  // Supply (P = intercept + slope*Q); Demand (P = intercept − Q)
+  const cornSupInt0  = modelType === 'A' ? 0        : Pw0 / 2;
+  const cornDemInt0  = modelType === 'A' ? A_c + Pw0 : A_c;
+  const wheatSupInt0 = modelType === 'A' ? 0        : Pc0 / 2;
+  const wheatDemInt0 = modelType === 'A' ? A_w + Pc0 : A_w;
+
+  // ── Shifted curve intercepts derived from new equilibrium ──
+  // The shifted curve always passes through the new equilibrium (Qnew, Pnew).
+  // Supply: P = int + slope*Q  →  int = Pnew - slope*Qnew
+  // Demand: P = int - Q        →  int = Pnew + Qnew
+  const cornShiftedIsSupply  = shockedIsCorn
+    ? scenario.shockedCurve === 'supply'
+    : spilloverCurve === 'supply';
+  const wheatShiftedIsSupply = !shockedIsCorn
+    ? scenario.shockedCurve === 'supply'
+    : spilloverCurve === 'supply';
+
+  const cornShiftedInt = cornShiftedIsSupply
+    ? Pc1 - supplySlope * Qc1
+    : Pc1 + Qc1;
+  const wheatShiftedInt = wheatShiftedIsSupply
+    ? Pw1 - supplySlope * Qw1
+    : Pw1 + Qw1;
+
+  drawMarket(
+    $cornCanvas,
+    showCornShifted || showCornSpill,
+    Pc0, Qc0, Pc1, Qc1,
+    cornSupInt0, supplySlope,
+    cornDemInt0,
+    cornShiftedIsSupply, cornShiftedInt
+  );
+
+  drawMarket(
+    $wheatCanvas,
+    showWheatShifted || showWheatSpill,
+    Pw0, Qw0, Pw1, Qw1,
+    wheatSupInt0, supplySlope,
+    wheatDemInt0,
+    wheatShiftedIsSupply, wheatShiftedInt
+  );
+}
+
+// ── Status strip ──────────────────────────────────────────────────────────
+function fmt(n){ return isFinite(n) ? n.toFixed(2) : '—'; }
+
+function eqHTML(){
+  const c = A_c, w = A_w;
+  if(modelType === 'A'){
+    return `<div class="eq-head">Equations</div>` +
+      `<div class="eq-cell"><em>Q</em><sub>C</sub><sup>d</sup> = ${c} &minus; <em>P</em><sub>C</sub> + <em>P</em><sub>W</sub></div>` +
+      `<div class="eq-cell"><em>Q</em><sub>W</sub><sup>d</sup> = ${w} &minus; <em>P</em><sub>W</sub> + <em>P</em><sub>C</sub></div>` +
+      `<div class="eq-cell"><em>Q</em><sub>C</sub><sup>s</sup> = <em>P</em><sub>C</sub></div>` +
+      `<div class="eq-cell"><em>Q</em><sub>W</sub><sup>s</sup> = <em>P</em><sub>W</sub></div>`;
+  } else {
+    return `<div class="eq-head">Equations</div>` +
+      `<div class="eq-cell"><em>Q</em><sub>C</sub><sup>d</sup> = ${c} &minus; <em>P</em><sub>C</sub></div>` +
+      `<div class="eq-cell"><em>Q</em><sub>W</sub><sup>d</sup> = ${w} &minus; <em>P</em><sub>W</sub></div>` +
+      `<div class="eq-cell"><em>Q</em><sub>C</sub><sup>s</sup> = 2<em>P</em><sub>C</sub> &minus; <em>P</em><sub>W</sub></div>` +
+      `<div class="eq-cell"><em>Q</em><sub>W</sub><sup>s</sup> = 2<em>P</em><sub>W</sub> &minus; <em>P</em><sub>C</sub></div>`;
+  }
+}
+
+function updateStatus(){
+  if(!scenario){ $status.textContent = 'Loading…'; return; }
+
+  const modelName = modelType === 'A' ? 'Demand-side' : 'Supply-side';
+  const narr = scenario.narrative.length > 70
+    ? scenario.narrative.slice(0,70) + '…'
+    : scenario.narrative;
+
+  const pCnew = phase === 'done' ? fmt(Pc1) : '?';
+  const qCnew = phase === 'done' ? fmt(Qc1) : '?';
+  const pWnew = phase === 'done' ? fmt(Pw1) : '?';
+  const qWnew = phase === 'done' ? fmt(Qw1) : '?';
+
+  $status.innerHTML =
+    `<div class="eq-grid">${eqHTML()}</div>` +
+    `<span class="status-label">Model:</span> ${modelName} links &nbsp;|&nbsp; ` +
+    `<span class="status-label">Shock:</span> ${narr}<br>` +
+    `<span class="status-label">Corn:</span> ` +
+    `P* = ${fmt(Pc0)}, Q* = ${fmt(Qc0)} &nbsp;→&nbsp; ` +
+    `P<sub>new</sub> = ${pCnew}, Q<sub>new</sub> = ${qCnew}<br>` +
+    `<span class="status-label">Wheat:</span> ` +
+    `P* = ${fmt(Pw0)}, Q* = ${fmt(Qw0)} &nbsp;→&nbsp; ` +
+    `P<sub>new</sub> = ${pWnew}, Q<sub>new</sub> = ${qWnew}`;
+}
+
+function updateDescs(){
+  if(!scenario) return;
+  const sm = scenario.shockedMarket;
+  const shockedP = sm === 'corn' ? Pc1 : Pw1;
+  const shockedP0 = sm === 'corn' ? Pc0 : Pw0;
+  const spillP  = sm === 'corn' ? Pw1 : Pc1;
+  const spillP0 = sm === 'corn' ? Pw0 : Pc0;
+
+  $cornDesc.textContent =
+    `Corn market. Initial equilibrium: price ${fmt(Pc0)}, quantity ${fmt(Qc0)}. ` +
+    (phase !== 'scenario'
+      ? `After shock: price ${fmt(Pc1)}, quantity ${fmt(Qc1)}.`
+      : 'Shock not yet revealed.');
+
+  $wheatDesc.textContent =
+    `Wheat market. Initial equilibrium: price ${fmt(Pw0)}, quantity ${fmt(Qw0)}. ` +
+    (phase === 'done'
+      ? `After spillover: price ${fmt(Pw1)}, quantity ${fmt(Qw1)}.`
+      : 'Spillover not yet revealed.');
+}
+
+// ── Radio helpers ─────────────────────────────────────────────────────────
+function buildRadioGroup(container, name, options){
+  container.innerHTML = '';
+  options.forEach(opt => {
+    const id  = name + '_' + opt.value;
+    const lbl = document.createElement('label');
+    lbl.className = 'radio-option';
+    lbl.id = id + 'Lbl';
+    lbl.innerHTML =
+      `<input type="radio" name="${name}" value="${opt.value}" id="${id}">` +
+      `<span class="opt-text">${opt.text}</span>`;
+    container.appendChild(lbl);
+    lbl.querySelector('input').addEventListener('change', () => {
+      [...container.querySelectorAll('.radio-option')].forEach(el =>
+        el.classList.remove('selected'));
+      lbl.classList.add('selected');
+    });
+  });
+}
+
+function buildRadioStack(container, name, orderedOpts){
+  container.innerHTML = '';
+  orderedOpts.forEach(opt => {
+    const id  = name + '_' + opt.value;
+    const lbl = document.createElement('label');
+    lbl.className = 'radio-option';
+    lbl.id = id + 'Lbl';
+    lbl.innerHTML =
+      `<input type="radio" name="${name}" value="${opt.value}" id="${id}">` +
+      `<span class="opt-text">${opt.text}</span>`;
+    container.appendChild(lbl);
+    lbl.querySelector('input').addEventListener('change', () => {
+      [...container.querySelectorAll('.radio-option')].forEach(el =>
+        el.classList.remove('selected'));
+      lbl.classList.add('selected');
+    });
+  });
+}
+
+function lockRadio(container, correctValue){
+  [...container.querySelectorAll('input')].forEach(i => i.disabled = true);
+  [...container.querySelectorAll('.radio-option')].forEach(lbl => {
+    const inp = lbl.querySelector('input');
+    lbl.classList.add('locked');
+    lbl.classList.remove('selected');
+    if(inp.value === correctValue) lbl.classList.add('correct');
+    else if(inp.checked)           lbl.classList.add('wrong');
+  });
+}
+
+function markWrongOption(container, wrongValue){
+  const lbl = container.querySelector(`[value="${wrongValue}"]`)?.closest('.radio-option');
+  if(lbl){
+    lbl.querySelector('input').disabled = true;
+    lbl.classList.add('wrong','locked');
+    lbl.classList.remove('selected');
+  }
+}
+
+function getChecked(container, name){
+  const inp = container.querySelector(`input[name="${name}"]:checked`);
+  return inp ? inp.value : null;
+}
+
+function showCard(card){
+  card.classList.remove('hidden');
+  card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+// ── Retry-on-wrong infrastructure ─────────────────────────────────────────
+function handleSubmit(qIdx, container, name, correctValue, feedbackEl, submitBtn,
+                      onCorrect, feedbackCorrectHTML, feedbackHintHTML){
+  const sel = getChecked(container, name);
+  if(!sel){
+    feedbackEl.textContent = 'Please select an option before submitting.';
+    feedbackEl.className   = 'feedback-msg wrong';
+    return;
+  }
+  if(sel === correctValue){
+    // Correct
+    const firstAttempt = !qLocked[qIdx];
+    if(firstAttempt) _firstScore += 1;
+    qLocked[qIdx] = true;
+    lockRadio(container, correctValue);
+    feedbackEl.innerHTML  = feedbackCorrectHTML;
+    feedbackEl.className  = 'feedback-msg correct';
+    submitBtn.disabled = true;
+
+    const qTexts = [
+      `In the ${scenario.shockedMarket} market, which curve shifts?`,
+      `Does the ${scenario.shockedCurve} curve in the ${scenario.shockedMarket} market shift left or right?`,
+      `After the shift, what happens to the equilibrium price of ${scenario.shockedMarket}?`,
+      `Which curve shifts in the ${scenario.shockedMarket === 'corn' ? 'wheat' : 'corn'} market?`,
+      `Does the ${spilloverCurve} curve in the ${scenario.shockedMarket === 'corn' ? 'wheat' : 'corn'} market shift left or right?`,
+      `After this shift, what happens to the equilibrium price of ${scenario.shockedMarket === 'corn' ? 'wheat' : 'corn'}?`,
+    ];
+    const answerText = container.querySelector(`input[value="${correctValue}"]`)
+                        ?.closest('.radio-option')
+                        ?.querySelector('.opt-text')?.textContent || correctValue;
+    if(window.Session && Session.recordQuestion){
+      Session.recordQuestion(LAB_ID, qIdx, qTexts[qIdx],
+                             answerText, true,
+                             answerText, true);
+    }
+    onCorrect();
+  } else {
+    // Wrong — disable that option, show hint, re-enable submit
+    markWrongOption(container, sel);
+    feedbackEl.innerHTML  = feedbackHintHTML;
+    feedbackEl.className  = 'feedback-msg hint';
+    submitBtn.disabled = false;
+  }
+}
+
+// ── Populate questions ────────────────────────────────────────────────────
+function populateQuestions(){
+  const sm   = scenario.shockedMarket;
+  const om   = sm === 'corn' ? 'wheat' : 'corn';
+  const sc   = scenario.shockedCurve;
+
+  // Q1
+  $q1Narrative.textContent = scenario.narrative;
+  $q1Text.textContent =
+    `In the ${sm} market, which curve shifts as a direct result of this shock?`;
+  buildRadioGroup($q1Options, 'q1', [
+    { value:'supply', text:'Supply' },
+    { value:'demand', text:'Demand' },
+  ]);
+
+  // Q2 (built after Q1 correct)
+  function buildQ2(){
+    $q2Text.textContent =
+      `Does the ${sc.charAt(0).toUpperCase()+sc.slice(1)} curve ` +
+      `in the ${sm} market shift to the left or to the right?`;
+    buildRadioGroup($q2Options, 'q2', [
+      { value:'left',  text:'Left'  },
+      { value:'right', text:'Right' },
+    ]);
+  }
+
+  // Q3
+  const priceOpts = [
+    { value:'rises', text:'Rises' },
+    { value:'falls', text:'Falls' },
+    { value:'same',  text:'Stays the same' },
+  ];
+  function buildQ3(){
+    $q3Text.textContent =
+      `After the ${sc} curve shifts ${scenario.direction}, ` +
+      `what happens to the equilibrium price of ${sm}?`;
+    buildRadioStack($q3Options, 'q3',
+      q3ShuffleOrder.map(i => priceOpts[i]));
+  }
+
+  // Q4
+  function buildQ4(){
+    $q4Text.textContent =
+      `The change in the ${sm} price now affects the ${om} market. ` +
+      `Which curve shifts in the ${om} market?`;
+    buildRadioGroup($q4Options, 'q4', [
+      { value:'supply', text:'Supply' },
+      { value:'demand', text:'Demand' },
+    ]);
+  }
+
+  // Q5
+  function buildQ5(){
+    $q5Text.textContent =
+      `Does the ${spilloverCurve.charAt(0).toUpperCase()+spilloverCurve.slice(1)} ` +
+      `curve in the ${om} market shift to the left or to the right?`;
+    buildRadioGroup($q5Options, 'q5', [
+      { value:'left',  text:'Left'  },
+      { value:'right', text:'Right' },
+    ]);
+  }
+
+  // Q6
+  function buildQ6(){
+    $q6Text.textContent =
+      `After this shift, what happens to the equilibrium price of ${om}?`;
+    buildRadioStack($q6Options, 'q6',
+      q6ShuffleOrder.map(i => priceOpts[i]));
+  }
+
+  // ── Wire Q1 ──
+  $submitQ1.addEventListener('click', function onQ1(){
+    handleSubmit(0, $q1Options, 'q1', sc,
+      $q1Feedback, $submitQ1,
+      () => {
+        buildQ2();
+        showCard($q2Card);
+      },
+      `✓ Correct — the ${sc} curve is affected directly by this shock to ` +
+      `${sc === 'demand'
+        ? 'consumer demand conditions'
+        : 'producer supply conditions'} in the ${sm} market.`,
+      `Not quite — think about whether this shock changes the willingness ` +
+      `of buyers (demand) or sellers (supply) in the ${sm} market.`
+    );
+  });
+
+  // ── Wire Q2 ──
+  $submitQ2.addEventListener('click', function onQ2(){
+    const dir = scenario.direction;
+    handleSubmit(1, $q2Options, 'q2', dir,
+      $q2Feedback, $submitQ2,
+      () => {
+        buildQ3();
+        showCard($q3Card);
+      },
+      `✓ Correct — the shock moves the ${sc} curve to the ${dir}, ` +
+      `${dir === 'right' ? 'increasing' : 'decreasing'} the ${sc === 'supply' ? 'quantity supplied' : 'quantity demanded'} at every price.`,
+      `Think about whether the shock increases or decreases ${sc === 'supply' ? 'supply' : 'demand'} — ` +
+      `does it shift the curve right (more) or left (less)?`
+    );
+  });
+
+  // ── Wire Q3 ──
+  const q3Correct = priceEffect === 'up' ? 'rises' : 'falls';
+  const shockedPold = sm === 'corn' ? Pc0 : Pw0;
+  const shockedPnew = sm === 'corn' ? Pc1 : Pw1;
+  $submitQ3.addEventListener('click', function onQ3(){
+    handleSubmit(2, $q3Options, 'q3', q3Correct,
+      $q3Feedback, $submitQ3,
+      () => {
+        phase = 'shocked';
+        redraw();
+        buildQ4();
+        showCard($q4Card);
+      },
+      `✓ Correct — P* = ${fmt(shockedPold)} → P<sub>new</sub> = ${fmt(shockedPnew)}. ` +
+      `The equilibrium price of ${sm} ${priceEffect === 'up' ? 'rises' : 'falls'}.`,
+      `Compare the initial and new equilibrium prices for ${sm}. ` +
+      `P* = ${fmt(shockedPold)}, P<sub>new</sub> = ${fmt(shockedPnew)}.`
+    );
+  });
+
+  // ── Wire Q4 ──
+  $submitQ4.addEventListener('click', function onQ4(){
+    const spillMech = modelType === 'A'
+      ? `In Model A, the ${om} market's demand depends on the price of ${sm}, ` +
+        `so a change in P_${sm} shifts the demand curve in the ${om} market.`
+      : `In Model B, the ${om} market's supply depends on the price of ${sm} ` +
+        `(resource reallocation between markets), ` +
+        `so a change in P_${sm} shifts the supply curve in the ${om} market.`;
+    handleSubmit(3, $q4Options, 'q4', spilloverCurve,
+      $q4Feedback, $submitQ4,
+      () => {
+        buildQ5();
+        showCard($q5Card);
+      },
+      `✓ Correct — ${spillMech}`,
+      `Think about which equation in the ${om} market contains the ` +
+      `price of ${sm} as a term — that is the curve that shifts.`
+    );
+  });
+
+  // ── Wire Q5 ──
+  $submitQ5.addEventListener('click', function onQ5(){
+    const dirExpl = modelType === 'A'
+      ? (priceEffect === 'up'
+          ? `As ${sm} becomes more expensive, consumers substitute toward ${om}, ` +
+            `raising demand in the ${om} market → rightward shift.`
+          : `As ${sm} becomes cheaper, consumers substitute away from ${om}, ` +
+            `reducing demand in the ${om} market → leftward shift.`)
+      : (priceEffect === 'up'
+          ? `As ${sm} becomes more profitable, resources flow toward ${sm}, ` +
+            `reducing supply of ${om} → leftward shift.`
+          : `As ${sm} becomes less profitable, resources flow toward ${om}, ` +
+            `expanding supply of ${om} → rightward shift.`);
+    handleSubmit(4, $q5Options, 'q5', spilloverDirection,
+      $q5Feedback, $submitQ5,
+      () => {
+        buildQ6();
+        showCard($q6Card);
+      },
+      `✓ Correct — ${dirExpl}`,
+      `Think about how the change in P_${sm} affects the ${spilloverCurve} ` +
+      `in the ${om} market — does it increase or decrease it?`
+    );
+  });
+
+  // ── Wire Q6 ──
+  const spillPold = sm === 'corn' ? Pw0 : Pc0;
+  const spillPnew = sm === 'corn' ? Pw1 : Pc1;
+  const q6Correct = spilloverPriceEffect === 'up' ? 'rises' : 'falls';
+  $submitQ6.addEventListener('click', function onQ6(){
+    handleSubmit(5, $q6Options, 'q6', q6Correct,
+      $q6Feedback, $submitQ6,
+      () => {
+        phase = 'done';
+        redraw();
+        if(window.Session && Session.recordLabDone){
+          Session.recordLabDone(LAB_ID, LAB_LABEL, _firstScore, _firstScore, 6);
+        }
+        $labDoneMsg.textContent =
+          `Lab complete! Score: ${_firstScore} of 6 on first attempt.`;
+        $labDoneMsg.classList.remove('hidden');
+      },
+      `✓ Correct — P* = ${fmt(spillPold)} → P<sub>new</sub> = ${fmt(spillPnew)}. ` +
+      `The equilibrium price of ${om} ${spilloverPriceEffect === 'up' ? 'rises' : 'falls'}.`,
+      `Compare the initial and new equilibrium prices for ${om}. ` +
+      `P* = ${fmt(spillPold)}, P<sub>new</sub> = ${fmt(spillPnew)}.`
+    );
+  });
+}
+
+// ── Reset UI ──────────────────────────────────────────────────────────────
+function clearLabSessionData(){
+  try{
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    if(d && d.labs && d.labs[LAB_ID]){
+      delete d.labs[LAB_ID];
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(d));
+    }
+  }catch(e){}
+}
+
+function resetUI(){
+  // Hide and clear all question cards except Q1
+  [$q2Card,$q3Card,$q4Card,$q5Card,$q6Card].forEach(c => c.classList.add('hidden'));
+
+  // Clear feedback
+  [$q1Feedback,$q2Feedback,$q3Feedback,$q4Feedback,$q5Feedback,$q6Feedback].forEach(el => {
+    el.className = 'feedback-msg hidden';
+    el.innerHTML = '';
+  });
+
+  // Re-enable submit buttons
+  [$submitQ1,$submitQ2,$submitQ3,$submitQ4,$submitQ5,$submitQ6].forEach(b => {
+    b.disabled = false;
+  });
+
+  $labDoneMsg.classList.add('hidden');
+  $labDoneMsg.textContent = '';
+
+  // Remove old event listeners by cloning
+  [$submitQ1,$submitQ2,$submitQ3,$submitQ4,$submitQ5,$submitQ6].forEach(btn => {
+    const clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+  });
+  // Re-cache cloned buttons
+  reassignButtons();
+
+  // State
+  phase       = 'scenario';
+  qLocked     = [false,false,false,false,false,false];
+  _firstScore = 0;
+}
+
+function reassignButtons(){
+  // After cloneNode we need fresh references
+  Object.assign(window, {
+    $submitQ1: document.getElementById('submitQ1Btn'),
+    $submitQ2: document.getElementById('submitQ2Btn'),
+    $submitQ3: document.getElementById('submitQ3Btn'),
+    $submitQ4: document.getElementById('submitQ4Btn'),
+    $submitQ5: document.getElementById('submitQ5Btn'),
+    $submitQ6: document.getElementById('submitQ6Btn'),
+  });
+}
+
+// Because we use closures over module-level $submitQN vars, we take a
+// different approach: instead of cloneNode, we use a generation counter
+// to ignore stale handlers.
+let _gen = 0;
+
+function resetUIClean(){
+  _gen++;
+  const gen = _gen;
+
+  [$q2Card,$q3Card,$q4Card,$q5Card,$q6Card].forEach(c => c.classList.add('hidden'));
+  [$q1Feedback,$q2Feedback,$q3Feedback,$q4Feedback,$q5Feedback,$q6Feedback].forEach(el => {
+    el.className = 'feedback-msg hidden';
+    el.innerHTML = '';
+  });
+  [$submitQ1,$submitQ2,$submitQ3,$submitQ4,$submitQ5,$submitQ6].forEach(b => b.disabled = false);
+  $labDoneMsg.classList.add('hidden');
+  $labDoneMsg.textContent = '';
+
+  phase       = 'scenario';
+  qLocked     = [false,false,false,false,false,false];
+  _firstScore = 0;
+
+  return gen;
+}
+
+// ── New Problem ───────────────────────────────────────────────────────────
+// We wire questions fresh each time using a generation guard.
+function startNewProblem(){
+  clearLabSessionData();
+  const gen = resetUIClean();
+
+  generateParams();
+
+  // Clear radio groups
+  [$q1Options,$q2Options,$q3Options,$q4Options,$q5Options,$q6Options].forEach(c => {
+    c.innerHTML = '';
+  });
+
+  // Re-populate Q1 fresh
+  setupQ1(gen);
+  redraw();
+}
+
+function setupQ1(gen){
+  const sm = scenario.shockedMarket;
+  const sc = scenario.shockedCurve;
+  const om = sm === 'corn' ? 'wheat' : 'corn';
+
+  $q1Narrative.textContent = scenario.narrative;
+  $q1Text.textContent =
+    `In the ${sm} market, which curve shifts as a direct result of this shock?`;
+
+  buildRadioGroup($q1Options, 'q1_' + gen, [
+    { value:'supply', text:'Supply' },
+    { value:'demand', text:'Demand' },
+  ]);
+
+  $submitQ1.onclick = function(){
+    if(_gen !== gen || qLocked[0]) return;
+    const sel = getChecked($q1Options, 'q1_' + gen);
+    if(!sel){
+      $q1Feedback.textContent = 'Please select an option before submitting.';
+      $q1Feedback.className   = 'feedback-msg wrong';
+      return;
+    }
+    if(sel === sc){
+      qLocked[0] = true;
+      _firstScore += 1;
+      lockRadio($q1Options, sc);
+      $q1Feedback.innerHTML =
+        `✓ Correct — the ${sc} curve is affected directly by this shock ` +
+        `to ${sc === 'demand' ? 'consumer demand conditions' : 'producer supply conditions'} ` +
+        `in the ${sm} market.`;
+      $q1Feedback.className = 'feedback-msg correct';
+      $submitQ1.disabled = true;
+      recordQ(gen, 0, `In the ${sm} market, which curve shifts?`,
+               sc.charAt(0).toUpperCase()+sc.slice(1), true);
+      setupQ2(gen, sm, sc, om);
+      $q2Card.classList.remove('hidden');
+      $q2Card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    } else {
+      markWrongOption($q1Options, sel);
+      $q1Feedback.innerHTML =
+        `Not quite — think about whether this shock changes the willingness ` +
+        `of buyers (demand) or sellers (supply) in the ${sm} market.`;
+      $q1Feedback.className = 'feedback-msg hint';
+    }
+  };
+}
+
+function recordQ(gen, idx, qText, ansText, correct){
+  if(_gen !== gen) return;
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(LAB_ID, idx, qText, ansText, correct, ansText, correct);
+  }
+}
+
+function setupQ2(gen, sm, sc, om){
+  const dir = scenario.direction;
+  $q2Text.textContent =
+    `Does the ${sc.charAt(0).toUpperCase()+sc.slice(1)} curve ` +
+    `in the ${sm} market shift to the left or to the right?`;
+  buildRadioGroup($q2Options, 'q2_' + gen, [
+    { value:'left',  text:'Left'  },
+    { value:'right', text:'Right' },
+  ]);
+
+  $submitQ2.onclick = function(){
+    if(_gen !== gen || qLocked[1]) return;
+    const sel = getChecked($q2Options, 'q2_' + gen);
+    if(!sel){
+      $q2Feedback.textContent = 'Please select an option.';
+      $q2Feedback.className = 'feedback-msg wrong'; return;
+    }
+    if(sel === dir){
+      qLocked[1] = true;
+      _firstScore += 1;
+      lockRadio($q2Options, dir);
+      $q2Feedback.innerHTML =
+        `✓ Correct — the shock shifts the ${sc} curve to the ${dir}, ` +
+        `${dir==='right' ? 'increasing' : 'decreasing'} ` +
+        `the ${sc==='supply' ? 'quantity supplied' : 'quantity demanded'} at every price.`;
+      $q2Feedback.className = 'feedback-msg correct';
+      $submitQ2.disabled = true;
+      recordQ(gen, 1, `Direction of ${sc} shift in ${sm} market?`,
+               dir.charAt(0).toUpperCase()+dir.slice(1), true);
+      setupQ3(gen, sm, sc, om);
+      $q3Card.classList.remove('hidden');
+      $q3Card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    } else {
+      markWrongOption($q2Options, sel);
+      $q2Feedback.innerHTML =
+        `Think about whether the shock increases or decreases ${sc==='supply'?'supply':'demand'} — ` +
+        `does it shift right (more) or left (less)?`;
+      $q2Feedback.className = 'feedback-msg hint';
+    }
+  };
+}
+
+function setupQ3(gen, sm, sc, om){
+  const priceOpts = [
+    { value:'rises', text:'Rises' },
+    { value:'falls', text:'Falls' },
+    { value:'same',  text:'Stays the same' },
+  ];
+  const q3Correct = priceEffect === 'up' ? 'rises' : 'falls';
+  const shockedP0 = sm === 'corn' ? Pc0 : Pw0;
+  const shockedP1 = sm === 'corn' ? Pc1 : Pw1;
+
+  $q3Text.textContent =
+    `After the ${sc} curve shifts ${scenario.direction}, ` +
+    `what happens to the equilibrium price of ${sm}?`;
+  buildRadioStack($q3Options, 'q3_' + gen, q3ShuffleOrder.map(i => priceOpts[i]));
+
+  $submitQ3.onclick = function(){
+    if(_gen !== gen || qLocked[2]) return;
+    const sel = getChecked($q3Options, 'q3_' + gen);
+    if(!sel){
+      $q3Feedback.textContent = 'Please select an option.';
+      $q3Feedback.className = 'feedback-msg wrong'; return;
+    }
+    if(sel === q3Correct){
+      qLocked[2] = true;
+      _firstScore += 1;
+      lockRadio($q3Options, q3Correct);
+      $q3Feedback.innerHTML =
+        `✓ Correct — P* = ${fmt(shockedP0)} → P<sub>new</sub> = ${fmt(shockedP1)}. ` +
+        `The equilibrium price of ${sm} ${priceEffect==='up'?'rises':'falls'}.`;
+      $q3Feedback.className = 'feedback-msg correct';
+      $submitQ3.disabled = true;
+      recordQ(gen, 2, `Price effect in ${sm} market?`,
+               q3Correct.charAt(0).toUpperCase()+q3Correct.slice(1), true);
+      phase = 'shocked';
+      redraw();
+      setupQ4(gen, sm, sc, om);
+      $q4Card.classList.remove('hidden');
+      $q4Card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    } else {
+      markWrongOption($q3Options, sel);
+      $q3Feedback.innerHTML =
+        `Compare the initial and new equilibrium prices for ${sm}. ` +
+        `P* = ${fmt(shockedP0)}, P<sub>new</sub> = ${fmt(shockedP1)}.`;
+      $q3Feedback.className = 'feedback-msg hint';
+    }
+  };
+}
+
+function setupQ4(gen, sm, sc, om){
+  const spillMech = modelType === 'A'
+    ? `In Model A, the ${om} market's demand depends on P_${sm}, so the demand curve shifts.`
+    : `In Model B, the ${om} market's supply depends on P_${sm} (resource reallocation), so the supply curve shifts.`;
+
+  $q4Text.textContent =
+    `The change in the ${sm} price now affects the ${om} market. ` +
+    `Which curve shifts in the ${om} market?`;
+  buildRadioGroup($q4Options, 'q4_' + gen, [
+    { value:'supply', text:'Supply' },
+    { value:'demand', text:'Demand' },
+  ]);
+
+  $submitQ4.onclick = function(){
+    if(_gen !== gen || qLocked[3]) return;
+    const sel = getChecked($q4Options, 'q4_' + gen);
+    if(!sel){
+      $q4Feedback.textContent = 'Please select an option.';
+      $q4Feedback.className = 'feedback-msg wrong'; return;
+    }
+    if(sel === spilloverCurve){
+      qLocked[3] = true;
+      _firstScore += 1;
+      lockRadio($q4Options, spilloverCurve);
+      $q4Feedback.innerHTML = `✓ Correct — ${spillMech}`;
+      $q4Feedback.className = 'feedback-msg correct';
+      $submitQ4.disabled = true;
+      recordQ(gen, 3, `Which curve shifts in ${om} market?`,
+               spilloverCurve.charAt(0).toUpperCase()+spilloverCurve.slice(1), true);
+      setupQ5(gen, sm, sc, om);
+      $q5Card.classList.remove('hidden');
+      $q5Card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    } else {
+      markWrongOption($q4Options, sel);
+      $q4Feedback.innerHTML =
+        `Think about which equation in the ${om} market contains P_${sm} — that curve shifts.`;
+      $q4Feedback.className = 'feedback-msg hint';
+    }
+  };
+}
+
+function setupQ5(gen, sm, sc, om){
+  const dirExpl = modelType === 'A'
+    ? (priceEffect === 'up'
+        ? `As ${sm} becomes more expensive, consumers substitute toward ${om} → demand shifts right.`
+        : `As ${sm} becomes cheaper, consumers substitute away from ${om} → demand shifts left.`)
+    : (priceEffect === 'up'
+        ? `As ${sm} becomes more profitable, resources flow toward ${sm}, reducing ${om} supply → left.`
+        : `As ${sm} becomes less profitable, resources flow toward ${om}, expanding ${om} supply → right.`);
+
+  $q5Text.textContent =
+    `Does the ${spilloverCurve.charAt(0).toUpperCase()+spilloverCurve.slice(1)} ` +
+    `curve in the ${om} market shift to the left or to the right?`;
+  buildRadioGroup($q5Options, 'q5_' + gen, [
+    { value:'left',  text:'Left'  },
+    { value:'right', text:'Right' },
+  ]);
+
+  $submitQ5.onclick = function(){
+    if(_gen !== gen || qLocked[4]) return;
+    const sel = getChecked($q5Options, 'q5_' + gen);
+    if(!sel){
+      $q5Feedback.textContent = 'Please select an option.';
+      $q5Feedback.className = 'feedback-msg wrong'; return;
+    }
+    if(sel === spilloverDirection){
+      qLocked[4] = true;
+      _firstScore += 1;
+      lockRadio($q5Options, spilloverDirection);
+      $q5Feedback.innerHTML = `✓ Correct — ${dirExpl}`;
+      $q5Feedback.className = 'feedback-msg correct';
+      $submitQ5.disabled = true;
+      recordQ(gen, 4, `Direction of spillover shift in ${om} market?`,
+               spilloverDirection.charAt(0).toUpperCase()+spilloverDirection.slice(1), true);
+      setupQ6(gen, sm, sc, om);
+      $q6Card.classList.remove('hidden');
+      $q6Card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    } else {
+      markWrongOption($q5Options, sel);
+      $q5Feedback.innerHTML =
+        `Think about how the change in P_${sm} affects the ${spilloverCurve} in the ${om} market.`;
+      $q5Feedback.className = 'feedback-msg hint';
+    }
+  };
+}
+
+function setupQ6(gen, sm, sc, om){
+  const priceOpts = [
+    { value:'rises', text:'Rises' },
+    { value:'falls', text:'Falls' },
+    { value:'same',  text:'Stays the same' },
+  ];
+  const q6Correct = spilloverPriceEffect === 'up' ? 'rises' : 'falls';
+  const spillP0 = sm === 'corn' ? Pw0 : Pc0;
+  const spillP1 = sm === 'corn' ? Pw1 : Pc1;
+
+  $q6Text.textContent =
+    `After this shift, what happens to the equilibrium price of ${om}?`;
+  buildRadioStack($q6Options, 'q6_' + gen, q6ShuffleOrder.map(i => priceOpts[i]));
+
+  $submitQ6.onclick = function(){
+    if(_gen !== gen || qLocked[5]) return;
+    const sel = getChecked($q6Options, 'q6_' + gen);
+    if(!sel){
+      $q6Feedback.textContent = 'Please select an option.';
+      $q6Feedback.className = 'feedback-msg wrong'; return;
+    }
+    if(sel === q6Correct){
+      qLocked[5] = true;
+      _firstScore += 1;
+      lockRadio($q6Options, q6Correct);
+      $q6Feedback.innerHTML =
+        `✓ Correct — P* = ${fmt(spillP0)} → P<sub>new</sub> = ${fmt(spillP1)}. ` +
+        `The equilibrium price of ${om} ${spilloverPriceEffect==='up'?'rises':'falls'}.`;
+      $q6Feedback.className = 'feedback-msg correct';
+      $submitQ6.disabled = true;
+      recordQ(gen, 5, `Price effect in ${om} market?`,
+               q6Correct.charAt(0).toUpperCase()+q6Correct.slice(1), true);
+      phase = 'done';
+      redraw();
+      if(window.Session && Session.recordLabDone){
+        Session.recordLabDone(LAB_ID, LAB_LABEL, _firstScore, _firstScore, 6);
+      }
+      $labDoneMsg.textContent = `Lab complete! Score: ${_firstScore} of 6 on first attempt.`;
+      $labDoneMsg.classList.remove('hidden');
+    } else {
+      markWrongOption($q6Options, sel);
+      $q6Feedback.innerHTML =
+        `Compare the initial and new equilibrium prices for ${om}. ` +
+        `P* = ${fmt(spillP0)}, P<sub>new</sub> = ${fmt(spillP1)}.`;
+      $q6Feedback.className = 'feedback-msg hint';
+    }
+  };
+}
+
+// ── New problem button ────────────────────────────────────────────────────
+$newProblem.addEventListener('click', () => {
+  clearLabSessionData();
+  startNewProblem();
+});
+
+// ── Resize ────────────────────────────────────────────────────────────────
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────
+function init(){
+  generateParams();
+  setupQ1(_gen);
+  redraw();
+}
+
+if(window.DiscussionModal){
+  DiscussionModal.init({
+    weekLabel: WEEK_LABEL,
+    onReady: function(){ init(); }
+  });
+} else {
+  init();
+}
+
+})();
+</script>
+</body>
+</html>

@@ -12,7 +12,11 @@ Static GitHub Pages site hosting interactive economics labs.
 Labs are self-contained HTML files with embedded CSS and JS.
 No build step. No frameworks. Vanilla HTML/CSS/JS only.
 
-Primary lab directory: `/classes/econ104a/labs/`
+Lab directories: `/classes/econ104a/labs/` and `/classes/econ104b/labs/`
+Each course has a `labs/index.html` that lists every lab as a card,
+grouped by topic. Every new lab must be added to its course's labs
+homepage in the same pass — see "Course labs homepage" below.
+
 Assets: `/assets/session.js`, `/assets/discussion-modal.js`,
         `/assets/discussion-pdf.js`
 
@@ -359,28 +363,300 @@ the user to move focus:
 
 ## Session Tracking
 
-Every lab must integrate with the session system:
+See [Building a Discussion-Compatible Lab](#building-a-discussion-compatible-lab)
+for the full integration pattern including two-phase answer recording,
+`_firstScore` tracking, and the week template entry format.
+
+Quick reference — the three calls every lab must make:
 
 ```js
-const LAB_ID    = 'unique-lab-id';   // kebab-case, matches filename
+const LAB_ID    = 'kebab-case-id';
 const LAB_LABEL = 'Human-Readable Lab Name';
 
+// 1. In generateParams() — seed the RNG per-lab:
+if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+
+// 2. On each Phase 1 answer submission:
+if(window.Session && Session.recordQuestion)
+  Session.recordQuestion(LAB_ID, qIndex, qText,
+                         answer, isCorrect,
+                         answer, isCorrect);  // same for both on first submit
+
+// 3. On final submission (Phase 2, or Phase 1 for single-phase labs):
+if(window.Session && Session.recordLabDone)
+  Session.recordLabDone(LAB_ID, LAB_LABEL, _firstScore, finalScore, total);
+```
+
+---
+
+## Building a Discussion-Compatible Lab
+
+A lab is **discussion-compatible** when it records its results to
+the Session system so they appear in the student's summary PDF.
+Every new ECON 104B lab should be discussion-compatible from the
+start — add the integration in the same pass as the lab logic.
+
+### Required constants
+
+```js
+const LAB_ID    = 'kebab-case-id';        // unique across all labs
+const LAB_LABEL = 'Human-Readable Name';  // shown in the PDF summary
+```
+
+`LAB_ID` must be:
+- Unique across the entire site
+- Kebab-case matching the folder/filename (e.g. `'price-ceiling'`)
+- **Stable** — changing it breaks any session that already recorded it
+
+### Seeded RNG
+
+```js
 let _rng = null;
 function rng(){ return _rng ? _rng() : Math.random(); }
 function pick(arr){ return arr[Math.floor(rng() * arr.length)]; }
 
-// In generateParams():
+// At the start of generateParams():
 if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
-
-// When the user answers a question (Phase 1 advance):
-if(window.Session && Session.recordQuestion)
-  Session.recordQuestion(LAB_ID, qIndex, prompt, correctAnswer,
-                         isCorrect, userAnswer, true);
-
-// When the lab is complete (Phase 2 reached):
-if(window.Session && Session.recordLabDone)
-  Session.recordLabDone(LAB_ID, LAB_LABEL, score, maxScore, 1);
 ```
+
+### Two-phase answer recording
+
+Discussion labs have two phases that mirror the classroom workflow:
+
+**Phase 1** — student submits their initial answer (before TA review).
+Pass the same answer as both first and final:
+
+```js
+if(window.Session && Session.recordQuestion)
+  Session.recordQuestion(
+    LAB_ID,
+    qIndex,     // 0-based question index
+    qText,      // the question prompt string shown to the student
+    answer,     // text of the student's answer
+    isCorrect,  // boolean
+    answer,     // same as answer on first submission
+    isCorrect   // same as isCorrect on first submission
+  );
+```
+
+**Phase 2** — after TA review, student corrects if needed and submits
+final answers. Call again with the revised answer, keeping the Phase 1
+values unchanged:
+
+```js
+if(window.Session && Session.recordQuestion)
+  Session.recordQuestion(
+    LAB_ID, qIndex, qText,
+    firstAnswer, firstCorrect,  // from Phase 1 — do not change
+    finalAnswer, finalCorrect   // the (possibly corrected) final answer
+  );
+```
+
+If the lab is **single-phase** (student submits once and that's
+final — common for exploration/visualization labs), use only the
+Phase 1 call and it counts as both first and final.
+
+### Recording lab completion
+
+Track the Phase 1 score separately so the PDF can show improvement:
+
+```js
+let _firstScore = 0; // increment each time a Phase 1 answer is correct
+
+// When Phase 2 is fully submitted:
+if(window.Session && Session.recordLabDone)
+  Session.recordLabDone(LAB_ID, LAB_LABEL, _firstScore, finalScore, total);
+// firstScore — questions correct on first attempt
+// finalScore — questions correct after corrections
+// total      — total number of questions
+```
+
+For **single-phase labs**, pass the same value for both scores:
+
+```js
+Session.recordLabDone(LAB_ID, LAB_LABEL, score, score, total);
+```
+
+### Adding the lab to a discussion week
+
+When the lab is ready, add one entry to the week page's `LABS` array
+(see [Creating a new discussion week](#discussion-scripts)):
+
+```js
+{ id:   'kebab-case-id',    // must match LAB_ID in the lab file
+  name: 'Human-Readable Name',
+  icon: '📊',               // choose an appropriate emoji
+  desc: 'One sentence: what the student does in this lab.',
+  url:  '/classes/econ104b/labs/lab-name/?disc=1' }
+```
+
+`?disc=1` is a URL convention that signals the link is being used
+in a discussion context. The lab JS does not read this parameter —
+it runs the session integration unconditionally.
+
+### Pre-completion checklist additions for discussion-compatible labs
+
+In addition to the standard WCAG checklist, verify:
+
+- [ ] `LAB_ID` is kebab-case, unique site-wide, matches the folder name
+- [ ] `Session.rngForLab(LAB_ID)` called at the start of `generateParams()`
+- [ ] `Session.recordQuestion(...)` called at Phase 1 submission for each question
+- [ ] `Session.recordQuestion(...)` called again at Phase 2 with corrected answers
+      (or once only for single-phase labs)
+- [ ] `Session.recordLabDone(...)` called once when the lab is fully submitted
+- [ ] `_firstScore` tracked separately from `finalScore`
+- [ ] `LAB_ID`, `LAB_LABEL`, `url` noted in a comment at top of file for
+      easy copy-paste into a week template's `LABS` array
+
+---
+
+## Course labs homepage
+
+Each course has a labs index page that lists every lab as a card,
+grouped into `<section class="section">` blocks by topic:
+
+| Course   | File                                  |
+|----------|---------------------------------------|
+| ECON 104A | `/classes/econ104a/labs/index.html`  |
+| ECON 104B | `/classes/econ104b/labs/index.html`  |
+
+**Every time a new lab is created, add a tile for it to the matching
+course's labs homepage in the same pass.** Do not leave this for later.
+
+### When the topic section already exists
+
+Append a new `.tile` inside the topic's existing `.grid`:
+
+```html
+<div class="tile">
+  <h3>[Human-Readable Lab Name]</h3>
+  <div class="tile-desc">[One- or two-sentence description of what the
+  student does in the lab.]</div>
+  <a href="[folder-name]/">Open Lab &rarr;</a>
+</div>
+```
+
+Use a trailing-slash relative href (`folder-name/`) — never an
+absolute `/classes/...` path — so the link works regardless of how
+the site is served.
+
+### When the topic section does not yet exist
+
+Add a new section immediately after the last existing one (and before
+the `.ada-notice` block):
+
+```html
+<section class="section">
+  <h2>[Topic Name]</h2>
+  <div class="grid">
+    <div class="tile">
+      <h3>[Lab Name]</h3>
+      <div class="tile-desc">[Description.]</div>
+      <a href="[folder-name]/">Open Lab &rarr;</a>
+    </div>
+  </div>
+</section>
+```
+
+Topic ordering should follow the course syllabus order
+(e.g. "General Equilibrium" → "Welfare Economics" → "Externalities").
+Inside a section, order tiles in the sequence students would
+encounter the material.
+
+### Pre-completion checklist additions
+
+In addition to the standard WCAG and discussion-compatibility
+checklists, verify:
+
+- [ ] A tile for the new lab exists in `classes/econ[N]/labs/index.html`
+      under the correct topic section
+- [ ] The tile's `<h3>` matches the lab's `LAB_LABEL`
+- [ ] The tile's `<a>` href is a relative path ending in `/`
+- [ ] If the topic section is new, it is positioned in syllabus order
+      and uses the same `<section class="section">` / `<h2>` / `.grid`
+      markup as the existing sections
+
+---
+
+## Discussion Scripts
+
+### Script load order
+
+Discussion labs require jsPDF (for PDF export) in addition to the
+three standard assets. Load scripts in this order:
+
+```html
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+/* lab JS */
+})();
+</script>
+```
+
+Non-discussion labs omit the jsPDF tag.
+
+### `DiscussionModal.init(opts)`
+
+Shows an entry modal on page load (Full Name, NetID, Session Code).
+If a session is already active (page refresh mid-lab), the modal is
+skipped and `onReady` fires immediately.
+
+| Option | Type | Description |
+|---|---|---|
+| `weekLabel` | string | Shown in the modal heading and stored in the session (e.g. `'Week 3 — Fiscal Policy'`) |
+| `noSeed` | boolean | If `true`, omits the Session Code field (for seedless weeks) |
+| `onReady` | function | Called with the session info object once the student submits |
+
+Call `DiscussionModal.init()` as the **last statement** in the
+inline `<script>`, after all lab functions are defined. The
+`onReady` callback is where `generateParams()` and `redraw()`
+should be invoked so the lab initialises only after a session exists.
+
+```js
+DiscussionModal.init({
+  weekLabel: 'Week 3 — Fiscal Policy',
+  onReady: function(session) {
+    generateParams();
+    redraw();
+  }
+});
+```
+
+### Creating a new discussion week
+
+1. Copy `classes/econ002/discussion/week-template.html` to a new
+   folder, e.g. `week-03/index.html`.
+2. Edit **only** the config block at the top of the `<script>`:
+   - Set `WEEK_LABEL` (e.g. `'Week 3 — GDP & Measurement'`)
+   - Replace the `LABS` array entries with the labs for that week
+3. Add a card for the new week to `discussion/index.html`.
+
+Everything else — HTML structure, CSS, modal, PDF, polling — is
+identical across all week pages and requires no editing.
+
+### `DiscussionPDF.generate()`
+
+No arguments. Reads `Session.export()`, then renders and downloads
+a letter-size PDF via jsPDF. The PDF includes:
+
+- Header with student name, NetID, and session code
+- Score summary: Initial / Final / Possible / Assignment Grade (0–5) / Labs Done
+- Per-lab table: question text, first answer, final answer, ✓/✗ badge
+
+Call from a "Download Summary" button:
+
+```html
+<button class="primary-btn" onclick="DiscussionPDF.generate()">
+  Download Summary PDF
+</button>
+```
+
+jsPDF must be loaded (see script order above) before this is called.
 
 ---
 
@@ -581,6 +857,55 @@ h1{font-family:var(--font-serif);font-size:2rem;
   transition:background .12s;white-space:nowrap;}
 .primary-btn:hover{background:#264d68;}
 .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+```
+
+---
+
+## Instructions Dropdown
+
+Labs may include a collapsible instructions box below the subtitle in the
+`<header>`. Use a `<details>` element with these exact classes — the CSS
+and markup are standardized across all labs.
+
+### CSS (add to `<style>` block)
+
+```css
+.instructions-box{background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;margin-top:8px;overflow:hidden;
+  box-shadow:var(--shadow);max-width:80ch;}
+.instructions-box summary.instructions-toggle{list-style:none;
+  display:flex;align-items:center;gap:8px;padding:12px 18px;
+  cursor:pointer;font-size:0.8125rem;font-weight:700;
+  color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+  user-select:none;}
+.instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+.instructions-box summary.instructions-toggle::before{
+  content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+.instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+.instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+  font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+.instructions-body p{margin:8px 0;}
+.instructions-body ol{margin:8px 0;padding-left:22px;}
+.instructions-body li{margin-bottom:6px;}
+.instructions-body strong{color:var(--ink);}
+```
+
+### HTML (place after `.sub` paragraph, inside `.header-inner`)
+
+```html
+<details class="instructions-box">
+  <summary class="instructions-toggle">Instructions</summary>
+  <div class="instructions-body">
+    <p>[One-paragraph overview of what the student will practice.]</p>
+    <p>You will be asked to answer the following questions:</p>
+    <ol>
+      <li><strong>[Question 1 title.]</strong> [One-sentence description.]</li>
+      <li><strong>[Question 2 title.]</strong> [One-sentence description.]</li>
+    </ol>
+    <p>For each step, enter your answer and click <strong>Check Answer</strong>.
+    If your answer is incorrect, hints and the worked solution are available.</p>
+  </div>
+</details>
 ```
 
 ---
