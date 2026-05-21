@@ -1,0 +1,1084 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Perfect Price Discrimination — Surplus Visualizer — ECON 104B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;  --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ─────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Layout */
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+    .lab-grid{display:grid;grid-template-columns:1fr 420px;gap:18px;align-items:start;}
+    @media(max-width:980px){.lab-grid{grid-template-columns:1fr;}}
+
+    /* Card */
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;
+      padding:18px;box-shadow:var(--shadow);margin-bottom:14px;}
+    .card h2{font-family:var(--font-serif);font-size:1.125rem;font-weight:700;
+      color:var(--ink);margin:0 0 6px;}
+    .card-sub{font-size:0.8125rem;color:var(--muted);margin:0 0 12px;line-height:1.5;}
+
+    /* Regime button group */
+    .regime-group{display:grid;grid-template-columns:1fr;gap:8px;}
+    @media(min-width:520px){.regime-group{grid-template-columns:1fr 1fr 1fr;}}
+    .regime-btn{padding:12px 14px;border:1.5px solid #8c7f72;background:var(--panel);
+      border-radius:12px;font-family:var(--font-sans);font-size:0.8125rem;
+      font-weight:700;color:var(--ink-2);cursor:pointer;text-align:left;
+      line-height:1.3;transition:background .12s,border-color .12s,color .12s;}
+    .regime-btn .rlabel{display:block;font-size:0.75rem;color:var(--muted);
+      font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;}
+    .regime-btn:hover:not([aria-pressed="true"]){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .regime-btn[aria-pressed="true"]{border-color:var(--accent);
+      background:rgba(47,93,124,.12);color:var(--accent);
+      box-shadow:0 0 0 2px rgba(47,93,124,.18) inset;}
+    .regime-btn[aria-pressed="true"] .rlabel{color:var(--accent);}
+
+    /* Sliders */
+    .slider-row{display:grid;grid-template-columns:1fr;gap:14px;margin-top:14px;}
+    @media(min-width:520px){.slider-row{grid-template-columns:1fr 1fr 1fr;}}
+    .slider-cell{background:rgba(246,242,234,.55);border:1px solid var(--line);
+      border-radius:12px;padding:10px 12px;}
+    .slider-cell label{font-size:0.6875rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:2px;}
+    .slider-cell .v{font-size:1.0625rem;font-weight:700;color:var(--ink);
+      font-family:var(--font-sans);margin-bottom:6px;}
+    .slider-cell input[type=range]{width:100%;accent-color:var(--accent);}
+    .slider-cell input[type=range]:focus-visible{outline:3px solid var(--accent);
+      outline-offset:3px;border-radius:4px;}
+    .reset-row{margin-top:12px;display:flex;justify-content:flex-end;}
+    .reset-btn{padding:6px 12px;border:1.5px solid #8c7f72;background:var(--panel);
+      color:var(--ink-2);border-radius:10px;font-size:0.75rem;font-weight:700;
+      font-family:var(--font-sans);cursor:pointer;transition:background .12s;}
+    .reset-btn:hover{background:rgba(47,93,124,.07);border-color:var(--accent);
+      color:var(--accent);}
+
+    /* Totals table */
+    .totals{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;}
+    .tot-cell{background:rgba(246,242,234,.55);border:1px solid var(--line);
+      border-radius:12px;padding:9px 12px;}
+    .tot-cell .label{font-size:0.6875rem;text-transform:uppercase;letter-spacing:.08em;
+      color:var(--muted);margin-bottom:2px;}
+    .tot-cell .value{font-size:1.0625rem;font-weight:700;color:var(--ink);}
+    .tot-cell.zero .value{color:var(--muted);}
+    .tot-cell.cs{border-left:4px solid var(--accent);}
+    .tot-cell.ps{border-left:4px solid var(--good);}
+    .tot-cell.dwl{border-left:4px solid var(--bad);}
+    .tot-cell.ts{border-left:4px solid #8c4800;}
+    .tot-cell.q{border-left:4px solid var(--ink-2);}
+
+    /* Reflection */
+    .qcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+      padding:14px 16px;box-shadow:var(--shadow);margin-bottom:10px;}
+    .qhead{display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;}
+    .qbadge{font-size:0.625rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
+      background:var(--accent);color:#fff;padding:3px 9px;border-radius:999px;flex-shrink:0;
+      margin-top:2px;}
+    .qtext{font-size:0.9375rem;font-weight:700;color:var(--ink);line-height:1.4;}
+    .qopts{display:grid;grid-template-columns:1fr;gap:6px;margin:8px 0 0;}
+    .qopt{padding:9px 12px;border:1.5px solid #8c7f72;background:var(--panel);
+      border-radius:10px;font-family:var(--font-sans);font-size:0.875rem;font-weight:600;
+      color:var(--ink-2);cursor:pointer;text-align:left;line-height:1.35;
+      transition:background .12s,border-color .12s,color .12s;}
+    .qopt:hover:not(:disabled):not(.locked){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .qopt[aria-pressed="true"]{border-color:var(--accent);
+      background:rgba(47,93,124,.12);color:var(--accent);}
+    .qopt.correct{border-color:var(--good);background:rgba(21,92,56,.08);color:var(--good);}
+    .qopt.wrong{border-color:var(--bad);background:rgba(180,35,24,.06);color:var(--bad);}
+    .qopt.locked,.qopt:disabled{cursor:default;}
+    .qfb{margin-top:8px;padding:7px 11px;border-radius:10px;font-size:0.8125rem;
+      font-weight:600;line-height:1.4;}
+    .qfb.correct{background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.2);color:var(--good);}
+    .qfb.wrong{background:rgba(180,35,24,.06);border:1px solid rgba(180,35,24,.2);color:var(--bad);}
+    .qfb.expl{background:rgba(47,93,124,.06);border:1px solid rgba(47,93,124,.18);color:var(--ink-2);}
+
+    /* Action buttons */
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover{background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* Lab-done banner */
+    .lab-done-banner{margin-top:14px;padding:12px 16px;border-radius:12px;
+      background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.25);
+      color:var(--good);font-weight:700;font-size:0.875rem;line-height:1.45;}
+
+    /* Graph card */
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);position:sticky;top:14px;}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .canvas-wrap{position:relative;width:100%;aspect-ratio:1/1;border-radius:10px;
+      overflow:hidden;background:rgba(246,242,234,.45);border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+    .graph-legend{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px;}
+    .legend-row{display:flex;align-items:center;gap:7px;font-size:0.75rem;color:var(--ink-2);}
+    .legend-swatch{width:18px;height:14px;border-radius:3px;flex-shrink:0;
+      border:1px solid rgba(0,0,0,.15);}
+    .regime-display{margin-top:10px;padding:8px 12px;border-radius:10px;
+      background:rgba(47,93,124,.06);border:1px solid rgba(47,93,124,.18);
+      font-size:0.8125rem;color:var(--ink-2);line-height:1.4;}
+    .regime-display strong{color:var(--accent);}
+
+    .hidden{display:none !important;}
+
+    /* Footer */
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+      font-size:0.75rem;color:var(--muted);padding-top:12px;
+      border-top:1px solid var(--line);margin-top:24px;}
+  </style>
+</head>
+<body>
+
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ104b/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104B — Price Discrimination</div>
+      <h1>Perfect Price Discrimination — Surplus Visualizer</h1>
+      <p class="sub">
+        Toggle between single-price monopoly, perfect competition, and first-degree
+        (perfect) price discrimination to see how the same demand and cost curves
+        produce dramatically different distributions of surplus — and why an
+        efficient outcome is not necessarily a good outcome for consumers.
+      </p>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>This lab compares three pricing regimes on the same linear demand
+          curve and constant marginal cost. Use the regime buttons to switch
+          between them, and watch the shaded surplus regions and the numerical
+          totals update in real time. Use the sliders to confirm the
+          comparisons hold for different parameterizations.</p>
+          <p>You will then be asked to answer four conceptual questions:</p>
+          <ol>
+            <li><strong>Which regime maximizes total surplus?</strong></li>
+            <li><strong>Under which regime does consumer surplus disappear?</strong></li>
+            <li><strong>How does the quantity sold under first-degree price
+            discrimination compare with single-price monopoly?</strong></li>
+            <li><strong>Does an efficient outcome mean consumers are well off?</strong></li>
+          </ol>
+          <p>Click a choice to lock in your answer for each question.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+  <div class="lab-grid">
+
+    <!-- LEFT COLUMN: controls + reflection -->
+    <div>
+      <div class="card">
+        <h2>Choose a regime</h2>
+        <p class="card-sub">All three regimes face the same linear demand and the
+        same flat marginal cost. The only thing that changes is how the firm
+        sets price.</p>
+        <div class="regime-group" role="group" aria-label="Select a pricing regime">
+          <button class="regime-btn" id="rbMono" aria-pressed="false">
+            <span class="rlabel">Regime 1</span>
+            Single-Price Monopoly
+          </button>
+          <button class="regime-btn" id="rbPC" aria-pressed="false">
+            <span class="rlabel">Regime 2</span>
+            Perfect Competition
+          </button>
+          <button class="regime-btn" id="rb1D" aria-pressed="false">
+            <span class="rlabel">Regime 3</span>
+            1st-Degree Price Discrimination
+          </button>
+        </div>
+
+        <div class="slider-row">
+          <div class="slider-cell">
+            <label for="slA">Demand intercept (a)</label>
+            <div class="v"><span id="aVal">100</span></div>
+            <input type="range" id="slA" min="60" max="150" step="5" value="100"
+                   aria-describedby="aLive"/>
+            <span id="aLive" class="sr-only" aria-live="polite" aria-atomic="true">
+              Demand intercept a equals 100
+            </span>
+          </div>
+          <div class="slider-cell">
+            <label for="slB">Demand slope (b)</label>
+            <div class="v"><span id="bVal">2</span></div>
+            <input type="range" id="slB" min="1" max="5" step="0.25" value="2"
+                   aria-describedby="bLive"/>
+            <span id="bLive" class="sr-only" aria-live="polite" aria-atomic="true">
+              Demand slope b equals 2
+            </span>
+          </div>
+          <div class="slider-cell">
+            <label for="slC">Marginal cost (c)</label>
+            <div class="v"><span id="cVal">20</span></div>
+            <input type="range" id="slC" min="5" max="60" step="5" value="20"
+                   aria-describedby="cLive"/>
+            <span id="cLive" class="sr-only" aria-live="polite" aria-atomic="true">
+              Marginal cost c equals 20
+            </span>
+          </div>
+        </div>
+        <div class="reset-row">
+          <button class="reset-btn" id="resetBtn">Reset defaults</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Surplus totals</h2>
+        <p class="card-sub" id="totalsCaption">Numbers update with the regime
+        and parameters. Dollar amounts measure surplus areas under the chosen
+        curves; quantity is in units sold.</p>
+        <div class="totals" aria-live="polite" aria-atomic="true" id="totalsBlock">
+          <div class="tot-cell q"   id="tcQ">
+            <div class="label">Quantity sold</div>
+            <div class="value" id="vQ">—</div>
+          </div>
+          <div class="tot-cell ts"  id="tcTS">
+            <div class="label">Total surplus</div>
+            <div class="value" id="vTS">—</div>
+          </div>
+          <div class="tot-cell cs"  id="tcCS">
+            <div class="label">Consumer surplus (CS)</div>
+            <div class="value" id="vCS">—</div>
+          </div>
+          <div class="tot-cell ps"  id="tcPS">
+            <div class="label">Producer surplus (PS)</div>
+            <div class="value" id="vPS">—</div>
+          </div>
+          <div class="tot-cell dwl" id="tcDWL" style="grid-column:1/-1;">
+            <div class="label">Deadweight loss (DWL)</div>
+            <div class="value" id="vDWL">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Reflection</h2>
+        <p class="card-sub">Use the graph and totals to answer each question.
+        Cycle through the three regimes if you need to compare them.</p>
+        <div id="reflection"></div>
+      </div>
+
+      <div id="labDoneBanner" class="lab-done-banner hidden"
+           role="status" aria-live="polite" aria-atomic="true"></div>
+
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="primary-btn" id="downloadPdfBtn"
+                style="background:#8c7f72;">Download Summary PDF</button>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: graph -->
+    <div>
+      <div class="graph-card">
+        <div class="graph-title" id="graphTitle">Surplus on a Linear Demand &amp; Flat MC</div>
+        <div class="canvas-wrap">
+          <canvas id="surplusCanvas"
+                  role="img"
+                  aria-labelledby="graphTitle"
+                  aria-describedby="surplusDesc"></canvas>
+        </div>
+        <!-- Canvas accessible description — aria-live so updates are announced -->
+        <section class="sr-only" id="graphDescBlock" aria-live="polite" aria-atomic="true">
+          <p id="surplusDesc">Graph not yet drawn.</p>
+        </section>
+        <div class="regime-display" id="regimeDisplay" aria-live="polite" aria-atomic="true">
+          Select a regime above to begin.
+        </div>
+        <div class="graph-legend" aria-hidden="true">
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:rgba(47,93,124,0.28);"></div>
+            <span>CS — Consumer Surplus</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:rgba(21,92,56,0.32);"></div>
+            <span>PS — Producer Surplus</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:rgba(180,35,24,0.28);"></div>
+            <span>DWL — Deadweight Loss</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#fff;border:2px solid var(--accent);"></div>
+            <span>Demand and MC curves</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer style="margin-top:32px;">
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 104B — Intermediate Microeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+// LAB_ID:    'perfect-price-discrimination-surplus'
+// LAB_LABEL: 'Perfect Price Discrimination — Surplus Visualizer'
+// url:       '/classes/econ104b/labs/perfect-price-discrimination-surplus/?disc=1'
+const LAB_ID     = 'perfect-price-discrimination-surplus';
+const LAB_LABEL  = 'Perfect Price Discrimination — Surplus Visualizer';
+const WEEK_LABEL = 'Price Discrimination';
+const SESSION_KEY = 'econ002_session';
+
+// Font-scale factor — recomputed at start of every redraw (WCAG 1.4.4)
+let _fs = 1;
+
+// ── State ──────────────────────────────────────────────────────────────────
+let _rng    = null;
+let params  = { a:100, b:2, c:20 };
+let regime  = null; // 'mono' | 'pc' | '1d' | null
+const PAD   = { l:56, r:18, t:18, b:48 };
+
+// Reflection questions
+const QUESTIONS = [
+  {
+    qIdx:0,
+    text:'Under which regime is total surplus largest?',
+    opts:[
+      { label:'Single-Price Monopoly',                            ok:false },
+      { label:'Perfect Competition only',                         ok:false },
+      { label:'1st-Degree Price Discrimination only',             ok:false },
+      { label:'Tied: Perfect Competition AND 1st-Degree PD',      ok:true  }
+    ],
+    expl:'Both perfect competition and 1st-degree price discrimination produce Q* = (a−c)/b with zero DWL — the efficient quantity. They tie on total surplus; they differ only in how that surplus is split.'
+  },
+  {
+    qIdx:1,
+    text:'Under which regime is consumer surplus zero?',
+    opts:[
+      { label:'Single-Price Monopoly',                ok:false },
+      { label:'Perfect Competition',                  ok:false },
+      { label:'1st-Degree Price Discrimination',      ok:true  },
+      { label:'Consumer surplus is never zero',       ok:false }
+    ],
+    expl:'A first-degree price discriminator charges each buyer their exact willingness to pay, leaving each buyer indifferent — the firm captures every dollar of surplus.'
+  },
+  {
+    qIdx:2,
+    text:'Compared to single-price monopoly, does 1st-degree price discrimination produce MORE, LESS, or the SAME quantity?',
+    opts:[
+      { label:'More — output rises to the competitive level Q_c = (a−c)/b',  ok:true  },
+      { label:'Less — the firm restricts output further to extract surplus', ok:false },
+      { label:'The same Q_m = (a−c)/(2b)',                                   ok:false }
+    ],
+    expl:'Without a single price to defend, the firm has no reason to withhold low-value units. It produces every unit whose willingness to pay exceeds MC — exactly the competitive quantity. That is why DWL disappears under 1st-degree PD.'
+  },
+  {
+    qIdx:3,
+    text:'True or false: An efficient market outcome means consumers are well off.',
+    opts:[
+      { label:'True',  ok:false },
+      { label:'False', ok:true  }
+    ],
+    expl:'Efficiency is about the SIZE of total surplus, not its DISTRIBUTION. Both perfect competition and 1st-degree PD are efficient — yet consumers get everything in one and nothing in the other.'
+  }
+];
+
+let _firstScore  = 0;
+let _finalScore  = 0;
+const _qDone     = QUESTIONS.map(() => false);
+let _labDoneFired = false;
+
+// ── DOM ────────────────────────────────────────────────────────────────────
+const $canvas    = document.getElementById('surplusCanvas');
+const $desc      = document.getElementById('surplusDesc');
+const $rbMono    = document.getElementById('rbMono');
+const $rbPC      = document.getElementById('rbPC');
+const $rb1D      = document.getElementById('rb1D');
+const $slA       = document.getElementById('slA');
+const $slB       = document.getElementById('slB');
+const $slC       = document.getElementById('slC');
+const $aVal      = document.getElementById('aVal');
+const $bVal      = document.getElementById('bVal');
+const $cVal      = document.getElementById('cVal');
+const $aLive     = document.getElementById('aLive');
+const $bLive     = document.getElementById('bLive');
+const $cLive     = document.getElementById('cLive');
+const $vQ        = document.getElementById('vQ');
+const $vTS       = document.getElementById('vTS');
+const $vCS       = document.getElementById('vCS');
+const $vPS       = document.getElementById('vPS');
+const $vDWL      = document.getElementById('vDWL');
+const $tcCS      = document.getElementById('tcCS');
+const $tcPS      = document.getElementById('tcPS');
+const $tcDWL     = document.getElementById('tcDWL');
+const $tcTS      = document.getElementById('tcTS');
+const $tcQ       = document.getElementById('tcQ');
+const $regDisp   = document.getElementById('regimeDisplay');
+const $reflection = document.getElementById('reflection');
+const $banner    = document.getElementById('labDoneBanner');
+
+const ALL_REGIME_BTNS = [$rbMono, $rbPC, $rb1D];
+const REGIME_INFO = {
+  mono: { btn:$rbMono, name:'Single-Price Monopoly' },
+  pc:   { btn:$rbPC,   name:'Perfect Competition' },
+  '1d': { btn:$rb1D,   name:'1st-Degree Price Discrimination' }
+};
+
+// ── Utilities ──────────────────────────────────────────────────────────────
+function fmtMoney(v){
+  if(!isFinite(v)) return '—';
+  if(Math.abs(v) < 0.005) return '$0';
+  const r = Math.round(v);
+  return '$' + r.toLocaleString('en-US');
+}
+function fmtQty(v){
+  if(!isFinite(v)) return '—';
+  if(Math.abs(v - Math.round(v)) < 0.05) return Math.round(v).toLocaleString('en-US');
+  return v.toFixed(1);
+}
+function tickStep(mx){
+  if(mx<=10) return 1; if(mx<=20) return 2; if(mx<=50) return 5;
+  if(mx<=100) return 10; if(mx<=200) return 20; if(mx<=500) return 50;
+  return 100;
+}
+function snapUp(raw){
+  const s=[5,8,10,12,15,20,25,30,40,50,60,80,100,120,150,200,250,300,400,500,600,800,1000];
+  return s.find(v => v >= raw) || Math.ceil(raw/100)*100;
+}
+
+// ── Compute surplus values for current regime + params ────────────────────
+function computeSurplus(){
+  const {a,b,c} = params;
+  const Qc = (a - c) / b;
+  const Qm = (a - c) / (2*b);
+  const Pm = (a + c) / 2;
+  const CSc = 0.5 * Qc * (a - c); // total triangle = max total surplus
+
+  let CS=0, PS=0, DWL=0, Q=0, P=null;
+  if(regime === 'mono'){
+    Q   = Qm;
+    P   = Pm;
+    CS  = 0.5 * Qm * (a - Pm);   // triangle above Pm, below D, 0..Qm
+    PS  = (Pm - c) * Qm;         // rectangle (Pm-c) × Qm
+    DWL = 0.5 * (Qc - Qm) * (Pm - c); // DWL triangle
+  } else if(regime === 'pc'){
+    Q   = Qc;
+    P   = c;
+    CS  = CSc;
+    PS  = 0;
+    DWL = 0;
+  } else if(regime === '1d'){
+    Q   = Qc;
+    P   = null; // not a single price
+    CS  = 0;
+    PS  = CSc;
+    DWL = 0;
+  }
+  return { Q, P, CS, PS, DWL, TS: CS+PS, Qc, Qm, Pm, CSc };
+}
+
+// ── Update totals panel ────────────────────────────────────────────────────
+function updateTotals(){
+  if(regime === null){
+    $vQ.textContent  = '—';
+    $vTS.textContent = '—';
+    $vCS.textContent = '—';
+    $vPS.textContent = '—';
+    $vDWL.textContent = '—';
+    [$tcCS,$tcPS,$tcDWL,$tcTS,$tcQ].forEach(el => el.classList.remove('zero'));
+    return;
+  }
+  const s = computeSurplus();
+  $vQ.textContent   = fmtQty(s.Q) + ' units';
+  $vTS.textContent  = fmtMoney(s.TS);
+  $vCS.textContent  = fmtMoney(s.CS);
+  $vPS.textContent  = fmtMoney(s.PS);
+  $vDWL.textContent = fmtMoney(s.DWL);
+  $tcCS.classList.toggle('zero',  s.CS  < 0.005);
+  $tcPS.classList.toggle('zero',  s.PS  < 0.005);
+  $tcDWL.classList.toggle('zero', s.DWL < 0.005);
+}
+
+// ── Regime display text under graph ───────────────────────────────────────
+function updateRegimeDisplay(){
+  if(regime === null){
+    $regDisp.textContent = 'Select a regime above to begin.';
+    return;
+  }
+  const s = computeSurplus();
+  const name = REGIME_INFO[regime].name;
+  let priceStr;
+  if(regime === '1d')      priceStr = 'each buyer pays their willingness to pay';
+  else if(regime === 'pc') priceStr = `price = MC = $${params.c}`;
+  else                      priceStr = `price = $${s.P.toFixed(0)}`;
+  $regDisp.innerHTML = `<strong>${name}.</strong> Quantity = ${fmtQty(s.Q)} units; ${priceStr}. DWL = ${fmtMoney(s.DWL)}.`;
+}
+
+// ── Canvas accessible description (WCAG 1.1.1 / 4.1.3) ────────────────────
+function updateGraphDesc(){
+  const {a,b,c} = params;
+  if(regime === null){
+    $desc.textContent =
+      `Graph with quantity on the horizontal axis and price on the vertical axis. ` +
+      `A downward-sloping linear demand curve P = ${a} − ${b}Q is shown, ` +
+      `together with a flat marginal-cost line at $${c}. ` +
+      `No regime is selected, so no surplus regions are shaded. ` +
+      `Use the regime buttons to begin.`;
+    return;
+  }
+  const s = computeSurplus();
+  const name = REGIME_INFO[regime].name;
+  const parts = [
+    `Graph with quantity on the horizontal axis and price on the vertical axis.`,
+    `A downward-sloping linear demand curve P = ${a} − ${b}Q and a flat marginal-cost line at $${c} are shown.`,
+    `The currently selected regime is ${name}.`
+  ];
+  if(regime === 'mono'){
+    parts.push(`Output is ${fmtQty(s.Q)} units sold at a single price of $${s.P.toFixed(0)} per unit.`);
+    parts.push(`Consumer surplus is the triangle above the price line and below demand, area ${fmtMoney(s.CS)}, shaded blue and labeled "CS".`);
+    parts.push(`Producer surplus is the rectangle between price and marginal cost from quantity 0 to ${fmtQty(s.Q)}, area ${fmtMoney(s.PS)}, shaded green and labeled "PS".`);
+    parts.push(`Deadweight loss is the triangle between demand and marginal cost from the monopoly quantity ${fmtQty(s.Q)} to the competitive quantity ${fmtQty(s.Qc)}, area ${fmtMoney(s.DWL)}, shaded red and labeled "DWL".`);
+  } else if(regime === 'pc'){
+    parts.push(`Output is the competitive quantity ${fmtQty(s.Q)} units sold at marginal cost, price $${params.c}.`);
+    parts.push(`Consumer surplus is the entire triangle above marginal cost and below demand, area ${fmtMoney(s.CS)}, shaded blue and labeled "CS".`);
+    parts.push(`Producer surplus is zero and deadweight loss is zero.`);
+  } else {
+    parts.push(`The firm captures every unit between 0 and the competitive quantity ${fmtQty(s.Q)} at each buyer's willingness to pay.`);
+    parts.push(`Consumer surplus is zero.`);
+    parts.push(`Producer surplus is the entire triangle above marginal cost and below demand, area ${fmtMoney(s.PS)}, shaded green and labeled "PS".`);
+    parts.push(`Deadweight loss is zero.`);
+  }
+  parts.push(`Total surplus is ${fmtMoney(s.TS)}.`);
+  $desc.textContent = parts.join(' ');
+}
+
+// ── Slider live-region announcements ──────────────────────────────────────
+function updateSliderText(){
+  $aVal.textContent = params.a;
+  $bVal.textContent = params.b;
+  $cVal.textContent = params.c;
+  $aLive.textContent = `Demand intercept a equals ${params.a}`;
+  $bLive.textContent = `Demand slope b equals ${params.b}`;
+  $cLive.textContent = `Marginal cost c equals ${params.c}`;
+}
+
+// ── Canvas setup / coords ─────────────────────────────────────────────────
+function setupCanvas(canvas){
+  const dpr  = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W    = Math.round(rect.width * dpr);
+  const H    = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+function makeCoords(W, H, dpr, xMax, yMax){
+  const p = { l:PAD.l*dpr, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  return {
+    xC: x => p.l + (x / xMax) * PW,
+    yC: y => H - p.b - (y / yMax) * PH,
+    p, PW, PH
+  };
+}
+
+// ── Draw ──────────────────────────────────────────────────────────────────
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+
+  const setup = setupCanvas($canvas);
+  if(!setup) return;
+  const { ctx, dpr, W, H } = setup;
+  ctx.clearRect(0,0,W,H);
+
+  const {a,b,c} = params;
+  const Qc = (a - c) / b;
+  // Frame so demand intercept on x-axis (a/b) and the price intercept a both fit
+  const xMaxRaw = a / b;
+  const xMax = snapUp(xMaxRaw * 1.08);
+  const yMax = snapUp(a * 1.08);
+
+  const co = makeCoords(W, H, dpr, xMax, yMax);
+  const { p, PW, PH } = co;
+  const X0 = p.l, X1 = p.l + PW, Y0 = p.t, Y1 = p.t + PH;
+
+  // Axes
+  ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+  ctx.lineWidth   = 1.4*dpr;
+  ctx.beginPath(); ctx.moveTo(X0,Y1); ctx.lineTo(X1,Y1); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0,Y1); ctx.stroke();
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.beginPath(); ctx.moveTo(X1,Y1); ctx.lineTo(X1-7*dpr,Y1-4*dpr); ctx.lineTo(X1-7*dpr,Y1+4*dpr); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0-4*dpr,Y0+7*dpr); ctx.lineTo(X0+4*dpr,Y0+7*dpr); ctx.closePath(); ctx.fill();
+
+  // Axis titles
+  ctx.fillStyle = 'rgba(0,0,0,0.60)';
+  ctx.font = `700 ${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('Quantity (Q)', (X0+X1)/2, Y1+28*dpr);
+  ctx.save();
+  ctx.translate(X0-40*dpr, (Y0+Y1)/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.textBaseline = 'top';
+  ctx.fillText('Price ($)', 0, 0);
+  ctx.restore();
+
+  // Y ticks + gridlines
+  ctx.font = `600 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  const yStep = tickStep(yMax);
+  for(let v=yStep; v<=yMax+0.0001; v+=yStep){
+    const cy = co.yC(v);
+    if(cy < Y0 || cy > Y1) continue;
+    ctx.strokeStyle = 'rgba(0,0,0,0.09)';
+    ctx.lineWidth   = 1*dpr;
+    ctx.beginPath(); ctx.moveTo(X0,cy); ctx.lineTo(X1,cy); ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,0.60)';
+    ctx.fillText(v, X0-6*dpr, cy);
+  }
+  // X ticks
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  const xStep = tickStep(xMax);
+  for(let v=xStep; v<=xMax+0.0001; v+=xStep){
+    const cx = co.xC(v);
+    ctx.strokeStyle = 'rgba(0,0,0,0.09)';
+    ctx.lineWidth   = 1*dpr;
+    ctx.beginPath(); ctx.moveTo(cx,Y0); ctx.lineTo(cx,Y1); ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,0.60)';
+    ctx.fillText(v, cx, Y1+5*dpr);
+  }
+
+  // Clip surplus + curves to plot area
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(X0, Y0, PW, PH);
+  ctx.clip();
+
+  // ── Draw surplus regions (under clip) ────────────────────────────────────
+  if(regime !== null){
+    const s = computeSurplus();
+    drawSurplusFills(ctx, co, params, regime, s, dpr);
+  }
+
+  // Demand curve (P = a − bQ)
+  ctx.beginPath();
+  ctx.moveTo(co.xC(0),   co.yC(a));
+  ctx.lineTo(co.xC(a/b), co.yC(0));
+  ctx.strokeStyle = '#2f5d7c';
+  ctx.lineWidth   = 2.5*dpr;
+  ctx.stroke();
+
+  // MC line at c
+  ctx.beginPath();
+  ctx.moveTo(co.xC(0),    co.yC(c));
+  ctx.lineTo(co.xC(xMax), co.yC(c));
+  ctx.strokeStyle = '#155c38';
+  ctx.lineWidth   = 2.5*dpr;
+  ctx.stroke();
+
+  // Regime-specific marker lines (price line / quantity guide)
+  if(regime === 'mono'){
+    const s = computeSurplus();
+    ctx.setLineDash([5*dpr,4*dpr]);
+    ctx.strokeStyle = 'rgba(180,35,24,0.55)';
+    ctx.lineWidth   = 1.4*dpr;
+    // Price horizontal
+    ctx.beginPath();
+    ctx.moveTo(co.xC(0),    co.yC(s.P));
+    ctx.lineTo(co.xC(s.Q),  co.yC(s.P));
+    ctx.stroke();
+    // Quantity vertical at Qm
+    ctx.beginPath();
+    ctx.moveTo(co.xC(s.Q), co.yC(0));
+    ctx.lineTo(co.xC(s.Q), co.yC(s.P));
+    ctx.stroke();
+    // Quantity vertical at Qc (boundary of DWL)
+    ctx.beginPath();
+    ctx.moveTo(co.xC(s.Qc), co.yC(0));
+    ctx.lineTo(co.xC(s.Qc), co.yC(c));
+    ctx.stroke();
+    ctx.setLineDash([]);
+  } else if(regime === 'pc' || regime === '1d'){
+    const s = computeSurplus();
+    ctx.setLineDash([5*dpr,4*dpr]);
+    ctx.strokeStyle = 'rgba(180,35,24,0.55)';
+    ctx.lineWidth   = 1.4*dpr;
+    ctx.beginPath();
+    ctx.moveTo(co.xC(s.Qc), co.yC(0));
+    ctx.lineTo(co.xC(s.Qc), co.yC(c));
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ctx.restore(); // end clip
+
+  // Curve labels with white halos
+  const haloLabel = (text, color, cx, cy) => {
+    ctx.font = `700 ${Math.round(10.5*dpr*_fs)}px "Inter",sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth   = 3.5*dpr;
+    ctx.strokeStyle = 'rgba(255,255,255,0.94)';
+    ctx.strokeText(text, cx, cy);
+    ctx.fillStyle = color;
+    ctx.fillText(text, cx, cy);
+  };
+  // D label near top-left of curve
+  {
+    const Qd = xMax * 0.08;
+    haloLabel('D', '#2f5d7c', co.xC(Qd), co.yC(a - b*Qd) - 12*dpr);
+  }
+  // MC label near right
+  {
+    const Qmc = xMax * 0.88;
+    haloLabel('MC', '#155c38', co.xC(Qmc), co.yC(c) - 10*dpr);
+  }
+
+  // Region labels (CS / PS / DWL) drawn after clip so they sit above fills
+  if(regime !== null){
+    drawSurplusLabels(ctx, co, params, regime, computeSurplus(), dpr, haloLabel);
+  }
+
+  updateGraphDesc();
+}
+
+// ── Surplus fills ─────────────────────────────────────────────────────────
+function drawSurplusFills(ctx, co, params, regime, s, dpr){
+  const {a,b,c} = params;
+  const CS_FILL  = 'rgba(47,93,124,0.28)';   // accent
+  const PS_FILL  = 'rgba(21,92,56,0.32)';    // good
+  const DWL_FILL = 'rgba(180,35,24,0.28)';   // bad
+  const CS_EDGE  = 'rgba(47,93,124,0.55)';
+  const PS_EDGE  = 'rgba(21,92,56,0.6)';
+  const DWL_EDGE = 'rgba(180,35,24,0.6)';
+
+  function fillPoly(pts, fill, edge){
+    if(pts.length < 3) return;
+    ctx.beginPath();
+    ctx.moveTo(co.xC(pts[0][0]), co.yC(pts[0][1]));
+    for(let i=1;i<pts.length;i++) ctx.lineTo(co.xC(pts[i][0]), co.yC(pts[i][1]));
+    ctx.closePath();
+    ctx.fillStyle = fill; ctx.fill();
+    ctx.strokeStyle = edge; ctx.lineWidth = 1.25*dpr; ctx.stroke();
+  }
+
+  if(regime === 'mono'){
+    // CS: triangle (0,Pm) - (0,a) - (Qm, Pm)
+    fillPoly([[0, s.P], [0, a], [s.Q, s.P]], CS_FILL, CS_EDGE);
+    // PS: rectangle (0,c)-(0,Pm)-(Qm,Pm)-(Qm,c)
+    fillPoly([[0, c], [0, s.P], [s.Q, s.P], [s.Q, c]], PS_FILL, PS_EDGE);
+    // DWL: triangle (Qm, Pm)-(Qm, c)-(Qc, c)
+    fillPoly([[s.Q, s.P], [s.Q, c], [s.Qc, c]], DWL_FILL, DWL_EDGE);
+  } else if(regime === 'pc'){
+    // CS: entire triangle (0,c)-(0,a)-(Qc,c)
+    fillPoly([[0, c], [0, a], [s.Qc, c]], CS_FILL, CS_EDGE);
+    // PS = 0, DWL = 0
+  } else if(regime === '1d'){
+    // PS: entire triangle (0,c)-(0,a)-(Qc,c)
+    fillPoly([[0, c], [0, a], [s.Qc, c]], PS_FILL, PS_EDGE);
+    // CS = 0, DWL = 0
+  }
+}
+
+// ── Surplus region labels ─────────────────────────────────────────────────
+function drawSurplusLabels(ctx, co, params, regime, s, dpr, haloLabel){
+  const {a,b,c} = params;
+  if(regime === 'mono'){
+    // CS centroid: triangle with vertices (0,Pm), (0,a), (Qm,Pm)
+    const cx1 = (0 + 0 + s.Q)/3, cy1 = (s.P + a + s.P)/3;
+    haloLabel(`CS  ${fmtMoney(s.CS)}`, '#1a3a52', co.xC(cx1), co.yC(cy1));
+    // PS centroid: rectangle midpoint
+    haloLabel(`PS  ${fmtMoney(s.PS)}`, '#0d482a', co.xC(s.Q/2), co.yC((c+s.P)/2));
+    // DWL centroid: triangle (Qm,Pm),(Qm,c),(Qc,c)
+    const cx3 = (s.Q + s.Q + s.Qc)/3, cy3 = (s.P + c + c)/3;
+    haloLabel(`DWL  ${fmtMoney(s.DWL)}`, '#8c1f12', co.xC(cx3), co.yC(cy3));
+  } else if(regime === 'pc'){
+    // CS centroid of triangle (0,c),(0,a),(Qc,c)
+    const cx1 = s.Qc/3, cy1 = (c + a + c)/3;
+    haloLabel(`CS  ${fmtMoney(s.CS)}`, '#1a3a52', co.xC(cx1), co.yC(cy1));
+  } else if(regime === '1d'){
+    const cx1 = s.Qc/3, cy1 = (c + a + c)/3;
+    haloLabel(`PS  ${fmtMoney(s.PS)}`, '#0d482a', co.xC(cx1), co.yC(cy1));
+  }
+}
+
+// ── Regime selection ──────────────────────────────────────────────────────
+function selectRegime(key){
+  regime = key;
+  ALL_REGIME_BTNS.forEach(b => b.setAttribute('aria-pressed','false'));
+  REGIME_INFO[key].btn.setAttribute('aria-pressed','true');
+  updateTotals();
+  updateRegimeDisplay();
+  redraw();
+}
+
+// ── Reflection rendering ──────────────────────────────────────────────────
+function renderReflection(){
+  $reflection.innerHTML = '';
+  QUESTIONS.forEach((q, i) => {
+    const card = document.createElement('div');
+    card.className = 'qcard';
+    card.id = 'qc'+i;
+    const head = document.createElement('div');
+    head.className = 'qhead';
+    head.innerHTML = `<span class="qbadge">Q${i+1}</span><span class="qtext">${q.text}</span>`;
+    card.appendChild(head);
+    const opts = document.createElement('div');
+    opts.className = 'qopts';
+    opts.setAttribute('role','group');
+    opts.setAttribute('aria-label', q.text);
+    q.opts.forEach((o, j) => {
+      const btn = document.createElement('button');
+      btn.className = 'qopt';
+      btn.setAttribute('aria-pressed','false');
+      btn.textContent = o.label;
+      btn.addEventListener('click', () => handleAnswer(i, j, btn));
+      opts.appendChild(btn);
+    });
+    card.appendChild(opts);
+    const fb = document.createElement('div');
+    fb.className = 'qfb hidden';
+    fb.id = 'qfb'+i;
+    fb.setAttribute('role','status');
+    fb.setAttribute('aria-live','polite');
+    fb.setAttribute('aria-atomic','true');
+    card.appendChild(fb);
+    $reflection.appendChild(card);
+  });
+}
+
+function handleAnswer(qi, oi, btn){
+  if(_qDone[qi]) return;
+  const q = QUESTIONS[qi];
+  const opt = q.opts[oi];
+  _qDone[qi] = true;
+
+  // Lock all opt buttons in this card; mark chosen + correct
+  const card = document.getElementById('qc'+qi);
+  const allOpts = Array.from(card.querySelectorAll('.qopt'));
+  allOpts.forEach((b, idx) => {
+    b.disabled = true;
+    b.classList.add('locked');
+    b.setAttribute('aria-pressed', idx === oi ? 'true' : 'false');
+    if(q.opts[idx].ok) b.classList.add('correct');
+    else if(idx === oi) b.classList.add('wrong');
+  });
+
+  const fb = document.getElementById('qfb'+qi);
+  if(opt.ok){
+    fb.className = 'qfb correct';
+    fb.textContent = '✓ Correct — ' + q.expl;
+    _firstScore += 1;
+    _finalScore += 1;
+  } else {
+    const correctLabel = q.opts.find(o => o.ok).label;
+    fb.className = 'qfb wrong';
+    fb.textContent = '✗ Not quite. Correct answer: ' + correctLabel + '. ' + q.expl;
+  }
+
+  // Record to Session — single-phase: pass same as first and final
+  const ansText = opt.label;
+  const isCorrect = !!opt.ok;
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(LAB_ID, q.qIdx, q.text,
+      ansText, isCorrect,
+      ansText, isCorrect);
+  }
+  maybeFinishLab();
+}
+
+function maybeFinishLab(){
+  if(_labDoneFired) return;
+  if(!_qDone.every(Boolean)) return;
+  _labDoneFired = true;
+  if(window.Session && Session.recordLabDone){
+    Session.recordLabDone(LAB_ID, LAB_LABEL,
+      _firstScore, _finalScore, QUESTIONS.length);
+  }
+  $banner.classList.remove('hidden');
+  const isDiscussion = new URLSearchParams(location.search).get('disc') === '1';
+  const tail = isDiscussion
+    ? ' Try each regime with different slider values to make sure the comparisons hold, then download a summary PDF.'
+    : ' Try each regime with different slider values to make sure the comparisons hold.';
+  $banner.textContent =
+    `Lab complete — ${_firstScore} of ${QUESTIONS.length} correct.` + tail;
+}
+
+// ── Slider handlers ───────────────────────────────────────────────────────
+function clampParams(){
+  // Keep MC well below demand intercept so Q_c > 0 and surplus regions render
+  if(params.c >= params.a - 5){
+    params.c = Math.max(5, params.a - 10);
+    $slC.value = params.c;
+  }
+}
+
+function onSliderChange(){
+  params.a = parseFloat($slA.value);
+  params.b = parseFloat($slB.value);
+  params.c = parseFloat($slC.value);
+  clampParams();
+  updateSliderText();
+  updateTotals();
+  updateRegimeDisplay();
+  redraw();
+}
+
+[$slA,$slB,$slC].forEach(el => {
+  el.addEventListener('input', onSliderChange);
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  params = { a:100, b:2, c:20 };
+  $slA.value = 100; $slB.value = 2; $slC.value = 20;
+  updateSliderText();
+  updateTotals();
+  updateRegimeDisplay();
+  redraw();
+});
+
+// ── Regime button handlers ────────────────────────────────────────────────
+$rbMono.addEventListener('click', () => selectRegime('mono'));
+$rbPC  .addEventListener('click', () => selectRegime('pc'));
+$rb1D  .addEventListener('click', () => selectRegime('1d'));
+
+// ── PDF button (only in discussion mode) ──────────────────────────────────
+const _pdfBtn = document.getElementById('downloadPdfBtn');
+if(new URLSearchParams(location.search).get('disc') === '1'){
+  _pdfBtn.addEventListener('click', () => {
+    if(window.DiscussionPDF && DiscussionPDF.generate){
+      DiscussionPDF.generate();
+    } else {
+      alert('PDF export is not available — try refreshing the page.');
+    }
+  });
+} else {
+  _pdfBtn.remove();
+}
+
+// ── Resize handler (debounced) ────────────────────────────────────────────
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+// ── Generate params (per-lab seeded RNG) ──────────────────────────────────
+function generateParams(){
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+  // Sliders are user-controlled; defaults are already set in params.
+  // The seeded RNG is initialized for parity with other labs and in case
+  // we ever want to vary the starting parameters per session.
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+function init(){
+  generateParams();
+  updateSliderText();
+  renderReflection();
+  selectRegime('mono'); // start with single-price monopoly so students see DWL
+}
+
+function kickoff(){
+  const isDiscussion = new URLSearchParams(location.search).get('disc') === '1';
+  if(isDiscussion && window.DiscussionModal){
+    DiscussionModal.init({
+      weekLabel: WEEK_LABEL,
+      onReady: function(){ init(); }
+    });
+  } else {
+    init();
+  }
+}
+kickoff();
+
+})();
+</script>
+</body>
+</html>

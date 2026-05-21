@@ -1,0 +1,1588 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Iterated Elimination of Dominated Strategies — ECON 104B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <!--
+    LAB_ID    = 'iterated-elimination-dominated-strategies'
+    LAB_LABEL = 'Iterated Elimination of Dominated Strategies'
+    url       = '/classes/econ104b/labs/iterated-elimination-dominated-strategies/?disc=1'
+  -->
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea;
+      --panel:#ffffff;
+      --ink:#1f2937;
+      --ink-2:#374151;
+      --muted:#596878;
+      --line:#e7dfd2;
+      --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;
+      --bad:#b42318;
+      --player-a:#b54708;
+      --player-b:#2f5d7c;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3 / good practice) ────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;
+      font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;
+      line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;
+      max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Layout */
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+    .lab-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;
+      gap:18px;align-items:start;}
+    @media(max-width:880px){.lab-grid{grid-template-columns:minmax(0,1fr);}}
+
+    /* Panel cards */
+    .card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .card-title{font-family:var(--font-serif);font-size:1.0625rem;
+      font-weight:700;color:var(--ink);margin:0 0 6px;}
+    .card-sub{font-size:0.8125rem;color:var(--muted);
+      margin:0 0 12px;line-height:1.5;}
+
+    /* Payoff matrix table */
+    .matrix-wrap{display:flex;justify-content:center;
+      margin:6px 0 8px;overflow-x:auto;}
+    table.game-matrix{border-collapse:collapse;
+      font-family:var(--font-sans);font-weight:700;
+      margin:0 auto;}
+    table.game-matrix caption{caption-side:top;}
+    table.game-matrix .b-header{
+      text-align:center;color:var(--player-b);
+      font-size:0.8125rem;font-weight:800;
+      text-transform:uppercase;letter-spacing:.06em;
+      padding:6px 8px;border:none;}
+    table.game-matrix .a-header{
+      writing-mode:vertical-rl;transform:rotate(180deg);
+      color:var(--player-a);font-size:0.8125rem;font-weight:800;
+      text-transform:uppercase;letter-spacing:.06em;
+      padding:8px 6px;text-align:center;vertical-align:middle;
+      border:none;}
+    table.game-matrix th.col-label{
+      text-align:center;font-size:0.875rem;color:var(--ink-2);
+      padding:6px 10px;border-bottom:1px solid var(--line);
+      font-weight:700;}
+    table.game-matrix th.row-label{
+      text-align:center;font-size:0.875rem;color:var(--ink-2);
+      padding:10px 12px;border-right:1px solid var(--line);
+      font-weight:700;}
+    table.game-matrix td.payoff-cell{
+      border:1.5px solid var(--ink);
+      padding:14px 16px;text-align:center;
+      background:rgba(246,242,234,.45);
+      min-width:84px;min-height:60px;
+      font-size:1rem;}
+    table.game-matrix td.payoff-cell + td.payoff-cell{border-left:none;}
+    table.game-matrix tbody tr + tr td.payoff-cell{border-top:none;}
+    .pay-a{color:var(--player-a);font-weight:800;}
+    .pay-b{color:var(--player-b);font-weight:800;}
+    .pay-sep{color:var(--ink-2);font-weight:600;}
+
+    /* Clickable payoff (used after Done is correct) */
+    .payoff-click{display:inline-block;padding:3px 7px;border-radius:6px;
+      cursor:pointer;transition:background .12s,border-color .12s;
+      user-select:none;border:2px solid transparent;}
+    .payoff-click:hover{background:rgba(47,93,124,.10);}
+    .payoff-click.sel-a{background:rgba(181,71,8,.16);
+      border-color:var(--player-a);}
+    .payoff-click.sel-b{background:rgba(47,93,124,.16);
+      border-color:var(--player-b);}
+    .payoff-click.correct{background:rgba(21,92,56,.14);
+      border-color:var(--good);}
+    .payoff-click.wrong{background:rgba(180,35,24,.10);
+      border-color:var(--bad);}
+    .payoff-click.disabled{cursor:default;}
+    .payoff-click.disabled:hover{background:transparent;}
+    .payoff-click.disabled.sel-a{background:rgba(181,71,8,.16);}
+    .payoff-click.disabled.sel-b{background:rgba(47,93,124,.16);}
+
+    /* Step cards (BR + PSNE) */
+    .step-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:16px;padding:16px;box-shadow:var(--shadow);
+      margin-bottom:12px;transition:opacity .15s;}
+    .step-card.locked{opacity:.55;pointer-events:none;}
+    .step-card.locked .step-locked-note{display:inline;}
+    .step-locked-note{display:none;font-size:0.6875rem;font-weight:800;
+      text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+      margin-left:8px;}
+    .step-card-header{display:flex;justify-content:space-between;
+      align-items:flex-start;gap:10px;}
+    .step-num{display:inline-block;font-size:0.625rem;font-weight:800;
+      text-transform:uppercase;letter-spacing:.07em;color:var(--accent);
+      background:rgba(47,93,124,.08);border:1px solid rgba(47,93,124,.18);
+      border-radius:6px;padding:2px 7px;margin-bottom:4px;}
+    .step-title{font-size:0.9375rem;font-weight:700;
+      color:var(--ink);line-height:1.3;}
+    .step-instruction{font-size:0.8125rem;color:var(--ink-2);
+      line-height:1.55;margin:8px 0 0;}
+    .step-btn{flex-shrink:0;padding:6px 12px;border:1.5px solid #8c7f72;
+      background:rgba(47,93,124,.06);color:var(--accent);border-radius:10px;
+      font-size:0.75rem;font-weight:700;font-family:var(--font-sans);
+      cursor:pointer;transition:background .12s,border-color .12s;
+      white-space:nowrap;}
+    .step-btn:hover:not(:disabled){background:rgba(47,93,124,.14);
+      border-color:var(--accent);}
+    .step-btn:disabled{opacity:.55;cursor:default;}
+    .step-btn.done{background:rgba(21,92,56,.08);
+      border-color:rgba(21,92,56,.3);color:var(--good);}
+    .step-fb{margin-top:8px;font-size:0.8125rem;line-height:1.5;
+      color:var(--ink-2);min-height:1em;}
+    .step-fb.ok{color:var(--good);font-weight:600;}
+    .step-fb.bad{color:var(--bad);font-weight:600;}
+
+    /* PSNE list */
+    .psne-list{display:flex;flex-direction:column;gap:8px;margin-top:8px;}
+    .psne-item{display:flex;align-items:center;gap:8px;padding:8px 10px;
+      background:#fff;border:1px solid var(--line);border-radius:10px;
+      flex-wrap:wrap;font-size:0.875rem;}
+    .psne-item.none{color:var(--muted);font-style:italic;
+      background:rgba(246,242,234,.5);}
+    .psne-item.correct{border-color:var(--good);background:rgba(21,92,56,.06);}
+    .psne-item.wrong{border-color:var(--bad);background:rgba(180,35,24,.06);}
+    .psne-remove{padding:3px 8px;border:1px solid #8c7f72;background:#fff;
+      border-radius:8px;color:var(--ink-2);font-size:0.75rem;font-weight:700;
+      cursor:pointer;font-family:var(--font-sans);}
+    .psne-remove:hover:not(:disabled){background:rgba(180,35,24,.08);
+      border-color:var(--bad);color:var(--bad);}
+    .psne-remove:disabled{opacity:.45;cursor:not-allowed;}
+    .add-psne-btn{margin-top:8px;padding:7px 14px;border:1.5px dashed #8c7f72;
+      background:rgba(47,93,124,.04);color:var(--accent);border-radius:10px;
+      font-size:0.8125rem;font-weight:700;cursor:pointer;
+      font-family:var(--font-sans);}
+    .add-psne-btn:hover:not(:disabled){background:rgba(47,93,124,.10);
+      border-color:var(--accent);}
+    .add-psne-btn:disabled{opacity:.45;cursor:not-allowed;}
+
+    /* Eliminated visuals */
+    table.game-matrix th.row-label.eliminated,
+    table.game-matrix th.col-label.eliminated{
+      text-decoration:line-through;
+      color:var(--muted);
+    }
+    table.game-matrix td.payoff-cell.dimmed{
+      opacity:.38;
+      background:rgba(246,242,234,.25);
+    }
+
+    /* Legend */
+    .legend-pills{display:flex;gap:10px;justify-content:center;
+      flex-wrap:wrap;margin-top:8px;font-size:0.75rem;}
+    .legend-pills .pill{display:inline-flex;align-items:center;
+      gap:6px;padding:4px 9px;border-radius:999px;
+      background:rgba(246,242,234,.6);border:1px solid var(--line);}
+    .pill-dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+
+    /* Status / live region */
+    .status-strip{margin:8px 0 0;padding:10px 14px;
+      border-radius:12px;font-size:0.875rem;line-height:1.5;
+      background:rgba(47,93,124,.06);border:1px solid rgba(47,93,124,.2);
+      color:var(--ink-2);min-height:1.5em;}
+    .status-strip.ok{background:rgba(21,92,56,.08);
+      border-color:rgba(21,92,56,.3);color:var(--good);}
+    .status-strip.bad{background:rgba(180,35,24,.07);
+      border-color:rgba(180,35,24,.3);color:var(--bad);}
+
+    /* Control panel */
+    .control-row{display:flex;flex-direction:column;gap:10px;}
+    .field{display:flex;flex-direction:column;gap:5px;}
+    .field-label{font-size:0.75rem;font-weight:800;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.06em;}
+    .fs{padding:7px 10px;border:1.5px solid #8c7f72;border-radius:10px;
+      font-size:0.9375rem;font-family:var(--font-sans);font-weight:700;
+      background:#fff;color:var(--ink);outline:none;cursor:pointer;
+      transition:border-color .12s,background .12s;}
+    .fs:focus{border-color:var(--accent);}
+    .fs:disabled{background:rgba(246,242,234,.9);
+      color:var(--muted);cursor:not-allowed;}
+
+    /* Radio group */
+    fieldset.player-group{border:1.5px solid #8c7f72;border-radius:12px;
+      padding:8px 12px 10px;margin:0;background:#fff;}
+    fieldset.player-group legend{font-size:0.75rem;font-weight:800;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.06em;
+      padding:0 6px;}
+    .radio-stack{display:flex;flex-direction:column;gap:6px;margin-top:4px;}
+    .radio-item{display:flex;align-items:center;gap:8px;
+      font-size:0.875rem;font-weight:600;color:var(--ink-2);cursor:pointer;
+      padding:3px 4px;border-radius:6px;}
+    .radio-item input[type=radio]{accent-color:var(--accent);
+      width:1.05rem;height:1.05rem;cursor:pointer;}
+    .radio-item input[type=radio]:disabled + span{color:var(--muted);}
+    .radio-item:has(input:disabled){cursor:not-allowed;}
+
+    /* Buttons */
+    .primary-btn{padding:10px 18px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover:not(:disabled){background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    .button-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+
+    /* Score / progress */
+    .progress-line{font-size:0.8125rem;color:var(--ink-2);margin:8px 0 0;}
+    .progress-line strong{color:var(--ink);}
+
+    /* MCQ panels */
+    .mcq-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:16px;padding:16px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .mcq-prompt{font-size:0.9375rem;color:var(--ink);
+      line-height:1.55;margin:0 0 10px;font-weight:600;}
+    .mcq-options{display:flex;flex-direction:column;gap:8px;}
+    .mcq-opt{display:flex;align-items:flex-start;gap:10px;
+      padding:9px 12px;border:1.5px solid #8c7f72;border-radius:10px;
+      background:#fff;cursor:pointer;font-size:0.875rem;line-height:1.5;
+      color:var(--ink-2);}
+    .mcq-opt:hover:not(.locked){border-color:var(--accent);
+      background:rgba(47,93,124,.05);}
+    .mcq-opt input{accent-color:var(--accent);margin-top:2px;
+      width:1.05rem;height:1.05rem;flex-shrink:0;}
+    .mcq-opt.correct{border-color:var(--good);background:rgba(21,92,56,.06);
+      color:var(--good);}
+    .mcq-opt.wrong{border-color:var(--bad);background:rgba(180,35,24,.06);
+      color:var(--bad);}
+    .mcq-opt.locked{cursor:default;}
+    .mcq-feedback{margin-top:10px;font-size:0.8125rem;
+      line-height:1.5;color:var(--ink-2);min-height:1em;}
+    .mcq-feedback.ok{color:var(--good);font-weight:600;}
+    .mcq-feedback.bad{color:var(--bad);font-weight:600;}
+
+    /* Final summary */
+    .summary-card{background:linear-gradient(180deg,
+      rgba(47,93,124,.05),rgba(47,93,124,.02));
+      border:1px solid rgba(47,93,124,.25);border-radius:16px;
+      padding:18px;margin-bottom:14px;}
+    .summary-title{font-family:var(--font-serif);font-size:1.125rem;
+      font-weight:700;color:var(--accent);margin:0 0 10px;}
+    .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+      gap:10px;margin-bottom:12px;}
+    .summary-stat{background:#fff;border:1px solid var(--line);
+      border-radius:10px;padding:10px;text-align:center;}
+    .summary-num{font-family:var(--font-serif);font-size:1.5rem;
+      font-weight:700;color:var(--ink);}
+    .summary-lab{font-size:0.6875rem;font-weight:800;
+      color:var(--muted);text-transform:uppercase;letter-spacing:.06em;
+      margin-top:2px;}
+
+    /* Footer */
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+    .hidden{display:none!important;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ104b/">← ECON 104B</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104B — Game Theory</div>
+      <h1>Iterated Elimination of Dominated Strategies</h1>
+      <p class="sub">Apply the dominant-strategy logic from the lecture to larger games. Remove
+      strictly dominated strategies one at a time and watch new dominations appear as the
+      opponent's options shrink.</p>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>You will be shown a 3×3 or 4×4 payoff matrix. Player A is the row player and
+          Player B is the column player; each cell shows
+          <span style="color:var(--player-a);font-weight:700;">A's payoff</span>,
+          <span style="color:var(--player-b);font-weight:700;">B's payoff</span>.</p>
+
+          <p><strong>Definitions.</strong></p>
+          <ul>
+            <li><strong>Strict dominance.</strong> Strategy <em>X</em> <strong>strictly</strong>
+            dominates strategy <em>Y</em> for a player if <em>X</em> gives that player a
+            <em>strictly higher</em> payoff than <em>Y</em> against <em>every</em> surviving
+            strategy of the opponent. A single tie (equal payoffs in any column for A, or
+            any row for B) breaks strict dominance.</li>
+            <li><strong>Weak dominance.</strong> Strategy <em>X</em> <strong>weakly</strong>
+            dominates strategy <em>Y</em> if <em>X</em> gives <em>at least as high</em> a
+            payoff in every surviving opponent strategy, <em>and a strictly higher payoff
+            in at least one</em>. Weak dominance allows ties — but if every payoff is
+            equal, neither strategy dominates the other.</li>
+          </ul>
+
+          <p>Your task:</p>
+          <ol>
+            <li><strong>Find a dominated strategy.</strong> Pick the player whose strategy
+            is dominated, pick the strategy to eliminate, pick the surviving strategy of
+            the same player that dominates it, and pick the type of dominance you're
+            claiming (<em>strict</em> or <em>weak</em>). Click <strong>Check elimination</strong>.</li>
+            <li><strong>Repeat</strong> on the reduced game. A strategy that wasn't
+            dominated before may become dominated once the opponent has fewer options.</li>
+            <li><strong>Click Done</strong> once no strategy is strictly or weakly dominated
+            in the remaining game. Then mark each player's best responses in the surviving
+            sub-game and list any pure-strategy Nash equilibria.</li>
+          </ol>
+
+          <p><strong>Caution with weak dominance.</strong> Unlike strict iterated
+          elimination, iterating weak dominance can <em>discard</em> some Nash equilibria
+          and the surviving sub-game can depend on the order of elimination. Use weak
+          dominance only when no strict dominance is available, and be aware that the
+          PSNE you identify afterwards may be a subset of the original game's PSNE.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <div class="lab-grid">
+
+    <!-- LEFT: Matrix + status -->
+    <div>
+      <section class="card" aria-labelledby="matrixHeading">
+        <h2 class="card-title" id="matrixHeading">Payoff Matrix</h2>
+        <p class="card-sub" id="matrixSubtitle">Player A chooses a row, Player B chooses a
+        column. Each cell shows (A's payoff, B's payoff).</p>
+
+        <div class="matrix-wrap" id="matrixWrap" role="region"
+             aria-labelledby="matrixHeading" aria-live="off">
+          <!-- table injected by JS -->
+        </div>
+
+        <div class="legend-pills" aria-hidden="true">
+          <span class="pill"><span class="pill-dot" style="background:var(--player-a);"></span>
+            Player A (rows)</span>
+          <span class="pill"><span class="pill-dot" style="background:var(--player-b);"></span>
+            Player B (columns)</span>
+        </div>
+
+        <!-- Polite live region for elimination outcomes -->
+        <div id="statusStrip" class="status-strip" role="status"
+             aria-live="polite" aria-atomic="true">
+          Pick a player, a strategy to eliminate, and a dominator, then click
+          <strong>Check elimination</strong>.
+        </div>
+
+        <!-- Persistent description of current state (sr-only, live) -->
+        <div class="sr-only" id="matrixStateDesc"
+             aria-live="polite" aria-atomic="true">
+          <!-- updated by JS -->
+        </div>
+
+        <p class="progress-line" aria-live="polite">
+          <strong>Eliminations:</strong>
+          <span id="elimCount">0</span>
+          &nbsp;·&nbsp;
+          <strong>First-attempt correct:</strong>
+          <span id="firstScoreLabel">0</span>
+        </p>
+      </section>
+
+      <!-- Best-Response card (locked until Done) -->
+      <section class="step-card locked" id="brCard" aria-labelledby="brHeading">
+        <div class="step-card-header">
+          <div>
+            <div class="step-num">After elimination · Step 1</div>
+            <div class="step-title" id="brHeading">
+              Mark best responses
+              <span class="step-locked-note">— unlocks after Done</span>
+            </div>
+          </div>
+          <button class="step-btn" id="brBtn" type="button" disabled>Check answer</button>
+        </div>
+        <p class="step-instruction">
+          In the surviving sub-game above, click each payoff that is a
+          <em>best response</em> to one of the opponent's surviving strategies.
+          Click <span style="color:var(--player-a);font-weight:700;">A's orange payoff</span>
+          to mark Player A's best response in that column; click
+          <span style="color:var(--player-b);font-weight:700;">B's blue payoff</span>
+          to mark Player B's best response in that row. Click again to deselect.
+        </p>
+        <div class="step-fb" id="brFb" aria-live="polite" aria-atomic="true"></div>
+      </section>
+
+      <!-- PSNE card (locked until Done) -->
+      <section class="step-card locked" id="psneCard" aria-labelledby="psneHeading">
+        <div class="step-card-header">
+          <div>
+            <div class="step-num">After elimination · Step 2</div>
+            <div class="step-title" id="psneHeading">
+              List pure-strategy Nash equilibria
+              <span class="step-locked-note">— unlocks after Done</span>
+            </div>
+          </div>
+          <button class="step-btn" id="psneBtn" type="button" disabled>Check answer</button>
+        </div>
+        <p class="step-instruction">
+          A pure-strategy Nash equilibrium (PSNE) is a cell where <em>neither</em>
+          player wants to deviate — both payoffs are best responses. Add every
+          PSNE in the surviving sub-game (there may be zero, one, or several). If
+          the sub-game has no PSNE, leave the list empty.
+        </p>
+        <div class="psne-list" id="psneList" role="list"></div>
+        <button class="add-psne-btn" id="addPsneBtn" type="button" disabled>
+          + Add equilibrium
+        </button>
+        <div class="step-fb" id="psneFb" aria-live="polite" aria-atomic="true"></div>
+      </section>
+    </div>
+
+    <!-- RIGHT: Controls + done -->
+    <div>
+      <section class="card" id="controlCard" aria-labelledby="controlHeading">
+        <h2 class="card-title" id="controlHeading">Eliminate a dominated strategy</h2>
+        <p class="card-sub">All controls update as you eliminate strategies.</p>
+
+        <div class="control-row">
+
+          <fieldset class="player-group" id="playerGroup"
+                    aria-describedby="playerHelp">
+            <legend>Player whose strategy is dominated</legend>
+            <span id="playerHelp" class="sr-only">
+              Choose whether you're eliminating one of Player A's rows or Player B's columns.
+            </span>
+            <div class="radio-stack">
+              <label class="radio-item">
+                <input type="radio" name="playerPick" value="A" checked>
+                <span>Player A — eliminate a row</span>
+              </label>
+              <label class="radio-item">
+                <input type="radio" name="playerPick" value="B">
+                <span>Player B — eliminate a column</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="field">
+            <label class="field-label" for="elimSel">Strategy to eliminate</label>
+            <select id="elimSel" class="fs"></select>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="domSel">Dominating strategy
+              (must belong to the same player)</label>
+            <select id="domSel" class="fs"></select>
+          </div>
+
+          <fieldset class="player-group" id="domTypeGroup">
+            <legend>Type of dominance</legend>
+            <div class="radio-stack">
+              <label class="radio-item">
+                <input type="radio" name="domType" value="strict" checked>
+                <span>Strict — dominator's payoff is <em>strictly higher</em>
+                  against every opponent strategy</span>
+              </label>
+              <label class="radio-item">
+                <input type="radio" name="domType" value="weak">
+                <span>Weak — dominator's payoff is <em>at least as high</em>
+                  in every case <em>and strictly higher in at least one</em></span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="button-row">
+            <button class="primary-btn" id="checkBtn" type="button">
+              Check elimination
+            </button>
+            <button class="option-btn" id="resetBtn" type="button">Reset matrix</button>
+            <button class="option-btn" id="newGameBtn" type="button">New game</button>
+          </div>
+
+          <div class="button-row" style="margin-top:4px;">
+            <button class="primary-btn" id="doneBtn" type="button"
+                    style="background:var(--good);white-space:normal;
+                           line-height:1.3;text-align:left;">
+              Done — no more dominated strategies
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Final summary -->
+      <section class="summary-card hidden" id="summaryCard"
+               aria-labelledby="summaryHeading">
+        <h2 class="summary-title" id="summaryHeading">Lab Complete</h2>
+        <div class="summary-grid">
+          <div class="summary-stat">
+            <div class="summary-num" id="sumFirst">0</div>
+            <div class="summary-lab">First-attempt</div>
+          </div>
+          <div class="summary-stat">
+            <div class="summary-num" id="sumFinal">0</div>
+            <div class="summary-lab">Final score</div>
+          </div>
+          <div class="summary-stat">
+            <div class="summary-num" id="sumTotal">0</div>
+            <div class="summary-lab">Total questions</div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 104B — Intermediate Microeconomics II</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ───────────────────────────────────────────────────────────
+   LAB IDENTITY
+   ─────────────────────────────────────────────────────────── */
+const LAB_ID    = 'iterated-elimination-dominated-strategies';
+const LAB_LABEL = 'Iterated Elimination of Dominated Strategies';
+
+/* ───────────────────────────────────────────────────────────
+   MATRIX GENERATION
+   Each matrix is { rows, cols, pay } where:
+     rows:   array of row labels (Player A strategies)
+     cols:   array of col labels (Player B strategies)
+     pay:    pay[i][j] = [aPayoff, bPayoff]
+   Payoffs are integers in [0, 9]. Generation is fully random — students may
+   encounter games that fully reduce, partially reduce, or don't reduce at
+   all. Working through the "no further eliminations" cases is part of the
+   point.
+   ─────────────────────────────────────────────────────────── */
+
+/* ───────────────────────────────────────────────────────────
+   STATE
+   ─────────────────────────────────────────────────────────── */
+let _rng = null;
+function rng(){ return _rng ? _rng() : Math.random(); }
+function rngFor(useSeeded){
+  // Generate with seeded RNG for the first game (so each session has a stable
+  // opener), but with Math.random for New Game so the student gets variety.
+  return useSeeded && _rng ? _rng() : Math.random();
+}
+function randInt(lo, hi, useSeeded){
+  return lo + Math.floor(rngFor(useSeeded) * (hi - lo + 1));
+}
+
+function generateRandomMatrix(useSeeded){
+  // 60% chance 3×3, 40% chance 4×4
+  const size = rngFor(useSeeded) < 0.6 ? 3 : 4;
+  const rowLabels = size === 3 ? ['T','M','B'] : ['T','M1','M2','B'];
+  const colLabels = size === 3 ? ['L','C','R'] : ['L','C1','C2','R'];
+
+  const pay = [];
+  for(let i = 0; i < size; i++){
+    const row = [];
+    for(let j = 0; j < size; j++){
+      row.push([randInt(0, 9, useSeeded), randInt(0, 9, useSeeded)]);
+    }
+    pay.push(row);
+  }
+  return { rows: rowLabels, cols: colLabels, pay };
+}
+
+let MAT = null;             // current matrix
+let elimRows = new Set();   // eliminated A-row indices
+let elimCols = new Set();   // eliminated B-col indices
+// Phases: 'eliminating' → 'post-elim' (BR + PSNE unlocked) → 'done'
+let phase = 'eliminating';
+
+// Best-response selections: Set of "i-j" cell keys per player.
+let selectedBR = { A: new Set(), B: new Set() };
+let brLocked = false;       // true once BR check passes (or after Done in 1×1)
+let _brFirstAttempt = true;
+let _brRecorded = false;
+
+// PSNE list: [{row:idx, col:idx, state:''|'correct'|'wrong'}, ...]
+let psneEntries = [];
+let psneLocked = false;
+let _psneFirstAttempt = true;
+let _psneRecorded = false;
+
+let roundCount = 0;         // # of successful eliminations so far
+const MAX_RECORDED = 3;     // cap procedural recordings at 3 (per spec)
+let recordedRounds = 0;     // # of procedural questions recorded
+
+let _firstAttemptThisRound = true;   // reset to true after each successful elim
+let _firstScore = 0;
+let _finalScore = 0;
+
+
+/* ───────────────────────────────────────────────────────────
+   ELEMENT REFS
+   ─────────────────────────────────────────────────────────── */
+const $matrixWrap     = document.getElementById('matrixWrap');
+const $matrixStateDesc= document.getElementById('matrixStateDesc');
+const $matrixSubtitle = document.getElementById('matrixSubtitle');
+const $statusStrip    = document.getElementById('statusStrip');
+const $elimCount      = document.getElementById('elimCount');
+const $firstScoreLbl  = document.getElementById('firstScoreLabel');
+
+const $playerRadios   = document.querySelectorAll('input[name="playerPick"]');
+const $elimSel        = document.getElementById('elimSel');
+const $domSel         = document.getElementById('domSel');
+const $checkBtn       = document.getElementById('checkBtn');
+const $resetBtn       = document.getElementById('resetBtn');
+const $doneBtn        = document.getElementById('doneBtn');
+const $controlCard    = document.getElementById('controlCard');
+
+const $brCard     = document.getElementById('brCard');
+const $brBtn      = document.getElementById('brBtn');
+const $brFb       = document.getElementById('brFb');
+const $psneCard   = document.getElementById('psneCard');
+const $psneBtn    = document.getElementById('psneBtn');
+const $psneFb     = document.getElementById('psneFb');
+const $psneList   = document.getElementById('psneList');
+const $addPsneBtn = document.getElementById('addPsneBtn');
+
+const $summaryCard = document.getElementById('summaryCard');
+const $sumFirst    = document.getElementById('sumFirst');
+const $sumFinal    = document.getElementById('sumFinal');
+const $sumTotal    = document.getElementById('sumTotal');
+const $newGameBtn  = document.getElementById('newGameBtn');
+
+/* ───────────────────────────────────────────────────────────
+   HELPERS
+   ─────────────────────────────────────────────────────────── */
+function survivingRowIndices(){
+  const out = [];
+  for(let i = 0; i < MAT.rows.length; i++){
+    if(!elimRows.has(i)) out.push(i);
+  }
+  return out;
+}
+function survivingColIndices(){
+  const out = [];
+  for(let j = 0; j < MAT.cols.length; j++){
+    if(!elimCols.has(j)) out.push(j);
+  }
+  return out;
+}
+
+// Does strategy dominantIdx dominate strategy elimIdx for player ('A' or 'B'),
+// given the current surviving opponent set and the requested dominance mode
+// ('strict' or 'weak').
+// Strict: domPay > elimPay against every surviving opponent strategy.
+// Weak:   domPay >= elimPay against every surviving opponent strategy,
+//         and domPay > elimPay against at least one.
+// Returns { ok: true } or { ok: false, witnessIdx?, dominantPay?, elimPay?, allEqual? }
+function checkDominance(player, elimIdx, dominantIdx, mode){
+  const ix = (player === 'A')
+    ? survivingColIndices()
+    : survivingRowIndices();
+  let hasStrict = false;
+  for(const k of ix){
+    const elimPay = (player === 'A') ? MAT.pay[elimIdx][k][0] : MAT.pay[k][elimIdx][1];
+    const domPay  = (player === 'A') ? MAT.pay[dominantIdx][k][0] : MAT.pay[k][dominantIdx][1];
+    if(mode === 'strict'){
+      if(!(domPay > elimPay)){
+        return { ok: false, witnessIdx: k, dominantPay: domPay, elimPay };
+      }
+    } else { // weak
+      if(domPay < elimPay){
+        return { ok: false, witnessIdx: k, dominantPay: domPay, elimPay };
+      }
+      if(domPay > elimPay) hasStrict = true;
+    }
+  }
+  if(mode === 'weak' && !hasStrict){
+    return { ok: false, allEqual: true };
+  }
+  return { ok: true };
+}
+
+// Is any strategy still dominated (strict OR weak) in the reduced game?
+// Reports the *kind* of dominance found so Done can hint the student precisely.
+// Returns { hasDom: false } or
+//         { hasDom: true, player, elimIdx, dominantIdx, kind: 'strict'|'weak' }
+function anyDominated(){
+  const rows = survivingRowIndices();
+  const cols = survivingColIndices();
+  for(const mode of ['strict', 'weak']){
+    if(rows.length >= 2){
+      for(const a of rows){
+        for(const b of rows){
+          if(a === b) continue;
+          if(checkDominance('A', a, b, mode).ok){
+            return { hasDom: true, player: 'A', elimIdx: a, dominantIdx: b, kind: mode };
+          }
+        }
+      }
+    }
+    if(cols.length >= 2){
+      for(const a of cols){
+        for(const b of cols){
+          if(a === b) continue;
+          if(checkDominance('B', a, b, mode).ok){
+            return { hasDom: true, player: 'B', elimIdx: a, dominantIdx: b, kind: mode };
+          }
+        }
+      }
+    }
+  }
+  return { hasDom: false };
+}
+
+function currentPlayer(){
+  let v = 'A';
+  $playerRadios.forEach(r => { if(r.checked) v = r.value; });
+  return v;
+}
+
+function currentDomType(){
+  const r = document.querySelector('input[name="domType"]:checked');
+  return r ? r.value : 'strict';
+}
+
+/* ───────────────────────────────────────────────────────────
+   RENDERING
+   ─────────────────────────────────────────────────────────── */
+function generateParams(){
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+  // First matrix of the session — seeded so it's stable across reloads.
+  MAT = generateRandomMatrix(true);
+  elimRows = new Set();
+  elimCols = new Set();
+  phase = 'eliminating';
+  roundCount = 0;
+  recordedRounds = 0;
+  _firstAttemptThisRound = true;
+  _firstScore = 0;
+  _finalScore = 0;
+  selectedBR = { A: new Set(), B: new Set() };
+  brLocked = false;
+  _brFirstAttempt = true;
+  _brRecorded = false;
+  psneEntries = [];
+  psneLocked = false;
+  _psneFirstAttempt = true;
+  _psneRecorded = false;
+}
+
+function renderMatrix(){
+  const R = MAT.rows.length;
+  const C = MAT.cols.length;
+
+  // Build table HTML
+  let html = '<table class="game-matrix">';
+  html += '<caption class="sr-only">Payoff matrix. Player A is the row player, '
+        + 'Player B is the column player. Each cell shows Player A\'s payoff first, '
+        + 'then Player B\'s payoff.</caption>';
+
+  // Row 1: spacer + B-header spanning all columns
+  html += '<tr>';
+  html += '<td class="a-header" rowspan="' + (R + 2) + '" aria-hidden="true">Player A</td>';
+  html += '<td aria-hidden="true"></td>';
+  html += '<th class="b-header" colspan="' + C + '" scope="colgroup">Player B</th>';
+  html += '</tr>';
+
+  // Row 2: column labels
+  html += '<tr>';
+  html += '<td aria-hidden="true"></td>';
+  for(let j = 0; j < C; j++){
+    const isE = elimCols.has(j);
+    html += '<th scope="col" class="col-label' + (isE ? ' eliminated' : '') + '">'
+          + MAT.cols[j]
+          + (isE ? '<span class="sr-only"> (eliminated)</span>' : '')
+          + '</th>';
+  }
+  html += '</tr>';
+
+  // Body rows
+  for(let i = 0; i < R; i++){
+    const rowE = elimRows.has(i);
+    html += '<tr>';
+    html += '<th scope="row" class="row-label' + (rowE ? ' eliminated' : '') + '">'
+          + MAT.rows[i]
+          + (rowE ? '<span class="sr-only"> (eliminated)</span>' : '')
+          + '</th>';
+    for(let j = 0; j < C; j++){
+      const colE = elimCols.has(j);
+      const dim = rowE || colE;
+      const a = MAT.pay[i][j][0];
+      const b = MAT.pay[i][j][1];
+      const cellKey = i + '-' + j;
+      const aSelClass = selectedBR.A.has(cellKey) ? ' sel-a' : '';
+      const bSelClass = selectedBR.B.has(cellKey) ? ' sel-b' : '';
+      const disabledA = (phase !== 'post-elim' || brLocked) ? ' disabled' : '';
+      const disabledB = (phase !== 'post-elim' || brLocked) ? ' disabled' : '';
+      html += '<td class="payoff-cell' + (dim ? ' dimmed' : '') + '"'
+            + (dim ? ' aria-hidden="true"' : '')
+            + '>';
+      if(dim){
+        html += '<span class="pay-a">' + a + '</span>'
+              + '<span class="pay-sep">,&nbsp;</span>'
+              + '<span class="pay-b">' + b + '</span>';
+      } else {
+        const aIsClickable = phase === 'post-elim' && !brLocked;
+        const bIsClickable = phase === 'post-elim' && !brLocked;
+        html += '<span class="pay-a payoff-click' + aSelClass + disabledA + '"'
+              + ' data-who="A" data-cell="' + cellKey + '"'
+              + (aIsClickable
+                  ? ' role="button" tabindex="0"'
+                    + ' aria-pressed="' + (selectedBR.A.has(cellKey) ? 'true' : 'false') + '"'
+                    + ' aria-label="Player A payoff ' + a + ' at row '
+                    + MAT.rows[i] + ', column ' + MAT.cols[j]
+                    + '. Click to toggle as A\'s best response."'
+                  : '')
+              + '>' + a + '</span>'
+              + '<span class="pay-sep">,&nbsp;</span>'
+              + '<span class="pay-b payoff-click' + bSelClass + disabledB + '"'
+              + ' data-who="B" data-cell="' + cellKey + '"'
+              + (bIsClickable
+                  ? ' role="button" tabindex="0"'
+                    + ' aria-pressed="' + (selectedBR.B.has(cellKey) ? 'true' : 'false') + '"'
+                    + ' aria-label="Player B payoff ' + b + ' at row '
+                    + MAT.rows[i] + ', column ' + MAT.cols[j]
+                    + '. Click to toggle as B\'s best response."'
+                  : '')
+              + '>' + b + '</span>';
+      }
+      html += '</td>';
+    }
+    html += '</tr>';
+  }
+  html += '</table>';
+
+  $matrixWrap.innerHTML = html;
+}
+
+function updateMatrixStateDesc(){
+  const rows = survivingRowIndices().map(i => MAT.rows[i]);
+  const cols = survivingColIndices().map(j => MAT.cols[j]);
+  const elimR = [...elimRows].map(i => MAT.rows[i]);
+  const elimC = [...elimCols].map(j => MAT.cols[j]);
+
+  let txt = 'Reduced game: ' + rows.length + ' surviving rows for Player A ('
+          + rows.join(', ') + '), ' + cols.length + ' surviving columns for Player B ('
+          + cols.join(', ') + ').';
+  if(elimR.length){
+    txt += ' Eliminated rows: ' + elimR.join(', ') + '.';
+  }
+  if(elimC.length){
+    txt += ' Eliminated columns: ' + elimC.join(', ') + '.';
+  }
+  $matrixStateDesc.textContent = txt;
+}
+
+function populateDropdowns(){
+  const player = currentPlayer();
+  const elimSet = player === 'A' ? elimRows : elimCols;
+  const all     = player === 'A' ? MAT.rows : MAT.cols;
+  const survive = [];
+  for(let k = 0; k < all.length; k++){
+    if(!elimSet.has(k)) survive.push(k);
+  }
+
+  // Strategy to eliminate
+  $elimSel.innerHTML = '';
+  if(survive.length < 2){
+    const o = document.createElement('option');
+    o.value = ''; o.textContent = '— no further options —';
+    $elimSel.appendChild(o);
+    $elimSel.disabled = true;
+    $domSel.innerHTML = '';
+    const o2 = document.createElement('option');
+    o2.value = ''; o2.textContent = '—';
+    $domSel.appendChild(o2);
+    $domSel.disabled = true;
+    $checkBtn.disabled = true;
+    return;
+  }
+  $elimSel.disabled = false;
+  $domSel.disabled = false;
+  $checkBtn.disabled = (phase !== 'eliminating');
+
+  for(const k of survive){
+    const o = document.createElement('option');
+    o.value = String(k); o.textContent = all[k];
+    $elimSel.appendChild(o);
+  }
+  // Default: first survivor
+  $elimSel.value = String(survive[0]);
+
+  refreshDomDropdown();
+}
+
+function refreshDomDropdown(){
+  const player = currentPlayer();
+  const all = player === 'A' ? MAT.rows : MAT.cols;
+  const elimSet = player === 'A' ? elimRows : elimCols;
+  const exclude = parseInt($elimSel.value, 10);
+  const survive = [];
+  for(let k = 0; k < all.length; k++){
+    if(!elimSet.has(k) && k !== exclude) survive.push(k);
+  }
+  $domSel.innerHTML = '';
+  if(survive.length === 0){
+    const o = document.createElement('option');
+    o.value = ''; o.textContent = '—';
+    $domSel.appendChild(o);
+    $domSel.disabled = true;
+    return;
+  }
+  for(const k of survive){
+    const o = document.createElement('option');
+    o.value = String(k); o.textContent = all[k];
+    $domSel.appendChild(o);
+  }
+  $domSel.value = String(survive[0]);
+}
+
+function setStatus(text, kind){
+  $statusStrip.textContent = '';
+  // Status strip uses role=status (set in HTML). Updating textContent triggers announcement.
+  $statusStrip.className = 'status-strip' + (kind ? ' ' + kind : '');
+  // Force live region announcement: clear & set
+  setTimeout(() => { $statusStrip.textContent = text; }, 10);
+}
+
+/* ───────────────────────────────────────────────────────────
+   ELIMINATION ACTION
+   ─────────────────────────────────────────────────────────── */
+function onCheck(){
+  if(phase !== 'eliminating') return;
+  if($elimSel.disabled || $domSel.disabled) return;
+  const player = currentPlayer();
+  const mode   = currentDomType();
+  const elimIdx = parseInt($elimSel.value, 10);
+  const domIdx  = parseInt($domSel.value, 10);
+  if(Number.isNaN(elimIdx) || Number.isNaN(domIdx)) return;
+
+  const all = player === 'A' ? MAT.rows : MAT.cols;
+  const elimName = all[elimIdx];
+  const domName  = all[domIdx];
+  const playerLabel = player === 'A' ? 'Player A' : 'Player B';
+  const stratWord   = player === 'A' ? 'row' : 'column';
+  const oppWord     = player === 'A' ? 'column' : 'row';
+
+  const result = checkDominance(player, elimIdx, domIdx, mode);
+  const modeWord = mode === 'strict' ? 'strictly' : 'weakly';
+  const answerText = 'Eliminated ' + elimName + ' (' + playerLabel + '\'s ' + stratWord
+                   + '), ' + modeWord + ' dominated by ' + domName;
+
+  if(result.ok){
+    if(player === 'A') elimRows.add(elimIdx);
+    else                elimCols.add(elimIdx);
+    roundCount++;
+
+    setStatus(elimName + ' eliminated by ' + domName + ' — ' + modeWord
+              + ' dominated for ' + playerLabel + '.', 'ok');
+
+    if(recordedRounds < MAX_RECORDED){
+      _finalScore++;
+      if(_firstAttemptThisRound) _firstScore++;
+      if(window.Session && Session.recordQuestion){
+        const qText = 'Round ' + (recordedRounds + 1)
+                    + ': identify a dominated strategy (strict or weak) and the strategy that dominates it.';
+        Session.recordQuestion(
+          LAB_ID,
+          recordedRounds,
+          qText,
+          answerText, _firstAttemptThisRound,
+          answerText, true
+        );
+      }
+      recordedRounds++;
+    }
+
+    _firstAttemptThisRound = true;
+
+    renderMatrix();
+    updateMatrixStateDesc();
+    populateDropdowns();
+    updateProgress();
+  } else {
+    _firstAttemptThisRound = false;
+    const oppPlayer = player === 'A' ? 'Player B' : 'Player A';
+    let msg;
+    if(result.allEqual){
+      msg = elimName + ' is not weakly dominated by ' + domName + ' for ' + playerLabel
+          + ': the payoffs are equal in every surviving ' + oppWord
+          + ', so neither strategy dominates the other. Weak dominance requires '
+          + 'at least one ' + oppWord + ' where the dominator gives a strictly higher payoff.';
+    } else {
+      const oppName = player === 'A'
+        ? MAT.cols[result.witnessIdx]
+        : MAT.rows[result.witnessIdx];
+      if(mode === 'strict'){
+        // Distinguish "equal here" from "dominator lower here" so the student
+        // can see whether weak dominance might apply instead.
+        const cmp = (result.dominantPay === result.elimPay)
+          ? 'gives the same payoff (' + result.dominantPay
+            + ') — strict dominance requires a strictly higher payoff in every '
+            + oppWord + ' (consider trying <em>weak</em> dominance).'
+          : 'only gives ' + result.dominantPay
+            + ' — strict dominance requires a strictly higher payoff in every '
+            + oppWord + '.';
+        msg = elimName + ' is not strictly dominated by ' + domName + ' for '
+            + playerLabel + ': when ' + oppPlayer + ' plays ' + oppName + ', '
+            + elimName + ' gives ' + playerLabel + ' a payoff of ' + result.elimPay
+            + ', but ' + domName + ' ' + cmp;
+      } else {
+        msg = elimName + ' is not weakly dominated by ' + domName + ' for '
+            + playerLabel + ': when ' + oppPlayer + ' plays ' + oppName + ', '
+            + elimName + ' gives ' + playerLabel + ' ' + result.elimPay
+            + ' but ' + domName + ' only gives ' + result.dominantPay
+            + '. Weak dominance requires the dominator to be at least as high '
+            + 'in every ' + oppWord + '.';
+      }
+    }
+    // setStatus uses textContent, so strip HTML tags from the message.
+    setStatus(msg.replace(/<\/?em>/g, ''), 'bad');
+  }
+}
+
+function updateProgress(){
+  $elimCount.textContent = String(roundCount);
+  $firstScoreLbl.textContent = String(_firstScore);
+}
+
+/* ───────────────────────────────────────────────────────────
+   DONE — unlock BR + PSNE
+   ─────────────────────────────────────────────────────────── */
+function onDone(){
+  if(phase !== 'eliminating') return;
+  const dom = anyDominated();
+  if(dom.hasDom){
+    const who = dom.player === 'A' ? 'Player A' : 'Player B';
+    const kind = dom.kind === 'strict' ? 'strictly' : 'weakly';
+    setStatus('There is still a ' + kind + ' dominated strategy. Hint: re-examine '
+              + who + '\'s remaining strategies.', 'bad');
+    return;
+  }
+  // All eliminations done — lock controls and unlock the four follow-up questions.
+  phase = 'post-elim';
+  $checkBtn.disabled = true;
+  $resetBtn.disabled = true;
+  $doneBtn.disabled = true;
+  $elimSel.disabled = true;
+  $domSel.disabled = true;
+  $playerRadios.forEach(r => r.disabled = true);
+  document.querySelectorAll('input[name="domType"]').forEach(r => r.disabled = true);
+  setStatus('Elimination phase complete. Mark best responses, then list any '
+            + 'pure-strategy Nash equilibria in the surviving sub-game.', 'ok');
+  unlockPostElim();
+}
+
+/* ───────────────────────────────────────────────────────────
+   FINISH / SUMMARY
+   ─────────────────────────────────────────────────────────── */
+function finishLab(){
+  if(phase === 'done') return;
+  // Total = procedural recorded + BR + PSNE
+  const total = recordedRounds + 2;
+  phase = 'done';
+  if(window.Session && Session.recordLabDone){
+    Session.recordLabDone(LAB_ID, LAB_LABEL, _firstScore, _finalScore, total);
+  }
+  $sumFirst.textContent = String(_firstScore);
+  $sumFinal.textContent = String(_finalScore);
+  $sumTotal.textContent = String(total);
+  $summaryCard.classList.remove('hidden');
+}
+
+/* ───────────────────────────────────────────────────────────
+   RESET
+   ─────────────────────────────────────────────────────────── */
+function onReset(){
+  elimRows = new Set();
+  elimCols = new Set();
+  roundCount = 0;
+  // Recorded rounds are NOT reset — once a question is logged, it stays in the session.
+  // But _firstScore tracked for procedural also stays. This avoids letting the student
+  // "game" the first-attempt counter by resetting.
+  _firstAttemptThisRound = true;
+  setStatus('Matrix reset. Begin again.', '');
+  renderMatrix();
+  updateMatrixStateDesc();
+  populateDropdowns();
+  updateProgress();
+}
+
+/* ───────────────────────────────────────────────────────────
+   POST-ELIM: BEST-RESPONSE + PSNE
+   ─────────────────────────────────────────────────────────── */
+
+// Compute, for the current surviving sub-game, the set of cell keys
+// ("i-j") that ARE best responses for each player.
+function computeBRAnswers(){
+  const rows = survivingRowIndices();
+  const cols = survivingColIndices();
+  const aBR = new Set();
+  const bBR = new Set();
+
+  // For Player A: in each surviving column, the row(s) with the max A-payoff.
+  for(const j of cols){
+    let best = -Infinity;
+    for(const i of rows){
+      const v = MAT.pay[i][j][0];
+      if(v > best) best = v;
+    }
+    for(const i of rows){
+      if(MAT.pay[i][j][0] === best) aBR.add(i + '-' + j);
+    }
+  }
+  // For Player B: in each surviving row, the col(s) with the max B-payoff.
+  for(const i of rows){
+    let best = -Infinity;
+    for(const j of cols){
+      const v = MAT.pay[i][j][1];
+      if(v > best) best = v;
+    }
+    for(const j of cols){
+      if(MAT.pay[i][j][1] === best) bBR.add(i + '-' + j);
+    }
+  }
+  return { aBR, bBR };
+}
+
+// PSNE = cells that are best responses for BOTH players.
+function computePSNE(){
+  const { aBR, bBR } = computeBRAnswers();
+  const out = [];
+  for(const key of aBR){
+    if(bBR.has(key)){
+      const [i, j] = key.split('-').map(Number);
+      out.push({ row: i, col: j });
+    }
+  }
+  return out;
+}
+
+function setsEq(a, b){
+  if(a.size !== b.size) return false;
+  for(const x of a) if(!b.has(x)) return false;
+  return true;
+}
+
+function attachPayoffListeners(){
+  if(phase !== 'post-elim' || brLocked) return;
+  document.querySelectorAll('#matrixWrap .payoff-click:not(.disabled)')
+    .forEach(el => {
+      el.addEventListener('click', onPayoffClick);
+      el.addEventListener('keydown', ev => {
+        if(ev.key === 'Enter' || ev.key === ' '){
+          ev.preventDefault(); onPayoffClick({ currentTarget: el });
+        }
+      });
+    });
+}
+
+function onPayoffClick(e){
+  if(brLocked || phase !== 'post-elim') return;
+  const el = e.currentTarget;
+  const who = el.getAttribute('data-who');
+  const key = el.getAttribute('data-cell');
+  if(selectedBR[who].has(key)) selectedBR[who].delete(key);
+  else                          selectedBR[who].add(key);
+  // Update visual (toggle class + aria-pressed)
+  const isSel = selectedBR[who].has(key);
+  el.classList.toggle(who === 'A' ? 'sel-a' : 'sel-b', isSel);
+  el.setAttribute('aria-pressed', String(isSel));
+}
+
+function onCheckBR(){
+  if(brLocked || phase !== 'post-elim') return;
+  const { aBR, bBR } = computeBRAnswers();
+  const okA = setsEq(selectedBR.A, aBR);
+  const okB = setsEq(selectedBR.B, bBR);
+  const ok = okA && okB;
+
+  // Build a human description of what they selected
+  const fmtSet = (s) => {
+    if(s.size === 0) return 'none';
+    return [...s].map(k => {
+      const [i, j] = k.split('-').map(Number);
+      return '(' + MAT.rows[i] + ',' + MAT.cols[j] + ')';
+    }).join(', ');
+  };
+  const answerText = 'A: ' + fmtSet(selectedBR.A)
+                   + ' | B: ' + fmtSet(selectedBR.B);
+
+  if(ok){
+    brLocked = true;
+    // Repaint each clickable payoff: drop sel-a/sel-b and apply .correct to
+    // every true best response (so each one shows the green bubble).
+    document.querySelectorAll('#matrixWrap .payoff-click').forEach(el => {
+      const who = el.getAttribute('data-who');
+      const key = el.getAttribute('data-cell');
+      const truth = (who === 'A' ? aBR : bBR).has(key);
+      el.classList.remove('sel-a','sel-b','wrong');
+      if(truth) el.classList.add('correct');
+      el.classList.add('disabled');
+    });
+    $brBtn.disabled = true;
+    $brBtn.classList.add('done');
+    $brBtn.textContent = 'Correct ✓';
+    $brFb.textContent = 'Correct. Every payoff you marked is a best response, and you haven\'t missed any.';
+    $brFb.className = 'step-fb ok';
+    if(_brFirstAttempt) _firstScore++;
+    if(!_brRecorded) _finalScore++;
+    if(!_brRecorded && window.Session && Session.recordQuestion){
+      Session.recordQuestion(
+        LAB_ID, recordedRounds,
+        'Identify each cell whose payoff is a best response to a surviving opponent strategy '
+          + '(A\'s payoffs by column, B\'s payoffs by row).',
+        answerText, _brFirstAttempt,
+        answerText, true
+      );
+    }
+    _brRecorded = true;
+    updateProgress();
+    maybeFinish();
+  } else {
+    _brFirstAttempt = false;
+    const missingA = [...aBR].filter(k => !selectedBR.A.has(k)).length;
+    const extraA   = [...selectedBR.A].filter(k => !aBR.has(k)).length;
+    const missingB = [...bBR].filter(k => !selectedBR.B.has(k)).length;
+    const extraB   = [...selectedBR.B].filter(k => !bBR.has(k)).length;
+    const bits = [];
+    if(!okA) bits.push('Player A: ' + missingA + ' missing, ' + extraA + ' extra');
+    if(!okB) bits.push('Player B: ' + missingB + ' missing, ' + extraB + ' extra');
+    $brFb.textContent = 'Not quite. ' + bits.join('; ')
+      + '. Remember: for each column, A picks the row with the higher A-payoff; '
+      + 'for each row, B picks the column with the higher B-payoff.';
+    $brFb.className = 'step-fb bad';
+  }
+}
+
+function renderPsneList(){
+  const rows = survivingRowIndices();
+  const cols = survivingColIndices();
+  if(psneEntries.length === 0){
+    $psneList.innerHTML = '<div class="psne-item none">'
+      + 'None added yet — click <strong>+ Add equilibrium</strong> to add one, '
+      + 'or leave empty if the sub-game has no PSNE.</div>';
+    return;
+  }
+  $psneList.innerHTML = psneEntries.map((e, i) => {
+    const rowOpts = rows.map(ri =>
+      '<option value="' + ri + '"' + (e.row === ri ? ' selected' : '') + '>'
+      + MAT.rows[ri] + '</option>').join('');
+    const colOpts = cols.map(cj =>
+      '<option value="' + cj + '"' + (e.col === cj ? ' selected' : '') + '>'
+      + MAT.cols[cj] + '</option>').join('');
+    return '<div class="psne-item ' + (e.state || '') + '" role="listitem">'
+      + '<span>' + (i + 1) + '.</span>'
+      + '<label class="sr-only" for="psne-row-' + i + '">'
+      + 'Equilibrium ' + (i + 1) + ': Player A\'s strategy</label>'
+      + '<span aria-hidden="true">Player A plays</span> '
+      + '<select class="fs" id="psne-row-' + i + '" data-i="' + i + '"'
+      + ' data-fld="row"' + (psneLocked ? ' disabled' : '') + '>'
+      + rowOpts + '</select>'
+      + '<label class="sr-only" for="psne-col-' + i + '">'
+      + 'Equilibrium ' + (i + 1) + ': Player B\'s strategy</label>'
+      + '<span aria-hidden="true">, Player B plays</span> '
+      + '<select class="fs" id="psne-col-' + i + '" data-i="' + i + '"'
+      + ' data-fld="col"' + (psneLocked ? ' disabled' : '') + '>'
+      + colOpts + '</select>'
+      + '<button type="button" class="psne-remove" data-rm="' + i + '"'
+      + (psneLocked ? ' disabled' : '') + ' aria-label="Remove equilibrium '
+      + (i + 1) + '">Remove</button>'
+      + '</div>';
+  }).join('');
+  $psneList.querySelectorAll('select[data-fld]').forEach(sel => {
+    sel.addEventListener('change', ev => {
+      const i = +ev.target.getAttribute('data-i');
+      const fld = ev.target.getAttribute('data-fld');
+      psneEntries[i][fld] = parseInt(ev.target.value, 10);
+      psneEntries[i].state = '';
+    });
+  });
+  $psneList.querySelectorAll('button[data-rm]').forEach(btn => {
+    btn.addEventListener('click', ev => {
+      const i = +ev.currentTarget.getAttribute('data-rm');
+      psneEntries.splice(i, 1);
+      renderPsneList();
+    });
+  });
+}
+
+function addPsneRow(){
+  if(psneLocked || phase !== 'post-elim') return;
+  const rows = survivingRowIndices();
+  const cols = survivingColIndices();
+  psneEntries.push({ row: rows[0], col: cols[0], state: '' });
+  renderPsneList();
+}
+
+function onCheckPSNE(){
+  if(psneLocked || phase !== 'post-elim') return;
+  const truth = computePSNE();
+  const truthKeys = new Set(truth.map(e => e.row + '-' + e.col));
+  const studentKeys = new Set(psneEntries.map(e => e.row + '-' + e.col));
+  // Mark each entry
+  psneEntries.forEach(e => {
+    e.state = truthKeys.has(e.row + '-' + e.col) ? 'correct' : 'wrong';
+  });
+  const ok = setsEq(truthKeys, studentKeys);
+  renderPsneList();
+
+  const fmtList = (set) => {
+    if(set.size === 0) return 'none';
+    return [...set].map(k => {
+      const [i, j] = k.split('-').map(Number);
+      return '(' + MAT.rows[i] + ',' + MAT.cols[j] + ')';
+    }).join(', ');
+  };
+  const answerText = fmtList(studentKeys);
+
+  if(ok){
+    psneLocked = true;
+    $psneBtn.disabled = true;
+    $psneBtn.classList.add('done');
+    $psneBtn.textContent = 'Correct ✓';
+    $addPsneBtn.disabled = true;
+    $psneFb.textContent = truth.length === 0
+      ? 'Correct. The surviving sub-game has no pure-strategy Nash equilibrium '
+        + '(at least one player would always deviate). It must be solved in mixed strategies.'
+      : 'Correct. You identified every pure-strategy Nash equilibrium in the surviving sub-game.';
+    $psneFb.className = 'step-fb ok';
+    if(_psneFirstAttempt) _firstScore++;
+    if(!_psneRecorded) _finalScore++;
+    if(!_psneRecorded && window.Session && Session.recordQuestion){
+      Session.recordQuestion(
+        LAB_ID, recordedRounds + 1,
+        'List every pure-strategy Nash equilibrium in the surviving sub-game.',
+        answerText, _psneFirstAttempt,
+        answerText, true
+      );
+    }
+    _psneRecorded = true;
+    updateProgress();
+    maybeFinish();
+  } else {
+    _psneFirstAttempt = false;
+    const missing = [...truthKeys].filter(k => !studentKeys.has(k)).length;
+    const extra   = [...studentKeys].filter(k => !truthKeys.has(k)).length;
+    $psneFb.textContent = 'Not quite. ' + missing + ' missing, ' + extra
+      + ' incorrect. A PSNE is a cell where the A-payoff is a best response in '
+      + 'its column AND the B-payoff is a best response in its row.';
+    $psneFb.className = 'step-fb bad';
+  }
+}
+
+function unlockPostElim(){
+  // Called after Done is correctly clicked.
+  // Removes the .locked class from BR + PSNE cards and enables interactivity.
+  $brCard.classList.remove('locked');
+  $psneCard.classList.remove('locked');
+  $brBtn.disabled = false;
+  $psneBtn.disabled = false;
+  $addPsneBtn.disabled = false;
+  renderPsneList();
+  // Re-render matrix so payoff spans become clickable
+  renderMatrix();
+  attachPayoffListeners();
+}
+
+// Fire finishLab once BR and PSNE are both correctly answered.
+function maybeFinish(){
+  if(brLocked && psneLocked){
+    finishLab();
+  }
+}
+
+/* ───────────────────────────────────────────────────────────
+   NEW GAME — pick a different matrix from the pool
+   ─────────────────────────────────────────────────────────── */
+function onNewGame(){
+  // Generate a fresh random matrix (unseeded — every New Game is different).
+  MAT = generateRandomMatrix(false);
+
+  // Treat a New Game as a fresh start: reset all state and scoring so the new
+  // attempt re-records cleanly (Session entries at qIdx 0..N just overwrite).
+  // Also wipe this lab's previously-recorded questions from the session so
+  // stale slots from a longer prior attempt don't bleed into the summary.
+  try {
+    const KEY = 'econ002_session';
+    const raw = sessionStorage.getItem(KEY);
+    if(raw){
+      const d = JSON.parse(raw);
+      if(d.labs && d.labs[LAB_ID]){
+        d.labs[LAB_ID].questions = [];
+        d.labs[LAB_ID].doneAt = null;
+        delete d.labs[LAB_ID].firstScore;
+        delete d.labs[LAB_ID].finalScore;
+        delete d.labs[LAB_ID].total;
+        delete d.labs[LAB_ID].grade;
+        sessionStorage.setItem(KEY, JSON.stringify(d));
+      }
+    }
+  } catch(e){}
+
+  elimRows = new Set();
+  elimCols = new Set();
+  roundCount = 0;
+  recordedRounds = 0;
+  _firstAttemptThisRound = true;
+  _firstScore = 0;
+  _finalScore = 0;
+  phase = 'eliminating';
+  selectedBR = { A: new Set(), B: new Set() };
+  brLocked = false;
+  _brFirstAttempt = true;
+  _brRecorded = false;
+  psneEntries = [];
+  psneLocked = false;
+  _psneFirstAttempt = true;
+  _psneRecorded = false;
+
+  // Re-enable controls in case Done had locked them
+  $checkBtn.disabled = false;
+  $resetBtn.disabled = false;
+  $doneBtn.disabled  = false;
+  $elimSel.disabled  = false;
+  $domSel.disabled   = false;
+  $playerRadios.forEach(r => r.disabled = false);
+  document.querySelectorAll('input[name="domType"]').forEach(r => r.disabled = false);
+  // Default back to strict
+  const strictR = document.querySelector('input[name="domType"][value="strict"]');
+  if(strictR) strictR.checked = true;
+
+  // Re-lock BR + PSNE cards
+  $brCard.classList.add('locked');
+  $psneCard.classList.add('locked');
+  $brBtn.disabled = true; $brBtn.classList.remove('done'); $brBtn.textContent = 'Check answer';
+  $psneBtn.disabled = true; $psneBtn.classList.remove('done'); $psneBtn.textContent = 'Check answer';
+  $addPsneBtn.disabled = true;
+  $brFb.textContent = ''; $brFb.className = 'step-fb';
+  $psneFb.textContent = ''; $psneFb.className = 'step-fb';
+
+  $summaryCard.classList.add('hidden');
+
+  setStatus('New matrix loaded. Begin again.', '');
+  renderMatrix();
+  updateMatrixStateDesc();
+  populateDropdowns();
+  renderPsneList();
+  updateProgress();
+}
+
+/* ───────────────────────────────────────────────────────────
+   EVENT WIRING
+   ─────────────────────────────────────────────────────────── */
+$playerRadios.forEach(r => r.addEventListener('change', () => {
+  populateDropdowns();
+}));
+$elimSel.addEventListener('change', refreshDomDropdown);
+$checkBtn.addEventListener('click', onCheck);
+$resetBtn.addEventListener('click', onReset);
+$doneBtn.addEventListener('click', onDone);
+$newGameBtn.addEventListener('click', onNewGame);
+$brBtn.addEventListener('click', onCheckBR);
+$psneBtn.addEventListener('click', onCheckPSNE);
+$addPsneBtn.addEventListener('click', addPsneRow);
+
+function redraw(){
+  renderMatrix();
+  attachPayoffListeners();
+  updateMatrixStateDesc();
+  populateDropdowns();
+  renderPsneList();
+  updateProgress();
+}
+
+/* ───────────────────────────────────────────────────────────
+   DISCUSSION MODAL ENTRY
+   ─────────────────────────────────────────────────────────── */
+if(window.DiscussionModal && DiscussionModal.init){
+  DiscussionModal.init({
+    weekLabel: 'TBD — set when assigning to a week',
+    onReady: function(){
+      generateParams();
+      redraw();
+    }
+  });
+} else {
+  generateParams();
+  redraw();
+}
+
+})();
+</script>
+</body>
+</html>

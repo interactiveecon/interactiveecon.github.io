@@ -1,0 +1,1339 @@
+<!--
+Week template entry:
+{ id:   'signaling-equilibrium-explorer',
+  name: 'Signaling Equilibrium Explorer',
+  icon: '🎓',
+  desc: 'Discover when education works as a signal and when it fails by exploring costs, wages, and the single-crossing property.',
+  url:  '/classes/econ104b/labs/signaling-equilibrium-explorer/?disc=1' }
+-->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Signaling — Separating Equilibrium Explorer — ECON 104B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;  --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Layout */
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+
+    /* Cards */
+    .card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px 20px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .card-title{font-family:var(--font-serif);font-size:1.125rem;
+      font-weight:700;margin:0 0 8px;color:var(--ink);}
+    .card-sub{font-size:0.875rem;color:var(--ink-2);margin:0 0 10px;line-height:1.55;}
+
+    /* Sliders */
+    .slider-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:14px 18px;}
+    @media(max-width:880px){.slider-grid{grid-template-columns:1fr 1fr;}}
+    @media(max-width:560px){.slider-grid{grid-template-columns:1fr;}}
+    .slider-block{min-width:0;}
+    .slider-block label{display:block;font-size:0.75rem;font-weight:700;
+      color:var(--ink-2);letter-spacing:.04em;text-transform:uppercase;
+      margin-bottom:5px;}
+    .slider-block .sval{font-weight:700;color:var(--accent);font-size:0.875rem;
+      text-transform:none;letter-spacing:0;}
+    .slider-block input[type=range]{width:100%;}
+    .slider-help{font-size:0.6875rem;color:var(--muted);margin-top:3px;line-height:1.4;}
+
+    .reset-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+      margin-top:14px;padding-top:12px;border-top:1px solid var(--line);}
+
+    /* Buttons (CLAUDE.md standard, border #8c7f72 = 3.5:1 on white) */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover:not(:disabled){background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* Payoff panels */
+    .payoffs-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;
+      margin-top:14px;}
+    @media(max-width:700px){.payoffs-row{grid-template-columns:1fr;}}
+    .payoff-panel{background:rgba(246,242,234,.55);border:1px solid var(--line);
+      border-radius:14px;padding:14px 16px;}
+    .payoff-panel h3{font-family:var(--font-serif);font-size:1rem;font-weight:700;
+      margin:0 0 8px;color:var(--ink);}
+    .payoff-rows{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+    .payoff-row{display:flex;justify-content:space-between;align-items:baseline;
+      gap:10px;font-size:0.875rem;}
+    .payoff-row .lbl{color:var(--ink-2);}
+    .payoff-row .val{font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);}
+    .payoff-row.winner .val{color:var(--good);}
+    .payoff-row.winner .lbl{color:var(--good);font-weight:700;}
+    .payoff-action{font-size:0.8125rem;font-weight:700;margin-top:4px;
+      padding:6px 10px;border-radius:8px;text-align:center;
+      background:rgba(47,93,124,.08);color:var(--accent);
+      border:1px solid rgba(47,93,124,.20);}
+    .payoff-action.goes{background:rgba(21,92,56,.10);color:var(--good);
+      border-color:rgba(21,92,56,.28);}
+    .payoff-action.skips{background:rgba(89,104,120,.10);color:var(--ink-2);
+      border-color:rgba(89,104,120,.28);}
+
+    /* Status bar — equilibrium classification */
+    .status-bar{margin-top:14px;padding:12px 16px;border-radius:12px;
+      font-size:0.9375rem;font-weight:700;line-height:1.45;
+      border:1.5px solid;}
+    .status-bar.separating{background:rgba(21,92,56,.10);color:var(--good);
+      border-color:rgba(21,92,56,.30);}
+    .status-bar.pooling{background:rgba(180,35,24,.06);color:var(--bad);
+      border-color:rgba(180,35,24,.30);}
+    .status-bar.perverse{background:rgba(140,72,0,.08);color:#8c4800;
+      border-color:rgba(140,72,0,.30);}
+    .status-bar .badge{display:inline-block;padding:2px 8px;border-radius:999px;
+      font-size:0.6875rem;font-weight:800;letter-spacing:.07em;
+      text-transform:uppercase;margin-right:8px;border:1px solid currentColor;}
+
+    /* Canvas graph */
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;
+      overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+
+    /* Legend */
+    .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px;
+      font-size:0.75rem;color:var(--ink-2);}
+    .legend-item{display:flex;align-items:center;gap:6px;}
+    .legend-swatch{width:18px;height:3px;border-radius:2px;display:inline-block;}
+    .legend-swatch.accent{background:var(--accent);}
+    .legend-swatch.bad{background:var(--bad);}
+    .legend-swatch.dash{background:repeating-linear-gradient(90deg,var(--ink-2) 0 4px,transparent 4px 8px);height:3px;}
+    .legend-swatch.band{background:rgba(21,92,56,.20);border:1px solid rgba(21,92,56,.40);height:10px;width:14px;border-radius:3px;}
+
+    /* Pc band indicator */
+    .pc-band-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .pc-band-card h3{font-family:var(--font-serif);font-size:0.9375rem;
+      font-weight:700;margin:0 0 10px;color:var(--ink);}
+    .pc-track{position:relative;height:32px;background:rgba(246,242,234,.55);
+      border:1px solid var(--line);border-radius:8px;}
+    .pc-track-band{position:absolute;top:0;bottom:0;
+      background:rgba(21,92,56,.22);border-left:2px solid var(--good);
+      border-right:2px solid var(--good);}
+    .pc-track-marker{position:absolute;top:-4px;bottom:-4px;width:3px;
+      background:var(--accent);border-radius:2px;}
+    .pc-track-ticks{display:flex;justify-content:space-between;
+      margin-top:6px;font-size:0.6875rem;color:var(--muted);
+      font-variant-numeric:tabular-nums;}
+    .pc-band-info{font-size:0.8125rem;color:var(--ink-2);margin-top:8px;
+      line-height:1.5;}
+    .pc-band-info strong{color:var(--ink);}
+
+    /* Questions */
+    .question{margin-bottom:18px;padding-bottom:14px;
+      border-bottom:1px solid var(--line);}
+    .question:last-of-type{border-bottom:none;margin-bottom:6px;padding-bottom:0;}
+    .qprompt{font-size:0.9375rem;font-weight:700;color:var(--ink);
+      margin:0 0 10px;line-height:1.5;}
+    .qprompt .qnum{display:inline-block;font-size:0.625rem;
+      font-weight:800;letter-spacing:.08em;
+      background:var(--accent);color:#fff;padding:3px 9px;
+      border-radius:999px;margin-right:8px;vertical-align:middle;
+      text-transform:uppercase;}
+    .q-scenario{font-size:0.875rem;color:var(--ink-2);margin:0 0 10px;
+      padding:8px 12px;border-radius:10px;line-height:1.5;
+      background:rgba(47,93,124,.06);border-left:3px solid var(--accent);}
+    .q-scenario strong{color:var(--ink);}
+    .qchoices{display:flex;flex-direction:column;gap:6px;}
+    .qchoice{display:flex;align-items:flex-start;gap:8px;padding:8px 11px;
+      border:1.5px solid #8c7f72;border-radius:10px;cursor:pointer;
+      background:var(--panel);font-size:0.875rem;color:var(--ink-2);
+      line-height:1.45;transition:all .12s;}
+    .qchoice:hover{border-color:var(--accent);background:rgba(47,93,124,.05);}
+    .qchoice input{margin-top:3px;flex-shrink:0;}
+    .qchoice.locked{cursor:default;}
+    .qchoice.locked:hover{border-color:#8c7f72;background:var(--panel);}
+    .qchoice.correct-answer{border-color:var(--good);
+      background:rgba(21,92,56,.08);color:var(--good);}
+    .qchoice.wrong-answer{border-color:var(--bad);
+      background:rgba(180,35,24,.06);color:var(--bad);}
+    .qfeedback{margin-top:10px;padding:8px 12px;border-radius:10px;
+      font-size:0.8125rem;font-weight:600;line-height:1.5;}
+    .qfeedback.correct{background:rgba(21,92,56,.08);
+      border:1px solid rgba(21,92,56,.2);color:var(--good);}
+    .qfeedback.wrong{background:rgba(180,35,24,.06);
+      border:1px solid rgba(180,35,24,.2);color:var(--bad);}
+
+    .submit-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;
+      align-items:center;}
+
+    .lab-done-banner{margin-top:14px;padding:12px 16px;border-radius:12px;
+      background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.25);
+      color:var(--good);font-weight:700;font-size:0.9375rem;line-height:1.5;}
+    .hidden{display:none!important;}
+
+    /* Footer */
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ104b/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104B — Asymmetric Information</div>
+      <h1>Signaling — Separating Equilibrium Explorer</h1>
+      <p class="sub">
+        Move the sliders to discover when education works as a signal of
+        worker quality — and when it stops working.
+      </p>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>Two types of workers — <strong>high-productivity</strong> and
+          <strong>low-productivity</strong> — choose whether to attend
+          college. Employers cannot observe a worker's type, but they can see
+          whether the worker has a degree. If a degree reliably indicates the
+          high type, the labor market reaches a
+          <strong>separating equilibrium</strong>.</p>
+          <p>Use the sliders to vary:</p>
+          <ol>
+            <li><strong>Cost of education per year</strong> for each type
+            (<em>C<sub>H</sub></em>, <em>C<sub>L</sub></em>) and the
+            <strong>years required</strong> for a degree.</li>
+            <li><strong>Lifetime value produced</strong> by each type
+            (<em>V<sub>H</sub></em>, <em>V<sub>L</sub></em>).</li>
+            <li><strong>The wage offered to college graduates</strong>
+            (<em>P<sub>c</sub></em>).</li>
+          </ol>
+          <p>The payoff panels show each type's net benefit from going to
+          college vs. not. The status bar classifies the equilibrium. The
+          graph shows the cost lines and the band of <em>P<sub>c</sub></em>
+          values that produce separation.</p>
+          <p>Then answer the five questions below. Each question may ask you
+          to set the sliders to a specific configuration before answering.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- Intro -->
+  <div class="card">
+    <h2 class="card-title">What is a signal?</h2>
+    <p class="card-sub">
+      A <strong>signal</strong> is a costly action that one party takes to
+      reveal private information to another. In Spence's model, workers
+      know their own productivity but employers do not. Education is
+      costly, and if it is <em>more costly per year</em> for the low type,
+      only high types will choose to acquire it — making the degree a
+      credible signal. Three things can happen as you vary the parameters:
+      <strong>separation</strong> (only high types go to college),
+      <strong>pooling</strong> (both go, or neither goes), and — if the
+      single-crossing condition is violated — a perverse outcome.
+    </p>
+  </div>
+
+  <!-- Sandbox controls -->
+  <div class="card">
+    <h2 class="card-title">Sandbox — move the sliders</h2>
+    <div class="slider-grid">
+
+      <div class="slider-block">
+        <label for="sldCH">C<sub>H</sub> — cost per year (high type):
+          <span class="sval" id="chVal">$25,000</span></label>
+        <input type="range" id="sldCH" min="5000" max="50000" step="1000" value="25000"
+               aria-describedby="chHelp"/>
+        <div class="slider-help" id="chHelp">Per-year cost of college for a high-productivity worker.</div>
+      </div>
+
+      <div class="slider-block">
+        <label for="sldCL">C<sub>L</sub> — cost per year (low type):
+          <span class="sval" id="clVal">$50,000</span></label>
+        <input type="range" id="sldCL" min="5000" max="80000" step="1000" value="50000"
+               aria-describedby="clHelp"/>
+        <div class="slider-help" id="clHelp">Per-year cost of college for a low-productivity worker.</div>
+      </div>
+
+      <div class="slider-block">
+        <label for="sldYears">Years of college required:
+          <span class="sval" id="yearsVal">4</span></label>
+        <input type="range" id="sldYears" min="1" max="6" step="1" value="4"
+               aria-describedby="yearsHelp"/>
+        <div class="slider-help" id="yearsHelp">Years of college needed to earn the college wage.</div>
+      </div>
+
+      <div class="slider-block">
+        <label for="sldVH">V<sub>H</sub> — lifetime value (high type):
+          <span class="sval" id="vhVal">$250,000</span></label>
+        <input type="range" id="sldVH" min="150000" max="400000" step="5000" value="250000"
+               aria-describedby="vhHelp"/>
+        <div class="slider-help" id="vhHelp">Lifetime output produced by a high-productivity worker.</div>
+      </div>
+
+      <div class="slider-block">
+        <label for="sldVL">V<sub>L</sub> — lifetime value (low type):
+          <span class="sval" id="vlVal">$125,000</span></label>
+        <input type="range" id="sldVL" min="50000" max="250000" step="5000" value="125000"
+               aria-describedby="vlHelp"/>
+        <div class="slider-help" id="vlHelp">Lifetime output produced by a low-productivity worker. Will be capped below V<sub>H</sub>.</div>
+      </div>
+
+      <div class="slider-block">
+        <label for="sldPc">P<sub>c</sub> — wage if college:
+          <span class="sval" id="pcVal">$250,000</span></label>
+        <input type="range" id="sldPc" min="100000" max="400000" step="5000" value="250000"
+               aria-describedby="pcHelp"/>
+        <div class="slider-help" id="pcHelp">Wage employers offer to workers with at least the required years of college.</div>
+      </div>
+
+    </div>
+
+    <div class="reset-row">
+      <button class="option-btn" id="btnReset">Reset to textbook values</button>
+      <span class="slider-help" style="margin:0;">
+        C<sub>H</sub> $25k · C<sub>L</sub> $50k · V<sub>H</sub> $250k ·
+        V<sub>L</sub> $125k · P<sub>c</sub> $250k · 4 years
+      </span>
+    </div>
+
+    <!-- Slider value live region for screen readers -->
+    <div class="sr-only" id="sliderLive" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Payoff panels -->
+    <div class="payoffs-row">
+      <section class="payoff-panel" aria-labelledby="hiHead">
+        <h3 id="hiHead">High-productivity worker</h3>
+        <div class="payoff-rows">
+          <div class="payoff-row" id="hiRowCol">
+            <span class="lbl">Net benefit from college</span>
+            <span class="val" id="hiCol">—</span>
+          </div>
+          <div class="payoff-row" id="hiRowNo">
+            <span class="lbl">Net benefit no college</span>
+            <span class="val" id="hiNo">—</span>
+          </div>
+        </div>
+        <div class="payoff-action" id="hiAction" role="status">—</div>
+      </section>
+
+      <section class="payoff-panel" aria-labelledby="loHead">
+        <h3 id="loHead">Low-productivity worker</h3>
+        <div class="payoff-rows">
+          <div class="payoff-row" id="loRowCol">
+            <span class="lbl">Net benefit from college</span>
+            <span class="val" id="loCol">—</span>
+          </div>
+          <div class="payoff-row" id="loRowNo">
+            <span class="lbl">Net benefit no college</span>
+            <span class="val" id="loNo">—</span>
+          </div>
+        </div>
+        <div class="payoff-action" id="loAction" role="status">—</div>
+      </section>
+    </div>
+
+    <!-- Equilibrium status bar -->
+    <div class="status-bar separating" id="statusBar"
+         role="status" aria-live="polite" aria-atomic="true">
+      <span class="badge" id="statusBadge">Separating</span>
+      <span id="statusText">Only high types go to college. The signal works.</span>
+    </div>
+  </div>
+
+  <!-- Cost diagram -->
+  <div class="graph-card">
+    <div class="graph-title" id="costGraphTitle">Cost of education by years &amp; type</div>
+    <div class="canvas-wrap">
+      <canvas id="costCanvas"
+              role="img"
+              aria-labelledby="costGraphTitle"
+              aria-describedby="costGraphDesc"
+              style="aspect-ratio:1.6/1;"></canvas>
+    </div>
+    <div class="legend" aria-hidden="true">
+      <span class="legend-item"><span class="legend-swatch accent"></span> Cost<sub>H</sub>(y) — high type</span>
+      <span class="legend-item"><span class="legend-swatch bad"></span> Cost<sub>L</sub>(y) — low type</span>
+      <span class="legend-item"><span class="legend-swatch dash"></span> Wage premium P<sub>c</sub> − V<sub>L</sub></span>
+      <span class="legend-item"><span class="legend-swatch band"></span> Cost gap at required years</span>
+    </div>
+  </div>
+
+  <!-- Pc band indicator -->
+  <div class="pc-band-card">
+    <h3>Separating P<sub>c</sub> range — given current costs and years</h3>
+    <div class="pc-track" id="pcTrack" aria-hidden="true">
+      <div class="pc-track-band" id="pcTrackBand"></div>
+      <div class="pc-track-marker" id="pcTrackMarker"></div>
+    </div>
+    <div class="pc-track-ticks" id="pcTrackTicks">
+      <span>$100k</span><span>$175k</span><span>$250k</span><span>$325k</span><span>$400k</span>
+    </div>
+    <div class="pc-band-info" id="pcBandInfo">—</div>
+  </div>
+
+  <!-- Live-region canvas description (WCAG 1.1.1, 4.1.3) -->
+  <section class="sr-only" id="graphsDesc"
+           aria-live="polite" aria-atomic="true">
+    <p id="costGraphDesc">Initial description.</p>
+  </section>
+
+  <!-- Guided questions -->
+  <div class="card">
+    <h2 class="card-title">Guided questions</h2>
+    <p class="card-sub">Five questions step you through what you can
+    discover by moving the sliders. Each question appears after you answer
+    the previous one.</p>
+
+    <div class="question" id="q1">
+      <p class="qprompt"><span class="qnum">Q1</span>
+        <span class="qtext"></span></p>
+      <div class="q-scenario">
+        Start at the <strong>textbook defaults</strong>. (Click
+        <em>Reset to textbook values</em> if you have moved sliders.)
+      </div>
+      <div class="qchoices" role="radiogroup" aria-labelledby="q1"></div>
+      <div class="submit-row">
+        <button class="primary-btn q-submit" data-q="0">Submit answer</button>
+        <button class="primary-btn q-next hidden" data-next="1">Next question →</button>
+      </div>
+      <div class="qfeedback hidden" id="fb1" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="question hidden" id="q2">
+      <p class="qprompt"><span class="qnum">Q2</span>
+        <span class="qtext"></span></p>
+      <div class="q-scenario" id="q2scenario">
+        Drag <strong>P<sub>c</sub></strong> DOWN until the status bar
+        switches away from <em>SEPARATING</em>. Then nudge it back up by
+        $5k until separation is restored. Use that value to answer.
+      </div>
+      <div class="qchoices" role="radiogroup" aria-labelledby="q2"></div>
+      <div class="submit-row">
+        <button class="primary-btn q-submit" data-q="1">Submit answer</button>
+        <button class="primary-btn q-next hidden" data-next="2">Next question →</button>
+      </div>
+      <div class="qfeedback hidden" id="fb2" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="question hidden" id="q3">
+      <p class="qprompt"><span class="qnum">Q3</span>
+        <span class="qtext"></span></p>
+      <div class="q-scenario" id="q3scenario">
+        Now drag <strong>P<sub>c</sub></strong> UP until separation breaks
+        the other way. Then back it down $5k until separation returns.
+        Use that value.
+      </div>
+      <div class="qchoices" role="radiogroup" aria-labelledby="q3"></div>
+      <div class="submit-row">
+        <button class="primary-btn q-submit" data-q="2">Submit answer</button>
+        <button class="primary-btn q-next hidden" data-next="3">Next question →</button>
+      </div>
+      <div class="qfeedback hidden" id="fb3" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="question hidden" id="q4">
+      <p class="qprompt"><span class="qnum">Q4</span>
+        <span class="qtext"></span></p>
+      <div class="q-scenario">
+        Click <em>Reset to textbook values</em>. Then drag
+        <strong>C<sub>L</sub></strong> DOWN to <strong>$25,000</strong>
+        (equal to C<sub>H</sub>). Try every P<sub>c</sub> value you can.
+        What happens?
+      </div>
+      <div class="qchoices" role="radiogroup" aria-labelledby="q4"></div>
+      <div class="submit-row">
+        <button class="primary-btn q-submit" data-q="3">Submit answer</button>
+        <button class="primary-btn q-next hidden" data-next="4">Next question →</button>
+      </div>
+      <div class="qfeedback hidden" id="fb4" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="question hidden" id="q5">
+      <p class="qprompt"><span class="qnum">Q5</span>
+        <span class="qtext"></span></p>
+      <div class="q-scenario">
+        Suppose a new technology cuts education costs in half for everyone:
+        both C<sub>H</sub> and C<sub>L</sub> drop to half their textbook
+        values. Compare the width of the separating P<sub>c</sub> range
+        before and after.
+      </div>
+      <div class="qchoices" role="radiogroup" aria-labelledby="q5"></div>
+      <div class="submit-row">
+        <button class="primary-btn q-submit" data-q="4">Submit answer</button>
+      </div>
+      <div class="qfeedback hidden" id="fb5" role="status" aria-live="polite"></div>
+    </div>
+
+    <div id="labDoneBanner" class="lab-done-banner hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <div class="submit-row" id="pdfRow" style="margin-top:14px;">
+      <button class="primary-btn hidden" id="downloadPdfBtn" style="background:#8c7f72;">Download Summary PDF</button>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 104B — Intermediate Microeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+// LAB_ID:    'signaling-equilibrium-explorer'
+// LAB_LABEL: 'Signaling Separating Equilibrium Explorer'
+// url:       '/classes/econ104b/labs/signaling-equilibrium-explorer/?disc=1'
+const LAB_ID     = 'signaling-equilibrium-explorer';
+const LAB_LABEL  = 'Signaling Separating Equilibrium Explorer';
+const WEEK_LABEL = 'Uncertainty';
+
+// ── State ────────────────────────────────────────────────────────────────
+let _rng = null;
+let _fs  = 1;
+
+const DEFAULTS = { CH:25000, CL:50000, VH:250000, VL:125000, Pc:250000, years:4 };
+const state = Object.assign({}, DEFAULTS);
+
+// ── DOM ──────────────────────────────────────────────────────────────────
+const $sldCH    = document.getElementById('sldCH');
+const $sldCL    = document.getElementById('sldCL');
+const $sldVH    = document.getElementById('sldVH');
+const $sldVL    = document.getElementById('sldVL');
+const $sldPc    = document.getElementById('sldPc');
+const $sldYears = document.getElementById('sldYears');
+
+const $chVal    = document.getElementById('chVal');
+const $clVal    = document.getElementById('clVal');
+const $vhVal    = document.getElementById('vhVal');
+const $vlVal    = document.getElementById('vlVal');
+const $pcVal    = document.getElementById('pcVal');
+const $yearsVal = document.getElementById('yearsVal');
+
+const $btnReset   = document.getElementById('btnReset');
+const $sliderLive = document.getElementById('sliderLive');
+
+const $hiCol = document.getElementById('hiCol');
+const $hiNo  = document.getElementById('hiNo');
+const $loCol = document.getElementById('loCol');
+const $loNo  = document.getElementById('loNo');
+const $hiRowCol = document.getElementById('hiRowCol');
+const $hiRowNo  = document.getElementById('hiRowNo');
+const $loRowCol = document.getElementById('loRowCol');
+const $loRowNo  = document.getElementById('loRowNo');
+const $hiAction = document.getElementById('hiAction');
+const $loAction = document.getElementById('loAction');
+
+const $statusBar   = document.getElementById('statusBar');
+const $statusBadge = document.getElementById('statusBadge');
+const $statusText  = document.getElementById('statusText');
+
+const $costCanvas = document.getElementById('costCanvas');
+const $costDesc   = document.getElementById('costGraphDesc');
+
+const $pcTrack       = document.getElementById('pcTrack');
+const $pcTrackBand   = document.getElementById('pcTrackBand');
+const $pcTrackMarker = document.getElementById('pcTrackMarker');
+const $pcBandInfo    = document.getElementById('pcBandInfo');
+
+const $banner = document.getElementById('labDoneBanner');
+const $pdfBtn = document.getElementById('downloadPdfBtn');
+
+// ── Helpers ──────────────────────────────────────────────────────────────
+function rng(){ return _rng ? _rng() : Math.random(); }
+function shuffle(a){
+  const x = a.slice();
+  for(let i = x.length - 1; i > 0; i--){
+    const j = Math.floor(rng() * (i + 1));
+    [x[i], x[j]] = [x[j], x[i]];
+  }
+  return x;
+}
+function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+function money(v){
+  if(!isFinite(v)) return '—';
+  const s = Math.abs(v) >= 1000
+    ? '$' + (v/1000).toFixed(0) + 'k'
+    : '$' + v.toFixed(0);
+  return v < 0 ? '−' + s.replace('-','') : s;
+}
+function moneyFull(v){
+  if(!isFinite(v)) return '—';
+  const sign = v < 0 ? '−' : '';
+  const abs = Math.abs(v);
+  return sign + '$' + abs.toLocaleString('en-US');
+}
+function round5k(v){ return Math.round(v / 5000) * 5000; }
+
+// ── Equilibrium classification ───────────────────────────────────────────
+function classify(){
+  const { CH, CL, VL, Pc, years } = state;
+  const hiCol = Pc - years * CH;
+  const loCol = Pc - years * CL;
+  const hiNo  = VL;
+  const loNo  = VL;
+  const hiGoes = hiCol > hiNo;
+  const loGoes = loCol > loNo;
+  let kind, label, text;
+  if(hiGoes && !loGoes){
+    kind  = 'separating';
+    label = 'Separating';
+    text  = 'Only high types go to college. The signal works.';
+  } else if(hiGoes && loGoes){
+    kind  = 'pooling';
+    label = 'Pooling (both)';
+    text  = 'Both types go to college. The signal is uninformative.';
+  } else if(!hiGoes && !loGoes){
+    kind  = 'pooling';
+    label = 'Pooling (neither)';
+    text  = 'Neither type goes to college. The signal is unused.';
+  } else {
+    kind  = 'perverse';
+    label = 'Perverse';
+    text  = 'Only low types go to college. Check whether costs satisfy the single-crossing condition (Cₗ > Cₕ).';
+  }
+  return { kind, label, text, hiGoes, loGoes, hiCol, loCol, hiNo, loNo };
+}
+
+// Separating Pc range: V_L + years*C_H < Pc < V_L + years*C_L  (when C_L > C_H)
+function separatingRange(){
+  const { CH, CL, VL, years } = state;
+  const lo = VL + years * CH;
+  const hi = VL + years * CL;
+  return { lo, hi, valid: hi > lo };
+}
+
+// ── Read sliders into state ──────────────────────────────────────────────
+function readSliders(){
+  state.CH    = parseInt($sldCH.value, 10);
+  state.CL    = parseInt($sldCL.value, 10);
+  state.VH    = parseInt($sldVH.value, 10);
+  state.VL    = parseInt($sldVL.value, 10);
+  state.Pc    = parseInt($sldPc.value, 10);
+  state.years = parseInt($sldYears.value, 10);
+  // Enforce V_L < V_H
+  if(state.VL >= state.VH){
+    state.VL = state.VH - 5000;
+    $sldVL.value = state.VL;
+  }
+}
+
+function writeSliders(s){
+  $sldCH.value    = s.CH;
+  $sldCL.value    = s.CL;
+  $sldVH.value    = s.VH;
+  $sldVL.value    = s.VL;
+  $sldPc.value    = s.Pc;
+  $sldYears.value = s.years;
+  Object.assign(state, s);
+}
+
+function updateSliderValueText(){
+  $chVal.textContent    = '$' + state.CH.toLocaleString('en-US');
+  $clVal.textContent    = '$' + state.CL.toLocaleString('en-US');
+  $vhVal.textContent    = '$' + state.VH.toLocaleString('en-US');
+  $vlVal.textContent    = '$' + state.VL.toLocaleString('en-US');
+  $pcVal.textContent    = '$' + state.Pc.toLocaleString('en-US');
+  $yearsVal.textContent = state.years.toString();
+}
+
+// ── Payoff panels ────────────────────────────────────────────────────────
+function updatePayoffs(c){
+  $hiCol.textContent = moneyFull(c.hiCol);
+  $hiNo.textContent  = moneyFull(c.hiNo);
+  $loCol.textContent = moneyFull(c.loCol);
+  $loNo.textContent  = moneyFull(c.loNo);
+
+  $hiRowCol.classList.toggle('winner', c.hiGoes);
+  $hiRowNo.classList.toggle('winner', !c.hiGoes);
+  $loRowCol.classList.toggle('winner', c.loGoes);
+  $loRowNo.classList.toggle('winner', !c.loGoes);
+
+  if(c.hiGoes){
+    $hiAction.textContent = 'HIGH type goes to college ✓';
+    $hiAction.className = 'payoff-action goes';
+  } else {
+    $hiAction.textContent = 'HIGH type skips college';
+    $hiAction.className = 'payoff-action skips';
+  }
+  if(c.loGoes){
+    $loAction.textContent = 'LOW type goes to college';
+    $loAction.className = 'payoff-action goes';
+  } else {
+    $loAction.textContent = 'LOW type skips college ✓';
+    $loAction.className = 'payoff-action skips';
+  }
+}
+
+// ── Status bar ───────────────────────────────────────────────────────────
+function updateStatus(c){
+  $statusBar.classList.remove('separating','pooling','perverse');
+  $statusBar.classList.add(c.kind);
+  $statusBadge.textContent = c.label;
+  $statusText.textContent  = c.text;
+}
+
+// ── Pc band indicator ────────────────────────────────────────────────────
+const PC_TRACK_MIN = 100000;
+const PC_TRACK_MAX = 400000;
+function pcTrackPct(pc){
+  return clamp(((pc - PC_TRACK_MIN) / (PC_TRACK_MAX - PC_TRACK_MIN)) * 100, 0, 100);
+}
+function updatePcBand(){
+  const r = separatingRange();
+  if(r.valid && r.lo < PC_TRACK_MAX && r.hi > PC_TRACK_MIN){
+    const a = pcTrackPct(Math.max(r.lo, PC_TRACK_MIN));
+    const b = pcTrackPct(Math.min(r.hi, PC_TRACK_MAX));
+    $pcTrackBand.style.left  = a + '%';
+    $pcTrackBand.style.width = (b - a) + '%';
+    $pcTrackBand.style.display = 'block';
+  } else {
+    $pcTrackBand.style.display = 'none';
+  }
+  $pcTrackMarker.style.left = pcTrackPct(state.Pc) + '%';
+  if(r.valid){
+    $pcBandInfo.innerHTML =
+      'Separation requires <strong>' + moneyFull(r.lo) + ' &lt; P<sub>c</sub> &lt; ' +
+      moneyFull(r.hi) + '</strong>. Range width = <strong>' +
+      moneyFull(r.hi - r.lo) + '</strong>. Current P<sub>c</sub> = <strong>' +
+      moneyFull(state.Pc) + '</strong>.';
+  } else {
+    $pcBandInfo.innerHTML =
+      '<strong>No separating P<sub>c</sub> exists.</strong> The cost gap ' +
+      'between the two types (C<sub>L</sub> − C<sub>H</sub>) is zero or ' +
+      'negative — the single-crossing condition is violated.';
+  }
+}
+
+// ── Canvas ───────────────────────────────────────────────────────────────
+function setupCanvas(canvas, wrap){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  const W = Math.round(rect.width * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+const PAD = { l:64, r:14, t:14, b:46 };
+function makeCoords(W, H, dpr, xMax, yMax){
+  const p = { l:PAD.l*dpr, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  return {
+    xC: x => p.l + (x / xMax) * PW,
+    yC: y => H - p.b - (y / yMax) * PH,
+    p, PW, PH
+  };
+}
+
+function drawCostChart(){
+  const wrap = $costCanvas.parentElement;
+  const setup = setupCanvas($costCanvas, wrap);
+  if(!setup) return;
+  const { ctx, dpr, W, H } = setup;
+  ctx.clearRect(0, 0, W, H);
+
+  const { CH, CL, VL, Pc, years } = state;
+
+  // Axis bounds
+  const xMax = 6;
+  const premium = Pc - VL;
+  const yRaw = Math.max(
+    CH * xMax,
+    CL * xMax,
+    premium,
+    10000
+  );
+  // Snap up to a clean number
+  const yMax = Math.ceil(yRaw / 50000) * 50000;
+
+  const c = makeCoords(W, H, dpr, xMax, yMax);
+  const { p, PW, PH } = c;
+
+  // Background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(p.l, p.t, PW, PH);
+
+  // Grid + Y ticks
+  ctx.strokeStyle = '#e7dfd2';
+  ctx.lineWidth = 1 * dpr;
+  ctx.fillStyle = '#596878';
+  ctx.font = `600 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  const yTickStep = yMax >= 300000 ? 50000 : 25000;
+  for(let y = 0; y <= yMax; y += yTickStep){
+    const yy = c.yC(y);
+    ctx.beginPath();
+    ctx.moveTo(p.l, yy);
+    ctx.lineTo(W - p.r, yy);
+    ctx.stroke();
+    ctx.fillText('$' + (y / 1000) + 'k', p.l - 6 * dpr, yy);
+  }
+
+  // X ticks
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for(let x = 0; x <= xMax; x++){
+    const xx = c.xC(x);
+    ctx.beginPath();
+    ctx.moveTo(xx, p.t);
+    ctx.lineTo(xx, H - p.b);
+    ctx.stroke();
+    ctx.fillText(x.toString(), xx, H - p.b + 6 * dpr);
+  }
+
+  // Axis labels
+  ctx.fillStyle = '#374151';
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('Years of college', (p.l + W - p.r) / 2, H - p.b + 24 * dpr);
+  ctx.save();
+  ctx.translate(p.l - 48 * dpr, (p.t + H - p.b) / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.fillText('Dollars', 0, 0);
+  ctx.restore();
+
+  // Axis borders
+  ctx.strokeStyle = '#374151';
+  ctx.lineWidth = 1.5 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(p.l, p.t);
+  ctx.lineTo(p.l, H - p.b);
+  ctx.lineTo(W - p.r, H - p.b);
+  ctx.stroke();
+
+  // Clip to plot area for curves
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(p.l, p.t, PW, PH);
+  ctx.clip();
+
+  // Wage premium horizontal line (dashed)
+  if(premium > 0 && premium < yMax){
+    ctx.strokeStyle = '#374151';
+    ctx.setLineDash([6 * dpr, 6 * dpr]);
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.beginPath();
+    const yPrem = c.yC(premium);
+    ctx.moveTo(p.l, yPrem);
+    ctx.lineTo(W - p.r, yPrem);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Vertical line at required years
+  if(years > 0 && years <= xMax){
+    ctx.strokeStyle = '#596878';
+    ctx.setLineDash([3 * dpr, 4 * dpr]);
+    ctx.lineWidth = 1.25 * dpr;
+    ctx.beginPath();
+    const xY = c.xC(years);
+    ctx.moveTo(xY, p.t);
+    ctx.lineTo(xY, H - p.b);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Shaded cost-gap band at required years
+  if(years > 0){
+    const xY  = c.xC(years);
+    const yCH = c.yC(Math.min(CH * years, yMax));
+    const yCL = c.yC(Math.min(CL * years, yMax));
+    const yLo = Math.min(yCH, yCL);
+    const yHi = Math.max(yCH, yCL);
+    ctx.fillStyle = 'rgba(21,92,56,0.18)';
+    ctx.fillRect(xY - 9 * dpr, yLo, 18 * dpr, yHi - yLo);
+    ctx.strokeStyle = 'rgba(21,92,56,0.55)';
+    ctx.lineWidth = 1 * dpr;
+    ctx.strokeRect(xY - 9 * dpr, yLo, 18 * dpr, yHi - yLo);
+  }
+
+  // Cost_H line
+  ctx.strokeStyle = '#2f5d7c';
+  ctx.lineWidth = 2.5 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(c.xC(0), c.yC(0));
+  ctx.lineTo(c.xC(xMax), c.yC(CH * xMax));
+  ctx.stroke();
+
+  // Cost_L line
+  ctx.strokeStyle = '#b42318';
+  ctx.lineWidth = 2.5 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(c.xC(0), c.yC(0));
+  ctx.lineTo(c.xC(xMax), c.yC(CL * xMax));
+  ctx.stroke();
+
+  ctx.restore();
+
+  // Inline labels for the two cost lines
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  // High: near right end
+  const xLab = c.xC(xMax) - 4 * dpr;
+  const yHEnd = c.yC(Math.min(CH * xMax, yMax));
+  const yLEnd = c.yC(Math.min(CL * xMax, yMax));
+  ctx.fillStyle = '#2f5d7c';
+  ctx.textAlign = 'right';
+  ctx.fillText('Cost_H', xLab, yHEnd - 10 * dpr);
+  ctx.fillStyle = '#b42318';
+  ctx.fillText('Cost_L', xLab, yLEnd - 10 * dpr);
+
+  // Premium label
+  if(premium > 0 && premium < yMax){
+    ctx.fillStyle = '#374151';
+    ctx.textAlign = 'left';
+    ctx.fillText('P_c − V_L = ' + moneyFull(premium),
+      p.l + 6 * dpr, c.yC(premium) - 10 * dpr);
+  }
+
+  // Years label
+  if(years > 0 && years <= xMax){
+    ctx.fillStyle = '#596878';
+    ctx.textAlign = 'center';
+    ctx.fillText(years + ' yrs', c.xC(years), p.t + 10 * dpr);
+  }
+}
+
+// ── Canvas a11y description ──────────────────────────────────────────────
+function updateGraphDesc(c){
+  const r = separatingRange();
+  const { CH, CL, VL, Pc, years } = state;
+  const steeper = CL > CH ? 'Cost for the low type is steeper than for the high type (single-crossing satisfied).'
+                : CL < CH ? 'Cost for the low type is shallower than for the high type — single-crossing VIOLATED.'
+                : 'Cost for both types is identical — single-crossing fails (no separation possible).';
+  const rangeText = r.valid
+    ? 'Separating P_c range: ' + moneyFull(r.lo) + ' to ' + moneyFull(r.hi) +
+      ' (width ' + moneyFull(r.hi - r.lo) + ').'
+    : 'No separating P_c range exists at these costs.';
+  const total = years + ' years × Cost_H = ' + moneyFull(years * CH) +
+                '; ' + years + ' years × Cost_L = ' + moneyFull(years * CL) + '.';
+  const premiumTxt = 'Wage premium P_c − V_L = ' + moneyFull(Pc - VL) + '.';
+  $costDesc.textContent =
+    'Cost diagram. X axis: years of college 0 to 6. Y axis: dollars. ' +
+    'Cost_H(y) = y × ' + moneyFull(CH) + ' shown in blue. ' +
+    'Cost_L(y) = y × ' + moneyFull(CL) + ' shown in red. ' +
+    steeper + ' ' + total + ' ' + premiumTxt + ' ' +
+    'Current equilibrium: ' + c.label + ' — ' + c.text + ' ' + rangeText;
+}
+
+// ── Master redraw ────────────────────────────────────────────────────────
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  const c = classify();
+  updateSliderValueText();
+  updatePayoffs(c);
+  updateStatus(c);
+  updatePcBand();
+  drawCostChart();
+  updateGraphDesc(c);
+
+  // SR announcement of current values when sliders change
+  const r = separatingRange();
+  $sliderLive.textContent =
+    'C_H ' + moneyFull(state.CH) + ', C_L ' + moneyFull(state.CL) +
+    ', V_H ' + moneyFull(state.VH) + ', V_L ' + moneyFull(state.VL) +
+    ', P_c ' + moneyFull(state.Pc) + ', ' + state.years + ' years. ' +
+    c.label + '. ' +
+    (r.valid
+      ? 'Separating range ' + moneyFull(r.lo) + ' to ' + moneyFull(r.hi) + '.'
+      : 'No separating range.');
+}
+
+// ── Slider wiring ────────────────────────────────────────────────────────
+['input','change'].forEach(evt => {
+  [$sldCH,$sldCL,$sldVH,$sldVL,$sldPc,$sldYears].forEach(el => {
+    el.addEventListener(evt, () => {
+      readSliders();
+      redraw();
+      refreshDynamicQuestions();
+    });
+  });
+});
+$btnReset.addEventListener('click', () => {
+  writeSliders(DEFAULTS);
+  redraw();
+  refreshDynamicQuestions();
+  $sliderLive.textContent = 'Reset to textbook values.';
+});
+
+// ── Questions ────────────────────────────────────────────────────────────
+const Q_TOTAL = 5;
+let _firstScore   = 0;
+let _selected     = [null,null,null,null,null];
+let _submitted    = [false,false,false,false,false];
+let _labDoneFired = false;
+
+// Question generators — produce { qText, choices:[{key,label,correct}], correctKey }
+// Q1 and Q4, Q5 are static. Q2, Q3 are dynamic (depend on current sliders).
+function buildQ1(){
+  const qText = 'At the textbook defaults, who goes to college and what does the employer learn from a college degree?';
+  const choices = [
+    { key:'A', label:'Both types go; the degree tells the employer nothing.',  correct:false },
+    { key:'B', label:'Only high types go; the degree reveals the worker’s type.', correct:true  },
+    { key:'C', label:'Only low types go; the degree is misleading.',           correct:false },
+    { key:'D', label:'Neither type goes; the degree is unused.',               correct:false },
+  ];
+  return { qText, choices, fb:{
+    correct: 'Yes. At the defaults P_c − 4·C_H = $150k > V_L = $125k, so the high type prefers college. But P_c − 4·C_L = $50k < V_L = $125k, so the low type does not. Only high types go — the degree is a credible signal.',
+    wrong:   'Compute net benefits at the defaults: high type gets P_c − 4·C_H = $250k − $100k = $150k from college vs. V_L = $125k from skipping. Low type gets P_c − 4·C_L = $250k − $200k = $50k from college vs. $125k from skipping. Only the high type prefers college, so the degree separates the types.'
+  }};
+}
+function buildQ2(){
+  // Smallest Pc at which separation still holds — at the boundary, high type indifferent.
+  // Slider step is $5k. Correct = round5(V_L + years*C_H).
+  const r = separatingRange();
+  const correct = round5k(r.lo);
+  const opts = [correct - 10000, correct - 5000, correct, correct + 5000, correct + 10000];
+  // Pick 4 close to the threshold, ensuring `correct` is one of them.
+  const choicesVals = [correct - 5000, correct, correct + 5000, correct + 10000];
+  const labeled = shuffle(choicesVals.map((v, i) => ({
+    key: String.fromCharCode(65 + i),
+    val: v,
+    label: moneyFull(v),
+    correct: v === correct
+  })));
+  // Re-letter after shuffle so A,B,C,D in order
+  const choices = labeled.map((c, i) => ({
+    key: String.fromCharCode(65 + i),
+    label: c.label,
+    correct: c.correct,
+    val: c.val
+  }));
+  const qText = 'What is the smallest P_c (in $5,000 increments) at which separation still holds, given the current C_H, V_L, and years?';
+  return { qText, choices, dynamic:true, correctVal: correct, fb:{
+    correct: 'Correct. Below this P_c, even the high type prefers to skip college because the wage premium doesn’t cover their cost: P_c − years·C_H ≤ V_L.',
+    wrong:   'The smallest separating P_c is the threshold at which the high type is just willing to pay for the signal: P_c = V_L + years·C_H = ' + moneyFull(r.lo) + '. Below that, both types skip college and the signal collapses.'
+  }};
+}
+function buildQ3(){
+  const r = separatingRange();
+  const correct = round5k(r.hi);
+  const choicesVals = [correct - 10000, correct - 5000, correct, correct + 5000];
+  const labeled = shuffle(choicesVals.map((v, i) => ({
+    key: String.fromCharCode(65 + i),
+    val: v,
+    label: moneyFull(v),
+    correct: v === correct
+  })));
+  const choices = labeled.map((c, i) => ({
+    key: String.fromCharCode(65 + i),
+    label: c.label,
+    correct: c.correct,
+    val: c.val
+  }));
+  const qText = 'What is the largest P_c (in $5,000 increments) at which separation still holds, given the current C_L, V_L, and years?';
+  return { qText, choices, dynamic:true, correctVal: correct, fb:{
+    correct: 'Correct. Above this P_c, even the low type finds college worthwhile, so both types go and the signal pools — the employer can no longer tell types apart.',
+    wrong:   'The largest separating P_c is the threshold at which the low type is just willing to pay for the signal: P_c = V_L + years·C_L = ' + moneyFull(r.hi) + '. Above that, both types pool into college.'
+  }};
+}
+function buildQ4(){
+  const qText = 'When C_L = C_H (education is equally costly for both types), separation is:';
+  const choices = [
+    { key:'A', label:'Easier — the signal becomes stronger.', correct:false },
+    { key:'B', label:'Impossible — the signal can no longer distinguish the two types.', correct:true },
+    { key:'C', label:'Stronger only for the high type.', correct:false },
+    { key:'D', label:'Unchanged.', correct:false },
+  ];
+  return { qText, choices, fb:{
+    correct: 'Right. Separation requires the single-crossing condition C_L > C_H. When costs are equal, the separating range V_L + years·C_H < P_c < V_L + years·C_L collapses to zero width — no P_c can sort the types.',
+    wrong:   'A signal works only when it is MORE costly per year for the type you do NOT want to signal (the low type). When C_L = C_H, the separating range has width zero — no wage can sort the types apart.'
+  }};
+}
+function buildQ5(){
+  const qText = 'If a new technology halves both C_H and C_L, the width of the separating P_c range:';
+  const choices = [
+    { key:'A', label:'Gets wider.', correct:false },
+    { key:'B', label:'Gets narrower (by half).', correct:true },
+    { key:'C', label:'Stays the same.', correct:false },
+    { key:'D', label:'Cannot be determined without more information.', correct:false },
+  ];
+  return { qText, choices, fb:{
+    correct: 'Correct. Range width = years · (C_L − C_H). Halving both costs halves the gap, so the range shrinks proportionally. This is why credential inflation matters: as education gets cheaper, signals lose discriminating power.',
+    wrong:   'Range width = years · (C_L − C_H). Halving both costs halves the gap. Concretely: 4·($50k − $25k) = $100k becomes 4·($25k − $12.5k) = $50k. The range is half as wide — the signal is less powerful.'
+  }};
+}
+
+const BUILDERS = [buildQ1, buildQ2, buildQ3, buildQ4, buildQ5];
+let _qData = [null,null,null,null,null];
+
+function renderQuestion(idx){
+  if(_submitted[idx]) return;
+  const data = BUILDERS[idx]();
+  _qData[idx] = data;
+  const qEl = document.getElementById('q' + (idx + 1));
+  qEl.querySelector('.qtext').textContent = data.qText;
+  const choicesEl = qEl.querySelector('.qchoices');
+  choicesEl.innerHTML = '';
+  data.choices.forEach(ch => {
+    const labelEl = document.createElement('label');
+    labelEl.className = 'qchoice';
+    const id = 'q' + (idx + 1) + '_' + ch.key;
+    labelEl.htmlFor = id;
+    labelEl.innerHTML =
+      '<input type="radio" name="q' + (idx + 1) + '" id="' + id +
+      '" value="' + ch.key + '"/><span><strong>' + ch.key + '.</strong> ' +
+      ch.label + '</span>';
+    labelEl.addEventListener('change', e => {
+      if(_submitted[idx]) return;
+      _selected[idx] = ch.key;
+    });
+    choicesEl.appendChild(labelEl);
+  });
+}
+
+function refreshDynamicQuestions(){
+  // Re-render Q2 and Q3 if they're visible AND not yet submitted, so the
+  // multiple-choice values track the current slider configuration.
+  [1, 2].forEach(idx => {
+    const qEl = document.getElementById('q' + (idx + 1));
+    if(qEl.classList.contains('hidden')) return;
+    if(_submitted[idx]) return;
+    renderQuestion(idx);
+  });
+}
+
+function answerText(idx){
+  const data = _qData[idx];
+  if(!data) return '';
+  const ch = data.choices.find(c => c.key === _selected[idx]);
+  return ch ? (ch.key + '. ' + ch.label) : '';
+}
+
+function submitQuestion(idx){
+  if(_submitted[idx]) return;
+  const data = _qData[idx];
+  if(!data || _selected[idx] == null){
+    const fb = document.getElementById('fb' + (idx + 1));
+    fb.className = 'qfeedback wrong';
+    fb.textContent = 'Please choose an answer before submitting.';
+    fb.classList.remove('hidden');
+    return;
+  }
+  _submitted[idx] = true;
+  const chosen = data.choices.find(c => c.key === _selected[idx]);
+  const correct = !!chosen.correct;
+  if(correct) _firstScore++;
+
+  // Lock and color choices
+  const qEl = document.getElementById('q' + (idx + 1));
+  const choiceLabels = qEl.querySelectorAll('.qchoice');
+  choiceLabels.forEach(lb => {
+    lb.classList.add('locked');
+    const input = lb.querySelector('input');
+    input.disabled = true;
+    const key = input.value;
+    const ch = data.choices.find(c => c.key === key);
+    if(ch && ch.correct) lb.classList.add('correct-answer');
+    if(ch && !ch.correct && key === _selected[idx]) lb.classList.add('wrong-answer');
+  });
+
+  // Feedback
+  const fb = document.getElementById('fb' + (idx + 1));
+  fb.className = 'qfeedback ' + (correct ? 'correct' : 'wrong');
+  fb.textContent = correct ? '✓ Correct. ' + data.fb.correct
+                           : '✗ Not quite. ' + data.fb.wrong;
+  fb.classList.remove('hidden');
+
+  // Hide submit, show next (or final action on Q5)
+  qEl.querySelector('.q-submit').classList.add('hidden');
+  const nextBtn = qEl.querySelector('.q-next');
+  if(nextBtn) nextBtn.classList.remove('hidden');
+
+  // Record question (single-phase: same answer for first and final)
+  const answer = answerText(idx);
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(LAB_ID, idx, data.qText,
+      answer, correct, answer, correct);
+  }
+
+  if(idx === Q_TOTAL - 1){
+    finalize();
+  }
+}
+
+function revealQuestion(idx){
+  const qEl = document.getElementById('q' + (idx + 1));
+  qEl.classList.remove('hidden');
+  if(!_qData[idx]) renderQuestion(idx);
+  // Scroll into view for usability
+  qEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  qEl.querySelector('input[type=radio]')?.focus();
+}
+
+function finalize(){
+  if(_labDoneFired) return;
+  _labDoneFired = true;
+  const pct = Math.round((_firstScore / Q_TOTAL) * 100);
+  $banner.classList.remove('hidden');
+  $banner.innerHTML = 'Lab complete. You answered <strong>' + _firstScore +
+    ' of ' + Q_TOTAL + '</strong> questions correctly (' + pct + '%). ' +
+    'Click <strong>Download Summary PDF</strong> to save your results.';
+  $pdfBtn.classList.remove('hidden');
+  if(window.Session && Session.recordLabDone){
+    Session.recordLabDone(LAB_ID, LAB_LABEL, _firstScore, _firstScore, Q_TOTAL);
+  }
+}
+
+// Wire submit / next buttons via event delegation
+document.addEventListener('click', e => {
+  const sub = e.target.closest('.q-submit');
+  if(sub){
+    const idx = parseInt(sub.dataset.q, 10);
+    submitQuestion(idx);
+    return;
+  }
+  const nxt = e.target.closest('.q-next');
+  if(nxt){
+    const idx = parseInt(nxt.dataset.next, 10);
+    revealQuestion(idx);
+    return;
+  }
+});
+
+// PDF
+$pdfBtn.addEventListener('click', () => {
+  if(window.DiscussionPDF && DiscussionPDF.generate) DiscussionPDF.generate();
+});
+
+// ── Resize ───────────────────────────────────────────────────────────────
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+// ── Bootstrap ────────────────────────────────────────────────────────────
+function generateParams(){
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+  writeSliders(DEFAULTS);
+}
+
+function renderSandbox(){
+  redraw();
+  renderQuestion(0);
+}
+
+if(window.DiscussionModal && DiscussionModal.init){
+  DiscussionModal.init({
+    weekLabel: WEEK_LABEL,
+    onReady: function(){
+      generateParams();
+      renderSandbox();
+    }
+  });
+} else {
+  // Defensive fallback — should not run in normal use
+  generateParams();
+  renderSandbox();
+}
+
+})();
+</script>
+</body>
+</html>

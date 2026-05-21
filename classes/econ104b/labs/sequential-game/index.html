@@ -1,0 +1,980 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Solving a Sequential Game — ECON 104B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;  --bad:#b42318;
+      --player-a:#b54708;
+      --player-b:#2f5d7c;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Buttons */
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:none;border-radius:12px;font-family:var(--font-sans);font-size:0.875rem;font-weight:700;cursor:pointer;transition:background .12s;}
+    .btn.primary{background:var(--accent);color:#fff;}
+    .btn.primary:hover:not(:disabled){background:#264d68;}
+    .btn.primary:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* Layout */
+    .lab-container{max-width:1160px;margin:0 auto;padding:18px;}
+
+    /* Tree card */
+    .tree-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;
+      padding:18px 18px 14px;box-shadow:var(--shadow);margin-bottom:14px;}
+    .tree-card-title{font-size:0.8125rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+    .tree-svg-wrap{overflow-x:auto;border-radius:12px;
+      background:rgba(246,242,234,.45);border:1px solid var(--line);}
+    .tree-svg{display:block;width:100%;height:auto;}
+    .tree-svg.scroll{width:auto;}
+
+    /* SVG element styles */
+    .branch{stroke:var(--ink);stroke-width:2;fill:none;cursor:default;
+      transition:stroke .18s, opacity .18s;}
+    .branch.eliminated{stroke:var(--line-2);stroke-width:1.5;stroke-dasharray:5 5;opacity:.55;}
+
+    /* Clickable badge that wraps each branch's L/R label */
+    .branch-label-badge{fill:var(--panel);stroke:#8c7f72;stroke-width:1.4;
+      cursor:default;transition:fill .12s,stroke .12s;}
+    .branch-label-badge.clickable{cursor:pointer;stroke:var(--accent);stroke-width:1.6;}
+    .branch-label-badge.clickable:hover{fill:rgba(180,35,24,.10);stroke:var(--bad);stroke-width:2;}
+    .branch-label-badge.selected{fill:rgba(180,35,24,.16);stroke:var(--bad);stroke-width:2;}
+    .branch-label-badge.eliminated{fill:rgba(217,207,191,.55);stroke:var(--line-2);
+      stroke-width:1;opacity:.7;}
+    .branch-label{font-family:var(--font-sans);font-weight:800;
+      fill:var(--ink-2);pointer-events:none;user-select:none;
+      text-anchor:middle;dominant-baseline:central;}
+    .branch-label.clickable-host{fill:var(--accent);}
+    .branch-label.eliminated{fill:var(--muted);opacity:.7;}
+
+    .node-circle{fill:var(--panel);stroke:var(--ink);stroke-width:1.8;}
+    .node-circle.a{stroke:var(--player-a);}
+    .node-circle.b{stroke:var(--player-b);}
+    .node-letter{font-family:var(--font-sans);font-weight:800;font-size:14px;
+      text-anchor:middle;dominant-baseline:central;pointer-events:none;user-select:none;}
+    .node-letter.a{fill:var(--player-a);}
+    .node-letter.b{fill:var(--player-b);}
+
+    .payoff-box{fill:var(--panel);stroke:var(--ink-2);stroke-width:1.2;
+      transition:fill .15s, stroke .15s;}
+    .payoff-box.clickable{cursor:pointer;}
+    .payoff-box.clickable:hover{fill:rgba(47,93,124,.10);stroke:var(--accent);}
+    .payoff-box.selected{fill:rgba(21,92,56,.16);stroke:var(--good);stroke-width:2;}
+    .payoff-box.correct{fill:rgba(21,92,56,.18);stroke:var(--good);stroke-width:2;}
+    .payoff-box.wrong{fill:rgba(180,35,24,.14);stroke:var(--bad);stroke-width:2;}
+    .payoff-box.hidden{display:none;}
+    .payoff-text{font-family:var(--font-sans);font-weight:700;
+      text-anchor:middle;dominant-baseline:central;pointer-events:none;user-select:none;}
+    .payoff-text.a{fill:var(--player-a);}
+    .payoff-text.b{fill:var(--player-b);}
+    .payoff-text.dim{opacity:.4;}
+
+    .ribbon-spne{stroke:var(--good);stroke-width:10;stroke-linecap:round;
+      stroke-linejoin:round;fill:none;opacity:.32;pointer-events:none;}
+
+    /* Question group header */
+    .qgroup-header{display:flex;align-items:center;gap:10px;margin:18px 0 10px;}
+    .qbadge{font-size:0.625rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;
+      background:var(--accent);color:#fff;padding:3px 9px;border-radius:999px;}
+    .qgroup-title{font-family:var(--font-serif);font-size:1.0625rem;font-weight:700;color:var(--ink);line-height:1.3;}
+
+    /* Step cards (one per round) */
+    .step-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;
+      padding:16px;box-shadow:var(--shadow);margin-bottom:12px;
+      transition:opacity .18s, filter .18s;}
+    .step-card.locked{opacity:.55;}
+    .step-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+    .step-num{display:inline-block;font-size:0.625rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);background:rgba(47,93,124,.08);border:1px solid rgba(47,93,124,.18);border-radius:6px;padding:2px 7px;margin-bottom:4px;}
+    .step-num.locked{color:var(--muted);background:rgba(0,0,0,.04);border-color:var(--line);}
+    .step-title{font-size:0.875rem;font-weight:700;color:var(--ink);line-height:1.3;}
+    .step-instruction{font-size:0.8125rem;color:var(--ink-2);line-height:1.55;margin:8px 0 0;}
+    .step-instruction code{font-family:var(--font-sans);font-weight:700;color:var(--accent);
+      background:rgba(47,93,124,.07);padding:1px 6px;border-radius:5px;}
+    .step-stats{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:0.75rem;color:var(--ink-2);}
+    .step-stats .stat strong{font-weight:800;color:var(--ink);}
+
+    .step-btn{flex-shrink:0;padding:6px 12px;border:1.5px solid #8c7f72;
+      background:rgba(47,93,124,.06);color:var(--accent);border-radius:10px;
+      font-size:0.75rem;font-weight:700;font-family:var(--font-sans);cursor:pointer;
+      transition:background .12s,border-color .12s;white-space:nowrap;}
+    .step-btn:hover:not(:disabled){background:rgba(47,93,124,.14);border-color:var(--accent);}
+    .step-btn:disabled{opacity:.55;cursor:default;}
+    .step-btn.done{background:rgba(21,92,56,.08);border-color:rgba(21,92,56,.3);color:var(--good);}
+
+    .entry-fb{margin-top:8px;padding:7px 11px;border-radius:10px;font-size:0.8125rem;
+      font-weight:600;line-height:1.4;animation:fadeSlide .18s ease;}
+    .entry-fb.correct{background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.2);color:var(--good);}
+    .entry-fb.wrong{background:rgba(180,35,24,.06);border:1px solid rgba(180,35,24,.2);color:var(--bad);}
+
+    .step-formula{margin-top:10px;padding:9px 13px;background:rgba(47,93,124,.04);
+      border:1px solid rgba(47,93,124,.14);border-radius:12px;animation:fadeSlide .2s ease;}
+    .step-answer{margin-top:8px;padding:11px 13px;background:rgba(21,92,56,.05);
+      border:1px solid rgba(21,92,56,.2);border-radius:12px;animation:fadeSlide .2s ease;}
+    .answer-label{font-size:0.625rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--good);margin-bottom:7px;}
+    .step-formula .formula-content,
+    .step-answer .answer-content{font-size:0.8125rem;line-height:1.7;color:var(--ink);}
+    .step-formula .formula-content p,
+    .step-answer .answer-content p{margin:4px 0;}
+
+    @keyframes fadeSlide{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+    .hidden{display:none !important;}
+
+    .lab-done-banner{margin-top:14px;padding:12px 16px;border-radius:12px;
+      background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.25);
+      color:var(--good);font-weight:700;font-size:0.875rem;line-height:1.45;}
+
+    .legend-pills{display:flex;gap:10px;justify-content:flex-start;flex-wrap:wrap;
+      margin-top:10px;font-size:0.75rem;}
+    .legend-pills .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;
+      border-radius:999px;background:rgba(246,242,234,.6);border:1px solid var(--line);}
+    .pill-dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+      font-size:0.75rem;color:var(--muted);padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ104b/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104B — Game Theory</div>
+      <h1>Solving a Sequential Game</h1>
+      <p class="sub">
+        Two players move one after the other. Solve the game by backward induction:
+        at each level, find the best response of the player who moves, eliminate the
+        branches they will never take, and propagate the surviving payoffs up to the
+        next level. The subgame-perfect Nash equilibrium is the path that survives.
+      </p>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>You are given an extensive-form game with two players who alternate moves.
+          The tree has between 2 and 4 decision levels. The
+          <strong style="color:var(--player-a)">orange number</strong> at each terminal
+          node is Player A's payoff; the
+          <strong style="color:var(--player-b)">blue number</strong> is Player B's.</p>
+          <p>Solve the game by backward induction, one round at a time:</p>
+          <ol>
+            <li><strong>Identify the best payoff.</strong> At the deepest level, click the payoff at the
+              child node that is best for the player who moves at the parent decision node.</li>
+            <li><strong>Eliminate the unchosen branches.</strong> On each branch you want to
+              eliminate, click its <strong>L / R label badge</strong> (the little circle
+              with the letter). The branch will grey out.</li>
+            <li><strong>Check the round.</strong> When every decision node in this round has
+              both a highlighted payoff and a greyed-out branch, press
+              <strong>Check Round</strong>. If you got it right, the eliminated branches
+              disappear and the surviving payoffs propagate up to the next level.</li>
+            <li><strong>Repeat one level higher</strong> until you reach the root. Once the
+              whole game is solved, the tree expands back to its full size with the
+              <strong>subgame-perfect Nash equilibrium path</strong> highlighted in green.</li>
+          </ol>
+          <p>You can review hints and the worked answer after a wrong check.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-container">
+
+  <!-- Single game tree.  While the game is being solved, this shows the reduced
+       tree (eliminations applied as they are confirmed).  Once the game is fully
+       solved, it switches to the full tree with the subgame-perfect path
+       highlighted. -->
+  <div class="tree-card">
+    <div class="tree-card-title" id="treeTitle">Game Tree</div>
+    <div class="tree-svg-wrap" id="treeWrap">
+      <svg id="treeSvg" class="tree-svg"
+           role="img"
+           aria-labelledby="treeTitle"
+           aria-describedby="treeDesc"></svg>
+    </div>
+    <p class="sr-only" id="treeDesc" aria-live="polite" aria-atomic="true">
+      Game tree.  While solving, eliminated branches disappear as you confirm each round.  Once the game is solved, the full tree is shown with the subgame-perfect equilibrium path highlighted.
+    </p>
+    <div class="legend-pills" aria-hidden="true">
+      <span class="pill"><span class="pill-dot" style="background:var(--player-a);"></span>Player A</span>
+      <span class="pill"><span class="pill-dot" style="background:var(--player-b);"></span>Player B</span>
+    </div>
+  </div>
+
+  <!-- Question group -->
+  <div class="qgroup-header">
+    <span class="qbadge">Q1</span>
+    <span class="qgroup-title">Solve the Sequential Game by Backward Induction</span>
+  </div>
+  <div id="stepsContainer"></div>
+
+  <div id="labDoneBanner" class="lab-done-banner hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+    <button class="btn primary" id="newProblemBtn">New Game</button>
+    <button class="btn primary" id="downloadPdfBtn" style="background:#8c7f72;">Download Summary PDF</button>
+  </div>
+
+</main>
+
+<footer style="margin-top:32px;">
+  <div class="lab-container">
+    <div class="footer-inner">
+      <span>ECON 104B — Intermediate Microeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+  // LAB_ID:    'sequential-game'
+  // LAB_LABEL: 'Solving a Sequential Game'
+  // url:       '/classes/econ104b/labs/sequential-game/?disc=1'
+  const LAB_ID     = 'sequential-game';
+  const LAB_LABEL  = 'Solving a Sequential Game';
+  const WEEK_LABEL = 'Game Theory';
+  const SESSION_KEY = 'econ002_session';
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let _rng = null;
+  let _problemIdx = 0;
+  let game = null;            // { R, leaves, values, bestChild }
+  let stepMeta = [];          // per-round state: { s: 'check'|'formula'|'answer'|'done' }
+  let firstAttempt = [];
+  let firstCorrect = [];
+  let firstAnsText = [];
+  let _labDoneFired = false;
+
+  // Per-node highlight (student's "best" pick) — parentIdx -> childIdx
+  let highlighted = {};
+  // Per-parent elimination (student's "eliminated" branch) — parentIdx -> childIdx
+  let eliminated = {};
+  // Current active round (1-based), counted from deepest = 1 to root = R.
+  let activeRound = 1;
+
+  // ── DOM ────────────────────────────────────────────────────────────────────
+  const $treeSvg  = document.getElementById('treeSvg');
+  const $treeWrap = document.getElementById('treeWrap');
+  const $treeTitle = document.getElementById('treeTitle');
+  const $treeDesc  = document.getElementById('treeDesc');
+  const $stepsContainer = document.getElementById('stepsContainer');
+  const $banner   = document.getElementById('labDoneBanner');
+
+  // ── Utilities ──────────────────────────────────────────────────────────────
+  function rng(){ return _rng ? _rng() : Math.random(); }
+  function ri(lo,hi){ return lo + Math.floor(rng()*(hi-lo+1)); }
+  function depthOf(idx){ return Math.floor(Math.log2(idx)); }
+  function playerAt(idx){ return depthOf(idx) % 2 === 0 ? 'A' : 'B'; }
+  function leafStart(R){ return 1 << R; }     // first leaf index
+  function leafEnd(R){ return (1 << (R+1)) - 1; } // last leaf index
+
+  // ── Problem generation ─────────────────────────────────────────────────────
+  function generateGame(){
+    if(_problemIdx === 0 && window.Session && Session.rngForLab){
+      _rng = Session.rngForLab(LAB_ID);
+    } else {
+      _rng = null;
+    }
+    const R = ri(2, 4);
+    const start = leafStart(R), end = leafEnd(R);
+    const leaves = {};
+    // Loop until leaves give no ties at any decision node
+    let attempts = 0;
+    while(attempts < 80){
+      attempts++;
+      for(let i = start; i <= end; i++){
+        leaves[i] = { a: ri(-15, 15), b: ri(-15, 15) };
+      }
+      // Compute values + bestChild + check no ties
+      const values = {}, bestChild = {};
+      let ok = true;
+      for(let i = (1 << R) - 1; i >= 1; i--){
+        const left = 2*i, right = 2*i + 1;
+        const lv = values[left] || leaves[left];
+        const rv = values[right] || leaves[right];
+        const p = playerAt(i);
+        const lp = p === 'A' ? lv.a : lv.b;
+        const rp = p === 'A' ? rv.a : rv.b;
+        if(lp === rp){ ok = false; break; }
+        const winner = lp > rp ? left : right;
+        bestChild[i] = winner;
+        values[i] = winner === left ? lv : rv;
+      }
+      if(ok){
+        // Add leaves' own values into the values map (for uniform access).
+        for(let i = start; i <= end; i++) values[i] = leaves[i];
+        return { R, leaves, values, bestChild };
+      }
+    }
+    // Fallback (shouldn't reach here)
+    return { R:2, leaves:{4:{a:3,b:-2},5:{a:-1,b:4},6:{a:5,b:1},7:{a:2,b:-3}},
+             values:{}, bestChild:{} };
+  }
+
+  // ── Layout / dims ──────────────────────────────────────────────────────────
+  function treeDims(R, deepestVisible){
+    const leafW = { 2: 130, 3: 90, 4: 60, 5: 44 }[R] || 80;
+    const lvlH  = 116;
+    const pad   = 30;
+    const fontScale = { 2: 1.0, 3: 0.95, 4: 0.95, 5: 1.1 }[R] || 1;
+    const W = (1 << R) * leafW + 2*pad;
+    // Height shrinks as the visible depth shrinks (when rounds collapse).
+    const H = pad + Math.max(1, deepestVisible) * lvlH + 24 * fontScale + pad;
+    return { W, H, leafW, lvlH, pad, fontScale };
+  }
+
+  function nodePos(idx, R, dims){
+    const d = depthOf(idx);
+    const pos = idx - (1 << d);
+    const innerW = dims.W - 2*dims.pad;
+    const x = dims.pad + ((pos + 0.5) / (1 << d)) * innerW;
+    const y = dims.pad + d * dims.lvlH;
+    return { x, y };
+  }
+  // Where a branch starts (bottom of the parent decision circle).
+  function nodeExitY(idx, R, dims){
+    return nodePos(idx, R, dims).y + 13 * dims.fontScale;
+  }
+  // Where a branch ends — depends on whether the child is rendered as a
+  // payoff box (at the deepest visible level) or as a decision circle.
+  function nodeEntryY(idx, R, dims, isPayoffBox){
+    return nodePos(idx, R, dims).y - (isPayoffBox ? 20 : 13) * dims.fontScale;
+  }
+
+  // ── Tree rendering ─────────────────────────────────────────────────────────
+  // `kind` = 'full' (shows every level — used when the lab is solved) or
+  // `'reduced'` (shows only depths 0…deepestVisible — used while solving).
+  // While solving, the "deepest visible" level shrinks by one per confirmed
+  // round: the just-solved decision nodes become the new payoff-box leaves of
+  // the visible tree, and everything below them is erased.
+  function buildTreeMarkup(kind){
+    if(!game) return { svg:'', W:0, H:0 };
+    const { R, values, bestChild } = game;
+    const allDone = stepMeta.length && stepMeta.every(m => m.s === 'done');
+
+    // Which depths are visible.
+    //   • Solved (full) tree: every level (0…R).
+    //   • Reduced tree during round k: depths 0…(R - k + 1), i.e. one level
+    //     below the current decision-makers.  After Check Round, activeRound
+    //     advances and the deepest visible level shrinks by one.
+    const deepestVisible = (kind === 'full' || allDone) ? R : (R - activeRound + 1);
+
+    const dims = treeDims(R, deepestVisible);
+    const numNodes = (1 << (R+1)) - 1;
+
+    function isPayoffBoxAt(idx){
+      // A node is rendered as a payoff box when its depth equals deepestVisible
+      // (the bottom of the visible tree).  Otherwise it is a decision circle.
+      return depthOf(idx) === deepestVisible;
+    }
+    function isVisible(idx){ return depthOf(idx) <= deepestVisible; }
+
+    let svg = '';
+
+    // ── SPNE ribbon (only on the solved/full tree) ──────────────────────────
+    if(kind === 'full' && allDone){
+      let cur = 1;
+      const points = [];
+      points.push([nodePos(1, R, dims).x, nodeExitY(1, R, dims)]);
+      while(cur < (1 << R)){
+        const nxt = bestChild[cur];
+        const nx = nodePos(nxt, R, dims).x;
+        const childIsBox = isPayoffBoxAt(nxt);
+        points.push([nx, nodeEntryY(nxt, R, dims, childIsBox)]);
+        if(!childIsBox){
+          points.push([nx, nodeExitY(nxt, R, dims)]);
+        }
+        cur = nxt;
+      }
+      const d = points.map((p,i) => (i?'L':'M') + p[0] + ' ' + p[1]).join(' ');
+      svg += `<path class="ribbon-spne" d="${d}"/>`;
+    }
+
+    // ── Branches ────────────────────────────────────────────────────────────
+    for(let par = 1; par < (1 << R); par++){
+      if(!isVisible(par)) continue;
+      const parDepth = depthOf(par);
+      // Parent must be a decision circle (not a payoff box) to have outgoing branches.
+      if(parDepth >= deepestVisible) continue;
+      for(const offset of [0, 1]){
+        const child = 2*par + offset;
+        if(!isVisible(child)) continue;
+        const elimPending = eliminated[par] === child;
+        const px = nodePos(par, R, dims).x;
+        const cx = nodePos(child, R, dims).x;
+        const py = nodeExitY(par, R, dims);
+        const cy = nodeEntryY(child, R, dims, isPayoffBoxAt(child));
+
+        const isCurrentRoundEdge = parentLevelOfActiveRound() === parDepth;
+        const branchActive = isCurrentRoundEdge &&
+                             stepMeta[activeRound-1] && stepMeta[activeRound-1].s === 'check';
+        const branchClasses = ['branch'];
+        if(elimPending) branchClasses.push('eliminated');
+
+        svg += `<line class="${branchClasses.join(' ')}" x1="${px}" y1="${py}" x2="${cx}" y2="${cy}"/>`;
+
+        // L/R label rendered as a clickable circular badge.
+        const lbl = offset === 0 ? 'L' : 'R';
+        const lblX = px + (cx - px) * 0.5;
+        const lblY = py + (cy - py) * 0.5;
+        const badgeR = 11 * dims.fontScale;
+        const badgeCls = ['branch-label-badge'];
+        if(elimPending)                  badgeCls.push('eliminated');
+        else if(branchActive)            badgeCls.push('clickable');
+        if(branchActive && elimPending)  badgeCls.push('selected');
+        svg += `<circle class="${badgeCls.join(' ')}" cx="${lblX}" cy="${lblY}" r="${badgeR}" data-edge="${par}-${child}"/>`;
+
+        const lblCls = ['branch-label'];
+        if(elimPending)        lblCls.push('eliminated');
+        else if(branchActive)  lblCls.push('clickable-host');
+        svg += `<text class="${lblCls.join(' ')}" x="${lblX}" y="${lblY}" style="font-size:${12*dims.fontScale}px;">${lbl}</text>`;
+      }
+    }
+
+    // ── Nodes ───────────────────────────────────────────────────────────────
+    for(let idx = 1; idx <= numNodes; idx++){
+      if(!isVisible(idx)) continue;
+      const { x, y } = nodePos(idx, R, dims);
+
+      if(isPayoffBoxAt(idx)){
+        // Rendered as a payoff box (a leaf of the visible tree).  Uses the
+        // truth-propagated value for internal nodes whose subgame has been
+        // solved, or the original leaf payoff for actual terminal nodes.
+        drawNodeValue(idx, x, y, dims);
+      } else {
+        // Decision circle with the moving player's letter.
+        const p = playerAt(idx);
+        const rad = 13 * dims.fontScale;
+        svg += `<circle class="node-circle ${p.toLowerCase()}" cx="${x}" cy="${y}" r="${rad}"/>`;
+        svg += `<text class="node-letter ${p.toLowerCase()}" x="${x}" y="${y}" style="font-size:${14*dims.fontScale}px;">${p}</text>`;
+      }
+    }
+
+    function drawNodeValue(idx, cx, cy, dims){
+      const v = values[idx] || game.leaves[idx];
+      if(!v) return;
+      const boxW = 38 * dims.fontScale;
+      const boxH = 40 * dims.fontScale;
+      const halfW = boxW/2, halfH = boxH/2;
+      const par = idx >> 1;
+      const clickable = par >= 1 &&
+                         parentLevelOfActiveRound() === depthOf(par) &&
+                         stepMeta[activeRound-1] && stepMeta[activeRound-1].s === 'check';
+      const isSelected = (highlighted[par] === idx);
+      const boxClasses = ['payoff-box'];
+      if(clickable) boxClasses.push('clickable');
+      if(isSelected) boxClasses.push('selected');
+      svg += `<rect class="${boxClasses.join(' ')}" x="${cx-halfW}" y="${cy-halfH}" width="${boxW}" height="${boxH}" rx="6" data-node="${idx}"/>`;
+      const aSize = 13 * dims.fontScale;
+      const aY = cy - boxH*0.20;
+      const bY = cy + boxH*0.20;
+      svg += `<text class="payoff-text a" x="${cx}" y="${aY}" style="font-size:${aSize}px;">${v.a}</text>`;
+      svg += `<text class="payoff-text b" x="${cx}" y="${bY}" style="font-size:${aSize}px;">${v.b}</text>`;
+    }
+
+    return { svg, W: dims.W, H: dims.H };
+  }
+
+  function renderTrees(){
+    if(!game) return;
+    // While solving — show the reduced tree (eliminations applied as confirmed).
+    // Once solved — show the full tree with the SPNE path highlighted.
+    const allDone = stepMeta.length && stepMeta.every(m => m.s === 'done');
+    const kind = allDone ? 'full' : 'reduced';
+    const out = buildTreeMarkup(kind);
+    $treeSvg.setAttribute('viewBox', `0 0 ${out.W} ${out.H}`);
+    $treeSvg.innerHTML = out.svg;
+    $treeSvg.classList.toggle('scroll', game.R >= 5);
+    $treeSvg.style.minWidth = game.R >= 5 ? out.W + 'px' : '';
+    $treeTitle.textContent = allDone
+      ? 'Solved Game Tree — Subgame-Perfect Equilibrium Path Highlighted'
+      : `Game Tree — Eliminations Applied (Round ${Math.min(activeRound, game.R)} of ${game.R})`;
+    updateTreeDescs(allDone);
+  }
+
+  function updateTreeDescs(allDone){
+    if(!game) return;
+    if(allDone){
+      $treeDesc.textContent =
+        `Solved game tree with all ${game.R} decision levels visible.  ` +
+        `The thick green ribbon traces the subgame-perfect Nash equilibrium path from root to leaf.`;
+    } else {
+      const elimCount = Object.keys(eliminated).length;
+      $treeDesc.textContent =
+        `Game tree — eliminated branches are hidden as soon as each round is confirmed.  ` +
+        (elimCount ? `${elimCount} branch${elimCount===1?'':'es'} marked for elimination in the current round.  ` : '') +
+        `Active round: ${activeRound} of ${game.R}, working at level ${game.R - activeRound}.`;
+    }
+  }
+
+  // ── Round → level mapping ──────────────────────────────────────────────────
+  // Round 1 operates at the deepest decision level (R - 1).
+  // Round k operates at level R - k. (Parent decision nodes at this level pick.)
+  function parentLevelOfActiveRound(){
+    if(!game) return -1;
+    return game.R - activeRound;
+  }
+  function decisionNodesAtRound(k){
+    if(!game) return [];
+    const lvl = game.R - k;
+    const arr = [];
+    for(let i = (1 << lvl); i < (1 << (lvl + 1)); i++) arr.push(i);
+    return arr;
+  }
+
+  // ── Click handling ─────────────────────────────────────────────────────────
+  function onPayoffClick(idx){
+    // Only allow clicks on payoffs at children of currently-active decision nodes.
+    const par = idx >> 1;
+    if(parentLevelOfActiveRound() !== depthOf(par)) return;
+    const meta = stepMeta[activeRound-1];
+    if(!meta || meta.s !== 'check') return;
+    // Toggle: clicking same node again unselects; clicking sibling switches.
+    if(highlighted[par] === idx) delete highlighted[par];
+    else highlighted[par] = idx;
+    renderTrees();
+    refreshStepCardStates();
+  }
+  function onBranchClick(par, child){
+    if(parentLevelOfActiveRound() !== depthOf(par)) return;
+    const meta = stepMeta[activeRound-1];
+    if(!meta || meta.s !== 'check') return;
+    if(eliminated[par] === child) delete eliminated[par];
+    else eliminated[par] = child;
+    renderTrees();
+    refreshStepCardStates();
+  }
+  function attachSvgListeners(){
+    $treeSvg.addEventListener('click', ev => {
+      const target = ev.target;
+      if(target.classList.contains('payoff-box') && target.classList.contains('clickable')){
+        const idx = parseInt(target.getAttribute('data-node'), 10);
+        if(idx) onPayoffClick(idx);
+      }
+      else if(target.classList.contains('branch-label-badge') &&
+              target.classList.contains('clickable')){
+        const edge = target.getAttribute('data-edge');
+        if(edge){
+          const [par, child] = edge.split('-').map(Number);
+          onBranchClick(par, child);
+        }
+      }
+    });
+  }
+
+  // ── Step cards ─────────────────────────────────────────────────────────────
+  function roundInstructions(k){
+    const R = game.R;
+    const lvl = R - k;
+    const player = playerAt((1 << lvl)); // any node at this level — all same player
+    const nodesCount = 1 << lvl;
+    let levelName;
+    if(k === 1) levelName = 'the deepest decision level';
+    else if(k === R) levelName = 'the root';
+    else levelName = `level <code>${lvl}</code>`;
+    return {
+      title: `Round ${k} of ${R} — Backward induction at ${k === 1 ? 'the deepest level' : (k === R ? 'the root' : 'level ' + lvl)}`,
+      instr:
+        `At ${levelName}, <strong>Player ${player}</strong> chooses. For each of the ` +
+        `${nodesCount} decision node${nodesCount===1?'':'s'} at this level, click the ` +
+        `<strong>better payoff for Player ${player}</strong> at one of its two children, ` +
+        `then click the <strong>L / R label badge</strong> on the other branch to eliminate it. ` +
+        `When every node has both a highlighted payoff and an eliminated branch, press ` +
+        `<strong>Check Round</strong>.`,
+      player, lvl, nodesCount,
+    };
+  }
+
+  function stepCardHTML(k){
+    const r = roundInstructions(k);
+    return `<div class="step-card" id="sc${k}">
+      <div class="step-card-header">
+        <div>
+          <div class="step-num">Round ${k}</div>
+          <div class="step-title">${r.title}</div>
+        </div>
+        <button class="step-btn" id="btn${k}" aria-label="Check round ${k}">Check Round</button>
+      </div>
+      <p class="step-instruction">${r.instr}</p>
+      <div class="step-stats" id="stats${k}"></div>
+      <div id="fb${k}" class="hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div class="step-formula hidden" id="fml${k}"><div class="formula-content" id="fc${k}"></div></div>
+      <div class="step-answer hidden" id="ans${k}">
+        <div class="answer-label">Answer</div>
+        <div class="answer-content" id="ac${k}"></div>
+      </div>
+    </div>`;
+  }
+
+  function renderSteps(){
+    if(!game) return;
+    const html = [];
+    for(let k = 1; k <= game.R; k++) html.push(stepCardHTML(k));
+    $stepsContainer.innerHTML = html.join('');
+    for(let k = 1; k <= game.R; k++){
+      document.getElementById('btn'+k).addEventListener('click', () => handleBtn(k));
+    }
+    refreshStepCardStates();
+  }
+
+  function refreshStepCardStates(){
+    if(!game) return;
+    for(let k = 1; k <= game.R; k++){
+      const card = document.getElementById('sc'+k);
+      const btn  = document.getElementById('btn'+k);
+      const meta = stepMeta[k-1];
+      const isActive = (k === activeRound) && meta.s !== 'done';
+      const isFuture = k > activeRound;
+      card.classList.toggle('locked', isFuture || meta.s === 'done');
+      btn.disabled = (meta.s === 'done') || isFuture;
+      // Stats
+      const nodes = decisionNodesAtRound(k);
+      const high  = nodes.filter(n => highlighted[n] !== undefined).length;
+      const elim  = nodes.filter(n => eliminated[n]  !== undefined).length;
+      const $stats = document.getElementById('stats'+k);
+      $stats.innerHTML = `
+        <span class="stat">Payoffs highlighted: <strong>${high} / ${nodes.length}</strong></span>
+        <span class="stat">Branches marked for elimination: <strong>${elim} / ${nodes.length}</strong></span>`;
+    }
+  }
+
+  // ── Validation per round ───────────────────────────────────────────────────
+  function checkRound(k){
+    const nodes = decisionNodesAtRound(k);
+    // Every parent at this level must have both a highlight and an elimination,
+    // and they must be consistent and correct.
+    let allFilled = true, allCorrect = true;
+    const issues = [];
+    nodes.forEach(par => {
+      const hi = highlighted[par];
+      const el = eliminated[par];
+      if(hi === undefined || el === undefined){ allFilled = false; return; }
+      const truthBest = game.bestChild[par];
+      const okHi = hi === truthBest;
+      const okEl = el === (2*par + 1 - (truthBest - 2*par));  // the other child
+      // Simpler: okEl = (el !== truthBest && (el === 2*par || el === 2*par+1))
+      const okElSimple = (el === 2*par || el === 2*par+1) && (el !== truthBest);
+      if(!okHi || !okElSimple){ allCorrect = false; issues.push(par); }
+    });
+    return { allFilled, allCorrect, issues };
+  }
+
+  function buildEnteredText(k){
+    const nodes = decisionNodesAtRound(k);
+    return nodes.map(par => {
+      const hi = highlighted[par];
+      const el = eliminated[par];
+      const dir = c => c === 2*par ? 'L' : (c === 2*par+1 ? 'R' : '?');
+      return `node ${par}: pick ${dir(hi)}, eliminate ${dir(el)}`;
+    }).join('; ');
+  }
+  function buildAnswerText(k){
+    const nodes = decisionNodesAtRound(k);
+    return nodes.map(par => {
+      const best = game.bestChild[par];
+      const other = best === 2*par ? 2*par+1 : 2*par;
+      const dir = c => c === 2*par ? 'L' : 'R';
+      return `node ${par}: pick ${dir(best)}, eliminate ${dir(other)}`;
+    }).join('; ');
+  }
+  const Q_TEXTS_PREFIX = 'Backward induction round ';
+
+  function recordQ(k, firstAns, firstOk, finalAns, finalOk){
+    if(!(window.Session && Session.recordQuestion)) return;
+    Session.recordQuestion(LAB_ID, k-1,
+      `${Q_TEXTS_PREFIX}${k}: identify best payoffs and eliminate the unchosen branches at level ${game.R - k}.`,
+      firstAns, firstOk, finalAns, finalOk);
+  }
+
+  function showFB(k, ok, msg){
+    const el = document.getElementById('fb'+k);
+    el.classList.remove('hidden');
+    el.className = 'entry-fb '+(ok ? 'correct' : 'wrong');
+    el.textContent = msg;
+  }
+
+  function stepFormulaHTML(k){
+    const R = game.R;
+    const lvl = R - k;
+    const player = playerAt(1 << lvl);
+    const nodes = decisionNodesAtRound(k);
+    return `
+      <p><strong>Round ${k} works at level ${lvl}.</strong> Player ${player} moves at every
+      decision node on this level. At each node, compare the
+      ${k === 1 ? 'payoffs at the two terminal children' : 'propagated values at the two child subgames'}
+      and pick whichever gives Player ${player} the higher payoff. Eliminate the other branch.</p>
+      <p>The ${nodes.length} decision node${nodes.length===1?'':'s'} at this level are:
+      <code>${nodes.join(', ')}</code>.</p>`;
+  }
+  function stepAnswerHTML(k){
+    const nodes = decisionNodesAtRound(k);
+    return `<p>For each decision node at this level, Player ${playerAt(1 << (game.R - k))}
+      picks the better-for-them child and eliminates the other:</p>
+      <ul style="margin:6px 0;padding-left:20px;line-height:1.55;">${
+        nodes.map(par => {
+          const best  = game.bestChild[par];
+          const other = best === 2*par ? 2*par+1 : 2*par;
+          const dir = c => c === 2*par ? '<strong>L</strong>' : '<strong>R</strong>';
+          const vBest  = game.values[best];
+          const vOther = game.values[other];
+          return `<li>Node <code>${par}</code>: pick ${dir(best)} (value (${vBest.a}, ${vBest.b})), eliminate ${dir(other)} (value (${vOther.a}, ${vOther.b})).</li>`;
+        }).join('')
+      }</ul>`;
+  }
+  function revealFmlAns(k){
+    document.getElementById('fc'+k).innerHTML = stepFormulaHTML(k);
+    document.getElementById('ac'+k).innerHTML = stepAnswerHTML(k);
+    document.getElementById('fml'+k).classList.remove('hidden');
+    document.getElementById('ans'+k).classList.remove('hidden');
+  }
+
+  // ── Apply the answer for round k onto the trees and advance ────────────────
+  function applyRoundCorrect(k){
+    const nodes = decisionNodesAtRound(k);
+    nodes.forEach(par => {
+      // Record the truth so the SPNE ribbon and the propagated payoff boxes
+      // reflect the correct answer regardless of what the student entered.
+      const best  = game.bestChild[par];
+      const other = best === 2*par ? 2*par+1 : 2*par;
+      highlighted[par] = best;
+      eliminated[par]  = other;
+    });
+    // The active round advances → the visible tree collapses one level.
+    if(activeRound <= game.R) activeRound++;
+    renderTrees();
+    refreshStepCardStates();
+  }
+
+  function markDoneCorrect(k){
+    stepMeta[k-1].s = 'done';
+    revealFmlAns(k);
+    showFB(k, true, '✓ Correct!');
+    const btn = document.getElementById('btn'+k);
+    btn.textContent = '✓ Done';
+    btn.disabled = true;
+    btn.classList.add('done');
+    applyRoundCorrect(k);
+    maybeFinishLab();
+  }
+
+  function markDoneViaReveal(k){
+    stepMeta[k-1].s = 'done';
+    const btn = document.getElementById('btn'+k);
+    btn.textContent = '✓ Done';
+    btn.disabled = true;
+    btn.classList.add('done');
+    applyRoundCorrect(k);
+    maybeFinishLab();
+  }
+
+  function handleBtn(k){
+    const meta = stepMeta[k-1];
+    const btn  = document.getElementById('btn'+k);
+    if(meta.s === 'check'){
+      const res = checkRound(k);
+      if(!res.allFilled){
+        showFB(k, false,
+          'Click a payoff at each decision node, and click each branch you want to eliminate, before checking.');
+        return;
+      }
+      if(firstAttempt[k-1]){
+        firstAttempt[k-1] = false;
+        firstCorrect[k-1] = res.allCorrect;
+        firstAnsText[k-1] = buildEnteredText(k);
+        recordQ(k, firstAnsText[k-1], firstCorrect[k-1], firstAnsText[k-1], firstCorrect[k-1]);
+      }
+      if(res.allCorrect){
+        markDoneCorrect(k);
+      } else {
+        meta.s = 'formula';
+        showFB(k, false, 'Not quite — review the hint, then reveal the answer to continue.');
+        btn.textContent = 'Show Hint';
+        // Lock interactions for this round so the student can't keep clicking.
+        renderTrees();
+        refreshStepCardStates();
+      }
+    } else if(meta.s === 'formula'){
+      document.getElementById('fc'+k).innerHTML = stepFormulaHTML(k);
+      document.getElementById('fml'+k).classList.remove('hidden');
+      meta.s = 'answer';
+      btn.textContent = 'Show Answer';
+    } else if(meta.s === 'answer'){
+      revealFmlAns(k);
+      recordQ(k, firstAnsText[k-1], firstCorrect[k-1], buildAnswerText(k), true);
+      markDoneViaReveal(k);
+    }
+  }
+
+  function maybeFinishLab(){
+    if(_labDoneFired) return;
+    if(!stepMeta.every(m => m.s === 'done')) return;
+    _labDoneFired = true;
+    const firstScore = firstCorrect.filter(Boolean).length;
+    const total = game.R;
+    if(window.Session && Session.recordLabDone){
+      Session.recordLabDone(LAB_ID, LAB_LABEL, firstScore, total, total);
+    }
+    // Describe the SPNE path
+    let cur = 1;
+    const path = [];
+    while(cur < (1 << game.R)){
+      const nxt = game.bestChild[cur];
+      path.push(nxt === 2*cur ? 'L' : 'R');
+      cur = nxt;
+    }
+    const finalLeaf = game.values[cur] || game.leaves[cur];
+    $banner.classList.remove('hidden');
+    $banner.textContent =
+      `Lab complete — ${firstScore} of ${total} rounds correct on the first attempt. ` +
+      `The subgame-perfect Nash equilibrium path is ${path.join(' → ')}, with payoffs ` +
+      `(A: ${finalLeaf.a}, B: ${finalLeaf.b}).`;
+    renderTrees();
+  }
+
+  // ── Reset / generate ───────────────────────────────────────────────────────
+  function renderProblem(){
+    highlighted = {};
+    eliminated  = {};
+    activeRound = 1;
+    stepMeta    = Array.from({length: game.R}, () => ({s:'check'}));
+    firstAttempt = Array(game.R).fill(true);
+    firstCorrect = Array(game.R).fill(false);
+    firstAnsText = Array(game.R).fill('—');
+    _labDoneFired = false;
+    $banner.classList.add('hidden');
+
+    renderSteps();
+    renderTrees();
+  }
+
+  function clearLabSessionData(){
+    try{
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if(!raw) return;
+      const d = JSON.parse(raw);
+      if(d && d.labs && d.labs[LAB_ID]){
+        delete d.labs[LAB_ID];
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(d));
+      }
+    }catch(e){ /* ignore */ }
+  }
+
+  document.getElementById('newProblemBtn').addEventListener('click', () => {
+    clearLabSessionData();
+    _problemIdx++;
+    game = generateGame();
+    renderProblem();
+  });
+
+  const _pdfBtn = document.getElementById('downloadPdfBtn');
+  if(new URLSearchParams(location.search).get('disc') === '1'){
+    _pdfBtn.addEventListener('click', () => {
+      if(window.DiscussionPDF && DiscussionPDF.generate){
+        DiscussionPDF.generate();
+      } else {
+        alert('PDF export is not available — try refreshing the page.');
+      }
+    });
+  } else {
+    _pdfBtn.remove();
+  }
+
+  let _resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(renderTrees, 80);
+  });
+
+  function init(){
+    game = generateGame();
+    renderProblem();
+    attachSvgListeners();
+  }
+  function kickoff(){
+    const isDiscussion = new URLSearchParams(location.search).get('disc') === '1';
+    if(isDiscussion && window.DiscussionModal){
+      DiscussionModal.init({ weekLabel: WEEK_LABEL, onReady: function(){ init(); } });
+    } else {
+      init();
+    }
+  }
+  kickoff();
+
+})();
+</script>
+</body>
+</html>

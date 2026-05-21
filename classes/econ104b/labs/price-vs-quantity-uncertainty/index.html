@@ -1,0 +1,1247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Price vs. Quantity Interventions Under Uncertainty — ECON 104B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;  --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ─────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Main layout */
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+
+    /* Controls card */
+    .controls-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px 18px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .controls-title{font-family:var(--font-serif);font-size:1.0625rem;
+      font-weight:700;margin:0 0 12px;color:var(--ink);}
+
+    .preset-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+
+    /* Buttons — border #8c7f72 = 3.5:1 on white (WCAG 1.4.11 ✓) */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+
+    .slider-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+    @media(max-width:780px){.slider-grid{grid-template-columns:1fr;}}
+    .slider-block label{display:block;font-size:0.75rem;font-weight:700;
+      color:var(--ink-2);letter-spacing:.04em;text-transform:uppercase;
+      margin-bottom:5px;}
+    .slider-block .sval{font-weight:700;color:var(--accent);font-size:0.875rem;}
+    .slider-block input[type=range]{width:100%;}
+    .slider-help{font-size:0.6875rem;color:var(--muted);margin-top:3px;line-height:1.4;}
+
+    /* Canvases */
+    .canvas-row{display:grid;grid-template-columns:1fr 1fr;
+      gap:14px;margin-bottom:14px;}
+    @media(max-width:780px){.canvas-row{grid-template-columns:1fr;}}
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;
+      overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+
+    /* Readouts */
+    .readouts{display:grid;grid-template-columns:repeat(3,1fr);
+      gap:6px;margin-top:10px;}
+    .readout{background:rgba(246,242,234,.55);border:1px solid var(--line);
+      border-radius:10px;padding:6px 9px;text-align:center;}
+    .readout .lbl{font-size:0.625rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:2px;}
+    .readout .val{font-size:0.9375rem;font-weight:700;color:var(--ink);
+      font-variant-numeric:tabular-nums;}
+    .readout .val.bad{color:var(--bad);}
+
+    /* Comparison strip */
+    .compare-strip{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;padding:14px 18px;box-shadow:var(--shadow);
+      margin-bottom:18px;font-size:0.9375rem;line-height:1.55;
+      color:var(--ink-2);}
+    .compare-strip strong{color:var(--ink);}
+    .compare-strip .winner-tax{color:var(--accent);font-weight:800;}
+    .compare-strip .winner-quota{color:var(--good);font-weight:800;}
+    .compare-strip .winner-tie{color:var(--muted);font-weight:800;}
+
+    /* Legend */
+    .legend{display:flex;flex-wrap:wrap;gap:14px;margin:0 4px 14px;
+      font-size:0.75rem;color:var(--ink-2);}
+    .legend-row{display:inline-flex;align-items:center;gap:6px;}
+    .legend-swatch{width:22px;height:3px;border-radius:2px;}
+    .legend-swatch.dashed{background:repeating-linear-gradient(90deg,
+      var(--accent) 0 5px, transparent 5px 9px);height:3px;}
+    .legend-swatch.solid-blue{background:var(--accent);}
+    .legend-swatch.solid-green{background:var(--good);}
+    .legend-swatch.solid-red{background:var(--bad);}
+    .legend-tri{width:0;height:0;
+      border-left:6px solid transparent;border-right:6px solid transparent;
+      border-bottom:10px solid rgba(180,35,24,0.35);}
+
+    /* Questions */
+    .questions-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px 20px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .questions-title{font-family:var(--font-serif);font-size:1.125rem;
+      font-weight:700;margin:0 0 6px;color:var(--ink);}
+    .questions-sub{font-size:0.8125rem;color:var(--muted);margin:0 0 14px;
+      line-height:1.5;}
+    .question{margin-bottom:18px;padding-bottom:14px;
+      border-bottom:1px solid var(--line);}
+    .question:last-of-type{border-bottom:none;margin-bottom:6px;}
+    .qprompt{font-size:0.9375rem;font-weight:700;color:var(--ink);
+      margin:0 0 10px;line-height:1.45;}
+    .qprompt .qnum{display:inline-block;font-size:0.625rem;
+      font-weight:800;letter-spacing:.08em;
+      background:var(--accent);color:#fff;padding:3px 9px;
+      border-radius:999px;margin-right:8px;vertical-align:middle;
+      text-transform:uppercase;}
+    .qchoices{display:flex;flex-direction:column;gap:6px;}
+    .qchoice{display:flex;align-items:flex-start;gap:8px;padding:8px 11px;
+      border:1.5px solid #8c7f72;border-radius:10px;cursor:pointer;
+      background:var(--panel);font-size:0.875rem;color:var(--ink-2);
+      line-height:1.45;transition:all .12s;}
+    .qchoice:hover{border-color:var(--accent);background:rgba(47,93,124,.05);}
+    .qchoice input{margin-top:3px;flex-shrink:0;}
+    .qchoice.locked{cursor:default;}
+    .qchoice.locked:hover{border-color:#8c7f72;background:var(--panel);}
+    .qchoice.correct-answer{border-color:var(--good);
+      background:rgba(21,92,56,.08);color:var(--good);}
+    .qchoice.wrong-answer{border-color:var(--bad);
+      background:rgba(180,35,24,.06);color:var(--bad);}
+    .qchoice .badge{font-size:0.6875rem;font-weight:800;margin-left:auto;
+      flex-shrink:0;}
+
+    .qfeedback{margin-top:8px;padding:8px 11px;border-radius:10px;
+      font-size:0.8125rem;font-weight:600;line-height:1.45;}
+    .qfeedback.correct{background:rgba(21,92,56,.08);
+      border:1px solid rgba(21,92,56,.2);color:var(--good);}
+    .qfeedback.wrong{background:rgba(180,35,24,.06);
+      border:1px solid rgba(180,35,24,.2);color:var(--bad);}
+
+    .submit-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover:not(:disabled){background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    .lab-done-banner{margin-top:14px;padding:12px 16px;border-radius:12px;
+      background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.25);
+      color:var(--good);font-weight:700;font-size:0.875rem;line-height:1.45;}
+    .hidden{display:none!important;}
+
+    /* Footer */
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+  </style>
+</head>
+<body>
+
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ104b/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104B — Externalities</div>
+      <h1>Price-Based vs. Quantity-Based Interventions Under Uncertainty</h1>
+      <p class="sub">
+        Compare a Pigouvian tax to a quantity cap when the regulator is
+        uncertain about the marginal abatement cost (MAC) curve. See how
+        the relative slopes of MAC and the marginal cost of pollution (MCP)
+        — not the direction of the error — decide which instrument has
+        lower deadweight loss.
+      </p>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>The market generates pollution. Each unit polluted yields a
+          marginal benefit equal to <strong>MAC(Q) = a − b·Q</strong>
+          (the marginal abatement cost — the polluter's willingness to
+          pay to avoid being cut by one unit). Each unit of pollution
+          inflicts marginal social damage <strong>MCP(Q) = c + d·Q</strong>.
+          The true social optimum is where MAC = MCP.</p>
+          <p>The regulator must set policy <em>before</em> observing the
+          true MAC. Their estimate of the MAC intercept may be too high
+          or too low. They can either set a Pigouvian tax (a price) or
+          a quantity cap. Once policy is set, polluters respond to the
+          <em>true</em> MAC.</p>
+          <p>Use the controls to compare both instruments side by side:</p>
+          <ol>
+            <li><strong>Pick a scenario preset</strong> to set the slopes
+            of MAC and MCP. Or use the slope sliders directly.</li>
+            <li><strong>Move the estimation-error slider</strong> to give
+            the regulator over- or under-estimates of the true MAC.</li>
+            <li><strong>Watch the two DWL triangles.</strong> Whichever is
+            smaller is the better instrument under those slopes.</li>
+            <li><strong>Answer the three questions</strong> below the
+            graphs once you've explored.</li>
+          </ol>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- Controls -->
+  <div class="controls-card">
+    <h2 class="controls-title">Controls</h2>
+
+    <div class="preset-row" role="group" aria-label="Scenario presets">
+      <button class="option-btn" id="presetSteepMCP"   aria-pressed="false">Steep MCP, flat MAC</button>
+      <button class="option-btn" id="presetSteepMAC"   aria-pressed="false">Flat MCP, steep MAC</button>
+      <button class="option-btn" id="presetBalanced"   aria-pressed="false">Balanced slopes</button>
+      <button class="option-btn" id="presetCustom"     aria-pressed="false">Custom</button>
+    </div>
+
+    <div class="slider-grid">
+      <div class="slider-block">
+        <label for="sldB">MAC slope |b|: <span class="sval" id="bVal"></span></label>
+        <input type="range" id="sldB" min="0.4" max="2.5" step="0.1" value="1.2"
+               aria-describedby="bHelp"/>
+        <div class="slider-help" id="bHelp">Higher = MAC drops faster (steeper MAC).</div>
+      </div>
+      <div class="slider-block">
+        <label for="sldD">MCP slope d: <span class="sval" id="dVal"></span></label>
+        <input type="range" id="sldD" min="0.4" max="2.5" step="0.1" value="1.2"
+               aria-describedby="dHelp"/>
+        <div class="slider-help" id="dHelp">Higher = damage rises faster (steeper MCP).</div>
+      </div>
+      <div class="slider-block">
+        <label for="sldErr">Regulator's MAC estimate error: <span class="sval" id="errVal"></span></label>
+        <input type="range" id="sldErr" min="-40" max="40" step="1" value="0"
+               aria-describedby="errHelp"/>
+        <div class="slider-help" id="errHelp">Shifts the perceived MAC intercept. 0% = perfect information.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend" aria-hidden="true">
+    <span class="legend-row"><span class="legend-swatch solid-blue"></span>True MAC</span>
+    <span class="legend-row"><span class="legend-swatch dashed"></span>Perceived MAC</span>
+    <span class="legend-row"><span class="legend-swatch solid-green"></span>MCP</span>
+    <span class="legend-row"><span class="legend-swatch solid-red"></span>Policy line (tax / cap)</span>
+    <span class="legend-row"><span class="legend-tri"></span>Deadweight loss</span>
+  </div>
+
+  <!-- Canvases -->
+  <div class="canvas-row">
+    <div class="graph-card">
+      <div class="graph-title" id="taxGraphTitle">Price Instrument — Pigouvian Tax</div>
+      <div class="canvas-wrap">
+        <canvas id="taxCanvas"
+                role="img"
+                aria-labelledby="taxGraphTitle"
+                aria-describedby="taxGraphDesc"
+                style="aspect-ratio:1.05/1;"></canvas>
+      </div>
+      <div class="readouts">
+        <div class="readout">
+          <div class="lbl">Q*</div>
+          <div class="val" id="taxQstar">—</div>
+        </div>
+        <div class="readout">
+          <div class="lbl">Q actual</div>
+          <div class="val" id="taxQa">—</div>
+        </div>
+        <div class="readout">
+          <div class="lbl">DWL</div>
+          <div class="val bad" id="taxDWL">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="graph-card">
+      <div class="graph-title" id="quotaGraphTitle">Quantity Instrument — Emissions Cap</div>
+      <div class="canvas-wrap">
+        <canvas id="quotaCanvas"
+                role="img"
+                aria-labelledby="quotaGraphTitle"
+                aria-describedby="quotaGraphDesc"
+                style="aspect-ratio:1.05/1;"></canvas>
+      </div>
+      <div class="readouts">
+        <div class="readout">
+          <div class="lbl">Q*</div>
+          <div class="val" id="quotaQstar">—</div>
+        </div>
+        <div class="readout">
+          <div class="lbl">Q actual</div>
+          <div class="val" id="quotaQa">—</div>
+        </div>
+        <div class="readout">
+          <div class="lbl">DWL</div>
+          <div class="val bad" id="quotaDWL">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live-region canvas descriptions for screen readers (WCAG 1.1.1, 4.1.3) -->
+  <section class="sr-only" id="graphsDesc"
+           aria-live="polite" aria-atomic="true">
+    <p id="taxGraphDesc">Initial description.</p>
+    <p id="quotaGraphDesc">Initial description.</p>
+  </section>
+
+  <!-- Comparison strip (announced live) -->
+  <div class="compare-strip" id="compareStrip"
+       role="status" aria-live="polite" aria-atomic="true">
+    Adjust the controls to compare instruments.
+  </div>
+
+  <!-- Questions -->
+  <div class="questions-card">
+    <h2 class="questions-title">Check your understanding</h2>
+    <p class="questions-sub" id="questionsSub">
+      Answer the three multiple-choice questions about the
+      <strong id="qScenarioName">balanced-slopes</strong> scenario shown
+      in the canvases, then click <strong>Submit Answers</strong>.
+      Click <strong>New Problem</strong> for a fresh scenario.
+    </p>
+
+    <div class="question" id="q1">
+      <p class="qprompt"><span class="qnum">Q1</span>
+        <span class="qtext" id="q1text"></span></p>
+      <div class="qchoices" role="radiogroup" aria-labelledby="q1"></div>
+      <div class="qfeedback hidden" id="fb1" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="question" id="q2">
+      <p class="qprompt"><span class="qnum">Q2</span>
+        <span class="qtext" id="q2text"></span></p>
+      <div class="qchoices" role="radiogroup" aria-labelledby="q2"></div>
+      <div class="qfeedback hidden" id="fb2" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="question" id="q3">
+      <p class="qprompt"><span class="qnum">Q3</span>
+        <span class="qtext" id="q3text"></span></p>
+      <div class="qchoices" role="radiogroup" aria-labelledby="q3"></div>
+      <div class="qfeedback hidden" id="fb3" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="submit-row">
+      <button class="primary-btn" id="submitBtn">Submit Answers</button>
+      <button class="primary-btn" id="newProblemBtn" style="background:#8c7f72;">New Problem</button>
+      <button class="primary-btn hidden" id="downloadPdfBtn" style="background:#8c7f72;">Download Summary PDF</button>
+    </div>
+
+    <div id="labDoneBanner" class="lab-done-banner hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 104B — Intermediate Microeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+// LAB_ID:    'price-vs-quantity-uncertainty'
+// LAB_LABEL: 'Price-Based vs. Quantity-Based Interventions Under Uncertainty'
+// url:       '/classes/econ104b/labs/price-vs-quantity-uncertainty/?disc=1'
+const LAB_ID     = 'price-vs-quantity-uncertainty';
+const LAB_LABEL  = 'Price-Based vs. Quantity-Based Interventions Under Uncertainty';
+const WEEK_LABEL = 'Externalities — Price vs. Quantity Instruments';
+
+// ── State ────────────────────────────────────────────────────────────────────
+// True MAC: P = A_true − b·Q.   MCP: P = c + d·Q.
+let _rng    = null;
+let _fs     = 1;
+const A_TRUE = 100;
+const C_INT  = 20;
+let b       = 1.2;
+let d       = 1.2;
+let errPct  = 0;          // -40 .. +40
+let preset  = 'balanced'; // current preset key
+
+// Fixed plot ranges so both canvases compare cleanly
+const X_MAX = 75;
+const Y_MAX = 130;
+
+// Question state
+const Q_TOTAL = 3;
+
+// Per-scenario question banks. The active bank is chosen by the preset the
+// student selects. Each bank has 3 prompts and 3 choice arrays (4 choices
+// each, one marked correct).
+const SCENARIO_QS = {
+  steepMCP: {
+    label: 'steep MCP, flat MAC',
+    prompts: [
+      'In this scenario (steep MCP, flat MAC), which instrument has lower deadweight loss?',
+      'What property of MCP makes precise quantity control especially valuable here?',
+      'What property of MAC makes the tax instrument perform poorly in this scenario?',
+    ],
+    choices: [
+      [
+        {key:'a', text:'Tax (price instrument)'},
+        {key:'b', text:'Quota (quantity instrument)', correct:true},
+        {key:'c', text:'It depends on the sign of the regulator\'s error'},
+        {key:'d', text:'They always produce equal DWL'},
+      ],
+      [
+        {key:'a', text:'Marginal damages are roughly constant, so the level of Q doesn\'t matter much'},
+        {key:'b', text:'Marginal damages decrease past Q*, rewarding overshoots'},
+        {key:'c', text:'Marginal damages rise sharply near Q*, so a small Q-error is very costly', correct:true},
+        {key:'d', text:'Damages depend only on the regulator\'s estimate, not on actual emissions'},
+      ],
+      [
+        {key:'a', text:'Flat MAC means firms swing emissions a lot in response to small tax errors', correct:true},
+        {key:'b', text:'Flat MAC means the tax has no effect on firm behavior'},
+        {key:'c', text:'Steep MAC always implies the tax over-collects revenue'},
+        {key:'d', text:'Taxes only work when MAC is perfectly observable'},
+      ],
+    ],
+  },
+  steepMAC: {
+    label: 'flat MCP, steep MAC',
+    prompts: [
+      'In this scenario (flat MCP, steep MAC), which instrument has lower deadweight loss?',
+      'What property of MAC makes the tax instrument accurate in this scenario?',
+      'What property of MCP makes a mis-set quantity relatively cheap here?',
+    ],
+    choices: [
+      [
+        {key:'a', text:'Tax (price instrument)', correct:true},
+        {key:'b', text:'Quota (quantity instrument)'},
+        {key:'c', text:'It depends on the sign of the regulator\'s error'},
+        {key:'d', text:'They always produce equal DWL'},
+      ],
+      [
+        {key:'a', text:'Steep MAC means firms barely change emissions when the tax is slightly off', correct:true},
+        {key:'b', text:'Steep MAC means firms ignore the tax entirely'},
+        {key:'c', text:'Steep MAC means the tax automatically tracks the true MCP'},
+        {key:'d', text:'Steep MAC means the regulator\'s estimate is always correct'},
+      ],
+      [
+        {key:'a', text:'Flat MCP means damages are infinite past Q*'},
+        {key:'b', text:'Flat MCP means damages rise gently with Q, so a Q-error costs relatively little', correct:true},
+        {key:'c', text:'Flat MCP means there is no externality at all'},
+        {key:'d', text:'Flat MCP means damages are concentrated at Q = 0'},
+      ],
+    ],
+  },
+  balanced: {
+    label: 'balanced-slopes',
+    prompts: [
+      'In this scenario (|b| = d), which instrument has lower deadweight loss?',
+      'What feature of the curves causes the two DWLs to be exactly equal here?',
+      'If the regulator\'s estimate of MAC were exactly correct (zero error), what would each DWL be?',
+    ],
+    choices: [
+      [
+        {key:'a', text:'Tax'},
+        {key:'b', text:'Quota'},
+        {key:'c', text:'They are equal under these slopes', correct:true},
+        {key:'d', text:'Neither — DWL is always positive under uncertainty'},
+      ],
+      [
+        {key:'a', text:'The intercepts of MAC and MCP coincide'},
+        {key:'b', text:'The slope of MCP equals the absolute slope of MAC (d = |b|)', correct:true},
+        {key:'c', text:'The error in the regulator\'s estimate is small'},
+        {key:'d', text:'The polluters are perfectly competitive'},
+      ],
+      [
+        {key:'a', text:'Tax DWL = $0; quota DWL > $0'},
+        {key:'b', text:'Quota DWL = $0; tax DWL > $0'},
+        {key:'c', text:'Both DWLs equal zero', correct:true},
+        {key:'d', text:'Both DWLs equal the area of the larger triangle'},
+      ],
+    ],
+  },
+};
+
+// Active question scenario — one of the three keys above. Custom uses the
+// closest matching preset based on slopes (and does not auto-update mid-task).
+let qScenario       = 'balanced';
+const selectedKey   = [null,null,null];
+let _submitted      = false;
+let _labDoneFired   = false;
+
+// ── DOM ──────────────────────────────────────────────────────────────────────
+const $taxCanvas   = document.getElementById('taxCanvas');
+const $quotaCanvas = document.getElementById('quotaCanvas');
+const $taxDesc     = document.getElementById('taxGraphDesc');
+const $quotaDesc   = document.getElementById('quotaGraphDesc');
+const $taxQstar    = document.getElementById('taxQstar');
+const $taxQa       = document.getElementById('taxQa');
+const $taxDWL      = document.getElementById('taxDWL');
+const $quotaQstar  = document.getElementById('quotaQstar');
+const $quotaQa     = document.getElementById('quotaQa');
+const $quotaDWL    = document.getElementById('quotaDWL');
+const $compare     = document.getElementById('compareStrip');
+const $banner      = document.getElementById('labDoneBanner');
+const $submitBtn   = document.getElementById('submitBtn');
+const $sldB        = document.getElementById('sldB');
+const $sldD        = document.getElementById('sldD');
+const $sldErr      = document.getElementById('sldErr');
+const $bVal        = document.getElementById('bVal');
+const $dVal        = document.getElementById('dVal');
+const $errVal      = document.getElementById('errVal');
+
+const PRESET_BTNS = {
+  steepMCP: document.getElementById('presetSteepMCP'),
+  steepMAC: document.getElementById('presetSteepMAC'),
+  balanced: document.getElementById('presetBalanced'),
+  custom:   document.getElementById('presetCustom'),
+};
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+function fmt(v, dp){
+  if(!isFinite(v)) return '—';
+  let s = v.toFixed(dp == null ? 2 : dp);
+  if(s.indexOf('.') !== -1) s = s.replace(/0+$/,'').replace(/\.$/,'');
+  return s;
+}
+function clamp(x, lo, hi){ return Math.max(lo, Math.min(hi, x)); }
+
+// Round to slider step to detect "is this a preset value?"
+function nearly(a, b, eps){ return Math.abs(a - b) <= (eps == null ? 0.06 : eps); }
+
+// ── Model ────────────────────────────────────────────────────────────────────
+//
+// True MAC:        MAC_true(Q)  = A_TRUE − b·Q
+// MCP:             MCP(Q)       = C_INT  + d·Q
+// True optimum:    Q* = (A_TRUE − C_INT) / (b + d)
+// Perceived MAC:   A_perc = A_TRUE · (1 + errPct/100)
+//                  MAC_perc(Q) = A_perc − b·Q   (parallel shift)
+// Regulator's Q^p: Q_perc = (A_perc − C_INT) / (b + d)
+//
+// Tax instrument:
+//   T* = MCP(Q_perc) = C_INT + d·Q_perc
+//   Firms set true MAC = T*  →  Q_tax = (A_TRUE − T*) / b
+//
+// Quota instrument:
+//   Q_cap = Q_perc  →  Q_quota = Q_cap
+//
+// DWL (for either Q_actual):
+//   At any Q, MCP(Q) − MAC_true(Q) = (b + d)·(Q − Q*)
+//   So DWL = ½·(b + d)·(Q_actual − Q*)²
+//
+function model(){
+  const A_perc = A_TRUE * (1 + errPct/100);
+  const Qstar  = (A_TRUE - C_INT) / (b + d);
+  const Pstar  = A_TRUE - b*Qstar;                 // = MCP(Q*) = optimal price
+  const Q_perc = (A_perc  - C_INT) / (b + d);
+  const T_star = C_INT + d*Q_perc;                 // tax level
+  const Q_tax  = (A_TRUE - T_star) / b;
+  const Q_quota = Q_perc;
+  const DWL_tax   = 0.5 * (b + d) * Math.pow(Q_tax   - Qstar, 2);
+  const DWL_quota = 0.5 * (b + d) * Math.pow(Q_quota - Qstar, 2);
+  return { A_perc, Qstar, Pstar, Q_perc, T_star,
+           Q_tax, Q_quota, DWL_tax, DWL_quota };
+}
+
+// ── Comparison strip ─────────────────────────────────────────────────────────
+function updateCompare(m){
+  let winnerHTML, reason;
+  const slopeReason = b > d
+    ? `MAC is steeper than MCP (|b|=${fmt(b,1)} > d=${fmt(d,1)}), so a price error translates into a small quantity error, and MCP rises gently anyway — favoring the <strong>tax</strong>.`
+    : (b < d
+      ? `MCP is steeper than MAC (d=${fmt(d,1)} > |b|=${fmt(b,1)}), so getting Q wrong is costly — but a flat MAC means a small price error causes a large quantity miss. The <strong>cap</strong> pins Q directly.`
+      : `MAC and MCP have equal slopes (|b|=${fmt(b,1)}=d), so both instruments produce identical DWL.`);
+
+  if(Math.abs(m.DWL_tax - m.DWL_quota) < 1e-6){
+    winnerHTML = `<span class="winner-tie">Tax and quota produce equal DWL ($${fmt(m.DWL_tax,2)}).</span>`;
+  } else if(m.DWL_tax < m.DWL_quota){
+    winnerHTML = `Under these slopes the <span class="winner-tax">tax</span> wins — DWL = $${fmt(m.DWL_tax,2)} vs. $${fmt(m.DWL_quota,2)} for the quota.`;
+  } else {
+    winnerHTML = `Under these slopes the <span class="winner-quota">quota</span> wins — DWL = $${fmt(m.DWL_quota,2)} vs. $${fmt(m.DWL_tax,2)} for the tax.`;
+  }
+
+  if(Math.abs(errPct) < 0.5){
+    reason = `<strong>With zero estimation error</strong>, both instruments hit Q* exactly and DWL is zero. Move the error slider to introduce uncertainty.`;
+  } else {
+    reason = slopeReason;
+  }
+  $compare.innerHTML = `${winnerHTML} ${reason}`;
+}
+
+// ── Numeric readouts ─────────────────────────────────────────────────────────
+function updateReadouts(m){
+  $taxQstar.textContent   = fmt(m.Qstar, 2);
+  $taxQa.textContent      = fmt(m.Q_tax, 2);
+  $taxDWL.textContent     = '$' + fmt(m.DWL_tax, 2);
+  $quotaQstar.textContent = fmt(m.Qstar, 2);
+  $quotaQa.textContent    = fmt(m.Q_quota, 2);
+  $quotaDWL.textContent   = '$' + fmt(m.DWL_quota, 2);
+}
+
+// ── Canvas helpers ───────────────────────────────────────────────────────────
+function setupCanvas(canvas){
+  const dpr  = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W    = Math.round(rect.width  * dpr);
+  const H    = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+function drawAxes(ctx, dpr, W, H){
+  const pad = { l:54*dpr, r:18*dpr, t:14*dpr, b:48*dpr };
+  const X0 = pad.l, X1 = W - pad.r, Y0 = pad.t, Y1 = H - pad.b;
+  const PW = X1 - X0, PH = Y1 - Y0;
+  const xC = x => X0 + (x / X_MAX) * PW;
+  const yC = y => Y1 - (y / Y_MAX) * PH;
+
+  // Axes
+  ctx.strokeStyle = 'rgba(0,0,0,0.28)';
+  ctx.lineWidth   = 1.5*dpr;
+  ctx.beginPath(); ctx.moveTo(X0,Y1); ctx.lineTo(X1,Y1); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0,Y1); ctx.stroke();
+  // Arrows
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.beginPath(); ctx.moveTo(X1,Y1); ctx.lineTo(X1-7*dpr,Y1-4*dpr);
+    ctx.lineTo(X1-7*dpr,Y1+4*dpr); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0-4*dpr,Y0+7*dpr);
+    ctx.lineTo(X0+4*dpr,Y0+7*dpr); ctx.closePath(); ctx.fill();
+
+  // Axis titles
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  ctx.font = `700 ${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('Pollution Q', (X0+X1)/2, Y1 + 28*dpr);
+  ctx.save();
+  ctx.translate(X0 - 38*dpr, (Y0+Y1)/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.textBaseline = 'top';
+  ctx.fillText('$ per unit', 0, 0);
+  ctx.restore();
+
+  // Y ticks
+  ctx.font = `600 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for(let t=1; t<=4; t++){
+    const v  = Math.round((Y_MAX/4)*t);
+    const cy = yC(v);
+    if(cy < Y0 || cy > Y1) continue;
+    ctx.strokeStyle = 'rgba(0,0,0,0.09)';
+    ctx.lineWidth   = 1*dpr;
+    ctx.beginPath(); ctx.moveTo(X0,cy); ctx.lineTo(X1,cy); ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,0.62)';
+    ctx.fillText(v, X0 - 6*dpr, cy);
+  }
+  // X ticks every 15
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for(let v=15; v<=X_MAX; v+=15){
+    const cx = xC(v);
+    ctx.strokeStyle = 'rgba(0,0,0,0.09)';
+    ctx.lineWidth   = 1*dpr;
+    ctx.beginPath(); ctx.moveTo(cx,Y0); ctx.lineTo(cx,Y1); ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,0.62)';
+    ctx.fillText(v, cx, Y1 + 5*dpr);
+  }
+
+  return { X0, X1, Y0, Y1, PW, PH, xC, yC, pad };
+}
+
+function drawLine(ctx, dpr, ax, fn, color, lw, dashed){
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(ax.X0, ax.Y0, ax.PW, ax.PH);
+  ctx.clip();
+  ctx.beginPath();
+  let go = false;
+  for(let k=0; k<=240; k++){
+    const Q = (k/240) * X_MAX;
+    const v = fn(Q);
+    if(!isFinite(v) || v < -Y_MAX*0.05 || v > Y_MAX*1.06){ go = false; continue; }
+    const cx = ax.xC(Q), cy = ax.yC(v);
+    if(!go){ ctx.moveTo(cx,cy); go = true; }
+    else    ctx.lineTo(cx,cy);
+  }
+  if(dashed) ctx.setLineDash([8*dpr, 5*dpr]);
+  ctx.strokeStyle = color;
+  ctx.lineWidth   = lw;
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function fillDWL(ctx, dpr, ax, Qa, Qstar, m){
+  // Triangle vertices in (Q, P) space:
+  //   (Q*, P*),  (Qa, MAC_true(Qa)),  (Qa, MCP(Qa))
+  // P* = MAC_true(Q*) = MCP(Q*)
+  const Pstar  = A_TRUE - b*Qstar;
+  const Pmac_a = A_TRUE - b*Qa;
+  const Pmcp_a = C_INT  + d*Qa;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(ax.X0, ax.Y0, ax.PW, ax.PH);
+  ctx.clip();
+  ctx.beginPath();
+  ctx.moveTo(ax.xC(Qstar), ax.yC(Pstar));
+  ctx.lineTo(ax.xC(Qa),    ax.yC(Pmac_a));
+  ctx.lineTo(ax.xC(Qa),    ax.yC(Pmcp_a));
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(180,35,24,0.32)';
+  ctx.fill();
+  ctx.strokeStyle = '#b42318';
+  ctx.lineWidth   = 1.4*dpr;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function dot(ctx, dpr, ax, Q, P, hex){
+  const cx = ax.xC(Q), cy = ax.yC(P);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(ax.X0, ax.Y0, ax.PW, ax.PH);
+  ctx.clip();
+  ctx.beginPath(); ctx.arc(cx, cy, 5.5*dpr, 0, Math.PI*2);
+  ctx.fillStyle = hex; ctx.fill();
+  ctx.lineWidth = 1.5*dpr;
+  ctx.strokeStyle = '#fff';
+  ctx.stroke();
+  ctx.restore();
+}
+
+function haloLabel(ctx, dpr, text, color, cx, cy){
+  ctx.font = `700 ${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth   = 3.5*dpr;
+  ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+  ctx.strokeText(text, cx, cy);
+  ctx.fillStyle = color;
+  ctx.fillText(text, cx, cy);
+}
+
+// ── Draw one canvas ──────────────────────────────────────────────────────────
+function drawCanvas(canvas, mode, m){
+  const setup = setupCanvas(canvas);
+  if(!setup) return;
+  const { ctx, dpr, W, H } = setup;
+  ctx.clearRect(0,0,W,H);
+
+  const ax = drawAxes(ctx, dpr, W, H);
+
+  // True MAC (solid accent)
+  drawLine(ctx, dpr, ax, Q => A_TRUE - b*Q, '#2f5d7c', 2.5*dpr, false);
+  // Perceived MAC (dashed, only if there's error)
+  if(Math.abs(errPct) >= 0.5){
+    drawLine(ctx, dpr, ax, Q => m.A_perc - b*Q, '#2f5d7c', 2*dpr, true);
+  }
+  // MCP (solid good)
+  drawLine(ctx, dpr, ax, Q => C_INT + d*Q, '#155c38', 2.5*dpr, false);
+
+  // Policy line + DWL triangle for this instrument
+  const Qa     = mode === 'tax' ? m.Q_tax : m.Q_quota;
+  const Qa_clip = clamp(Qa, 0, X_MAX);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(ax.X0, ax.Y0, ax.PW, ax.PH);
+  ctx.clip();
+  ctx.strokeStyle = '#b42318';
+  ctx.lineWidth   = 2.25*dpr;
+  ctx.setLineDash([]);
+  if(mode === 'tax'){
+    // Horizontal tax line across plot at price T*
+    const T = m.T_star;
+    if(T >= 0 && T <= Y_MAX){
+      ctx.beginPath();
+      ctx.moveTo(ax.X0, ax.yC(T));
+      ctx.lineTo(ax.X1, ax.yC(T));
+      ctx.stroke();
+    }
+  } else {
+    // Vertical quota line at Q_cap
+    ctx.beginPath();
+    ctx.moveTo(ax.xC(Qa_clip), ax.Y0);
+    ctx.lineTo(ax.xC(Qa_clip), ax.Y1);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // DWL triangle (only if there's a meaningful gap).
+  // Pass the unclipped Qa so the geometry is correct; ctx.clip() in fillDWL
+  // crops it to the visible plot area for us.
+  if(Math.abs(Qa - m.Qstar) > 1e-6){
+    fillDWL(ctx, dpr, ax, Qa, m.Qstar, m);
+  }
+
+  // Q* marker
+  dot(ctx, dpr, ax, m.Qstar, m.Pstar, '#1f2937');
+  // Actual emissions point on MCP (where damage is being inflicted)
+  if(Qa >= 0 && Qa <= X_MAX){
+    dot(ctx, dpr, ax, Qa, C_INT + d*Qa, '#b42318');
+  }
+
+  // Curve labels
+  // True MAC label near upper left
+  {
+    const Qlab = X_MAX * 0.18;
+    const vlab = A_TRUE - b*Qlab;
+    if(vlab > 0 && vlab < Y_MAX){
+      haloLabel(ctx, dpr, 'MAC (true)', '#2f5d7c',
+                ax.xC(Qlab), ax.yC(vlab) - 12*dpr);
+    }
+  }
+  // Perceived MAC
+  if(Math.abs(errPct) >= 0.5){
+    const Qlab = X_MAX * 0.45;
+    const vlab = m.A_perc - b*Qlab;
+    if(vlab > 0 && vlab < Y_MAX){
+      haloLabel(ctx, dpr,
+        errPct > 0 ? 'MAC (perceived, over)' : 'MAC (perceived, under)',
+        '#5a7f99',
+        ax.xC(Qlab), ax.yC(vlab) + 14*dpr);
+    }
+  }
+  // MCP label
+  {
+    const Qlab = X_MAX * 0.78;
+    const vlab = C_INT + d*Qlab;
+    if(vlab > 0 && vlab < Y_MAX){
+      haloLabel(ctx, dpr, 'MCP', '#155c38',
+                ax.xC(Qlab), ax.yC(vlab) - 12*dpr);
+    }
+  }
+  // Policy label
+  if(mode === 'tax'){
+    const T = m.T_star;
+    if(T >= 0 && T <= Y_MAX){
+      haloLabel(ctx, dpr, `Tax T* = $${fmt(T,1)}`, '#b42318',
+                ax.X0 + 70*dpr, ax.yC(T) - 9*dpr);
+    }
+  } else {
+    if(Qa_clip >= 0 && Qa_clip <= X_MAX){
+      haloLabel(ctx, dpr, `Cap = ${fmt(Qa_clip,1)}`, '#b42318',
+                ax.xC(Qa_clip) + 30*dpr, ax.Y0 + 14*dpr);
+    }
+  }
+
+  // Q*, Qa axis tags
+  ctx.font = `700 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillStyle = '#1f2937';
+  ctx.fillText('Q*', ax.xC(m.Qstar), ax.Y1 + 18*dpr);
+  if(Qa >= 0 && Qa <= X_MAX && Math.abs(Qa - m.Qstar) > X_MAX*0.04){
+    ctx.fillStyle = '#b42318';
+    ctx.fillText('Qₐ', ax.xC(Qa_clip), ax.Y1 + 18*dpr);
+  }
+}
+
+// ── Update accessible descriptions ───────────────────────────────────────────
+function updateDescriptions(m){
+  const winner =
+    Math.abs(m.DWL_tax - m.DWL_quota) < 1e-6 ? 'tied' :
+    m.DWL_tax < m.DWL_quota ? 'tax' : 'quota';
+  const slopeWord = b > d
+    ? 'MAC is steeper than MCP'
+    : (b < d ? 'MCP is steeper than MAC' : 'MAC and MCP slopes are equal');
+  const errWord = errPct === 0
+    ? 'The regulator\'s estimate of MAC is exactly correct, so both perceived and true MAC coincide.'
+    : `The regulator has ${errPct > 0 ? 'over' : 'under'}estimated the MAC intercept by ${Math.abs(errPct)} percent.`;
+
+  $taxDesc.textContent =
+    `Tax-instrument graph. Pollution quantity on the horizontal axis from 0 to ${X_MAX}, ` +
+    `price on the vertical axis from 0 to ${Y_MAX}. ` +
+    `The true marginal abatement cost MAC slopes downward from intercept ${A_TRUE} with slope ${fmt(-b,1)}. ` +
+    `The marginal cost of pollution MCP slopes upward from intercept ${C_INT} with slope ${fmt(d,1)}. ` +
+    `${errWord} ` +
+    `The Pigouvian tax is set at T* = $${fmt(m.T_star,2)}, shown as a horizontal red line. ` +
+    `Firms pollute where true MAC equals T*, giving actual emissions ${fmt(m.Q_tax,2)} compared to the true optimum Q* = ${fmt(m.Qstar,2)}. ` +
+    `The deadweight loss triangle has area $${fmt(m.DWL_tax,2)}. ` +
+    `${slopeWord}, so under these slopes the ${winner} instrument has lower DWL.`;
+
+  $quotaDesc.textContent =
+    `Quota-instrument graph. Same axes and curves as the tax graph. ` +
+    `The regulator sets a quantity cap equal to where perceived MAC equals MCP, ` +
+    `at Q_cap = ${fmt(m.Q_quota,2)}, shown as a vertical red line. ` +
+    `${errWord} ` +
+    `Actual emissions equal the cap. Compared to the true optimum Q* = ${fmt(m.Qstar,2)}, ` +
+    `the deadweight loss triangle has area $${fmt(m.DWL_quota,2)}. ` +
+    `${slopeWord}, so under these slopes the ${winner} instrument has lower DWL.`;
+}
+
+// ── Master redraw ────────────────────────────────────────────────────────────
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  const m = model();
+  updateReadouts(m);
+  updateCompare(m);
+  drawCanvas($taxCanvas,   'tax',   m);
+  drawCanvas($quotaCanvas, 'quota', m);
+  updateDescriptions(m);
+}
+
+// ── Preset application ──────────────────────────────────────────────────────
+const PRESETS = {
+  steepMCP: { b:0.5, d:2.0, label:'Steep MCP, flat MAC' },
+  steepMAC: { b:2.0, d:0.5, label:'Flat MCP, steep MAC' },
+  balanced: { b:1.2, d:1.2, label:'Balanced slopes'     },
+};
+
+function syncPresetButtons(){
+  Object.keys(PRESET_BTNS).forEach(k => {
+    const active = (k === preset);
+    PRESET_BTNS[k].classList.toggle('active', active);
+    PRESET_BTNS[k].setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+}
+
+function applyPreset(key){
+  if(!PRESETS[key]){
+    preset = 'custom';
+    syncPresetButtons();
+    return;
+  }
+  preset = key;
+  b = PRESETS[key].b;
+  d = PRESETS[key].d;
+  $sldB.value = b;
+  $sldD.value = d;
+  $bVal.textContent = fmt(b, 1);
+  $dVal.textContent = fmt(d, 1);
+  syncPresetButtons();
+  // If the student hasn't submitted yet, switch the question bank to match.
+  if(!_submitted && SCENARIO_QS[key] && key !== qScenario){
+    qScenario = key;
+    renderQuestions();
+  }
+  redraw();
+}
+
+function detectPreset(){
+  for(const k of ['steepMCP','steepMAC','balanced']){
+    if(nearly(b, PRESETS[k].b) && nearly(d, PRESETS[k].d)) return k;
+  }
+  return 'custom';
+}
+
+// ── Slider wiring ───────────────────────────────────────────────────────────
+function onSlopeChange(){
+  b = parseFloat($sldB.value);
+  d = parseFloat($sldD.value);
+  $bVal.textContent = fmt(b, 1);
+  $dVal.textContent = fmt(d, 1);
+  preset = detectPreset();
+  syncPresetButtons();
+  redraw();
+}
+function onErrChange(){
+  errPct = parseInt($sldErr.value, 10);
+  $errVal.textContent = (errPct > 0 ? '+' : '') + errPct + '%';
+  redraw();
+}
+
+$sldB.addEventListener('input', onSlopeChange);
+$sldD.addEventListener('input', onSlopeChange);
+$sldErr.addEventListener('input', onErrChange);
+PRESET_BTNS.steepMCP.addEventListener('click', () => applyPreset('steepMCP'));
+PRESET_BTNS.steepMAC.addEventListener('click', () => applyPreset('steepMAC'));
+PRESET_BTNS.balanced.addEventListener('click', () => applyPreset('balanced'));
+PRESET_BTNS.custom  .addEventListener('click', () => {
+  preset = 'custom';
+  syncPresetButtons();
+});
+
+// ── Questions ───────────────────────────────────────────────────────────────
+function activeBank(){ return SCENARIO_QS[qScenario]; }
+
+function renderQuestions(){
+  const bank = activeBank();
+  document.getElementById('qScenarioName').textContent = bank.label;
+  selectedKey.fill(null);
+
+  for(let i=0; i<Q_TOTAL; i++){
+    document.getElementById('q' + (i+1) + 'text').textContent = bank.prompts[i];
+    const container = document.querySelector('#q' + (i+1) + ' .qchoices');
+    container.innerHTML = '';
+    bank.choices[i].forEach(c => {
+      const id = `q${i+1}_${c.key}`;
+      const label = document.createElement('label');
+      label.className = 'qchoice';
+      label.setAttribute('for', id);
+      label.innerHTML =
+        `<input type="radio" id="${id}" name="q${i+1}" value="${c.key}"> ` +
+        `<span>${c.text}</span>`;
+      label.addEventListener('change', () => {
+        if(_submitted) return;
+        selectedKey[i] = c.key;
+      });
+      container.appendChild(label);
+    });
+
+    // Clear feedback
+    const fb = document.getElementById('fb' + (i+1));
+    fb.className = 'qfeedback hidden';
+    fb.textContent = '';
+  }
+}
+
+function submitAnswers(){
+  if(_submitted) return;
+  // Require all answered
+  for(let i=0; i<Q_TOTAL; i++){
+    if(selectedKey[i] == null){
+      alert('Please answer all three questions before submitting.');
+      return;
+    }
+  }
+  _submitted = true;
+  let score = 0;
+  const bank = activeBank();
+
+  for(let i=0; i<Q_TOTAL; i++){
+    const key       = selectedKey[i];
+    const choice    = bank.choices[i].find(c => c.key === key);
+    const correct   = !!(choice && choice.correct);
+    if(correct) score++;
+
+    // Mark choices visually + lock
+    const inputs = document.querySelectorAll(`#q${i+1} .qchoice`);
+    inputs.forEach((lbl, idx) => {
+      const c = bank.choices[i][idx];
+      lbl.classList.add('locked');
+      const radio = lbl.querySelector('input');
+      radio.disabled = true;
+      if(c.correct) lbl.classList.add('correct-answer');
+      else if(c.key === key) lbl.classList.add('wrong-answer');
+    });
+    const fb = document.getElementById('fb' + (i+1));
+    fb.classList.remove('hidden');
+    if(correct){
+      fb.className = 'qfeedback correct';
+      fb.textContent = '✓ Correct.';
+    } else {
+      const right = bank.choices[i].find(c => c.correct);
+      fb.className = 'qfeedback wrong';
+      fb.textContent = `Not quite. The correct answer was: "${right.text}".`;
+    }
+
+    // Record (single-phase: same for first & final)
+    const ansText = choice ? choice.text : '(none)';
+    if(window.Session && Session.recordQuestion){
+      Session.recordQuestion(LAB_ID, i, bank.prompts[i],
+                             ansText, correct,
+                             ansText, correct);
+    }
+  }
+
+  if(window.Session && Session.recordLabDone && !_labDoneFired){
+    Session.recordLabDone(LAB_ID, LAB_LABEL, score, score, Q_TOTAL);
+    _labDoneFired = true;
+  }
+
+  $banner.classList.remove('hidden');
+  $banner.textContent =
+    `Lab complete — ${score} of ${Q_TOTAL} correct. ` +
+    `Click "New Problem" to try a different scenario.`;
+  $submitBtn.disabled = true;
+  $submitBtn.textContent = '✓ Submitted';
+}
+
+$submitBtn.addEventListener('click', submitAnswers);
+
+// ── New Problem ─────────────────────────────────────────────────────────────
+const SESSION_KEY = 'econ002_session';
+function clearLabSessionData(){
+  try{
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    if(d && d.labs && d.labs[LAB_ID]){
+      delete d.labs[LAB_ID];
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(d));
+    }
+  }catch(e){ /* ignore */ }
+}
+
+function newProblem(){
+  // Pick a random scenario and a random error
+  const keys = ['steepMCP','steepMAC','balanced'];
+  const k    = keys[Math.floor(rngOrMath() * keys.length)];
+  const mags = [15, 20, 25, 30];
+  const m    = mags[Math.floor(rngOrMath() * mags.length)];
+  const sign = rngOrMath() < 0.5 ? -1 : 1;
+
+  // Apply scenario (sets b, d and slider positions + preset highlight)
+  applyPreset(k);
+  qScenario = k;
+
+  // Apply error
+  errPct = sign * m;
+  $sldErr.value = errPct;
+  $errVal.textContent = (errPct > 0 ? '+' : '') + errPct + '%';
+
+  // Reset submission state
+  _submitted    = false;
+  _labDoneFired = false;
+  $submitBtn.disabled = false;
+  $submitBtn.textContent = 'Submit Answers';
+  $banner.classList.add('hidden');
+  clearLabSessionData();
+
+  renderQuestions();
+  redraw();
+}
+
+function rngOrMath(){ return _rng ? _rng() : Math.random(); }
+
+document.getElementById('newProblemBtn').addEventListener('click', newProblem);
+
+// PDF button — visible only in discussion mode
+const _pdfBtn = document.getElementById('downloadPdfBtn');
+if(new URLSearchParams(location.search).get('disc') === '1'){
+  _pdfBtn.classList.remove('hidden');
+  _pdfBtn.addEventListener('click', () => {
+    if(window.DiscussionPDF && DiscussionPDF.generate){
+      DiscussionPDF.generate();
+    } else {
+      alert('PDF export is not available — try refreshing the page.');
+    }
+  });
+} else {
+  _pdfBtn.remove();
+}
+
+// ── Resize ──────────────────────────────────────────────────────────────────
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+// ── Init ────────────────────────────────────────────────────────────────────
+function generateParams(){
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+  // Defaults (balanced preset, zero error)
+  b = PRESETS.balanced.b;
+  d = PRESETS.balanced.d;
+  errPct = 0;
+  preset = 'balanced';
+}
+
+function init(){
+  generateParams();
+  $sldB.value = b;     $bVal.textContent   = fmt(b, 1);
+  $sldD.value = d;     $dVal.textContent   = fmt(d, 1);
+  $sldErr.value = errPct;
+  $errVal.textContent = (errPct > 0 ? '+' : '') + errPct + '%';
+  syncPresetButtons();
+  renderQuestions();
+  redraw();
+}
+
+function kickoff(){
+  const isDiscussion = new URLSearchParams(location.search).get('disc') === '1';
+  if(isDiscussion && window.DiscussionModal){
+    DiscussionModal.init({
+      weekLabel: WEEK_LABEL,
+      onReady: function(){ init(); }
+    });
+  } else {
+    init();
+  }
+}
+kickoff();
+
+})();
+</script>
+</body>
+</html>

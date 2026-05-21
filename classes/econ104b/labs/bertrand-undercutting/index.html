@@ -1,0 +1,1494 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Bertrand Price-Undercutting Race — ECON 104B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <!--
+    LABS-array entry for discussion week templates:
+    { id:   'bertrand-undercutting',
+      name: 'Bertrand Price-Undercutting Race',
+      icon: '🏁',
+      desc: 'Play a price-cutting game against a rival firm and watch prices spiral toward marginal cost — then see how capacity constraints halt the spiral.',
+      url:  '/classes/econ104b/labs/bertrand-undercutting/?disc=1' }
+  -->
+
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38; --bad:#b42318;
+      --firmA:#2f5d7c; /* same as accent — Firm A */
+      --firmB:#6d28d9; /* purple (7.1:1 on white) — Firm B */
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ──────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;
+      font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;
+      line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;
+      max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Layout */
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+
+    /* Scenario panel */
+    .scenario-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px;box-shadow:var(--shadow);
+      margin-bottom:18px;}
+    .scenario-title{font-family:var(--font-serif);font-size:1.125rem;
+      font-weight:700;margin:0 0 6px;color:var(--ink);}
+    .scenario-sub{font-size:0.875rem;color:var(--muted);
+      margin:0 0 14px;line-height:1.5;}
+    .scenario-grid{display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+      gap:10px;}
+    .param{background:rgba(246,242,234,.55);border:1px solid var(--line);
+      border-radius:12px;padding:10px 12px;}
+    .param-label{font-size:0.6875rem;text-transform:uppercase;
+      letter-spacing:.08em;color:var(--muted);margin-bottom:3px;}
+    .param-value{font-size:0.9375rem;font-weight:700;color:var(--ink);}
+
+    /* Mode block */
+    .mode-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px;box-shadow:var(--shadow);
+      margin-bottom:18px;}
+    .mode-tag{display:inline-block;font-size:0.625rem;font-weight:800;
+      text-transform:uppercase;letter-spacing:.08em;
+      background:var(--accent);color:#fff;padding:3px 10px;
+      border-radius:999px;margin-bottom:6px;}
+    .mode-tag.cap{background:var(--firmB);}
+    .mode-title{font-family:var(--font-serif);font-size:1.25rem;
+      font-weight:700;color:var(--ink);margin:0 0 6px;}
+    .mode-desc{font-size:0.875rem;color:var(--ink-2);
+      line-height:1.55;margin:0 0 14px;max-width:75ch;}
+
+    .game-grid{display:grid;grid-template-columns:1fr 1fr;
+      gap:14px;align-items:start;}
+    @media(max-width:880px){.game-grid{grid-template-columns:1fr;}}
+
+    /* State panel */
+    .state-panel{background:rgba(246,242,234,.45);
+      border:1px solid var(--line);border-radius:14px;padding:14px;}
+    .round-line{font-size:0.75rem;text-transform:uppercase;
+      letter-spacing:.08em;color:var(--muted);margin-bottom:8px;font-weight:700;}
+    .firm-row{display:flex;align-items:center;justify-content:space-between;
+      padding:8px 10px;border-radius:10px;border:1px solid var(--line);
+      background:var(--panel);margin-bottom:6px;font-size:0.875rem;}
+    .firm-row.lower{border-color:var(--accent);
+      background:rgba(47,93,124,.06);}
+    .firm-row.lower .firm-label::before{content:'▶ ';color:var(--accent);
+      font-weight:900;}
+    .firm-label{font-weight:700;color:var(--ink);}
+    .firm-price{font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;}
+    .firm-price.A{color:var(--firmA);}
+    .firm-price.B{color:var(--firmB);}
+    .firm-meta{font-size:0.75rem;color:var(--muted);margin-top:2px;}
+
+    .stat-row{display:flex;justify-content:space-between;
+      padding:6px 10px;font-size:0.8125rem;color:var(--ink-2);}
+    .stat-row + .stat-row{border-top:1px solid var(--line);}
+    .stat-row strong{color:var(--ink);font-variant-numeric:tabular-nums;}
+
+    /* Status / event line — aria-live */
+    .status-line{margin-top:10px;padding:8px 11px;border-radius:10px;
+      background:rgba(47,93,124,.06);border:1px solid rgba(47,93,124,.18);
+      font-size:0.8125rem;color:var(--ink-2);line-height:1.45;}
+
+    .end-banner{margin-top:10px;padding:11px 14px;border-radius:12px;
+      background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.25);
+      color:var(--good);font-weight:700;font-size:0.875rem;line-height:1.45;}
+    .end-banner.cap{background:rgba(109,40,217,.08);
+      border-color:rgba(109,40,217,.3);color:var(--firmB);}
+
+    /* Action panel */
+    .action-panel{margin-top:12px;}
+    .action-label{font-size:0.6875rem;text-transform:uppercase;
+      letter-spacing:.08em;color:var(--muted);
+      margin-bottom:6px;font-weight:700;}
+    .inc-group{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+    .inc-btn{padding:6px 10px;border-radius:8px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.75rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .inc-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .inc-btn.active{background:var(--accent);color:#fff;
+      border-color:var(--accent);}
+    .inc-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    .action-row{display:flex;flex-wrap:wrap;gap:8px;}
+    .act-btn{padding:9px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;
+      flex:1;min-width:130px;}
+    .act-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .act-btn.primary{background:var(--accent);color:#fff;
+      border-color:var(--accent);}
+    .act-btn.primary:hover:not(:disabled){background:#264d68;}
+    .act-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    .small-btn{padding:6px 10px;border-radius:8px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.75rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .small-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .small-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .util-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+
+    /* Capacity slider area */
+    .cap-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+      margin-bottom:12px;padding:10px 12px;
+      background:rgba(109,40,217,.04);
+      border:1px solid rgba(109,40,217,.18);border-radius:12px;}
+    .cap-row label{font-size:0.8125rem;font-weight:700;color:var(--ink-2);}
+    .cap-row input[type=range]{flex:1;min-width:140px;}
+    .cap-value{font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;
+      min-width:64px;text-align:right;}
+
+    /* Graph card */
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;padding:14px;box-shadow:var(--shadow);}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .canvas-wrap{position:relative;width:100%;aspect-ratio:5/4;
+      border-radius:10px;overflow:hidden;
+      background:rgba(246,242,234,.45);border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+    .legend-row{display:flex;align-items:center;gap:8px;
+      font-size:0.75rem;color:var(--ink-2);margin-top:4px;}
+    .legend-swatch{width:22px;height:3px;border-radius:2px;flex-shrink:0;}
+
+    /* Reflection card */
+    .reflect-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px;box-shadow:var(--shadow);
+      margin-bottom:18px;}
+    .reflect-title{font-family:var(--font-serif);font-size:1.125rem;
+      font-weight:700;color:var(--ink);margin:0 0 6px;}
+    .reflect-sub{font-size:0.875rem;color:var(--muted);
+      margin:0 0 14px;line-height:1.5;}
+    .q-block{padding:12px 0;border-top:1px solid var(--line);}
+    .q-block:first-of-type{border-top:0;}
+    .q-prompt{font-size:0.9375rem;font-weight:700;color:var(--ink);
+      margin:0 0 8px;line-height:1.4;}
+    .q-options{display:flex;flex-direction:column;gap:6px;}
+    .opt-btn{padding:8px 12px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.875rem;font-weight:600;
+      color:var(--ink-2);cursor:pointer;text-align:left;
+      transition:all .12s;}
+    .opt-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .opt-btn.selected{background:var(--accent);color:#fff;
+      border-color:var(--accent);}
+    .opt-btn.correct{background:rgba(21,92,56,.08);
+      border-color:var(--good);color:var(--good);}
+    .opt-btn.wrong{background:rgba(180,35,24,.06);
+      border-color:var(--bad);color:var(--bad);}
+    .opt-btn:disabled{cursor:default;}
+
+    .q-feedback{margin-top:8px;padding:7px 11px;border-radius:10px;
+      font-size:0.8125rem;font-weight:600;line-height:1.4;}
+    .q-feedback.correct{background:rgba(21,92,56,.08);
+      border:1px solid rgba(21,92,56,.2);color:var(--good);}
+    .q-feedback.wrong{background:rgba(180,35,24,.06);
+      border:1px solid rgba(180,35,24,.2);color:var(--bad);}
+
+    .lab-done-banner{margin-top:14px;padding:12px 16px;
+      border-radius:12px;background:rgba(21,92,56,.08);
+      border:1px solid rgba(21,92,56,.25);color:var(--good);
+      font-weight:700;font-size:0.875rem;line-height:1.45;}
+
+    /* Buttons */
+    .btn{display:inline-flex;align-items:center;gap:8px;
+      padding:10px 16px;border:none;border-radius:12px;
+      font-family:var(--font-sans);font-size:0.875rem;
+      font-weight:700;cursor:pointer;transition:background .12s;}
+    .btn.primary{background:var(--accent);color:#fff;}
+    .btn.primary:hover:not(:disabled){background:#264d68;}
+    .btn.primary:disabled{opacity:.4;cursor:not-allowed;}
+    .btn.neutral{background:#8c7f72;color:#fff;}
+    .btn.neutral:hover:not(:disabled){background:#6f655a;}
+
+    .util-bar{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;}
+
+    .hidden{display:none !important;}
+
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+  </style>
+</head>
+<body>
+
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ104b/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104B — Oligopoly</div>
+      <h1>Bertrand Price-Undercutting Race</h1>
+      <p class="sub">
+        Two firms sell identical products. Play a price-cutting game against a rival
+        and watch prices spiral toward marginal cost — then add a capacity constraint
+        and see why the spiral halts above cost.
+      </p>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>You play as Firm A. Your rival, Firm B, plays automatically: after every move you make, Firm B reacts by undercutting your price whenever undercutting is profitable for it. The two firms sell identical products, so customers always buy from whichever store has the lower price.</p>
+          <p>The lab has two modes:</p>
+          <ol>
+            <li><strong>Mode 1 — Race to the Bottom.</strong> Neither firm has a capacity limit, so whichever firm posts the lower price serves the entire market. Click <em>Undercut</em>, <em>Match</em>, or <em>Stay</em> and watch the prices fall.</li>
+            <li><strong>Mode 2 — Capacity Limits Save the Day.</strong> Each firm can sell at most K units. Undercutting now only steals K customers; the rival keeps the rest at its higher price. See how this weakens the incentive to cut prices.</li>
+          </ol>
+          <p>After playing both modes, answer the three reflection questions and click <strong>Submit Reflection</strong> to record your work.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- ───────── Scenario ───────── -->
+  <section class="scenario-card" aria-labelledby="scenarioTitle">
+    <h2 class="scenario-title" id="scenarioTitle">The Scenario</h2>
+    <p class="scenario-sub" id="scenarioSub">Loading scenario…</p>
+    <div class="scenario-grid">
+      <div class="param">
+        <div class="param-label">Firm A (you)</div>
+        <div class="param-value" id="paramFirmA">—</div>
+      </div>
+      <div class="param">
+        <div class="param-label">Firm B (rival)</div>
+        <div class="param-value" id="paramFirmB">—</div>
+      </div>
+      <div class="param">
+        <div class="param-label">Marginal cost (c)</div>
+        <div class="param-value" id="paramMC">—</div>
+      </div>
+      <div class="param">
+        <div class="param-label">Market quantity (Q)</div>
+        <div class="param-value" id="paramQ">—</div>
+      </div>
+      <div class="param">
+        <div class="param-label">Reservation price</div>
+        <div class="param-value" id="paramRes">—</div>
+      </div>
+      <div class="param">
+        <div class="param-label">Starting price (collusion)</div>
+        <div class="param-value" id="paramStart">—</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── Mode 1 ───────── -->
+  <section class="mode-card" aria-labelledby="mode1Title">
+    <span class="mode-tag">Mode 1</span>
+    <h2 class="mode-title" id="mode1Title">Race to the Bottom — No Capacity Limits</h2>
+    <p class="mode-desc">
+      Both firms can serve the entire market. Whoever posts the lower price captures
+      all <span id="mode1Q">Q</span> customers; the other sells zero. If both post
+      the same price, they split the market evenly. Click <em>Undercut</em> to
+      lower your price by the chosen increment.
+    </p>
+
+    <div class="game-grid">
+      <!-- LEFT: state + actions -->
+      <div>
+        <div class="state-panel" aria-labelledby="m1State">
+          <div class="round-line" id="m1State">Round <span id="m1Round">1</span></div>
+          <div class="firm-row" id="m1RowA">
+            <span class="firm-label"><span id="m1AName">Firm A</span> (you)</span>
+            <span class="firm-price A" id="m1PriceA">—</span>
+          </div>
+          <div class="firm-row" id="m1RowB">
+            <span class="firm-label"><span id="m1BName">Firm B</span></span>
+            <span class="firm-price B" id="m1PriceB">—</span>
+          </div>
+
+          <div class="stat-row"><span>This round's profit, A</span><strong id="m1ProfA">$0</strong></div>
+          <div class="stat-row"><span>This round's profit, B</span><strong id="m1ProfB">$0</strong></div>
+          <div class="stat-row"><span>Cumulative profit, A</span><strong id="m1CumA">$0</strong></div>
+          <div class="stat-row"><span>Cumulative profit, B</span><strong id="m1CumB">$0</strong></div>
+          <div class="stat-row"><span>Gap above MC</span><strong id="m1Gap">$0</strong></div>
+
+          <div class="status-line" id="m1Status" aria-live="polite" aria-atomic="true">
+            Both firms start at the collusive price.
+          </div>
+
+          <div class="end-banner hidden" id="m1End" role="status" aria-live="polite" aria-atomic="true"></div>
+        </div>
+
+        <div class="action-panel">
+          <div class="action-label" id="m1IncLabel">Undercut increment</div>
+          <div class="inc-group" role="group" aria-labelledby="m1IncLabel" id="m1IncGroup">
+            <button type="button" class="inc-btn active" data-inc="0.01" aria-pressed="true" aria-label="Undercut by 1 cent">1¢</button>
+            <button type="button" class="inc-btn" data-inc="1"    aria-pressed="false" aria-label="Undercut by 1 dollar">$1</button>
+            <button type="button" class="inc-btn" data-inc="5"    aria-pressed="false" aria-label="Undercut by 5 dollars">$5</button>
+            <button type="button" class="inc-btn" data-inc="10"   aria-pressed="false" aria-label="Undercut by 10 dollars">$10</button>
+          </div>
+
+          <div class="action-row" role="group" aria-label="Choose your action for Firm A">
+            <button type="button" class="act-btn primary" id="m1UndercutBtn"
+                    aria-label="Undercut Firm B's current price">
+              Undercut B by <span id="m1UcAmt">1¢</span>
+            </button>
+            <button type="button" class="act-btn" id="m1MatchBtn"
+                    aria-label="Match Firm B's current price">
+              Match B
+            </button>
+            <button type="button" class="act-btn" id="m1StayBtn"
+                    aria-label="Keep Firm A at the same price">
+              Stay
+            </button>
+          </div>
+
+          <div class="util-row">
+            <button type="button" class="small-btn" id="m1AutoBtn">Auto-play to equilibrium</button>
+            <button type="button" class="small-btn" id="m1ResetBtn">Reset Mode 1</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: canvas -->
+      <div class="graph-card">
+        <div class="graph-title" id="m1GraphTitle">Price path — Mode 1</div>
+        <div class="canvas-wrap">
+          <canvas id="m1Canvas"
+                  role="img"
+                  aria-labelledby="m1GraphTitle"
+                  aria-describedby="m1GraphDesc"></canvas>
+        </div>
+        <div class="legend-row" aria-hidden="true">
+          <div class="legend-swatch" style="background:#2f5d7c;"></div>
+          <span>Firm A price</span>
+          <div class="legend-swatch" style="background:#6d28d9;margin-left:10px;"></div>
+          <span>Firm B price</span>
+          <div class="legend-swatch" style="background:#b42318;margin-left:10px;
+            border-top:2px dashed #b42318;background:transparent;height:0;"></div>
+          <span style="margin-left:-4px;">MC (marginal cost)</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────── Mode 2 ───────── -->
+  <section class="mode-card" aria-labelledby="mode2Title">
+    <span class="mode-tag cap">Mode 2</span>
+    <h2 class="mode-title" id="mode2Title">Capacity Limits Save the Day</h2>
+    <p class="mode-desc">
+      Now each firm can sell at most <strong>K</strong> units. The lower-price firm
+      sells as many customers as its capacity allows; the higher-price firm picks up
+      the leftover demand at its own (higher) price. Adjust capacity below, then
+      replay the price-cutting game and see what happens.
+    </p>
+
+    <div class="cap-row">
+      <label for="capSlider">Capacity per firm, K:</label>
+      <input type="range" id="capSlider" min="0" max="100" step="1" value="60"
+             aria-describedby="capSliderHint">
+      <span class="cap-value" id="capValue">—</span>
+      <span class="sr-only" id="capSliderHint">Slide right for larger capacity. When K equals Q, capacity is non-binding.</span>
+    </div>
+
+    <div class="game-grid">
+      <div>
+        <div class="state-panel" aria-labelledby="m2State">
+          <div class="round-line" id="m2State">Round <span id="m2Round">1</span></div>
+          <div class="firm-row" id="m2RowA">
+            <span class="firm-label"><span id="m2AName">Firm A</span> (you)</span>
+            <span class="firm-price A" id="m2PriceA">—</span>
+          </div>
+          <div class="firm-row" id="m2RowB">
+            <span class="firm-label"><span id="m2BName">Firm B</span></span>
+            <span class="firm-price B" id="m2PriceB">—</span>
+          </div>
+
+          <div class="stat-row"><span>Sales this round, A / B</span><strong id="m2Sales">—</strong></div>
+          <div class="stat-row"><span>This round's profit, A</span><strong id="m2ProfA">$0</strong></div>
+          <div class="stat-row"><span>This round's profit, B</span><strong id="m2ProfB">$0</strong></div>
+          <div class="stat-row"><span>Cumulative profit, A</span><strong id="m2CumA">$0</strong></div>
+          <div class="stat-row"><span>Cumulative profit, B</span><strong id="m2CumB">$0</strong></div>
+
+          <div class="status-line" id="m2Status" aria-live="polite" aria-atomic="true">
+            Both firms start at the collusive price.
+          </div>
+
+          <div class="end-banner cap hidden" id="m2End" role="status" aria-live="polite" aria-atomic="true"></div>
+        </div>
+
+        <div class="action-panel">
+          <div class="action-label" id="m2IncLabel">Undercut increment</div>
+          <div class="inc-group" role="group" aria-labelledby="m2IncLabel" id="m2IncGroup">
+            <button type="button" class="inc-btn active" data-inc="0.01" aria-pressed="true" aria-label="Undercut by 1 cent">1¢</button>
+            <button type="button" class="inc-btn" data-inc="1"    aria-pressed="false" aria-label="Undercut by 1 dollar">$1</button>
+            <button type="button" class="inc-btn" data-inc="5"    aria-pressed="false" aria-label="Undercut by 5 dollars">$5</button>
+            <button type="button" class="inc-btn" data-inc="10"   aria-pressed="false" aria-label="Undercut by 10 dollars">$10</button>
+          </div>
+
+          <div class="action-row" role="group" aria-label="Choose your action for Firm A in Mode 2">
+            <button type="button" class="act-btn primary" id="m2UndercutBtn"
+                    aria-label="Undercut Firm B's current price">
+              Undercut B by <span id="m2UcAmt">1¢</span>
+            </button>
+            <button type="button" class="act-btn" id="m2MatchBtn"
+                    aria-label="Match Firm B's current price">
+              Match B
+            </button>
+            <button type="button" class="act-btn" id="m2StayBtn"
+                    aria-label="Keep Firm A at the same price">
+              Stay
+            </button>
+          </div>
+
+          <div class="util-row">
+            <button type="button" class="small-btn" id="m2AutoBtn">Auto-play to equilibrium</button>
+            <button type="button" class="small-btn" id="m2ResetBtn">Reset Mode 2</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="graph-card">
+        <div class="graph-title" id="m2GraphTitle">Price path — Mode 2 (with capacity)</div>
+        <div class="canvas-wrap">
+          <canvas id="m2Canvas"
+                  role="img"
+                  aria-labelledby="m2GraphTitle"
+                  aria-describedby="m2GraphDesc"></canvas>
+        </div>
+        <div class="legend-row" aria-hidden="true">
+          <div class="legend-swatch" style="background:#2f5d7c;"></div>
+          <span>Firm A price</span>
+          <div class="legend-swatch" style="background:#6d28d9;margin-left:10px;"></div>
+          <span>Firm B price</span>
+          <div class="legend-swatch" style="background:#b42318;margin-left:10px;
+            background:transparent;height:0;border-top:2px dashed #b42318;"></div>
+          <span style="margin-left:-4px;">MC (marginal cost)</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Canvas live-region descriptions (WCAG 1.1.1 + 4.1.3) -->
+  <section class="sr-only" id="graphsDesc"
+           aria-live="polite" aria-atomic="true">
+    <p id="m1GraphDesc">Mode 1 price path. Both firms begin at the collusive price.</p>
+    <p id="m2GraphDesc">Mode 2 price path. Both firms begin at the collusive price.</p>
+  </section>
+
+  <!-- ───────── Reflection ───────── -->
+  <section class="reflect-card" aria-labelledby="reflectTitle">
+    <h2 class="reflect-title" id="reflectTitle">Reflection Questions</h2>
+    <p class="reflect-sub">Answer all three to record your work.</p>
+
+    <div class="q-block" id="qBlock0">
+      <p class="q-prompt" id="q0Prompt">
+        1. In the no-capacity Bertrand model with identical goods and identical
+        marginal cost, what is the equilibrium market price?
+      </p>
+      <div class="q-options" role="group" aria-labelledby="q0Prompt" id="q0Opts"></div>
+      <div class="q-feedback hidden" id="q0Fb" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="q-block" id="qBlock1">
+      <p class="q-prompt" id="q1Prompt">
+        2. Why does Firm B keep undercutting Firm A's price in the no-capacity model?
+      </p>
+      <div class="q-options" role="group" aria-labelledby="q1Prompt" id="q1Opts"></div>
+      <div class="q-feedback hidden" id="q1Fb" role="status" aria-live="polite"></div>
+    </div>
+
+    <div class="q-block" id="qBlock2">
+      <p class="q-prompt" id="q2Prompt">
+        3. True or False: Adding a capacity constraint to the Bertrand model can
+        sustain prices above marginal cost in equilibrium.
+      </p>
+      <div class="q-options" role="group" aria-labelledby="q2Prompt" id="q2Opts"></div>
+      <div class="q-feedback hidden" id="q2Fb" role="status" aria-live="polite"></div>
+    </div>
+
+    <div id="labDoneBanner" class="lab-done-banner hidden"
+         role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <div class="util-bar">
+      <button type="button" class="btn primary" id="submitReflectBtn" disabled>Submit Reflection</button>
+      <button type="button" class="btn neutral" id="newScenarioBtn">New Scenario</button>
+      <button type="button" class="btn neutral" id="downloadPdfBtn">Download Summary PDF</button>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 104B — Intermediate Microeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+// ─── Constants ─────────────────────────────────────────────────────────────
+const LAB_ID     = 'bertrand-undercutting';
+const LAB_LABEL  = 'Bertrand Price-Undercutting Race';
+const WEEK_LABEL = 'Oligopoly';
+
+// ─── State ─────────────────────────────────────────────────────────────────
+let _rng = null;
+let _fs  = 1;
+let _scenarioCounter = 0;     // bumps on New Scenario → re-seeds beyond LAB_ID
+let _labDoneFired = false;
+
+let params = {};
+const games = {1:null, 2:null};
+
+const NUM_QS = 3;
+const qFirstScore = [false,false,false];
+const qFinalScore = [false,false,false];
+const qChoiceIdx  = [-1,-1,-1];
+const qFinalText  = ['—','—','—'];
+
+const Q_DATA = [
+  {
+    prompt: 'In the no-capacity Bertrand model with identical goods and identical MC, what is the equilibrium market price?',
+    opts: [
+      'The monopoly price',
+      'Halfway between the monopoly price and marginal cost',
+      'Equal to marginal cost',
+      'Above marginal cost by a small fixed markup'
+    ],
+    correct: 2
+  },
+  {
+    prompt: "Why does Firm B keep undercutting Firm A's price in the no-capacity model?",
+    opts: [
+      'To stick to the collusive agreement',
+      'To capture the entire market and earn higher profit',
+      'To be fair to consumers',
+      'To raise total industry profit'
+    ],
+    correct: 1
+  },
+  {
+    prompt: 'True or False: Adding a capacity constraint to the Bertrand model can sustain prices above marginal cost in equilibrium.',
+    opts: ['True','False'],
+    correct: 0
+  }
+];
+
+// ─── Utilities ─────────────────────────────────────────────────────────────
+function rng(){ return _rng ? _rng() : Math.random(); }
+function ri(lo,hi){ return lo + Math.floor(rng()*(hi-lo+1)); }
+function pick(arr){ return arr[Math.floor(rng()*arr.length)]; }
+function round2(v){ return Math.round(v*100)/100; }
+function fmtMoney(v){
+  const sign = v < 0 ? '-' : '';
+  const abs  = Math.abs(v);
+  // Show cents only if needed
+  const s = abs >= 100 ? abs.toFixed(0) : abs.toFixed(2).replace(/\.?0+$/,'');
+  return sign + '$' + s.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+function fmtPrice(v){
+  return '$' + v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+function fmtIncShort(v){
+  if(v < 1) return Math.round(v*100) + '¢';
+  return '$' + v;
+}
+
+// ─── Params / scenario generation ──────────────────────────────────────────
+function generateParams(){
+  if(window.Session && Session.rngForLab){
+    _rng = Session.rngForLab(LAB_ID + ':' + _scenarioCounter);
+  }
+  const FIRM_PAIRS = [
+    {a:'Target',  b:'Walmart'},
+    {a:'Best Buy',b:'Amazon'},
+    {a:'Costco',  b:"Sam's Club"},
+    {a:'Kroger',  b:'Safeway'},
+    {a:'Home Depot',b:"Lowe's"}
+  ];
+  const PRODUCTS = [
+    'Nintendo Switch','PlayStation 5','Xbox Series X','iPad','MacBook Air'
+  ];
+  const pair    = pick(FIRM_PAIRS);
+  const product = pick(PRODUCTS);
+  const c       = ri(200, 400);              // MC per unit
+  const Q       = ri(80, 140);               // total market quantity
+  const pStart  = c + ri(20, 40);            // collusive / starting price
+  const Kdefault = Math.round(Q * (0.55 + rng()*0.15));   // K ∈ [0.55Q, 0.70Q]
+
+  params = {
+    firmA: pair.a, firmB: pair.b, product,
+    c, Q, pStart,
+    reservation: pStart,
+    Kmin: Math.round(Q * 0.50),
+    Kmax: Q,
+    Kdefault
+  };
+
+  initGame(1);
+  initGame(2);
+}
+
+function initGame(mode){
+  const g = {
+    inc: 0.01,
+    capacityOn: (mode === 2),
+    K: (mode === 2) ? params.Kdefault : params.Q,
+    round: 1,
+    pA: params.pStart,
+    pB: params.pStart,
+    cumProfA: 0,
+    cumProfB: 0,
+    history: [],
+    ended: false,
+    endReason: '',
+    statusMsg: 'Round 1: Both firms post the collusive starting price of ' + fmtPrice(params.pStart) + '. They split the market evenly.',
+    lastEvent: ''   // what happened this round
+  };
+  // Record round 1 (initial collusion)
+  const r = computeSales(g, g.pA, g.pB);
+  g.cumProfA += r.profA;
+  g.cumProfB += r.profB;
+  g.history.push({round:1, pA:g.pA, pB:g.pB, ...r});
+  games[mode] = g;
+}
+
+// ─── Profit / sales ────────────────────────────────────────────────────────
+function computeSales(g, pA, pB){
+  const c = params.c, Q = params.Q, K = g.K, cap = g.capacityOn;
+  const reservation = params.reservation;
+  let salesA = 0, salesB = 0, lowFirm = 'tie';
+
+  // Reservation: if both prices above reservation, nobody buys
+  const aboveResA = pA > reservation;
+  const aboveResB = pB > reservation;
+
+  if(aboveResA && aboveResB){
+    salesA = 0; salesB = 0; lowFirm = 'none';
+  } else if(pA < pB){
+    lowFirm = 'A';
+    salesA = aboveResA ? 0 : Math.min(Q, cap ? K : Q);
+    const resid = Math.max(0, Q - salesA);
+    salesB = (cap && !aboveResB) ? Math.min(resid, K) : 0;
+  } else if(pB < pA){
+    lowFirm = 'B';
+    salesB = aboveResB ? 0 : Math.min(Q, cap ? K : Q);
+    const resid = Math.max(0, Q - salesB);
+    salesA = (cap && !aboveResA) ? Math.min(resid, K) : 0;
+  } else {
+    lowFirm = 'tie';
+    const halfEach = Q / 2;
+    salesA = aboveResA ? 0 : (cap ? Math.min(halfEach, K) : halfEach);
+    salesB = aboveResB ? 0 : (cap ? Math.min(halfEach, K) : halfEach);
+  }
+
+  const profA = salesA * (pA - c);
+  const profB = salesB * (pB - c);
+  return {salesA, salesB, profA, profB, lowFirm};
+}
+
+// AI Firm B response, given new pA. Returns {price, choice}
+function aiResponseB(g, newpA){
+  const c = params.c;
+  const undercutP = round2(Math.max(c, newpA - g.inc));
+
+  if(!g.capacityOn){
+    return {price: undercutP, choice: 'undercut'};
+  }
+
+  // Capacity mode: compare undercut vs stay high
+  // Stay-high candidate: max of {previous pB, reservation, newpA + inc}
+  const stayP = round2(Math.max(g.pB, params.reservation, newpA + g.inc));
+
+  const ucProfit   = computeSales(g, newpA, undercutP).profB;
+  const stayProfit = computeSales(g, newpA, stayP).profB;
+
+  if(stayProfit > ucProfit){
+    return {price: stayP, choice: 'stay'};
+  }
+  return {price: undercutP, choice: 'undercut'};
+}
+
+// What student "auto" best response is (used by auto-play): undercut if profitable
+function studentAutoBR(g){
+  const undercutP = round2(Math.max(params.c, g.pB - g.inc));
+  const stayP     = g.pA;
+  if(g.capacityOn){
+    const ucProf   = computeSales(g, undercutP, g.pB).profA;
+    const stayProf = computeSales(g, stayP, g.pB).profA;
+    return (ucProf > stayProf) ? undercutP : stayP;
+  }
+  // No-cap: undercut while pB > c (profitable to capture market)
+  return (g.pB > params.c + 1e-6) ? undercutP : stayP;
+}
+
+// ─── Apply student action ──────────────────────────────────────────────────
+function applyAction(mode, action){
+  const g = games[mode];
+  if(g.ended) return;
+
+  let newpA;
+  if(action === 'undercut'){
+    newpA = round2(Math.max(params.c, g.pB - g.inc));
+    if(newpA === g.pA){
+      // Already at MC — can't go lower
+      g.lastEvent = 'You cannot undercut below marginal cost. Price stays at ' + fmtPrice(g.pA) + '.';
+      updateUI(mode);
+      return;
+    }
+  } else if(action === 'match'){
+    newpA = round2(g.pB);
+  } else if(action === 'stay'){
+    newpA = g.pA;
+  }
+
+  const resp = aiResponseB(g, newpA);
+  advanceRound(g, mode, newpA, resp.price, action, resp.choice);
+  updateUI(mode);
+}
+
+function advanceRound(g, mode, newpA, newpB, action, aiChoice){
+  g.round += 1;
+  const prevA = g.pA, prevB = g.pB;
+  g.pA = newpA;
+  g.pB = newpB;
+  const r = computeSales(g, newpA, newpB);
+  g.cumProfA += r.profA;
+  g.cumProfB += r.profB;
+  g.history.push({round:g.round, pA:newpA, pB:newpB, ...r});
+
+  // Compose status / event narrative
+  const aName = params.firmA, bName = params.firmB;
+  const parts = [];
+  if(action === 'undercut'){
+    parts.push(aName + ' (you) undercut to ' + fmtPrice(newpA) + '.');
+  } else if(action === 'match'){
+    parts.push(aName + ' (you) matched ' + bName + ' at ' + fmtPrice(newpA) + '.');
+  } else if(action === 'stay'){
+    parts.push(aName + ' (you) stayed at ' + fmtPrice(newpA) + '.');
+  } else {
+    parts.push(aName + ' (you) moved to ' + fmtPrice(newpA) + '.');
+  }
+  if(newpB < prevB && newpB > params.c - 0.001){
+    parts.push(bName + ' undercut to ' + fmtPrice(newpB) + '.');
+  } else if(newpB === prevB){
+    parts.push(bName + ' held its price at ' + fmtPrice(newpB) + '.');
+  } else if(newpB > prevB){
+    parts.push(bName + ' raised its price to ' + fmtPrice(newpB) + '.');
+  } else {
+    parts.push(bName + ' set its price to ' + fmtPrice(newpB) + '.');
+  }
+  g.lastEvent = parts.join(' ');
+
+  // End conditions
+  if(!g.capacityOn){
+    if(g.pA <= params.c + 1e-6 && g.pB <= params.c + 1e-6){
+      g.ended = true;
+      g.endReason = 'Price has fallen to marginal cost. Both firms earn zero economic profit. This is the Bertrand Nash equilibrium with identical goods.';
+    }
+  } else {
+    // Capacity mode: rest point when AI chose 'stay high' instead of undercutting —
+    // this is the signal that capacity has halted the spiral above MC.
+    if(aiChoice === 'stay' && g.round > 1){
+      g.ended = true;
+      g.endReason = params.firmB + ' chose NOT to undercut — instead it kept its price at ' + fmtPrice(g.pB) + ' to serve the residual demand of ' + Math.round(r.salesB) + ' units. With capacity constraints, undercutting only steals as many customers as the rival has spare capacity to serve, so staying high is more profitable. The price-cutting spiral halts above marginal cost: prices are ' + fmtMoney(Math.min(g.pA, g.pB) - params.c) + ' or more above MC = ' + fmtPrice(params.c) + '.';
+    }
+    // Also stop if prices hit MC anyway
+    if(g.pA <= params.c + 1e-6 && g.pB <= params.c + 1e-6){
+      g.ended = true;
+      g.endReason = 'Even with capacity constraints, the spiral pushed prices all the way down to marginal cost. Try a tighter capacity (smaller K) to halt the spiral above MC.';
+    }
+  }
+}
+
+// ─── Auto-play ─────────────────────────────────────────────────────────────
+function autoPlay(mode){
+  const g = games[mode];
+  if(g.ended) return;
+  let safety = 50000;
+  while(!g.ended && safety-- > 0){
+    const newpA = studentAutoBR(g);
+    const resp  = aiResponseB(g, newpA);
+    const stable = (newpA === g.pA && resp.price === g.pB);
+    if(stable){
+      g.ended = true;
+      g.endReason = g.capacityOn
+        ? 'With capacity constraints, undercutting no longer pays — the spiral has halted at prices of ' + fmtPrice(Math.min(g.pA, g.pB)) + ', which is ' + fmtMoney(Math.min(g.pA, g.pB) - params.c) + ' above MC.'
+        : 'Price has fallen to marginal cost. Both firms earn zero economic profit. This is the Bertrand Nash equilibrium with identical goods.';
+      break;
+    }
+    advanceRound(g, mode, newpA, resp.price, 'auto', resp.choice);
+  }
+  updateUI(mode);
+}
+
+// ─── Reset ─────────────────────────────────────────────────────────────────
+function resetMode(mode){
+  if(mode === 2){
+    // Preserve current K (slider)
+    const curK = games[2] ? games[2].K : params.Kdefault;
+    initGame(2);
+    games[2].K = curK;
+  } else {
+    initGame(mode);
+  }
+  updateUI(mode);
+}
+
+// ─── DOM refs ──────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+const refs = {
+  scenarioSub: $('scenarioSub'),
+  paramFirmA: $('paramFirmA'),
+  paramFirmB: $('paramFirmB'),
+  paramMC:    $('paramMC'),
+  paramQ:     $('paramQ'),
+  paramRes:   $('paramRes'),
+  paramStart: $('paramStart'),
+  mode1Q:     $('mode1Q'),
+  // Mode 1
+  m1Round:   $('m1Round'),
+  m1AName:   $('m1AName'),
+  m1BName:   $('m1BName'),
+  m1PriceA:  $('m1PriceA'),
+  m1PriceB:  $('m1PriceB'),
+  m1RowA:    $('m1RowA'),
+  m1RowB:    $('m1RowB'),
+  m1ProfA:   $('m1ProfA'),
+  m1ProfB:   $('m1ProfB'),
+  m1CumA:    $('m1CumA'),
+  m1CumB:    $('m1CumB'),
+  m1Gap:     $('m1Gap'),
+  m1Status:  $('m1Status'),
+  m1End:     $('m1End'),
+  m1Canvas:  $('m1Canvas'),
+  m1Desc:    $('m1GraphDesc'),
+  m1IncGroup:$('m1IncGroup'),
+  m1UcAmt:   $('m1UcAmt'),
+  m1UndercutBtn:$('m1UndercutBtn'),
+  m1MatchBtn:$('m1MatchBtn'),
+  m1StayBtn: $('m1StayBtn'),
+  m1AutoBtn: $('m1AutoBtn'),
+  m1ResetBtn:$('m1ResetBtn'),
+  // Mode 2
+  capSlider:$('capSlider'),
+  capValue: $('capValue'),
+  m2Round:  $('m2Round'),
+  m2AName:  $('m2AName'),
+  m2BName:  $('m2BName'),
+  m2PriceA: $('m2PriceA'),
+  m2PriceB: $('m2PriceB'),
+  m2RowA:   $('m2RowA'),
+  m2RowB:   $('m2RowB'),
+  m2Sales:  $('m2Sales'),
+  m2ProfA:  $('m2ProfA'),
+  m2ProfB:  $('m2ProfB'),
+  m2CumA:   $('m2CumA'),
+  m2CumB:   $('m2CumB'),
+  m2Status: $('m2Status'),
+  m2End:    $('m2End'),
+  m2Canvas: $('m2Canvas'),
+  m2Desc:   $('m2GraphDesc'),
+  m2IncGroup:$('m2IncGroup'),
+  m2UcAmt:  $('m2UcAmt'),
+  m2UndercutBtn:$('m2UndercutBtn'),
+  m2MatchBtn:$('m2MatchBtn'),
+  m2StayBtn:$('m2StayBtn'),
+  m2AutoBtn:$('m2AutoBtn'),
+  m2ResetBtn:$('m2ResetBtn'),
+  // Reflection
+  q0Opts: $('q0Opts'),
+  q1Opts: $('q1Opts'),
+  q2Opts: $('q2Opts'),
+  q0Fb:   $('q0Fb'),
+  q1Fb:   $('q1Fb'),
+  q2Fb:   $('q2Fb'),
+  submitReflectBtn: $('submitReflectBtn'),
+  labDoneBanner:    $('labDoneBanner'),
+  newScenarioBtn:   $('newScenarioBtn'),
+  downloadPdfBtn:   $('downloadPdfBtn')
+};
+
+// ─── Render scenario ───────────────────────────────────────────────────────
+function renderScenario(){
+  refs.scenarioSub.textContent =
+    params.firmA + ' and ' + params.firmB +
+    ' both sell the latest ' + params.product +
+    '. The two stores are identical to consumers, who always buy from whichever store posts the lower price. Both stores have the same marginal cost.';
+  refs.paramFirmA.textContent  = params.firmA;
+  refs.paramFirmB.textContent  = params.firmB;
+  refs.paramMC.textContent     = fmtPrice(params.c);
+  refs.paramQ.textContent      = params.Q + ' units';
+  refs.paramRes.textContent    = fmtPrice(params.reservation);
+  refs.paramStart.textContent  = fmtPrice(params.pStart);
+  refs.mode1Q.textContent      = params.Q;
+
+  refs.m1AName.textContent = params.firmA;
+  refs.m1BName.textContent = params.firmB;
+  refs.m2AName.textContent = params.firmA;
+  refs.m2BName.textContent = params.firmB;
+
+  // Cap slider bounds
+  refs.capSlider.min = String(params.Kmin);
+  refs.capSlider.max = String(params.Kmax);
+  refs.capSlider.value = String(params.Kdefault);
+  refs.capValue.textContent = params.Kdefault + ' units';
+}
+
+// ─── Render state panel + canvas ───────────────────────────────────────────
+function updateUI(mode){
+  if(mode){ renderState(mode); drawCanvas(mode); }
+  else { renderState(1); renderState(2); drawCanvas(1); drawCanvas(2); }
+  updateCanvasDesc(1);
+  updateCanvasDesc(2);
+}
+
+function renderState(mode){
+  const g = games[mode];
+  if(!g) return;
+  const r = g.history[g.history.length - 1];
+  const m1 = (mode === 1);
+
+  const $Round = m1 ? refs.m1Round : refs.m2Round;
+  const $PA    = m1 ? refs.m1PriceA: refs.m2PriceA;
+  const $PB    = m1 ? refs.m1PriceB: refs.m2PriceB;
+  const $RowA  = m1 ? refs.m1RowA  : refs.m2RowA;
+  const $RowB  = m1 ? refs.m1RowB  : refs.m2RowB;
+  const $ProfA = m1 ? refs.m1ProfA : refs.m2ProfA;
+  const $ProfB = m1 ? refs.m1ProfB : refs.m2ProfB;
+  const $CumA  = m1 ? refs.m1CumA  : refs.m2CumA;
+  const $CumB  = m1 ? refs.m1CumB  : refs.m2CumB;
+  const $Status= m1 ? refs.m1Status: refs.m2Status;
+  const $End   = m1 ? refs.m1End   : refs.m2End;
+  const $UcAmt = m1 ? refs.m1UcAmt : refs.m2UcAmt;
+  const $UcBtn = m1 ? refs.m1UndercutBtn : refs.m2UndercutBtn;
+  const $MatchBtn = m1 ? refs.m1MatchBtn : refs.m2MatchBtn;
+  const $StayBtn  = m1 ? refs.m1StayBtn  : refs.m2StayBtn;
+  const $AutoBtn  = m1 ? refs.m1AutoBtn  : refs.m2AutoBtn;
+
+  $Round.textContent = g.round;
+  $PA.textContent = fmtPrice(g.pA);
+  $PB.textContent = fmtPrice(g.pB);
+
+  // ▶ marker / "lower" class on whichever firm is lower
+  $RowA.classList.toggle('lower', g.pA < g.pB);
+  $RowB.classList.toggle('lower', g.pB < g.pA);
+
+  $ProfA.textContent = fmtMoney(r.profA);
+  $ProfB.textContent = fmtMoney(r.profB);
+  $CumA.textContent  = fmtMoney(g.cumProfA);
+  $CumB.textContent  = fmtMoney(g.cumProfB);
+
+  if(m1){
+    refs.m1Gap.textContent = fmtMoney(Math.min(g.pA, g.pB) - params.c);
+  } else {
+    refs.m2Sales.textContent = Math.round(r.salesA) + ' / ' + Math.round(r.salesB) + ' units';
+  }
+
+  // Status line
+  let msg = g.lastEvent || g.statusMsg;
+  if(g.lowFirm !== 'tie' && g.history.length > 1){
+    const r2 = r;
+    if(r2.lowFirm === 'A'){
+      msg += ' ' + params.firmA + ' has the lower price and ' +
+             (g.capacityOn
+               ? 'sells ' + Math.round(r2.salesA) + ' units; ' + params.firmB + ' picks up ' + Math.round(r2.salesB) + ' residual units at the higher price.'
+               : 'captures the entire market.');
+    } else if(r2.lowFirm === 'B'){
+      msg += ' ' + params.firmB + ' has the lower price and ' +
+             (g.capacityOn
+               ? 'sells ' + Math.round(r2.salesB) + ' units; ' + params.firmA + ' picks up ' + Math.round(r2.salesA) + ' residual units at the higher price.'
+               : 'captures the entire market.');
+    } else if(r2.lowFirm === 'tie' && g.history.length > 1){
+      msg += ' Both firms post the same price and split the market.';
+    }
+  }
+  $Status.textContent = msg;
+
+  // End banner
+  if(g.ended){
+    $End.classList.remove('hidden');
+    $End.textContent = g.endReason;
+    $UcBtn.disabled = true;
+    $MatchBtn.disabled = true;
+    $StayBtn.disabled = true;
+    $AutoBtn.disabled = true;
+  } else {
+    $End.classList.add('hidden');
+    $UcBtn.disabled = false;
+    $MatchBtn.disabled = false;
+    $StayBtn.disabled = false;
+    $AutoBtn.disabled = false;
+  }
+
+  // Increment label on undercut button
+  $UcAmt.textContent = fmtIncShort(g.inc);
+}
+
+// ─── Canvas ────────────────────────────────────────────────────────────────
+function setupCanvas(canvas){
+  const wrap = canvas.parentElement;
+  const dpr  = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  const W = Math.round(rect.width * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+const PAD = { l:56, r:14, t:14, b:42 };
+
+function tickStep(mx){
+  if(mx<=10) return 1; if(mx<=20) return 2; if(mx<=50) return 5;
+  if(mx<=100) return 10; if(mx<=200) return 20; if(mx<=500) return 50;
+  if(mx<=1000) return 100; if(mx<=2000) return 200;
+  if(mx<=5000) return 500; return 1000;
+}
+
+function drawCanvas(mode){
+  const g = games[mode]; if(!g) return;
+  const canvas = (mode === 1 ? refs.m1Canvas : refs.m2Canvas);
+  const s = setupCanvas(canvas); if(!s) return;
+  const {ctx, dpr, W, H} = s;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const p = { l:PAD.l*dpr, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+
+  const c = params.c, pStart = params.pStart;
+  const xMax = Math.max(5, g.history[g.history.length-1].round);
+  const yMin = c - 2;
+  const yMax = pStart + 2;
+
+  const xC = r => p.l + ((r - 1) / Math.max(1, xMax - 1)) * PW;
+  const yC = v => H - p.b - ((v - yMin) / (yMax - yMin)) * PH;
+
+  // Plot background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(p.l, p.t, PW, PH);
+
+  // Grid + axes
+  ctx.lineWidth = 1 * dpr;
+  ctx.strokeStyle = '#e7dfd2';
+  // Y gridlines
+  const yStep = tickStep(yMax - yMin);
+  ctx.font = `600 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = '#596878';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  const yStart = Math.ceil(yMin / yStep) * yStep;
+  for(let y = yStart; y <= yMax; y += yStep){
+    const yp = yC(y);
+    ctx.beginPath();
+    ctx.moveTo(p.l, yp); ctx.lineTo(W - p.r, yp);
+    ctx.stroke();
+    ctx.fillText('$' + Math.round(y), p.l - 6*dpr, yp);
+  }
+  // X gridlines
+  const xStep = tickStep(xMax);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for(let x = 1; x <= xMax; x += xStep){
+    const xp = xC(x);
+    ctx.beginPath();
+    ctx.moveTo(xp, p.t); ctx.lineTo(xp, H - p.b);
+    ctx.stroke();
+    ctx.fillText(String(x), xp, H - p.b + 4*dpr);
+  }
+  // Always show last round if not on tick
+  if(xMax > 1 && ((xMax - 1) % xStep !== 0)){
+    const xp = xC(xMax);
+    ctx.beginPath();
+    ctx.moveTo(xp, p.t); ctx.lineTo(xp, H - p.b);
+    ctx.strokeStyle = '#d9cfbf';
+    ctx.stroke();
+  }
+
+  // Axis labels
+  ctx.fillStyle = '#374151';
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('Round', p.l + PW/2, H - 8*dpr);
+  ctx.save();
+  ctx.translate(14*dpr, p.t + PH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText('Price ($)', 0, 0);
+  ctx.restore();
+
+  // Plot clipping
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(p.l, p.t, PW, PH);
+  ctx.clip();
+
+  // MC reference line (dashed red)
+  ctx.strokeStyle = '#b42318';
+  ctx.lineWidth = 1.5 * dpr;
+  ctx.setLineDash([6*dpr, 4*dpr]);
+  ctx.beginPath();
+  ctx.moveTo(p.l, yC(c));
+  ctx.lineTo(W - p.r, yC(c));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // MC label inline
+  ctx.fillStyle = '#b42318';
+  ctx.font = `700 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+  ctx.fillText('MC = ' + fmtPrice(c), p.l + 6*dpr, yC(c) - 3*dpr);
+
+  // Firm A line
+  ctx.strokeStyle = '#2f5d7c';
+  ctx.lineWidth = 2.2 * dpr;
+  ctx.beginPath();
+  g.history.forEach((h,i) => {
+    const x = xC(h.round), y = yC(h.pA);
+    if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Firm B line
+  ctx.strokeStyle = '#6d28d9';
+  ctx.lineWidth = 2.2 * dpr;
+  ctx.beginPath();
+  g.history.forEach((h,i) => {
+    const x = xC(h.round), y = yC(h.pB);
+    if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Dots — only if not too many
+  if(g.history.length <= 60){
+    g.history.forEach(h => {
+      const xA = xC(h.round), yA = yC(h.pA);
+      const xB = xC(h.round), yB = yC(h.pB);
+      ctx.fillStyle = '#2f5d7c';
+      ctx.beginPath(); ctx.arc(xA, yA, 3*dpr, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#6d28d9';
+      ctx.beginPath(); ctx.arc(xB, yB, 3*dpr, 0, Math.PI*2); ctx.fill();
+    });
+  }
+
+  ctx.restore();
+}
+
+function updateCanvasDesc(mode){
+  const g = games[mode]; if(!g) return;
+  const el = mode === 1 ? refs.m1Desc : refs.m2Desc;
+  const r  = g.history[g.history.length - 1];
+  const gap = Math.min(g.pA, g.pB) - params.c;
+  let txt = (mode === 1 ? 'Mode 1 price path. ' : 'Mode 2 price path (capacity K = ' + g.K + ' per firm). ');
+  txt += 'Round ' + g.round + ': ' + params.firmA + ' is charging ' + fmtPrice(g.pA) +
+         ', ' + params.firmB + ' is charging ' + fmtPrice(g.pB) + '. ';
+  if(gap <= 0.01){
+    txt += 'Prices have reached marginal cost. ';
+  } else {
+    txt += 'Both prices remain ' + fmtMoney(gap) + ' or more above the marginal cost of ' + fmtPrice(params.c) + '. ';
+  }
+  if(g.ended){
+    txt += g.endReason;
+  } else if(mode === 1){
+    txt += 'The undercutting spiral continues.';
+  } else {
+    txt += 'With capacity constraints, undercutting only steals as many customers as the rival firm has spare capacity to serve.';
+  }
+  el.textContent = txt;
+}
+
+// ─── Reflection questions ──────────────────────────────────────────────────
+function renderQuestions(){
+  [0,1,2].forEach(i => {
+    const Q = Q_DATA[i];
+    const container = $('q' + i + 'Opts');
+    container.innerHTML = '';
+    Q.opts.forEach((opt,idx) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'opt-btn';
+      b.textContent = opt;
+      b.setAttribute('aria-pressed', 'false');
+      b.addEventListener('click', () => chooseAnswer(i, idx));
+      container.appendChild(b);
+    });
+  });
+}
+
+function chooseAnswer(qIdx, optIdx){
+  const Q = Q_DATA[qIdx];
+  const container = $('q' + qIdx + 'Opts');
+  const buttons = container.querySelectorAll('.opt-btn');
+  // First attempt → record firstScore
+  const isFirstAttempt = (qChoiceIdx[qIdx] === -1);
+  qChoiceIdx[qIdx] = optIdx;
+  const correct = (optIdx === Q.correct);
+
+  buttons.forEach((b,i) => {
+    b.classList.remove('selected','correct','wrong');
+    b.setAttribute('aria-pressed','false');
+  });
+  const chosen = buttons[optIdx];
+  chosen.setAttribute('aria-pressed','true');
+  if(correct){
+    chosen.classList.add('correct');
+  } else {
+    chosen.classList.add('wrong');
+    // Highlight the correct one (in green) as feedback
+    buttons[Q.correct].classList.add('correct');
+  }
+
+  // Feedback message
+  const fbEl = $('q' + qIdx + 'Fb');
+  fbEl.classList.remove('hidden','correct','wrong');
+  fbEl.classList.add(correct ? 'correct' : 'wrong');
+  fbEl.textContent = correct
+    ? 'Correct. ' + explain(qIdx)
+    : "Not quite. The correct answer is “" + Q.opts[Q.correct] + ".” " + explain(qIdx);
+
+  if(isFirstAttempt){
+    qFirstScore[qIdx] = correct;
+  }
+  qFinalScore[qIdx] = correct;
+  qFinalText[qIdx]  = Q.opts[optIdx];
+
+  // Record question to Session. Single-phase: firstAnswer locks on first attempt;
+  // finalAnswer updates each time the student changes their pick.
+  if(!chooseAnswer._firstText) chooseAnswer._firstText = ['—','—','—'];
+  if(isFirstAttempt) chooseAnswer._firstText[qIdx] = Q.opts[optIdx];
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(
+      LAB_ID, qIdx, Q.prompt,
+      chooseAnswer._firstText[qIdx], qFirstScore[qIdx],
+      Q.opts[optIdx], correct
+    );
+  }
+
+  // Enable submit when all answered
+  const allAnswered = qChoiceIdx.every(v => v !== -1);
+  refs.submitReflectBtn.disabled = !allAnswered;
+}
+
+function explain(qIdx){
+  if(qIdx === 0)
+    return "Two firms selling an identical good with the same MC compete prices all the way down to marginal cost, leaving zero economic profit.";
+  if(qIdx === 1)
+    return "A 1¢ undercut shifts every buyer to whoever is cheaper. With identical goods, even a tiny price cut doubles your customers, which is why each firm keeps cutting.";
+  return "When K < Q, undercutting only steals K customers — the rival keeps the residual demand at its higher price. That makes staying high more profitable than triggering another round of cuts.";
+}
+
+function submitReflection(){
+  const total = NUM_QS;
+  const finalScore = qFinalScore.reduce((s,v) => s + (v?1:0), 0);
+  const firstScore = qFirstScore.reduce((s,v) => s + (v?1:0), 0);
+
+  if(window.Session && Session.recordLabDone && !_labDoneFired){
+    Session.recordLabDone(LAB_ID, LAB_LABEL, firstScore, finalScore, total);
+    _labDoneFired = true;
+  }
+
+  refs.labDoneBanner.classList.remove('hidden');
+  refs.labDoneBanner.textContent =
+    'Reflection submitted. Final score: ' + finalScore + ' of ' + total +
+    '. First-attempt score: ' + firstScore + ' of ' + total + '.';
+  refs.submitReflectBtn.disabled = true;
+}
+
+// ─── Wire up events ────────────────────────────────────────────────────────
+function wire(){
+  // Increment buttons
+  [['m1IncGroup',1], ['m2IncGroup',2]].forEach(([id, mode]) => {
+    const grp = $(id);
+    grp.addEventListener('click', e => {
+      const btn = e.target.closest('.inc-btn'); if(!btn) return;
+      const v = parseFloat(btn.dataset.inc);
+      games[mode].inc = v;
+      grp.querySelectorAll('.inc-btn').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-pressed','false');
+      });
+      btn.classList.add('active');
+      btn.setAttribute('aria-pressed','true');
+      updateUI(mode);
+    });
+  });
+
+  // Mode 1 actions
+  refs.m1UndercutBtn.addEventListener('click', () => applyAction(1, 'undercut'));
+  refs.m1MatchBtn   .addEventListener('click', () => applyAction(1, 'match'));
+  refs.m1StayBtn    .addEventListener('click', () => applyAction(1, 'stay'));
+  refs.m1AutoBtn    .addEventListener('click', () => autoPlay(1));
+  refs.m1ResetBtn   .addEventListener('click', () => resetMode(1));
+
+  // Mode 2 actions
+  refs.m2UndercutBtn.addEventListener('click', () => applyAction(2, 'undercut'));
+  refs.m2MatchBtn   .addEventListener('click', () => applyAction(2, 'match'));
+  refs.m2StayBtn    .addEventListener('click', () => applyAction(2, 'stay'));
+  refs.m2AutoBtn    .addEventListener('click', () => autoPlay(2));
+  refs.m2ResetBtn   .addEventListener('click', () => resetMode(2));
+
+  // Capacity slider
+  refs.capSlider.addEventListener('input', e => {
+    const K = parseInt(e.target.value, 10);
+    games[2].K = K;
+    refs.capValue.textContent = K + ' units';
+  });
+  refs.capSlider.addEventListener('change', () => {
+    // Reset Mode 2 when capacity changes (game restarts at collusive price)
+    resetMode(2);
+  });
+
+  // New scenario / PDF
+  refs.newScenarioBtn.addEventListener('click', () => {
+    _scenarioCounter += 1;
+    _labDoneFired = false;
+    refs.labDoneBanner.classList.add('hidden');
+    // Reset reflection state
+    qChoiceIdx[0] = qChoiceIdx[1] = qChoiceIdx[2] = -1;
+    qFirstScore[0] = qFirstScore[1] = qFirstScore[2] = false;
+    qFinalScore[0] = qFinalScore[1] = qFinalScore[2] = false;
+    qFinalText[0]  = qFinalText[1]  = qFinalText[2]  = '—';
+    chooseAnswer._firstText = ['—','—','—'];
+    renderQuestions();
+    ['q0Fb','q1Fb','q2Fb'].forEach(id => $(id).classList.add('hidden'));
+    refs.submitReflectBtn.disabled = true;
+    boot();
+  });
+
+  refs.downloadPdfBtn.addEventListener('click', () => {
+    if(window.DiscussionPDF && DiscussionPDF.generate) DiscussionPDF.generate();
+  });
+
+  refs.submitReflectBtn.addEventListener('click', submitReflection);
+
+  // Resize handler (debounced)
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => updateUI(), 80);
+  });
+}
+
+// ─── Boot ──────────────────────────────────────────────────────────────────
+function boot(){
+  generateParams();
+  renderScenario();
+  updateUI();
+}
+
+function redrawAll(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  drawCanvas(1);
+  drawCanvas(2);
+  updateCanvasDesc(1);
+  updateCanvasDesc(2);
+}
+
+// Hook _fs recompute into every UI update
+const _origUpdateUI = updateUI;
+updateUI = function(mode){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  _origUpdateUI(mode);
+};
+
+// ─── Initialize ────────────────────────────────────────────────────────────
+renderQuestions();
+wire();
+
+if(window.DiscussionModal && DiscussionModal.init){
+  DiscussionModal.init({
+    weekLabel: WEEK_LABEL,
+    onReady: function(){ boot(); }
+  });
+} else {
+  boot();
+}
+
+})();
+</script>
+</body>
+</html>

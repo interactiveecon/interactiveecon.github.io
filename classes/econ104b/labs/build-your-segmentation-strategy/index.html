@@ -1,0 +1,2342 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Build Your Own Segmentation Strategy — ECON 104B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;  --bad:#b42318;
+      --warn:#8c4800;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* Skip link (WCAG 2.4.1) */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* Visually hidden (WCAG 1.1.1) */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* Focus (WCAG 2.4.7) */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* Reduced motion */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Layout */
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+
+    /* Progress bar */
+    .progress-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;padding:10px 16px;box-shadow:var(--shadow);
+      display:flex;justify-content:space-between;align-items:center;
+      gap:14px;margin-bottom:14px;flex-wrap:wrap;}
+    .progress-card .label{font-size:0.6875rem;font-weight:800;
+      letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+    .progress-card .value{font-family:var(--font-serif);font-weight:700;
+      font-size:1.0625rem;color:var(--ink);}
+
+    /* Scenario picker tiles */
+    .picker-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+    @media(max-width:880px){.picker-grid{grid-template-columns:1fr;}}
+    .scenario-tile{background:var(--panel);border:1.5px solid var(--line);
+      border-radius:16px;padding:16px;box-shadow:var(--shadow);
+      display:flex;flex-direction:column;gap:10px;
+      cursor:pointer;text-align:left;font-family:var(--font-sans);
+      transition:border-color .12s, background .12s;}
+    .scenario-tile:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.04);}
+    .scenario-tile[aria-pressed="true"]{border-color:var(--accent);
+      background:rgba(47,93,124,.08);}
+    .scenario-tile h3{font-family:var(--font-serif);font-size:1.0625rem;
+      font-weight:700;color:var(--ink);margin:0;}
+    .scenario-tile .tag{display:inline-block;font-size:0.625rem;
+      font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--accent);}
+    .scenario-tile .desc{font-size:0.8125rem;color:var(--ink-2);
+      line-height:1.5;}
+    .scenario-tile .status{font-size:0.6875rem;font-weight:700;
+      color:var(--good);margin-top:auto;}
+    .scenario-tile .status.todo{color:var(--muted);}
+
+    /* Card */
+    .card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px 20px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .card h2{font-family:var(--font-serif);font-size:1.25rem;
+      font-weight:700;color:var(--ink);margin:0 0 8px;}
+    .card .lead{font-size:0.875rem;color:var(--ink-2);line-height:1.55;
+      margin:0 0 14px;max-width:75ch;}
+
+    /* Customer-type cards */
+    .types-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+      margin-top:10px;}
+    @media(max-width:780px){.types-grid{grid-template-columns:1fr;}}
+    .type-card{background:rgba(246,242,234,.55);border:1px solid var(--line);
+      border-radius:12px;padding:10px 12px;}
+    .type-card .name{font-size:0.875rem;font-weight:800;color:var(--ink);
+      margin-bottom:4px;}
+    .type-card .traits{font-size:0.75rem;color:var(--ink-2);line-height:1.5;}
+
+    /* Attribute selector */
+    .attr-list{display:flex;flex-direction:column;gap:8px;margin-top:8px;}
+    .attr-row{display:flex;align-items:flex-start;gap:10px;
+      padding:10px 12px;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);border-radius:12px;cursor:pointer;}
+    .attr-row:hover{background:rgba(47,93,124,.06);}
+    .attr-row input[type="checkbox"]{margin-top:3px;width:16px;height:16px;
+      accent-color:var(--accent);flex-shrink:0;cursor:pointer;}
+    .attr-row .attr-text{font-size:0.875rem;color:var(--ink-2);line-height:1.5;}
+    .attr-row .attr-text strong{color:var(--ink);}
+
+    /* Price input panel for each selected attribute */
+    .seg-block{margin-top:10px;background:rgba(246,242,234,.5);
+      border:1px solid var(--line);border-radius:12px;
+      padding:12px 14px;}
+    .seg-block .block-title{font-size:0.6875rem;font-weight:800;
+      letter-spacing:.08em;text-transform:uppercase;color:var(--accent);
+      margin-bottom:8px;}
+    .seg-block .block-hint{font-size:0.75rem;color:var(--muted);
+      line-height:1.5;margin-bottom:10px;}
+    .price-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+    @media(max-width:600px){.price-grid{grid-template-columns:1fr;}}
+    .price-input{display:flex;flex-direction:column;gap:4px;}
+    .price-input label{font-size:0.75rem;font-weight:700;color:var(--ink-2);}
+    .price-input .row{display:flex;align-items:center;gap:6px;}
+    .price-input .row span{font-size:0.875rem;color:var(--ink-2);}
+    .price-input input[type="number"]{
+      width:100px;padding:6px 8px;border:1.5px solid #8c7f72;
+      border-radius:8px;font-family:var(--font-sans);font-size:0.875rem;
+      font-weight:700;color:var(--ink);background:#fff;outline:none;
+      transition:border-color .12s;}
+    .price-input input[type="number"]:focus{border-color:var(--accent);}
+
+    /* Buttons */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+    .option-btn.active{background:rgba(47,93,124,.1);
+      border-color:var(--accent);color:var(--accent);}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover:not(:disabled){background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .secondary-btn{padding:10px 18px;border-radius:12px;
+      border:1.5px solid #8c7f72;background:transparent;
+      color:var(--accent);font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:all .12s;}
+    .secondary-btn:hover{background:rgba(47,93,124,.06);
+      border-color:var(--accent);}
+
+    .button-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+
+    /* Results */
+    .result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+      margin-top:10px;}
+    @media(max-width:780px){.result-grid{grid-template-columns:1fr;}}
+    .stat{background:rgba(246,242,234,.55);border:1px solid var(--line);
+      border-radius:12px;padding:10px 12px;}
+    .stat .stat-label{font-size:0.6875rem;font-weight:700;
+      text-transform:uppercase;letter-spacing:.07em;color:var(--muted);
+      margin-bottom:4px;}
+    .stat .stat-value{font-family:var(--font-serif);font-size:1.25rem;
+      font-weight:700;color:var(--ink);}
+    .stat.good{background:rgba(21,92,56,.07);border-color:rgba(21,92,56,.25);}
+    .stat.good .stat-value{color:var(--good);}
+    .stat.bad{background:rgba(180,35,24,.06);border-color:rgba(180,35,24,.25);}
+    .stat.bad .stat-value{color:var(--bad);}
+
+    .classification-list{display:flex;flex-direction:column;gap:8px;
+      margin-top:10px;}
+    .class-row{display:flex;align-items:flex-start;gap:10px;
+      padding:10px 12px;border-radius:10px;font-size:0.8125rem;
+      line-height:1.5;border:1px solid var(--line);
+      background:rgba(246,242,234,.45);}
+    .class-row .badge{flex-shrink:0;font-size:0.625rem;font-weight:800;
+      letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;
+      border-radius:999px;white-space:nowrap;}
+    .badge.direct{background:rgba(21,92,56,.12);color:var(--good);
+      border:1px solid rgba(21,92,56,.3);}
+    .badge.indirect{background:rgba(47,93,124,.12);color:var(--accent);
+      border:1px solid rgba(47,93,124,.3);}
+    .badge.broken{background:rgba(180,35,24,.1);color:var(--bad);
+      border:1px solid rgba(180,35,24,.3);}
+    .badge.warn{background:rgba(140,72,0,.1);color:var(--warn);
+      border:1px solid rgba(140,72,0,.3);}
+
+    /* Flag list */
+    .flag-list{display:flex;flex-direction:column;gap:7px;margin-top:8px;}
+    .flag{display:flex;align-items:flex-start;gap:8px;
+      padding:9px 12px;border-radius:10px;font-size:0.8125rem;
+      line-height:1.5;}
+    .flag.success{background:rgba(21,92,56,.07);
+      border:1px solid rgba(21,92,56,.25);color:var(--good);}
+    .flag.warn{background:rgba(140,72,0,.07);
+      border:1px solid rgba(140,72,0,.3);color:var(--warn);}
+    .flag.error{background:rgba(180,35,24,.07);
+      border:1px solid rgba(180,35,24,.3);color:var(--bad);}
+    .flag-prefix{font-weight:800;flex-shrink:0;}
+
+    /* Model answer */
+    .model-answer{margin-top:12px;padding:12px 14px;
+      background:rgba(47,93,124,.05);border:1px solid rgba(47,93,124,.18);
+      border-radius:12px;font-size:0.8125rem;color:var(--ink-2);
+      line-height:1.6;}
+    .model-answer strong{color:var(--ink);}
+
+    /* Quiz prompt cards */
+    .quiz-card{background:rgba(246,242,234,.5);border:1px solid var(--line);
+      border-radius:12px;padding:12px 14px;margin-top:10px;}
+    .quiz-q{font-size:0.875rem;font-weight:700;color:var(--ink);
+      line-height:1.5;margin-bottom:8px;}
+    .quiz-options{display:flex;flex-direction:column;gap:6px;}
+    .quiz-option{display:flex;align-items:flex-start;gap:8px;
+      padding:8px 10px;background:#fff;border:1.5px solid var(--line);
+      border-radius:10px;cursor:pointer;font-size:0.8125rem;
+      color:var(--ink-2);line-height:1.5;transition:border-color .12s;}
+    .quiz-option:hover:not(.locked){border-color:var(--accent);}
+    .quiz-option input{margin-top:2px;flex-shrink:0;accent-color:var(--accent);}
+    .quiz-option.locked{cursor:default;}
+    .quiz-option.chosen{background:rgba(47,93,124,.06);
+      border-color:var(--accent);}
+    .quiz-option.correct{background:rgba(21,92,56,.08);
+      border-color:rgba(21,92,56,.4);color:var(--good);}
+    .quiz-option.wrong{background:rgba(180,35,24,.06);
+      border-color:rgba(180,35,24,.35);color:var(--bad);}
+    .quiz-feedback{margin-top:8px;padding:8px 10px;border-radius:8px;
+      font-size:0.8125rem;font-weight:600;line-height:1.5;}
+    .quiz-feedback.correct{background:rgba(21,92,56,.08);
+      border:1px solid rgba(21,92,56,.25);color:var(--good);}
+    .quiz-feedback.wrong{background:rgba(180,35,24,.07);
+      border:1px solid rgba(180,35,24,.3);color:var(--bad);}
+    .quiz-actions{margin-top:10px;}
+
+    .hidden{display:none!important;}
+
+    /* Optimal-pricing breakdown */
+    .opt-grid{display:grid;grid-template-columns:repeat(2,1fr);
+      gap:12px;margin-top:10px;}
+    @media(max-width:760px){.opt-grid{grid-template-columns:1fr;}}
+    .opt-cell{background:rgba(246,242,234,.55);border:1px solid var(--line);
+      border-radius:14px;padding:12px 14px;}
+    .opt-cell .opt-title{font-size:0.875rem;font-weight:800;color:var(--ink);
+      margin-bottom:2px;line-height:1.35;}
+    .opt-cell .opt-types{font-size:0.6875rem;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .opt-cell .canvas-wrap{position:relative;width:100%;aspect-ratio:5/3;
+      background:rgba(255,255,255,.65);border:1px solid var(--line);
+      border-radius:10px;overflow:hidden;}
+    .opt-cell .canvas-wrap canvas{display:block;width:100%;height:100%;}
+    .opt-cell .opt-stats{display:flex;flex-direction:column;gap:3px;
+      margin-top:8px;font-size:0.75rem;color:var(--ink-2);line-height:1.55;}
+    .opt-cell .opt-stats .opt-best{color:var(--bad);font-weight:700;}
+    .opt-cell .opt-stats .opt-yours{color:var(--warn);}
+    .opt-cell .opt-stats .opt-gap{color:var(--muted);}
+    .opt-legend{display:flex;flex-wrap:wrap;gap:14px;
+      margin:10px 0 6px;font-size:0.75rem;color:var(--ink-2);}
+    .opt-legend .swatch{display:inline-block;width:18px;height:3px;
+      vertical-align:middle;margin-right:5px;border-radius:2px;}
+    .opt-legend .swatch.dot{height:9px;width:9px;border-radius:50%;}
+    .opt-legend .swatch.dash{border-top:2px dashed currentColor;
+      background:transparent;height:0;}
+
+    /* Indirect-menu comparison table */
+    .menu-cmp{background:rgba(246,242,234,.55);border:1px solid var(--line);
+      border-radius:14px;padding:12px 14px;margin-top:10px;}
+    .menu-cmp h4{margin:0 0 8px;font-size:0.875rem;color:var(--ink);}
+    .menu-cmp table{width:100%;border-collapse:collapse;font-size:0.8125rem;}
+    .menu-cmp th,.menu-cmp td{padding:6px 8px;text-align:left;
+      border-bottom:1px solid var(--line);}
+    .menu-cmp th{font-size:0.6875rem;text-transform:uppercase;
+      letter-spacing:.06em;color:var(--muted);font-weight:700;}
+    .menu-cmp tr:last-child td{border-bottom:none;}
+    .menu-cmp .menu-best{color:var(--bad);font-weight:700;}
+    .menu-cmp .menu-yours{color:var(--warn);}
+    .menu-cmp .menu-summary{margin-top:8px;font-size:0.75rem;color:var(--ink-2);}
+
+    /* Live preview */
+    .live-preview{margin-top:14px;padding:12px 14px;
+      background:rgba(47,93,124,.05);border:1px solid rgba(47,93,124,.18);
+      border-radius:12px;}
+    .live-preview .lp-head{display:flex;justify-content:space-between;
+      align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:8px;}
+    .live-preview .lp-label{font-size:0.6875rem;font-weight:800;
+      letter-spacing:.08em;text-transform:uppercase;color:var(--accent);}
+    .live-preview .lp-total{font-family:var(--font-serif);
+      font-size:1.25rem;font-weight:700;color:var(--ink);}
+    .live-preview .lp-vs{font-size:0.75rem;color:var(--muted);
+      margin-left:6px;}
+    .live-preview .lp-vs.up{color:var(--good);}
+    .live-preview .lp-vs.down{color:var(--bad);}
+    .live-preview .lp-rows{display:flex;flex-direction:column;gap:4px;}
+    .live-preview .lp-row{font-size:0.75rem;color:var(--ink-2);
+      line-height:1.5;}
+    .live-preview .lp-row .lp-name{font-weight:700;color:var(--ink);}
+    .live-preview .lp-hint{font-size:0.75rem;color:var(--muted);
+      margin-top:8px;line-height:1.5;}
+
+    /* Footer */
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+
+    /* Lab-done banner */
+    .lab-done-banner{margin-top:14px;padding:12px 16px;border-radius:12px;
+      background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.25);
+      color:var(--good);font-weight:700;font-size:0.875rem;line-height:1.45;}
+  </style>
+</head>
+<body>
+
+<!-- Skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ104b/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104B — Price Discrimination</div>
+      <h1>Build Your Own Segmentation Strategy</h1>
+      <p class="sub">
+        Step into the role of a manager designing a price-discrimination strategy.
+        Pick which observable attributes to segment on, set prices for each segment,
+        and see how the firm's profit and the chapter's two requirements play out.
+      </p>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>For each scenario you will: read the business setup and the latent customer
+          types, choose one or more attributes to segment on, set a price for each
+          resulting segment, and run the simulation to see your profit and any
+          strategy problems.</p>
+          <p>You will be asked to answer the following questions:</p>
+          <ol>
+            <li><strong>Direct vs. indirect attributes.</strong> Identify which of the
+            attributes you used are observable at the point of purchase
+            (direct / 3rd-degree) and which require customer choice
+            (indirect / 2nd-degree).</li>
+            <li><strong>Incentive compatibility.</strong> Recognize when a
+            self-declared menu without verification breaks down.</li>
+            <li><strong>The two requirements.</strong> Identify which of the chapter's
+            two prerequisites — market power, or preventing resale — is at risk
+            in each setting.</li>
+          </ol>
+          <p>You can rerun the simulation as many times as you like — only the first
+          submission of each scored prompt is recorded.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- Progress -->
+  <div class="progress-card" role="status" aria-live="polite" aria-atomic="true">
+    <div>
+      <div class="label">Progress</div>
+      <div class="value" id="progressValue">Scenarios completed: 0 of 3 · Concept checks: 0 of 5</div>
+    </div>
+    <button class="primary-btn" id="downloadPdfBtn" style="background:#8c7f72;"
+            aria-label="Download summary PDF">Download Summary PDF</button>
+  </div>
+
+  <!-- Scenario picker -->
+  <div class="card" id="pickerCard">
+    <h2>Pick a scenario</h2>
+    <p class="lead">Each scenario presents a different business with different
+      customer types and a different menu of attributes you might use to segment.
+      Work through all three to compare how segmentation strategies depend on
+      what is observable.</p>
+    <div class="picker-grid" id="pickerGrid" role="group"
+         aria-label="Choose a scenario"></div>
+  </div>
+
+  <!-- Active scenario container -->
+  <div id="scenarioContainer" class="hidden" aria-live="polite"></div>
+
+  <div id="labDoneBanner" class="lab-done-banner hidden"
+       role="status" aria-live="polite" aria-atomic="true"></div>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 104B — Intermediate Microeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+// LAB_ID:    'build-your-segmentation-strategy'
+// LAB_LABEL: 'Build Your Own Segmentation Strategy'
+// url:       '/classes/econ104b/labs/build-your-segmentation-strategy/?disc=1'
+const LAB_ID     = 'build-your-segmentation-strategy';
+const LAB_LABEL  = 'Build Your Own Segmentation Strategy';
+const WEEK_LABEL = 'Monopoly & Price Discrimination';
+
+// ── Session-routed prompts ─────────────────────────────────────────────────
+// 5 single-phase concept-check questions distributed across the three scenarios.
+const PROMPTS = [
+  // 0 — gym opener
+  { scenario:'gym', when:'before',
+    qIdx:0,
+    type:'multi',
+    text:'Of the candidate attributes below for the gym, which ones are observable at the point of purchase (so the firm can verify them and price by group)? Select all that apply.',
+    options:[
+      { id:'edu',     label:'Student status (.edu email or student ID)',          correct:true  },
+      { id:'age',     label:'Age (verified by government ID)',                     correct:true  },
+      { id:'peak',    label:'Time of day the customer plans to come (self-reported)', correct:false },
+      { id:'income',  label:'Self-reported household income (stated on the sign-up form, not verified)', correct:false },
+      { id:'past',    label:'Past attendance frequency (for new sign-ups, before they have any history)', correct:false },
+    ] },
+  // 1 — gym follow-up after running strategy
+  { scenario:'gym', when:'after',
+    qIdx:1,
+    type:'single',
+    text:'Suppose every gym member can freely transfer their membership card to a friend at the door. Which of the chapter\'s two requirements for price discrimination is violated?',
+    options:[
+      { id:'a', label:'Market power — the gym no longer has any',                   correct:false },
+      { id:'b', label:'Preventing resale / arbitrage between customer groups',      correct:true  },
+      { id:'c', label:'Neither — transferability does not affect price discrimination', correct:false },
+      { id:'d', label:'Both, equally',                                              correct:false },
+    ],
+    correctExplain:'When low-WTP customers can transfer their cheap membership to high-WTP customers, the firm loses the ability to charge different prices to different groups. Market power is unaffected.',
+  },
+  // 2 — software opener: classify menu kind
+  { scenario:'software', when:'before',
+    qIdx:2,
+    type:'single',
+    text:'You offer a self-declared "Personal / Small business / Enterprise" plan menu with NO verification — anyone can pick any tier at signup. If the only difference between tiers is the price, what kind of price discrimination is this?',
+    options:[
+      { id:'a', label:'Direct (3rd-degree) — you are segmenting by an observable customer characteristic', correct:false },
+      { id:'b', label:'Indirect (2nd-degree) — customers are revealing their type by choosing a tier', correct:false },
+      { id:'c', label:'Neither — without product differences, all customers will pick the cheapest tier and you will earn the single-price outcome', correct:true },
+      { id:'d', label:'First-degree (perfect) price discrimination',                correct:false },
+    ],
+    correctExplain:'For an indirect menu to separate customers, the tiers must differ in something the high-WTP customers value (extra features, restrictions, bundled services). If only the price differs, every customer rationally picks the cheapest option.',
+  },
+  // 3 — software follow-up after strategy
+  { scenario:'software', when:'after',
+    qIdx:3,
+    type:'tf',
+    text:'True or false: For an indirect-pricing menu (e.g., an advance-purchase fare vs. a flexible fare, or a basic plan vs. a premium plan) to work, the price gap between options must be small enough that high-WTP customers still strictly prefer their intended option — and large enough that low-WTP customers are not tempted to upgrade.',
+    options:[
+      { id:'t', label:'True',  correct:true  },
+      { id:'f', label:'False', correct:false },
+    ],
+    correctExplain:'This is the incentive-compatibility condition. Each type must (weakly) prefer its intended tier to every other tier. Setting the price gaps so this holds is the entire design problem of 2nd-degree price discrimination.',
+  },
+  // 4 — airline single concept: classify Saturday-night-stay
+  { scenario:'airline', when:'before',
+    qIdx:4,
+    type:'single',
+    text:'Requiring a Saturday-night stay to get the discounted fare is what kind of price discrimination?',
+    options:[
+      { id:'a', label:'Direct (3rd-degree) — you are pricing by the customer\'s observable type (business vs. leisure)', correct:false },
+      { id:'b', label:'Indirect (2nd-degree) — customers self-select: business travelers won\'t stay over Saturday, leisure travelers will', correct:true },
+      { id:'c', label:'First-degree (perfect) price discrimination',           correct:false },
+      { id:'d', label:'Not price discrimination at all',                       correct:false },
+    ],
+    correctExplain:'You can\'t tell at the gate whether a passenger is a business or leisure traveler. The Saturday-night rule is a self-selection device — only customers willing to stay through Saturday accept the discount, and business travelers (who need to be back for the workweek) screen themselves out.',
+  },
+];
+
+// ── Scenario definitions ───────────────────────────────────────────────────
+// Each customer "type" has a population N and a uniform WTP on [0, R].
+// Demand from type i at price p:  Q_i(p) = N_i * max(0, 1 - p/R_i)
+// Each "attribute" can be: 'direct' (firm observes at purchase),
+//                          'indirect' (menu — customer reveals by choice),
+//                          'unenforceable' (firm cannot verify),
+//                          'illegal' (legally / ethically problematic),
+//                          'unactionable' (can't be used at sign-up).
+
+const SCENARIOS = {
+  gym: {
+    id:'gym',
+    label:'The Gym',
+    tag:'Scenario 1',
+    desc:'A neighborhood gym with market power and a service that can\'t be resold. Three customer groups: students, working professionals, and retirees.',
+    mc:5,
+    unit:'per member per month',
+    requirementsNote:'Both requirements are clearly met: you have local market power (no other gym nearby), and gym access is in-person so it can\'t be resold.',
+    types:[
+      { id:'students', label:'Students',
+        traits:'High price sensitivity, low income, flexible schedules (often off-peak users).',
+        N:200, R:60 },
+      { id:'profs',    label:'Working professionals',
+        traits:'Low price sensitivity, peak-hour users (6–8am, 5–7pm).',
+        N:300, R:120 },
+      { id:'retirees', label:'Retirees',
+        traits:'Moderate price sensitivity, mostly off-peak users.',
+        N:150, R:70 },
+    ],
+    attrs:[
+      { id:'edu',  label:'Student status', detail:'verified by .edu email or student ID',
+        kind:'direct',
+        segments:[
+          { id:'stu',    label:'Verified student',     types:['students'] },
+          { id:'nonstu', label:'Non-student',          types:['profs','retirees'] },
+        ] },
+      { id:'age',  label:'Age (Senior 65+)', detail:'verified by government ID',
+        kind:'direct',
+        segments:[
+          { id:'sen',    label:'Senior (65+)',         types:['retirees'] },
+          { id:'nonsen', label:'Under 65',             types:['students','profs'] },
+        ] },
+      { id:'peak', label:'Time of day usage',
+        detail:'self-reported peak vs. off-peak — no door staff to enforce',
+        kind:'unenforceable',
+        unenforceableReason:'Without staff checking IDs at the door, every customer will claim to be off-peak whenever the off-peak price is lower. Time-of-day pricing requires actual enforcement.' },
+      { id:'income', label:'Self-reported household income',
+        detail:'customer writes their income on the sign-up form, no verification',
+        kind:'unenforceable',
+        unenforceableReason:'Income is genuinely correlated with willingness to pay, but without verification (paystubs, tax documents — which gyms don\'t collect) every customer will simply under-report to qualify for the lower price. You cannot price-discriminate on a trait you cannot verify.' },
+      { id:'past', label:'Past attendance frequency',
+        detail:'firm-observed visits over the prior 30 days',
+        kind:'unactionable',
+        unactionableReason:'For NEW sign-ups, you have no history to use. Past attendance can support retention pricing once a customer has been a member, but it can\'t segment them at the point of sign-up.' },
+    ],
+    modelAnswer:'The clean play is <strong>student-ID verification + senior verification</strong>: two simple, observable attributes that each carve off a distinct customer group, leaving working professionals as the high-price segment. Set the student price around $32–35, the senior price around $37–40, and the standard price around $62–65 — close to the monopoly price for each group given its WTP.',
+  },
+
+  software: {
+    id:'software',
+    label:'Software Company',
+    tag:'Scenario 2',
+    desc:'A productivity SaaS product with low marginal cost. Four customer types: individual hobbyists, students, small businesses, and enterprise.',
+    mc:2,
+    unit:'per subscription per month',
+    requirementsNote:'You have market power (proprietary product, switching costs). Resale is harder than for a physical good but not impossible — accounts can be shared. The lab assumes account-sharing is controlled by per-seat licensing.',
+    types:[
+      { id:'hobbyists', label:'Individual hobbyists',
+        traits:'Buy 1 seat. High price elasticity. No .edu email.',
+        N:500, R:15 },
+      { id:'students',  label:'Students',
+        traits:'Buy 1 seat. Even higher elasticity. Verifiable by .edu email.',
+        N:300, R:8  },
+      { id:'smallBiz',  label:'Small businesses',
+        traits:'Buy ~10 seats. Moderate elasticity. Value some Pro features.',
+        N:200, R:60 },
+      { id:'enterprise',label:'Enterprise',
+        traits:'Buy ~200 seats. Low elasticity. Need Enterprise-only features.',
+        N:30,  R:200 },
+    ],
+    attrs:[
+      { id:'edu',  label:'Educational license', detail:'verified by .edu email',
+        kind:'direct',
+        segments:[
+          { id:'student', label:'Verified student (.edu)', types:['students'] },
+          { id:'other',   label:'No .edu email',           types:['hobbyists','smallBiz','enterprise'] },
+        ] },
+      { id:'seats',label:'Number of seats / users', detail:'firm observes the seat count purchased',
+        kind:'direct',
+        segments:[
+          { id:'small', label:'1–5 seats',     types:['hobbyists','students'] },
+          { id:'med',   label:'6–50 seats',    types:['smallBiz'] },
+          { id:'large', label:'50+ seats',     types:['enterprise'] },
+        ] },
+      { id:'declared', label:'Self-declared use case',
+        detail:'customer picks "Personal / Small business / Enterprise" — no verification',
+        kind:'unenforceable',
+        unenforceableReason:'With no verification of the self-declared category, every customer rationally picks whichever bucket is cheapest. This is NOT 3rd-degree price discrimination — and it isn\'t 2nd-degree either, because the tiers don\'t differ in any way the customer values.' },
+      { id:'billing', label:'Annual vs. monthly billing',
+        detail:'commit annually for a discount, or pay month-to-month',
+        kind:'weak-indirect',
+        weakReason:'Billing frequency IS verifiable — the firm sees which plan the customer signs up for. But it is an INDIRECT (2nd-degree) attribute: the customer CHOOSES whether to commit annually in response to your menu. To be a useful 2nd-degree screen, the four customer types would have to value annual vs. monthly very differently — but in practice both hobbyists and enterprise can be willing to commit. It is mostly a cash-flow / churn-management tool, not a strong WTP separator here.' },
+      { id:'geo', label:'Geographic IP location', detail:'firm observes IP at signup',
+        kind:'direct',
+        geoNote:'Geo-pricing is real (Netflix, Adobe, Microsoft all do it). It can be defensible when tied to local market WTP and purchasing power — but with the four types in this scenario, geography doesn\'t cleanly separate them.',
+        segments:[
+          { id:'all', label:'All customers (geo doesn\'t separate these four types)',
+            types:['hobbyists','students','smallBiz','enterprise'] },
+        ] },
+    ],
+    modelAnswer:'The clean play here is <strong>educational license (.edu) + per-seat tier</strong>: .edu separates students from everyone else, and seat-count buckets sort the remaining customers into hobbyist / small-business / enterprise without any incentive-compatibility headache (a business genuinely needs the seats they buy). At the linear-demand monopoly prices for each type, that means roughly: students $5, hobbyists $9, small business $31, enterprise $100. The big lesson is that when a clean direct attribute is available, prefer it over an indirect menu — direct segmentation avoids the incentive-compatibility constraint entirely.',
+  },
+
+  airline: {
+    id:'airline',
+    label:'Airline Route',
+    tag:'Scenario 3',
+    desc:'A city-pair route with limited competition. Two customer types: last-minute business travelers and leisure travelers. The two cannot be distinguished at booking by any observable characteristic — the airline must rely on customer choice (indirect / 2nd-degree price discrimination) to separate them.',
+    mc:80,
+    unit:'per seat',
+    requirementsNote:'Market power is real on routes with limited competition. Resale is blocked by ticketing rules (boarding passes are tied to ID), so the chapter\'s two requirements both hold.',
+    types:[
+      { id:'business', label:'Last-minute business travelers',
+        traits:'Very low elasticity. Book within 7 days. Need to return before the weekend.',
+        N:40, R:800 },
+      { id:'leisure',  label:'Leisure travelers',
+        traits:'High elasticity. Plan trips weeks ahead. Will stay through the weekend.',
+        N:300, R:200 },
+    ],
+    baseFare:{
+      id:'base',
+      label:'Standard fare (refundable, no restrictions)',
+      hint:'Every customer qualifies for this fare by default.',
+      value:{ business:800, leisure:200 }
+    },
+    attrs:[
+      { id:'advance', label:'14-day advance-purchase fare',
+        detail:'discounted fare requires booking ≥14 days out',
+        kind:'restriction',
+        menuOption:{ id:'advance', label:'Advance-purchase fare',
+          value:{ business:0, leisure:200 } } },
+      { id:'satnight', label:'Saturday-night-stay fare',
+        detail:'discounted fare requires staying through Saturday',
+        kind:'restriction',
+        menuOption:{ id:'sat', label:'Sat-night-stay fare',
+          value:{ business:0, leisure:200 } } },
+      { id:'refundable', label:'Non-refundable fare',
+        detail:'discounted fare cannot be cancelled or changed',
+        kind:'weak-indirect',
+        weakReason:'A non-refundable fare IS verifiable — the firm sees which fare a passenger books — and it is indirect (2nd-degree) because the passenger chooses it. But based on the STATED characteristics in this scenario (business books last-minute and needs to return before the weekend; leisure plans ahead and stays through the weekend), neither type has a stated preference about refundability. Refundable vs. non-refundable does not separate business from leisure here.' },
+      { id:'bundle', label:'Bundled extras (baggage, seat selection)',
+        detail:'business-friendly add-ons bundled with higher fare classes',
+        kind:'weak-indirect',
+        weakReason:'Bundled fares ARE verifiable — the firm knows which fare a passenger booked — and the passenger\'s choice of bundle is an indirect (2nd-degree) signal. But based on the STATED characteristics in this scenario, neither business nor leisure travelers have a stated preference about bundled extras. Selecting this attribute does not separate them here; in other settings it can complement advance-purchase or Saturday-night restrictions.' },
+    ],
+    modelAnswer:'The textbook airline play is to set a high standard fare and then offer ONE or more discount fares with restrictions that business travelers cannot accept. Saturday-night-stay is the classic 2nd-degree screen: business travelers can\'t (or won\'t) stay over the weekend, so they self-select into the standard fare. At linear-demand monopoly prices for each type, that means a standard fare around $440 (the business-traveler monopoly price) and a discount fare around $140 (the leisure-traveler monopoly price). The 14-day advance-purchase restriction works equally well, since business travelers can\'t book that far out either.',
+  },
+};
+
+// Baseline targets are computed dynamically from the demand model (uniform
+// WTP per type) so the numbers are guaranteed to be consistent with what
+// the simulator produces. Cached per scenario after first computation.
+const TARGETS_CACHE = {};
+function computeTargets(scenarioId){
+  if(TARGETS_CACHE[scenarioId]) return TARGETS_CACHE[scenarioId];
+  const sc = SCENARIOS[scenarioId];
+  // Best single price across all types.
+  const maxR = Math.max(...sc.types.map(t => t.R));
+  let singleBest = 0;
+  for(let p = sc.mc; p <= maxR + 5; p += 0.5){
+    let prof = 0;
+    for(const t of sc.types){
+      const q = t.N * Math.max(0, 1 - p/t.R);
+      prof += (p - sc.mc) * q;
+    }
+    if(prof > singleBest) singleBest = prof;
+  }
+  // Best across all "useful" attribute combinations: try all subsets of
+  // direct (excluding illegal/unenforceable/unactionable/weak), optionally
+  // with one indirect menu.
+  const usefulDirect = sc.attrs.filter(a => a.kind === 'direct');
+  const indirectAttrs = sc.attrs.filter(a => a.kind === 'indirect');
+  let overallBest = singleBest;
+  const subsets = [];
+  for(let mask = 0; mask < (1 << usefulDirect.length); mask++){
+    const subset = [];
+    for(let i = 0; i < usefulDirect.length; i++)
+      if(mask & (1<<i)) subset.push(usefulDirect[i]);
+    subsets.push(subset);
+  }
+  for(const directSubset of subsets){
+    const directProfit = bestProfitFromDirect(sc, directSubset);
+    if(directProfit > overallBest) overallBest = directProfit;
+  }
+  for(const ind of indirectAttrs){
+    const indProfit = bestProfitFromIndirect(sc, ind);
+    if(indProfit > overallBest) overallBest = indProfit;
+  }
+  // For scenarios with a unified base-fare menu (airline), enumerate
+  // restriction subsets and find the best menu profit.
+  if(sc.baseFare){
+    const restrictions = sc.attrs.filter(a => a.kind === 'restriction');
+    for(let mask = 0; mask < (1 << restrictions.length); mask++){
+      const subset = [];
+      for(let i = 0; i < restrictions.length; i++)
+        if(mask & (1<<i)) subset.push(restrictions[i]);
+      const menuProfit = bestProfitFromUnifiedMenu(sc, subset);
+      if(menuProfit > overallBest) overallBest = menuProfit;
+    }
+  }
+  TARGETS_CACHE[scenarioId] = { singlePrice: singleBest, best: overallBest };
+  return TARGETS_CACHE[scenarioId];
+}
+
+function bestProfitFromDirect(sc, directSubset){
+  // Cells = cross-product of segment ids over the subset.
+  if(directSubset.length === 0){
+    // Single uniform price
+    const maxR = Math.max(...sc.types.map(t => t.R));
+    let best = 0;
+    for(let p = sc.mc; p <= maxR + 5; p += 0.5){
+      let prof = 0;
+      for(const t of sc.types){
+        const q = t.N * Math.max(0, 1 - p/t.R);
+        prof += (p - sc.mc) * q;
+      }
+      if(prof > best) best = prof;
+    }
+    return best;
+  }
+  const cellToTypes = {};
+  for(const t of sc.types){
+    const parts = [];
+    let allMatch = true;
+    for(const a of directSubset){
+      const seg = a.segments.find(s => s.types.includes(t.id));
+      if(!seg){ allMatch = false; break; }
+      parts.push(a.id + ':' + seg.id);
+    }
+    if(!allMatch) continue;
+    const k = parts.join('|');
+    (cellToTypes[k] = cellToTypes[k] || []).push(t);
+  }
+  let total = 0;
+  for(const k of Object.keys(cellToTypes)){
+    const types = cellToTypes[k];
+    const maxR = Math.max(...types.map(t => t.R));
+    let bestProf = 0;
+    for(let p = sc.mc; p <= maxR + 5; p += 0.5){
+      let prof = 0;
+      for(const t of types){
+        const q = t.N * Math.max(0, 1 - p/t.R);
+        prof += (p - sc.mc) * q;
+      }
+      if(prof > bestProf) bestProf = prof;
+    }
+    total += bestProf;
+  }
+  return total;
+}
+
+// ── Detailed optimal-pricing breakdown for the student's chosen attrs ──
+function computeOptimalBreakdown(scenarioId){
+  const sc = SCENARIOS[scenarioId];
+  const sel = state.selectedAttrs[scenarioId];
+  const selAttrs = [...sel].map(id => sc.attrs.find(a => a.id === id));
+  const directLike = selAttrs.filter(a => a.kind === 'direct' || a.kind === 'illegal');
+  const indirect   = selAttrs.filter(a => a.kind === 'indirect');
+
+  const cells = [];
+  if(directLike.length){
+    const cellMap = {};
+    for(const t of sc.types){
+      const segs = [];
+      let allMatch = true;
+      for(const a of directLike){
+        const seg = a.segments.find(s => s.types.includes(t.id));
+        if(!seg){ allMatch = false; break; }
+        segs.push({ attrId:a.id, segId:seg.id, segLabel:seg.label });
+      }
+      if(!allMatch) continue;
+      const key = segs.map(s => s.attrId + ':' + s.segId).join('|');
+      if(!cellMap[key]){
+        cellMap[key] = {
+          cellLabel: segs.map(s => s.segLabel).join(' × '),
+          types: [],
+          segs
+        };
+      }
+      cellMap[key].types.push(t);
+    }
+    for(const key of Object.keys(cellMap)){
+      const cell = cellMap[key];
+      const maxR = Math.max(...cell.types.map(t => t.R));
+      let bestP = sc.mc, bestProf = 0, bestQty = 0;
+      for(let p = sc.mc; p <= maxR + 5; p += 0.5){
+        let prof = 0, qty = 0;
+        for(const t of cell.types){
+          const q = t.N * Math.max(0, 1 - p/t.R);
+          qty += q;
+          prof += (p - sc.mc) * q;
+        }
+        if(prof > bestProf){ bestProf = prof; bestP = p; bestQty = qty; }
+      }
+      // Student's chosen price for this cell: min over per-attribute prices.
+      const stuPrices = [];
+      for(const a of directLike){
+        const seg = a.segments.find(s => s.types.includes(cell.types[0].id));
+        if(!seg) continue;
+        const p = state.prices[scenarioId][a.id + ':' + seg.id];
+        if(p != null) stuPrices.push(p);
+      }
+      const studentP = stuPrices.length ? Math.min(...stuPrices) : null;
+      let studentQty = 0, studentProfit = 0;
+      if(studentP != null){
+        for(const t of cell.types){
+          const q = t.N * Math.max(0, 1 - studentP/t.R);
+          studentQty += q;
+          studentProfit += (studentP - sc.mc) * q;
+        }
+      }
+      cells.push({ key, cellLabel:cell.cellLabel, types:cell.types,
+        optimalP:bestP, optimalQty:bestQty, optimalProfit:bestProf,
+        studentP, studentQty, studentProfit });
+    }
+  }
+
+  const menus = [];
+  // Unified base-fare menu (airline-style): brute-force best base + restriction prices.
+  if(sc.baseFare){
+    const restrictions = selAttrs.filter(a => a.kind === 'restriction');
+    const optionsArr = [
+      { id: sc.baseFare.id, label: sc.baseFare.label,
+        value: sc.baseFare.value, isBase:true },
+      ...restrictions.map(a => ({
+        id: a.menuOption.id, label: a.menuOption.label,
+        value: a.menuOption.value, attrId: a.id, isBase:false
+      }))
+    ];
+    const N = optionsArr.length;
+    const ranges = optionsArr.map(o =>
+      Math.max(...sc.types.map(t => o.value[t.id])) + 5);
+    const step = Math.max(5, Math.round(Math.max(...ranges) / 30));
+    let bestProf = 0, bestVec = new Array(N).fill(0);
+    const pVec = new Array(N).fill(0);
+    function tryGrid(i){
+      if(i === N){
+        let prof = 0;
+        for(const t of sc.types){
+          let bestSurp = -Infinity, bestPrice = null;
+          for(let k=0;k<N;k++){
+            const v = optionsArr[k].value[t.id];
+            const surp = v - pVec[k];
+            if(surp >= 0 && surp > bestSurp){ bestSurp = surp; bestPrice = pVec[k]; }
+          }
+          if(bestPrice != null){
+            const q = t.N * Math.max(0, 1 - bestPrice/t.R);
+            prof += (bestPrice - sc.mc) * q;
+          }
+        }
+        if(prof > bestProf){ bestProf = prof; bestVec = pVec.slice(); }
+        return;
+      }
+      for(let p=0; p<=ranges[i]; p+=step){ pVec[i] = p; tryGrid(i+1); }
+    }
+    tryGrid(0);
+    const optionPrices = {}, studentPrices = {};
+    optionsArr.forEach((opt, i) => {
+      optionPrices[opt.id] = bestVec[i];
+      const key = opt.isBase
+        ? `${sc.baseFare.id}:${sc.baseFare.id}`
+        : `${opt.attrId}:${opt.id}`;
+      studentPrices[opt.id] = state.prices[scenarioId][key] ?? null;
+    });
+    let studentProf = 0;
+    for(const t of sc.types){
+      let surp = -Infinity, price = null;
+      optionsArr.forEach(opt => {
+        const p = studentPrices[opt.id];
+        if(p == null) return;
+        const s = opt.value[t.id] - p;
+        if(s >= 0 && s > surp){ surp = s; price = p; }
+      });
+      if(price != null){
+        const q = t.N * Math.max(0, 1 - price/t.R);
+        studentProf += (price - sc.mc) * q;
+      }
+    }
+    menus.push({
+      attr: { label: 'Unified fare menu', menu: optionsArr.map(o => ({ id:o.id, label:o.label })) },
+      optionPrices, studentPrices,
+      optimalProfit: bestProf, studentProfit: studentProf
+    });
+  }
+  if(indirect.length === 1){
+    const a = indirect[0];
+    const N = a.menu.length;
+    const ranges = a.menu.map(m =>
+      Math.max(...sc.types.map(t => m.value[t.id])) + 5);
+    const step = Math.max(2, Math.round(Math.max(...ranges) / 35));
+    let bestProf = 0, bestVec = new Array(N).fill(0);
+    const pVec = new Array(N).fill(0);
+    function tryGrid(i){
+      if(i === N){
+        let prof = 0;
+        for(const t of sc.types){
+          let bestSurp = -Infinity, bestPrice = null;
+          for(let k=0;k<N;k++){
+            const v = a.menu[k].value[t.id];
+            const surp = v - pVec[k];
+            if(surp >= 0 && surp > bestSurp){ bestSurp = surp; bestPrice = pVec[k]; }
+          }
+          if(bestPrice != null){
+            const q = t.N * Math.max(0, 1 - bestPrice/t.R);
+            prof += (bestPrice - sc.mc) * q;
+          }
+        }
+        if(prof > bestProf){ bestProf = prof; bestVec = pVec.slice(); }
+        return;
+      }
+      for(let p=0; p<=ranges[i]; p+=step){ pVec[i] = p; tryGrid(i+1); }
+    }
+    tryGrid(0);
+    const optionPrices = {};
+    a.menu.forEach((opt, i) => { optionPrices[opt.id] = bestVec[i]; });
+    // Student menu prices (may be undefined for some options).
+    const studentPrices = {};
+    a.menu.forEach(opt => {
+      studentPrices[opt.id] = state.prices[scenarioId][a.id + ':' + opt.id] ?? null;
+    });
+    // Profit under student's menu prices, with each type self-selecting.
+    let studentProf = 0;
+    for(const t of sc.types){
+      let surp = -Infinity, price = null;
+      a.menu.forEach(opt => {
+        const p = studentPrices[opt.id];
+        if(p == null) return;
+        const s = opt.value[t.id] - p;
+        if(s >= 0 && s > surp){ surp = s; price = p; }
+      });
+      if(price != null){
+        const q = t.N * Math.max(0, 1 - price/t.R);
+        studentProf += (price - sc.mc) * q;
+      }
+    }
+    menus.push({ attr:a, optionPrices, studentPrices,
+      optimalProfit:bestProf, studentProfit:studentProf });
+  }
+
+  return { cells, menus };
+}
+
+// ── HiDPI canvas helpers (per CLAUDE.md) ───────────────────────────────
+const CHART_PAD = { l:50, r:14, t:14, b:38 };
+let _fs = 1;
+
+function setupCanvas(canvas, wrap){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  const W = Math.round(rect.width * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+function tickStep(mx){
+  if(mx<=10) return 1; if(mx<=20) return 2; if(mx<=50) return 5;
+  if(mx<=100) return 10; if(mx<=200) return 20; if(mx<=500) return 50;
+  return 100;
+}
+function snapUp(raw){
+  const s=[5,8,10,12,15,20,25,30,40,50,60,80,100,120,
+           150,200,250,300,400,500,600,800,1000,1200,1500,2000];
+  return s.find(v => v >= raw) || Math.ceil(raw/100)*100;
+}
+
+// Draw an aggregate-demand mini chart for a direct cell.
+function drawCellChart(canvas, wrap, cell, sc){
+  const setup = setupCanvas(canvas, wrap);
+  if(!setup) return;
+  const { ctx, dpr, W, H } = setup;
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  ctx.clearRect(0,0,W,H);
+
+  const totalN = cell.types.reduce((s,t)=>s+t.N, 0);
+  const xMax = snapUp(totalN * 1.05);
+  const maxR = Math.max(...cell.types.map(t => t.R));
+  const yMax = snapUp(maxR * 1.1);
+
+  const p = { l:CHART_PAD.l*dpr, r:CHART_PAD.r*dpr,
+              t:CHART_PAD.t*dpr, b:CHART_PAD.b*dpr };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  const xC = x => p.l + (x / xMax) * PW;
+  const yC = y => H - p.b - (y / yMax) * PH;
+
+  // Background grid + tick labels
+  ctx.font = `400 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.strokeStyle = 'rgba(231,223,210,0.7)';
+  ctx.lineWidth = 1 * dpr;
+  ctx.fillStyle = '#596878';
+  const xStep = tickStep(xMax);
+  for(let x = 0; x <= xMax + 0.001; x += xStep){
+    const px = xC(x);
+    ctx.beginPath(); ctx.moveTo(px, p.t); ctx.lineTo(px, H - p.b); ctx.stroke();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText(String(x), px, H - p.b + 4 * dpr);
+  }
+  const yStep = tickStep(yMax);
+  for(let y = 0; y <= yMax + 0.001; y += yStep){
+    const py = yC(y);
+    ctx.beginPath(); ctx.moveTo(p.l, py); ctx.lineTo(W - p.r, py); ctx.stroke();
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText('$' + y, p.l - 5 * dpr, py);
+  }
+  // Axis lines
+  ctx.strokeStyle = '#374151';
+  ctx.lineWidth = 1.25 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(p.l, p.t); ctx.lineTo(p.l, H - p.b); ctx.lineTo(W - p.r, H - p.b);
+  ctx.stroke();
+
+  // Axis titles
+  ctx.fillStyle = '#374151';
+  ctx.font = `700 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText('Quantity', (p.l + (W - p.r)) / 2, H - 6 * dpr);
+  ctx.save();
+  ctx.translate(12 * dpr, (p.t + (H - p.b)) / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('Price ($)', 0, 0);
+  ctx.restore();
+
+  // Plot aggregate demand curve (clip to plot area)
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(p.l, p.t, PW, PH);
+  ctx.clip();
+
+  ctx.strokeStyle = '#2f5d7c';
+  ctx.lineWidth = 2.5 * dpr;
+  ctx.beginPath();
+  let first = true;
+  for(let pp = yMax; pp >= 0; pp -= yMax / 240){
+    let q = 0;
+    for(const t of cell.types) q += t.N * Math.max(0, 1 - pp/t.R);
+    const x = xC(q), y = yC(pp);
+    if(first){ ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // MC line
+  ctx.strokeStyle = '#155c38';
+  ctx.lineWidth = 1.5 * dpr;
+  ctx.setLineDash([6*dpr, 4*dpr]);
+  ctx.beginPath();
+  ctx.moveTo(xC(0), yC(sc.mc));
+  ctx.lineTo(xC(xMax), yC(sc.mc));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Optimal P*/Q* crosshair + dot
+  ctx.strokeStyle = '#b42318';
+  ctx.lineWidth = 1.5 * dpr;
+  ctx.setLineDash([4*dpr, 3*dpr]);
+  ctx.beginPath();
+  ctx.moveTo(xC(0), yC(cell.optimalP));
+  ctx.lineTo(xC(cell.optimalQty), yC(cell.optimalP));
+  ctx.moveTo(xC(cell.optimalQty), yC(0));
+  ctx.lineTo(xC(cell.optimalQty), yC(cell.optimalP));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#b42318';
+  ctx.beginPath();
+  ctx.arc(xC(cell.optimalQty), yC(cell.optimalP), 5 * dpr, 0, Math.PI*2);
+  ctx.fill();
+
+  // Student price marker (if any)
+  if(cell.studentP != null && cell.studentP <= yMax){
+    ctx.strokeStyle = '#8c4800';
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.setLineDash([2*dpr, 3*dpr]);
+    ctx.beginPath();
+    ctx.moveTo(xC(0), yC(cell.studentP));
+    ctx.lineTo(xC(cell.studentQty), yC(cell.studentP));
+    ctx.moveTo(xC(cell.studentQty), yC(0));
+    ctx.lineTo(xC(cell.studentQty), yC(cell.studentP));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#8c4800';
+    ctx.beginPath();
+    ctx.arc(xC(cell.studentQty), yC(cell.studentP), 4.5 * dpr, 0, Math.PI*2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function bestProfitFromUnifiedMenu(sc, restrictionSubset){
+  const options = [
+    { value: sc.baseFare.value },
+    ...restrictionSubset.map(a => ({ value: a.menuOption.value }))
+  ];
+  const N = options.length;
+  const ranges = options.map(o =>
+    Math.max(...sc.types.map(t => o.value[t.id])) + 5);
+  const step = Math.max(5, Math.round(Math.max(...ranges) / 30));
+  let best = 0;
+  const pVec = new Array(N).fill(0);
+  function tryGrid(i){
+    if(i === N){
+      let prof = 0;
+      for(const t of sc.types){
+        let bestSurp = -Infinity, bestPrice = null;
+        for(let k=0;k<N;k++){
+          const v = options[k].value[t.id];
+          const surp = v - pVec[k];
+          if(surp >= 0 && surp > bestSurp){ bestSurp = surp; bestPrice = pVec[k]; }
+        }
+        if(bestPrice != null){
+          const q = t.N * Math.max(0, 1 - bestPrice/t.R);
+          prof += (bestPrice - sc.mc) * q;
+        }
+      }
+      if(prof > best) best = prof;
+      return;
+    }
+    for(let p=0; p<=ranges[i]; p+=step){ pVec[i] = p; tryGrid(i+1); }
+  }
+  tryGrid(0);
+  return best;
+}
+
+function bestProfitFromIndirect(sc, a){
+  const N = a.menu.length;
+  const ranges = a.menu.map(m =>
+    Math.max(...sc.types.map(t => m.value[t.id])) + 5);
+  const step = Math.max(2, Math.round(Math.max(...ranges) / 35));
+  let best = 0;
+  const pVec = new Array(N).fill(0);
+  function tryGrid(i){
+    if(i === N){
+      let prof = 0;
+      for(const t of sc.types){
+        let bestSurp = -Infinity, bestPrice = null;
+        for(let k=0;k<N;k++){
+          const v = a.menu[k].value[t.id];
+          const surp = v - pVec[k];
+          if(surp >= 0 && surp > bestSurp){ bestSurp = surp; bestPrice = pVec[k]; }
+        }
+        if(bestPrice != null){
+          const q = t.N * Math.max(0, 1 - bestPrice/t.R);
+          prof += (bestPrice - sc.mc) * q;
+        }
+      }
+      if(prof > best) best = prof;
+      return;
+    }
+    for(let p=0; p<=ranges[i]; p+=step){ pVec[i] = p; tryGrid(i+1); }
+  }
+  tryGrid(0);
+  return best;
+}
+
+// Holds redraw callbacks for active charts so they update on window resize.
+const _resizeRedraws = {};
+let _resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => {
+    Object.values(_resizeRedraws).forEach(fn => fn && fn());
+  }, 80);
+});
+
+// ── State ────────────────────────────────────────────────────────────────
+const state = {
+  rng:null,
+  scenariosCompleted: {gym:false, software:false, airline:false},
+  promptDone: new Array(PROMPTS.length).fill(false),
+  promptCorrect: new Array(PROMPTS.length).fill(false),
+  promptAns: new Array(PROMPTS.length).fill('—'),
+  activeScenario:null,
+  selectedAttrs: {},   // scenarioId -> Set of attribute ids
+  prices:        {},   // scenarioId -> Map keyed by "attrId:segId" -> price
+  labDoneFired:false,
+};
+
+function init(){
+  if(window.Session && Session.rngForLab) state.rng = Session.rngForLab(LAB_ID);
+  // Note: this lab has no random parameters per session; we still seed the RNG
+  // to keep the framework happy and reserve room for randomized scenarios.
+  for(const k of Object.keys(SCENARIOS)){
+    state.selectedAttrs[k] = new Set();
+    state.prices[k] = {};
+  }
+  renderPicker();
+  updateProgress();
+
+  document.getElementById('downloadPdfBtn').addEventListener('click', () => {
+    if(window.DiscussionPDF && DiscussionPDF.generate) DiscussionPDF.generate();
+  });
+}
+
+// ── Progress strip ──────────────────────────────────────────────────────
+function updateProgress(){
+  const sc = Object.values(state.scenariosCompleted).filter(Boolean).length;
+  const qd = state.promptCorrect.filter(Boolean).length;
+  document.getElementById('progressValue').textContent =
+    `Scenarios completed: ${sc} of 3 · Concept checks: ${qd} of ${PROMPTS.length}`;
+  if(sc === 3 && !state.labDoneFired){
+    state.labDoneFired = true;
+    const firstScore = state.promptCorrect.filter(Boolean).length;
+    if(window.Session && Session.recordLabDone)
+      Session.recordLabDone(LAB_ID, LAB_LABEL, firstScore, firstScore, PROMPTS.length);
+    const banner = document.getElementById('labDoneBanner');
+    banner.classList.remove('hidden');
+    banner.textContent =
+      `✓ Lab complete — you worked through all three scenarios and answered ` +
+      `${firstScore} of ${PROMPTS.length} concept checks correctly. ` +
+      `Download the summary PDF to submit.`;
+  }
+}
+
+// ── Scenario picker ─────────────────────────────────────────────────────
+function renderPicker(){
+  const grid = document.getElementById('pickerGrid');
+  grid.innerHTML = '';
+  for(const id of ['gym','software','airline']){
+    const sc = SCENARIOS[id];
+    const done = state.scenariosCompleted[id];
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'scenario-tile';
+    btn.setAttribute('aria-pressed', state.activeScenario === id ? 'true' : 'false');
+    btn.innerHTML =
+      `<div class="tag">${sc.tag}</div>` +
+      `<h3>${sc.label}</h3>` +
+      `<div class="desc">${sc.desc}</div>` +
+      `<div class="status ${done ? '' : 'todo'}">${done ? '✓ Strategy submitted' : '— Not yet attempted'}</div>`;
+    btn.addEventListener('click', () => openScenario(id));
+    grid.appendChild(btn);
+  }
+}
+
+function openScenario(id){
+  state.activeScenario = id;
+  renderPicker();
+  renderScenario(id);
+  // Smooth scroll only if reduced-motion not requested
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.getElementById('scenarioContainer').scrollIntoView({
+    behavior: reduced ? 'auto' : 'smooth', block:'start'
+  });
+}
+
+// ── Render the active scenario ──────────────────────────────────────────
+function renderScenario(id){
+  const sc = SCENARIOS[id];
+  const container = document.getElementById('scenarioContainer');
+  container.classList.remove('hidden');
+  container.innerHTML = '';
+
+  // The Business
+  const c1 = document.createElement('section');
+  c1.className = 'card';
+  c1.innerHTML =
+    `<h2>The Business — ${sc.label}</h2>` +
+    `<p class="lead">${sc.desc} Marginal cost is $${sc.mc} ${sc.unit}.</p>` +
+    `<p class="lead" style="margin-top:-4px;"><strong>Two-requirements note.</strong> ${sc.requirementsNote}</p>` +
+    `<div class="types-grid">` +
+    sc.types.map(t =>
+      `<div class="type-card">
+         <div class="name">${t.label} (${t.N} customers)</div>
+         <div class="traits">${t.traits}</div>
+       </div>`
+    ).join('') +
+    `</div>`;
+  container.appendChild(c1);
+
+  // "Before" prompts
+  PROMPTS.forEach((p, i) => {
+    if(p.scenario === id && p.when === 'before')
+      container.appendChild(renderPromptCard(i));
+  });
+
+  // Strategy builder
+  const c2 = document.createElement('section');
+  c2.className = 'card';
+  c2.id = 'strategyCard';
+  c2.innerHTML =
+    `<h2>Pick your segmentation strategy</h2>` +
+    `<p class="lead">Check each attribute you want to use to segment customers. ` +
+    `For each one you check, price inputs will appear below — set a price for ` +
+    `each resulting segment. You can combine multiple attributes. The live ` +
+    `preview below updates as you type — try a price, see who buys and what ` +
+    `you earn, and iterate. Click <strong>Run Simulation</strong> when you're ` +
+    `ready to lock it in and see the full feedback.</p>` +
+    `<div class="attr-list" id="attrList" role="group" aria-label="Candidate attributes"></div>` +
+    `<div id="segArea" style="margin-top:14px;"></div>` +
+    `<div id="livePreview" class="live-preview hidden" role="status" aria-live="polite" aria-atomic="true"></div>` +
+    `<div class="button-row">` +
+      `<button class="primary-btn" id="runBtn" disabled>Run Simulation</button>` +
+      `<button class="secondary-btn" id="resetBtn">Reset choices</button>` +
+    `</div>`;
+  container.appendChild(c2);
+
+  // Build attribute list
+  const attrList = c2.querySelector('#attrList');
+  sc.attrs.forEach(attr => {
+    const row = document.createElement('label');
+    row.className = 'attr-row';
+    const checked = state.selectedAttrs[id].has(attr.id);
+    row.innerHTML =
+      `<input type="checkbox" data-attr="${attr.id}" ${checked ? 'checked' : ''}/>` +
+      `<span class="attr-text"><strong>${attr.label}</strong>` +
+      (attr.detail ? ` <span style="color:var(--muted);">— ${attr.detail}</span>` : '') +
+      `</span>`;
+    row.querySelector('input').addEventListener('change', e => {
+      if(e.target.checked) state.selectedAttrs[id].add(attr.id);
+      else state.selectedAttrs[id].delete(attr.id);
+      renderSegArea(id);
+    });
+    attrList.appendChild(row);
+  });
+
+  document.getElementById('runBtn').addEventListener('click', () => runSimulation(id));
+  document.getElementById('resetBtn').addEventListener('click', () => resetScenario(id));
+
+  // Results placeholder
+  const resultsHost = document.createElement('div');
+  resultsHost.id = 'resultsHost';
+  container.appendChild(resultsHost);
+
+  // After-prompts (rendered only after running)
+  const afterHost = document.createElement('div');
+  afterHost.id = 'afterPromptsHost';
+  container.appendChild(afterHost);
+
+  // Return-to-picker button
+  const back = document.createElement('div');
+  back.className = 'button-row';
+  back.style.marginTop = '8px';
+  back.innerHTML = `<button class="secondary-btn" id="backBtn">← Back to scenario picker</button>`;
+  container.appendChild(back);
+  document.getElementById('backBtn').addEventListener('click', () => {
+    state.activeScenario = null;
+    document.getElementById('scenarioContainer').classList.add('hidden');
+    renderPicker();
+    document.getElementById('pickerCard').scrollIntoView({block:'start'});
+  });
+
+  renderSegArea(id);
+}
+
+// ── Render per-attribute price inputs ───────────────────────────────────
+function renderSegArea(scenarioId){
+  const sc = SCENARIOS[scenarioId];
+  const host = document.getElementById('segArea');
+  host.innerHTML = '';
+  const sel = state.selectedAttrs[scenarioId];
+  // For scenarios with a base fare (e.g. airline), always show that input.
+  if(sc.baseFare){
+    host.appendChild(buildBaseFareBlock(scenarioId, sc));
+  }
+  if(sel.size === 0 && !sc.baseFare){
+    host.innerHTML = `<div style="font-size:0.8125rem;color:var(--muted);
+      padding:8px 12px;border:1px dashed var(--line);border-radius:10px;">
+      Pick at least one attribute above to start setting prices.</div>`;
+    document.getElementById('runBtn').disabled = true;
+    updateLivePreview(scenarioId);
+    return;
+  }
+  document.getElementById('runBtn').disabled = !!sc.baseFare ? false :
+    (sel.size === 0);
+  sc.attrs.forEach(attr => {
+    if(!sel.has(attr.id)) return;
+    host.appendChild(buildAttrBlock(scenarioId, attr));
+  });
+  updateLivePreview(scenarioId);
+}
+
+function buildBaseFareBlock(scenarioId, sc){
+  const wrap = document.createElement('div');
+  wrap.className = 'seg-block';
+  wrap.style.borderColor = 'rgba(47,93,124,.3)';
+  wrap.style.background  = 'rgba(47,93,124,.05)';
+  wrap.innerHTML =
+    `<div class="block-title">${sc.baseFare.label}</div>` +
+    `<div class="block-hint">${sc.baseFare.hint || 'Every customer qualifies for this fare by default.'}</div>`;
+  const grid = document.createElement('div');
+  grid.className = 'price-grid';
+  const fullKey = `${sc.baseFare.id}:${sc.baseFare.id}`;
+  const existing = state.prices[scenarioId][fullKey];
+  const div = document.createElement('div');
+  div.className = 'price-input';
+  div.innerHTML =
+    `<label for="p_${scenarioId}_${sc.baseFare.id}_${sc.baseFare.id}">${sc.baseFare.label}</label>
+     <div class="row">
+       <span>$</span>
+       <input type="number" min="0" step="1"
+              id="p_${scenarioId}_${sc.baseFare.id}_${sc.baseFare.id}"
+              value="${existing != null ? existing : ''}"
+              aria-label="Base fare price for ${sc.baseFare.label}"
+              inputmode="decimal"/>
+       <span style="font-size:0.75rem;color:var(--muted);">${sc.unit}</span>
+     </div>`;
+  div.querySelector('input').addEventListener('input', e => {
+    const v = parseFloat(e.target.value);
+    if(isNaN(v)) delete state.prices[scenarioId][fullKey];
+    else state.prices[scenarioId][fullKey] = v;
+    updateLivePreview(scenarioId);
+  });
+  grid.appendChild(div);
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+// ── Live profit preview ────────────────────────────────────────────────
+function updateLivePreview(scenarioId){
+  const el = document.getElementById('livePreview');
+  if(!el) return;
+  const sc = SCENARIOS[scenarioId];
+  const sel = state.selectedAttrs[scenarioId];
+  const anyPriceSet = Object.keys(state.prices[scenarioId]).length > 0;
+  if(sel.size === 0 || !anyPriceSet){
+    el.classList.add('hidden');
+    el.innerHTML = '';
+    return;
+  }
+  el.classList.remove('hidden');
+  const sim = simulate(scenarioId);
+  const t = computeTargets(scenarioId);
+  const diff = sim.totalProfit - t.singlePrice;
+  const diffPct = (diff / t.singlePrice) * 100;
+  const diffClass = diff > 1 ? 'up' : (diff < -1 ? 'down' : '');
+  const diffSym   = diff > 1 ? '▲' : (diff < -1 ? '▼' : '·');
+  const diffText  = `${diffSym} $${fmtMoney(Math.abs(diff))} (${diffPct >= 0 ? '+' : ''}${diffPct.toFixed(0)}%) vs. best single price ($${fmtMoney(t.singlePrice)})`;
+  const rows = sim.perType.map(r => {
+    if(r.price == null)
+      return `<div class="lp-row"><span class="lp-name">${r.type.label}:</span> no price set yet — unserved.</div>`;
+    return `<div class="lp-row"><span class="lp-name">${r.type.label}:</span> pays $${r.price.toFixed(0)} → ${r.qty.toFixed(0)} of ${r.type.N} buy → profit $${fmtMoney(r.profit)}</div>`;
+  }).join('');
+  el.innerHTML =
+    `<div class="lp-head">
+       <div>
+         <div class="lp-label">Live preview — updates as you type</div>
+         <div class="lp-total">$${fmtMoney(sim.totalProfit)} total profit
+           <span class="lp-vs ${diffClass}">${diffText}</span>
+         </div>
+       </div>
+     </div>
+     <div class="lp-rows">${rows}</div>
+     <div class="lp-hint">This is just an estimate from the demand model — click <strong>Run Simulation</strong> to lock in your strategy and see the full feedback, attribute classification, and instructor commentary.</div>`;
+}
+
+function buildAttrBlock(scenarioId, attr){
+  const sc = SCENARIOS[scenarioId];
+  const wrap = document.createElement('div');
+  wrap.className = 'seg-block';
+  let title = attr.label, hint = '';
+  if(attr.kind === 'direct')
+    hint = 'Direct (3rd-degree) — observed at purchase. Set a price for each verified segment.';
+  else if(attr.kind === 'indirect')
+    hint = 'Indirect (2nd-degree) — set a price for each menu option. Customers will pick whichever option gives them the most surplus.';
+  else if(attr.kind === 'restriction')
+    hint = 'Indirect (2nd-degree) fare condition — set the discounted price for this option. Customers will pick whichever fare gives them the most surplus, comparing this against the standard fare.';
+  else if(attr.kind === 'unenforceable')
+    hint = 'Heads-up — this attribute is not enforceable here. You can set prices, but the simulation will let customers misrepresent.';
+  else if(attr.kind === 'illegal')
+    hint = 'Heads-up — this attribute may segment correctly, but it raises legal/ethics concerns. The simulation will flag it.';
+  else if(attr.kind === 'unactionable')
+    hint = 'Heads-up — this attribute can\'t be used at sign-up. Set a price if you like; the simulation will treat it as inactive.';
+  else if(attr.kind === 'weak-indirect')
+    hint = 'Indirect (2nd-degree) — the firm can verify which option the customer chooses, but in this scenario the choice does not cleanly separate the customer types by willingness to pay.';
+
+  wrap.innerHTML = `<div class="block-title">${title}</div>
+    <div class="block-hint">${hint}</div>`;
+
+  // Weak-indirect attributes are informational — no price input rendered.
+  if(attr.kind === 'weak-indirect') return wrap;
+
+  const grid = document.createElement('div');
+  grid.className = 'price-grid';
+  let cells = [];
+  if(attr.segments) cells = attr.segments.map(s => ({key:s.id, label:s.label}));
+  else if(attr.menu) cells = attr.menu.map(m => ({key:m.id, label:m.label}));
+  else if(attr.menuOption) cells = [{key:attr.menuOption.id, label:attr.menuOption.label}];
+  else cells = [{key:'self', label:attr.label}];
+
+  cells.forEach(c => {
+    const fullKey = `${attr.id}:${c.key}`;
+    const existing = state.prices[scenarioId][fullKey];
+    const div = document.createElement('div');
+    div.className = 'price-input';
+    div.innerHTML =
+      `<label for="p_${scenarioId}_${attr.id}_${c.key}">${c.label}</label>
+       <div class="row">
+         <span>$</span>
+         <input type="number" min="0" step="1"
+                id="p_${scenarioId}_${attr.id}_${c.key}"
+                value="${existing != null ? existing : ''}"
+                aria-label="Price for ${c.label} (${attr.label})"
+                inputmode="decimal"/>
+         <span style="font-size:0.75rem;color:var(--muted);">${sc.unit}</span>
+       </div>`;
+    div.querySelector('input').addEventListener('input', e => {
+      const v = parseFloat(e.target.value);
+      if(isNaN(v)) delete state.prices[scenarioId][fullKey];
+      else state.prices[scenarioId][fullKey] = v;
+      updateLivePreview(scenarioId);
+    });
+    grid.appendChild(div);
+  });
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+function resetScenario(id){
+  state.selectedAttrs[id].clear();
+  state.prices[id] = {};
+  renderScenario(id);
+}
+
+// ── Simulation ──────────────────────────────────────────────────────────
+// For each customer type, decide which "cell" they end up in:
+//   - DIRECT attributes partition types into observable groups.
+//     The cell is the cross-product of all selected direct attributes.
+//   - At most ONE indirect (menu) attribute can be selected at a time
+//     (within a direct cell, each customer chooses their best menu option).
+//   - UNENFORCEABLE attributes are treated as ineffective — customers
+//     pick whichever of the attribute's price cells is cheapest.
+//   - ILLEGAL attributes work like direct but raise a flag.
+//   - UNACTIONABLE attributes are inactive.
+//   - WEAK-INDIRECT attributes are inactive in the profit calc, but flagged.
+function simulate(scenarioId){
+  const sc = SCENARIOS[scenarioId];
+  const selIds = [...state.selectedAttrs[scenarioId]];
+  const selAttrs = selIds.map(i => sc.attrs.find(a => a.id === i));
+
+  const directLike   = selAttrs.filter(a => a.kind === 'direct' || a.kind === 'illegal');
+  const indirect     = selAttrs.filter(a => a.kind === 'indirect');
+  const restrictions = selAttrs.filter(a => a.kind === 'restriction');
+  const unenforced   = selAttrs.filter(a => a.kind === 'unenforceable');
+
+  // For scenarios with a unified base-fare menu (airline), build the menu
+  // from the base fare + every selected restriction.
+  function unifiedMenuFor(t){
+    if(!sc.baseFare) return null;
+    const menu = [];
+    const basePrice = state.prices[scenarioId][`${sc.baseFare.id}:${sc.baseFare.id}`];
+    if(basePrice != null){
+      menu.push({ optionId: sc.baseFare.id,
+        value: sc.baseFare.value[t.id], price: basePrice });
+    }
+    for(const a of restrictions){
+      const p = state.prices[scenarioId][`${a.id}:${a.menuOption.id}`];
+      if(p == null) continue;
+      menu.push({ optionId: a.menuOption.id,
+        value: a.menuOption.value[t.id], price: p });
+    }
+    if(menu.length === 0) return null;
+    let best = null;
+    for(const opt of menu){
+      const surp = opt.value - opt.price;
+      if(surp >= 0 && (!best || surp > best.surp))
+        best = { surp, price: opt.price, optionId: opt.optionId };
+    }
+    return best;
+  }
+
+  // Build cross-product of direct partitions over customer types.
+  // Each type lands in a unique combination of direct segment-ids.
+  function typeCell(type){
+    return directLike.map(a => {
+      const seg = a.segments.find(s => s.types.includes(type.id));
+      return `${a.id}:${seg.id}`;
+    }).join('|');
+  }
+  // For unenforced attributes: at price-pick time, each customer picks the
+  // cheapest of that attribute's segments (since they can misrepresent).
+  function unenforcedKeyFor(a){
+    const opts = a.segments || [];
+    if(opts.length === 0) return null;
+    let bestKey = null, bestP = Infinity;
+    for(const seg of opts){
+      const p = state.prices[scenarioId][`${a.id}:${seg.id}`];
+      if(p == null) continue;
+      if(p < bestP){ bestP = p; bestKey = `${a.id}:${seg.id}`; }
+    }
+    return { key: bestKey, price: bestP === Infinity ? null : bestP };
+  }
+
+  let totalProfit = 0;
+  const perType = [];
+  for(const t of sc.types){
+    // Direct cell price = some combination — but in this lab, a direct cell
+    // is identified by a sequence of segment-ids; we treat the price of the
+    // FIRST direct attribute as the binding one when multiple are selected.
+    // (Pedagogically: the firm posts one price per direct cell. Here, each
+    // selected direct attribute splits further, and the cell's "price" is
+    // whatever the student set for the corresponding finest segment.)
+    //
+    // Implementation: when multiple direct attrs are selected, the unique
+    // cell is identified by the tuple of segment-ids. We resolve to a price
+    // by AVERAGING the per-attribute prices for this type's matching segment
+    // when the user has set multiple — but actually that conflates pricing
+    // schemes. Cleaner: take the SMALLEST per-attribute price the type
+    // qualifies for (the firm gives the customer the lowest price they
+    // qualify for, e.g., student discount + senior discount → take the
+    // discount that helps them most. In practice firms pick one; we use
+    // min for simplicity).
+    let directPrice = null;
+    if(directLike.length){
+      const prices = [];
+      for(const a of directLike){
+        const seg = a.segments.find(s => s.types.includes(t.id));
+        if(!seg) continue;
+        const p = state.prices[scenarioId][`${a.id}:${seg.id}`];
+        if(p != null) prices.push(p);
+      }
+      if(prices.length) directPrice = Math.min(...prices);
+    }
+
+    // Indirect menu: type evaluates each option, picks one with positive surplus.
+    let indirectChoice = null; // {price, optionId}
+    if(indirect.length === 1){
+      const a = indirect[0];
+      let best = null;
+      for(const opt of a.menu){
+        const p = state.prices[scenarioId][`${a.id}:${opt.id}`];
+        if(p == null) continue;
+        const v = opt.value[t.id];
+        const surplus = v - p;
+        if(surplus >= 0 && (!best || surplus > best.surplus))
+          best = { surplus, price:p, optionId:opt.id };
+      }
+      indirectChoice = best;
+    }
+    // Unified base-fare + restriction menu (airline-style)
+    const unified = unifiedMenuFor(t);
+    if(unified && (!indirectChoice || unified.price < indirectChoice.price)){
+      indirectChoice = { price: unified.price, optionId: unified.optionId,
+                         surplus: unified.surp };
+    }
+
+    // Unenforced: pick cheapest cell-price the type can claim.
+    let unenforcedPrice = null;
+    if(unenforced.length){
+      for(const a of unenforced){
+        const r = unenforcedKeyFor(a);
+        if(r && r.price != null){
+          if(unenforcedPrice == null || r.price < unenforcedPrice)
+            unenforcedPrice = r.price;
+        }
+      }
+    }
+
+    // Final price faced by this type. A direct carve-out (e.g. a loyalty
+    // fare class) is treated as exclusive to that segment — it overrides
+    // the public menu so the firm can actually extract from the carve-out.
+    // Customers without a direct price fall back to the menu / unenforced
+    // price they qualified for.
+    let price = null;
+    if(directPrice != null){
+      price = directPrice;
+    } else if(indirectChoice){
+      price = indirectChoice.price;
+    } else if(unenforcedPrice != null){
+      price = unenforcedPrice;
+    }
+    if(price == null){
+      perType.push({ type:t, qty:0, price:null, profit:0,
+        note:'No applicable price set — customer not served.' });
+      continue;
+    }
+    // Quantity (uniform-WTP demand)
+    const qty = t.N * Math.max(0, 1 - price / t.R);
+    const profit = (price - sc.mc) * qty;
+    totalProfit += profit;
+    perType.push({ type:t, qty, price, profit });
+  }
+  return { totalProfit, perType, directLike, indirect, unenforced, selAttrs };
+}
+
+// Best-given-attribute-selection: brute force per direct/menu segment
+// over a coarse price grid. Indirect: enumerate independently.
+function bestGivenSelection(scenarioId){
+  const sc = SCENARIOS[scenarioId];
+  const selIds = [...state.selectedAttrs[scenarioId]];
+  const selAttrs = selIds.map(i => sc.attrs.find(a => a.id === i));
+  const directLike = selAttrs.filter(a => a.kind === 'direct' || a.kind === 'illegal');
+  const indirect   = selAttrs.filter(a => a.kind === 'indirect');
+  // If unenforceable / unactionable / weak — these don't add separation, so
+  // ignore them in the "best" computation.
+
+  // If both direct and indirect are present, the interaction is complex.
+  // Approximation: optimize each separately, take whichever yields more.
+  // For pure direct: each cell's optimal price is independent.
+  function bestDirect(){
+    if(directLike.length === 0) return null;
+    // Identify cells = cross-product of direct attribute segments. Types
+    // that do not match every selected direct attr (e.g. non-frequent-flyers
+    // when only a frequent-flyer carve-out is selected) are excluded here —
+    // they show up in the unified menu / single-price part of the calc.
+    const cellToTypes = {};
+    for(const t of sc.types){
+      const parts = [];
+      let allMatch = true;
+      for(const a of directLike){
+        const seg = a.segments.find(s => s.types.includes(t.id));
+        if(!seg){ allMatch = false; break; }
+        parts.push(seg.id);
+      }
+      if(!allMatch) continue;
+      const k = parts.join('|');
+      (cellToTypes[k] = cellToTypes[k] || []).push(t);
+    }
+    let total = 0;
+    for(const k of Object.keys(cellToTypes)){
+      const types = cellToTypes[k];
+      let bestP = sc.mc, bestProf = 0;
+      const maxR = Math.max(...types.map(t => t.R));
+      for(let p = sc.mc; p <= maxR + 5; p += 1){
+        let prof = 0;
+        for(const t of types){
+          const q = t.N * Math.max(0, 1 - p/t.R);
+          prof += (p - sc.mc) * q;
+        }
+        if(prof > bestProf){ bestProf = prof; bestP = p; }
+      }
+      total += bestProf;
+    }
+    return total;
+  }
+  function bestIndirect(){
+    if(indirect.length === 0) return null;
+    // Single indirect menu: brute-force grid over prices.
+    // For tractability, search each option's price independently in a small
+    // grid, taking incentive compatibility into account by allowing each
+    // type to pick its optimal option (the simulation does that already).
+    const a = indirect[0];
+    const optIds = a.menu.map(m => m.id);
+    const N = optIds.length;
+    // Determine search range from each option's max value across types.
+    const ranges = a.menu.map(m =>
+      Math.max(...sc.types.map(t => m.value[t.id])) + 5);
+    // Coarse grid: step depends on max range.
+    const step = Math.max(2, Math.round(Math.max(...ranges) / 40));
+    let best = 0;
+    const pVec = new Array(N).fill(0);
+    function tryGrid(i){
+      if(i === N){
+        let prof = 0;
+        for(const t of sc.types){
+          let bestSurp = -Infinity, bestPrice = null;
+          for(let k=0;k<N;k++){
+            const v = a.menu[k].value[t.id];
+            const surp = v - pVec[k];
+            if(surp >= 0 && surp > bestSurp){ bestSurp = surp; bestPrice = pVec[k]; }
+          }
+          if(bestPrice != null){
+            const q = t.N * Math.max(0, 1 - bestPrice/t.R);
+            prof += (bestPrice - sc.mc) * q;
+          }
+        }
+        if(prof > best) best = prof;
+        return;
+      }
+      for(let p=0; p<=ranges[i]; p+=step){ pVec[i] = p; tryGrid(i+1); }
+    }
+    tryGrid(0);
+    return best;
+  }
+  function bestUnified(){
+    if(!sc.baseFare) return null;
+    const restrictions = selAttrs.filter(a => a.kind === 'restriction');
+    return bestProfitFromUnifiedMenu(sc, restrictions);
+  }
+  // Combined optimizer for scenarios with a base fare: jointly searches
+  // over all selected direct-segment prices AND menu prices (base +
+  // restrictions) via coordinate descent. This catches cases like loyalty
+  // carve-out + sat-night menu where neither alone is optimal.
+  function bestCombined(){
+    if(!sc.baseFare) return null;
+    const restrictions = selAttrs.filter(a => a.kind === 'restriction');
+    if(directLike.length === 0 && restrictions.length === 0) return null;
+
+    const knobs = [];
+    for(const a of directLike){
+      for(const seg of a.segments){
+        if(seg.types.length === 0) continue;
+        const maxR = Math.max(...seg.types
+          .map(typeId => sc.types.find(t=>t.id===typeId).R));
+        knobs.push({ key:`${a.id}:${seg.id}`, range: maxR + 5 });
+      }
+    }
+    const baseKey = `${sc.baseFare.id}:${sc.baseFare.id}`;
+    {
+      const maxV = Math.max(...sc.types.map(t => sc.baseFare.value[t.id]));
+      knobs.push({ key: baseKey, range: maxV + 5 });
+    }
+    for(const a of restrictions){
+      const maxV = Math.max(...sc.types.map(t => a.menuOption.value[t.id]));
+      knobs.push({ key:`${a.id}:${a.menuOption.id}`, range: maxV + 5 });
+    }
+    if(knobs.length === 0) return null;
+
+    const prices = {};
+    knobs.forEach(k => { prices[k.key] = Math.round(k.range / 2); });
+
+    function evaluate(){
+      let total = 0;
+      for(const t of sc.types){
+        let directP = null;
+        for(const a of directLike){
+          const seg = a.segments.find(s => s.types.includes(t.id));
+          if(!seg) continue;
+          const p = prices[`${a.id}:${seg.id}`];
+          if(p == null) continue;
+          if(directP == null || p < directP) directP = p;
+        }
+        const menu = [];
+        const bP = prices[baseKey];
+        if(bP != null) menu.push({ v: sc.baseFare.value[t.id], price: bP });
+        for(const a of restrictions){
+          const p = prices[`${a.id}:${a.menuOption.id}`];
+          if(p != null) menu.push({ v: a.menuOption.value[t.id], price: p });
+        }
+        let menuP = null, bestSurp = -Infinity;
+        for(const opt of menu){
+          const surp = opt.v - opt.price;
+          if(surp >= 0 && surp > bestSurp){ bestSurp = surp; menuP = opt.price; }
+        }
+        const p = (directP != null) ? directP : menuP;
+        if(p == null) continue;
+        const q = t.N * Math.max(0, 1 - p/t.R);
+        total += (p - sc.mc) * q;
+      }
+      return total;
+    }
+
+    function search1D(k){
+      const step = Math.max(1, Math.round(k.range / 60));
+      const orig = prices[k.key];
+      let bestP = orig, bestProf = evaluate();
+      for(let p = 0; p <= k.range; p += step){
+        prices[k.key] = p;
+        const prof = evaluate();
+        if(prof > bestProf){ bestProf = prof; bestP = p; }
+      }
+      prices[k.key] = bestP;
+      return bestProf;
+    }
+
+    let last = -Infinity, prof = 0;
+    for(let iter = 0; iter < 8; iter++){
+      for(const k of knobs) prof = search1D(k);
+      if(prof - last < 1) break;
+      last = prof;
+    }
+    return prof;
+  }
+  const d = bestDirect();
+  const i = bestIndirect();
+  const u = bestUnified();
+  const c = bestCombined();
+  const cand = [d, i, u, c].filter(v => v != null);
+  if(cand.length === 0) return null;
+  return Math.max(...cand);
+}
+
+// ── Run + render results ────────────────────────────────────────────────
+function runSimulation(scenarioId){
+  const sc = SCENARIOS[scenarioId];
+  const sel = state.selectedAttrs[scenarioId];
+
+  // Validate: at least one attribute selected OR (for scenarios with a base
+  // fare) the base-fare price is set.
+  if(sel.size === 0 && !sc.baseFare) return;
+  const anyPriceSet = Object.keys(state.prices[scenarioId]).length > 0;
+  if(!anyPriceSet){
+    const host = document.getElementById('resultsHost');
+    host.innerHTML = `<section class="card" role="status" aria-live="polite">
+      <div class="flag error"><span class="flag-prefix">✗</span>
+      Enter at least one price before running the simulation.</div></section>`;
+    return;
+  }
+
+  const sim = simulate(scenarioId);
+  const bestGiven = bestGivenSelection(scenarioId);
+  const target = computeTargets(scenarioId);
+
+  // Render
+  const host = document.getElementById('resultsHost');
+  host.innerHTML = '';
+  const card = document.createElement('section');
+  card.className = 'card';
+  card.setAttribute('role','status');
+  card.setAttribute('aria-live','polite');
+  card.setAttribute('aria-atomic','false');
+
+  const yourProfit = sim.totalProfit;
+  const profitClass =
+    yourProfit < target.singlePrice * 0.98 ? 'bad' :
+    yourProfit >= (bestGiven || target.best) * 0.95 ? 'good' : '';
+  const profitPrefix =
+    profitClass === 'bad'  ? '✗ ' :
+    profitClass === 'good' ? '✓ ' : '— ';
+
+  card.innerHTML = `<h2>Simulation results</h2>`;
+  card.innerHTML += `<div class="result-grid">
+    <div class="stat ${profitClass}">
+      <div class="stat-label">Your strategy — profit</div>
+      <div class="stat-value">${profitPrefix}$${fmtMoney(yourProfit)}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Best single-price baseline</div>
+      <div class="stat-value">$${fmtMoney(target.singlePrice)}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Best with your chosen attributes</div>
+      <div class="stat-value">$${fmtMoney(bestGiven != null ? bestGiven : target.singlePrice)}</div>
+    </div>
+  </div>`;
+
+  // Per-type breakdown
+  card.innerHTML += `<div style="margin-top:14px;font-size:0.8125rem;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.07em;font-weight:800;">Per-segment outcomes</div>`;
+  const breakdown = document.createElement('div');
+  breakdown.className = 'classification-list';
+  sim.perType.forEach(r => {
+    const row = document.createElement('div');
+    row.className = 'class-row';
+    let body;
+    if(r.price == null){
+      body = `${r.type.label} (${r.type.N} customers): <span style="color:var(--bad);">⚠ no price applies — these customers are unserved.</span>`;
+    } else {
+      body = `${r.type.label} (${r.type.N} customers): pays $${r.price.toFixed(0)} → ${r.qty.toFixed(0)} buyers → profit $${fmtMoney(r.profit)}`;
+    }
+    row.innerHTML = `<span style="font-size:0.8125rem;line-height:1.5;">${body}</span>`;
+    breakdown.appendChild(row);
+  });
+  card.appendChild(breakdown);
+
+  // Classification of each selected attribute
+  card.innerHTML += `<div style="margin-top:14px;font-size:0.8125rem;color:var(--muted);
+    text-transform:uppercase;letter-spacing:.07em;font-weight:800;">Attribute classification</div>`;
+  const cls = document.createElement('div');
+  cls.className = 'classification-list';
+  sim.selAttrs.forEach(a => {
+    const row = document.createElement('div');
+    row.className = 'class-row';
+    let badge = '', text = '';
+    if(a.kind === 'direct'){
+      badge = `<span class="badge direct">✓ Direct (3rd-degree)</span>`;
+      text = `<strong>${a.label}</strong> — observable at purchase. Posting one price per segment is standard 3rd-degree price discrimination.`;
+    } else if(a.kind === 'indirect'){
+      badge = `<span class="badge indirect">↻ Indirect (2nd-degree)</span>`;
+      text = `<strong>${a.label}</strong> — customers reveal their type by choosing a menu option. Setting prices is a screening problem (incentive compatibility).`;
+    } else if(a.kind === 'restriction'){
+      badge = `<span class="badge indirect">↻ Indirect (2nd-degree) — fare condition</span>`;
+      text = `<strong>${a.label}</strong> — adds a discounted option to the fare menu. Customers self-select between this fare and the standard fare based on which gives them more surplus.`;
+    } else if(a.kind === 'unenforceable'){
+      badge = `<span class="badge broken">✗ Not workable here</span>`;
+      text = `<strong>${a.label}</strong> — ${a.unenforceableReason}`;
+    } else if(a.kind === 'illegal'){
+      badge = `<span class="badge warn">⚠ Legally / ethically risky</span>`;
+      text = `<strong>${a.label}</strong> — ${a.illegalReason}`;
+    } else if(a.kind === 'unactionable'){
+      badge = `<span class="badge broken">✗ Not actionable</span>`;
+      text = `<strong>${a.label}</strong> — ${a.unactionableReason}`;
+    } else if(a.kind === 'weak-indirect'){
+      badge = `<span class="badge indirect">↻ Indirect (2nd-degree), limited here</span>`;
+      text = `<strong>${a.label}</strong> — ${a.weakReason}`;
+    }
+    row.innerHTML = `${badge}<span>${text}</span>`;
+    cls.appendChild(row);
+  });
+  card.appendChild(cls);
+
+  // Flags
+  const flags = buildFlags(scenarioId, sim, bestGiven, target);
+  if(flags.length){
+    card.innerHTML += `<div style="margin-top:14px;font-size:0.8125rem;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.07em;font-weight:800;">Strategy notes</div>`;
+    const flagList = document.createElement('div');
+    flagList.className = 'flag-list';
+    flags.forEach(f => {
+      const div = document.createElement('div');
+      div.className = `flag ${f.kind}`;
+      div.innerHTML = `<span class="flag-prefix">${f.prefix}</span><span>${f.text}</span>`;
+      flagList.appendChild(div);
+    });
+    card.appendChild(flagList);
+  }
+
+  // Optimal pricing breakdown (per-cell charts + indirect-menu table)
+  const breakdownData = computeOptimalBreakdown(scenarioId);
+  if(breakdownData.cells.length || breakdownData.menus.length){
+    const optHeader = document.createElement('div');
+    optHeader.style.cssText = 'margin-top:14px;font-size:0.8125rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:800;';
+    optHeader.textContent = 'Optimal pricing for your strategy';
+    card.appendChild(optHeader);
+    const optHelp = document.createElement('p');
+    optHelp.style.cssText = 'font-size:0.8125rem;color:var(--ink-2);line-height:1.55;margin:6px 0 4px;';
+    optHelp.innerHTML = 'For each segment you created, the chart below plots the aggregate demand curve, the marginal cost line, and the profit-maximizing price (red). Your price is marked in amber.';
+    card.appendChild(optHelp);
+    const legend = document.createElement('div');
+    legend.className = 'opt-legend';
+    legend.innerHTML =
+      `<span><span class="swatch" style="background:#2f5d7c;"></span>Aggregate demand</span>` +
+      `<span style="color:#155c38;"><span class="swatch dash"></span>Marginal cost (MC)</span>` +
+      `<span style="color:#b42318;"><span class="swatch dot" style="background:#b42318;"></span>Optimal (P*, Q*)</span>` +
+      `<span style="color:#8c4800;"><span class="swatch dot" style="background:#8c4800;"></span>Your choice</span>`;
+    card.appendChild(legend);
+
+    if(breakdownData.cells.length){
+      const grid = document.createElement('div');
+      grid.className = 'opt-grid';
+      breakdownData.cells.forEach((cell, idx) => {
+        const cellCard = document.createElement('div');
+        cellCard.className = 'opt-cell';
+        const titleId  = `optTitle_${scenarioId}_${idx}`;
+        const descId   = `optDesc_${scenarioId}_${idx}`;
+        const canvasId = `optCanvas_${scenarioId}_${idx}`;
+        const typeNames = cell.types.map(t => t.label).join(', ');
+        const stuLine = cell.studentP != null
+          ? `<span class="opt-yours">▲ Your price: $${cell.studentP.toFixed(0)} → ${cell.studentQty.toFixed(0)} buyers → profit $${fmtMoney(cell.studentProfit)}</span>` +
+            (cell.studentProfit < cell.optimalProfit - 1
+              ? `<span class="opt-gap">Gap: $${fmtMoney(cell.optimalProfit - cell.studentProfit)} below optimum</span>`
+              : `<span class="opt-gap">✓ At or near the optimum.</span>`)
+          : `<span class="opt-yours">▲ Your price: not set — set a price for this segment.</span>`;
+        cellCard.innerHTML =
+          `<div class="opt-title" id="${titleId}">${cell.cellLabel}</div>` +
+          `<div class="opt-types">Serves: ${typeNames}</div>` +
+          `<div class="canvas-wrap">` +
+            `<canvas id="${canvasId}" role="img" ` +
+              `aria-labelledby="${titleId}" aria-describedby="${descId}"></canvas>` +
+          `</div>` +
+          `<div class="opt-stats">` +
+            `<span class="opt-best">● Optimal: P* = $${cell.optimalP.toFixed(2).replace(/\.00$/,'')} → ${cell.optimalQty.toFixed(0)} buyers → profit $${fmtMoney(cell.optimalProfit)}</span>` +
+            stuLine +
+          `</div>` +
+          `<p class="sr-only" id="${descId}" aria-live="polite" aria-atomic="true">` +
+            `Chart for the ${cell.cellLabel} segment, serving ${typeNames}. ` +
+            `Aggregate demand curve with quantity from 0 to ${cell.types.reduce((s,t)=>s+t.N,0)} on the horizontal axis and price up to $${Math.max(...cell.types.map(t=>t.R))} on the vertical axis. ` +
+            `Marginal cost is a horizontal line at $${sc.mc}. ` +
+            `The profit-maximizing point is marked at price $${cell.optimalP.toFixed(2).replace(/\.00$/,'')} and quantity ${cell.optimalQty.toFixed(0)}, yielding profit $${fmtMoney(cell.optimalProfit)}. ` +
+            (cell.studentP != null
+              ? `Your chosen price of $${cell.studentP.toFixed(0)} is marked in amber, serving ${cell.studentQty.toFixed(0)} buyers and earning profit $${fmtMoney(cell.studentProfit)}.`
+              : `You have not set a price for this segment.`) +
+          `</p>`;
+        grid.appendChild(cellCard);
+      });
+      card.appendChild(grid);
+      // Draw canvases after layout. setTimeout gives the browser time to
+      // resolve aspect-ratio sizing on .canvas-wrap before we measure.
+      const redrawAll = () => {
+        breakdownData.cells.forEach((cell, idx) => {
+          const canvas = document.getElementById(`optCanvas_${scenarioId}_${idx}`);
+          if(canvas) drawCellChart(canvas, canvas.parentElement, cell, sc);
+        });
+      };
+      requestAnimationFrame(() => requestAnimationFrame(redrawAll));
+      setTimeout(redrawAll, 80);
+      _resizeRedraws[scenarioId] = redrawAll;
+    }
+
+    breakdownData.menus.forEach(menu => {
+      const tbl = document.createElement('div');
+      tbl.className = 'menu-cmp';
+      const rows = menu.attr.menu.map(opt => {
+        const stuP = menu.studentPrices[opt.id];
+        const optP = menu.optionPrices[opt.id];
+        return `<tr>
+          <td><strong>${opt.label}</strong></td>
+          <td class="menu-yours">${stuP != null ? '$' + stuP.toFixed(0) : '—'}</td>
+          <td class="menu-best">$${optP.toFixed(0)}</td>
+        </tr>`;
+      }).join('');
+      tbl.innerHTML =
+        `<h4>${menu.attr.label} — optimal menu prices</h4>` +
+        `<table><thead><tr>` +
+          `<th>Option</th><th>Your price</th><th>Optimal price</th>` +
+        `</tr></thead><tbody>${rows}</tbody></table>` +
+        `<div class="menu-summary">` +
+          `Optimal menu profit: <strong style="color:var(--bad);">$${fmtMoney(menu.optimalProfit)}</strong>. ` +
+          `Your menu profit: <strong style="color:var(--warn);">$${fmtMoney(menu.studentProfit)}</strong>.` +
+        `</div>`;
+      card.appendChild(tbl);
+    });
+  }
+
+  // Model answer
+  const m = document.createElement('div');
+  m.className = 'model-answer';
+  m.innerHTML = `<div style="font-size:0.6875rem;font-weight:800;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--accent);margin-bottom:6px;">
+    Instructor commentary</div>${sc.modelAnswer}`;
+  card.appendChild(m);
+
+  host.appendChild(card);
+
+  // Mark scenario completed
+  if(!state.scenariosCompleted[scenarioId]){
+    state.scenariosCompleted[scenarioId] = true;
+  }
+
+  // Render after-prompts now
+  const afterHost = document.getElementById('afterPromptsHost');
+  afterHost.innerHTML = '';
+  PROMPTS.forEach((p, i) => {
+    if(p.scenario === scenarioId && p.when === 'after')
+      afterHost.appendChild(renderPromptCard(i));
+  });
+
+  updateProgress();
+  renderPicker();
+}
+
+// ── Build feedback flags ────────────────────────────────────────────────
+function buildFlags(scenarioId, sim, bestGiven, target){
+  const flags = [];
+  const sc = SCENARIOS[scenarioId];
+
+  // Below single-price baseline
+  if(sim.totalProfit < target.singlePrice - 1){
+    flags.push({ kind:'error', prefix:'✗',
+      text:`Your strategy earned $${fmtMoney(sim.totalProfit)}, which is BELOW the single-price baseline of $${fmtMoney(target.singlePrice)}. Discriminating poorly is worse than not discriminating at all.` });
+  } else if(sim.totalProfit >= target.singlePrice * 0.99 && bestGiven != null && sim.totalProfit < bestGiven * 0.92){
+    flags.push({ kind:'warn', prefix:'⚠',
+      text:`You're above the single-price baseline, but well below the best you could do with the attributes you selected ($${fmtMoney(bestGiven)}). Check your per-segment prices.` });
+  } else if(bestGiven != null && sim.totalProfit >= bestGiven * 0.95){
+    flags.push({ kind:'success', prefix:'✓',
+      text:`Strong execution — you're within 5% of the best profit achievable with the attributes you chose.` });
+  }
+
+  // Compare to overall best
+  if(target.best != null && sim.totalProfit < target.best * 0.85){
+    const gap = target.best - sim.totalProfit;
+    flags.push({ kind:'warn', prefix:'⚠',
+      text:`The best segmentation in this scenario earns about $${fmtMoney(target.best)} — you're leaving about $${fmtMoney(gap)} on the table. The attributes you selected may not separate the customer types as cleanly as another combination would.` });
+  }
+
+  // Unenforceable selected
+  const sel = state.selectedAttrs[scenarioId];
+  sc.attrs.forEach(a => {
+    if(!sel.has(a.id)) return;
+    if(a.kind === 'unenforceable'){
+      flags.push({ kind:'error', prefix:'✗',
+        text:`"${a.label}" can't be enforced without verification. The simulation routed every customer to the cheapest option for that attribute, just as real customers would.` });
+    }
+    if(a.kind === 'illegal'){
+      flags.push({ kind:'warn', prefix:'⚠',
+        text:`"${a.label}" is legally / ethically risky. The simulation used it as a direct segmenter, but in practice this would be hard to defend.` });
+    }
+    if(a.kind === 'unactionable'){
+      flags.push({ kind:'warn', prefix:'⚠',
+        text:`"${a.label}" can't be used at sign-up — the simulation ignored it.` });
+    }
+    if(a.kind === 'weak-indirect'){
+      flags.push({ kind:'warn', prefix:'⚠',
+        text:`"${a.label}" is verifiable, but it works as an indirect (2nd-degree) choice — and in this scenario the choice doesn't separate the customer types much beyond what your other attributes already capture.` });
+    }
+  });
+
+  // Indirect-menu incentive-compatibility check.
+  // A "true" IC violation here means: the customer could AFFORD their
+  // highest-value option (positive surplus) but chose a different option
+  // because the price gap is too small. If the highest-value option is
+  // simply unaffordable (negative surplus), that's a price-level issue,
+  // not an IC issue, and we don't flag it.
+  sc.attrs.forEach(a => {
+    if(!sel.has(a.id) || a.kind !== 'indirect') return;
+    const violations = [];
+    sc.types.forEach(t => {
+      // Find the type's highest-value option, and the option they actually pick.
+      let topVal = null, pickByType = null;
+      a.menu.forEach(opt => {
+        const v = opt.value[t.id];
+        if(!topVal || v > topVal.v) topVal = { v, id:opt.id };
+        const p = state.prices[scenarioId][`${a.id}:${opt.id}`];
+        if(p == null) return;
+        const surp = v - p;
+        if(surp >= 0 && (!pickByType || surp > pickByType.surp))
+          pickByType = { surp, id:opt.id };
+      });
+      // Affordability of the top-value option:
+      const topPrice = state.prices[scenarioId][`${a.id}:${topVal.id}`];
+      const topAffordable = topPrice != null && (topVal.v - topPrice) >= 0;
+      if(pickByType && topAffordable && pickByType.id !== topVal.id){
+        violations.push(`${t.label} picks "${a.menu.find(o=>o.id===pickByType.id).label}" instead of their highest-value option "${a.menu.find(o=>o.id===topVal.id).label}"`);
+      }
+    });
+    if(violations.length){
+      flags.push({ kind:'warn', prefix:'⚠',
+        text:`Incentive-compatibility issue on "${a.label}": ${violations.join('; ')}. The price gap is too small — higher-WTP customers can save money by picking a cheaper option.` });
+    }
+  });
+
+  return flags;
+}
+
+// ── Quiz prompt rendering ───────────────────────────────────────────────
+function renderPromptCard(promptIdx){
+  const p = PROMPTS[promptIdx];
+  const card = document.createElement('section');
+  card.className = 'card';
+  const inner = document.createElement('div');
+  inner.className = 'quiz-card';
+  inner.innerHTML = `<div class="quiz-q">${p.text}</div>`;
+  const opts = document.createElement('div');
+  opts.className = 'quiz-options';
+  const isLocked = state.promptDone[promptIdx];
+  const inputType = p.type === 'multi' ? 'checkbox' : 'radio';
+  p.options.forEach(o => {
+    const id = `q${promptIdx}_${o.id}`;
+    const label = document.createElement('label');
+    label.className = 'quiz-option' + (isLocked ? ' locked' : '');
+    label.setAttribute('for', id);
+    label.innerHTML = `<input type="${inputType}" name="q${promptIdx}" id="${id}"
+      value="${o.id}" ${isLocked ? 'disabled' : ''}/><span>${o.label}</span>`;
+    if(isLocked){
+      // Show correct/wrong status from stored answer.
+      const chosen = (state.promptAns[promptIdx] || '').split(',');
+      if(o.correct) label.classList.add('correct');
+      if(chosen.includes(o.id) && !o.correct) label.classList.add('wrong');
+      if(chosen.includes(o.id) && o.correct) label.classList.add('correct');
+      if(chosen.includes(o.id)) label.querySelector('input').checked = true;
+    }
+    opts.appendChild(label);
+  });
+  inner.appendChild(opts);
+  const fb = document.createElement('div');
+  fb.className = 'quiz-feedback hidden';
+  inner.appendChild(fb);
+  const actions = document.createElement('div');
+  actions.className = 'quiz-actions';
+  if(!isLocked){
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.textContent = 'Submit answer';
+    btn.addEventListener('click', () => handleQuizSubmit(promptIdx, card));
+    actions.appendChild(btn);
+  } else {
+    fb.classList.remove('hidden');
+    const correct = state.promptCorrect[promptIdx];
+    fb.className = 'quiz-feedback ' + (correct ? 'correct' : 'wrong');
+    fb.innerHTML = (correct ? '✓ Correct.' : '✗ Recorded — see correct answer above.') +
+      (p.correctExplain ? ' ' + p.correctExplain : '');
+  }
+  inner.appendChild(actions);
+  card.appendChild(inner);
+  return card;
+}
+
+function handleQuizSubmit(promptIdx, cardEl){
+  const p = PROMPTS[promptIdx];
+  const inputs = cardEl.querySelectorAll(`input[name="q${promptIdx}"]`);
+  const selected = [...inputs].filter(i => i.checked).map(i => i.value);
+  if(selected.length === 0){
+    const fb = cardEl.querySelector('.quiz-feedback');
+    fb.classList.remove('hidden');
+    fb.className = 'quiz-feedback wrong';
+    fb.textContent = '✗ Pick at least one option before submitting.';
+    return;
+  }
+  // Determine correctness
+  let correct = true;
+  const correctIds = p.options.filter(o => o.correct).map(o => o.id);
+  if(p.type === 'multi'){
+    const a = new Set(selected), b = new Set(correctIds);
+    if(a.size !== b.size) correct = false;
+    else for(const v of a) if(!b.has(v)){ correct = false; break; }
+  } else {
+    if(selected.length !== 1 || !correctIds.includes(selected[0])) correct = false;
+  }
+  state.promptDone[promptIdx] = true;
+  state.promptCorrect[promptIdx] = correct;
+  state.promptAns[promptIdx] = selected.join(',');
+
+  // Build human-readable answer text for Session.
+  const ansText = selected
+    .map(s => p.options.find(o => o.id === s).label)
+    .join(' | ');
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(LAB_ID, p.qIdx, p.text,
+      ansText, correct,
+      ansText, correct);
+  }
+
+  // Re-render this prompt card in locked state.
+  const replacement = renderPromptCard(promptIdx);
+  cardEl.parentNode.replaceChild(replacement, cardEl);
+  updateProgress();
+}
+
+// ── Utilities ───────────────────────────────────────────────────────────
+function fmtMoney(v){
+  if(!isFinite(v)) return '—';
+  return Math.round(v).toLocaleString('en-US');
+}
+
+// ── Boot ────────────────────────────────────────────────────────────────
+function kickoff(){
+  const isDiscussion = new URLSearchParams(location.search).get('disc') === '1';
+  if(isDiscussion && window.DiscussionModal){
+    DiscussionModal.init({
+      weekLabel: WEEK_LABEL,
+      onReady: function(){ init(); }
+    });
+  } else {
+    init();
+  }
+}
+kickoff();
+
+})();
+</script>
+</body>
+</html>

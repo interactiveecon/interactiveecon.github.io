@@ -1,0 +1,1405 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Solving a Simultaneous Game — ECON 104B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;  --bad:#b42318;
+      --player-a:#b54708;   /* A's color — orange/amber, 4.7:1 on white */
+      --player-b:#2f5d7c;   /* B's color — accent blue */
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ─────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Buttons */
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:none;border-radius:12px;font-family:var(--font-sans);font-size:0.875rem;font-weight:700;cursor:pointer;transition:background .12s;}
+    .btn.primary{background:var(--accent);color:#fff;}
+    .btn.primary:hover:not(:disabled){background:#264d68;}
+    .btn.primary:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* Layout */
+    .lab-container{max-width:1100px;margin:0 auto;padding:18px;}
+    .lab-grid{display:grid;grid-template-columns:1fr 360px;gap:18px;align-items:start;}
+    @media(max-width:880px){.lab-grid{grid-template-columns:1fr;}}
+
+    /* Problem card with payoff matrix */
+    .problem-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow);margin-bottom:14px;}
+    .problem-header{font-family:var(--font-serif);font-size:1.25rem;font-weight:700;color:var(--ink);margin:0 0 6px;}
+    .problem-sub{font-size:0.8125rem;color:var(--muted);margin:0 0 14px;line-height:1.5;}
+
+    /* Game matrix */
+    .matrix-wrap{display:flex;justify-content:center;margin:10px 0 4px;}
+    .matrix-grid{display:grid;
+      grid-template-columns:auto auto 1fr 1fr;
+      grid-template-rows:auto auto 1fr 1fr;
+      gap:0;font-family:var(--font-sans);font-weight:700;}
+    .mx-corner{}
+    .mx-b-header{grid-column:3/5;text-align:center;color:var(--player-b);font-size:0.8125rem;
+      padding:6px 8px;text-transform:uppercase;letter-spacing:.06em;}
+    .mx-a-header{grid-row:3/5;writing-mode:vertical-rl;transform:rotate(180deg);
+      text-align:center;color:var(--player-a);font-size:0.8125rem;
+      padding:8px 6px;text-transform:uppercase;letter-spacing:.06em;
+      align-self:center;justify-self:center;}
+    .mx-col-label{text-align:center;font-size:0.8125rem;color:var(--ink-2);
+      padding:6px 10px;border-bottom:1px solid var(--line);}
+    .mx-row-label{text-align:center;font-size:0.8125rem;color:var(--ink-2);
+      padding:10px 12px;border-right:1px solid var(--line);
+      align-self:center;writing-mode:horizontal-tb;}
+    .mx-cell{border:1.5px solid var(--ink);
+      padding:14px 18px;display:flex;align-items:center;justify-content:center;gap:4px;
+      background:rgba(246,242,234,.45);min-width:88px;min-height:64px;}
+    .mx-cell + .mx-cell{border-left:none;}
+    .mx-cell.row2{border-top:none;}
+    .payoff{display:inline-block;font-size:1.0625rem;font-weight:800;padding:3px 7px;border-radius:6px;
+      cursor:pointer;transition:background .12s,box-shadow .12s,outline .12s;
+      user-select:none;border:2px solid transparent;}
+    .payoff.a-pay{color:var(--player-a);}
+    .payoff.b-pay{color:var(--player-b);}
+    .payoff:hover{background:rgba(47,93,124,.10);}
+    .payoff.sel-a{background:rgba(181,71,8,.16);border-color:var(--player-a);}
+    .payoff.sel-b{background:rgba(47,93,124,.16);border-color:var(--player-b);}
+    .payoff.correct{background:rgba(21,92,56,.14);border-color:var(--good);box-shadow:0 0 0 1px rgba(21,92,56,.25);}
+    .payoff.wrong{background:rgba(180,35,24,.10);border-color:var(--bad);}
+    .payoff.disabled{cursor:default;}
+    .payoff.disabled:hover{background:transparent;}
+    .payoff.disabled.sel-a{background:rgba(181,71,8,.16);}
+    .payoff.disabled.sel-b{background:rgba(47,93,124,.16);}
+    .payoff.disabled.correct{background:rgba(21,92,56,.14);}
+    .payoff.disabled.wrong{background:rgba(180,35,24,.10);}
+    .payoff-sep{color:var(--ink-2);font-weight:600;font-size:1rem;}
+
+    .legend-pills{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:8px;font-size:0.75rem;}
+    .legend-pills .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;background:rgba(246,242,234,.6);border:1px solid var(--line);}
+    .pill-dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+
+    /* Question group header */
+    .qgroup-header{display:flex;align-items:center;gap:10px;margin:18px 0 10px;}
+    .qgroup-header:first-child{margin-top:8px;}
+    .qbadge{font-size:0.625rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;background:var(--accent);color:#fff;padding:3px 9px;border-radius:999px;font-family:var(--font-sans);}
+    .qgroup-title{font-family:var(--font-serif);font-size:1.0625rem;font-weight:700;color:var(--ink);line-height:1.3;}
+
+    /* Step cards */
+    .step-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);margin-bottom:12px;}
+    .step-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+    .step-num{display:inline-block;font-size:0.625rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);background:rgba(47,93,124,.08);border:1px solid rgba(47,93,124,.18);border-radius:6px;padding:2px 7px;margin-bottom:4px;}
+    .step-title{font-size:0.875rem;font-weight:700;color:var(--ink);line-height:1.3;}
+    .step-instruction{font-size:0.8125rem;color:var(--ink-2);line-height:1.55;margin:8px 0 0;}
+
+    .step-btn{flex-shrink:0;padding:6px 12px;border:1.5px solid #8c7f72;background:rgba(47,93,124,.06);color:var(--accent);border-radius:10px;font-size:0.75rem;font-weight:700;font-family:var(--font-sans);cursor:pointer;transition:background .12s,border-color .12s;white-space:nowrap;}
+    .step-btn:hover:not(:disabled){background:rgba(47,93,124,.14);border-color:var(--accent);}
+    .step-btn:disabled{opacity:.55;cursor:default;}
+    .step-btn.done{background:rgba(21,92,56,.08);border-color:rgba(21,92,56,.3);color:var(--good);}
+
+    /* Entry area */
+    .entry-area{margin-top:12px;padding:10px 12px;background:rgba(246,242,234,.5);border:1px solid var(--line);border-radius:12px;}
+    .entry-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:0.9375rem;font-weight:600;color:var(--ink);line-height:2.2;}
+    .entry-row + .entry-row{margin-top:6px;}
+    .entry-sym{color:var(--ink-2);white-space:nowrap;font-size:0.9375rem;}
+
+    /* Inline inputs */
+    .fi{width:72px;padding:5px 7px;border:1.5px solid #8c7f72;border-radius:8px;font-size:0.9375rem;font-family:var(--font-sans);font-weight:700;text-align:center;background:#fff;color:var(--ink);outline:none;transition:border-color .12s,background .12s;}
+    .fi.wide{width:90px;}
+    .fi:focus{border-color:var(--accent);}
+    .fi.correct{border-color:var(--good);background:rgba(21,92,56,.06);}
+    .fi.wrong{border-color:var(--bad);background:rgba(180,35,24,.06);}
+    .fi:disabled{background:rgba(246,242,234,.9);color:var(--muted);cursor:not-allowed;}
+
+    /* Dropdown styled like .fi */
+    .fs{padding:5px 7px;border:1.5px solid #8c7f72;border-radius:8px;
+      font-size:0.9375rem;font-family:var(--font-sans);font-weight:700;
+      background:#fff;color:var(--ink);outline:none;
+      transition:border-color .12s,background .12s;cursor:pointer;}
+    .fs:focus{border-color:var(--accent);}
+    .fs.correct{border-color:var(--good);background:rgba(21,92,56,.06);}
+    .fs.wrong{border-color:var(--bad);background:rgba(180,35,24,.06);}
+    .fs:disabled{background:rgba(246,242,234,.9);color:var(--muted);cursor:not-allowed;}
+
+    /* PSNE list */
+    .psne-list{display:flex;flex-direction:column;gap:8px;}
+    .psne-item{display:flex;align-items:center;gap:8px;padding:8px 10px;
+      background:#fff;border:1px solid var(--line);border-radius:10px;}
+    .psne-item.none{color:var(--muted);font-style:italic;background:rgba(246,242,234,.5);}
+    .psne-item.correct{border-color:var(--good);background:rgba(21,92,56,.06);}
+    .psne-item.wrong{border-color:var(--bad);background:rgba(180,35,24,.06);}
+    .psne-remove{padding:3px 8px;border:1px solid #8c7f72;background:#fff;
+      border-radius:8px;color:var(--ink-2);font-size:0.75rem;font-weight:700;
+      cursor:pointer;font-family:var(--font-sans);}
+    .psne-remove:hover:not(:disabled){background:rgba(180,35,24,.08);border-color:var(--bad);color:var(--bad);}
+    .psne-remove:disabled{opacity:.45;cursor:not-allowed;}
+    .add-psne-btn{margin-top:4px;padding:7px 14px;border:1.5px dashed #8c7f72;
+      background:rgba(47,93,124,.04);color:var(--accent);border-radius:10px;
+      font-size:0.8125rem;font-weight:700;cursor:pointer;font-family:var(--font-sans);}
+    .add-psne-btn:hover:not(:disabled){background:rgba(47,93,124,.10);border-color:var(--accent);}
+    .add-psne-btn:disabled{opacity:.45;cursor:not-allowed;}
+
+    /* Feedback */
+    .entry-fb{margin-top:8px;padding:7px 11px;border-radius:10px;font-size:0.8125rem;font-weight:600;line-height:1.4;animation:fadeSlide .18s ease;}
+    .entry-fb.correct{background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.2);color:var(--good);}
+    .entry-fb.wrong{background:rgba(180,35,24,.06);border:1px solid rgba(180,35,24,.2);color:var(--bad);}
+
+    /* Revealed content */
+    .step-formula{margin-top:10px;padding:9px 13px;background:rgba(47,93,124,.04);border:1px solid rgba(47,93,124,.14);border-radius:12px;animation:fadeSlide .2s ease;}
+    .step-answer{margin-top:8px;padding:11px 13px;background:rgba(21,92,56,.05);border:1px solid rgba(21,92,56,.2);border-radius:12px;animation:fadeSlide .2s ease;}
+    .answer-label{font-size:0.625rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--good);margin-bottom:7px;}
+    .step-formula .formula-content,
+    .step-answer .answer-content{font-size:0.8125rem;line-height:1.7;color:var(--ink);}
+    .step-formula .formula-content p,
+    .step-answer .answer-content p{margin:4px 0;}
+
+    @keyframes fadeSlide{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+    .hidden{display:none !important;}
+
+    /* Lab-done banner */
+    .lab-done-banner{margin-top:14px;padding:12px 16px;border-radius:12px;
+      background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.25);
+      color:var(--good);font-weight:700;font-size:0.875rem;line-height:1.45;}
+
+    /* Graph card */
+    .graph-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);position:sticky;top:18px;}
+    .graph-title{font-size:0.8125rem;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+    .graph-canvas-wrap{position:relative;width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;background:rgba(246,242,234,.45);border:1px solid var(--line);}
+    #graphCanvas{display:block;width:100%;height:100%;}
+    .graph-legend{display:flex;flex-direction:column;gap:5px;margin-top:10px;}
+    .legend-row{display:flex;align-items:center;gap:7px;font-size:0.75rem;color:var(--ink-2);}
+    .legend-swatch{width:22px;height:3px;border-radius:2px;flex-shrink:0;}
+    .legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+    .legend-dashed{width:22px;height:3px;flex-shrink:0;
+      background-image:linear-gradient(to right,var(--player-b) 60%,transparent 0);
+      background-size:8px 3px;background-repeat:repeat-x;}
+
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+  </style>
+</head>
+<body>
+
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ104b/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104B — Game Theory</div>
+      <h1>Solving a Simultaneous Game</h1>
+      <p class="sub">
+        Two players move at the same time. Identify each player's best
+        responses, determine any dominant strategies, find all pure-strategy
+        Nash equilibria, and compute the mixed-strategy Nash equilibrium.
+      </p>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>You will solve a 2×2 simultaneous-move game step by step. In the matrix, the
+          <strong style="color:var(--player-a)">first (orange) number</strong> in each cell is
+          Player A's payoff; the <strong style="color:var(--player-b)">second (blue) number</strong>
+          is Player B's payoff.</p>
+          <p>You will be asked to answer the following:</p>
+          <ol>
+            <li><strong>Best Responses.</strong> Click each payoff in the matrix that is a player's
+              best response to one of the opponent's actions. Click the same payoff again to
+              deselect.</li>
+            <li><strong>Dominant Strategies.</strong> Choose each player's dominant strategy
+              from the dropdown — or <em>None</em> if no strategy dominates the other.</li>
+            <li><strong>Pure-Strategy Nash Equilibria.</strong> Add every PSNE (a strategy pair
+              from which neither player wants to deviate). Leave the list empty if there is none.</li>
+            <li><strong>Mixed-Strategy Nash Equilibrium.</strong> Enter the probabilities
+              <em>p</em> (Player A plays Top) and <em>q</em> (Player B plays Left) that make each
+              player indifferent between their two actions.</li>
+          </ol>
+          <p>For each step, enter your answer and click <strong>Check Answer</strong>.
+          If your answer is incorrect, hints and the worked solution are available.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-container">
+  <div class="lab-grid">
+
+    <!-- LEFT COLUMN -->
+    <div>
+      <div class="problem-card">
+        <h2 class="problem-header">Payoff Matrix</h2>
+        <p class="problem-sub">
+          Player A chooses a row (<em>Top</em> or <em>Bottom</em>). Player B chooses a column
+          (<em>Left</em> or <em>Right</em>). In each cell, the orange number is Player A's
+          payoff, the blue number is Player B's payoff.
+        </p>
+        <div class="matrix-wrap">
+          <div class="matrix-grid" role="grid" aria-label="Payoff matrix">
+            <div class="mx-corner"></div>
+            <div class="mx-corner"></div>
+            <div class="mx-b-header">Player B</div>
+            <div class="mx-corner"></div>
+            <div class="mx-corner"></div>
+            <div class="mx-col-label">Left</div>
+            <div class="mx-col-label">Right</div>
+
+            <div class="mx-a-header">Player A</div>
+            <div class="mx-row-label">Top</div>
+            <div class="mx-cell" id="cell-TL">
+              <span class="payoff a-pay" data-cell="TL" data-who="A" id="pay-A-TL" tabindex="0" role="button" aria-label="Player A payoff Top Left"></span>
+              <span class="payoff-sep">,</span>
+              <span class="payoff b-pay" data-cell="TL" data-who="B" id="pay-B-TL" tabindex="0" role="button" aria-label="Player B payoff Top Left"></span>
+            </div>
+            <div class="mx-cell" id="cell-TR">
+              <span class="payoff a-pay" data-cell="TR" data-who="A" id="pay-A-TR" tabindex="0" role="button" aria-label="Player A payoff Top Right"></span>
+              <span class="payoff-sep">,</span>
+              <span class="payoff b-pay" data-cell="TR" data-who="B" id="pay-B-TR" tabindex="0" role="button" aria-label="Player B payoff Top Right"></span>
+            </div>
+
+            <div class="mx-row-label">Bottom</div>
+            <div class="mx-cell row2" id="cell-BL">
+              <span class="payoff a-pay" data-cell="BL" data-who="A" id="pay-A-BL" tabindex="0" role="button" aria-label="Player A payoff Bottom Left"></span>
+              <span class="payoff-sep">,</span>
+              <span class="payoff b-pay" data-cell="BL" data-who="B" id="pay-B-BL" tabindex="0" role="button" aria-label="Player B payoff Bottom Left"></span>
+            </div>
+            <div class="mx-cell row2" id="cell-BR">
+              <span class="payoff a-pay" data-cell="BR" data-who="A" id="pay-A-BR" tabindex="0" role="button" aria-label="Player A payoff Bottom Right"></span>
+              <span class="payoff-sep">,</span>
+              <span class="payoff b-pay" data-cell="BR" data-who="B" id="pay-B-BR" tabindex="0" role="button" aria-label="Player B payoff Bottom Right"></span>
+            </div>
+          </div>
+        </div>
+        <div class="legend-pills" aria-hidden="true">
+          <span class="pill"><span class="pill-dot" style="background:var(--player-a);"></span>Player A's payoff</span>
+          <span class="pill"><span class="pill-dot" style="background:var(--player-b);"></span>Player B's payoff</span>
+        </div>
+      </div>
+
+      <!-- ── Question group ── -->
+      <div class="qgroup-header">
+        <span class="qbadge">Q1</span>
+        <span class="qgroup-title">Solve the Simultaneous Game</span>
+      </div>
+      <div id="stepsContainer"></div>
+
+      <div id="labDoneBanner" class="lab-done-banner hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn primary" id="newProblemBtn">New Game</button>
+        <button class="btn primary" id="downloadPdfBtn" style="background:#8c7f72;">Download Summary PDF</button>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div>
+      <div class="graph-card">
+        <div class="graph-title" id="graphCanvasTitle">Best Response Diagram in (p, q) Space</div>
+        <div class="graph-canvas-wrap">
+          <canvas id="graphCanvas"
+                  role="img"
+                  aria-labelledby="graphCanvasTitle"
+                  aria-describedby="graphCanvasDesc"></canvas>
+        </div>
+        <p class="sr-only" id="graphCanvasDesc"
+           aria-live="polite" aria-atomic="true">Best response diagram with the probability that Player A plays Top (p) on the horizontal axis and the probability that Player B plays Left (q) on the vertical axis. Complete the steps on the left to reveal the best response correspondences and Nash equilibria.</p>
+        <div class="graph-legend" aria-hidden="true">
+          <div class="legend-row" id="lgBRA">
+            <div class="legend-swatch" style="background:var(--player-a);"></div>
+            <span>Player A's best response</span>
+          </div>
+          <div class="legend-row" id="lgBRB">
+            <div class="legend-dashed"></div>
+            <span>Player B's best response</span>
+          </div>
+          <div class="legend-row hidden" id="lgTentative">
+            <div class="legend-dot" style="background:#a16207;"></div>
+            <span>Your entry (not yet checked)</span>
+          </div>
+          <div class="legend-row hidden" id="lgCorrect">
+            <div class="legend-dot" style="background:var(--good);"></div>
+            <span>Correct equilibrium</span>
+          </div>
+          <div class="legend-row hidden" id="lgWrong">
+            <div class="legend-dot" style="background:var(--bad);"></div>
+            <span>Your entry — incorrect</span>
+          </div>
+          <div class="legend-row hidden" id="lgMissed">
+            <div class="legend-dot" style="background:#fff;border:2px solid var(--good);width:9px;height:9px;box-sizing:border-box;"></div>
+            <span>Correct equilibrium you didn't enter</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer style="margin-top:32px;">
+  <div class="lab-container">
+    <div class="footer-inner">
+      <span>ECON 104B — Intermediate Microeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // LAB_ID:    'simultaneous-game'
+  // LAB_LABEL: 'Solving a Simultaneous Game'
+  // url:       '/classes/econ104b/labs/simultaneous-game/?disc=1'
+  // LABS-array entry for discussion week templates:
+  //   { id: 'simultaneous-game',
+  //     name: 'Solving a Simultaneous Game',
+  //     icon: '🎲',
+  //     desc: 'Find best responses, dominant strategies, pure-strategy Nash equilibria, and the mixed-strategy Nash equilibrium of a 2×2 simultaneous game.',
+  //     url:  '/classes/econ104b/labs/simultaneous-game/?disc=1' }
+  const LAB_ID     = 'simultaneous-game';
+  const LAB_LABEL  = 'Solving a Simultaneous Game';
+  const WEEK_LABEL = 'Game Theory';
+  const SESSION_KEY = 'econ002_session';
+
+  let _fs = 1;
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let _rng = null;
+  let _problemIdx = 0;
+  let params = {};
+  let answers = {};
+  const N_STEPS = 4;
+  const stepMeta = Array.from({length:N_STEPS}, () => ({s:'check'}));
+  const firstAttempt = Array(N_STEPS).fill(true);
+  const firstCorrect = Array(N_STEPS).fill(false);
+  const firstAnsText = Array(N_STEPS).fill('—');
+  let _labDoneFired = false;
+
+  // Step 1 — best responses: payoff selections
+  // selectedBR.A = Set of cell keys (TL,TR,BL,BR) where student marked A's payoff as a BR
+  // selectedBR.B = same for B
+  const selectedBR = { A:new Set(), B:new Set() };
+  let brLocked = false;
+
+  // Step 3 — PSNE entries: array of {a:'Top'|'Bottom', b:'Left'|'Right', state:''|'correct'|'wrong'}
+  let psneEntries = [];
+  let psneLocked = false;
+
+  // ── DOM ────────────────────────────────────────────────────────────────────
+  const $stepsContainer = document.getElementById('stepsContainer');
+  const $canvas   = document.getElementById('graphCanvas');
+  const $graphDesc = document.getElementById('graphCanvasDesc');
+  const $banner   = document.getElementById('labDoneBanner');
+
+  // ── Utilities ──────────────────────────────────────────────────────────────
+  function rng(){ return _rng ? _rng() : Math.random(); }
+  function ri(lo,hi){ return lo + Math.floor(rng()*(hi-lo+1)); }
+  function fmtNum(v,dp){
+    if(!isFinite(v)) return '—';
+    let s = v.toFixed(dp);
+    if(s.indexOf('.') !== -1) s = s.replace(/0+$/,'').replace(/\.$/,'');
+    return s;
+  }
+  function eqSets(a,b){
+    if(a.size !== b.size) return false;
+    for(const x of a) if(!b.has(x)) return false;
+    return true;
+  }
+
+  // ── Compute the canonical answers ──────────────────────────────────────────
+  function computeAnswers(p){
+    const {ATL,ATR,ABL,ABR,BTL,BTR,BBL,BBR} = p;
+
+    // Best responses (sets of cells where the marked payoff is a best response).
+    // For A: in each B-column, choose the higher (or both if tied).
+    const aLeft  = ATL > ABL ? ['TL']
+                 : ATL < ABL ? ['BL']
+                 : ['TL','BL'];
+    const aRight = ATR > ABR ? ['TR']
+                 : ATR < ABR ? ['BR']
+                 : ['TR','BR'];
+    // For B: in each A-row, choose the higher (or both if tied).
+    const bTop = BTL > BTR ? ['TL']
+               : BTL < BTR ? ['TR']
+               : ['TL','TR'];
+    const bBot = BBL > BBR ? ['BL']
+               : BBL < BBR ? ['BR']
+               : ['BL','BR'];
+    const aBR = new Set([...aLeft, ...aRight]);
+    const bBR = new Set([...bTop,  ...bBot]);
+
+    // Dominant strategies (weak; Top/Left preferred in the all-equal degenerate case).
+    let aDom = 'None';
+    if(ATL >= ABL && ATR >= ABR && (ATL > ABL || ATR > ABR)) aDom = 'Top';
+    else if(ATL <= ABL && ATR <= ABR && (ATL < ABL || ATR < ABR)) aDom = 'Bottom';
+    let bDom = 'None';
+    if(BTL >= BTR && BBL >= BBR && (BTL > BTR || BBL > BBR)) bDom = 'Left';
+    else if(BTL <= BTR && BBL <= BBR && (BTL < BTR || BBL < BBR)) bDom = 'Right';
+
+    // PSNE: profiles where each player is best responding.
+    const psne = [];
+    if(ATL >= ABL && BTL >= BTR) psne.push({a:'Top',    b:'Left'});
+    if(ATR >= ABR && BTR >= BTL) psne.push({a:'Top',    b:'Right'});
+    if(ABL >= ATL && BBL >= BBR) psne.push({a:'Bottom', b:'Left'});
+    if(ABR >= ATR && BBR >= BBL) psne.push({a:'Bottom', b:'Right'});
+
+    // MSNE — the equilibrium probabilities A plays Top (p) and B plays Left (q).
+    //   • If A has a dominant strategy, p collapses to 1 (Top) or 0 (Bottom).
+    //   • Else if B has a dominant strategy, A best-responds to it, so p is 0 or 1.
+    //   • Else both players mix on their indifference curves:
+    //       q* = (ABR - ATR) / [(ATL - ATR) - (ABL - ABR)]
+    //       p* = (BBR - BBL) / [(BTL - BBL) - (BTR - BBR)]
+    let pStar, qStar;
+    if(aDom === 'Top')         pStar = 1;
+    else if(aDom === 'Bottom') pStar = 0;
+    else if(bDom === 'Left')   pStar = (ATL > ABL) ? 1 : 0;
+    else if(bDom === 'Right')  pStar = (ATR > ABR) ? 1 : 0;
+    else {
+      const denomP = (BTL - BBL) - (BTR - BBR);
+      pStar = denomP !== 0 ? (BBR - BBL) / denomP : NaN;
+    }
+    if(bDom === 'Left')        qStar = 1;
+    else if(bDom === 'Right')  qStar = 0;
+    else if(aDom === 'Top')    qStar = (BTL > BTR) ? 1 : 0;
+    else if(aDom === 'Bottom') qStar = (BBL > BBR) ? 1 : 0;
+    else {
+      const denomQ = (ATL - ATR) - (ABL - ABR);
+      qStar = denomQ !== 0 ? (ABR - ATR) / denomQ : NaN;
+    }
+
+    return { aBR, bBR, aLeft, aRight, bTop, bBot,
+             aDom, bDom, psne, qStar, pStar };
+  }
+
+  // ── Problem generation ─────────────────────────────────────────────────────
+  // Generate fully random payoffs. The only constraint is that no two payoffs
+  // in the same row or column tie, so best responses are unambiguous and the
+  // MSNE values (whether interior or at a corner) are well-defined.
+  function generateParams(){
+    if(_problemIdx === 0 && window.Session && Session.rngForLab){
+      _rng = Session.rngForLab(LAB_ID);
+    } else {
+      _rng = null;
+    }
+    for(let tries=0; tries<3000; tries++){
+      const ATL = ri(-10,10), ATR = ri(-10,10), ABL = ri(-10,10), ABR = ri(-10,10);
+      const BTL = ri(-10,10), BTR = ri(-10,10), BBL = ri(-10,10), BBR = ri(-10,10);
+      if(ATL===ABL || ATR===ABR || BTL===BTR || BBL===BBR) continue;
+      const p = {ATL,ATR,ABL,ABR,BTL,BTR,BBL,BBR};
+      const a = computeAnswers(p);
+      if(!isFinite(a.pStar) || !isFinite(a.qStar)) continue;
+      params  = p;
+      answers = a;
+      return;
+    }
+    // Deterministic fallback — a classic battle-of-the-sexes-style game
+    params  = {ATL:3, ATR:0, ABL:0, ABR:2, BTL:2, BTR:0, BBL:0, BBR:3};
+    answers = computeAnswers(params);
+  }
+
+  // ── Render the payoff matrix ───────────────────────────────────────────────
+  function renderMatrix(){
+    const cells = ['TL','TR','BL','BR'];
+    const aMap = {TL:params.ATL, TR:params.ATR, BL:params.ABL, BR:params.ABR};
+    const bMap = {TL:params.BTL, TR:params.BTR, BL:params.BBL, BR:params.BBR};
+    cells.forEach(c => {
+      document.getElementById('pay-A-'+c).textContent = aMap[c];
+      document.getElementById('pay-B-'+c).textContent = bMap[c];
+    });
+    refreshMatrixVisuals();
+  }
+  function refreshMatrixVisuals(){
+    ['TL','TR','BL','BR'].forEach(c => {
+      ['A','B'].forEach(w => {
+        const el = document.getElementById('pay-'+w+'-'+c);
+        el.classList.remove('sel-a','sel-b','correct','wrong','disabled');
+        if(selectedBR[w].has(c)) el.classList.add(w==='A'?'sel-a':'sel-b');
+        if(brLocked) el.classList.add('disabled');
+      });
+    });
+  }
+
+  // Click handler on payoff cells. Only active during Step 1.
+  function onPayoffClick(e){
+    if(brLocked) return;
+    const who = e.currentTarget.getAttribute('data-who');
+    const c   = e.currentTarget.getAttribute('data-cell');
+    if(selectedBR[who].has(c)) selectedBR[who].delete(c);
+    else selectedBR[who].add(c);
+    refreshMatrixVisuals();
+  }
+  function attachMatrixListeners(){
+    ['TL','TR','BL','BR'].forEach(c => {
+      ['A','B'].forEach(w => {
+        const el = document.getElementById('pay-'+w+'-'+c);
+        el.addEventListener('click', onPayoffClick);
+        el.addEventListener('keydown', ev => {
+          if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); onPayoffClick({currentTarget:el}); }
+        });
+      });
+    });
+  }
+
+  // ── Build step cards ───────────────────────────────────────────────────────
+  function stepHTML(n, title, instr, body){
+    return `<div class="step-card" id="sc${n}">
+      <div class="step-card-header">
+        <div>
+          <div class="step-num">Step ${n}</div>
+          <div class="step-title">${title}</div>
+        </div>
+        <button class="step-btn" id="btn${n}" aria-label="Check your answer for step ${n}">Check Answer</button>
+      </div>
+      <p class="step-instruction">${instr}</p>
+      <div class="entry-area">${body}</div>
+      <div id="fb${n}" class="hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div class="step-formula hidden" id="fml${n}">
+        <div class="formula-content" id="fc${n}"></div>
+      </div>
+      <div class="step-answer hidden" id="ans${n}">
+        <div class="answer-label">Answer</div>
+        <div class="answer-content" id="ac${n}"></div>
+      </div>
+    </div>`;
+  }
+
+  function renderSteps(){
+    const html = [];
+
+    // Step 1 — best responses (clicks happen in the matrix above).
+    html.push(stepHTML(1,
+      'Best Responses',
+      `In the payoff matrix above, click the payoffs that are a player's best response to one of the opponent's actions. Player A has one best response for each of Player B's two actions (Left and Right), and vice-versa. Click a payoff a second time to deselect it. When you are done, press <strong>Check Answer</strong>.`,
+      `<p class="entry-sym" style="margin:0;font-size:0.8125rem;line-height:1.45;">
+        <strong>Tip:</strong> click on Player A's <span style="color:var(--player-a);font-weight:800;">orange</span>
+        payoff to mark A's best response in that column; click on Player B's
+        <span style="color:var(--player-b);font-weight:800;">blue</span> payoff to mark B's best response in that row.
+      </p>`
+    ));
+
+    // Step 2 — dominant strategies (dropdowns).
+    html.push(stepHTML(2,
+      'Dominant Strategies',
+      `A strategy is <strong>dominant</strong> if it yields a higher payoff than the alternative for every action the opponent might take. Choose each player's dominant strategy — or <em>None</em> if neither strategy dominates.`,
+      `<div class="entry-row">
+        <span class="entry-sym">Player A's dominant strategy:&nbsp;</span>
+        <select class="fs" id="s2a" aria-label="Player A dominant strategy">
+          <option value="">—</option>
+          <option value="Top">Top</option>
+          <option value="Bottom">Bottom</option>
+          <option value="None">None</option>
+        </select>
+      </div>
+      <div class="entry-row">
+        <span class="entry-sym">Player B's dominant strategy:&nbsp;</span>
+        <select class="fs" id="s2b" aria-label="Player B dominant strategy">
+          <option value="">—</option>
+          <option value="Left">Left</option>
+          <option value="Right">Right</option>
+          <option value="None">None</option>
+        </select>
+      </div>`
+    ));
+
+    // Step 3 — PSNE (add equilibrium list).
+    html.push(stepHTML(3,
+      'Pure-Strategy Nash Equilibria',
+      `A pure-strategy Nash equilibrium (PSNE) is a strategy pair from which <em>neither</em> player wants to deviate. Click <strong>Add Equilibrium</strong> for each PSNE you identify, then pick Player A's and Player B's strategies. If there is no PSNE, leave the list empty.`,
+      `<div class="psne-list" id="psneList"></div>
+       <button type="button" class="add-psne-btn" id="addPsneBtn">+ Add Equilibrium</button>`
+    ));
+
+    // Step 4 — MSNE (p and q inputs).
+    html.push(stepHTML(4,
+      'Mixed-Strategy Nash Equilibrium',
+      `In a mixed-strategy Nash equilibrium, each player randomizes so that the opponent is <em>indifferent</em> between their two actions. Find the probability <em>p</em> that Player A plays Top (which makes B indifferent) and the probability <em>q</em> that Player B plays Left (which makes A indifferent). Round to 3 decimal places.`,
+      `<div class="entry-row">
+        <span class="entry-sym"><em>p</em> (Player A plays Top) =&nbsp;</span>
+        <input class="fi wide" id="s4p" type="text" inputmode="decimal" autocomplete="off" placeholder="0.xxx" aria-label="Probability A plays Top"/>
+      </div>
+      <div class="entry-row">
+        <span class="entry-sym"><em>q</em> (Player B plays Left) =&nbsp;</span>
+        <input class="fi wide" id="s4q" type="text" inputmode="decimal" autocomplete="off" placeholder="0.xxx" aria-label="Probability B plays Left"/>
+      </div>`
+    ));
+
+    $stepsContainer.innerHTML = html.join('');
+
+    // Wire up step buttons
+    for(let n=1; n<=N_STEPS; n++){
+      document.getElementById('btn'+n).addEventListener('click', () => handleBtn(n));
+    }
+    document.getElementById('addPsneBtn').addEventListener('click', addPsneRow);
+    renderPsneList();
+
+    // Enter-to-check on Step 4 inputs
+    ['s4p','s4q'].forEach(id => {
+      document.getElementById(id).addEventListener('keydown', ev => {
+        if(ev.key === 'Enter') handleBtn(4);
+      });
+      document.getElementById(id).addEventListener('input', drawGraph);
+    });
+  }
+
+  // ── Step 3 — PSNE list rendering ───────────────────────────────────────────
+  function renderPsneList(){
+    const $list = document.getElementById('psneList');
+    if(!$list) return;
+    if(psneEntries.length === 0){
+      $list.innerHTML = `<div class="psne-item none">None — no pure-strategy Nash equilibrium added yet.</div>`;
+    } else {
+      $list.innerHTML = psneEntries.map((e,i) => `
+        <div class="psne-item ${e.state||''}">
+          <span class="entry-sym">${i+1}.&nbsp;</span>
+          <span class="entry-sym">Player A plays&nbsp;</span>
+          <select class="fs" data-i="${i}" data-fld="a" ${psneLocked?'disabled':''} aria-label="PSNE ${i+1}: Player A's strategy">
+            <option value="Top"     ${e.a==='Top'?'selected':''}>Top</option>
+            <option value="Bottom"  ${e.a==='Bottom'?'selected':''}>Bottom</option>
+          </select>
+          <span class="entry-sym">,&nbsp;Player B plays&nbsp;</span>
+          <select class="fs" data-i="${i}" data-fld="b" ${psneLocked?'disabled':''} aria-label="PSNE ${i+1}: Player B's strategy">
+            <option value="Left"   ${e.b==='Left'?'selected':''}>Left</option>
+            <option value="Right"  ${e.b==='Right'?'selected':''}>Right</option>
+          </select>
+          <button type="button" class="psne-remove" data-rm="${i}" ${psneLocked?'disabled':''} aria-label="Remove equilibrium ${i+1}">Remove</button>
+        </div>`).join('');
+    }
+    document.querySelectorAll('#psneList select[data-fld]').forEach(sel => {
+      sel.addEventListener('change', e => {
+        const i   = +e.target.getAttribute('data-i');
+        const fld = e.target.getAttribute('data-fld');
+        psneEntries[i][fld] = e.target.value;
+        psneEntries[i].state = '';
+        drawGraph();
+      });
+    });
+    document.querySelectorAll('#psneList button[data-rm]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const i = +e.target.getAttribute('data-rm');
+        psneEntries.splice(i,1);
+        renderPsneList();
+        drawGraph();
+      });
+    });
+  }
+  function addPsneRow(){
+    if(psneLocked) return;
+    psneEntries.push({a:'Top', b:'Left', state:''});
+    renderPsneList();
+    drawGraph();
+  }
+
+  // ── Validation ─────────────────────────────────────────────────────────────
+  function checkStep1(){
+    // Compare selectedBR.A to answers.aBR, and selectedBR.B to answers.bBR
+    const okA = eqSets(selectedBR.A, answers.aBR);
+    const okB = eqSets(selectedBR.B, answers.bBR);
+    return {ok: okA && okB, okA, okB};
+  }
+  function checkStep2(){
+    const a = document.getElementById('s2a').value;
+    const b = document.getElementById('s2b').value;
+    if(!a || !b) return {ok:false, empty:true};
+    const okA = a === answers.aDom;
+    const okB = b === answers.bDom;
+    document.getElementById('s2a').classList.toggle('correct', okA);
+    document.getElementById('s2a').classList.toggle('wrong', !okA);
+    document.getElementById('s2b').classList.toggle('correct', okB);
+    document.getElementById('s2b').classList.toggle('wrong', !okB);
+    return {ok: okA && okB, entered:{a,b}};
+  }
+  function checkStep3(){
+    // Compare set of entered profiles to answers.psne (as a set of "Top|Left" strings).
+    const enteredKeys = new Set(psneEntries.map(e => e.a+'|'+e.b));
+    const truthKeys   = new Set(answers.psne.map(e => e.a+'|'+e.b));
+    // Duplicate detection: number of unique entries must equal length
+    const dup = enteredKeys.size !== psneEntries.length;
+    psneEntries.forEach(e => {
+      e.state = truthKeys.has(e.a+'|'+e.b) ? 'correct' : 'wrong';
+    });
+    renderPsneList();
+    const ok = !dup && eqSets(enteredKeys, truthKeys);
+    return {ok};
+  }
+  function checkStep4(){
+    const pRaw = document.getElementById('s4p').value.trim();
+    const qRaw = document.getElementById('s4q').value.trim();
+    if(pRaw === '' || qRaw === '') return {ok:false, empty:true};
+    const pv = parseFloat(pRaw);
+    const qv = parseFloat(qRaw);
+    const okP = !isNaN(pv) && Math.abs(pv - answers.pStar) <= 0.02;
+    const okQ = !isNaN(qv) && Math.abs(qv - answers.qStar) <= 0.02;
+    document.getElementById('s4p').classList.toggle('correct', okP);
+    document.getElementById('s4p').classList.toggle('wrong', !okP);
+    document.getElementById('s4q').classList.toggle('correct', okQ);
+    document.getElementById('s4q').classList.toggle('wrong', !okQ);
+    return {ok: okP && okQ, entered:{p:pRaw, q:qRaw}};
+  }
+
+  // ── Feedback / reveal helpers ──────────────────────────────────────────────
+  function showFB(n, ok, msg){
+    const el = document.getElementById('fb'+n);
+    el.classList.remove('hidden');
+    el.className = 'entry-fb '+(ok ? 'correct' : 'wrong');
+    el.textContent = msg;
+  }
+
+  function revealFmlAns(n){
+    const fml = document.getElementById('fml'+n);
+    const ans = document.getElementById('ans'+n);
+    const fc  = document.getElementById('fc'+n);
+    const ac  = document.getElementById('ac'+n);
+
+    fc.innerHTML = stepFormula(n);
+    ac.innerHTML = stepAnswer(n);
+
+    fml.classList.remove('hidden');
+    ans.classList.remove('hidden');
+  }
+
+  function stepFormula(n){
+    const {ATL,ATR,ABL,ABR,BTL,BTR,BBL,BBR} = params;
+    if(n === 1) return `
+      <p><strong>How to find a best response.</strong> Fix the opponent's action and ask: which of <em>my</em> two actions gives me the higher payoff?</p>
+      <p>For Player A, do this once for each column (Left, Right). For Player B, do this once for each row (Top, Bottom). A best response is the higher of two payoffs in the row/column being considered.</p>`;
+    if(n === 2) return `
+      <p><strong>Definition.</strong> A strategy weakly dominates the other if its payoff is at least as high in every column (for A) or every row (for B), with at least one strict inequality.</p>
+      <p>Compare Player A's Top payoffs (${ATL}, ${ATR}) to A's Bottom payoffs (${ABL}, ${ABR}); compare Player B's Left payoffs (${BTL}, ${BBL}) to B's Right payoffs (${BTR}, ${BBR}). If neither row or column dominates the other, the answer is <em>None</em>.</p>`;
+    if(n === 3) return `
+      <p><strong>Definition.</strong> A profile (a, b) is a PSNE if A's best response to b is a, <em>and</em> B's best response to a is b — i.e. neither player can gain by unilaterally deviating.</p>
+      <p>From Step 1's best-response analysis, a cell is a PSNE iff <em>both</em> Player A's payoff (the orange number) <em>and</em> Player B's payoff (the blue number) in that cell are best responses.</p>`;
+    if(n === 4){
+      const {aDom, bDom} = answers;
+      const parts = [];
+      if(aDom !== 'None'){
+        const bResp = (aDom === 'Top') ? (BTL > BTR ? 'Left' : 'Right')
+                                       : (BBL > BBR ? 'Left' : 'Right');
+        parts.push(`<p><strong>Player A has a dominant strategy (${aDom}),</strong> so A plays ${aDom} with certainty: <em>p</em> = ${aDom==='Top'?1:0}.</p>`);
+        parts.push(`<p>Given that A plays ${aDom}, Player B's best response is ${bResp}: <em>q</em> = ${bResp==='Left'?1:0}.</p>`);
+      } else if(bDom !== 'None'){
+        const aResp = (bDom === 'Left') ? (ATL > ABL ? 'Top' : 'Bottom')
+                                        : (ATR > ABR ? 'Top' : 'Bottom');
+        parts.push(`<p><strong>Player B has a dominant strategy (${bDom}),</strong> so B plays ${bDom} with certainty: <em>q</em> = ${bDom==='Left'?1:0}.</p>`);
+        parts.push(`<p>Given that B plays ${bDom}, Player A's best response is ${aResp}: <em>p</em> = ${aResp==='Top'?1:0}.</p>`);
+      } else {
+        const denomQ = (ATL - ATR) - (ABL - ABR);
+        const denomP = (BTL - BBL) - (BTR - BBR);
+        parts.push(`<p><strong>Player B's mix <em>q</em> makes A indifferent</strong> between Top and Bottom:</p>`);
+        parts.push(`<p>${ATL}·q + ${ATR}·(1−q) = ${ABL}·q + ${ABR}·(1−q)</p>`);
+        parts.push(`<p>Solving: q* = (${ABR} − ${ATR}) ÷ [(${ATL} − ${ATR}) − (${ABL} − ${ABR})] = ${ABR-ATR} ÷ ${denomQ}.</p>`);
+        parts.push(`<p><strong>Player A's mix <em>p</em> makes B indifferent</strong> between Left and Right:</p>`);
+        parts.push(`<p>${BTL}·p + ${BBL}·(1−p) = ${BTR}·p + ${BBR}·(1−p)</p>`);
+        parts.push(`<p>Solving: p* = (${BBR} − ${BBL}) ÷ [(${BTL} − ${BBL}) − (${BTR} − ${BBR})] = ${BBR-BBL} ÷ ${denomP}.</p>`);
+      }
+      return parts.join('');
+    }
+    return '';
+  }
+
+  function stepAnswer(n){
+    if(n === 1){
+      const cellName = c => ({TL:'Top–Left',TR:'Top–Right',BL:'Bottom–Left',BR:'Bottom–Right'}[c]);
+      const aTxt = [...answers.aBR].map(cellName).join(', ');
+      const bTxt = [...answers.bBR].map(cellName).join(', ');
+      return `
+        <p><strong>Player A's best responses (orange payoffs):</strong> ${aTxt}.</p>
+        <p><strong>Player B's best responses (blue payoffs):</strong> ${bTxt}.</p>`;
+    }
+    if(n === 2) return `
+      <p><strong>Player A:</strong> ${answers.aDom}.</p>
+      <p><strong>Player B:</strong> ${answers.bDom}.</p>`;
+    if(n === 3){
+      if(answers.psne.length === 0)
+        return `<p>There is <strong>no</strong> pure-strategy Nash equilibrium in this game.</p>`;
+      return `<p><strong>PSNE:</strong> ${answers.psne.map(e => `(${e.a}, ${e.b})`).join('; ')}.</p>`;
+    }
+    if(n === 4) return `
+      <p><strong>p* = ${fmtNum(answers.pStar,3)}</strong> &nbsp; (Player A plays Top with this probability).</p>
+      <p><strong>q* = ${fmtNum(answers.qStar,3)}</strong> &nbsp; (Player B plays Left with this probability).</p>`;
+    return '';
+  }
+
+  // ── Lock / mark-done helpers ───────────────────────────────────────────────
+  function lockStep(n){
+    if(n === 1){
+      brLocked = true;
+      // Mark each payoff "correct" if the student's mark agrees with the answer,
+      // "wrong" otherwise (selected-but-not-an-answer, or answer-but-not-selected).
+      ['TL','TR','BL','BR'].forEach(c => {
+        ['A','B'].forEach(w => {
+          const el = document.getElementById('pay-'+w+'-'+c);
+          el.classList.remove('sel-a','sel-b');
+          const truth = (w === 'A' ? answers.aBR : answers.bBR).has(c);
+          const sel   = selectedBR[w].has(c);
+          if(truth) el.classList.add('correct');
+          else if(sel) el.classList.add('wrong');
+          el.classList.add('disabled');
+        });
+      });
+    }
+    if(n === 2){
+      document.getElementById('s2a').disabled = true;
+      document.getElementById('s2b').disabled = true;
+    }
+    if(n === 3){
+      psneLocked = true;
+      renderPsneList();
+      document.getElementById('addPsneBtn').disabled = true;
+    }
+    if(n === 4){
+      document.getElementById('s4p').disabled = true;
+      document.getElementById('s4q').disabled = true;
+    }
+  }
+
+  function markDone(n, wasCorrect){
+    stepMeta[n-1].s = 'done';
+    revealFmlAns(n);
+    lockStep(n);
+    if(wasCorrect) showFB(n, true, '✓ Correct!');
+    const btn = document.getElementById('btn'+n);
+    btn.textContent = '✓ Done';
+    btn.disabled = true;
+    btn.classList.add('done');
+    drawGraph();
+    maybeFinishLab();
+  }
+
+  // ── Build entered-text for session recording / PDF ─────────────────────────
+  function enteredText(n){
+    const cellName = c => ({TL:'Top–Left',TR:'Top–Right',BL:'Bottom–Left',BR:'Bottom–Right'}[c]);
+    if(n === 1){
+      const aTxt = selectedBR.A.size ? [...selectedBR.A].map(cellName).join(', ') : '(none selected)';
+      const bTxt = selectedBR.B.size ? [...selectedBR.B].map(cellName).join(', ') : '(none selected)';
+      return `Player A BRs: ${aTxt}; Player B BRs: ${bTxt}`;
+    }
+    if(n === 2){
+      const a = document.getElementById('s2a').value || '—';
+      const b = document.getElementById('s2b').value || '—';
+      return `Player A: ${a}; Player B: ${b}`;
+    }
+    if(n === 3){
+      if(psneEntries.length === 0) return 'No PSNE entered (None).';
+      return psneEntries.map(e => `(${e.a}, ${e.b})`).join('; ');
+    }
+    if(n === 4){
+      const p = document.getElementById('s4p').value.trim() || '—';
+      const q = document.getElementById('s4q').value.trim() || '—';
+      return `p = ${p}, q = ${q}`;
+    }
+    return '';
+  }
+  function answerText(n){
+    const cellName = c => ({TL:'Top–Left',TR:'Top–Right',BL:'Bottom–Left',BR:'Bottom–Right'}[c]);
+    if(n === 1) return `Player A BRs: ${[...answers.aBR].map(cellName).join(', ')}; Player B BRs: ${[...answers.bBR].map(cellName).join(', ')}`;
+    if(n === 2) return `Player A: ${answers.aDom}; Player B: ${answers.bDom}`;
+    if(n === 3) return answers.psne.length
+      ? answers.psne.map(e => `(${e.a}, ${e.b})`).join('; ')
+      : 'No PSNE (None).';
+    if(n === 4) return `p* = ${fmtNum(answers.pStar,3)}, q* = ${fmtNum(answers.qStar,3)}`;
+    return '';
+  }
+  const Q_TEXTS = [
+    "Identify each player's best response to each of the opponent's possible actions.",
+    "Determine each player's dominant strategy (if any).",
+    "Identify all pure-strategy Nash equilibria.",
+    "Find the mixed-strategy Nash equilibrium: the probabilities p (A plays Top) and q (B plays Left).",
+  ];
+
+  function recordQ(n, firstAns, firstOk, finalAns, finalOk){
+    if(!(window.Session && Session.recordQuestion)) return;
+    Session.recordQuestion(LAB_ID, n-1, Q_TEXTS[n-1],
+                           firstAns, firstOk,
+                           finalAns, finalOk);
+  }
+
+  // ── Main handler for step buttons ──────────────────────────────────────────
+  function handleBtn(n){
+    const meta = stepMeta[n-1];
+    const btn  = document.getElementById('btn'+n);
+
+    if(meta.s === 'check'){
+      let res;
+      if(n === 1) res = checkStep1();
+      else if(n === 2) res = checkStep2();
+      else if(n === 3) res = checkStep3();
+      else if(n === 4) res = checkStep4();
+
+      if(res.empty){
+        showFB(n, false, n===2 ? 'Choose a value from each dropdown before checking.'
+                              : 'Fill in both fields before checking.');
+        return;
+      }
+
+      if(firstAttempt[n-1]){
+        firstAttempt[n-1] = false;
+        firstCorrect[n-1] = res.ok;
+        firstAnsText[n-1] = enteredText(n);
+        recordQ(n, firstAnsText[n-1], firstCorrect[n-1],
+                   firstAnsText[n-1], firstCorrect[n-1]);
+      }
+
+      if(res.ok){
+        markDone(n, true);
+      } else {
+        meta.s = 'formula';
+        showFB(n, false, 'Not quite — review the hint, then reveal the answer to continue.');
+        lockStep(n);
+        btn.textContent = 'Show Hint';
+        drawGraph();
+      }
+    } else if(meta.s === 'formula'){
+      const fml = document.getElementById('fml'+n);
+      const fc  = document.getElementById('fc'+n);
+      fc.innerHTML = stepFormula(n);
+      fml.classList.remove('hidden');
+      meta.s = 'answer';
+      btn.textContent = 'Show Answer';
+    } else if(meta.s === 'answer'){
+      revealFmlAns(n);
+      recordQ(n, firstAnsText[n-1], firstCorrect[n-1],
+                 answerText(n),     true);
+      markDone(n, false);
+    }
+  }
+
+  function maybeFinishLab(){
+    if(_labDoneFired) return;
+    if(!stepMeta.every(m => m.s === 'done')) return;
+    _labDoneFired = true;
+    const firstScore = firstCorrect.filter(Boolean).length;
+    const finalScore = N_STEPS;
+    const total      = N_STEPS;
+    if(window.Session && Session.recordLabDone){
+      Session.recordLabDone(LAB_ID, LAB_LABEL, firstScore, finalScore, total);
+    }
+    $banner.classList.remove('hidden');
+    $banner.textContent =
+      `Lab complete — ${firstScore} of ${total} correct on the first attempt. ` +
+      `You can download a summary PDF or start a new game.`;
+  }
+
+  // ── Canvas: best response diagram in (p, q) ────────────────────────────────
+  function setupCanvas(){
+    const dpr  = window.devicePixelRatio || 1;
+    const rect = $canvas.getBoundingClientRect();
+    const W    = Math.round(rect.width  * dpr);
+    const H    = Math.round(rect.height * dpr);
+    if(!W || !H) return null;
+    if($canvas.width !== W || $canvas.height !== H){
+      $canvas.width = W; $canvas.height = H;
+    }
+    return { ctx: $canvas.getContext('2d'), dpr, W, H };
+  }
+
+  function drawGraph(){
+    _fs = Math.max(0.75, Math.min(2.5,
+      parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+    const setup = setupCanvas();
+    if(!setup) return;
+    const {ctx,dpr,W,H} = setup;
+    ctx.clearRect(0,0,W,H);
+    if(!answers || !isFinite(answers.pStar)) return;
+
+    const pad = {l:48*dpr, r:18*dpr, t:18*dpr, b:46*dpr};
+    const X0 = pad.l, X1 = W - pad.r, Y0 = pad.t, Y1 = H - pad.b;
+    const PW = X1 - X0, PH = Y1 - Y0;
+    const xC = p => X0 + p*PW;
+    const yC = q => Y1 - q*PH;
+
+    // Axes
+    ctx.strokeStyle = 'rgba(0,0,0,0.30)';
+    ctx.lineWidth   = 1.5*dpr;
+    ctx.beginPath(); ctx.moveTo(X0,Y1); ctx.lineTo(X1,Y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0,Y1); ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,0.30)';
+    ctx.beginPath(); ctx.moveTo(X1,Y1); ctx.lineTo(X1-7*dpr,Y1-4*dpr); ctx.lineTo(X1-7*dpr,Y1+4*dpr); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0-4*dpr,Y0+7*dpr); ctx.lineTo(X0+4*dpr,Y0+7*dpr); ctx.closePath(); ctx.fill();
+
+    // Axis titles
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.font = `700 ${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('p  (Pr A plays Top)', (X0+X1)/2, Y1+24*dpr);
+    ctx.save();
+    ctx.translate(X0-34*dpr, (Y0+Y1)/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.textBaseline = 'top';
+    ctx.fillText('q  (Pr B plays Left)', 0, 0);
+    ctx.restore();
+
+    // Ticks at 0, 0.5, 1
+    ctx.font = `600 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    [0,0.5,1].forEach(v => {
+      const cy = yC(v);
+      ctx.strokeStyle = 'rgba(0,0,0,0.10)';
+      ctx.lineWidth   = 1*dpr;
+      ctx.beginPath(); ctx.moveTo(X0,cy); ctx.lineTo(X1,cy); ctx.stroke();
+      ctx.fillStyle = 'rgba(0,0,0,0.60)';
+      ctx.fillText(fmtNum(v,1), X0-6*dpr, cy);
+    });
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    [0,0.5,1].forEach(v => {
+      const cx = xC(v);
+      ctx.strokeStyle = 'rgba(0,0,0,0.10)';
+      ctx.lineWidth   = 1*dpr;
+      ctx.beginPath(); ctx.moveTo(cx,Y0); ctx.lineTo(cx,Y1); ctx.stroke();
+      ctx.fillStyle = 'rgba(0,0,0,0.60)';
+      ctx.fillText(fmtNum(v,1), cx, Y1+5*dpr);
+    });
+
+    // Clip to plot area
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(X0, Y0, PW, PH);
+    ctx.clip();
+
+    const showBRCurves = stepMeta[3].s !== 'check';
+    if(showBRCurves){
+      const {ATL,ATR,ABL,ABR,BTL,BTR,BBL,BBR} = params;
+      const qStar = answers.qStar, pStar = answers.pStar;
+
+      // ── Player A's best response (orange, solid) ───────────────────────────
+      // At q = 0 A prefers Top iff ATR > ABR; at q = 1 iff ATL > ABL.
+      // If both agree, A has a dominant strategy → BR is a vertical line at p=0 or 1.
+      // If they disagree, BR is a step function crossing q = qStar.
+      const aTopAtQ0 = (ATR > ABR);
+      const aTopAtQ1 = (ATL > ABL);
+      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--player-a').trim() || '#b54708';
+      ctx.lineWidth   = 2.6*dpr;
+      ctx.lineCap     = 'round';
+      ctx.beginPath();
+      if(aTopAtQ0 === aTopAtQ1){
+        const pConst = aTopAtQ0 ? 1 : 0;
+        ctx.moveTo(xC(pConst), yC(0));
+        ctx.lineTo(xC(pConst), yC(1));
+      } else {
+        const pLow  = aTopAtQ0 ? 1 : 0;
+        const pHigh = aTopAtQ0 ? 0 : 1;
+        ctx.moveTo(xC(pLow),  yC(0));
+        ctx.lineTo(xC(pLow),  yC(qStar));
+        ctx.lineTo(xC(pHigh), yC(qStar));
+        ctx.lineTo(xC(pHigh), yC(1));
+      }
+      ctx.stroke();
+
+      // ── Player B's best response (blue, dashed) ────────────────────────────
+      const bLeftAtP0 = (BBL > BBR);
+      const bLeftAtP1 = (BTL > BTR);
+      ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--player-b').trim() || '#2f5d7c';
+      ctx.lineWidth   = 2.6*dpr;
+      ctx.setLineDash([6*dpr, 4*dpr]);
+      ctx.beginPath();
+      if(bLeftAtP0 === bLeftAtP1){
+        const qConst = bLeftAtP0 ? 1 : 0;
+        ctx.moveTo(xC(0), yC(qConst));
+        ctx.lineTo(xC(1), yC(qConst));
+      } else {
+        const qLow  = bLeftAtP0 ? 1 : 0;
+        const qHigh = bLeftAtP0 ? 0 : 1;
+        ctx.moveTo(xC(0),     yC(qLow));
+        ctx.lineTo(xC(pStar), yC(qLow));
+        ctx.lineTo(xC(pStar), yC(qHigh));
+        ctx.lineTo(xC(1),     yC(qHigh));
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // ── Dot drawing primitives ───────────────────────────────────────────────
+    function dotFilled(p, q, hex, r){
+      const cx = xC(p), cy = yC(q);
+      const r2 = parseInt(hex.slice(1,3),16);
+      const g2 = parseInt(hex.slice(3,5),16);
+      const b2 = parseInt(hex.slice(5,7),16);
+      ctx.beginPath(); ctx.arc(cx,cy, (r+3)*dpr, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${r2},${g2},${b2},0.20)`; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx,cy, r*dpr, 0, Math.PI*2);
+      ctx.fillStyle = hex; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx,cy, r*dpr, 0, Math.PI*2);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5*dpr; ctx.stroke();
+    }
+    function dotRing(p, q, hex, r){
+      // Hollow outlined circle — marks a correct equilibrium the student missed.
+      const cx = xC(p), cy = yC(q);
+      ctx.beginPath(); ctx.arc(cx,cy, (r+3)*dpr, 0, Math.PI*2);
+      ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx,cy, r*dpr, 0, Math.PI*2);
+      ctx.strokeStyle = hex; ctx.lineWidth = 2.5*dpr; ctx.stroke();
+    }
+    function dotCross(p, q, hex, r){
+      // Filled dot with a white × — marks a wrong student entry.
+      const cx = xC(p), cy = yC(q);
+      const r2 = parseInt(hex.slice(1,3),16);
+      const g2 = parseInt(hex.slice(3,5),16);
+      const b2 = parseInt(hex.slice(5,7),16);
+      ctx.beginPath(); ctx.arc(cx,cy, (r+3)*dpr, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${r2},${g2},${b2},0.20)`; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx,cy, r*dpr, 0, Math.PI*2);
+      ctx.fillStyle = hex; ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth   = 2*dpr;
+      ctx.lineCap     = 'round';
+      const d = (r-2.2)*dpr;
+      ctx.beginPath();
+      ctx.moveTo(cx-d, cy-d); ctx.lineTo(cx+d, cy+d);
+      ctx.moveTo(cx-d, cy+d); ctx.lineTo(cx+d, cy-d);
+      ctx.stroke();
+    }
+    const GREEN = '#155c38';
+    const RED   = '#b42318';
+    const GOLD  = '#a16207';
+
+    // ── PSNE: show student entries (correct/wrong) and missed truth ─────────
+    const psneChecked = stepMeta[2].s !== 'check';
+    const truthCorners = answers.psne.map(e => ({
+      p: e.a==='Top'  ? 1 : 0,
+      q: e.b==='Left' ? 1 : 0,
+      key: e.a+'|'+e.b,
+    }));
+    const truthKeys = new Set(truthCorners.map(c => c.key));
+    const enteredKeys = new Set(psneEntries.map(e => e.a+'|'+e.b));
+
+    let anyPsneCorrect = false, anyPsneWrong = false, anyPsneMissed = false;
+
+    // Student entries
+    psneEntries.forEach(e => {
+      const p = e.a==='Top' ? 1 : 0;
+      const q = e.b==='Left' ? 1 : 0;
+      const key = e.a+'|'+e.b;
+      if(!psneChecked){
+        dotFilled(p, q, GOLD, 6);          // pre-check: tentative
+      } else if(truthKeys.has(key)){
+        dotFilled(p, q, GREEN, 6);
+        anyPsneCorrect = true;
+      } else {
+        dotCross(p, q, RED, 6);
+        anyPsneWrong = true;
+      }
+    });
+    // Missed correct PSNE — only revealed after the student has checked.
+    if(psneChecked){
+      truthCorners.forEach(c => {
+        if(!enteredKeys.has(c.key)){
+          dotRing(c.p, c.q, GREEN, 7);
+          anyPsneMissed = true;
+        }
+      });
+    }
+
+    // ── MSNE: student point and the correct one (if different) ──────────────
+    const msneChecked = stepMeta[3].s !== 'check';
+    const pIn = document.getElementById('s4p');
+    const qIn = document.getElementById('s4q');
+    let pv = NaN, qv = NaN;
+    if(pIn && qIn){
+      pv = parseFloat(pIn.value);
+      qv = parseFloat(qIn.value);
+    }
+    const haveStudent = isFinite(pv) && isFinite(qv) && pv>=0 && pv<=1 && qv>=0 && qv<=1;
+    let anyMsneCorrect = false, anyMsneWrong = false, anyMsneMissed = false;
+
+    if(haveStudent){
+      if(!msneChecked){
+        dotFilled(pv, qv, GOLD, 6);
+      } else {
+        const okP = Math.abs(pv - answers.pStar) <= 0.02;
+        const okQ = Math.abs(qv - answers.qStar) <= 0.02;
+        if(okP && okQ){
+          dotFilled(pv, qv, GREEN, 6);
+          anyMsneCorrect = true;
+        } else {
+          dotCross(pv, qv, RED, 6);
+          anyMsneWrong = true;
+          // Show the correct MSNE so the student can compare.
+          if(isFinite(answers.pStar) && isFinite(answers.qStar)){
+            dotRing(answers.pStar, answers.qStar, GREEN, 7);
+            anyMsneMissed = true;
+          }
+        }
+      }
+    } else if(msneChecked && isFinite(answers.pStar) && isFinite(answers.qStar)){
+      // Student checked without entering anything — still show the correct point.
+      dotRing(answers.pStar, answers.qStar, GREEN, 7);
+      anyMsneMissed = true;
+    }
+
+    ctx.restore(); // end clip
+
+    // ── Legend visibility ──────────────────────────────────────────────────
+    const anyCorrect = anyPsneCorrect || anyMsneCorrect;
+    const anyWrong   = anyPsneWrong   || anyMsneWrong;
+    const anyMissed  = anyPsneMissed  || anyMsneMissed;
+    const anyTentative = (psneEntries.length > 0 && !psneChecked) || (haveStudent && !msneChecked);
+    document.getElementById('lgTentative').classList.toggle('hidden', !anyTentative);
+    document.getElementById('lgCorrect').classList.toggle('hidden', !anyCorrect);
+    document.getElementById('lgWrong').classList.toggle('hidden', !anyWrong);
+    document.getElementById('lgMissed').classList.toggle('hidden', !anyMissed);
+
+    updateGraphDesc({anyTentative, anyCorrect, anyWrong, anyMissed});
+  }
+
+  function updateGraphDesc(flags){
+    const {anyTentative, anyCorrect, anyWrong, anyMissed} = flags || {};
+    const parts = [
+      `Best response diagram with the probability that Player A plays Top (p) on the horizontal axis (0 to 1) and the probability that Player B plays Left (q) on the vertical axis (0 to 1).`,
+    ];
+    const showBRCurves = stepMeta[3].s !== 'check';
+    if(showBRCurves){
+      parts.push(`Player A's best response curve is shown in orange and Player B's in dashed blue; their intersection is the Nash equilibrium with p* = ${fmtNum(answers.pStar,3)} and q* = ${fmtNum(answers.qStar,3)}.`);
+    }
+    if(anyTentative) parts.push(`Gold dots mark equilibria you've entered but not yet checked.`);
+    if(anyCorrect)   parts.push(`Green filled dots mark correct equilibria.`);
+    if(anyWrong)     parts.push(`Red dots with an × mark entries that are not Nash equilibria.`);
+    if(anyMissed)    parts.push(`Green outlined rings mark correct equilibria you didn't enter.`);
+    if(!showBRCurves && !anyTentative && !anyCorrect && !anyWrong && !anyMissed)
+      parts.push(`Add equilibria to plot them; complete the mixed-strategy step to reveal the best response curves.`);
+    $graphDesc.textContent = parts.join(' ');
+  }
+
+  // ── Reset / new problem ────────────────────────────────────────────────────
+  function renderProblem(){
+    stepMeta.forEach(m => { m.s = 'check'; });
+    firstAttempt.fill(true);
+    firstCorrect.fill(false);
+    firstAnsText.fill('—');
+    selectedBR.A.clear(); selectedBR.B.clear();
+    brLocked = false;
+    psneEntries = [];
+    psneLocked  = false;
+    _labDoneFired = false;
+    $banner.classList.add('hidden');
+
+    renderMatrix();
+    renderSteps();
+    attachMatrixListeners();
+    drawGraph();
+  }
+
+  function clearLabSessionData(){
+    try{
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if(!raw) return;
+      const d = JSON.parse(raw);
+      if(d && d.labs && d.labs[LAB_ID]){
+        delete d.labs[LAB_ID];
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(d));
+      }
+    }catch(e){ /* ignore */ }
+  }
+
+  document.getElementById('newProblemBtn').addEventListener('click', () => {
+    clearLabSessionData();
+    _problemIdx++;
+    generateParams();
+    renderProblem();
+  });
+
+  const _pdfBtn = document.getElementById('downloadPdfBtn');
+  if(new URLSearchParams(location.search).get('disc') === '1'){
+    _pdfBtn.addEventListener('click', () => {
+      if(window.DiscussionPDF && DiscussionPDF.generate){
+        DiscussionPDF.generate();
+      } else {
+        alert('PDF export is not available — try refreshing the page.');
+      }
+    });
+  } else {
+    _pdfBtn.remove();
+  }
+
+  // ── Resize ─────────────────────────────────────────────────────────────────
+  let _resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(drawGraph, 80);
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  function init(){
+    generateParams();
+    renderProblem();
+  }
+  function kickoff(){
+    const isDiscussion = new URLSearchParams(location.search).get('disc') === '1';
+    if(isDiscussion && window.DiscussionModal){
+      DiscussionModal.init({
+        weekLabel: WEEK_LABEL,
+        onReady: function(){ init(); }
+      });
+    } else {
+      init();
+    }
+  }
+  kickoff();
+
+})();
+</script>
+</body>
+</html>

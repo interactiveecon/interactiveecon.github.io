@@ -1,0 +1,1245 @@
+<!doctype html>
+<!--
+  LAB_ID:    discount-factor-threshold
+  LAB_LABEL: Discount Factor Threshold Explorer
+  url:       /classes/econ104b/labs/discount-factor-threshold/?disc=1
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Discount Factor Threshold Explorer — ECON 104B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea;
+      --panel:#ffffff;
+      --ink:#1f2937;
+      --ink-2:#374151;
+      --muted:#596878;
+      --line:#e7dfd2;
+      --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;
+      --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),
+               0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3 / good practice) ────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* ── Header / Footer (CLAUDE.md standard) ────────────────── */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;
+      font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;
+      line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;
+      max-width:80ch;font-size:0.9375rem;}
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+    .hidden{display:none!important;}
+
+    /* ── Instructions dropdown ─────────────────────────────── */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* ── Cards ──────────────────────────────────────────── */
+    .card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px 18px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .card-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin:0 0 10px;}
+    .card-note{margin:0 0 10px;color:var(--ink-2);font-size:0.875rem;line-height:1.55;}
+
+    /* ── Payoff parameter inputs ─────────────────────────── */
+    .pd-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;
+      margin-bottom:14px;}
+    @media(max-width:700px){.pd-grid{grid-template-columns:repeat(2,1fr);}}
+    .pd-field{display:flex;flex-direction:column;gap:4px;}
+    .pd-field label{font-size:0.75rem;font-weight:700;color:var(--ink-2);
+      letter-spacing:.04em;text-transform:uppercase;}
+    .pd-field .pd-hint{font-size:0.6875rem;color:var(--muted);line-height:1.35;}
+    .pd-field input[type="number"]{
+      width:100%;padding:8px 10px;
+      border:1.5px solid #8c7f72;border-radius:10px;
+      background:var(--panel);color:var(--ink);
+      font-family:var(--font-sans);font-size:0.9375rem;font-weight:700;}
+    .pd-field input[type="number"]:hover{border-color:var(--accent);}
+
+    /* ── Matrix display ────────────────────────────────── */
+    .matrix-wrap{display:grid;grid-template-columns:auto auto;gap:8px;
+      align-items:center;margin:8px 0 0;}
+    .matrix-side-label{font-weight:700;color:var(--ink-2);font-size:0.8125rem;
+      writing-mode:vertical-rl;transform:rotate(180deg);text-align:center;
+      letter-spacing:.04em;}
+    .matrix-block{display:grid;grid-template-rows:auto 1fr;gap:6px;}
+    .matrix-top-label{font-weight:700;color:var(--ink-2);font-size:0.8125rem;
+      text-align:center;letter-spacing:.04em;}
+    .matrix{display:grid;grid-template-columns:auto 1fr 1fr;
+      border:1px solid var(--line-2);border-radius:10px;overflow:hidden;
+      background:var(--panel);}
+    .matrix-cell{padding:10px 12px;border-right:1px solid var(--line-2);
+      border-bottom:1px solid var(--line-2);font-size:0.875rem;
+      display:flex;align-items:center;justify-content:center;
+      text-align:center;min-height:54px;}
+    .matrix-cell:last-child{border-right:none;}
+    .matrix-row-last .matrix-cell{border-bottom:none;}
+    .matrix-cell.head{background:rgba(47,93,124,.08);font-weight:800;
+      color:var(--accent);font-size:0.75rem;letter-spacing:.06em;
+      text-transform:uppercase;min-height:36px;}
+    .matrix-cell.corner{background:rgba(47,93,124,.04);}
+    .matrix-cell .pair{font-weight:700;color:var(--ink);
+      font-variant-numeric:tabular-nums;}
+    .matrix-cell .role{display:block;font-size:0.6875rem;font-weight:700;
+      color:var(--muted);text-transform:uppercase;letter-spacing:.05em;
+      margin-top:2px;}
+
+    /* ── New problem button ─────────────────────────────── */
+    .problem-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+      margin:14px 0 4px;}
+    .problem-row .problem-hint{font-size:0.8125rem;color:var(--muted);
+      line-height:1.5;}
+    @keyframes matrix-flash {
+      0%   { box-shadow: 0 0 0 0 rgba(47,93,124,0); }
+      30%  { box-shadow: 0 0 0 4px rgba(47,93,124,.30); }
+      100% { box-shadow: 0 0 0 0 rgba(47,93,124,0); }
+    }
+    .matrix.matrix-flash{ animation: matrix-flash .55s ease-out; }
+
+    /* ── Validation message ──────────────────────────────── */
+    .pd-status{margin-top:10px;padding:10px 14px;border-radius:10px;
+      font-size:0.8125rem;line-height:1.5;display:flex;gap:8px;
+      align-items:flex-start;}
+    .pd-status.ok{background:rgba(21,92,56,.08);border:1px solid var(--good);
+      color:var(--good);}
+    .pd-status.bad{background:rgba(180,35,24,.08);border:1px solid var(--bad);
+      color:#8c4800;}
+    .pd-status .icon{font-weight:800;flex:0 0 auto;}
+
+    /* ── Slider ──────────────────────────────────────── */
+    .slider-row{display:grid;grid-template-columns:1fr auto;gap:14px;
+      align-items:center;margin-bottom:10px;}
+    @media(max-width:600px){.slider-row{grid-template-columns:1fr;}}
+    .slider-row label{font-weight:700;color:var(--ink-2);font-size:0.8125rem;
+      letter-spacing:.04em;text-transform:uppercase;}
+    .slider-row input[type="range"]{width:100%;accent-color:var(--accent);}
+    .slider-readout{font-variant-numeric:tabular-nums;font-weight:800;
+      color:var(--ink);font-size:1rem;min-width:5ch;text-align:right;}
+
+    .threshold-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;
+      margin-top:8px;}
+    .threshold-row--single{grid-template-columns:1fr;}
+    @media(max-width:700px){.threshold-row{grid-template-columns:1fr;}}
+    .threshold-box{padding:12px 14px;border:1px solid var(--line);
+      border-radius:12px;background:rgba(246,242,234,.45);}
+    .threshold-box .lbl{font-size:0.6875rem;font-weight:800;
+      letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
+    .threshold-box .val{font-size:1.25rem;font-weight:800;color:var(--ink);
+      font-variant-numeric:tabular-nums;margin-top:2px;}
+    .threshold-box .formula{font-size:0.75rem;color:var(--muted);
+      margin-top:4px;font-variant-numeric:tabular-nums;}
+
+    .sustain-banner{margin-top:10px;padding:12px 14px;border-radius:12px;
+      display:flex;gap:10px;align-items:center;font-size:0.9375rem;
+      font-weight:700;}
+    .sustain-banner.yes{background:rgba(21,92,56,.10);border:1.5px solid var(--good);
+      color:var(--good);}
+    .sustain-banner.no{background:rgba(180,35,24,.10);border:1.5px solid var(--bad);
+      color:var(--bad);}
+    .sustain-banner .badge{display:inline-flex;align-items:center;
+      justify-content:center;width:24px;height:24px;border-radius:50%;
+      font-weight:800;font-size:0.875rem;background:#fff;}
+    .sustain-banner.yes .badge{color:var(--good);}
+    .sustain-banner.no  .badge{color:var(--bad);}
+
+    /* ── Canvases ─────────────────────────────────────── */
+    .canvas-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;
+      margin-bottom:14px;}
+    @media(max-width:900px){.canvas-row{grid-template-columns:1fr;}}
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .graph-sub{font-size:0.8125rem;color:var(--ink-2);margin:0 0 10px;
+      line-height:1.45;}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;
+      overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;
+      aspect-ratio:16/10;}
+    .pdv-strip{margin-top:10px;padding:10px 12px;border-radius:10px;
+      background:rgba(246,242,234,.55);border:1px solid var(--line);
+      font-size:0.8125rem;color:var(--ink-2);line-height:1.55;}
+    .pdv-strip .pdv-num{font-variant-numeric:tabular-nums;font-weight:800;
+      color:var(--ink);}
+    .pdv-strip .higher-tag{display:inline-block;margin-left:6px;
+      padding:2px 8px;border-radius:999px;font-size:0.6875rem;font-weight:800;
+      letter-spacing:.04em;text-transform:uppercase;}
+    .pdv-strip.win{background:rgba(21,92,56,.08);border-color:var(--good);}
+    .pdv-strip.win .higher-tag{background:var(--good);color:#fff;}
+    .pdv-strip.lose .higher-tag{background:rgba(89,104,120,.18);color:var(--ink-2);}
+
+    /* ── Questions ────────────────────────────────────── */
+    .q-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px 18px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .q-num{font-size:0.6875rem;font-weight:800;color:var(--accent);
+      letter-spacing:.06em;text-transform:uppercase;}
+    .q-text{margin:4px 0 12px;color:var(--ink);font-size:0.9375rem;
+      line-height:1.55;}
+    .q-text strong{color:var(--ink);}
+    .q-input-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+      margin-bottom:8px;}
+    .q-input-row input[type="number"]{padding:8px 10px;
+      border:1.5px solid #8c7f72;border-radius:10px;
+      background:var(--panel);color:var(--ink);
+      font-family:var(--font-sans);font-size:0.9375rem;font-weight:700;
+      width:8rem;}
+    .q-options{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn.active{border-color:var(--accent);
+      background:rgba(47,93,124,.14);color:var(--accent);}
+    .option-btn:disabled{opacity:.5;cursor:not-allowed;}
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover:not(:disabled){background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .q-feedback{margin-top:8px;padding:10px 12px;border-radius:10px;
+      font-size:0.8125rem;line-height:1.5;}
+    .q-feedback.right{background:rgba(21,92,56,.10);border:1px solid var(--good);
+      color:var(--good);}
+    .q-feedback.wrong{background:rgba(180,35,24,.10);border:1px solid var(--bad);
+      color:var(--bad);}
+    .q-feedback .icon{font-weight:800;margin-right:6px;}
+    .q-btn-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+    .q-reveal{margin-top:8px;padding:10px 12px;border-radius:10px;
+      font-size:0.8125rem;line-height:1.55;color:var(--ink-2);}
+    .q-reveal .label{display:block;font-weight:800;letter-spacing:.06em;
+      text-transform:uppercase;font-size:0.6875rem;margin-bottom:4px;}
+    .q-reveal.q-hint{background:rgba(47,93,124,.08);border:1px solid var(--accent);}
+    .q-reveal.q-hint .label{color:var(--accent);}
+    .q-reveal.q-answer{background:rgba(21,92,56,.08);border:1px solid var(--good);}
+    .q-reveal.q-answer .label{color:var(--good);}
+    .option-btn.correct{border-color:var(--good);
+      background:rgba(21,92,56,.16);color:var(--good);}
+    .primary-btn.done{background:var(--good);}
+
+    /* ── Summary ─────────────────────────────────────── */
+    .summary-card{background:rgba(47,93,124,.08);border:1.5px solid var(--accent);
+      border-radius:18px;padding:18px;margin-bottom:14px;}
+    .summary-card h2{margin:0 0 8px;font-family:var(--font-serif);
+      font-size:1.25rem;color:var(--ink);}
+    .summary-card p{margin:0 0 10px;color:var(--ink-2);font-size:0.9375rem;
+      line-height:1.55;}
+    .summary-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ104b/">← ECON 104B</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 104B — Game Theory</div>
+      <h1>Discount Factor Threshold Explorer</h1>
+      <p class="sub">Two firms in the same market face a Prisoner's Dilemma every period: each can <em>cooperate</em> (charge the high collusive price) or <em>defect</em> (undercut for a one-period gain). When the game is infinitely repeated, how patient must firms be for collusion to survive as a subgame-perfect Nash equilibrium under a Grim Trigger strategy? Edit the profit matrix, slide the discount factor, and compare the two profit streams.</p>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>Payoffs are <strong>annual profits in millions of dollars</strong>, so <strong>higher is better</strong>. The PD inequalities <em>T &gt; C &gt; P &gt; S</em> have an economic reading: a one-period undercut beats sustained collusion (<em>T &gt; C</em>); collusion beats a price war (<em>C &gt; P</em>); and a price war beats being the only firm holding the high price while your rival undercuts (<em>P &gt; S</em>).</p>
+          <p>Under a Grim Trigger strategy (cooperate until anyone defects, then defect forever), collusion is sustainable as a subgame-perfect Nash equilibrium iff the discount factor satisfies</p>
+          <p style="text-align:center;font-family:var(--font-serif);font-size:1rem;">
+            δ ≥ δ* = (T − C) / (T − P).
+          </p>
+          <p>Use <strong>New Problem</strong> to draw a fresh payoff matrix. You will be asked to answer the following questions:</p>
+          <ol>
+            <li><strong>Threshold value.</strong> Compute δ* for the matrix on screen.</li>
+            <li><strong>Comparative statics on T.</strong> When temptation rises, does δ* go up or down?</li>
+            <li><strong>Comparative statics on P.</strong> When punishment becomes more painful, does δ* go up or down?</li>
+            <li><strong>Intuition at δ = 0.</strong> What is the only sustainable equilibrium when the future has zero weight?</li>
+          </ol>
+          <p>For each step, enter your answer and click <strong>Check Answer</strong>.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- Region 1: Payoff matrix editor -->
+  <section class="card" aria-labelledby="matrixCardTitle">
+    <h2 class="card-title" id="matrixCardTitle">Profit Matrix ($M / period)</h2>
+    <p class="card-note">Two firms each choose <strong>Cooperate</strong> (hold the collusive price) or <strong>Defect</strong> (undercut). Edit the four parameters below or press <strong>New Problem</strong> for a fresh scenario. For the game to remain a Prisoner's Dilemma, we require <strong>T &gt; C &gt; P &gt; S</strong>.</p>
+
+    <div class="pd-grid" role="group" aria-label="Prisoner's Dilemma profit parameters">
+      <div class="pd-field">
+        <label for="inpT">T — Temptation</label>
+        <input id="inpT" type="number" step="1" value="14"
+               aria-describedby="hintT">
+        <span class="pd-hint" id="hintT">Undercutter's profit when the rival keeps the high price.</span>
+      </div>
+      <div class="pd-field">
+        <label for="inpC">C — Cooperate</label>
+        <input id="inpC" type="number" step="1" value="10"
+               aria-describedby="hintC">
+        <span class="pd-hint" id="hintC">Each firm's profit under sustained collusion.</span>
+      </div>
+      <div class="pd-field">
+        <label for="inpP">P — Punishment</label>
+        <input id="inpP" type="number" step="1" value="5"
+               aria-describedby="hintP">
+        <span class="pd-hint" id="hintP">Each firm's profit in a sustained price war.</span>
+      </div>
+      <div class="pd-field">
+        <label for="inpS">S — Sucker</label>
+        <input id="inpS" type="number" step="1" value="2"
+               aria-describedby="hintS">
+        <span class="pd-hint" id="hintS">Profit of the firm still charging the high price while the rival undercuts.</span>
+      </div>
+    </div>
+
+    <div class="problem-row">
+      <button class="primary-btn" id="newProblemBtn" type="button">New Problem</button>
+      <span class="problem-hint">Generates a new random PD profit matrix.</span>
+    </div>
+
+    <div class="matrix-wrap">
+      <div class="matrix-side-label" aria-hidden="true">Firm A</div>
+      <div class="matrix-block">
+        <div class="matrix-top-label" aria-hidden="true">Firm B</div>
+        <div class="matrix" role="table" aria-label="Prisoner's Dilemma profit matrix in millions of dollars; row player is Firm A, column player is Firm B">
+          <div class="matrix-cell head corner" role="columnheader" aria-hidden="true"></div>
+          <div class="matrix-cell head" role="columnheader">Cooperate</div>
+          <div class="matrix-cell head" role="columnheader">Defect</div>
+
+          <div class="matrix-cell head" role="rowheader">Cooperate</div>
+          <div class="matrix-cell" role="cell">
+            <span class="pair" id="cellSS">(10, 10)</span>
+          </div>
+          <div class="matrix-cell" role="cell">
+            <span class="pair" id="cellSC">(2, 14)</span>
+          </div>
+
+          <div class="matrix-cell head matrix-row-last" role="rowheader">Defect</div>
+          <div class="matrix-cell matrix-row-last" role="cell">
+            <span class="pair" id="cellCS">(14, 2)</span>
+          </div>
+          <div class="matrix-cell matrix-row-last" role="cell">
+            <span class="pair" id="cellCC">(5, 5)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="pdStatus" class="pd-status ok" role="status" aria-live="polite" aria-atomic="true">
+      <span class="icon" aria-hidden="true">✓</span>
+      <span id="pdStatusText">Valid Prisoner's Dilemma: T &gt; C &gt; P &gt; S holds (14 &gt; 10 &gt; 5 &gt; 2).</span>
+    </div>
+  </section>
+
+  <!-- Region 2: Discount-factor slider + threshold -->
+  <section class="card" aria-labelledby="sliderCardTitle" id="sliderCard">
+    <h2 class="card-title" id="sliderCardTitle">Discount Factor &amp; Threshold</h2>
+    <div class="slider-row">
+      <div>
+        <label for="deltaRange">Discount factor δ</label>
+        <input id="deltaRange" type="range" min="0" max="0.99" step="0.01" value="0.50"
+               aria-describedby="deltaReadout"
+               aria-valuemin="0" aria-valuemax="0.99" aria-valuenow="0.50">
+      </div>
+      <div class="slider-readout" id="deltaReadout">δ = 0.50</div>
+    </div>
+
+    <div class="threshold-row threshold-row--single">
+      <div class="threshold-box">
+        <div class="lbl">Current δ</div>
+        <div class="val" id="deltaCurVal">0.50</div>
+        <div class="formula">your chosen patience level</div>
+      </div>
+    </div>
+
+    <div id="sustainBanner" class="sustain-banner yes" role="status" aria-live="polite" aria-atomic="true">
+      <span class="badge" aria-hidden="true">✓</span>
+      <span id="sustainText">Collusion sustainable at this δ.</span>
+    </div>
+  </section>
+
+  <!-- Region 3: Side-by-side payoff streams -->
+  <section aria-labelledby="streamsHeading">
+    <h2 class="sr-only" id="streamsHeading">Discounted payoff streams</h2>
+    <div class="canvas-row">
+      <div class="graph-card">
+        <div class="graph-title" id="streamATitle">Stream A — Cooperate forever</div>
+        <p class="graph-sub">Both firms cooperate every period; each period yields the cooperation payoff <em>C</em>. The outlined bar is the raw payoff; the filled bar is its present value δ<sup>t</sup>·payoff.</p>
+        <div class="canvas-wrap">
+          <canvas id="streamA"
+                  role="img"
+                  aria-labelledby="streamATitle"
+                  aria-describedby="streamADesc"></canvas>
+        </div>
+        <div class="pdv-strip" id="pdvAStrip" aria-live="polite" aria-atomic="true">
+          <span>First 15 periods (discounted): <span class="pdv-num" id="pdvA15">—</span></span>
+          ·
+          <span>Closed-form tail: <span class="pdv-num" id="pdvATail">—</span></span>
+          ·
+          <span>Total PDV: <span class="pdv-num" id="pdvA">—</span></span>
+          <span class="higher-tag" id="pdvATag">higher ←</span>
+        </div>
+      </div>
+
+      <div class="graph-card">
+        <div class="graph-title" id="streamBTitle">Stream B — Defect once, then punished forever</div>
+        <p class="graph-sub">Period 0 yields the temptation payoff <em>T</em>; from period 1 onward the rival grim-triggers and both earn <em>P</em>. The outlined bar is the raw payoff; the filled bar is its present value δ<sup>t</sup>·payoff.</p>
+        <div class="canvas-wrap">
+          <canvas id="streamB"
+                  role="img"
+                  aria-labelledby="streamBTitle"
+                  aria-describedby="streamBDesc"></canvas>
+        </div>
+        <div class="pdv-strip" id="pdvBStrip" aria-live="polite" aria-atomic="true">
+          <span>First 15 periods (discounted): <span class="pdv-num" id="pdvB15">—</span></span>
+          ·
+          <span>Closed-form tail: <span class="pdv-num" id="pdvBTail">—</span></span>
+          ·
+          <span>Total PDV: <span class="pdv-num" id="pdvB">—</span></span>
+          <span class="higher-tag" id="pdvBTag">higher ←</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SR-only live region paired to canvases -->
+    <section class="sr-only" id="graphsDesc"
+             aria-live="polite" aria-atomic="true">
+      <p id="streamADesc">Stream A description.</p>
+      <p id="streamBDesc">Stream B description.</p>
+    </section>
+  </section>
+
+  <!-- Region 4: Assessment questions -->
+  <section aria-labelledby="questionsHeading" id="questionsArea">
+    <h2 class="sr-only" id="questionsHeading">Assessment questions</h2>
+
+    <!-- Q1: numeric threshold -->
+    <div class="q-card" id="q0Card">
+      <div class="q-num">Question 1 of 4</div>
+      <p class="q-text" id="q0Text"><strong>Threshold for the current matrix.</strong> Using the values currently shown above, compute the discount-factor threshold δ* such that collusion is just barely sustainable. Enter δ* rounded to two decimal places (any answer within 0.01 of the true value counts as correct).</p>
+      <div class="q-input-row">
+        <label for="q0Input" class="sr-only">δ* to two decimal places</label>
+        <input id="q0Input" type="number" step="0.01" min="0" max="1" placeholder="e.g. 0.44">
+        <button class="primary-btn" id="q0Btn" type="button">Check Answer</button>
+      </div>
+      <div class="q-feedback hidden" id="q0FB" role="status" aria-live="polite"></div>
+      <div class="q-reveal q-hint hidden" id="q0Hint" role="status" aria-live="polite"></div>
+      <div class="q-reveal q-answer hidden" id="q0Answer" role="status" aria-live="polite"></div>
+    </div>
+
+    <!-- Q2: T increases -->
+    <div class="q-card" id="q1Card">
+      <div class="q-num">Question 2 of 4</div>
+      <p class="q-text" id="q1Text"><strong>Comparative statics on T.</strong> Suppose the temptation payoff T <em>increases</em> (a one-period undercut becomes more profitable), while C, P, and S are unchanged. Does the threshold δ* go <em>up</em>, <em>down</em>, or <em>stay the same</em>?</p>
+      <div class="q-options" role="group" aria-label="Direction of change in delta-star">
+        <button class="option-btn" type="button" data-q="1" data-val="up"   aria-pressed="false">Up ↑</button>
+        <button class="option-btn" type="button" data-q="1" data-val="down" aria-pressed="false">Down ↓</button>
+        <button class="option-btn" type="button" data-q="1" data-val="same" aria-pressed="false">Stay the same →</button>
+      </div>
+      <div class="q-btn-row">
+        <button class="primary-btn" id="q1Btn" type="button">Check Answer</button>
+      </div>
+      <div class="q-feedback hidden" id="q1FB" role="status" aria-live="polite"></div>
+      <div class="q-reveal q-hint hidden" id="q1Hint" role="status" aria-live="polite"></div>
+      <div class="q-reveal q-answer hidden" id="q1Answer" role="status" aria-live="polite"></div>
+    </div>
+
+    <!-- Q3: P decreases -->
+    <div class="q-card" id="q2Card">
+      <div class="q-num">Question 3 of 4</div>
+      <p class="q-text" id="q2Text"><strong>Comparative statics on P.</strong> Suppose the punishment payoff P <em>decreases</em> (a price war becomes even less profitable), while T, C, and S are unchanged. Does the threshold δ* go <em>up</em>, <em>down</em>, or <em>stay the same</em>?</p>
+      <div class="q-options" role="group" aria-label="Direction of change in delta-star when P decreases">
+        <button class="option-btn" type="button" data-q="2" data-val="up"   aria-pressed="false">Up ↑</button>
+        <button class="option-btn" type="button" data-q="2" data-val="down" aria-pressed="false">Down ↓</button>
+        <button class="option-btn" type="button" data-q="2" data-val="same" aria-pressed="false">Stay the same →</button>
+      </div>
+      <div class="q-btn-row">
+        <button class="primary-btn" id="q2Btn" type="button">Check Answer</button>
+      </div>
+      <div class="q-feedback hidden" id="q2FB" role="status" aria-live="polite"></div>
+      <div class="q-reveal q-hint hidden" id="q2Hint" role="status" aria-live="polite"></div>
+      <div class="q-reveal q-answer hidden" id="q2Answer" role="status" aria-live="polite"></div>
+    </div>
+
+    <!-- Q4: intuition at delta = 0 -->
+    <div class="q-card" id="q3Card">
+      <div class="q-num">Question 4 of 4</div>
+      <p class="q-text" id="q3Text"><strong>Intuition at δ = 0.</strong> Set the slider to δ = 0. Which strategy profile is the only credible (subgame-perfect) equilibrium, and why?</p>
+      <div class="q-options" role="group" aria-label="Equilibrium at delta equals zero">
+        <button class="option-btn" type="button" data-q="3" data-val="A" aria-pressed="false">A) Mutual collusion — punishment is most painful when undiscounted.</button>
+        <button class="option-btn" type="button" data-q="3" data-val="B" aria-pressed="false">B) Mutual undercutting — the future has zero weight, so only the one-shot Nash survives.</button>
+        <button class="option-btn" type="button" data-q="3" data-val="C" aria-pressed="false">C) Either — firms are indifferent when δ = 0.</button>
+      </div>
+      <div class="q-btn-row">
+        <button class="primary-btn" id="q3Btn" type="button">Check Answer</button>
+      </div>
+      <div class="q-feedback hidden" id="q3FB" role="status" aria-live="polite"></div>
+      <div class="q-reveal q-hint hidden" id="q3Hint" role="status" aria-live="polite"></div>
+      <div class="q-reveal q-answer hidden" id="q3Answer" role="status" aria-live="polite"></div>
+    </div>
+
+    <!-- Summary -->
+    <div class="summary-card hidden" id="summaryCard" role="status" aria-live="polite">
+      <h2>Lab complete</h2>
+      <p id="summaryText">Nice work.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 104B — Intermediate Microeconomics</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script>
+(function(){
+'use strict';
+
+const LAB_ID    = 'discount-factor-threshold';
+const LAB_LABEL = 'Discount Factor Threshold Explorer';
+const TOTAL_Q   = 4;
+const N_PERIODS = 15; // explicitly drawn periods; tail is closed-form
+
+// ── State ────────────────────────────────────────────────
+const payoffs = { T:14, C:10, P:5, S:2 };
+let delta = 0.50;
+let pdValid = true;
+let _rng = null;
+
+const selectedOption = [null, null, null, null]; // per-question selection
+const answeredCorrect = [false, false, false, false];
+const lockedQuestions = [false, false, false, false];
+let _firstScore = 0;
+let _finalScore = 0;
+let _completed = false;
+
+// ── DOM refs ─────────────────────────────────────────────
+const $inpT = document.getElementById('inpT');
+const $inpC = document.getElementById('inpC');
+const $inpP = document.getElementById('inpP');
+const $inpS = document.getElementById('inpS');
+const $cellSS = document.getElementById('cellSS');
+const $cellSC = document.getElementById('cellSC');
+const $cellCS = document.getElementById('cellCS');
+const $cellCC = document.getElementById('cellCC');
+const $pdStatus = document.getElementById('pdStatus');
+const $pdStatusText = document.getElementById('pdStatusText');
+const $deltaRange = document.getElementById('deltaRange');
+const $deltaReadout = document.getElementById('deltaReadout');
+const $deltaCurVal = document.getElementById('deltaCurVal');
+const $sustainBanner = document.getElementById('sustainBanner');
+const $sustainText = document.getElementById('sustainText');
+const $streamA = document.getElementById('streamA');
+const $streamB = document.getElementById('streamB');
+const $streamADesc = document.getElementById('streamADesc');
+const $streamBDesc = document.getElementById('streamBDesc');
+const $pdvA15 = document.getElementById('pdvA15');
+const $pdvATail = document.getElementById('pdvATail');
+const $pdvA = document.getElementById('pdvA');
+const $pdvATag = document.getElementById('pdvATag');
+const $pdvAStrip = document.getElementById('pdvAStrip');
+const $pdvB15 = document.getElementById('pdvB15');
+const $pdvBTail = document.getElementById('pdvBTail');
+const $pdvB = document.getElementById('pdvB');
+const $pdvBTag = document.getElementById('pdvBTag');
+const $pdvBStrip = document.getElementById('pdvBStrip');
+const $summaryCard = document.getElementById('summaryCard');
+const $summaryText = document.getElementById('summaryText');
+
+let _fs = 1;
+
+// ── PD parameters / threshold ────────────────────────────
+function readPayoffsFromInputs(){
+  const T = parseFloat($inpT.value);
+  const C = parseFloat($inpC.value);
+  const P = parseFloat($inpP.value);
+  const S = parseFloat($inpS.value);
+  if(!Number.isFinite(T) || !Number.isFinite(C) ||
+     !Number.isFinite(P) || !Number.isFinite(S)){
+    return null;
+  }
+  return { T, C, P, S };
+}
+
+function checkPD(p){
+  if(!(p.T > p.C)) return { ok:false, msg:`T > C is violated (${p.T} > ${p.C} is false). Temptation must beat mutual cooperation.` };
+  if(!(p.C > p.P)) return { ok:false, msg:`C > P is violated (${p.C} > ${p.P} is false). Mutual cooperation must beat mutual defection.` };
+  if(!(p.P > p.S)) return { ok:false, msg:`P > S is violated (${p.P} > ${p.S} is false). Mutual defection must beat being the sucker.` };
+  return { ok:true, msg:`Valid Prisoner's Dilemma: T > C > P > S holds (${p.T} > ${p.C} > ${p.P} > ${p.S}).` };
+}
+
+function deltaStar(p){
+  const denom = p.T - p.P;
+  if(denom <= 0) return NaN;
+  return (p.T - p.C) / denom;
+}
+
+function fmt(n, d){ return Number.isFinite(n) ? n.toFixed(d) : '—'; }
+
+// ── PDV (closed form + first-N partial sums) ─────────────
+function pdvCooperate(C, d){
+  if(d >= 1) return Infinity;
+  return C / (1 - d);
+}
+function pdvDefectOnce(T, P, d){
+  if(d >= 1) return Infinity;
+  return T + d * P / (1 - d);
+}
+function partialSumCooperate(C, d, N){
+  if(d === 1) return C * N;
+  return C * (1 - Math.pow(d, N)) / (1 - d);
+}
+function partialSumDefectOnce(T, P, d, N){
+  if(N <= 0) return 0;
+  if(N === 1) return T;
+  if(d === 1) return T + P * (N - 1);
+  return T + d * P * (1 - Math.pow(d, N - 1)) / (1 - d);
+}
+
+// ── PD matrix display ────────────────────────────────────
+function updateMatrixDisplay(p){
+  $cellSS.textContent = `(${p.C}, ${p.C})`;
+  $cellSC.textContent = `(${p.S}, ${p.T})`;
+  $cellCS.textContent = `(${p.T}, ${p.S})`;
+  $cellCC.textContent = `(${p.P}, ${p.P})`;
+}
+
+function updatePDStatus(valid, msg){
+  $pdStatus.classList.toggle('ok', valid);
+  $pdStatus.classList.toggle('bad', !valid);
+  $pdStatus.querySelector('.icon').textContent = valid ? '✓' : '⚠';
+  $pdStatusText.textContent = msg;
+  // Disable / enable the comparison region when invalid
+  if($deltaRange) $deltaRange.disabled = !valid;
+  for(let qi=0; qi<4; qi++){
+    const btn = document.getElementById(`q${qi}Btn`);
+    if(btn) btn.disabled = (!valid) || lockedQuestions[qi];
+  }
+  const inp0 = document.getElementById('q0Input');
+  if(inp0) inp0.disabled = (!valid) || lockedQuestions[0];
+  document.querySelectorAll('.option-btn').forEach(b => {
+    const qi = parseInt(b.dataset.q, 10);
+    b.disabled = (!valid) || lockedQuestions[qi];
+  });
+}
+
+// ── Slider ───────────────────────────────────────────────
+function readDelta(){
+  const v = parseFloat($deltaRange.value);
+  return Number.isFinite(v) ? v : 0;
+}
+
+// ── Canvas setup ────────────────────────────────────────
+function setupCanvas(canvas){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W = Math.round(rect.width * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+// ── Stream drawing ──────────────────────────────────────
+function drawStream(canvas, perPeriodPayoffs, d, totalYRange, opts){
+  const s = setupCanvas(canvas);
+  if(!s) return;
+  const { ctx, dpr, W, H } = s;
+  ctx.clearRect(0,0,W,H);
+
+  const PAD = { l:48, r:18, t:18, b:46 };
+  const p = { l:PAD.l*dpr, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr };
+  const PW = W - p.l - p.r;
+  const PH = H - p.t - p.b;
+
+  // y range: from min(0, lowest payoff) to max(0, highest payoff)
+  const yMin = totalYRange.min;
+  const yMax = totalYRange.max;
+  const yRange = (yMax - yMin) || 1;
+
+  const xMax = N_PERIODS;
+  const xC = i => p.l + (i + 0.5) * (PW / xMax);
+  const yC = v => p.t + (1 - (v - yMin)/yRange) * PH;
+
+  // Plot background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(p.l, p.t, PW, PH);
+  ctx.strokeStyle = '#d9cfbf';
+  ctx.lineWidth = 1 * dpr;
+  ctx.strokeRect(p.l, p.t, PW, PH);
+
+  // Clip drawing area for safety
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(p.l, p.t, PW, PH);
+  ctx.clip();
+
+  // Zero line if zero in range
+  if(yMin < 0 && yMax > 0){
+    ctx.strokeStyle = '#8c7f72';
+    ctx.lineWidth = 1 * dpr;
+    ctx.setLineDash([4*dpr, 3*dpr]);
+    const y0 = yC(0);
+    ctx.beginPath();
+    ctx.moveTo(p.l, y0);
+    ctx.lineTo(p.l + PW, y0);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Paired bars per period:
+  //   left  = raw payoff (outlined)
+  //   right = discounted payoff δ^t × payoff (filled)
+  const groupW = PW / xMax;
+  const barW   = groupW * 0.34;
+  const gap    = groupW * 0.06;
+  const yBase  = yMin < 0 && yMax > 0 ? yC(0) : yC(yMin);
+  perPeriodPayoffs.forEach((rawPayoff, i) => {
+    const discPayoff = Math.pow(d, i) * rawPayoff;
+    const center = xC(i);
+    const xRaw  = center - gap/2 - barW;
+    const xDisc = center + gap/2;
+
+    // Raw bar — outline only (envelope, no discount applied)
+    const yTopRaw = yC(rawPayoff);
+    ctx.strokeStyle = opts.barColor;
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.strokeRect(xRaw, Math.min(yTopRaw, yBase), barW, Math.abs(yTopRaw - yBase));
+
+    // Discounted bar — filled (actual present-value contribution)
+    const yTopDisc = yC(discPayoff);
+    ctx.fillStyle = opts.barColor;
+    ctx.fillRect(xDisc, Math.min(yTopDisc, yBase), barW, Math.abs(yTopDisc - yBase));
+  });
+
+  ctx.restore();
+
+  // Y axis ticks
+  ctx.fillStyle = '#374151';
+  ctx.strokeStyle = '#8c7f72';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.font = `700 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  const yTickN = 4;
+  for(let i=0; i<=yTickN; i++){
+    const v = yMin + (i/yTickN) * yRange;
+    const y = yC(v);
+    ctx.fillText(v.toFixed(0), p.l - 6*dpr, y);
+    ctx.beginPath();
+    ctx.moveTo(p.l - 3*dpr, y);
+    ctx.lineTo(p.l, y);
+    ctx.stroke();
+  }
+
+  // X axis labels
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.font = `700 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  for(let i=0; i<xMax; i++){
+    if(i % 2 !== 0 && xMax > 10) continue;
+    ctx.fillText(String(i), xC(i), p.t + PH + 6*dpr);
+  }
+
+  // Axis titles
+  ctx.fillStyle = '#596878';
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.fillText('Period (t)', p.l + PW/2, H - 8*dpr);
+
+  ctx.save();
+  ctx.translate(14*dpr, p.t + PH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.textAlign = 'center';
+  ctx.fillText('Payoff', 0, 0);
+  ctx.restore();
+
+  // Legend: outlined = raw payoff, filled = δ^t × payoff
+  ctx.font = `700 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  const swatchW = 14 * dpr;
+  const swatchH = 10 * dpr;
+  const legendY = p.t + 8 * dpr + swatchH/2;
+  // Raw swatch (outline)
+  let lx = p.l + 8 * dpr;
+  ctx.strokeStyle = opts.barColor;
+  ctx.lineWidth = 1.5 * dpr;
+  ctx.strokeRect(lx, legendY - swatchH/2, swatchW, swatchH);
+  ctx.fillStyle = '#374151';
+  ctx.fillText('raw payoff', lx + swatchW + 5*dpr, legendY);
+  const rawTextW = ctx.measureText('raw payoff').width;
+  // Discounted swatch (filled)
+  lx = lx + swatchW + 5*dpr + rawTextW + 14*dpr;
+  ctx.fillStyle = opts.barColor;
+  ctx.fillRect(lx, legendY - swatchH/2, swatchW, swatchH);
+  ctx.fillStyle = '#374151';
+  ctx.fillText('δᵗ × payoff', lx + swatchW + 5*dpr, legendY);
+}
+
+function payoffStreamA(){
+  // C every period
+  return new Array(N_PERIODS).fill(payoffs.C);
+}
+function payoffStreamB(){
+  // T at t=0, P thereafter
+  const arr = [payoffs.T];
+  for(let i=1; i<N_PERIODS; i++) arr.push(payoffs.P);
+  return arr;
+}
+
+// ── Description strings (live regions) ───────────────────
+function describeStreamA(d, dStar){
+  const sustain = d >= dStar ? 'cooperation is sustainable' : 'cooperation is not sustainable';
+  const pdv = pdvCooperate(payoffs.C, d);
+  return `Stream A: cooperate forever. Each period the outlined bar shows the raw payoff C = ${payoffs.C}; the filled bar shows its discounted contribution δ to the t times C, which decays geometrically. At δ = ${fmt(d,2)}, the total present discounted value equals C divided by 1 minus δ, which is ${fmt(pdv,3)}. Under Grim Trigger, ${sustain} at this δ.`;
+}
+function describeStreamB(d, dStar){
+  const pdv = pdvDefectOnce(payoffs.T, payoffs.P, d);
+  return `Stream B: defect once, then both punished forever. The outlined bar at period 0 is the raw temptation payoff T = ${payoffs.T}; from period 1 onward the outlined bars show P = ${payoffs.P}. Filled bars show the discounted contribution δ to the t times the payoff. At δ = ${fmt(d,2)}, the total present discounted value equals T plus δP divided by 1 minus δ, which is ${fmt(pdv,3)}.`;
+}
+
+// ── Main redraw ─────────────────────────────────────────
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+
+  const p = readPayoffsFromInputs();
+  if(p == null){
+    pdValid = false;
+    updatePDStatus(false, 'Please enter four numeric payoff values.');
+    return;
+  }
+  payoffs.T = p.T; payoffs.C = p.C; payoffs.P = p.P; payoffs.S = p.S;
+  updateMatrixDisplay(p);
+
+  const pd = checkPD(p);
+  pdValid = pd.ok;
+  updatePDStatus(pd.ok, pd.msg);
+
+  delta = readDelta();
+  $deltaReadout.textContent = `δ = ${fmt(delta,2)}`;
+  $deltaCurVal.textContent = fmt(delta, 2);
+  $deltaRange.setAttribute('aria-valuenow', fmt(delta, 2));
+
+  const dStar = deltaStar(p);
+
+  // Sustainability banner (only meaningful when PD is valid).
+  // Show the verdict (yes/no) but not the numeric threshold itself.
+  if(pd.ok && Number.isFinite(dStar)){
+    const sustain = delta >= dStar;
+    $sustainBanner.classList.toggle('yes', sustain);
+    $sustainBanner.classList.toggle('no', !sustain);
+    $sustainBanner.querySelector('.badge').textContent = sustain ? '✓' : '✗';
+    $sustainText.textContent = sustain
+      ? `At δ = ${fmt(delta,2)}, collusion IS sustainable under Grim Trigger.`
+      : `At δ = ${fmt(delta,2)}, collusion is NOT sustainable — a firm prefers to undercut.`;
+  } else {
+    $sustainBanner.classList.remove('yes');
+    $sustainBanner.classList.add('no');
+    $sustainBanner.querySelector('.badge').textContent = '⚠';
+    $sustainText.textContent = 'Fix the profit matrix to evaluate sustainability.';
+  }
+
+  // Streams
+  const sA = payoffStreamA();
+  const sB = payoffStreamB();
+  const allVals = sA.concat(sB).concat([0]);
+  const yMinRaw = Math.min(...allVals);
+  const yMaxRaw = Math.max(...allVals);
+  const pad = Math.max(1, (yMaxRaw - yMinRaw) * 0.08);
+  const yRange = { min: yMinRaw - pad, max: yMaxRaw + pad };
+
+  drawStream($streamA, sA, delta, yRange, { barColor:'#155c38' });
+  drawStream($streamB, sB, delta, yRange, { barColor:'#b42318' });
+
+  // PDVs
+  const pdvA_total = pdvCooperate(payoffs.C, delta);
+  const pdvA_partial = partialSumCooperate(payoffs.C, delta, N_PERIODS);
+  const pdvA_tail = pdvA_total - pdvA_partial;
+  const pdvB_total = pdvDefectOnce(payoffs.T, payoffs.P, delta);
+  const pdvB_partial = partialSumDefectOnce(payoffs.T, payoffs.P, delta, N_PERIODS);
+  const pdvB_tail = pdvB_total - pdvB_partial;
+
+  $pdvA15.textContent = fmt(pdvA_partial, 3);
+  $pdvATail.textContent = fmt(pdvA_tail, 3);
+  $pdvA.textContent = fmt(pdvA_total, 3);
+  $pdvB15.textContent = fmt(pdvB_partial, 3);
+  $pdvBTail.textContent = fmt(pdvB_tail, 3);
+  $pdvB.textContent = fmt(pdvB_total, 3);
+
+  // Which is higher?
+  const aHigher = pdvA_total > pdvB_total;
+  const bHigher = pdvB_total > pdvA_total;
+  $pdvAStrip.classList.toggle('win', aHigher);
+  $pdvAStrip.classList.toggle('lose', !aHigher);
+  $pdvBStrip.classList.toggle('win', bHigher);
+  $pdvBStrip.classList.toggle('lose', !bHigher);
+  $pdvATag.textContent = aHigher ? 'higher ←' : (bHigher ? '' : 'tied');
+  $pdvBTag.textContent = bHigher ? 'higher ←' : (aHigher ? '' : 'tied');
+  $pdvATag.style.visibility = (aHigher || (!aHigher && !bHigher)) ? 'visible' : 'hidden';
+  $pdvBTag.style.visibility = (bHigher || (!aHigher && !bHigher)) ? 'visible' : 'hidden';
+
+  // Descriptions
+  $streamADesc.textContent = describeStreamA(delta, dStar);
+  $streamBDesc.textContent = describeStreamB(delta, dStar);
+}
+
+// ── Questions ───────────────────────────────────────────
+const Q_TEXT = [
+  "What is the discount-factor threshold δ* for the current profit matrix (two decimal places)?",
+  "If the temptation payoff T increases (everything else held fixed), does δ* go up, down, or stay the same?",
+  "If the punishment payoff P decreases (everything else held fixed), does δ* go up, down, or stay the same?",
+  "At δ = 0, which is the only credible (subgame-perfect) equilibrium of the infinitely repeated PD?"
+];
+
+function setOptionPressed(qi, val){
+  document.querySelectorAll(`.option-btn[data-q="${qi}"]`).forEach(b => {
+    const isSel = b.dataset.val === val;
+    b.classList.toggle('active', isSel);
+    b.setAttribute('aria-pressed', isSel ? 'true' : 'false');
+  });
+}
+
+function bindOptionButtons(qi){
+  document.querySelectorAll(`.option-btn[data-q="${qi}"]`).forEach(b => {
+    b.addEventListener('click', () => {
+      if(lockedQuestions[qi]) return;
+      selectedOption[qi] = b.dataset.val;
+      setOptionPressed(qi, b.dataset.val);
+    });
+  });
+}
+
+function showFeedback(qi, correct, htmlMsg){
+  const fb = document.getElementById(`q${qi}FB`);
+  fb.classList.remove('hidden');
+  fb.classList.remove(correct ? 'wrong' : 'right');
+  fb.classList.add(correct ? 'right' : 'wrong');
+  fb.innerHTML =
+    `<span class="icon" aria-hidden="true">${correct ? '✓' : '✗'}</span>` +
+    `<strong>${correct ? 'Correct.' : 'Not quite.'}</strong> ${htmlMsg}`;
+}
+
+function showReveal(qi, kind, html){
+  const el = document.getElementById(`q${qi}${kind === 'hint' ? 'Hint' : 'Answer'}`);
+  if(!el) return;
+  const label = kind === 'hint' ? 'Hint' : 'Answer';
+  el.innerHTML = `<span class="label">${label}</span>${html}`;
+  el.classList.remove('hidden');
+}
+
+function lockQuestion(qi){
+  lockedQuestions[qi] = true;
+  document.querySelectorAll(`.option-btn[data-q="${qi}"]`).forEach(b => b.disabled = true);
+  const btn = document.getElementById(`q${qi}Btn`);
+  if(btn){
+    btn.disabled = true;
+    btn.classList.add('done');
+    btn.textContent = '✓ Done';
+  }
+  if(qi === 0){
+    document.getElementById('q0Input').disabled = true;
+  }
+}
+
+function maybeComplete(){
+  const allLocked = lockedQuestions.every(Boolean);
+  if(!allLocked || _completed) return;
+  _completed = true;
+  if(window.Session && Session.recordLabDone){
+    Session.recordLabDone(LAB_ID, LAB_LABEL, _firstScore, _finalScore, TOTAL_Q);
+  }
+  // Re-enable New Problem so the student can keep exploring fresh matrices
+  // after the assessment is finished (questions stay locked).
+  const npb = document.getElementById('newProblemBtn');
+  if(npb) npb.disabled = false;
+  $summaryCard.classList.remove('hidden');
+  $summaryText.textContent =
+    `You answered ${_firstScore} out of ${TOTAL_Q} correctly on the first try` +
+    (_firstScore === TOTAL_Q
+      ? '. Excellent work. The answers above stay locked, but you can press New Problem to keep experimenting.'
+      : '. Review the revealed answers above. The answers stay locked, but you can press New Problem to keep experimenting.');
+}
+
+// ── Per-question check functions ─────────────────────────
+function checkQ0(){
+  const raw = document.getElementById('q0Input').value;
+  if(raw == null || raw.trim() === '') return { empty:true };
+  const v = parseFloat(raw);
+  if(!Number.isFinite(v)) return { empty:true };
+  const truth = deltaStar(payoffs);
+  return { ok: Math.abs(v - truth) <= 0.01, ansText: v.toFixed(2) };
+}
+function checkMC(qi, correctVal){
+  const sel = selectedOption[qi];
+  if(!sel) return { empty:true };
+  return { ok: sel === correctVal, ansText: sel };
+}
+const Q_CHECK = [
+  checkQ0,
+  () => checkMC(1, 'up'),
+  () => checkMC(2, 'down'),
+  () => checkMC(3, 'B'),
+];
+
+// ── Per-question hint and answer content (computed live) ─
+const Q_HINT = [
+  () => `Cooperation forever has present value <strong>PDV<sub>A</sub> = C / (1 − δ)</strong>. Defecting once and being grim-triggered forever has present value <strong>PDV<sub>B</sub> = T + δ · P / (1 − δ)</strong>. At the threshold, the two are equal — set PDV<sub>A</sub> = PDV<sub>B</sub> and solve for δ.`,
+  () => `δ* = (T − C) / (T − P). When T rises, <em>both</em> the numerator (T − C) and the denominator (T − P) get larger by the same amount. Compute ∂δ*/∂T to see which effect dominates.`,
+  () => `δ* = (T − C) / (T − P). When P falls, only the denominator (T − P) changes. Does it grow or shrink? What does that do to the ratio?`,
+  () => `Plug δ = 0 directly into the no-deviation condition <strong>C / (1 − δ) ≥ T + δ · P / (1 − δ)</strong>. Both factors of 1/(1 − δ) become 1 and the δ·P term vanishes. What simple inequality is left?`,
+];
+const Q_ANSWER_HTML = [
+  () => {
+    const v = deltaStar(payoffs);
+    const num = payoffs.T - payoffs.C;
+    const den = payoffs.T - payoffs.P;
+    return `Setting C/(1−δ) = T + δ·P/(1−δ) and multiplying by (1−δ): C = T(1−δ) + δP, which rearranges to <strong>δ* = (T − C) / (T − P) = (${payoffs.T} − ${payoffs.C}) / (${payoffs.T} − ${payoffs.P}) = ${num}/${den} ≈ ${v.toFixed(3)}</strong>.`;
+  },
+  () => `∂δ*/∂T = [(T − P) − (T − C)] / (T − P)<sup>2</sup> = (C − P) / (T − P)<sup>2</sup>. Since C &gt; P in a PD, this is <strong>positive</strong>: as T rises, δ* rises. Intuition: a juicier one-period undercut requires firms to be more patient before grim-trigger punishment can deter it. <strong>Answer: Up ↑.</strong>`,
+  () => `∂δ*/∂P = (T − C) / (T − P)<sup>2</sup>. Since T &gt; C, this is <strong>positive</strong>. So when P decreases, δ* decreases as well. Intuition: a more painful price war makes the grim-trigger threat more credible, so even relatively impatient firms can sustain collusion. <strong>Answer: Down ↓.</strong>`,
+  () => `At δ = 0 the no-deviation condition collapses to <strong>C ≥ T</strong> — which directly contradicts the PD assumption T &gt; C. So collusion can <em>never</em> be sustained: the only credible (subgame-perfect) play is the one-shot Nash, with both firms undercutting every period. <strong>Answer: B.</strong>`,
+];
+const Q_ANSWER_TEXT = [
+  () => fmt(deltaStar(payoffs), 3),
+  () => 'up',
+  () => 'down',
+  () => 'B',
+];
+const Q_CORRECT_MC = { 1:'up', 2:'down', 3:'B' };
+
+// ── Unified Check / Show Hint / Show Answer state machine ─
+const qPhase = ['check','check','check','check']; // 'check' | 'hint' | 'answer' | 'done'
+const firstAnsText = ['','','',''];
+const firstAnsOk   = [false,false,false,false];
+const qAttempted   = [false,false,false,false];
+
+function recordFirstAttempt(qi, ansText, ok){
+  qAttempted[qi] = true;
+  firstAnsText[qi] = ansText;
+  firstAnsOk[qi]   = ok;
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(LAB_ID, qi, Q_TEXT[qi],
+      ansText, ok, ansText, ok);
+  }
+  if(ok) _firstScore++;
+  // Disable New Problem once any answer is committed to the current matrix.
+  if(newProblemBtn) newProblemBtn.disabled = true;
+}
+
+function handleQButton(qi){
+  if(lockedQuestions[qi]) return;
+  if(!pdValid) return;
+  const btn = document.getElementById(`q${qi}Btn`);
+
+  if(qPhase[qi] === 'check'){
+    const res = Q_CHECK[qi]();
+    if(res.empty){
+      showFeedback(qi, false, qi === 0
+        ? 'Please enter a number between 0 and 1.'
+        : 'Please choose an answer first.');
+      return;
+    }
+    if(!qAttempted[qi]) recordFirstAttempt(qi, res.ansText, res.ok);
+    if(res.ok){
+      showFeedback(qi, true, qi === 0
+        ? `δ* = ${fmt(deltaStar(payoffs), 3)} — nicely done.`
+        : 'Nicely reasoned.');
+      _finalScore++;
+      lockQuestion(qi);
+      maybeComplete();
+    } else {
+      showFeedback(qi, false, 'Work through the hint, then reveal the answer to continue.');
+      qPhase[qi] = 'hint';
+      btn.textContent = 'Show Hint';
+    }
+  } else if(qPhase[qi] === 'hint'){
+    showReveal(qi, 'hint', Q_HINT[qi]());
+    qPhase[qi] = 'answer';
+    btn.textContent = 'Show Answer';
+  } else if(qPhase[qi] === 'answer'){
+    showReveal(qi, 'answer', Q_ANSWER_HTML[qi]());
+    if(qi >= 1) {
+      const correct = Q_CORRECT_MC[qi];
+      document.querySelectorAll(`.option-btn[data-q="${qi}"]`).forEach(b => {
+        if(b.dataset.val === correct) b.classList.add('correct');
+      });
+    } else {
+      document.getElementById('q0Input').value = fmt(deltaStar(payoffs), 2);
+    }
+    // Second-phase session record: first answer kept, final answer = revealed
+    if(window.Session && Session.recordQuestion){
+      Session.recordQuestion(LAB_ID, qi, Q_TEXT[qi],
+        firstAnsText[qi], firstAnsOk[qi],
+        Q_ANSWER_TEXT[qi](), true);
+    }
+    _finalScore++;
+    lockQuestion(qi);
+    maybeComplete();
+  }
+}
+
+[0,1,2,3].forEach(qi => {
+  const btn = document.getElementById(`q${qi}Btn`);
+  if(btn) btn.addEventListener('click', () => handleQButton(qi));
+});
+
+// ── Wire option buttons for Q2, Q3, Q4 ───────────────────
+bindOptionButtons(1);
+bindOptionButtons(2);
+bindOptionButtons(3);
+
+// ── New Problem (random PD via seeded RNG) ───────────────
+const newProblemBtn = document.getElementById('newProblemBtn');
+
+function rng(){ return _rng ? _rng() : Math.random(); }
+function randInt(lo, hi){ // inclusive
+  return lo + Math.floor(rng() * (hi - lo + 1));
+}
+function randomPD(){
+  const C  = randInt(8, 12);                 // collusion profit
+  const T  = C + randInt(2, 5);              // T > C
+  const P  = randInt(Math.max(1, C - 6),     // P < C
+                     C - 2);
+  const S  = randInt(0, Math.max(0, P - 1)); // S < P
+  return { T, C, P, S };
+}
+function applyPayoffsToInputs(p){
+  $inpT.value = p.T;
+  $inpC.value = p.C;
+  $inpP.value = p.P;
+  $inpS.value = p.S;
+}
+newProblemBtn.addEventListener('click', () => {
+  if(newProblemBtn.disabled) return;
+  applyPayoffsToInputs(randomPD());
+  redraw();
+  // Brief flash so it's obvious the matrix updated
+  const matrixEl = document.querySelector('.matrix');
+  if(matrixEl){
+    matrixEl.classList.remove('matrix-flash');
+    // force reflow so animation restarts on rapid clicks
+    void matrixEl.offsetWidth;
+    matrixEl.classList.add('matrix-flash');
+  }
+});
+
+// ── Inputs / slider → redraw ────────────────────────────
+[$inpT, $inpC, $inpP, $inpS].forEach(el => {
+  el.addEventListener('input', redraw);
+  el.addEventListener('change', redraw);
+});
+$deltaRange.addEventListener('input', redraw);
+
+// ── Resize handler ───────────────────────────────────────
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+// ── generateParams (seeds the RNG per CLAUDE.md) ─────────
+function generateParams(){
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+  // This lab has fixed defaults; the seeded RNG is reserved in case
+  // future revisions randomise the matrix.
+}
+
+// ── Discussion modal entry ──────────────────────────────
+if(window.DiscussionModal && DiscussionModal.init){
+  DiscussionModal.init({
+    weekLabel: 'TBD — set when assigning to a week',
+    onReady: function(){
+      generateParams();
+      redraw();
+    }
+  });
+} else {
+  generateParams();
+  redraw();
+}
+
+})();
+</script>
+</body>
+</html>
