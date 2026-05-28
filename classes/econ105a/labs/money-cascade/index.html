@@ -1,0 +1,850 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Money Cascade — ECON 105A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;  --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ─────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Layout */
+    .lab-container{max-width:1160px;margin:0 auto;padding:18px;}
+
+    /* Generic card */
+    .card{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .card h2{margin:0 0 10px;font-size:0.75rem;font-weight:800;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;}
+
+    /* Controls */
+    .controls-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+    @media(max-width:900px){.controls-grid{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:520px){.controls-grid{grid-template-columns:1fr;}}
+    .ctrl{background:rgba(246,242,234,.55);border:1px solid var(--line);
+      border-radius:12px;padding:10px 12px;}
+    .ctrl .lbl{display:flex;justify-content:space-between;align-items:baseline;
+      margin-bottom:6px;}
+    .ctrl .lbl-name{font-size:0.75rem;font-weight:700;color:var(--ink-2);}
+    .ctrl .lbl-val{font-size:0.9375rem;font-weight:700;color:var(--accent);
+      font-variant-numeric:tabular-nums;}
+    .ctrl input[type=range]{width:100%;accent-color:var(--accent);
+      cursor:pointer;}
+    .ctrl input[type=range]:focus-visible{outline:3px solid var(--accent);
+      outline-offset:3px;}
+    .ctrl .lbl-help{font-size:0.6875rem;color:var(--muted);margin-top:4px;
+      line-height:1.4;}
+
+    /* Round stepper */
+    .stepper{display:flex;align-items:center;gap:6px;margin-top:4px;}
+    .stepper-btn{width:32px;height:32px;border-radius:8px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:1rem;font-weight:800;
+      color:var(--ink-2);cursor:pointer;line-height:1;
+      display:flex;align-items:center;justify-content:center;
+      transition:background .12s,border-color .12s,color .12s;}
+    .stepper-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .stepper-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .stepper-val{flex:1;text-align:center;font-size:1rem;font-weight:800;
+      color:var(--accent);font-variant-numeric:tabular-nums;
+      padding:4px 6px;background:var(--panel);border:1px solid var(--line);
+      border-radius:8px;}
+
+    /* Play/Reset row */
+    .play-row{display:flex;gap:8px;margin-top:8px;}
+    .play-btn{flex:1;padding:8px 12px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;
+      transition:background .12s,border-color .12s,color .12s;}
+    .play-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .play-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .play-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+    .play-btn.primary:hover:not(:disabled){background:#264d68;border-color:#264d68;color:#fff;}
+
+    /* Running totals grid */
+    .totals-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+    @media(max-width:900px){.totals-grid{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:520px){.totals-grid{grid-template-columns:1fr;}}
+    .metric{background:rgba(246,242,234,.55);border:1px solid var(--line);
+      border-radius:12px;padding:12px;}
+    .metric .m-label{font-size:0.6875rem;font-weight:800;
+      text-transform:uppercase;letter-spacing:.07em;color:var(--muted);
+      margin-bottom:4px;}
+    .metric .m-value{font-family:var(--font-serif);font-size:1.375rem;
+      font-weight:700;color:var(--ink);line-height:1.1;
+      font-variant-numeric:tabular-nums;}
+    .metric .m-target{font-size:0.75rem;color:var(--accent);
+      margin-top:6px;font-weight:600;font-variant-numeric:tabular-nums;}
+    .metric .m-bar{width:100%;height:6px;background:rgba(47,93,124,.10);
+      border-radius:3px;overflow:hidden;margin-top:6px;}
+    .metric .m-bar-fill{height:100%;background:var(--accent);
+      border-radius:3px;transition:width .25s ease;}
+    .metric .m-note{font-size:0.6875rem;color:var(--muted);
+      margin-top:6px;line-height:1.4;}
+
+    /* Multiplier card */
+    .mult-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+    @media(max-width:760px){.mult-grid{grid-template-columns:1fr;}}
+    .mult-box{background:rgba(246,242,234,.55);border:1px solid var(--line);
+      border-radius:12px;padding:12px;}
+    .mult-box .mb-label{font-size:0.6875rem;font-weight:800;
+      text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+      margin-bottom:4px;}
+    .mult-box .mb-formula{font-family:var(--font-serif);font-size:0.9375rem;
+      color:var(--ink-2);margin-bottom:4px;line-height:1.4;}
+    .mult-box .mb-value{font-family:var(--font-serif);font-size:1.5rem;
+      font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums;}
+    .mult-box.diff .mb-value{color:var(--ink);font-size:1.0625rem;}
+    .mult-diff-text{font-size:0.8125rem;color:var(--ink-2);
+      line-height:1.5;margin-top:4px;}
+
+    /* Cascade */
+    .cascade-intro{background:rgba(47,93,124,.06);
+      border:1px solid rgba(47,93,124,.22);border-radius:12px;
+      padding:12px 14px;margin-bottom:10px;font-size:0.875rem;
+      color:var(--ink-2);line-height:1.5;}
+    .cascade-intro strong{color:var(--accent);}
+
+    .round-card{background:var(--panel);border:1px solid var(--line-2);
+      border-radius:14px;padding:12px 14px;box-shadow:var(--shadow);
+      margin-bottom:6px;}
+    .round-card .rc-head{display:flex;justify-content:space-between;
+      align-items:baseline;flex-wrap:wrap;gap:8px;margin-bottom:8px;}
+    .round-card .rc-title{font-family:var(--font-serif);font-size:1rem;
+      font-weight:700;color:var(--ink);}
+    .round-card .rc-rounds{font-size:0.6875rem;text-transform:uppercase;
+      letter-spacing:.07em;color:var(--muted);font-weight:700;}
+
+    .bs-table{width:100%;border-collapse:collapse;font-size:0.875rem;}
+    .bs-table caption{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;
+      border:0;}
+    .bs-table th{font-size:0.6875rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.06em;color:var(--muted);text-align:left;
+      padding:4px 6px;border-bottom:1px solid var(--line);}
+    .bs-table td{padding:5px 6px;color:var(--ink);border-bottom:1px solid var(--line);
+      font-variant-numeric:tabular-nums;}
+    .bs-table tr:last-child td{border-bottom:none;}
+    .bs-table .bs-cell{display:flex;justify-content:space-between;align-items:baseline;}
+    .bs-table .bs-tag{font-size:0.625rem;font-weight:700;
+      text-transform:uppercase;letter-spacing:.05em;padding:1px 5px;
+      border-radius:4px;}
+    .bs-table .bs-tag.reserves{color:var(--good);background:rgba(21,92,56,.08);
+      border:1px solid rgba(21,92,56,.18);}
+    .bs-table .bs-tag.loans{color:var(--ink-2);background:rgba(89,104,120,.10);
+      border:1px solid rgba(89,104,120,.22);}
+    .bs-table .bs-tag.deposits{color:var(--accent);background:rgba(47,93,124,.08);
+      border:1px solid rgba(47,93,124,.22);}
+
+    .connector{display:flex;align-items:flex-start;gap:10px;margin:4px 0 4px 16px;
+      font-size:0.8125rem;color:var(--ink-2);line-height:1.5;}
+    .connector .arrow{font-size:1.25rem;color:var(--accent);
+      line-height:1;margin-top:1px;}
+    .connector .conn-main{flex:1;}
+    .connector .leak{display:block;margin-top:3px;font-size:0.75rem;
+      color:#8c4800;font-weight:600;}
+    .connector .leak::before{content:'↳ ';color:#8c4800;}
+
+    .ellipsis-card{background:rgba(246,242,234,.6);
+      border:1px dashed var(--line-2);border-radius:14px;
+      padding:12px 14px;margin-bottom:6px;font-size:0.875rem;
+      color:var(--ink-2);line-height:1.5;text-align:center;}
+    .ellipsis-card strong{color:var(--ink);}
+
+    /* Caption */
+    .caption{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;padding:14px 18px;box-shadow:var(--shadow);
+      margin-top:8px;font-size:0.875rem;color:var(--ink-2);line-height:1.6;
+      max-width:80ch;}
+    .caption p{margin:6px 0;}
+    .caption strong{color:var(--ink);}
+
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;
+      gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+  </style>
+</head>
+<body>
+
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105a/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105A — Money</div>
+      <h1>Money Cascade</h1>
+      <p class="sub">
+        Watch fractional-reserve banking create money round by round. Adjust
+        the reserve ratio and currency-deposit ratio to see how the money
+        multiplier emerges from a geometric series of loans and deposits.
+      </p>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>Use the sliders to explore how the money supply is created by
+          fractional-reserve banking. Watch the cascade of deposits and loans
+          round by round, and see how changing the reserve-deposit ratio
+          (<strong>rr</strong>) or the currency-deposit ratio
+          (<strong>cr</strong>) changes the total amount of money created.</p>
+          <p>Things to try:</p>
+          <ol>
+            <li><strong>Start with the textbook case.</strong> Leave the
+                defaults (B = $1000, rr = 0.20, cr = 0.00). Press Play and
+                watch the cascade. Notice that the money supply converges to
+                $5000 = $1000 × (1/0.20).</li>
+            <li><strong>Change the reserve ratio.</strong> Drag rr from 0.20
+                down to 0.10. Watch the multiplier double from 5 to 10. Why
+                does a lower reserve ratio create more money?</li>
+            <li><strong>Add currency leakage.</strong> Drag cr from 0 up to
+                0.50. Watch the cascade — what happens to the deposits at
+                each round? What happens to the money supply?</li>
+            <li><strong>Match the textbook example.</strong> Set B = 800,
+                cr = 0.80, rr = 0.10. The money supply should converge to
+                $1600, matching the example in §3.1 of the lecture notes.</li>
+            <li><strong>Notice the reserves.</strong> No matter how you set
+                the sliders, the total reserves across all banks stays equal
+                to rr × D. The cascade doesn't create reserves — it creates
+                <em>deposits</em>.</li>
+          </ol>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-container">
+
+  <!-- ── Controls ────────────────────────────────────────────── -->
+  <section class="card" aria-labelledby="controlsHead">
+    <h2 id="controlsHead">Controls</h2>
+    <div class="controls-grid">
+
+      <div class="ctrl">
+        <div class="lbl">
+          <label class="lbl-name" for="bSlider">B — Monetary Base</label>
+          <span class="lbl-val" id="bVal">$1,000</span>
+        </div>
+        <input type="range" id="bSlider"
+               min="500" max="2000" step="100" value="1000"
+               aria-valuetext="Monetary base: $1,000"/>
+        <div class="lbl-help">Dollars added to the system by the Fed.</div>
+      </div>
+
+      <div class="ctrl">
+        <div class="lbl">
+          <label class="lbl-name" for="rrSlider">rr — Reserve Ratio</label>
+          <span class="lbl-val" id="rrVal">0.20</span>
+        </div>
+        <input type="range" id="rrSlider"
+               min="0.05" max="0.50" step="0.05" value="0.20"
+               aria-valuetext="Reserve ratio: 20 percent"/>
+        <div class="lbl-help">Share of deposits banks keep as reserves.</div>
+      </div>
+
+      <div class="ctrl">
+        <div class="lbl">
+          <label class="lbl-name" for="crSlider">cr — Currency Ratio</label>
+          <span class="lbl-val" id="crVal">0.00</span>
+        </div>
+        <input type="range" id="crSlider"
+               min="0.00" max="1.50" step="0.05" value="0.00"
+               aria-valuetext="Currency-to-deposit ratio: 0.00"/>
+        <div class="lbl-help">Ratio of currency held by public to deposits.</div>
+      </div>
+
+      <div class="ctrl">
+        <div class="lbl">
+          <label class="lbl-name" id="kLabel">k — Rounds Shown</label>
+          <span class="lbl-val" id="kVal">1</span>
+        </div>
+        <div class="stepper" role="group" aria-labelledby="kLabel">
+          <button class="stepper-btn" id="kDown"
+                  aria-label="Decrease rounds shown">−</button>
+          <div class="stepper-val" id="kReadout"
+               role="status" aria-live="polite" aria-atomic="true">1</div>
+          <button class="stepper-btn" id="kUp"
+                  aria-label="Increase rounds shown">+</button>
+        </div>
+        <div class="play-row">
+          <button class="play-btn primary" id="playBtn">Play</button>
+          <button class="play-btn" id="resetBtn">Reset</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── Running totals ──────────────────────────────────────── -->
+  <section class="card" aria-labelledby="totalsHead">
+    <h2 id="totalsHead">Running Totals (After Round <span id="kHead">1</span>)</h2>
+    <div class="totals-grid" role="group" aria-label="Money supply running totals">
+
+      <div class="metric">
+        <div class="m-label">Money Supply M</div>
+        <div class="m-value" id="mVal">$0</div>
+        <div class="m-target" id="mTarget">Converges to: —</div>
+        <div class="m-bar" aria-hidden="true">
+          <div class="m-bar-fill" id="mBar" style="width:0%"></div>
+        </div>
+        <div class="m-note">M = C + D</div>
+      </div>
+
+      <div class="metric">
+        <div class="m-label">Currency C</div>
+        <div class="m-value" id="cVal">$0</div>
+        <div class="m-target" id="cTarget">Converges to: —</div>
+        <div class="m-bar" aria-hidden="true">
+          <div class="m-bar-fill" id="cBar" style="width:0%"></div>
+        </div>
+        <div class="m-note">Held by public (not redeposited).</div>
+      </div>
+
+      <div class="metric">
+        <div class="m-label">Deposits D</div>
+        <div class="m-value" id="dVal">$0</div>
+        <div class="m-target" id="dTarget">Converges to: —</div>
+        <div class="m-bar" aria-hidden="true">
+          <div class="m-bar-fill" id="dBar" style="width:0%"></div>
+        </div>
+        <div class="m-note">Sum of deposits across all banks.</div>
+      </div>
+
+      <div class="metric">
+        <div class="m-label">Reserves R</div>
+        <div class="m-value" id="rVal">$0</div>
+        <div class="m-target" id="rTarget">Converges to: —</div>
+        <div class="m-bar" aria-hidden="true">
+          <div class="m-bar-fill" id="rBar" style="width:0%"></div>
+        </div>
+        <div class="m-note" id="rNote">
+          Notice: total reserves always equal rr × D — banks aren't creating
+          reserves, just shuffling them.
+        </div>
+      </div>
+
+    </div>
+    <!-- Hidden live region announces totals when k changes -->
+    <div class="sr-only" id="totalsAnnounce"
+         aria-live="polite" aria-atomic="true"></div>
+  </section>
+
+  <!-- ── Multiplier comparison ───────────────────────────────── -->
+  <section class="card" aria-labelledby="multHead">
+    <h2 id="multHead">The Money Multiplier</h2>
+    <div class="mult-grid">
+
+      <div class="mult-box">
+        <div class="mb-label">Simple multiplier (no currency leakage)</div>
+        <div class="mb-formula">m<sub>simple</sub> = 1 / rr</div>
+        <div class="mb-value" id="multSimpleVal">5.00</div>
+      </div>
+
+      <div class="mult-box">
+        <div class="mb-label">Full multiplier (current cr, rr)</div>
+        <div class="mb-formula">m = (cr + 1) / (cr + rr)</div>
+        <div class="mb-value" id="multFullVal">5.00</div>
+      </div>
+
+      <div class="mult-box diff">
+        <div class="mb-label">Effect of currency leakage</div>
+        <div class="mb-value" id="multDiffVal">0%</div>
+        <div class="mult-diff-text" id="multDiffText">(no leakage)</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── Cascade ─────────────────────────────────────────────── -->
+  <section class="card" aria-labelledby="cascadeHead">
+    <h2 id="cascadeHead">The Cascade</h2>
+    <div class="cascade-intro" id="cascadeIntro" role="status"
+         aria-live="polite" aria-atomic="true">
+      <strong>Round 0 — Monetary base enters.</strong>
+      <span id="introText">The Fed adds $1,000 to the system. With cr = 0,
+      the public deposits the full $1,000 at Firstbank.</span>
+    </div>
+    <div id="cascadeList"></div>
+  </section>
+
+  <!-- ── Caption ────────────────────────────────────────────── -->
+  <section class="caption" aria-label="Explanation">
+    <p><strong>What you're watching.</strong> When the Fed adds dollars to
+    the monetary base, that money enters the banking system as a deposit.
+    The bank keeps a fraction <strong>rr</strong> as reserves and lends out
+    the rest. That loan becomes a new deposit at another bank, which keeps
+    <strong>rr</strong> and lends out the rest. The geometric series of
+    loans across all rounds is what <em>creates</em> the money supply.</p>
+    <p><strong>Why the multiplier formula has that shape.</strong> With
+    <strong>cr = 0</strong>, all the money created stays in the banking
+    system as deposits, so the multiplier is the clean
+    <strong>1 / rr</strong> from the geometric series. When
+    <strong>cr &gt; 0</strong>, some money leaks out as currency at each
+    round — that currency <em>adds</em> to the money supply (because
+    M = C + D) but stops circulating through the banking system. The net
+    effect is the full multiplier <strong>(cr + 1) / (cr + rr)</strong>.</p>
+  </section>
+
+</main>
+
+<footer style="margin-top:32px;">
+  <div class="lab-container">
+    <div class="footer-inner">
+      <span>ECON 105A — Intermediate Macroeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+// LAB_ID:    money-cascade
+// LAB_LABEL: Money Cascade
+// URL:       /classes/econ105a/labs/money-cascade/
+//
+// This is an exploration lab — no Session integration, no Discussion modal,
+// no PDF export. Students explore the cascade dynamics freely.
+(function(){
+'use strict';
+
+const MAX_K = 20;
+const BANK_NAMES = [
+  'Firstbank','Secondbank','Thirdbank','Fourthbank','Fifthbank',
+  'Sixthbank','Seventhbank','Eighthbank','Ninthbank','Tenthbank',
+  'Eleventhbank','Twelfthbank','Thirteenthbank','Fourteenthbank',
+  'Fifteenthbank','Sixteenthbank','Seventeenthbank','Eighteenthbank',
+  'Nineteenthbank','Twentiethbank'
+];
+
+const PREFERS_REDUCED_MOTION =
+  window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ── State ───────────────────────────────────────────────────────
+let B  = 1000;
+let rr = 0.20;
+let cr = 0.00;
+let k  = 1;
+let playTimer = null;
+
+// ── DOM ─────────────────────────────────────────────────────────
+const $bSlider  = document.getElementById('bSlider');
+const $rrSlider = document.getElementById('rrSlider');
+const $crSlider = document.getElementById('crSlider');
+const $bVal     = document.getElementById('bVal');
+const $rrVal    = document.getElementById('rrVal');
+const $crVal    = document.getElementById('crVal');
+const $kVal     = document.getElementById('kVal');
+const $kReadout = document.getElementById('kReadout');
+const $kHead    = document.getElementById('kHead');
+const $kUp      = document.getElementById('kUp');
+const $kDown    = document.getElementById('kDown');
+const $playBtn  = document.getElementById('playBtn');
+const $resetBtn = document.getElementById('resetBtn');
+
+const $mVal = document.getElementById('mVal');
+const $cVal = document.getElementById('cVal');
+const $dVal = document.getElementById('dVal');
+const $rVal = document.getElementById('rVal');
+const $mTarget = document.getElementById('mTarget');
+const $cTarget = document.getElementById('cTarget');
+const $dTarget = document.getElementById('dTarget');
+const $rTarget = document.getElementById('rTarget');
+const $mBar = document.getElementById('mBar');
+const $cBar = document.getElementById('cBar');
+const $dBar = document.getElementById('dBar');
+const $rBar = document.getElementById('rBar');
+
+const $multSimpleVal = document.getElementById('multSimpleVal');
+const $multFullVal   = document.getElementById('multFullVal');
+const $multDiffVal   = document.getElementById('multDiffVal');
+const $multDiffText  = document.getElementById('multDiffText');
+
+const $cascadeList   = document.getElementById('cascadeList');
+const $introText     = document.getElementById('introText');
+const $totalsAnnounce= document.getElementById('totalsAnnounce');
+
+// ── Formatting ──────────────────────────────────────────────────
+function fmt$(v){
+  if(!isFinite(v)) return '—';
+  const sign = v < 0 ? '−' : '';
+  const a = Math.abs(v);
+  // Two-decimal money formatting
+  return sign + '$' + a.toLocaleString('en-US',
+    { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function fmt$Int(v){
+  if(!isFinite(v)) return '—';
+  const sign = v < 0 ? '−' : '';
+  return sign + '$' + Math.abs(v).toLocaleString('en-US',
+    { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+function fmtPct(p, digits){
+  digits = digits == null ? 0 : digits;
+  return (p * 100).toFixed(digits) + '%';
+}
+
+// ── Math ────────────────────────────────────────────────────────
+// At round k (k>=1):
+//   NewDeposit_1 = B / (1+cr)
+//   NewDeposit_k = ((1-rr)/(1+cr)) * NewDeposit_{k-1}, for k>=2
+//   NewReserves_k = rr * NewDeposit_k
+//   NewLoans_k    = (1-rr) * NewDeposit_k
+//   NewCurrency_1 = cr/(1+cr) * B
+//   NewCurrency_k = cr/(1+cr) * NewLoans_{k-1}, for k>=2
+function roundValues(k_){
+  const ratio = (1 - rr) / (1 + cr);   // deposit shrinkage per round
+  const d1    = B / (1 + cr);
+  const d     = d1 * Math.pow(ratio, k_ - 1);
+  const reserves = rr * d;
+  const loans    = (1 - rr) * d;
+  let currency;
+  if(k_ === 1){
+    currency = (cr / (1 + cr)) * B;
+  } else {
+    const prevLoans = (1 - rr) * d1 * Math.pow(ratio, k_ - 2);
+    currency = (cr / (1 + cr)) * prevLoans;
+  }
+  return { d, reserves, loans, currency };
+}
+
+function cumulativeTotals(upTo){
+  // Sum of geometric series for D and C from round 1..upTo
+  const ratio = (1 - rr) / (1 + cr);
+  const d1    = B / (1 + cr);
+  // sum of d_1 * ratio^(i-1) for i=1..upTo
+  let geomSum;
+  if(Math.abs(ratio - 1) < 1e-12){
+    geomSum = upTo;
+  } else {
+    geomSum = (1 - Math.pow(ratio, upTo)) / (1 - ratio);
+  }
+  const D = d1 * geomSum;
+  const R = rr * D;
+  // Currency: C_1 = cr/(1+cr) * B; C_k for k>=2 = (cr/(1+cr)) * (1-rr) * d_{k-1}
+  // Total currency through k = cr/(1+cr) * [B + (1-rr) * (D - d_upTo)]
+  // Derivation: NewLoans sum from i=1..upTo-1 = (1-rr) * sum d_i (i=1..upTo-1)
+  //                                            = (1-rr) * (D - d_upTo)
+  let C;
+  if(upTo === 0){
+    C = 0;
+  } else if(upTo === 1){
+    C = (cr / (1 + cr)) * B;
+  } else {
+    const d_upTo = d1 * Math.pow(ratio, upTo - 1);
+    C = (cr / (1 + cr)) * (B + (1 - rr) * (D - d_upTo));
+  }
+  const M = C + D;
+  return { D, R, C, M };
+}
+
+function convergenceLimits(){
+  const Dinf = B / (cr + rr);
+  const Rinf = rr * Dinf;
+  const Cinf = cr * Dinf;
+  const Minf = Cinf + Dinf;
+  return { Dinf, Rinf, Cinf, Minf };
+}
+
+// ── Render ──────────────────────────────────────────────────────
+function renderControls(){
+  $bVal.textContent  = fmt$Int(B);
+  $rrVal.textContent = rr.toFixed(2);
+  $crVal.textContent = cr.toFixed(2);
+  $kVal.textContent  = k;
+  $kReadout.textContent = k;
+  $kHead.textContent = k;
+
+  // Update aria-valuetext for screen readers
+  $bSlider.setAttribute('aria-valuetext',
+    'Monetary base: $' + B.toLocaleString('en-US'));
+  $rrSlider.setAttribute('aria-valuetext',
+    'Reserve ratio: ' + Math.round(rr * 100) + ' percent');
+  $crSlider.setAttribute('aria-valuetext',
+    'Currency-to-deposit ratio: ' + cr.toFixed(2));
+
+  $kDown.disabled = (k <= 1);
+  $kUp.disabled   = (k >= MAX_K);
+}
+
+function renderTotals(){
+  const t = cumulativeTotals(k);
+  const lim = convergenceLimits();
+
+  $mVal.textContent = fmt$(t.M);
+  $cVal.textContent = fmt$(t.C);
+  $dVal.textContent = fmt$(t.D);
+  $rVal.textContent = fmt$(t.R);
+
+  $mTarget.textContent = 'Converges to: ' + fmt$(lim.Minf);
+  $cTarget.textContent = 'Converges to: ' + fmt$(lim.Cinf);
+  $dTarget.textContent = 'Converges to: ' + fmt$(lim.Dinf);
+  $rTarget.textContent = 'Converges to: ' + fmt$(lim.Rinf);
+
+  const pctM = lim.Minf > 0 ? Math.min(100, 100 * t.M / lim.Minf) : 0;
+  const pctC = lim.Cinf > 0 ? Math.min(100, 100 * t.C / lim.Cinf) : 0;
+  const pctD = lim.Dinf > 0 ? Math.min(100, 100 * t.D / lim.Dinf) : 0;
+  const pctR = lim.Rinf > 0 ? Math.min(100, 100 * t.R / lim.Rinf) : 0;
+  $mBar.style.width = pctM.toFixed(1) + '%';
+  $cBar.style.width = pctC.toFixed(1) + '%';
+  $dBar.style.width = pctD.toFixed(1) + '%';
+  $rBar.style.width = pctR.toFixed(1) + '%';
+}
+
+function renderMultiplier(){
+  const mSimple = 1 / rr;
+  const mFull   = (cr + 1) / (cr + rr);
+  $multSimpleVal.textContent = mSimple.toFixed(2);
+  $multFullVal.textContent   = mFull.toFixed(2);
+  if(cr <= 1e-9){
+    $multDiffVal.textContent  = '0%';
+    $multDiffText.textContent = '(no leakage — full and simple are equal)';
+  } else {
+    const pctDrop = (mSimple - mFull) / mSimple;
+    $multDiffVal.textContent  = '−' + (pctDrop * 100).toFixed(1) + '%';
+    $multDiffText.textContent = 'Currency leakage reduces the multiplier ' +
+      'by ' + (pctDrop * 100).toFixed(1) + '% relative to the no-leakage case.';
+  }
+}
+
+function renderIntro(){
+  if(cr <= 1e-9){
+    $introText.textContent = 'The Fed adds ' + fmt$Int(B) +
+      ' to the system. With cr = 0, the public deposits the full ' +
+      fmt$Int(B) + ' at Firstbank.';
+  } else {
+    const d1 = B / (1 + cr);
+    const c1 = (cr / (1 + cr)) * B;
+    $introText.textContent = 'The Fed adds ' + fmt$Int(B) +
+      ' to the system. With cr = ' + cr.toFixed(2) +
+      ', the public holds ' + fmt$(c1) +
+      ' as currency and deposits ' + fmt$(d1) + ' at Firstbank.';
+  }
+}
+
+function bankName(i){
+  return BANK_NAMES[i - 1] || ('Round ' + i + ' bank');
+}
+
+function renderCascade(){
+  // Build round cards 1..k
+  let html = '';
+  for(let i = 1; i <= k; i++){
+    const v = roundValues(i);
+    html += '<div class="round-card">';
+    html += '<div class="rc-head">';
+    html += '<span class="rc-title">Round ' + i + ' — ' + bankName(i) + '</span>';
+    html += '<span class="rc-rounds">Bank #' + i + ' of the cascade</span>';
+    html += '</div>';
+    html += '<table class="bs-table">';
+    html += '<caption>Balance sheet for ' + bankName(i) +
+            ' at round ' + i + '</caption>';
+    html += '<thead><tr>' +
+            '<th scope="col">Assets</th>' +
+            '<th scope="col">Liabilities</th>' +
+            '</tr></thead>';
+    html += '<tbody>';
+    html += '<tr>';
+    html += '<td><div class="bs-cell">' +
+            '<span><span class="bs-tag reserves">Reserves</span>' +
+            '</span><span>' + fmt$(v.reserves) + '</span></div></td>';
+    html += '<td><div class="bs-cell">' +
+            '<span><span class="bs-tag deposits">Deposits</span>' +
+            '</span><span>' + fmt$(v.d) + '</span></div></td>';
+    html += '</tr>';
+    html += '<tr>';
+    html += '<td><div class="bs-cell">' +
+            '<span><span class="bs-tag loans">Loans</span>' +
+            '</span><span>' + fmt$(v.loans) + '</span></div></td>';
+    html += '<td></td>';
+    html += '</tr>';
+    html += '</tbody></table>';
+    html += '</div>';
+
+    // Connector to next round
+    if(i < k){
+      const next = roundValues(i + 1);
+      html += '<div class="connector">';
+      html += '<span class="arrow" aria-hidden="true">↓</span>';
+      html += '<div class="conn-main">';
+      html += bankName(i) + '’s loans of ' + fmt$(v.loans) +
+              ' become a new deposit of ' + fmt$(next.d) + ' at ' +
+              bankName(i + 1) + '.';
+      if(cr > 1e-9){
+        html += '<span class="leak">' + fmt$(next.currency) +
+                ' of those loans leaks to currency held by the public ' +
+                '(at cr = ' + cr.toFixed(2) + ').</span>';
+      }
+      html += '</div></div>';
+    }
+  }
+
+  // "And so on" card if k < MAX_K
+  if(k < MAX_K){
+    html += '<div class="ellipsis-card">';
+    html += '<strong>…and so on…</strong> Each additional round adds ' +
+            'smaller and smaller amounts. After infinite rounds, the ' +
+            'totals converge to the values in the panel above.';
+    html += '</div>';
+  } else {
+    html += '<div class="ellipsis-card">';
+    html += '<strong>Twenty rounds shown.</strong> Successive rounds ' +
+            'contribute vanishingly small amounts; the running totals ' +
+            'are already very close to their convergent values above.';
+    html += '</div>';
+  }
+
+  $cascadeList.innerHTML = html;
+}
+
+function announceTotals(){
+  const t = cumulativeTotals(k);
+  $totalsAnnounce.textContent =
+    'After round ' + k +
+    ': money supply ' + fmt$(t.M) +
+    ', currency ' + fmt$(t.C) +
+    ', deposits ' + fmt$(t.D) +
+    ', reserves ' + fmt$(t.R) + '.';
+}
+
+function redraw(){
+  renderControls();
+  renderTotals();
+  renderMultiplier();
+  renderIntro();
+  renderCascade();
+  announceTotals();
+}
+
+// ── Event handlers ──────────────────────────────────────────────
+function stopPlay(){
+  if(playTimer){ clearInterval(playTimer); playTimer = null; }
+  $playBtn.textContent = 'Play';
+}
+
+$bSlider.addEventListener('input', () => {
+  B = parseFloat($bSlider.value);
+  redraw();
+});
+$rrSlider.addEventListener('input', () => {
+  rr = parseFloat($rrSlider.value);
+  redraw();
+});
+$crSlider.addEventListener('input', () => {
+  cr = parseFloat($crSlider.value);
+  redraw();
+});
+
+$kUp.addEventListener('click', () => {
+  if(k < MAX_K){ k++; redraw(); }
+});
+$kDown.addEventListener('click', () => {
+  if(k > 1){ k--; redraw(); }
+});
+
+$playBtn.addEventListener('click', () => {
+  if(playTimer){ stopPlay(); return; }
+  if(PREFERS_REDUCED_MOTION){
+    k = MAX_K;
+    redraw();
+    return;
+  }
+  // Start at k=1 if at the top, otherwise resume from current
+  if(k >= MAX_K) k = 1;
+  $playBtn.textContent = 'Pause';
+  const STEP_MS = Math.round(6000 / (MAX_K - 1));   // ~316ms
+  playTimer = setInterval(() => {
+    if(k < MAX_K){
+      k++;
+      redraw();
+    } else {
+      stopPlay();
+    }
+  }, STEP_MS);
+});
+
+$resetBtn.addEventListener('click', () => {
+  stopPlay();
+  k = 1;
+  redraw();
+});
+
+// Initial render
+redraw();
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1215 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Unemployment — Matching Model — ECON 105A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;  --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ─────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Layout */
+    .lab-wrap{max-width:1160px;margin:0 auto;padding:18px;}
+
+    /* Control bars (presets + toggles) */
+    .control-bar{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;padding:12px 16px;margin-bottom:12px;
+      display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+      box-shadow:var(--shadow);}
+    .control-bar .bar-label{font-size:0.6875rem;font-weight:800;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.08em;
+      margin-right:4px;}
+
+    /* Buttons — border #8c7f72 = 3.5:1 on white (WCAG 1.4.11 ✓) */
+    .opt-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;
+      transition:background .12s,border-color .12s,color .12s;}
+    .opt-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .opt-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .opt-btn[aria-pressed="true"]{background:var(--accent);color:#fff;
+      border-color:var(--accent);}
+
+    /* Canvas row */
+    .canvas-row{display:grid;grid-template-columns:1fr 1fr;
+      gap:14px;margin-bottom:14px;}
+    @media(max-width:900px){.canvas-row{grid-template-columns:1fr;}}
+
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;
+      overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+
+    /* Sliders */
+    .slider-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .slider-card h2{margin:0 0 10px;font-size:0.6875rem;font-weight:800;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.08em;}
+    .slider-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+    @media(max-width:900px){.slider-grid{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:560px){.slider-grid{grid-template-columns:1fr;}}
+    .slider-row{display:flex;flex-direction:column;gap:6px;}
+    .slider-row .slabel{display:flex;justify-content:space-between;
+      align-items:baseline;gap:8px;}
+    .slider-row .sname{font-size:0.8125rem;font-weight:700;color:var(--ink);}
+    .slider-row .sdesc{font-size:0.6875rem;color:var(--muted);
+      line-height:1.4;margin-top:-2px;}
+    .slider-row .svalue{font-size:0.875rem;font-weight:700;
+      color:var(--accent);font-variant-numeric:tabular-nums;
+      min-width:3.5em;text-align:right;}
+    .slider-row input[type="range"]{width:100%;margin:0;
+      accent-color:var(--accent);}
+    .slider-row input[type="range"]:focus-visible{
+      outline:3px solid var(--accent);outline-offset:4px;}
+
+    /* Outcome panel */
+    .outcome-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;padding:14px 18px;box-shadow:var(--shadow);
+      margin-bottom:14px;overflow-x:auto;}
+    .outcome-card h2{margin:0 0 10px;font-size:0.6875rem;font-weight:800;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.08em;}
+    .outcome-table{width:100%;border-collapse:collapse;
+      font-size:0.875rem;min-width:560px;}
+    .outcome-table th{text-align:left;font-weight:700;color:var(--muted);
+      padding:8px 6px;border-bottom:1px solid var(--line);
+      font-size:0.6875rem;text-transform:uppercase;letter-spacing:.06em;}
+    .outcome-table td{padding:9px 6px;color:var(--ink);
+      border-bottom:1px solid var(--line);
+      font-variant-numeric:tabular-nums;}
+    .outcome-table tr:last-child td{border-bottom:none;}
+    .outcome-table .row-label{font-weight:700;color:var(--ink-2);}
+    .outcome-table .row-math{color:var(--muted);font-size:0.75rem;
+      margin-left:4px;}
+    .outcome-table th.col-num,
+    .outcome-table td.col-num{text-align:right;}
+    .delta-up{color:var(--bad);font-weight:700;}
+    .delta-dn{color:var(--good);font-weight:700;}
+    .delta-up.neutral,.delta-dn.neutral{color:var(--ink-2);}
+    .delta-eq{color:var(--muted);font-weight:700;}
+
+    /* Footer */
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+
+    .hidden{display:none!important;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105a/labs/">← ECON 105A</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105A — Unemployment</div>
+      <h1>Unemployment — Matching Model</h1>
+      <p class="sub">
+        Explore how the labor market equilibrium responds to shocks to
+        productivity, the labor force, the job-separation rate, and the wage.
+      </p>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>This lab lets you explore the matching model of unemployment from the
+          lecture notes. The graph on the left shows labor demand and labor supply
+          as functions of labor market tightness θ. The panel on the right shows
+          worker flows between employment and unemployment in steady state.</p>
+          <p>Use the sliders to change four parameters:</p>
+          <ol>
+            <li><strong>Productivity (A).</strong> A labor-demand shock — how
+              productive workers are.</li>
+            <li><strong>Labor force (H).</strong> A labor-supply shock — the
+              total number of workers.</li>
+            <li><strong>Job-separation rate (s).</strong> A labor-supply shock —
+              the fraction of employed workers losing their jobs each month.</li>
+            <li><strong>Wage (W).</strong> A labor-demand shock — what firms
+              pay workers.</li>
+          </ol>
+          <p>Use the <strong>preset scenarios</strong> to see how recognizable
+          real-world events show up in the model. Toggle the
+          <strong>baseline comparison</strong> to show the original equilibrium
+          alongside the new one. Toggle <strong>frictional vs. rationing</strong>
+          to decompose total unemployment into its two types.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- Preset scenarios -->
+  <div class="control-bar" role="group" aria-label="Preset scenarios">
+    <span class="bar-label">Presets</span>
+    <button class="opt-btn" id="presetBaseline"     aria-pressed="true">Baseline</button>
+    <button class="opt-btn" id="presetRecession"    aria-pressed="false">Recession (A&nbsp;↓)</button>
+    <button class="opt-btn" id="presetProductivity" aria-pressed="false">Productivity boom (A&nbsp;↑)</button>
+    <button class="opt-btn" id="presetImmigration"  aria-pressed="false">Immigration wave (H&nbsp;↑)</button>
+    <button class="opt-btn" id="presetMinwage"      aria-pressed="false">Minimum wage hike (W&nbsp;↑)</button>
+  </div>
+
+  <!-- Display toggles -->
+  <div class="control-bar" role="group" aria-label="Display options">
+    <span class="bar-label">Display</span>
+    <button class="opt-btn" id="toggleCompare" aria-pressed="false">Show baseline comparison</button>
+    <button class="opt-btn" id="toggleDecomp"  aria-pressed="false">Show frictional vs. rationing</button>
+  </div>
+
+  <!-- Canvases -->
+  <div class="canvas-row">
+    <div class="graph-card">
+      <div class="graph-title" id="eqGraphTitle">Labor market equilibrium</div>
+      <div class="canvas-wrap">
+        <canvas id="eqCanvas"
+                role="img"
+                aria-labelledby="eqGraphTitle"
+                aria-describedby="eqGraphDesc"
+                style="aspect-ratio:1/1;"></canvas>
+      </div>
+    </div>
+
+    <div class="graph-card">
+      <div class="graph-title" id="flowGraphTitle">Worker flows (steady state)</div>
+      <div class="canvas-wrap">
+        <canvas id="flowCanvas"
+                role="img"
+                aria-labelledby="flowGraphTitle"
+                aria-describedby="flowGraphDesc"
+                style="aspect-ratio:5/4;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sliders -->
+  <div class="slider-card">
+    <h2>Parameters</h2>
+    <div class="slider-grid">
+      <div class="slider-row">
+        <div class="slabel">
+          <label for="sliderA" class="sname">Productivity (A)</label>
+          <span class="svalue" id="valueA">1.00</span>
+        </div>
+        <input type="range" id="sliderA" min="0.70" max="1.30" step="0.01" value="1.00"
+               aria-describedby="descA">
+        <div class="sdesc" id="descA">Higher A shifts labor demand outward.</div>
+      </div>
+
+      <div class="slider-row">
+        <div class="slabel">
+          <label for="sliderH" class="sname">Labor force (H)</label>
+          <span class="svalue" id="valueH">1.00</span>
+        </div>
+        <input type="range" id="sliderH" min="0.60" max="1.40" step="0.01" value="1.00"
+               aria-describedby="descH">
+        <div class="sdesc" id="descH">Total number of workers in the economy.</div>
+      </div>
+
+      <div class="slider-row">
+        <div class="slabel">
+          <label for="sliderS" class="sname">Job-separation rate (s)</label>
+          <span class="svalue" id="valueS">0.25</span>
+        </div>
+        <input type="range" id="sliderS" min="0.05" max="0.45" step="0.01" value="0.25"
+               aria-describedby="descS">
+        <div class="sdesc" id="descS">Fraction of employed workers losing jobs each period.</div>
+      </div>
+
+      <div class="slider-row">
+        <div class="slabel">
+          <label for="sliderW" class="sname">Wage (W)</label>
+          <span class="svalue" id="valueW">0.100</span>
+        </div>
+        <input type="range" id="sliderW" min="0.00" max="0.20" step="0.005" value="0.10"
+               aria-describedby="descW">
+        <div class="sdesc" id="descW">What firms pay workers.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Outcome panel -->
+  <div class="outcome-card">
+    <h2>Equilibrium outcomes</h2>
+    <table class="outcome-table" id="outcomeTable">
+      <thead id="outcomeHead"></thead>
+      <tbody id="outcomeBody"></tbody>
+    </table>
+  </div>
+
+  <!-- Live-region descriptions for both canvases -->
+  <section class="sr-only" id="graphsDesc"
+           aria-live="polite" aria-atomic="true">
+    <p id="eqGraphDesc">Labor market equilibrium graph. Initial state.</p>
+    <p id="flowGraphDesc">Worker flow diagram. Initial state.</p>
+  </section>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 105A — Intermediate Macroeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+/*
+ * LAB_ID:    unemployment
+ * LAB_LABEL: Unemployment — Matching Model
+ * Type:      Single-phase, exploratory (no Session integration, no scoring)
+ *
+ * This lab is NOT discussion-compatible by design — it's a free-exploration
+ * tool. If a discussion-graded "predict the direction" diagnostic is later
+ * built, it should be a separate lab file (e.g., unemployment-diagnostic/).
+ */
+(function(){
+'use strict';
+
+// ────────────────────────────────────────────────────────────────────
+// State
+// ────────────────────────────────────────────────────────────────────
+const BASELINE = { s:0.25, H:1.00, W:0.10, A:1.00 };
+const PRESETS = {
+  baseline:     { s:0.25, H:1.00, W:0.10, A:1.00 },
+  recession:    { s:0.25, H:1.00, W:0.10, A:0.80 },
+  productivity: { s:0.25, H:1.00, W:0.10, A:1.20 },
+  immigration:  { s:0.25, H:1.20, W:0.10, A:1.00 },
+  minwage:      { s:0.25, H:1.00, W:0.17, A:1.00 },
+};
+
+const state = {
+  s: 0.25, H: 1.00, W: 0.10, A: 1.00,
+  showComparison: false,
+  showDecomposition: false,
+  activePreset: 'baseline',
+};
+
+// Plot ranges
+const X_MAX = 1.5;   // L axis
+const Y_MAX = 1.0;   // θ axis
+
+// Colors
+const COLOR_LD       = '#1f6fb4';
+const COLOR_LS       = '#cc6a00';
+const COLOR_LD_BASE  = '#7faed1';
+const COLOR_LS_BASE  = '#e6b078';
+const COLOR_H_LINE   = '#155c38';
+const COLOR_GUIDE    = '#374151';
+const COLOR_FRICT    = 'rgba(204, 106, 0, 0.22)';
+const COLOR_RATION   = 'rgba(180, 35, 24, 0.22)';
+const COLOR_FRICT_TX = '#8c4800';
+const COLOR_RATION_TX= '#b42318';
+
+// Font scale (recomputed each redraw)
+let _fs = 1;
+
+// ────────────────────────────────────────────────────────────────────
+// Model
+// ────────────────────────────────────────────────────────────────────
+function solveTheta(s, H, W, A){
+  // Solve f(θ) = A(1-θ) - W - (θ/(θ+s))·H = 0 by bisection.
+  // f is monotonically decreasing in θ (demand falls, supply rises).
+  let lo = 0.0001, hi = 2.0;
+  // Guard against parameter combinations where f(lo) ≤ 0 (almost no slack).
+  let fLo = A*(1-lo) - W - (lo/(lo+s))*H;
+  let fHi = A*(1-hi) - W - (hi/(hi+s))*H;
+  if(fLo <= 0) return lo;
+  if(fHi >= 0){
+    // Demand never catches up — shouldn't happen for our slider ranges,
+    // but clamp to hi defensively.
+    return hi;
+  }
+  for(let i=0;i<80;i++){
+    const m = 0.5*(lo+hi);
+    const fm = A*(1-m) - W - (m/(m+s))*H;
+    if(fm > 0) lo = m; else hi = m;
+  }
+  return 0.5*(lo+hi);
+}
+
+function computeEquilibrium(s, H, W, A){
+  const theta = solveTheta(s, H, W, A);
+  const L = Math.max(0, A*(1 - theta) - W);
+  const u = s / (theta + s);
+  const U = Math.max(0, H - L);
+  // Rationing unemployment: workers who can't be employed because demand
+  // at θ=0 falls short of the labor force. Zero if A-W ≥ H.
+  const UR = Math.max(0, H - (A - W));
+  // Frictional = total − rationing.  (Equals A·θ* when A-W ≤ H, capped
+  // at U otherwise so the two pieces always sum to U.)
+  const UF = Math.max(0, U - UR);
+  return { theta, L, u, U, f: theta, UF, UR };
+}
+
+// L^d(θ): L = A(1-θ) - W ; line in (L, θ) space
+// L^s(θ): L = θ/(θ+s)·H ; hyperbolic in (L, θ) space
+
+// ────────────────────────────────────────────────────────────────────
+// Canvas helpers
+// ────────────────────────────────────────────────────────────────────
+function setupCanvas(canvas){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W = Math.round(rect.width * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+const PAD = { l:54, r:18, t:18, b:56 };
+
+function makeCoords(W, H, dpr, xMax, yMax){
+  const p = { l:PAD.l*dpr, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  return {
+    xC: x => p.l + (x / xMax) * PW,
+    yC: y => H - p.b - (y / yMax) * PH,
+    p, PW, PH
+  };
+}
+
+function drawArrowHead(ctx, x0, y0, x1, y1, size){
+  const ang = Math.atan2(y1-y0, x1-x0);
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x1 - size*Math.cos(ang - 0.45),
+             y1 - size*Math.sin(ang - 0.45));
+  ctx.lineTo(x1 - size*Math.cos(ang + 0.45),
+             y1 - size*Math.sin(ang + 0.45));
+  ctx.closePath();
+  ctx.fill();
+}
+
+// ────────────────────────────────────────────────────────────────────
+// DOM refs
+// ────────────────────────────────────────────────────────────────────
+const $eqCanvas   = document.getElementById('eqCanvas');
+const $flowCanvas = document.getElementById('flowCanvas');
+const $eqDesc     = document.getElementById('eqGraphDesc');
+const $flowDesc   = document.getElementById('flowGraphDesc');
+
+const $sliderA = document.getElementById('sliderA');
+const $sliderH = document.getElementById('sliderH');
+const $sliderS = document.getElementById('sliderS');
+const $sliderW = document.getElementById('sliderW');
+const $valueA  = document.getElementById('valueA');
+const $valueH  = document.getElementById('valueH');
+const $valueS  = document.getElementById('valueS');
+const $valueW  = document.getElementById('valueW');
+
+const PRESET_BTNS = {
+  baseline:     document.getElementById('presetBaseline'),
+  recession:    document.getElementById('presetRecession'),
+  productivity: document.getElementById('presetProductivity'),
+  immigration:  document.getElementById('presetImmigration'),
+  minwage:      document.getElementById('presetMinwage'),
+};
+const $toggleCompare = document.getElementById('toggleCompare');
+const $toggleDecomp  = document.getElementById('toggleDecomp');
+
+const $outcomeHead = document.getElementById('outcomeHead');
+const $outcomeBody = document.getElementById('outcomeBody');
+
+// ────────────────────────────────────────────────────────────────────
+// Equilibrium canvas — main figure
+// ────────────────────────────────────────────────────────────────────
+function drawEquilibrium(){
+  const setup = setupCanvas($eqCanvas);
+  if(!setup) return;
+  const { ctx, dpr, W, H } = setup;
+  ctx.clearRect(0,0,W,H);
+
+  const { xC, yC, p, PW, PH } = makeCoords(W, H, dpr, X_MAX, Y_MAX);
+
+  const cur = computeEquilibrium(state.s, state.H, state.W, state.A);
+  const base = computeEquilibrium(BASELINE.s, BASELINE.H, BASELINE.W, BASELINE.A);
+  const showCmp = state.showComparison;
+  const showDec = state.showDecomposition;
+
+  // ── Axes ──
+  ctx.strokeStyle = 'rgba(0,0,0,0.30)';
+  ctx.lineWidth = 1.5*dpr;
+  ctx.beginPath();
+  ctx.moveTo(p.l, H - p.b); ctx.lineTo(W - p.r, H - p.b); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(p.l, p.t); ctx.lineTo(p.l, H - p.b); ctx.stroke();
+  // Arrows
+  ctx.fillStyle = 'rgba(0,0,0,0.30)';
+  drawArrowHead(ctx, W - p.r - 10*dpr, H - p.b, W - p.r, H - p.b, 7*dpr);
+  drawArrowHead(ctx, p.l, p.t + 10*dpr, p.l, p.t, 7*dpr);
+
+  // ── Gridlines + ticks ──
+  ctx.font = `600 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+  // Y ticks (θ)
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for(let v=0.2; v<=Y_MAX+1e-6; v+=0.2){
+    const cy = yC(v);
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1*dpr;
+    ctx.beginPath(); ctx.moveTo(p.l, cy); ctx.lineTo(W - p.r, cy); ctx.stroke();
+    ctx.fillText(v.toFixed(1), p.l - 6*dpr, cy);
+  }
+  // X ticks (L)
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for(let v=0.5; v<=X_MAX+1e-6; v+=0.5){
+    const cx = xC(v);
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1*dpr;
+    ctx.beginPath(); ctx.moveTo(cx, p.t); ctx.lineTo(cx, H - p.b); ctx.stroke();
+    ctx.fillText(v.toFixed(1), cx, H - p.b + 6*dpr);
+  }
+
+  // ── Axis titles ──
+  ctx.font = `700 ${Math.round(12*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.72)';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('Number of workers (L)', (p.l + (W - p.r))/2, H - p.b + 28*dpr);
+  ctx.save();
+  ctx.translate(p.l - 42*dpr, (p.t + (H - p.b))/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  ctx.fillText('Labor market tightness (θ)', 0, 0);
+  ctx.restore();
+
+  // ── Clip plot area ──
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(p.l, p.t, PW, PH);
+  ctx.clip();
+
+  // ── Decomposition shading (drawn first, so curves overlay) ──
+  if(showDec){
+    // Bands sit at θ = θ* on the y-axis
+    const yStar = yC(cur.theta);
+    const yZero = yC(0);
+    const xL   = xC(cur.L);
+    // Cap A-W at H so the frictional band never extends past the labor
+    // force (no rationing in that case anyway).
+    const AmW  = Math.min(state.H, Math.max(0, state.A - state.W));
+    const xAmW = xC(AmW);
+    const xH   = xC(Math.min(X_MAX, state.H));
+    // Frictional: between L* and AmW
+    if(AmW > cur.L){
+      ctx.fillStyle = COLOR_FRICT;
+      ctx.fillRect(xL, yStar, xAmW - xL, yZero - yStar);
+    }
+    // Rationing: between AmW and H (only if H > A-W)
+    if(state.H > state.A - state.W){
+      ctx.fillStyle = COLOR_RATION;
+      ctx.fillRect(xAmW, yStar, xH - xAmW, yZero - yStar);
+    }
+    // Inset labels
+    ctx.font = `700 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+    ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+    if(AmW > cur.L && (xAmW - xL) > 36*dpr){
+      ctx.fillStyle = COLOR_FRICT_TX;
+      ctx.fillText('Frictional', (xL + xAmW)/2, (yStar + yZero)/2);
+    }
+    if(state.H > state.A - state.W && (xH - xAmW) > 36*dpr){
+      ctx.fillStyle = COLOR_RATION_TX;
+      ctx.fillText('Rationing', (xAmW + xH)/2, (yStar + yZero)/2);
+    }
+  }
+
+  // ── Baseline curves (dashed, lighter) ──
+  if(showCmp){
+    drawLd(ctx, dpr, xC, yC, BASELINE.A, BASELINE.W, BASELINE.H, COLOR_LD_BASE, 2*dpr, true);
+    drawLs(ctx, dpr, xC, yC, BASELINE.s, BASELINE.H, COLOR_LS_BASE, 2*dpr, true);
+  }
+
+  // ── Current curves ──
+  drawLd(ctx, dpr, xC, yC, state.A, state.W, state.H, COLOR_LD, 2.5*dpr, false);
+  drawLs(ctx, dpr, xC, yC, state.s, state.H, COLOR_LS, 2.5*dpr, false);
+
+  // ── L=A-W vertical line (frictional/rationing toggle only) ──
+  // Capped at L=H so it doesn't suggest more workers than exist.
+  if(showDec){
+    const x = xC(Math.min(state.H, Math.max(0, state.A - state.W)));
+    ctx.strokeStyle = 'rgba(180,35,24,0.55)';
+    ctx.lineWidth = 1.5*dpr;
+    ctx.setLineDash([2*dpr, 4*dpr]);
+    ctx.beginPath();
+    ctx.moveTo(x, p.t); ctx.lineTo(x, H - p.b); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // ── Vertical labor-force lines ──
+  // Current H
+  {
+    const x = xC(Math.min(X_MAX, state.H));
+    ctx.strokeStyle = COLOR_H_LINE;
+    ctx.lineWidth = 2*dpr;
+    ctx.beginPath();
+    ctx.moveTo(x, p.t); ctx.lineTo(x, H - p.b); ctx.stroke();
+  }
+  // Baseline H (dashed)
+  if(showCmp && Math.abs(state.H - BASELINE.H) > 1e-6){
+    const x = xC(Math.min(X_MAX, BASELINE.H));
+    ctx.strokeStyle = COLOR_H_LINE;
+    ctx.lineWidth = 1.5*dpr;
+    ctx.setLineDash([6*dpr, 4*dpr]);
+    ctx.beginPath();
+    ctx.moveTo(x, p.t); ctx.lineTo(x, H - p.b); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // ── Equilibrium dots + projections ──
+  // Current
+  drawEqDot(ctx, dpr, xC(cur.L), yC(cur.theta), COLOR_LD, true);
+  drawEqProjection(ctx, dpr, xC, yC, cur.L, cur.theta, COLOR_GUIDE);
+  // Baseline
+  if(showCmp){
+    drawEqDot(ctx, dpr, xC(base.L), yC(base.theta), COLOR_LD_BASE, false);
+    drawEqProjection(ctx, dpr, xC, yC, base.L, base.theta, 'rgba(55,65,81,0.45)');
+  }
+
+  // ── Unemployment arrows (only when decomposition is OFF) ──
+  if(!showDec){
+    const yArr = yC(cur.theta);
+    drawUnempArrow(ctx, dpr, xC(cur.L), xC(Math.min(X_MAX, state.H)), yArr,
+                   'U* = ' + cur.U.toFixed(3), COLOR_LD);
+    if(showCmp){
+      const yArrB = yC(base.theta) + 14*dpr;
+      drawUnempArrow(ctx, dpr, xC(base.L), xC(BASELINE.H), yArrB,
+                     'U₁ = ' + base.U.toFixed(3), COLOR_LD_BASE);
+    }
+  }
+
+  ctx.restore(); // end clip
+
+  // ── Curve end-labels (drawn outside clip so they can sit at top of plot) ──
+  drawCurveLabel(ctx, dpr, xC, yC, state.A, state.W, state.s, state.H,
+                 showCmp ? 'L^d₂' : 'L^d', COLOR_LD,
+                 showCmp ? 'L^s₂' : 'L^s', COLOR_LS);
+  if(showCmp){
+    drawBaselineLabels(ctx, dpr, xC, yC, COLOR_LD_BASE, COLOR_LS_BASE);
+  }
+
+}
+
+function drawLd(ctx, dpr, xC, yC, A, W, H, color, lw, dashed){
+  // L^d: L = A(1-θ) - W. Line in (L, θ) space from (A-W, 0) to (0, 1-W/A).
+  // Truncate at L = H so the demand line never extends past the labor
+  // force (which would suggest more workers can be hired than exist).
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  if(dashed) ctx.setLineDash([7*dpr, 4*dpr]);
+  const Lx0    = Math.max(0, A - W);       // L at θ=0
+  const thYat0 = Math.max(0, 1 - W/A);     // θ at L=0
+  // Cap right endpoint at L = H. The corresponding θ is 1 - W/A - H/A.
+  let Lstart   = Math.min(Lx0, H);
+  let thStart  = Math.max(0, 1 - W/A - Lstart/A);
+  ctx.beginPath();
+  ctx.moveTo(xC(Lstart), yC(thStart));
+  ctx.lineTo(xC(0),      yC(thYat0));
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawLs(ctx, dpr, xC, yC, s, H, color, lw, dashed){
+  // L = θH/(θ+s). Trace θ ∈ [0, Y_MAX*1.1]
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  if(dashed) ctx.setLineDash([7*dpr, 4*dpr]);
+  ctx.beginPath();
+  let go=false;
+  const N=160;
+  const TH_MAX = Y_MAX * 1.05;
+  for(let k=0;k<=N;k++){
+    const th = (k/N)*TH_MAX;
+    const L = th/(th+s) * H;
+    const cx = xC(L), cy = yC(th);
+    if(!go){ ctx.moveTo(cx,cy); go=true; }
+    else    ctx.lineTo(cx,cy);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawEqDot(ctx, dpr, cx, cy, color, filled){
+  ctx.lineWidth = 2*dpr;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = filled ? color : '#ffffff';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 5*dpr, 0, Math.PI*2);
+  ctx.fill();
+  ctx.stroke();
+}
+
+function drawEqProjection(ctx, dpr, xC, yC, L, theta, color){
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1*dpr;
+  ctx.setLineDash([4*dpr, 4*dpr]);
+  ctx.beginPath();
+  ctx.moveTo(xC(L), yC(0));     ctx.lineTo(xC(L),     yC(theta));
+  ctx.moveTo(xC(0), yC(theta)); ctx.lineTo(xC(L),     yC(theta));
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawUnempArrow(ctx, dpr, x1, x2, y, label, color){
+  if(x2 - x1 < 4*dpr) return;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 1.5*dpr;
+  ctx.beginPath();
+  ctx.moveTo(x1, y); ctx.lineTo(x2, y);
+  ctx.stroke();
+  drawArrowHead(ctx, x1+8*dpr, y, x1, y, 6*dpr);
+  drawArrowHead(ctx, x2-8*dpr, y, x2, y, 6*dpr);
+  ctx.font = `700 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText(label, (x1+x2)/2, y - 4*dpr);
+}
+
+function drawCurveLabel(ctx, dpr, xC, yC, A, W, s, H,
+                        ldLabel, ldColor, lsLabel, lsColor){
+  ctx.font = `700 ${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textBaseline = 'middle';
+  // L^d label near (L=0, θ=1-W/A)
+  const ldTh = Math.min(Y_MAX*0.95, Math.max(0, 1 - W/A));
+  ctx.fillStyle = ldColor;
+  ctx.textAlign = 'left';
+  ctx.fillText(ldLabel.replace('^d','ᵈ').replace('₂','₂'), xC(0)+6*dpr, yC(ldTh)-10*dpr);
+  // L^s label near top of supply (where θ ≈ 0.95, L = 0.95H/(0.95+s))
+  const thLs = Y_MAX*0.92;
+  const Lls  = thLs/(thLs+s)*H;
+  ctx.fillStyle = lsColor;
+  ctx.textAlign = 'left';
+  ctx.fillText(lsLabel.replace('^s','ˢ'), Math.min(xC(Lls)+6*dpr, xC(X_MAX)-30*dpr), yC(thLs));
+}
+
+function drawBaselineLabels(ctx, dpr, xC, yC, ldC, lsC){
+  ctx.font = `600 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textBaseline = 'middle';
+  const ldTh = Math.min(Y_MAX*0.95, Math.max(0, 1 - BASELINE.W/BASELINE.A));
+  ctx.fillStyle = ldC;
+  ctx.textAlign = 'left';
+  ctx.fillText('Lᵈ₁', xC(0)+6*dpr, yC(ldTh)+6*dpr);
+  const thLs = Y_MAX*0.85;
+  const Lls  = thLs/(thLs+BASELINE.s)*BASELINE.H;
+  ctx.fillStyle = lsC;
+  ctx.fillText('Lˢ₁', Math.min(xC(Lls)+6*dpr, xC(X_MAX)-26*dpr), yC(thLs));
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Worker-flow canvas
+// ────────────────────────────────────────────────────────────────────
+function drawFlow(){
+  const setup = setupCanvas($flowCanvas);
+  if(!setup) return;
+  const { ctx, dpr, W, H } = setup;
+  ctx.clearRect(0,0,W,H);
+
+  const cur = computeEquilibrium(state.s, state.H, state.W, state.A);
+  const L = cur.L, U = cur.U;
+  const total = Math.max(0.001, L + U);
+  // Box widths proportional to share of population
+  const innerPad = 40 * dpr;
+  const usable = W - innerPad*2;
+  const gap = 100 * dpr;
+  const minBox = 60 * dpr;
+  // Reserve gap, distribute remainder by share
+  const available = usable - gap;
+  const wL = Math.max(minBox, available * (L/total));
+  const wU = Math.max(minBox, available - wL);
+  const boxH = 90 * dpr;
+  const yMid = H * 0.46;
+
+  const xL = innerPad;
+  const xR = innerPad + wL + gap;
+
+  // ── Boxes ──
+  ctx.fillStyle = 'rgba(47, 93, 124, 0.06)';
+  ctx.strokeStyle = '#374151';
+  ctx.lineWidth = 2*dpr;
+  ctx.beginPath();
+  ctx.rect(xL, yMid - boxH/2, wL, boxH);
+  ctx.fill(); ctx.stroke();
+
+  ctx.fillStyle = 'rgba(180, 35, 24, 0.06)';
+  ctx.beginPath();
+  ctx.rect(xR, yMid - boxH/2, wU, boxH);
+  ctx.fill(); ctx.stroke();
+
+  // Box labels
+  ctx.font = `700 ${Math.round(13*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = '#1f2937';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('Employed', xL + wL/2, yMid - 14*dpr);
+  ctx.fillText('Unemployed', xR + wU/2, yMid - 14*dpr);
+  ctx.font = `700 ${Math.round(14*dpr*_fs)}px "Source Serif 4",serif`;
+  ctx.fillStyle = COLOR_LD;
+  ctx.fillText('L = ' + L.toFixed(3), xL + wL/2, yMid + 14*dpr);
+  ctx.fillStyle = COLOR_RATION_TX;
+  ctx.fillText('U = ' + U.toFixed(3), xR + wU/2, yMid + 14*dpr);
+
+  // ── Flow arrows ──
+  // Top arrow:    L → U   (separations, s·L)
+  // Bottom arrow: U → L   (hires, f(θ)·U)
+  const sL = state.s * L;
+  const fU = cur.f * U; // f(θ) = θ
+  // Stroke width maps the flow magnitude [0, 0.3] → [3px, 14px]
+  const lwOf = v => Math.max(3*dpr, Math.min(14*dpr, (3 + (v/0.3)*11) * dpr));
+  const lwTop = lwOf(sL);
+  const lwBot = lwOf(fU);
+
+  // Arrow shafts span the gap between the two boxes. Inset a hair so the
+  // arrowhead doesn't touch the box stroke.
+  const inset = 4 * dpr;
+  const x1 = xL + wL + inset;       // left end (right edge of L box)
+  const x2 = xR - inset;            // right end (left edge of U box)
+  const midX = (x1 + x2)/2;
+
+  // Arrow vertical positions — separated enough that both labels above
+  // the top arrow and both labels below the bottom arrow have room.
+  const yTop = yMid - boxH * 0.28;
+  const yBot = yMid + boxH * 0.28;
+
+  // Top arrow (L → U) — head on the right
+  ctx.strokeStyle = '#2f5d7c';
+  ctx.fillStyle   = '#2f5d7c';
+  ctx.lineCap = 'butt';
+  ctx.lineWidth = lwTop;
+  ctx.beginPath();
+  ctx.moveTo(x1, yTop);
+  ctx.lineTo(x2 - 10*dpr, yTop);
+  ctx.stroke();
+  drawArrowHead(ctx, x2 - 10*dpr, yTop, x2, yTop, Math.max(10*dpr, lwTop*1.6));
+
+  // Bottom arrow (U → L) — head on the left
+  ctx.lineWidth = lwBot;
+  ctx.beginPath();
+  ctx.moveTo(x2, yBot);
+  ctx.lineTo(x1 + 10*dpr, yBot);
+  ctx.stroke();
+  drawArrowHead(ctx, x1 + 10*dpr, yBot, x1, yBot, Math.max(10*dpr, lwBot*1.6));
+
+  // Labels — two lines each, so they fit comfortably in the gap between
+  // the boxes. Primary expression closer to the arrow, breakdown above/below it.
+  ctx.fillStyle = '#2f5d7c';
+  ctx.textAlign = 'center';
+
+  // Top arrow (L → U): "s × L = 0.142"  primary,  "0.25 × 0.617" breakdown.
+  ctx.font = `700 ${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('s × L = ' + sL.toFixed(3),
+               midX, yTop - lwTop/2 - 6*dpr);
+  ctx.font = `600 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = '#596878';
+  ctx.fillText(state.s.toFixed(2) + ' × ' + L.toFixed(3),
+               midX, yTop - lwTop/2 - 22*dpr);
+
+  // Bottom arrow (U → L): "f(θ) × U = 0.142"  primary,  "0.33 × 0.431" breakdown.
+  ctx.fillStyle = '#2f5d7c';
+  ctx.font = `700 ${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textBaseline = 'top';
+  ctx.fillText('f(θ) × U = ' + fU.toFixed(3),
+               midX, yBot + lwBot/2 + 6*dpr);
+  ctx.font = `600 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = '#596878';
+  ctx.fillText(cur.f.toFixed(2) + ' × ' + U.toFixed(3),
+               midX, yBot + lwBot/2 + 22*dpr);
+
+  // Steady-state note
+  ctx.font = `600 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = '#596878';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText('In steady state:  s·L = f(θ)·U',
+               W/2, H - 12*dpr);
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Outcome panel
+// ────────────────────────────────────────────────────────────────────
+function pctChange(cur, base){
+  if(Math.abs(base) < 1e-9) return null;
+  return 100 * (cur - base) / base;
+}
+
+function fmtPct(v, sign){
+  const s = (sign && v > 0) ? '+' : (v < 0 ? '−' : '');
+  return s + Math.abs(v).toFixed(1) + '%';
+}
+
+function fmtNum(v, digits){
+  if(digits === undefined) digits = 3;
+  return v.toFixed(digits);
+}
+
+function changeCell(curVal, baseVal, isPercent, polarity){
+  // polarity:  'good-up' (up=good), 'good-down' (down=good), 'neutral'
+  if(Math.abs(curVal - baseVal) < 1e-5){
+    return { html:'<span class="delta-eq">→ Unchanged</span>',
+             text:'Unchanged' };
+  }
+  const up = curVal > baseVal;
+  let cls;
+  if(polarity === 'good-up')   cls = up ? 'delta-dn' : 'delta-up';
+  else if(polarity === 'good-down') cls = up ? 'delta-up' : 'delta-dn';
+  else                         cls = up ? 'delta-up neutral' : 'delta-dn neutral';
+
+  const arrow = up ? '↑' : '↓';
+  let magnitude;
+  let words;
+  if(isPercent){
+    // percentage-point difference
+    const pp = (curVal - baseVal) * 100;
+    magnitude = (pp >= 0 ? '+' : '−') + Math.abs(pp).toFixed(1) + ' pp';
+    words = (up ? 'Increases by ' : 'Falls by ') + Math.abs(pp).toFixed(1)
+            + ' percentage points';
+  } else {
+    const p = pctChange(curVal, baseVal);
+    if(p === null){
+      magnitude = (curVal - baseVal >= 0 ? '+' : '−')
+                + Math.abs(curVal - baseVal).toFixed(3);
+      words = (up ? 'Increases by ' : 'Falls by ')
+             + Math.abs(curVal - baseVal).toFixed(3);
+    } else {
+      magnitude = (p >= 0 ? '+' : '−') + Math.abs(p).toFixed(1) + '%';
+      words = (up ? 'Increases by ' : 'Falls by ')
+             + Math.abs(p).toFixed(1) + ' percent';
+    }
+  }
+  return {
+    html:'<span class="'+cls+'"><span aria-hidden="true">'+arrow+'</span> '
+         + words + ' (' + magnitude + ')</span>',
+    text: words
+  };
+}
+
+function renderOutcomeTable(){
+  const cur  = computeEquilibrium(state.s, state.H, state.W, state.A);
+  const base = computeEquilibrium(BASELINE.s, BASELINE.H, BASELINE.W, BASELINE.A);
+  const showCmp = state.showComparison;
+  const showDec = state.showDecomposition;
+
+  // Build rows
+  const rows = [
+    { label:'Labor market tightness',
+      math:'θ*',
+      cur:cur.theta, base:base.theta,
+      fmt:(v)=>v.toFixed(3), isPct:false, polarity:'neutral' },
+    { label:'Job-finding rate',
+      math:'f(θ*) = θ*',
+      cur:cur.f, base:base.f,
+      fmt:(v)=>v.toFixed(3), isPct:false, polarity:'good-up' },
+    { label:'Employment',
+      math:'L*',
+      cur:cur.L, base:base.L,
+      fmt:(v)=>v.toFixed(3), isPct:false, polarity:'good-up' },
+    { label:'Number unemployed',
+      math:'U* = H − L*',
+      cur:cur.U, base:base.U,
+      fmt:(v)=>v.toFixed(3), isPct:false, polarity:'good-down' },
+    { label:'Unemployment rate',
+      math:'u* = s / (θ* + s)',
+      cur:cur.u, base:base.u,
+      fmt:(v)=>(v*100).toFixed(1)+'%', isPct:true, polarity:'good-down' },
+  ];
+  if(showDec){
+    rows.push(
+      { label:'Frictional unemployment',
+        math:'U^F = A·θ*',
+        cur:cur.UF, base:base.UF,
+        fmt:(v)=>v.toFixed(3), isPct:false, polarity:'good-down' },
+      { label:'Rationing unemployment',
+        math:'U^R = H − (A − W)',
+        cur:cur.UR, base:base.UR,
+        fmt:(v)=>v.toFixed(3), isPct:false, polarity:'good-down' },
+    );
+  }
+
+  // Header
+  let head;
+  if(showCmp){
+    head = '<tr><th>Variable</th>'
+         + '<th class="col-num">Baseline</th>'
+         + '<th class="col-num">Current</th>'
+         + '<th>Change</th></tr>';
+  } else {
+    head = '<tr><th>Variable</th>'
+         + '<th class="col-num">Current</th></tr>';
+  }
+  $outcomeHead.innerHTML = head;
+
+  // Body
+  let body = '';
+  rows.forEach(r => {
+    body += '<tr>';
+    body += '<td><span class="row-label">' + r.label + '</span>'
+          + '<span class="row-math"> (' + r.math + ')</span></td>';
+    if(showCmp){
+      body += '<td class="col-num">' + r.fmt(r.base) + '</td>';
+      body += '<td class="col-num">' + r.fmt(r.cur)  + '</td>';
+      const c = changeCell(r.cur, r.base, r.isPct, r.polarity);
+      body += '<td>' + c.html + '</td>';
+    } else {
+      body += '<td class="col-num">' + r.fmt(r.cur) + '</td>';
+    }
+    body += '</tr>';
+  });
+  $outcomeBody.innerHTML = body;
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Live-region descriptions
+// ────────────────────────────────────────────────────────────────────
+function updateGraphDescriptions(){
+  const cur  = computeEquilibrium(state.s, state.H, state.W, state.A);
+  const base = computeEquilibrium(BASELINE.s, BASELINE.H, BASELINE.W, BASELINE.A);
+  const showCmp = state.showComparison;
+  const showDec = state.showDecomposition;
+
+  let eq = 'Labor market equilibrium. Labor demand falls as tightness θ rises; ' +
+           'labor supply rises with θ toward the labor force H = ' +
+           state.H.toFixed(2) + '. ';
+  eq += 'At current parameters (A=' + state.A.toFixed(2) +
+        ', W=' + state.W.toFixed(3) +
+        ', s=' + state.s.toFixed(2) +
+        ', H=' + state.H.toFixed(2) + '), ';
+  eq += 'equilibrium tightness θ* = ' + cur.theta.toFixed(3) +
+        ', employment L* = ' + cur.L.toFixed(3) +
+        ', number unemployed U* = ' + cur.U.toFixed(3) +
+        ', and the unemployment rate u* = ' + (cur.u*100).toFixed(1) + ' percent.';
+  if(showCmp){
+    const dTh = cur.theta - base.theta;
+    const dU  = cur.u - base.u;
+    eq += ' Relative to the baseline (A=1, W=0.10, s=0.25, H=1.00): ' +
+          'tightness has ' + (Math.abs(dTh)<1e-4 ? 'not changed' :
+                              (dTh > 0 ? 'risen' : 'fallen')) + ', ' +
+          'the unemployment rate has ' + (Math.abs(dU)<1e-4 ? 'not changed' :
+                              (dU > 0 ? 'risen by ' + (dU*100).toFixed(1) + ' percentage points'
+                                      : 'fallen by ' + (Math.abs(dU)*100).toFixed(1) + ' percentage points')) + '.';
+  }
+  if(showDec){
+    eq += ' Total unemployment decomposes into ' +
+          'frictional U^F = ' + cur.UF.toFixed(3) +
+          ' (workers searching, A·θ*) and ' +
+          'rationing U^R = ' + cur.UR.toFixed(3) +
+          ' (workers who cannot be employed because demand at θ=0 is below the labor force).';
+  }
+  $eqDesc.textContent = eq;
+
+  const sL = state.s * cur.L;
+  const fU = cur.f * cur.U;
+  let fl = 'Worker flow diagram in steady state. ' +
+           'The employed box holds ' + cur.L.toFixed(3) + ' workers. ' +
+           'The unemployed box holds ' + cur.U.toFixed(3) + ' workers. ' +
+           'Each period, s × L = ' + sL.toFixed(3) +
+           ' workers lose their jobs (flow from employed to unemployed), and ' +
+           'f(θ) × U = ' + fU.toFixed(3) +
+           ' workers find jobs (flow from unemployed to employed). ' +
+           'These flows are equal in steady state.';
+  $flowDesc.textContent = fl;
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Redraw
+// ────────────────────────────────────────────────────────────────────
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  drawEquilibrium();
+  drawFlow();
+  renderOutcomeTable();
+  updateGraphDescriptions();
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Slider / preset / toggle wiring
+// ────────────────────────────────────────────────────────────────────
+function syncSlidersToState(){
+  $sliderA.value = state.A;
+  $sliderH.value = state.H;
+  $sliderS.value = state.s;
+  $sliderW.value = state.W;
+  $valueA.textContent = state.A.toFixed(2);
+  $valueH.textContent = state.H.toFixed(2);
+  $valueS.textContent = state.s.toFixed(2);
+  $valueW.textContent = state.W.toFixed(3);
+}
+
+function syncPresetButtons(){
+  Object.keys(PRESET_BTNS).forEach(k => {
+    const active = (state.activePreset === k);
+    PRESET_BTNS[k].setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+}
+
+function detectActivePreset(){
+  // If current state matches a preset exactly, mark that preset active.
+  for(const k of Object.keys(PRESETS)){
+    const p = PRESETS[k];
+    if(Math.abs(state.s - p.s) < 1e-6 &&
+       Math.abs(state.H - p.H) < 1e-6 &&
+       Math.abs(state.W - p.W) < 1e-6 &&
+       Math.abs(state.A - p.A) < 1e-6){
+      return k;
+    }
+  }
+  return null;
+}
+
+function applyPreset(key){
+  const p = PRESETS[key];
+  state.s = p.s; state.H = p.H; state.W = p.W; state.A = p.A;
+  state.activePreset = key;
+  syncSlidersToState();
+  syncPresetButtons();
+  redraw();
+}
+
+function onSliderChange(which, raw){
+  const v = parseFloat(raw);
+  if(which === 'A') state.A = v;
+  if(which === 'H') state.H = v;
+  if(which === 's') state.s = v;
+  if(which === 'W') state.W = v;
+  // Update displayed value immediately
+  $valueA.textContent = state.A.toFixed(2);
+  $valueH.textContent = state.H.toFixed(2);
+  $valueS.textContent = state.s.toFixed(2);
+  $valueW.textContent = state.W.toFixed(3);
+  // Update active preset detection
+  const matched = detectActivePreset();
+  state.activePreset = matched;
+  syncPresetButtons();
+  scheduleRedraw();
+}
+
+let _drawTimer = null;
+function scheduleRedraw(){
+  if(_drawTimer) return;
+  _drawTimer = setTimeout(() => { _drawTimer = null; redraw(); }, 16);
+}
+
+// Listeners
+$sliderA.addEventListener('input', e => onSliderChange('A', e.target.value));
+$sliderH.addEventListener('input', e => onSliderChange('H', e.target.value));
+$sliderS.addEventListener('input', e => onSliderChange('s', e.target.value));
+$sliderW.addEventListener('input', e => onSliderChange('W', e.target.value));
+
+Object.keys(PRESET_BTNS).forEach(k => {
+  PRESET_BTNS[k].addEventListener('click', () => applyPreset(k));
+});
+
+function setToggle(btn, stateKey){
+  const next = !state[stateKey];
+  state[stateKey] = next;
+  btn.setAttribute('aria-pressed', next ? 'true' : 'false');
+  redraw();
+}
+$toggleCompare.addEventListener('click',
+  () => setToggle($toggleCompare, 'showComparison'));
+$toggleDecomp.addEventListener('click',
+  () => setToggle($toggleDecomp, 'showDecomposition'));
+
+// Resize handler
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+// ────────────────────────────────────────────────────────────────────
+// Init
+// ────────────────────────────────────────────────────────────────────
+function generateParams(){
+  // Single-phase exploratory — initialise to baseline.
+  state.s = BASELINE.s; state.H = BASELINE.H;
+  state.W = BASELINE.W; state.A = BASELINE.A;
+  state.activePreset = 'baseline';
+}
+
+generateParams();
+syncSlidersToState();
+syncPresetButtons();
+redraw();
+
+})();
+</script>
+</body>
+</html>

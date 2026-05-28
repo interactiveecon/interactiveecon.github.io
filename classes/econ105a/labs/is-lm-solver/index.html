@@ -1,0 +1,1050 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>IS-LM Solver — ECON 105A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;  --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ─────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Buttons */
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:none;border-radius:12px;font-family:var(--font-sans);font-size:0.875rem;font-weight:700;cursor:pointer;transition:background .12s;}
+    .btn.primary{background:var(--accent);color:#fff;}
+    .btn.primary:hover:not(:disabled){background:#264d68;}
+    .btn.primary:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* Layout */
+    .lab-container{max-width:1160px;margin:0 auto;padding:18px;}
+    .lab-grid{display:grid;grid-template-columns:1fr 380px;gap:18px;align-items:start;}
+    @media(max-width:880px){.lab-grid{grid-template-columns:1fr;}
+      .graph-card{position:static !important;}
+      .graph-card-wrap{order:-1;}}
+
+    /* Problem card */
+    .problem-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow);margin-bottom:14px;}
+    .problem-header{font-family:var(--font-serif);font-size:1.25rem;font-weight:700;color:var(--ink);margin:0 0 6px;}
+    .problem-sub{font-size:0.8125rem;color:var(--muted);margin:0 0 14px;line-height:1.5;}
+    .param-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+    @media(max-width:520px){.param-grid{grid-template-columns:1fr;}}
+    .param{background:rgba(246,242,234,.55);border:1px solid var(--line);border-radius:12px;padding:9px 13px;}
+    .param.full{grid-column:1/-1;}
+    .param .label{font-size:0.6875rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px;}
+    .param .value{font-size:0.9375rem;font-weight:700;color:var(--ink);font-family:var(--font-sans);line-height:1.5;}
+
+    /* Math typography */
+    .eq i{font-style:italic;font-family:var(--font-serif);}
+    .eq sub, .eq sup{font-size:0.75em;}
+    .frac{display:inline-flex;flex-direction:column;vertical-align:-0.45em;
+      text-align:center;margin:0 2px;line-height:1.05;}
+    .frac .num{border-bottom:1.5px solid currentColor;padding:0 4px;}
+    .frac .den{padding:0 4px;}
+
+    /* Step cards */
+    .step-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);margin-bottom:12px;transition:opacity .18s;}
+    .step-card.locked{opacity:.55;}
+    .step-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+    .step-num{display:inline-block;font-size:0.625rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);background:rgba(47,93,124,.08);border:1px solid rgba(47,93,124,.18);border-radius:6px;padding:2px 7px;margin-bottom:4px;}
+    .step-title{font-size:0.9375rem;font-weight:700;color:var(--ink);line-height:1.3;}
+    .step-instruction{font-size:0.8125rem;color:var(--ink-2);line-height:1.55;margin:8px 0 0;}
+
+    /* Action buttons row — border #8c7f72 = 3.5:1 on white (WCAG 1.4.11 ✓) */
+    .step-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+    .step-btn{flex-shrink:0;padding:6px 12px;border:1.5px solid #8c7f72;background:rgba(47,93,124,.06);color:var(--accent);border-radius:10px;font-size:0.75rem;font-weight:700;font-family:var(--font-sans);cursor:pointer;transition:background .12s,border-color .12s;white-space:nowrap;}
+    .step-btn:hover:not(:disabled){background:rgba(47,93,124,.14);border-color:var(--accent);}
+    .step-btn:disabled{opacity:.55;cursor:not-allowed;}
+    .step-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+    .step-btn.primary:hover:not(:disabled){background:#264d68;}
+    .step-btn.done{background:rgba(21,92,56,.08);border-color:rgba(21,92,56,.3);color:var(--good);}
+
+    /* Entry area */
+    .entry-area{margin-top:12px;padding:10px 12px;background:rgba(246,242,234,.5);border:1px solid var(--line);border-radius:12px;}
+    .entry-row{display:flex;align-items:center;flex-wrap:wrap;gap:5px;font-size:0.9375rem;font-weight:600;color:var(--ink);line-height:2.2;}
+    .entry-sym{color:var(--ink-2);white-space:nowrap;font-size:1rem;font-family:var(--font-serif);font-style:italic;}
+    .entry-sym.plain{font-style:normal;font-family:var(--font-sans);font-weight:700;color:var(--ink-2);}
+
+    /* Inline number inputs — border #8c7f72 = 3.5:1 on white (WCAG 1.4.11 ✓) */
+    .fi{width:78px;padding:4px 6px;border:1.5px solid #8c7f72;border-radius:8px;font-size:0.9375rem;font-family:var(--font-sans);font-weight:700;text-align:center;background:#fff;color:var(--ink);outline:none;transition:border-color .12s,background .12s;}
+    .fi.wide{width:96px;}
+    .fi:focus{border-color:var(--accent);}
+    .fi.correct{border-color:var(--good);background:rgba(21,92,56,.06);}
+    .fi.wrong{border-color:var(--bad);background:rgba(180,35,24,.06);}
+    .fi:disabled{background:rgba(246,242,234,.9);color:var(--muted);cursor:not-allowed;}
+
+    /* Feedback */
+    .entry-fb{margin-top:8px;padding:7px 11px;border-radius:10px;font-size:0.8125rem;font-weight:600;line-height:1.4;animation:fadeSlide .18s ease;}
+    .entry-fb.correct{background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.2);color:var(--good);}
+    .entry-fb.wrong{background:rgba(180,35,24,.06);border:1px solid rgba(180,35,24,.2);color:var(--bad);}
+
+    /* Revealed content */
+    .step-hint{margin-top:10px;padding:9px 13px;background:rgba(47,93,124,.04);border:1px solid rgba(47,93,124,.14);border-radius:12px;animation:fadeSlide .2s ease;font-size:0.8125rem;color:var(--ink-2);line-height:1.55;}
+    .step-answer{margin-top:8px;padding:11px 13px;background:rgba(21,92,56,.05);border:1px solid rgba(21,92,56,.2);border-radius:12px;animation:fadeSlide .2s ease;}
+    .reveal-label{font-size:0.625rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin-bottom:6px;}
+    .reveal-label.good{color:var(--good);}
+    .answer-content{font-size:0.875rem;line-height:1.85;color:var(--ink);overflow-x:auto;}
+    .sol-line{display:block;padding:1px 0;font-family:var(--font-sans);}
+    .sol-line i{font-family:var(--font-serif);font-style:italic;}
+    .sol-line.boxed{display:inline-block;margin-top:4px;padding:4px 10px;
+      border:1.5px solid var(--good);border-radius:8px;background:rgba(21,92,56,.06);
+      color:var(--good);font-weight:700;}
+
+    @keyframes fadeSlide{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+    .hidden{display:none !important;}
+
+    /* Lab-done banner */
+    .lab-done-banner{margin-top:14px;padding:14px 18px;border-radius:14px;
+      background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.25);
+      color:var(--ink);font-size:0.875rem;line-height:1.55;}
+    .lab-done-banner .banner-title{font-family:var(--font-serif);font-size:1.125rem;font-weight:700;color:var(--good);margin:0 0 6px;}
+    .lab-done-banner .banner-score{margin:6px 0 0;font-size:0.8125rem;color:var(--ink-2);}
+
+    /* Graph card */
+    .graph-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);position:sticky;top:18px;}
+    .graph-title{font-size:0.8125rem;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+    .graph-canvas-wrap{position:relative;width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;background:rgba(246,242,234,.45);border:1px solid var(--line);}
+    #graphCanvas{display:block;width:100%;height:100%;}
+    .graph-legend{display:flex;flex-direction:column;gap:5px;margin-top:10px;}
+    .legend-row{display:flex;align-items:center;gap:7px;font-size:0.75rem;color:var(--ink-2);}
+    .legend-swatch{width:24px;height:3px;border-radius:2px;flex-shrink:0;}
+    .legend-swatch.dashed{background:repeating-linear-gradient(90deg,currentColor 0 4px,transparent 4px 8px);height:3px;}
+    .legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+  </style>
+</head>
+<body>
+
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105a/labs/">← ECON 105A Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105A — Aggregate Demand</div>
+      <h1>IS-LM Solver</h1>
+      <p class="sub">
+        Derive the IS curve from goods-market equilibrium, the LM curve from
+        money-market equilibrium, and then solve the two together for the
+        short-run equilibrium interest rate and output.
+      </p>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>You are given a consumption function with an interest-rate term,
+          an investment function, fiscal variables <strong>G</strong> and
+          <strong>T</strong>, a real money-demand function
+          <strong>L(r,Y) = MDY·Y − MDR·r</strong>, and the nominal money
+          supply <strong>M</strong> and price level <strong>P</strong>. Work
+          through four steps to find the IS-LM equilibrium.</p>
+          <p>You will be asked to answer the following questions:</p>
+          <ol>
+            <li><strong>The IS curve.</strong> Express the goods-market
+                equilibrium output as a linear function of <i>r</i>.
+                Enter the intercept and the (positive) coefficient on <i>r</i>.</li>
+            <li><strong>The LM curve.</strong> Express the money-market
+                equilibrium output as a linear function of <i>r</i>.
+                Enter the intercept and the coefficient on <i>r</i>.</li>
+            <li><strong>Equilibrium interest rate <i>r</i>*.</strong>
+                Set IS = LM and solve for <i>r</i>.</li>
+            <li><strong>Equilibrium output <i>Y</i>*.</strong>
+                Plug <i>r</i>* back into either curve.</li>
+          </ol>
+          <p>For each step, enter your answer and click <strong>Check
+          Answer</strong>. A short <strong>Hint</strong> is always available;
+          once you have submitted an attempt, you can also reveal a full
+          worked <strong>Solution</strong>. The next step unlocks as soon
+          as you submit (right or wrong).</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-container">
+  <div class="lab-grid">
+
+    <!-- LEFT COLUMN -->
+    <div>
+      <div class="problem-card">
+        <h2 class="problem-header">The Economy</h2>
+        <p class="problem-sub">
+          A short-run economy with both a goods market and a money market.
+          The interest rate <i>r</i> is expressed in percent.
+        </p>
+        <div class="param-grid" id="paramGrid"></div>
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn primary" id="newProblemBtn">New Problem</button>
+        </div>
+      </div>
+
+      <div id="stepsContainer"></div>
+
+      <div id="labDoneBanner" class="lab-done-banner hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="graph-card-wrap">
+      <div class="graph-card">
+        <div class="graph-title" id="graphCanvasTitle">IS-LM Diagram</div>
+        <div class="graph-canvas-wrap">
+          <canvas id="graphCanvas"
+                  role="img"
+                  aria-labelledby="graphCanvasTitle"
+                  aria-describedby="graphCanvasDesc"></canvas>
+        </div>
+        <!-- Canvas accessible description — aria-live so updates are announced (WCAG 1.1.1, 4.1.3) -->
+        <p class="sr-only" id="graphCanvasDesc"
+           aria-live="polite" aria-atomic="true">IS-LM diagram with output Y on the horizontal axis and the interest rate r on the vertical axis. Solve the steps on the left to reveal the equilibrium.</p>
+        <div class="graph-legend" aria-hidden="true">
+          <div class="legend-row hidden" id="lgIS">
+            <div class="legend-swatch" style="background:#b42318;"></div>
+            <span>IS curve</span>
+          </div>
+          <div class="legend-row hidden" id="lgLM">
+            <div class="legend-swatch" style="background:#155c38;"></div>
+            <span>LM curve</span>
+          </div>
+          <div class="legend-row hidden" id="lgEq">
+            <div class="legend-dot" style="background:#1f2937;"></div>
+            <span id="lgEqLabel">Equilibrium</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer style="margin-top:32px;">
+  <div class="lab-container">
+    <div class="footer-inner">
+      <span>ECON 105A — Intermediate Macroeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Sample week-template entry (paste into a discussion week's LABS array):
+  //   { id:   'is-lm-solver',
+  //     name: 'IS-LM Solver',
+  //     icon: '📊',
+  //     desc: 'Solve for IS, LM, and short-run equilibrium step by step.',
+  //     url:  '/classes/econ105a/labs/is-lm-solver/?disc=1' }
+  // ─────────────────────────────────────────────────────────────────────────
+  const LAB_ID    = 'is-lm-solver';
+  const LAB_LABEL = 'IS-LM Solver';
+  const TOTAL_STEPS = 4;
+
+  let _fs = 1; // canvas font scale (WCAG 1.4.4)
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let _rng = null;
+  let params = {};
+  let comp   = {};
+  const stepMeta     = Array.from({length:TOTAL_STEPS}, () => ({s:'check'}));
+  const stepUnlocked = Array(TOTAL_STEPS).fill(false);
+  const firstAttempt = Array(TOTAL_STEPS).fill(true);
+  const firstCorrect = Array(TOTAL_STEPS).fill(false);
+  const firstAnsText = Array(TOTAL_STEPS).fill('—');
+  const stepDone     = Array(TOTAL_STEPS).fill(false);
+  let _steps = [];
+  let _labDoneFired = false;
+
+  // ── DOM ────────────────────────────────────────────────────────────────────
+  const $paramGrid = document.getElementById('paramGrid');
+  const $canvas    = document.getElementById('graphCanvas');
+  const $graphDesc = document.getElementById('graphCanvasDesc');
+  const $steps     = document.getElementById('stepsContainer');
+  const $banner    = document.getElementById('labDoneBanner');
+
+  // ── Utilities ──────────────────────────────────────────────────────────────
+  function rng(){ return _rng ? _rng() : Math.random(); }
+  function ri(lo,hi){ return lo + Math.floor(rng()*(hi-lo+1)); }
+  function rnd2(v){ return Math.round(v*100)/100; }
+  function fmt2(v){
+    if(!isFinite(v)) return '—';
+    return v.toFixed(2);
+  }
+  function fmtInt(v){ return String(Math.round(v)); }
+
+  // Format a linear expression "intercept ± slope · variable" with correct sign
+  function formatLinear(intercept, slope, variable, opts){
+    opts = opts || {};
+    const ip = opts.interceptDp != null ? opts.interceptDp : 2;
+    const sp = opts.slopeDp     != null ? opts.slopeDp     : 2;
+    const a = ip === 0 ? fmtInt(intercept) : intercept.toFixed(ip);
+    if(slope === 0 || (opts.hideZeroSlope && Math.abs(slope) < 1e-9)){
+      return `${a}`;
+    }
+    const absB = sp === 0 ? fmtInt(Math.abs(slope)) : Math.abs(slope).toFixed(sp);
+    const sign = slope >= 0 ? '+' : '−';
+    return `${a} ${sign} ${absB} <i>${variable}</i>`;
+  }
+
+  // ── Compute the four answers ───────────────────────────────────────────────
+  // IS: Y = A − B r,  where A = (c0 − MPC T + I0 + G)/(1−MPC),  B = (c1+I1)/(1−MPC)
+  // LM: Y = C + D r,  where C = M/(P·MDY),                     D = MDR/MDY
+  // r* = (A − C)/(B + D);   Y* = A − B r* = C + D r*
+  function compute(p){
+    const {c0,MPC,c1,I0,I1,G,T,M,P,MDY,MDR} = p;
+    const oneMinus = 1 - MPC;
+    const A = (c0 - MPC*T + I0 + G) / oneMinus; // IS intercept
+    const B = (c1 + I1) / oneMinus;             // IS slope magnitude
+    const C = M / (P * MDY);                    // LM intercept
+    const D = MDR / MDY;                        // LM slope
+    const rStar = (A - C) / (B + D);
+    const Ystar = A - B * rStar;
+    return {
+      A: rnd2(A), B: rnd2(B),
+      C: rnd2(C), D: rnd2(D),
+      rStar: rnd2(rStar),
+      Ystar: rnd2(Ystar),
+    };
+  }
+
+  // ── Problem generation ─────────────────────────────────────────────────────
+  function generateParams(){
+    if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+    let last = null;
+    for(let tries=0; tries<60; tries++){
+      const c0  = ri(50, 200);
+      const MPC = rnd2(0.25 + rng()*0.74); // 0.25..0.99
+      const c1  = (rng() < 0.5) ? 0 : ri(0, 50);
+      const I0  = ri(50, 200);
+      const I1  = ri(10, 50);
+      const G   = ri(20, 80);
+      const T   = ri(20, 80);
+      const M   = ri(500, 800);
+      const P   = ri(1, 10);
+      const MDY = ri(1, 5);
+      const MDR = ri(10, 50);
+      const p   = {c0,MPC,c1,I0,I1,G,T,M,P,MDY,MDR};
+      const k   = compute(p);
+      last = {p,k};
+      if(!isFinite(k.rStar) || !isFinite(k.Ystar)) continue;
+      if(k.rStar < 1 || k.rStar > 15)              continue;
+      if(k.Ystar < 200 || k.Ystar > 1200)          continue;
+      params = p; comp = k; return;
+    }
+    // Fallback: hand-picked params known to satisfy both bounds.
+    // A = (100 − 30 + 150 + 80)/0.4 = 750; B = 30/0.4 = 75.
+    // C = 800/(1·2) = 400; D = 40/2 = 20.
+    // r* = (750−400)/(75+20) = 350/95 ≈ 3.68; Y* = 400 + 20·3.68 ≈ 473.7.
+    params = {c0:100,MPC:0.60,c1:0,I0:150,I1:30,G:80,T:50,
+              M:800,P:1,MDY:2,MDR:40};
+    comp   = compute(params);
+  }
+
+  // ── Render problem parameters ──────────────────────────────────────────────
+  function renderParamGrid(){
+    const {c0,MPC,c1,I0,I1,G,T,M,P,MDY,MDR} = params;
+    const cExpr = c1 > 0
+      ? `<i>C</i> = ${c0} + ${MPC.toFixed(2)} (<i>Y</i> − <i>T</i>) − ${c1} <i>r</i>`
+      : `<i>C</i> = ${c0} + ${MPC.toFixed(2)} (<i>Y</i> − <i>T</i>)`;
+    const rows = [
+      {full:true,  label:'Consumption',      v:cExpr},
+      {full:true,  label:'Investment',       v:`<i>I</i> = ${I0} − ${I1} <i>r</i>`},
+      {full:false, label:'Government spending', v:`<i>G</i> = ${G}`},
+      {full:false, label:'Taxes',            v:`<i>T</i> = ${T}`},
+      {full:true,  label:'Real money demand',v:`<i>L</i>(<i>r</i>, <i>Y</i>) = ${MDY} <i>Y</i> − ${MDR} <i>r</i>`},
+      {full:false, label:'Money supply',     v:`<i>M</i> = ${M}`},
+      {full:false, label:'Price level',      v:`<i>P</i> = ${P}`},
+    ];
+    $paramGrid.innerHTML = rows.map(r =>
+      `<div class="param${r.full?' full':''}">
+         <div class="label">${r.label}</div>
+         <div class="value eq">${r.v}</div>
+       </div>`
+    ).join('');
+  }
+
+  // ── Build the four step descriptors ────────────────────────────────────────
+  function buildSteps(){
+    const {c0,MPC,c1,I0,I1,G,T,M,P,MDY,MDR} = params;
+    const {A,B,C,D,rStar,Ystar} = comp;
+    const oneMinus = rnd2(1 - MPC);
+    const numA  = rnd2(c0 - MPC*T + I0 + G);
+    const numB  = c1 + I1;
+    const PMDY  = P * MDY;
+    const hasC1 = c1 > 0;
+
+    const s = [];
+
+    // ── Step 1: IS curve ────────────────────────────────────────────────────
+    const c1term = hasC1 ? ` − ${c1} <i>r</i>` : '';
+    s.push({
+      n:1, qIdx:0,
+      qText:'Find the IS curve. Enter the intercept and the (positive) coefficient on r in Y = A − B·r.',
+      title:'The IS Curve',
+      instruction:'Goods-market equilibrium says Y = C + I + G. Substitute the consumption and investment functions, collect terms in Y on one side, and solve for Y as a linear function of r. Enter the intercept and the magnitude of the coefficient on r (the form already includes the minus sign).',
+      eHTML:`<div class="entry-row eq">
+        <span class="entry-sym"><i>Y</i> =</span>
+        <input class="fi wide" id="s1a" aria-label="IS intercept" placeholder="?" autocomplete="off" inputmode="decimal"/>
+        <span class="entry-sym plain">−</span>
+        <input class="fi" id="s1b" aria-label="IS slope magnitude (coefficient on r)" placeholder="?" autocomplete="off" inputmode="decimal"/>
+        <span class="entry-sym">· <i>r</i></span>
+      </div>`,
+      ids:['s1a','s1b'],
+      answers:[A, B],
+      tols:[0.01, 0.01],
+      hint:'Start from Y = C + I + G. Substitute the given C and I, then collect every term that contains Y on the left side. Dividing by (1 − MPC) gives Y as a linear function of r.',
+      ansHTML: [
+        `<span class="sol-line"><i>Y</i> = <i>C</i> + <i>I</i> + <i>G</i></span>`,
+        `<span class="sol-line"><i>Y</i> = ${c0} + ${MPC.toFixed(2)}(<i>Y</i> − ${T})${c1term} + ${I0} − ${I1}<i>r</i> + ${G}</span>`,
+        `<span class="sol-line"><i>Y</i> − ${MPC.toFixed(2)}<i>Y</i> = ${c0} − ${MPC.toFixed(2)}·${T} + ${I0} + ${G} − (${c1} + ${I1})<i>r</i></span>`,
+        `<span class="sol-line">${oneMinus.toFixed(2)} <i>Y</i> = ${fmt2(numA)} − ${numB} <i>r</i></span>`,
+        `<span class="sol-line"><i>Y</i> = (${fmt2(numA)} ÷ ${oneMinus.toFixed(2)}) − (${numB} ÷ ${oneMinus.toFixed(2)}) <i>r</i></span>`,
+        `<span class="sol-line boxed"><i>Y</i> = ${fmt2(A)} − ${fmt2(B)} <i>r</i></span>`,
+      ].join(''),
+      ansText:`IS: Y = ${fmt2(A)} − ${fmt2(B)} r`,
+      enteredText:e => `IS: Y = ${e[0]} − ${e[1]} r`,
+    });
+
+    // ── Step 2: LM curve ────────────────────────────────────────────────────
+    s.push({
+      n:2, qIdx:1,
+      qText:'Find the LM curve. Enter the intercept and the coefficient on r in Y = C + D·r.',
+      title:'The LM Curve',
+      instruction:'Money-market equilibrium requires real money supply equals real money demand: M/P = MDY·Y − MDR·r. Solve for Y as a linear function of r.',
+      eHTML:`<div class="entry-row eq">
+        <span class="entry-sym"><i>Y</i> =</span>
+        <input class="fi wide" id="s2a" aria-label="LM intercept" placeholder="?" autocomplete="off" inputmode="decimal"/>
+        <span class="entry-sym plain">+</span>
+        <input class="fi" id="s2b" aria-label="LM slope (coefficient on r)" placeholder="?" autocomplete="off" inputmode="decimal"/>
+        <span class="entry-sym">· <i>r</i></span>
+      </div>`,
+      ids:['s2a','s2b'],
+      answers:[C, D],
+      tols:[0.01, 0.01],
+      hint:'Set the real money supply M/P equal to money demand MDY·Y − MDR·r, then isolate Y by moving the MDR·r term to the left side and dividing through by MDY.',
+      ansHTML:[
+        `<span class="sol-line"><span class="frac"><span class="num"><i>M</i></span><span class="den"><i>P</i></span></span> = ${MDY} <i>Y</i> − ${MDR} <i>r</i></span>`,
+        `<span class="sol-line"><span class="frac"><span class="num">${M}</span><span class="den">${P}</span></span> = ${MDY} <i>Y</i> − ${MDR} <i>r</i></span>`,
+        `<span class="sol-line">${MDY} <i>Y</i> = ${fmt2(M/P)} + ${MDR} <i>r</i></span>`,
+        `<span class="sol-line"><i>Y</i> = (${fmt2(M/P)} ÷ ${MDY}) + (${MDR} ÷ ${MDY}) <i>r</i></span>`,
+        `<span class="sol-line boxed"><i>Y</i> = ${fmt2(C)} + ${fmt2(D)} <i>r</i></span>`,
+      ].join(''),
+      ansText:`LM: Y = ${fmt2(C)} + ${fmt2(D)} r`,
+      enteredText:e => `LM: Y = ${e[0]} + ${e[1]} r`,
+    });
+
+    // ── Step 3: Equilibrium interest rate ───────────────────────────────────
+    s.push({
+      n:3, qIdx:2,
+      qText:'Find the equilibrium interest rate r* by setting IS = LM.',
+      title:'Equilibrium Interest Rate  r*',
+      instruction:'Set the IS and LM curves equal to each other and solve for r. Report r* as a percent (for example, enter 4.25 to mean 4.25%).',
+      eHTML:`<div class="entry-row eq">
+        <span class="entry-sym"><i>r</i>* =</span>
+        <input class="fi wide" id="s3a" aria-label="equilibrium interest rate, percent" placeholder="?" autocomplete="off" inputmode="decimal"/>
+        <span class="entry-sym plain">%</span>
+      </div>`,
+      ids:['s3a'],
+      answers:[rStar],
+      tols:[0.05],
+      hint:'Set the IS expression equal to the LM expression. Both sides equal Y, so set the right-hand sides equal. Collect the r terms on one side, the constants on the other, and divide.',
+      ansHTML:[
+        `<span class="sol-line">Set IS = LM:&nbsp; ${fmt2(A)} − ${fmt2(B)} <i>r</i> = ${fmt2(C)} + ${fmt2(D)} <i>r</i></span>`,
+        `<span class="sol-line">${fmt2(A)} − ${fmt2(C)} = (${fmt2(B)} + ${fmt2(D)}) <i>r</i></span>`,
+        `<span class="sol-line">${fmt2(A - C)} = ${fmt2(B + D)} <i>r</i></span>`,
+        `<span class="sol-line"><i>r</i>* = <span class="frac"><span class="num">${fmt2(A - C)}</span><span class="den">${fmt2(B + D)}</span></span> = ${fmt2(rStar)}%</span>`,
+        `<span class="sol-line boxed"><i>r</i>* = ${fmt2(rStar)}%</span>`,
+      ].join(''),
+      ansText:`r* = ${fmt2(rStar)}%`,
+      enteredText:e => `r* = ${e[0]}%`,
+    });
+
+    // ── Step 4: Equilibrium output ──────────────────────────────────────────
+    s.push({
+      n:4, qIdx:3,
+      qText:'Find the equilibrium output Y* by plugging r* back into either curve.',
+      title:'Equilibrium Output  Y*',
+      instruction:'Substitute r* into either the IS curve or the LM curve. Both should give the same Y*.',
+      eHTML:`<div class="entry-row eq">
+        <span class="entry-sym"><i>Y</i>* =</span>
+        <input class="fi wide" id="s4a" aria-label="equilibrium output" placeholder="?" autocomplete="off" inputmode="decimal"/>
+      </div>`,
+      ids:['s4a'],
+      answers:[Ystar],
+      tols:[0.5],
+      hint:'Plug r* into the IS curve (Y = A − B·r*) or, equivalently, into the LM curve (Y = C + D·r*). Both lines pass through the equilibrium, so either gives the same Y*.',
+      ansHTML:[
+        `<span class="sol-line">Using the IS curve:</span>`,
+        `<span class="sol-line"><i>Y</i>* = ${fmt2(A)} − ${fmt2(B)} · ${fmt2(rStar)}</span>`,
+        `<span class="sol-line"><i>Y</i>* = ${fmt2(A)} − ${fmt2(B * rStar)} = ${fmt2(Ystar)}</span>`,
+        `<span class="sol-line">Check with the LM curve:</span>`,
+        `<span class="sol-line"><i>Y</i>* = ${fmt2(C)} + ${fmt2(D)} · ${fmt2(rStar)} = ${fmt2(C + D*rStar)}</span>`,
+        `<span class="sol-line boxed"><i>Y</i>* = ${fmt2(Ystar)}</span>`,
+      ].join(''),
+      ansText:`Y* = ${fmt2(Ystar)}`,
+      enteredText:e => `Y* = ${e[0]}`,
+    });
+
+    return s;
+  }
+
+  // ── Render a step card ─────────────────────────────────────────────────────
+  function cardHTML(step){
+    const locked = step.n > 1;
+    return `<div class="step-card${locked ? ' locked' : ''}" id="sc${step.n}">
+      <div class="step-card-header">
+        <div>
+          <div class="step-num">Step ${step.n}</div>
+          <div class="step-title">${step.title}</div>
+        </div>
+      </div>
+      <p class="step-instruction">${step.instruction}</p>
+      <div class="entry-area">${step.eHTML}</div>
+      <div id="fb${step.n}" class="hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div class="step-actions">
+        <button class="step-btn primary" id="btnCheck${step.n}" aria-label="Check your answer for step ${step.n}"${locked ? ' disabled' : ''}>Check Answer</button>
+        <button class="step-btn" id="btnHint${step.n}" aria-label="Show a hint for step ${step.n}"${locked ? ' disabled' : ''} aria-expanded="false">Show Hint</button>
+        <button class="step-btn" id="btnSolution${step.n}" aria-label="Show the worked solution for step ${step.n}" disabled aria-expanded="false">Show Solution</button>
+      </div>
+      <div class="step-hint hidden" id="hint${step.n}">
+        <div class="reveal-label">Hint</div>
+        <div id="hintc${step.n}"></div>
+      </div>
+      <div class="step-answer hidden" id="ans${step.n}">
+        <div class="reveal-label good">Worked Solution</div>
+        <div class="answer-content" id="ac${step.n}"></div>
+      </div>
+    </div>`;
+  }
+
+  // ── Check inputs for a step ────────────────────────────────────────────────
+  function checkStep(step){
+    for(const id of step.ids){
+      if(document.getElementById(id).value.trim()==='') return {ok:false,empty:true};
+    }
+    let all = true;
+    const entered = [];
+    step.ids.forEach((id,i)=>{
+      const raw = document.getElementById(id).value.trim();
+      const v   = parseFloat(raw);
+      const ok  = !isNaN(v) && Math.abs(v - step.answers[i]) <= step.tols[i];
+      if(!ok) all = false;
+      entered.push(raw);
+      const el = document.getElementById(id);
+      el.classList.toggle('correct',ok);
+      el.classList.toggle('wrong',!ok);
+    });
+    return {ok:all, entered};
+  }
+
+  // Get current entry values (for live-graph overlay)
+  function readEntry(step){
+    const vals = step.ids.map(id => {
+      const raw = document.getElementById(id).value.trim();
+      if(raw === '') return null;
+      const v = parseFloat(raw);
+      return isNaN(v) ? null : v;
+    });
+    if(vals.some(v => v === null)) return null;
+    const ok = vals.every((v,i) => Math.abs(v - step.answers[i]) <= step.tols[i]);
+    return {vals, ok};
+  }
+
+  function showFB(n, ok, msg){
+    const el = document.getElementById('fb'+n);
+    el.className = 'entry-fb '+(ok ? 'correct' : 'wrong');
+    el.classList.remove('hidden');
+    el.textContent = (ok ? '✓ ' : '✗ ') + msg;
+  }
+
+  function lockInputs(step){
+    step.ids.forEach(id => { document.getElementById(id).disabled = true; });
+  }
+
+  function revealHint(n){
+    const el = document.getElementById('hint'+n);
+    if(!el.classList.contains('hidden')) return;
+    document.getElementById('hintc'+n).textContent = _steps[n-1].hint;
+    el.classList.remove('hidden');
+    const b = document.getElementById('btnHint'+n);
+    if(b) b.setAttribute('aria-expanded','true');
+  }
+  function revealAns(n){
+    const el = document.getElementById('ans'+n);
+    if(!el.classList.contains('hidden')) return;
+    document.getElementById('ac'+n).innerHTML = _steps[n-1].ansHTML;
+    el.classList.remove('hidden');
+    const b = document.getElementById('btnSolution'+n);
+    if(b) b.setAttribute('aria-expanded','true');
+  }
+
+  function recordQ(step, ansText, ok){
+    if(!(window.Session && Session.recordQuestion)) return;
+    Session.recordQuestion(LAB_ID, step.qIdx, step.qText,
+                           ansText, ok,
+                           ansText, ok);
+  }
+
+  function setBtnState(n, which, state){
+    const id = {check:'btnCheck',hint:'btnHint',solution:'btnSolution'}[which];
+    const b = document.getElementById(id+n);
+    if(!b) return;
+    if(state.disabled !== undefined) b.disabled = state.disabled;
+    if(state.text) b.textContent = state.text;
+    if(state.cls) b.className = 'step-btn '+state.cls;
+  }
+
+  function unlockStep(n){
+    if(stepUnlocked[n-1]) return;
+    stepUnlocked[n-1] = true;
+    const card = document.getElementById('sc'+n);
+    if(card) card.classList.remove('locked');
+    setBtnState(n,'check',{disabled:false});
+    setBtnState(n,'hint', {disabled:false});
+  }
+
+  function markDone(n, wasCorrect){
+    if(stepDone[n-1]) return;
+    stepDone[n-1] = true;
+    const step = _steps[n-1];
+    stepMeta[n-1].s = 'done';
+    revealAns(n);
+    lockInputs(step);
+    if(wasCorrect){
+      step.ids.forEach(id => document.getElementById(id).classList.add('correct'));
+    }
+    setBtnState(n, 'check',    {disabled:true, text:'✓ Done', cls:'done'});
+    setBtnState(n, 'solution', {disabled:true});
+    if(n < TOTAL_STEPS) unlockStep(n+1);
+    drawGraph();
+    maybeFinishLab();
+  }
+
+  // ── Button handlers ────────────────────────────────────────────────────────
+  function onCheck(n){
+    const meta = stepMeta[n-1];
+    if(meta.s !== 'check') return;
+    const step = _steps[n-1];
+    const res  = checkStep(step);
+    if(res.empty){
+      showFB(n, false, 'Please fill in all fields before checking.');
+      return;
+    }
+    if(firstAttempt[n-1]){
+      firstAttempt[n-1] = false;
+      firstCorrect[n-1] = res.ok;
+      firstAnsText[n-1] = step.enteredText(res.entered);
+      recordQ(step, firstAnsText[n-1], firstCorrect[n-1]);
+    } else {
+      // re-record the (still-final) attempt so the latest text is stored
+      recordQ(step, step.enteredText(res.entered), res.ok);
+    }
+    // Unlock the next step on first submission, right or wrong
+    if(n < TOTAL_STEPS) unlockStep(n+1);
+    // Enable Show Solution once student has submitted at least once
+    setBtnState(n, 'solution', {disabled:false});
+
+    if(res.ok){
+      showFB(n, true, 'Correct.');
+      markDone(n, true);
+    } else {
+      showFB(n, false, 'Not quite — try again, or use the hint or worked solution.');
+    }
+    drawGraph();
+  }
+  function onHint(n){
+    revealHint(n);
+    setBtnState(n, 'hint', {disabled:true});
+  }
+  function onSolution(n){
+    const step = _steps[n-1];
+    revealAns(n);
+    setBtnState(n, 'solution', {disabled:true});
+    if(firstAttempt[n-1]){
+      // student gave up before submitting — count as a failed first attempt
+      firstAttempt[n-1] = false;
+      firstCorrect[n-1] = false;
+      firstAnsText[n-1] = '—';
+      recordQ(step, step.ansText, true); // final = the solution, marked correct
+    } else {
+      // student already has a first attempt; record final as the solution
+      recordQ(step, step.ansText, true);
+    }
+    markDone(n, false);
+  }
+
+  // ── Lab completion ─────────────────────────────────────────────────────────
+  function maybeFinishLab(){
+    if(_labDoneFired) return;
+    if(!stepDone.every(Boolean)) return;
+    _labDoneFired = true;
+    const firstScore = firstCorrect.filter(Boolean).length;
+    const finalScore = TOTAL_STEPS;
+    if(window.Session && Session.recordLabDone){
+      Session.recordLabDone(LAB_ID, LAB_LABEL, firstScore, finalScore, TOTAL_STEPS);
+    }
+    const {rStar,Ystar} = comp;
+    $banner.classList.remove('hidden');
+    $banner.innerHTML = `
+      <p class="banner-title">Equilibrium reached.</p>
+      <p>The short-run IS-LM equilibrium is at
+        <strong><i>r</i>* = ${fmt2(rStar)}%</strong> and
+        <strong><i>Y</i>* = ${fmt2(Ystar)}</strong>. At this point both
+        the goods market and the money market clear simultaneously.</p>
+      <p class="banner-score">Score — first attempt: <strong>${firstScore} / ${TOTAL_STEPS}</strong>
+      &nbsp;·&nbsp; final: <strong>${finalScore} / ${TOTAL_STEPS}</strong>.</p>
+    `;
+  }
+
+  // ── Canvas accessible description (WCAG 1.1.1 / 4.1.3) ─────────────────────
+  function updateGraphDesc(){
+    const {A,B,C,D,rStar,Ystar} = comp;
+    const parts = [
+      `IS-LM diagram. Output Y is on the horizontal axis; the interest rate r, in percent, is on the vertical axis.`,
+    ];
+    if(stepDone[0]){
+      parts.push(`The IS curve is a downward-sloping red line: Y equals ${fmt2(A)} minus ${fmt2(B)} times r.`);
+    } else {
+      parts.push(`The IS curve will appear once Step 1 is complete.`);
+    }
+    if(stepDone[1]){
+      parts.push(`The LM curve is an upward-sloping green line: Y equals ${fmt2(C)} plus ${fmt2(D)} times r.`);
+    } else {
+      parts.push(`The LM curve will appear once Step 2 is complete.`);
+    }
+    if(stepDone[2]){
+      parts.push(`A horizontal dashed line marks the equilibrium interest rate at ${fmt2(rStar)} percent on the vertical axis.`);
+    }
+    if(stepDone[3]){
+      parts.push(`A vertical dashed line marks the equilibrium output at ${fmt2(Ystar)} on the horizontal axis, and a dark dot marks the intersection.`);
+    }
+    $graphDesc.textContent = parts.join(' ');
+  }
+
+  // ── Render whole problem ───────────────────────────────────────────────────
+  function renderProblem(){
+    renderParamGrid();
+    stepMeta.forEach(m => { m.s = 'check'; });
+    firstAttempt.fill(true);
+    firstCorrect.fill(false);
+    firstAnsText.fill('—');
+    stepDone.fill(false);
+    stepUnlocked.fill(false);
+    stepUnlocked[0] = true;
+    _labDoneFired = false;
+    $banner.classList.add('hidden');
+
+    _steps = buildSteps();
+    $steps.innerHTML = _steps.map(cardHTML).join('');
+
+    _steps.forEach(step => {
+      document.getElementById('btnCheck'+step.n)
+        .addEventListener('click', () => onCheck(step.n));
+      document.getElementById('btnHint'+step.n)
+        .addEventListener('click', () => onHint(step.n));
+      document.getElementById('btnSolution'+step.n)
+        .addEventListener('click', () => onSolution(step.n));
+      step.ids.forEach(id => {
+        const el = document.getElementById(id);
+        el.addEventListener('keydown', e => {
+          if(e.key === 'Enter') onCheck(step.n);
+        });
+      });
+    });
+
+    drawGraph();
+  }
+
+  document.getElementById('newProblemBtn').addEventListener('click', () => {
+    // Clear any stored data for this lab so a New Problem starts fresh.
+    try{
+      const KEY = 'econ002_session';
+      const raw = sessionStorage.getItem(KEY);
+      if(raw){
+        const d = JSON.parse(raw);
+        if(d && d.labs && d.labs[LAB_ID]){
+          delete d.labs[LAB_ID];
+          sessionStorage.setItem(KEY, JSON.stringify(d));
+        }
+      }
+    }catch(e){ /* ignore */ }
+    generateParams();
+    renderProblem();
+  });
+
+  // ── Canvas helpers ─────────────────────────────────────────────────────────
+  function setupCanvas(){
+    const dpr  = window.devicePixelRatio || 1;
+    const rect = $canvas.getBoundingClientRect();
+    const W    = Math.round(rect.width  * dpr);
+    const H    = Math.round(rect.height * dpr);
+    if(!W || !H) return null;
+    if($canvas.width !== W || $canvas.height !== H){
+      $canvas.width = W; $canvas.height = H;
+    }
+    return { ctx: $canvas.getContext('2d'), dpr, W, H };
+  }
+
+  function tickStep(mx){
+    if(mx<=10) return 1; if(mx<=20) return 2; if(mx<=50) return 5;
+    if(mx<=100) return 10; if(mx<=200) return 20; if(mx<=500) return 50;
+    if(mx<=1000) return 100; if(mx<=2000) return 200;
+    return 500;
+  }
+  function snapUp(raw){
+    const s=[5,10,15,20,25,30,40,50,75,100,150,200,250,300,400,500,
+             600,750,1000,1250,1500,2000,2500,3000];
+    return s.find(v => v >= raw) || Math.ceil(raw/500)*500;
+  }
+
+  // ── Draw IS-LM graph ───────────────────────────────────────────────────────
+  function drawGraph(){
+    _fs = Math.max(0.75, Math.min(2.5,
+      parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+
+    const setup = setupCanvas();
+    if(!setup) return;
+    const {ctx,dpr,W,H} = setup;
+    ctx.clearRect(0,0,W,H);
+    if(!comp || comp.rStar === undefined){ updateGraphDesc(); return; }
+
+    const {A,B,C,D,rStar,Ystar} = comp;
+
+    const pad = {l:78*dpr, r:22*dpr, t:18*dpr, b:64*dpr};
+    const X0 = pad.l, X1 = W - pad.r, Y0 = pad.t, Y1 = H - pad.b;
+    const PW = X1 - X0, PH = Y1 - Y0;
+
+    // axis ranges
+    const yMax = Math.max(20, Math.ceil(rStar + 5));
+    const isAtRmax = A - B * yMax; // could be negative
+    const lmAtRmax = C + D * yMax;
+    const isAt0    = A;
+    const lmAt0    = C;
+    const candX = [isAt0, lmAt0, isAtRmax, lmAtRmax, Ystar].filter(v => isFinite(v));
+    let rawMax = Math.max(...candX, 100);
+    rawMax = Math.max(rawMax, Ystar + 100);
+    const xMax = snapUp(rawMax * 1.05);
+
+    const xC = y => X0 + (y / xMax) * PW;
+    const yC = r => Y1 - (r / yMax) * PH;
+
+    // background panel
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillRect(X0, Y0, PW, PH);
+
+    // axes (L-shape on left and bottom — no regular ticks or gridlines)
+    ctx.strokeStyle = 'rgba(31,41,55,0.45)';
+    ctx.lineWidth = 1.4 * dpr;
+    ctx.beginPath();
+    ctx.moveTo(X0, Y0); ctx.lineTo(X0, Y1); ctx.lineTo(X1, Y1);
+    ctx.stroke();
+
+    // axis titles
+    ctx.fillStyle = '#1f2937';
+    ctx.font = `700 ${Math.round(12 * dpr * _fs)}px "Inter",sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText('Output Y', (X0 + X1)/2, H - 14*dpr);
+    ctx.save();
+    ctx.translate(14*dpr, (Y0 + Y1)/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('Interest rate r (%)', 0, 0);
+    ctx.restore();
+
+    // Helper: draw a straight line Y = a + b*r over r ∈ [0, yMax], clipped
+    function drawLine(a, b, color, width){
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(X0, Y0, PW, PH);
+      ctx.clip();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = (width || 2) * dpr;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(xC(a + b * 0),     yC(0));
+      ctx.lineTo(xC(a + b * yMax),  yC(yMax));
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Correct IS — only after Step 1 is done
+    if(stepDone[0]) drawLine(A, -B, '#b42318', 2);
+    // Correct LM — only after Step 2 is done
+    if(stepDone[1]) drawLine(C,  D, '#155c38', 2);
+
+    // r* tick + horizontal dashed line — only after Step 3 is done
+    if(stepDone[2]){
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(X0, Y0, PW, PH);
+      ctx.clip();
+      ctx.strokeStyle = 'rgba(31,41,55,0.55)';
+      ctx.lineWidth = 1.4 * dpr;
+      ctx.setLineDash([6*dpr, 4*dpr]);
+      ctx.beginPath();
+      ctx.moveTo(X0, yC(rStar));
+      ctx.lineTo(X1, yC(rStar));
+      ctx.stroke();
+      ctx.restore();
+      // tick mark on the y-axis at r*
+      ctx.strokeStyle = 'rgba(31,41,55,0.75)';
+      ctx.lineWidth = 1.4 * dpr;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(X0 - 5*dpr, yC(rStar)); ctx.lineTo(X0, yC(rStar));
+      ctx.stroke();
+      // numeric label (no "r* =" prefix)
+      ctx.fillStyle = '#1f2937';
+      ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText(fmt2(rStar) + '%', X0 - 7*dpr, yC(rStar));
+    }
+
+    // Y* tick + vertical dashed line + equilibrium dot — only after Step 4 is done
+    if(stepDone[3]){
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(X0, Y0, PW, PH);
+      ctx.clip();
+      ctx.strokeStyle = 'rgba(31,41,55,0.55)';
+      ctx.lineWidth = 1.4 * dpr;
+      ctx.setLineDash([6*dpr, 4*dpr]);
+      ctx.beginPath();
+      ctx.moveTo(xC(Ystar), Y0);
+      ctx.lineTo(xC(Ystar), Y1);
+      ctx.stroke();
+      ctx.restore();
+      // tick mark on x-axis at Y*
+      ctx.strokeStyle = 'rgba(31,41,55,0.75)';
+      ctx.lineWidth = 1.4 * dpr;
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(xC(Ystar), Y1); ctx.lineTo(xC(Ystar), Y1 + 5*dpr);
+      ctx.stroke();
+      // numeric label (no "Y* =" prefix)
+      ctx.fillStyle = '#1f2937';
+      ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText(fmt2(Ystar), xC(Ystar), Y1 + 7*dpr);
+      // dot at equilibrium
+      ctx.fillStyle = '#1f2937';
+      ctx.beginPath();
+      ctx.arc(xC(Ystar), yC(rStar), 5*dpr, 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    // Curve labels (IS / LM) — placed near the curves, only when the curves are visible
+    ctx.font = `800 ${Math.round(12 * dpr * _fs)}px "Inter",sans-serif`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    const labelR = Math.min(yMax * 0.85, Math.max(0, rStar + (yMax - rStar) * 0.5));
+    if(stepDone[0]){
+      ctx.fillStyle = '#b42318';
+      const isLabelY = A - B * labelR;
+      if(isLabelY > 0 && isLabelY < xMax){
+        ctx.fillText('IS', xC(isLabelY) + 6*dpr, yC(labelR));
+      }
+    }
+    if(stepDone[1]){
+      ctx.fillStyle = '#155c38';
+      const lmLabelY = C + D * labelR;
+      if(lmLabelY > 0 && lmLabelY < xMax){
+        ctx.fillText('LM', xC(lmLabelY) + 6*dpr, yC(labelR));
+      }
+    }
+
+    // Legend visibility mirrors what's plotted
+    document.getElementById('lgIS').classList.toggle('hidden', !stepDone[0]);
+    document.getElementById('lgLM').classList.toggle('hidden', !stepDone[1]);
+    document.getElementById('lgEq').classList.toggle('hidden', !(stepDone[2] && stepDone[3]));
+
+    updateGraphDesc();
+  }
+
+  // ── Resize ─────────────────────────────────────────────────────────────────
+  let _resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(drawGraph, 80);
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  generateParams();
+  renderProblem();
+})();
+</script>
+</body>
+</html>

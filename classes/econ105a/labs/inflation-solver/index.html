@@ -1,0 +1,1233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inflation Solver — ECON 105A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <!--
+    LAB_ID:    inflation-solver
+    LAB_LABEL: Inflation Solver
+    url:       /classes/econ105a/labs/inflation-solver/?disc=1
+  -->
+
+  <style>
+    /* ── Design tokens ─────────────────────────────────────────── */
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea;
+      --panel:#ffffff;
+      --ink:#1f2937;
+      --ink-2:#374151;
+      --muted:#596878;
+      --line:#e7dfd2;
+      --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;
+      --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3 / good practice) ────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* ── Header ────────────────────────────────────────────────── */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1100px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* ── Instructions dropdown ─────────────────────────────────── */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* ── Lab layout ────────────────────────────────────────────── */
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+    .lab-grid{display:grid;grid-template-columns:1fr;gap:18px;}
+
+    /* ── Problem card ──────────────────────────────────────────── */
+    .problem-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:20px;box-shadow:var(--shadow);}
+    .problem-header{font-family:var(--font-serif);font-size:1.25rem;
+      font-weight:700;color:var(--ink);margin:0 0 6px;}
+    .problem-sub{font-size:0.8125rem;color:var(--muted);margin:0 0 16px;
+      line-height:1.5;}
+
+    .group-label{font-size:0.6875rem;text-transform:uppercase;
+      letter-spacing:.08em;color:var(--accent);font-weight:800;
+      margin:14px 0 8px;display:flex;align-items:center;gap:10px;}
+    .group-label::before{content:"";display:inline-block;width:18px;
+      height:1.5px;background:var(--accent);opacity:.55;}
+
+    .var-grid{display:grid;grid-template-columns:repeat(4,1fr);
+      gap:8px;margin-bottom:6px;}
+    @media(max-width:700px){.var-grid{grid-template-columns:repeat(2,1fr);}}
+    .var-grid.two-col{grid-template-columns:repeat(2,1fr);}
+    @media(max-width:460px){.var-grid.two-col{grid-template-columns:1fr;}}
+    .var-block{background:rgba(246,242,234,.55);border:1px solid var(--line);
+      border-radius:12px;padding:10px 12px;text-align:left;}
+    .var-block .label{font-size:0.6875rem;text-transform:uppercase;
+      letter-spacing:.06em;color:var(--muted);margin-bottom:4px;font-weight:700;}
+    .var-block .value{font-size:1.0625rem;font-weight:700;color:var(--ink);
+      font-variant-numeric:tabular-nums;}
+    .var-block.unknown{border:1.5px dashed var(--accent);
+      background:rgba(47,93,124,.07);}
+    .var-block.unknown .value{color:var(--accent);}
+
+    /* ── Step cards ────────────────────────────────────────────── */
+    .step-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:20px;box-shadow:var(--shadow);
+      transition:opacity .18s;}
+    .step-card.locked{opacity:.65;}
+
+    .step-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;
+      flex-wrap:wrap;}
+    .step-num{font-size:0.6875rem;text-transform:uppercase;
+      letter-spacing:.08em;color:var(--accent);font-weight:800;
+      background:rgba(47,93,124,.10);padding:3px 9px;border-radius:999px;}
+    .step-title{font-family:var(--font-serif);font-size:1.125rem;
+      font-weight:700;color:var(--ink);margin:0;}
+    .step-status{font-size:0.6875rem;font-weight:700;text-transform:uppercase;
+      letter-spacing:.06em;margin-left:auto;padding:3px 9px;border-radius:999px;
+      display:inline-flex;align-items:center;gap:6px;}
+    .step-status.locked-badge{background:rgba(89,104,120,.12);color:var(--muted);
+      border:1px solid var(--line-2);}
+    .step-status.done-badge{background:rgba(21,92,56,.10);color:var(--good);
+      border:1px solid rgba(21,92,56,.30);}
+    /* Neutral amber for "solution shown" — student moved on after the
+       worked solution appeared, without entering the correct answer.
+       #8c4800 = 6.3:1 on white per CLAUDE.md, satisfies WCAG 1.4.3. */
+    .step-status.solution-badge{background:rgba(140,72,0,.10);
+      color:#8c4800;border:1px solid rgba(140,72,0,.30);}
+
+    .step-prompt{font-size:0.9375rem;color:var(--ink-2);line-height:1.55;
+      margin:8px 0 14px;}
+    .step-prompt strong{color:var(--ink);font-variant-numeric:tabular-nums;}
+
+    .answer-row{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;}
+    .answer-input{flex:1 1 180px;min-width:140px;padding:10px 12px;
+      border:1.5px solid #8c7f72;border-radius:12px;font-size:1rem;
+      font-family:var(--font-sans);color:var(--ink);background:#fafaf8;
+      outline:none;transition:border-color .12s;
+      font-variant-numeric:tabular-nums;}
+    .answer-input:focus{border-color:var(--accent);background:#fff;}
+    .answer-input.correct{border-color:var(--good);
+      background:rgba(21,92,56,.06);}
+    .answer-input.wrong{border-color:var(--bad);
+      background:rgba(180,35,24,.06);}
+    .answer-input:disabled{background:#f1ede4;color:var(--muted);
+      cursor:not-allowed;}
+
+    /* ── Buttons ───────────────────────────────────────────────── */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover:not(:disabled){background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* ── MC options (Step 3) ───────────────────────────────────── */
+    .mc-options{display:flex;flex-direction:column;gap:8px;}
+    .mc-option{display:flex;align-items:center;gap:10px;padding:10px 14px;
+      border:1.5px solid #8c7f72;border-radius:12px;background:#fff;
+      cursor:pointer;transition:border-color .12s, background .12s;
+      font-size:0.875rem;color:var(--ink);line-height:1.45;
+      width:100%;text-align:left;font-family:var(--font-sans);}
+    .mc-option:hover:not(:disabled){border-color:rgba(47,93,124,.55);
+      background:rgba(47,93,124,.05);}
+    .mc-option:disabled{cursor:not-allowed;}
+    .mc-option[aria-pressed="true"].selected-correct{
+      border-color:var(--good);background:rgba(21,92,56,.10);
+      color:var(--good);}
+    .mc-option[aria-pressed="true"].selected-wrong{
+      border-color:var(--bad);background:rgba(180,35,24,.06);
+      color:var(--bad);}
+    .mc-option.revealed-correct{border-color:var(--good);
+      background:rgba(21,92,56,.10);color:var(--good);}
+    .mc-letter{width:22px;height:22px;border-radius:999px;
+      border:1.5px solid #8c7f72;display:flex;align-items:center;
+      justify-content:center;font-size:0.6875rem;font-weight:700;
+      color:var(--muted);flex-shrink:0;}
+    .mc-option[aria-pressed="true"].selected-correct .mc-letter,
+    .mc-option.revealed-correct .mc-letter{
+      background:var(--good);color:#fff;border-color:var(--good);}
+    .mc-option[aria-pressed="true"].selected-wrong .mc-letter{
+      background:var(--bad);color:#fff;border-color:var(--bad);}
+
+    /* ── Feedback / disclosure ─────────────────────────────────── */
+    .feedback{margin-top:12px;padding:10px 14px;border-radius:12px;
+      font-size:0.8125rem;font-weight:600;line-height:1.5;}
+    .feedback.correct{background:rgba(21,92,56,.10);
+      border:1px solid rgba(21,92,56,.25);color:var(--good);}
+    .feedback.wrong{background:rgba(180,35,24,.08);
+      border:1px solid rgba(180,35,24,.25);color:var(--bad);}
+    .feedback.info{background:rgba(47,93,124,.07);
+      border:1px solid rgba(47,93,124,.20);color:var(--accent);}
+
+    .disclosure{margin-top:10px;display:flex;flex-direction:column;gap:8px;}
+    .disclosure .panel{background:rgba(246,242,234,.55);
+      border:1px solid var(--line);border-radius:12px;padding:10px 14px;
+      font-size:0.8125rem;color:var(--ink-2);line-height:1.55;
+      animation:fadeSlide .18s ease;}
+    .disclosure .panel.solution{background:rgba(47,93,124,.06);
+      border:1px solid rgba(47,93,124,.20);color:var(--ink);}
+    .disclosure .panel-label{font-size:0.625rem;text-transform:uppercase;
+      letter-spacing:.08em;color:var(--accent);font-weight:800;
+      margin-bottom:4px;display:block;}
+    .disclosure .formula{font-family:var(--font-serif);font-size:0.9375rem;
+      font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;}
+    .disclosure ol{margin:4px 0 0;padding-left:20px;}
+    .disclosure ol li{margin-bottom:4px;}
+    .disclosure .answer-line{margin-top:6px;font-weight:700;color:var(--ink);}
+
+    @keyframes fadeSlide{
+      from{opacity:0;transform:translateY(5px);}
+      to{opacity:1;transform:translateY(0);}}
+
+    /* ── Lock overlay text (non-color indicator, WCAG 1.4.1) ──── */
+    .lock-msg{font-size:0.8125rem;color:var(--muted);
+      font-style:italic;margin:6px 0 0;display:flex;align-items:center;gap:6px;}
+    .lock-icon{display:inline-block;font-weight:700;}
+
+    /* ── Bottom controls ───────────────────────────────────────── */
+    .controls-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+      margin-top:6px;}
+    .controls-row .summary-btn{margin-left:auto;}
+
+    /* ── Lab-complete banner ───────────────────────────────────── */
+    .complete-banner{background:rgba(21,92,56,.10);
+      border:1px solid rgba(21,92,56,.30);border-radius:14px;
+      padding:14px 18px;color:var(--good);font-weight:700;
+      font-size:0.9375rem;display:flex;align-items:center;gap:10px;}
+    .complete-banner .check{font-size:1.125rem;}
+
+    /* ── Footer ────────────────────────────────────────────────── */
+    footer{margin-top:32px;padding-top:12px;border-top:1px solid var(--line);}
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding:0 18px 14px;}
+    .hidden{display:none!important;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105a/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105A — Inflation</div>
+      <h1>Inflation Solver</h1>
+      <p class="sub">
+        Use the Quantity Theory of Money and the Fisher equation to solve for
+        the missing macro variable, then interpret the result.
+      </p>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>This lab walks you through the two identities that link the
+          aggregate price level, the money supply, real output, and the
+          nominal and real interest rates. Each problem gives you a set of
+          macro variables with one number missing in each step.</p>
+          <p>You will be asked to answer the following questions:</p>
+          <ol>
+            <li><strong>Quantity Theory of Money.</strong> Use
+              <em>%ΔM + %ΔV = π + %ΔY</em> to solve for the missing
+              variable among money growth, velocity growth, inflation, and
+              real output growth.</li>
+            <li><strong>Fisher Equation.</strong> Use
+              <em>i = r + π</em> (with the inflation rate carried over from
+              Step&nbsp;1) to solve for either the nominal or the real
+              interest rate.</li>
+            <li><strong>Interpretation.</strong> Answer one short
+              multiple-choice question about what the result implies in the
+              long run.</li>
+          </ol>
+          <p>For each step, enter your answer and click
+          <strong>Check Answer</strong>. If your answer is incorrect, a
+          hint, the relevant formula, and then a worked solution appear in
+          sequence. Step&nbsp;2 unlocks after Step&nbsp;1, and Step&nbsp;3
+          unlocks after Step&nbsp;2.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+  <div class="lab-grid">
+
+    <!-- ── Problem statement card ────────────────────────────── -->
+    <section class="problem-card" aria-labelledby="problemHeader">
+      <h2 class="problem-header" id="problemHeader">Problem</h2>
+      <p class="problem-sub">An economy is described by the following
+        macroeconomic variables. One value in each group is missing
+        (shown as <strong>?</strong>) — you will solve for it below.</p>
+
+      <div class="group-label" id="qtGroupLabel">Quantity Theory of Money — %ΔM + %ΔV = π + %ΔY</div>
+      <div class="var-grid" role="group" aria-labelledby="qtGroupLabel">
+        <div class="var-block" id="vM">
+          <div class="label">Money growth %ΔM</div>
+          <div class="value"><span id="vMval">—</span></div>
+        </div>
+        <div class="var-block" id="vV">
+          <div class="label">Velocity growth %ΔV</div>
+          <div class="value"><span id="vVval">—</span></div>
+        </div>
+        <div class="var-block" id="vPi">
+          <div class="label">Inflation π</div>
+          <div class="value"><span id="vPival">—</span></div>
+        </div>
+        <div class="var-block" id="vY">
+          <div class="label">Real output growth %ΔY</div>
+          <div class="value"><span id="vYval">—</span></div>
+        </div>
+      </div>
+
+      <div class="group-label" id="fisherGroupLabel">Fisher Equation — i = r + π</div>
+      <div class="var-grid two-col" role="group" aria-labelledby="fisherGroupLabel">
+        <div class="var-block" id="vI">
+          <div class="label">Nominal interest rate i</div>
+          <div class="value"><span id="vIval">—</span></div>
+        </div>
+        <div class="var-block" id="vR">
+          <div class="label">Real interest rate r</div>
+          <div class="value"><span id="vRval">—</span></div>
+        </div>
+      </div>
+
+      <p class="sr-only" id="problemSummary" aria-live="polite" aria-atomic="true"></p>
+    </section>
+
+    <!-- ── Step 1: Quantity Theory ───────────────────────────── -->
+    <section class="step-card" id="step1Card" aria-labelledby="step1Title">
+      <div class="step-head">
+        <span class="step-num">Step 1</span>
+        <h2 class="step-title" id="step1Title">Quantity Theory of Money</h2>
+        <span class="step-status" id="step1Status" hidden></span>
+      </div>
+      <p class="step-prompt" id="step1Prompt">Solve for the missing variable.</p>
+      <div class="answer-row">
+        <label class="sr-only" for="step1Input">Your answer in percent (Step 1)</label>
+        <input type="text" inputmode="decimal" class="answer-input"
+               id="step1Input" placeholder="e.g. 4" autocomplete="off" />
+        <button class="primary-btn" id="step1Check" type="button">Check Answer</button>
+      </div>
+      <div class="feedback hidden" id="step1Feedback"
+           role="status" aria-live="polite" aria-atomic="true"></div>
+      <div class="disclosure" id="step1Disclosure"
+           aria-live="polite" aria-atomic="false"></div>
+    </section>
+
+    <!-- ── Step 2: Fisher equation ───────────────────────────── -->
+    <section class="step-card locked" id="step2Card" aria-labelledby="step2Title">
+      <div class="step-head">
+        <span class="step-num">Step 2</span>
+        <h2 class="step-title" id="step2Title">Fisher Equation</h2>
+        <span class="step-status locked-badge" id="step2Status">
+          <span aria-hidden="true">🔒</span> Locked
+        </span>
+      </div>
+      <p class="step-prompt" id="step2Prompt">Solve for the missing interest rate.</p>
+      <p class="lock-msg" id="step2LockMsg">
+        <span class="lock-icon" aria-hidden="true">🔒</span>
+        <span>Complete Step 1 to unlock this step.</span>
+      </p>
+      <div class="answer-row hidden" id="step2InputRow">
+        <label class="sr-only" for="step2Input">Your answer in percent (Step 2)</label>
+        <input type="text" inputmode="decimal" class="answer-input"
+               id="step2Input" placeholder="e.g. 6" autocomplete="off" disabled />
+        <button class="primary-btn" id="step2Check" type="button" disabled>Check Answer</button>
+      </div>
+      <div class="feedback hidden" id="step2Feedback"
+           role="status" aria-live="polite" aria-atomic="true"></div>
+      <div class="disclosure" id="step2Disclosure"
+           aria-live="polite" aria-atomic="false"></div>
+    </section>
+
+    <!-- ── Step 3: Conceptual MC ─────────────────────────────── -->
+    <section class="step-card locked" id="step3Card" aria-labelledby="step3Title">
+      <div class="step-head">
+        <span class="step-num">Step 3</span>
+        <h2 class="step-title" id="step3Title">Interpretation</h2>
+        <span class="step-status locked-badge" id="step3Status">
+          <span aria-hidden="true">🔒</span> Locked
+        </span>
+      </div>
+      <p class="step-prompt" id="step3Prompt">Choose the best interpretation.</p>
+      <p class="lock-msg" id="step3LockMsg">
+        <span class="lock-icon" aria-hidden="true">🔒</span>
+        <span>Complete Step 2 to unlock this step.</span>
+      </p>
+      <div class="mc-options hidden" id="step3Options"
+           role="group" aria-label="Interpretation options"></div>
+      <div class="answer-row hidden" id="step3CheckRow" style="margin-top:12px;">
+        <button class="primary-btn" id="step3Check" type="button" disabled>Check Answer</button>
+      </div>
+      <div class="feedback hidden" id="step3Feedback"
+           role="status" aria-live="polite" aria-atomic="true"></div>
+      <div class="disclosure" id="step3Disclosure"
+           aria-live="polite" aria-atomic="false"></div>
+    </section>
+
+    <!-- ── Completion banner + controls ──────────────────────── -->
+    <div class="complete-banner hidden" id="completeBanner"
+         role="status" aria-live="polite" aria-atomic="true">
+      <span class="check" aria-hidden="true">✓</span>
+      <span id="completeText">Lab complete.</span>
+    </div>
+
+    <div class="controls-row">
+      <button class="option-btn" id="newProblemBtn" type="button">New Problem</button>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <span>ECON 105A — Intermediate Macroeconomic Theory</span>
+    <span>interactiveecon.github.io</span>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function () {
+'use strict';
+
+const LAB_ID    = 'inflation-solver';
+const LAB_LABEL = 'Inflation Solver';
+const TOTAL_Q   = 3;
+
+// ── State ─────────────────────────────────────────────────────────
+let _rng = null;
+let prob = null;
+let stepState = null;   // [{attempts, firstAnswer, firstCorrect, locked, hintLevel}, ...]
+let _firstScore = 0;
+// recordQuestion / recordLabDone may be called more than once per step:
+// (a) when the worked solution unlocks the next step, and (b) again if
+// the student then enters the correct answer. Session.recordQuestion
+// overwrites by index, so we don't gate on a "recorded" flag.
+
+// ── DOM ───────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+const $vMval = $('vMval'),   $vVval = $('vVval'),
+      $vPival = $('vPival'), $vYval = $('vYval'),
+      $vIval = $('vIval'),   $vRval = $('vRval');
+const $vM = $('vM'), $vV = $('vV'), $vPi = $('vPi'), $vY = $('vY'),
+      $vI = $('vI'), $vR = $('vR');
+
+const $problemSummary = $('problemSummary');
+
+const $step1Card = $('step1Card'),
+      $step1Prompt = $('step1Prompt'),
+      $step1Input = $('step1Input'),
+      $step1Check = $('step1Check'),
+      $step1Feedback = $('step1Feedback'),
+      $step1Disclosure = $('step1Disclosure'),
+      $step1Status = $('step1Status');
+
+const $step2Card = $('step2Card'),
+      $step2Prompt = $('step2Prompt'),
+      $step2Input = $('step2Input'),
+      $step2Check = $('step2Check'),
+      $step2Feedback = $('step2Feedback'),
+      $step2Disclosure = $('step2Disclosure'),
+      $step2Status = $('step2Status'),
+      $step2LockMsg = $('step2LockMsg'),
+      $step2InputRow = $('step2InputRow');
+
+const $step3Card = $('step3Card'),
+      $step3Prompt = $('step3Prompt'),
+      $step3Options = $('step3Options'),
+      $step3Check = $('step3Check'),
+      $step3CheckRow = $('step3CheckRow'),
+      $step3Feedback = $('step3Feedback'),
+      $step3Disclosure = $('step3Disclosure'),
+      $step3Status = $('step3Status'),
+      $step3LockMsg = $('step3LockMsg');
+
+const $completeBanner = $('completeBanner'),
+      $completeText = $('completeText'),
+      $newProblemBtn = $('newProblemBtn');
+
+// ── RNG ───────────────────────────────────────────────────────────
+function rng()        { return _rng ? _rng() : Math.random(); }
+function pick(arr)    { return arr[Math.floor(rng() * arr.length)]; }
+function randInt(lo, hi){ return lo + Math.floor(rng() * (hi - lo + 1)); }
+
+// ── Conceptual question pool (Step 3) ─────────────────────────────
+// Four short interpretation questions. The correct option's index is
+// stored alongside the option list (pre-shuffle); options are shuffled
+// per problem so position doesn't leak the answer.
+const CONCEPT_POOL = [
+  {
+    id: 'money-neutrality',
+    prompt: 'In the long run, a permanent 3-point rise in money growth %ΔM ' +
+            '(holding %ΔV and %ΔY fixed) primarily raises…',
+    options: [
+      'inflation π',
+      'real output growth %ΔY',
+      'the real interest rate r',
+      'velocity growth %ΔV'
+    ],
+    correctIdx: 0,
+    why: 'The quantity-theory identity %ΔM + %ΔV = π + %ΔY says that ' +
+         'with %ΔV and %ΔY fixed in the long run, a permanent rise in ' +
+         'money growth passes one-for-one into inflation. This is the ' +
+         'long-run neutrality of money: nominal variables move, real ' +
+         'variables do not.'
+  },
+  {
+    id: 'fisher-pass-through',
+    prompt: 'Holding the real interest rate r fixed, a 1-point rise in ' +
+            'expected inflation π raises the nominal interest rate i by…',
+    options: [
+      '0 points',
+      'less than 1 point',
+      'exactly 1 point',
+      'more than 1 point'
+    ],
+    correctIdx: 2,
+    why: 'The Fisher equation i = r + π is linear with a coefficient of ' +
+         '1 on π. Holding r fixed, di/dπ = 1: nominal rates rise one-for-' +
+         'one with inflation. This is sometimes called the "Fisher effect."'
+  },
+  {
+    id: 'output-growth-effect',
+    prompt: 'Real output growth %ΔY rises while %ΔM and %ΔV are unchanged. ' +
+            'The inflation rate π implied by the quantity theory must…',
+    options: [
+      'rise',
+      'fall',
+      'stay the same',
+      'become undefined'
+    ],
+    correctIdx: 1,
+    why: 'Rearranging the identity, π = %ΔM + %ΔV − %ΔY. With %ΔM and ' +
+         '%ΔV unchanged, an increase in %ΔY mechanically lowers π — the ' +
+         'same nominal spending growth now finances faster real growth, ' +
+         'leaving less room for prices to rise.'
+  },
+  {
+    id: 'expost-real-rate',
+    prompt: 'Inflation came in higher than expected. The ex-post real ' +
+            'interest rate (r = i − π) on a fixed-nominal-rate loan is…',
+    options: [
+      'higher than expected',
+      'lower than expected',
+      'unchanged',
+      'undefined'
+    ],
+    correctIdx: 1,
+    why: 'On a loan whose nominal rate i was locked in, an unexpectedly ' +
+         'high π reduces r = i − π. Borrowers gain (they repay in cheaper ' +
+         'dollars); lenders lose. This is the classic "inflation surprise" ' +
+         'redistribution.'
+  },
+  {
+    id: 'velocity-drift',
+    prompt: 'Velocity growth %ΔV unexpectedly turns negative while %ΔM ' +
+            'and %ΔY are unchanged. The inflation rate π implied by the ' +
+            'quantity theory must…',
+    options: [
+      'rise',
+      'fall',
+      'stay the same',
+      'become negative for sure'
+    ],
+    correctIdx: 1,
+    why: 'Rearranging the identity, π = %ΔM + %ΔV − %ΔY. A fall in %ΔV ' +
+         'directly lowers π. Whether π actually goes negative depends on ' +
+         'the magnitudes — option 4 is too strong.'
+  },
+  {
+    id: 'neutrality-mechanism',
+    prompt: 'A permanent rise in money growth raises inflation roughly ' +
+            'one-for-one in the long run because…',
+    options: [
+      'velocity and real output growth are roughly fixed in the long run',
+      'prices are sticky in the long run',
+      'the real interest rate always adjusts to absorb shocks',
+      'the central bank automatically offsets it'
+    ],
+    correctIdx: 0,
+    why: 'Long-run money neutrality rests on the idea that real variables ' +
+         '(%ΔY) and the demand for money (which pins down %ΔV) are not ' +
+         'permanently affected by money growth. With %ΔV and %ΔY fixed, ' +
+         'the identity %ΔM + %ΔV = π + %ΔY forces π to absorb any change ' +
+         'in %ΔM.'
+  },
+  {
+    id: 'real-vs-nominal',
+    prompt: 'Which of the following is best described as a "real" ' +
+            'variable rather than a "nominal" one?',
+    options: [
+      'the inflation rate π',
+      'the nominal interest rate i',
+      'the real interest rate r',
+      'money growth %ΔM'
+    ],
+    correctIdx: 2,
+    why: 'Real variables are measured in units of goods, not dollars. ' +
+         'The real interest rate r = i − π is the inflation-adjusted ' +
+         'return on saving. π, i, and %ΔM are all measured in dollar / ' +
+         'price terms — they are nominal.'
+  },
+  {
+    id: 'disinflation-policy',
+    prompt: 'A central bank wants to lower long-run inflation from 8% ' +
+            'to 2%, with no change in long-run real output growth. The ' +
+            'quantity theory implies it should…',
+    options: [
+      'raise money growth by about 6 points',
+      'lower money growth by about 6 points',
+      'lower the real interest rate r',
+      'raise the nominal interest rate i and hold it there'
+    ],
+    correctIdx: 1,
+    why: 'Long-run neutrality plus the QT identity: holding %ΔV and ' +
+         '%ΔY fixed, π moves one-for-one with %ΔM. Cutting π by 6 ' +
+         'points requires cutting %ΔM by about 6 points.'
+  },
+  {
+    id: 'hyperinflation-cause',
+    prompt: 'A country experiences sustained inflation of about 50% per ' +
+            'year for several years. The quantity theory points to the ' +
+            'most likely proximate cause as…',
+    options: [
+      'very rapid money growth %ΔM',
+      'very fast real output growth %ΔY',
+      'a fall in velocity %ΔV',
+      'a rise in the real interest rate r'
+    ],
+    correctIdx: 0,
+    why: 'π = %ΔM + %ΔV − %ΔY. Sustained inflation of that magnitude ' +
+         'cannot plausibly come from %ΔY or %ΔV — output growth is ' +
+         'bounded, and velocity tends to drift, not surge persistently. ' +
+         'Historically, all sustained high-inflation episodes have been ' +
+         'driven by rapid money growth.'
+  }
+];
+
+// ── Problem generation ────────────────────────────────────────────
+function generateParams() {
+  // Seed the RNG once per page load so the section's seed produces a
+  // deterministic SEQUENCE of problems — each "New Problem" advances
+  // through that sequence rather than restarting it.
+  if (!_rng && window.Session && Session.rngForLab) {
+    _rng = Session.rngForLab(LAB_ID);
+  }
+
+  // Draw realistic macro values (see CLAUDE.md / spec)
+  const pi = randInt(1, 8);
+  const dY = randInt(1, 5);
+  // %ΔV weighted toward zero: pick from a weighted bag
+  const vBag = [-3, -2, -1, -1, 0, 0, 0, 0, 1, 1, 2, 3];
+  const dV = pick(vBag);
+  const dM = pi + dY - dV;        // identity holds exactly
+
+  const r  = randInt(1, 5);
+  const i  = r + pi;              // Fisher holds exactly
+
+  const UK1 = randInt(1, 4);      // which QT variable is hidden
+  const UK2 = randInt(1, 2);      // which Fisher variable is hidden
+
+  // Pick a conceptual question; shuffle its option order
+  const conceptIdx = Math.floor(rng() * CONCEPT_POOL.length);
+  const concept    = CONCEPT_POOL[conceptIdx];
+  const order      = [0, 1, 2, 3];
+  // Fisher-Yates with the seeded rng
+  for (let k = order.length - 1; k > 0; k--) {
+    const j = Math.floor(rng() * (k + 1));
+    [order[k], order[j]] = [order[j], order[k]];
+  }
+  const shuffledOptions = order.map(i => concept.options[i]);
+  const shuffledCorrect = order.indexOf(concept.correctIdx);
+
+  prob = {
+    dM, dV, pi, dY, i, r, UK1, UK2,
+    concept,
+    conceptOptions: shuffledOptions,
+    conceptCorrectIdx: shuffledCorrect
+  };
+
+  // `locked`   = student entered the correct answer (✓ Done badge)
+  // `unlocked` = student may proceed to the next step (locked OR the
+  //              worked solution has been revealed). Lab completion
+  //              requires all steps unlocked, not necessarily locked.
+  // `lastAttempt` = last submitted answer text, used for recording
+  //              when the student moves on without ever getting it right.
+  stepState = [
+    { attempts: 0, firstAnswer: null, firstCorrect: null, locked: false, unlocked: false, hintLevel: 0, lastAttempt: null },
+    { attempts: 0, firstAnswer: null, firstCorrect: null, locked: false, unlocked: false, hintLevel: 0, lastAttempt: null },
+    { attempts: 0, firstAnswer: null, firstCorrect: null, locked: false, unlocked: false, hintLevel: 0, lastAttempt: null, selectedIdx: null }
+  ];
+  _firstScore = 0;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────
+function fmtPct(v) { return v + '%'; }
+function signedNum(v) { return (v >= 0 ? '+' : '') + v; }
+
+// Which variable is hidden in QT (UK1)? Returns the answer the student
+// must produce and the formula expression that solves for it.
+function qtUnknownInfo() {
+  const p = prob;
+  switch (p.UK1) {
+    case 1: return { name: 'Money growth %ΔM', symbol: '%ΔM',
+                     answer: p.dM,
+                     formula: '%ΔM = π + %ΔY − %ΔV',
+                     worked: `%ΔM = ${p.pi} + ${p.dY} − (${p.dV}) = ${p.dM}` };
+    case 2: return { name: 'Velocity growth %ΔV', symbol: '%ΔV',
+                     answer: p.dV,
+                     formula: '%ΔV = π + %ΔY − %ΔM',
+                     worked: `%ΔV = ${p.pi} + ${p.dY} − ${p.dM} = ${p.dV}` };
+    case 3: return { name: 'Inflation π', symbol: 'π',
+                     answer: p.pi,
+                     formula: 'π = %ΔM + %ΔV − %ΔY',
+                     worked: `π = ${p.dM} + (${p.dV}) − ${p.dY} = ${p.pi}` };
+    case 4: return { name: 'Real output growth %ΔY', symbol: '%ΔY',
+                     answer: p.dY,
+                     formula: '%ΔY = %ΔM + %ΔV − π',
+                     worked: `%ΔY = ${p.dM} + (${p.dV}) − ${p.pi} = ${p.dY}` };
+  }
+}
+
+function fisherUnknownInfo() {
+  const p = prob;
+  if (p.UK2 === 1) {
+    return { name: 'Nominal interest rate i', symbol: 'i',
+             answer: p.i,
+             formula: 'i = r + π',
+             worked: `i = ${p.r} + ${p.pi} = ${p.i}` };
+  }
+  return { name: 'Real interest rate r', symbol: 'r',
+           answer: p.r,
+           formula: 'r = i − π',
+           worked: `r = ${p.i} − ${p.pi} = ${p.r}` };
+}
+
+// ── Render problem statement ──────────────────────────────────────
+function renderProblem() {
+  const p = prob;
+
+  // Reset all blocks
+  [$vM, $vV, $vPi, $vY, $vI, $vR].forEach(el => el.classList.remove('unknown'));
+
+  $vMval.textContent  = fmtPct(p.dM);
+  $vVval.textContent  = signedNum(p.dV) + '%';
+  $vPival.textContent = fmtPct(p.pi);
+  $vYval.textContent  = fmtPct(p.dY);
+  $vIval.textContent  = fmtPct(p.i);
+  $vRval.textContent  = fmtPct(p.r);
+
+  const qtInfo = qtUnknownInfo();
+  const fInfo  = fisherUnknownInfo();
+
+  // Hide the QT unknown
+  const qtMap = { 1: [$vM, $vMval], 2: [$vV, $vVval],
+                  3: [$vPi, $vPival], 4: [$vY, $vYval] };
+  const [qtBlock, qtVal] = qtMap[p.UK1];
+  qtBlock.classList.add('unknown');
+  qtVal.textContent = '?';
+
+  // Hide the Fisher unknown
+  const fMap = { 1: [$vI, $vIval], 2: [$vR, $vRval] };
+  const [fBlock, fVal] = fMap[p.UK2];
+  fBlock.classList.add('unknown');
+  fVal.textContent = '?';
+
+  // Step prompts
+  $step1Prompt.innerHTML = 'Find <strong>' + qtInfo.name +
+    '</strong> using the quantity theory identity.';
+  $step2Prompt.innerHTML = 'Now find <strong>' + fInfo.name +
+    '</strong> using the Fisher equation. Use the value of inflation ' +
+    'from Step 1: <strong>π = ' + p.pi + '%</strong>.';
+  $step3Prompt.textContent = p.concept.prompt;
+
+  // SR-only description summarising the whole problem
+  $problemSummary.textContent =
+    `Quantity Theory variables. Money growth: ${p.UK1===1?'unknown':p.dM+' percent'}. ` +
+    `Velocity growth: ${p.UK1===2?'unknown':p.dV+' percent'}. ` +
+    `Inflation: ${p.UK1===3?'unknown':p.pi+' percent'}. ` +
+    `Real output growth: ${p.UK1===4?'unknown':p.dY+' percent'}. ` +
+    `Fisher equation variables. Nominal rate: ${p.UK2===1?'unknown':p.i+' percent'}. ` +
+    `Real rate: ${p.UK2===2?'unknown':p.r+' percent'}.`;
+}
+
+// ── Reset step UI ─────────────────────────────────────────────────
+function resetStepUI() {
+  // Step 1 — unlocked
+  $step1Input.value = '';
+  $step1Input.disabled = false;
+  $step1Input.className = 'answer-input';
+  $step1Check.disabled = false;
+  $step1Feedback.className = 'feedback hidden';
+  $step1Feedback.textContent = '';
+  $step1Disclosure.innerHTML = '';
+  $step1Status.hidden = true;
+  $step1Status.className = 'step-status';
+  $step1Card.classList.remove('locked');
+
+  // Step 2 — locked
+  $step2Input.value = '';
+  $step2Input.disabled = true;
+  $step2Input.className = 'answer-input';
+  $step2Check.disabled = true;
+  $step2Feedback.className = 'feedback hidden';
+  $step2Feedback.textContent = '';
+  $step2Disclosure.innerHTML = '';
+  $step2Status.className = 'step-status locked-badge';
+  $step2Status.innerHTML = '<span aria-hidden="true">🔒</span> Locked';
+  $step2LockMsg.classList.remove('hidden');
+  $step2InputRow.classList.add('hidden');
+  $step2Card.classList.add('locked');
+
+  // Step 3 — locked
+  $step3Options.innerHTML = '';
+  $step3Options.classList.add('hidden');
+  $step3CheckRow.classList.add('hidden');
+  $step3Check.disabled = true;
+  $step3Feedback.className = 'feedback hidden';
+  $step3Feedback.textContent = '';
+  $step3Disclosure.innerHTML = '';
+  $step3Status.className = 'step-status locked-badge';
+  $step3Status.innerHTML = '<span aria-hidden="true">🔒</span> Locked';
+  $step3LockMsg.classList.remove('hidden');
+  $step3Card.classList.add('locked');
+
+  $completeBanner.classList.add('hidden');
+}
+
+// ── Progressive disclosure ────────────────────────────────────────
+// Levels: 1 = hint, 2 = formula, 3 = full worked solution.
+function appendDisclosure($container, level, step) {
+  const panel = document.createElement('div');
+  panel.className = level === 3 ? 'panel solution' : 'panel';
+
+  if (level === 1) {
+    let hint;
+    if (step === 1) {
+      hint = 'Use the quantity theory identity %ΔM + %ΔV = π + %ΔY. ' +
+             'Rearrange to put the unknown on one side and the three ' +
+             'known values on the other.';
+    } else if (step === 2) {
+      hint = 'Use the Fisher equation i = r + π. Inflation π is the value ' +
+             'you found (or were given) in Step 1.';
+    } else {
+      hint = 'Think about what the quantity-theory and Fisher identities ' +
+             'imply when the variables change one at a time, holding the ' +
+             'others fixed.';
+    }
+    panel.innerHTML = '<span class="panel-label">Hint</span>' +
+                      '<div>' + hint + '</div>';
+  }
+  else if (level === 2) {
+    let formula;
+    if (step === 1)      formula = qtUnknownInfo().formula;
+    else if (step === 2) formula = fisherUnknownInfo().formula;
+    else                 formula = 'Apply the identity that links the variable ' +
+                                   'mentioned in the question to the others.';
+    panel.innerHTML = '<span class="panel-label">Formula</span>' +
+                      '<div class="formula">' + formula + '</div>';
+  }
+  else { // level 3 — worked solution
+    if (step === 1) {
+      const qi = qtUnknownInfo();
+      panel.innerHTML = '<span class="panel-label">Worked solution</span>' +
+        '<ol><li>Start from %ΔM + %ΔV = π + %ΔY.</li>' +
+        '<li>Rearrange: <span class="formula">' + qi.formula + '</span></li>' +
+        '<li>Substitute: <span class="formula">' + qi.worked + '</span></li></ol>' +
+        '<div class="answer-line">Answer: ' + qi.symbol + ' = ' + qi.answer + '%</div>';
+    } else if (step === 2) {
+      const fi = fisherUnknownInfo();
+      panel.innerHTML = '<span class="panel-label">Worked solution</span>' +
+        '<ol><li>Start from i = r + π.</li>' +
+        '<li>Rearrange: <span class="formula">' + fi.formula + '</span></li>' +
+        '<li>Substitute: <span class="formula">' + fi.worked + '</span></li></ol>' +
+        '<div class="answer-line">Answer: ' + fi.symbol + ' = ' + fi.answer + '%</div>';
+    } else {
+      const c = prob.concept;
+      const correctText = prob.conceptOptions[prob.conceptCorrectIdx];
+      panel.innerHTML = '<span class="panel-label">Worked solution</span>' +
+        '<div>' + c.why + '</div>' +
+        '<div class="answer-line">Answer: ' + correctText + '</div>';
+      // Also visually mark the correct option in the list — both with
+      // a color class AND a ✓ on the letter circle (WCAG 1.4.1).
+      const optBtns = $step3Options.querySelectorAll('.mc-option');
+      optBtns.forEach((btn, i) => {
+        if (i === prob.conceptCorrectIdx) {
+          btn.classList.add('revealed-correct');
+          const lEl = btn.querySelector('.mc-letter');
+          if (lEl) lEl.textContent = '✓';
+        }
+      });
+    }
+  }
+  $container.appendChild(panel);
+}
+
+function progressiveDisclose(state, $container, stepIdx) {
+  // Up to 3 disclosure levels; ignore further calls past 3.
+  if (state.hintLevel >= 3) return;
+  state.hintLevel += 1;
+  appendDisclosure($container, state.hintLevel, stepIdx);
+}
+
+// ── Record a question result via Session ──────────────────────────
+function recordQuestion(qIndex, qText, firstAnswer, firstCorrect, finalAnswer, finalCorrect) {
+  if (window.Session && Session.recordQuestion) {
+    Session.recordQuestion(LAB_ID, qIndex, qText,
+                           String(firstAnswer), !!firstCorrect,
+                           String(finalAnswer), !!finalCorrect);
+  }
+}
+
+// Called whenever any step transitions (correct, worked-solution-shown,
+// or a post-solution correction). Re-emits the lab summary so the
+// final score and banner always reflect the current state.
+function refreshLabDone() {
+  const allAdvanced = stepState.every(s => s.unlocked);
+  if (!allAdvanced) return;
+  const finalScore = stepState.filter(s => s.locked).length;
+  if (window.Session && Session.recordLabDone) {
+    Session.recordLabDone(LAB_ID, LAB_LABEL, _firstScore, finalScore, TOTAL_Q);
+  }
+  showCompletionBanner(finalScore);
+}
+
+function showCompletionBanner(finalScore) {
+  $completeBanner.classList.remove('hidden');
+  const lead = finalScore === TOTAL_Q ? 'Lab complete.' :
+               'Lab complete — solution revealed on one or more steps.';
+  $completeText.textContent =
+    `${lead} First-attempt score: ${_firstScore} of ${TOTAL_Q}. ` +
+    `Final score: ${finalScore} of ${TOTAL_Q}.`;
+}
+
+// ── Step 1 / Step 2 numeric submission ────────────────────────────
+function submitNumericStep(stepIdx, $input, $check, $feedback, $disclosure,
+                           $status, $card, getInfo, qText, nextUnlocker) {
+  const state = stepState[stepIdx];
+  if (state.locked) return;
+
+  const raw = $input.value.trim();
+  const parsed = Number(raw);
+  if (raw === '' || !isFinite(parsed)) {
+    $feedback.className = 'feedback wrong';
+    $feedback.textContent = 'Please enter a numeric percentage value (for example, 4).';
+    $input.classList.remove('correct');
+    $input.classList.add('wrong');
+    return;
+  }
+
+  state.attempts += 1;
+  const info = getInfo();
+  const correct = parsed === info.answer;
+
+  // Record first attempt info on the first submission only
+  if (state.attempts === 1) {
+    state.firstAnswer  = parsed + '%';
+    state.firstCorrect = correct;
+    if (correct) _firstScore += 1;
+  }
+
+  state.lastAttempt = parsed + '%';
+
+  if (correct) {
+    state.locked   = true;
+    const wasAlreadyUnlocked = state.unlocked;
+    state.unlocked = true;
+    $input.classList.remove('wrong');
+    $input.classList.add('correct');
+    $input.disabled = true;
+    $check.disabled = true;
+    $feedback.className = 'feedback correct';
+    $feedback.innerHTML = '✓ Correct. ' + info.symbol + ' = ' +
+      info.answer + '%.';
+    $status.hidden = false;
+    $status.className = 'step-status done-badge';
+    $status.innerHTML = '<span aria-hidden="true">✓</span> Done';
+    $card.classList.remove('locked');
+    recordQuestion(stepIdx, qText,
+                   state.firstAnswer, state.firstCorrect,
+                   parsed + '%', true);
+    if (!wasAlreadyUnlocked && nextUnlocker) nextUnlocker();
+    refreshLabDone();
+  } else {
+    $input.classList.remove('correct');
+    $input.classList.add('wrong');
+    $feedback.className = 'feedback wrong';
+    $feedback.textContent =
+      '✗ That is not the correct value. See the hint below and try again.';
+    progressiveDisclose(state, $disclosure, stepIdx + 1);
+
+    // If the worked solution has now appeared, unlock the next step so
+    // the student is not blocked. The current step's input stays
+    // active — a later correct submission upgrades the badge to Done.
+    if (state.hintLevel === 3 && !state.unlocked) {
+      state.unlocked = true;
+      $status.hidden = false;
+      $status.className = 'step-status solution-badge';
+      $status.innerHTML = '<span aria-hidden="true">ⓘ</span> Solution shown';
+      recordQuestion(stepIdx, qText,
+                     state.firstAnswer, state.firstCorrect,
+                     state.lastAttempt, false);
+      if (nextUnlocker) nextUnlocker();
+      refreshLabDone();
+    }
+  }
+}
+
+// ── Step 3 (MC) submission ────────────────────────────────────────
+function renderStep3Options() {
+  $step3Options.innerHTML = '';
+  const letters = ['A', 'B', 'C', 'D'];
+  prob.conceptOptions.forEach((text, i) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'mc-option';
+    btn.setAttribute('aria-pressed', 'false');
+    btn.dataset.idx = String(i);
+    btn.innerHTML =
+      '<span class="mc-letter" aria-hidden="true">' + letters[i] + '</span>' +
+      '<span>' + text + '</span>';
+    btn.addEventListener('click', function () {
+      if (stepState[2].locked) return;
+      // Update aria-pressed across the group
+      $step3Options.querySelectorAll('.mc-option').forEach(b => {
+        b.setAttribute('aria-pressed', 'false');
+        b.classList.remove('selected-correct', 'selected-wrong');
+      });
+      btn.setAttribute('aria-pressed', 'true');
+      stepState[2].selectedIdx = i;
+      $step3Check.disabled = false;
+    });
+    $step3Options.appendChild(btn);
+  });
+}
+
+function submitStep3() {
+  const state = stepState[2];
+  if (state.locked) return;
+  if (state.selectedIdx == null) {
+    $step3Feedback.className = 'feedback wrong';
+    $step3Feedback.textContent = 'Please select one of the options.';
+    return;
+  }
+
+  state.attempts += 1;
+  const chosen = state.selectedIdx;
+  const correctIdx = prob.conceptCorrectIdx;
+  const correct = chosen === correctIdx;
+  const chosenText = prob.conceptOptions[chosen];
+
+  if (state.attempts === 1) {
+    state.firstAnswer  = chosenText;
+    state.firstCorrect = correct;
+    if (correct) _firstScore += 1;
+  }
+
+  const btns = $step3Options.querySelectorAll('.mc-option');
+  const letterFor = i => ['A','B','C','D'][i];
+  // Visual mark on the chosen one (color + ✓/✗ symbol so the state is
+  // not conveyed by color alone — WCAG 1.4.1).
+  btns.forEach((b, i) => {
+    b.classList.remove('selected-correct', 'selected-wrong');
+    const lEl = b.querySelector('.mc-letter');
+    if (i === chosen) {
+      b.classList.add(correct ? 'selected-correct' : 'selected-wrong');
+      if (lEl) lEl.textContent = correct ? '✓' : '✗';
+    } else {
+      if (lEl) lEl.textContent = letterFor(i);
+    }
+  });
+
+  state.lastAttempt = chosenText;
+
+  if (correct) {
+    state.locked = true;
+    state.unlocked = true;
+    btns.forEach(b => { b.disabled = true; });
+    $step3Check.disabled = true;
+    $step3Feedback.className = 'feedback correct';
+    $step3Feedback.textContent = '✓ Correct.';
+    $step3Status.className = 'step-status done-badge';
+    $step3Status.innerHTML = '<span aria-hidden="true">✓</span> Done';
+    $step3Card.classList.remove('locked');
+    recordQuestion(2, prob.concept.prompt,
+                   state.firstAnswer, state.firstCorrect,
+                   chosenText, true);
+    refreshLabDone();
+  } else {
+    $step3Feedback.className = 'feedback wrong';
+    $step3Feedback.textContent = '✗ Not quite. See the hint below and try again.';
+    progressiveDisclose(state, $step3Disclosure, 3);
+
+    if (state.hintLevel === 3 && !state.unlocked) {
+      state.unlocked = true;
+      $step3Status.className = 'step-status solution-badge';
+      $step3Status.innerHTML = '<span aria-hidden="true">ⓘ</span> Solution shown';
+      recordQuestion(2, prob.concept.prompt,
+                     state.firstAnswer, state.firstCorrect,
+                     chosenText, false);
+      refreshLabDone();
+    }
+  }
+}
+
+// ── Unlock next step ──────────────────────────────────────────────
+function unlockStep2() {
+  $step2LockMsg.classList.add('hidden');
+  $step2InputRow.classList.remove('hidden');
+  $step2Input.disabled = false;
+  $step2Check.disabled = false;
+  $step2Card.classList.remove('locked');
+  $step2Status.className = 'step-status';
+  $step2Status.innerHTML = '';
+  $step2Status.hidden = true;
+  setTimeout(() => $step2Input.focus(), 60);
+}
+
+function unlockStep3() {
+  $step3LockMsg.classList.add('hidden');
+  $step3Options.classList.remove('hidden');
+  $step3CheckRow.classList.remove('hidden');
+  $step3Card.classList.remove('locked');
+  $step3Status.className = 'step-status';
+  $step3Status.innerHTML = '';
+  $step3Status.hidden = true;
+  renderStep3Options();
+}
+
+// ── Event wiring ──────────────────────────────────────────────────
+$step1Check.addEventListener('click', function () {
+  submitNumericStep(
+    0, $step1Input, $step1Check, $step1Feedback, $step1Disclosure,
+    $step1Status, $step1Card, qtUnknownInfo,
+    'Quantity Theory of Money — solve for ' + qtUnknownInfo().name,
+    unlockStep2
+  );
+});
+
+$step2Check.addEventListener('click', function () {
+  submitNumericStep(
+    1, $step2Input, $step2Check, $step2Feedback, $step2Disclosure,
+    $step2Status, $step2Card, fisherUnknownInfo,
+    'Fisher Equation — solve for ' + fisherUnknownInfo().name,
+    unlockStep3
+  );
+});
+
+$step3Check.addEventListener('click', submitStep3);
+
+[$step1Input, $step2Input].forEach(inp => {
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (inp === $step1Input) $step1Check.click();
+      else                     $step2Check.click();
+    }
+  });
+});
+
+$newProblemBtn.addEventListener('click', function () {
+  const anyAttemptInProgress = stepState && stepState.some(
+    s => s.attempts > 0 && !s.unlocked
+  );
+  if (anyAttemptInProgress) {
+    const ok = window.confirm(
+      'You have unfinished attempts in progress. ' +
+      'Starting a new problem will discard your first-attempt record for ' +
+      'the steps you have not yet completed. Continue?'
+    );
+    if (!ok) return;
+  }
+  startNewProblem();
+});
+
+function startNewProblem() {
+  generateParams();
+  renderProblem();
+  resetStepUI();
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+function init() {
+  startNewProblem();
+}
+
+DiscussionModal.init({
+  weekLabel: 'Inflation Solver',
+  onReady: function () { init(); }
+});
+
+})();
+</script>
+</body>
+</html>

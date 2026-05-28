@@ -1,0 +1,1000 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Deriving Aggregate Demand — ECON 105A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;            /* 6.4:1 on white (WCAG AA ✓) — active curve */
+      --good:#155c38;              /* 7.7:1 on white (WCAG AA ✓) */
+      --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+      /* Snapshot ink — neutral gray for the pinned (history) lines. */
+      --snap:#596878;              /* 5.85:1 on white (WCAG AA ✓) */
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ─────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Layout — controls left, charts right */
+    .lab-container{max-width:1160px;margin:0 auto;padding:18px;}
+    .lab-grid{display:grid;grid-template-columns:340px 1fr;gap:18px;align-items:start;}
+    @media(max-width:900px){.lab-grid{grid-template-columns:1fr;}
+      .right-col{order:-1;}}
+
+    .left-col{display:grid;gap:14px;}
+    .right-col{display:grid;gap:14px;}
+
+    /* Card shells */
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;
+          padding:16px;box-shadow:var(--shadow);}
+    .card-title{font-size:0.75rem;text-transform:uppercase;letter-spacing:.08em;
+      color:var(--accent);font-weight:800;margin-bottom:10px;}
+
+    /* Model display */
+    .model-row{font-size:0.875rem;color:var(--ink-2);line-height:1.9;
+      font-family:var(--font-sans);}
+    .model-row i{font-style:italic;font-family:var(--font-serif);}
+    .model-row sub, .model-row sup{font-size:0.75em;}
+    .model-row .lbl{display:inline-block;min-width:42px;font-weight:700;
+      color:var(--ink);}
+    .frac{display:inline-flex;flex-direction:column;vertical-align:-0.45em;
+      text-align:center;margin:0 2px;line-height:1.05;}
+    .frac .num{border-bottom:1.5px solid currentColor;padding:0 4px;}
+    .frac .den{padding:0 4px;}
+    .mp-readout{margin-top:10px;padding:8px 12px;background:rgba(246,242,234,.55);
+      border:1px solid var(--line);border-radius:10px;font-size:0.8125rem;
+      color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums;}
+
+    /* Slider card */
+    .slider-head{display:flex;justify-content:space-between;align-items:baseline;
+      margin-bottom:10px;}
+    .slider-head .p-value{
+      font-size:1.5rem;font-weight:800;color:var(--accent);
+      font-variant-numeric:tabular-nums;font-family:var(--font-sans);
+    }
+    .slider-head .p-value i{font-style:italic;font-family:var(--font-serif);
+      font-weight:700;color:var(--ink);font-size:1.125rem;margin-right:4px;}
+    .slider-hint{font-size:0.6875rem;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.07em;font-weight:700;}
+
+    .price-slider{
+      -webkit-appearance:none;appearance:none;
+      width:100%;height:8px;border-radius:999px;
+      background:linear-gradient(90deg,var(--accent) 0%,var(--accent) var(--fill,100%),var(--line-2) var(--fill,100%),var(--line-2) 100%);
+      outline:none;border:none;margin:8px 0 4px;cursor:pointer;
+    }
+    .price-slider::-webkit-slider-thumb{
+      -webkit-appearance:none;appearance:none;
+      width:22px;height:22px;border-radius:50%;
+      background:var(--accent);border:3px solid #fff;
+      box-shadow:0 1px 4px rgba(17,24,39,.25);cursor:grab;
+    }
+    .price-slider::-webkit-slider-thumb:active{cursor:grabbing;}
+    .price-slider::-moz-range-thumb{
+      width:22px;height:22px;border-radius:50%;
+      background:var(--accent);border:3px solid #fff;
+      box-shadow:0 1px 4px rgba(17,24,39,.25);cursor:grab;
+    }
+    .slider-ticks{
+      display:flex;justify-content:space-between;align-items:center;
+      font-size:0.625rem;color:var(--muted);font-weight:700;
+      font-variant-numeric:tabular-nums;padding:0 2px;margin-top:2px;
+    }
+
+    /* Snapshots panel */
+    .snap-row{margin-top:14px;display:flex;align-items:center;gap:6px;
+      flex-wrap:wrap;}
+    .snap-label{font-size:0.6875rem;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.07em;font-weight:700;
+      margin-right:4px;}
+    .snap-chip{
+      display:inline-flex;align-items:center;gap:4px;
+      padding:3px 8px;border-radius:999px;
+      background:rgba(89,104,120,.10);border:1px solid rgba(89,104,120,.32);
+      color:var(--ink);font-size:0.6875rem;font-weight:800;
+      font-variant-numeric:tabular-nums;
+    }
+    .snap-chip .letter{color:var(--snap);}
+    .snap-empty{color:var(--muted);font-size:0.75rem;font-style:italic;}
+
+    .reset-row{margin-top:14px;display:flex;justify-content:flex-end;}
+    .ghost-btn{
+      padding:6px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:transparent;
+      color:var(--ink-2);font-family:var(--font-sans);
+      font-size:0.75rem;font-weight:700;cursor:pointer;transition:background .12s;
+    }
+    .ghost-btn:hover{background:rgba(0,0,0,.04);}
+
+    /* Insight panel */
+    .insight-body{font-size:0.875rem;color:var(--ink-2);line-height:1.65;}
+    .insight-body p{margin:0 0 8px;}
+    .insight-body strong{color:var(--ink);}
+    .insight-body p:last-child{margin-bottom:0;}
+    .eq-pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+    .eq-pill{
+      font-size:0.75rem;font-weight:800;padding:4px 10px;border-radius:999px;
+      border:1.5px solid #8c7f72;background:var(--panel);color:var(--ink);
+      font-variant-numeric:tabular-nums;
+    }
+
+    /* Graph cards */
+    .graph-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;
+      padding:16px;box-shadow:var(--shadow);}
+    .graph-head{display:flex;justify-content:space-between;align-items:baseline;
+      gap:10px;margin-bottom:10px;}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin:0;}
+    .graph-hint{font-size:0.75rem;color:var(--muted);}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;overflow:hidden;
+      background:rgba(246,242,234,.45);border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+    .canvas-wrap.mm{aspect-ratio:16/9;}
+    .canvas-wrap.islm{aspect-ratio:16/10;}
+    .canvas-wrap.ad{aspect-ratio:16/9;}
+
+    /* Legend — non-color cues (solid = active, dashed = pinned snapshot) */
+    .legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;
+      font-size:0.75rem;color:var(--ink-2);}
+    .legend-row{display:flex;align-items:center;gap:6px;}
+    .legend-line{width:26px;height:0;border-top:2.5px solid currentColor;flex-shrink:0;}
+    .legend-line.dashed{border-top-style:dashed;}
+
+    /* Footer */
+    footer{margin-top:32px;}
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+      font-size:0.75rem;color:var(--muted);padding-top:12px;
+      border-top:1px solid var(--line);margin-top:24px;}
+  </style>
+</head>
+<body>
+
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105a/">← ECON 105A Home</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105A — Aggregate Demand</div>
+      <h1>Deriving Aggregate Demand</h1>
+      <p class="sub">
+        Drag the price level <i>P</i> from high to low and watch how the LM
+        curve shifts, the IS-LM equilibrium moves, and a new point pins on
+        the AD curve every two units of <i>P</i>.
+      </p>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>The economy is fixed — the only thing you change is the price
+          level <strong><i>P</i></strong>.</p>
+          <ol>
+            <li>The slider starts at <strong><i>P</i> = 10</strong> and the
+                first snapshot (point A) is already pinned.</li>
+            <li><strong>Drag the slider down.</strong> Each time <i>P</i>
+                drops by two (to 8, 6, 4, 2), a new labeled snapshot (B, C,
+                D, E) is pinned. On the money market and IS-LM panels, the
+                corresponding MS and LM lines stay drawn in gray with the
+                point's letter. On the AD panel, the labeled (<i>Y</i>,
+                <i>P</i>) point appears.</li>
+            <li>The smooth AD curve is drawn underneath the snapshot dots
+                from the start — as you drag, you watch the equilibrium
+                move along it.</li>
+            <li>When the slider reaches <strong><i>P</i> = 2</strong>, all
+                five snapshots are pinned and the lab is complete.</li>
+          </ol>
+          <p><strong>Key idea:</strong> Each pinned point is a full IS-LM
+          equilibrium for a particular value of <i>P</i>. The AD curve is
+          the locus of all such equilibria as <i>P</i> varies — the
+          hyperbola <i>Y</i> = α + β/<i>P</i>.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-container">
+  <div class="lab-grid">
+
+    <!-- LEFT COLUMN -->
+    <div class="left-col">
+
+      <!-- Model display -->
+      <div class="card" aria-labelledby="modelTitle">
+        <div class="card-title" id="modelTitle">The Economy</div>
+        <div class="model-row eq">
+          <div><span class="lbl">IS:</span> <i>r</i> = <span id="alphaISVal">—</span> − <span id="betaISVal">—</span> · <i>Y</i></div>
+          <div><span class="lbl">LM:</span> <i>r</i> = <span class="frac"><span class="num"><span id="mdyVal">—</span></span><span class="den"><span id="mdrVal">—</span></span></span> · <i>Y</i> − <span class="frac"><span class="num"><span id="mVal">—</span></span><span class="den"><span id="mdrVal2">—</span>·<i>P</i></span></span></div>
+        </div>
+        <div class="mp-readout" id="mpReadout" aria-live="polite" aria-atomic="true">
+          <i>M</i>/<i>P</i> = —
+        </div>
+      </div>
+
+      <!-- Slider card -->
+      <div class="card">
+        <div class="card-title" id="priceSliderLabel">Price Level Slider</div>
+        <div class="slider-head">
+          <div class="p-value" id="pValue"><i>P</i> = 10.0</div>
+          <span class="slider-hint">drag down</span>
+        </div>
+        <input type="range"
+               class="price-slider"
+               id="pSlider"
+               min="2" max="10" step="0.1" value="10"
+               aria-labelledby="priceSliderLabel"
+               aria-valuemin="2" aria-valuemax="10" aria-valuenow="10"/>
+        <div class="slider-ticks" aria-hidden="true">
+          <span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+          <span>7</span><span>8</span><span>9</span><span>10</span>
+        </div>
+
+        <!-- Snapshots pinned so far -->
+        <div class="snap-row" id="snapRow" aria-live="polite" aria-atomic="true">
+          <span class="snap-label">Snapshots:</span>
+          <span class="snap-empty" id="snapEmpty">none yet</span>
+        </div>
+
+        <div class="reset-row">
+          <button class="ghost-btn" id="resetBtn">Reset</button>
+        </div>
+      </div>
+
+      <!-- Insight panel -->
+      <div class="card">
+        <div class="card-title">What's happening</div>
+        <div class="insight-body" id="insightBody" aria-live="polite" aria-atomic="true"></div>
+        <div class="eq-pills" id="eqPills" aria-live="polite" aria-atomic="true"></div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="right-col">
+
+      <div class="graph-card">
+        <div class="graph-head">
+          <div class="graph-title" id="mmTitle">Money Market</div>
+          <span class="graph-hint">Vertical line: real money supply <i>M</i>/<i>P</i>. Downward line: money demand at current <i>Y</i>.</span>
+        </div>
+        <div class="canvas-wrap mm">
+          <canvas id="mmCanvas"
+                  role="img"
+                  aria-labelledby="mmTitle"
+                  aria-describedby="mmDesc"></canvas>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span class="legend-row" style="color:var(--accent);"><span class="legend-line"></span> Active at current <i>P</i></span>
+          <span class="legend-row" style="color:var(--snap);"><span class="legend-line dashed"></span> Pinned snapshot (A, B, C, …)</span>
+        </div>
+      </div>
+
+      <div class="graph-card">
+        <div class="graph-head">
+          <div class="graph-title" id="islmTitle">IS-LM</div>
+          <span class="graph-hint">IS is fixed; LM shifts as <i>P</i> changes.</span>
+        </div>
+        <div class="canvas-wrap islm">
+          <canvas id="islmCanvas"
+                  role="img"
+                  aria-labelledby="islmTitle"
+                  aria-describedby="islmDesc"></canvas>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span class="legend-row" style="color:var(--accent);"><span class="legend-line"></span> Active LM</span>
+          <span class="legend-row" style="color:var(--snap);"><span class="legend-line dashed"></span> Pinned LM snapshots</span>
+        </div>
+      </div>
+
+      <div class="graph-card">
+        <div class="graph-head">
+          <div class="graph-title" id="adTitle">Aggregate Demand</div>
+          <span class="graph-hint" id="adHint">Drag the slider to trace the AD curve.</span>
+        </div>
+        <div class="canvas-wrap ad">
+          <canvas id="adCanvas"
+                  role="img"
+                  aria-labelledby="adTitle"
+                  aria-describedby="adDesc"></canvas>
+        </div>
+      </div>
+
+      <!-- Live region for canvas descriptions (WCAG 1.1.1 + 4.1.3) -->
+      <section class="sr-only" id="canvasDescs" aria-live="polite" aria-atomic="true">
+        <p id="mmDesc">Money market diagram loading.</p>
+        <p id="islmDesc">IS-LM diagram loading.</p>
+        <p id="adDesc">Aggregate demand diagram loading.</p>
+      </section>
+
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="lab-container">
+    <div class="footer-inner">
+      <span>ECON 105A — Aggregate Demand</span>
+      <span>Hosted on GitHub Pages</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+// ─────────────────────────────────────────────────────────────────────────
+// Sample week-template entry (paste into a discussion week's LABS array):
+//   { id: 'aggregate-demand-derivation', name: 'Deriving Aggregate Demand', icon: '📊',
+//     desc: 'Trace the AD curve by dragging the price level from high to low.',
+//     url: '/classes/econ105a/labs/aggregate-demand-derivation/?disc=1' }
+// ─────────────────────────────────────────────────────────────────────────
+const LAB_ID    = 'aggregate-demand-derivation';
+const LAB_LABEL = 'Deriving Aggregate Demand';
+
+// ── Model parameters (fixed) ─────────────────────────────────────────────
+const c0 = 100, MPC = 0.75, c1 = 0, I0 = 150, I1 = 30,
+      G  = 50,  T   = 50,    M  = 650,  MDY = 3, MDR = 30;
+
+// Derived AD coefficients: Y = α + β/P
+const Anum     = c0 - MPC*T + I0 + G;           // 262.5
+const c1I1     = c1 + I1;                       // 30
+const oneMinus = 1 - MPC;                       // 0.25
+const Dconst   = MDR*oneMinus + c1I1*MDY;       // 97.5
+const alpha    = (MDR * Anum) / Dconst;         // 80.769
+const beta     = (c1I1 * M) / Dconst;           // 200
+const alphaIS  = Anum / c1I1;                   // 8.75
+const betaIS   = oneMinus / c1I1;               // 0.00833
+
+// ── Slider + snapshot config ─────────────────────────────────────────────
+const P_MAX = 10, P_MIN = 2, P_STEP = 0.1;
+const SNAP_DP = 2;                              // pin every 2 units of P
+// Snapshot P values (high to low) — letters assigned in order they are pinned.
+const SNAP_VALUES = [];
+for(let P = P_MAX; P >= P_MIN - 1e-6; P -= SNAP_DP) SNAP_VALUES.push(Math.round(P));
+// → [10, 8, 6, 4, 2]
+const TOTAL_SNAPS = SNAP_VALUES.length;          // 5
+const LETTERS = 'ABCDEFGHIJKLMNOP'.split('');
+
+// ── State ────────────────────────────────────────────────────────────────
+let _rng = null;
+let _fs  = 1;
+let currentP = P_MAX;
+let snapshots = [];      // [{P, letter}], pinned in order
+let _doneFired = false;
+
+// ── Plot ranges (fixed, sized for full P sweep with margin) ──────────────
+const RANGE_Y  = 220;    // Y at P=2 is 180.77 → 220 axis with margin
+const RANGE_r  = 12;     // r in [6.4, 8.0] over the sweep → 0-12 axis
+const RANGE_MP = 360;    // M/P at P=2 is 325 → 360 axis
+const AD_YMAX  = 240;
+const AD_PMAX  = 10.5;
+
+// ── DOM ──────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const $slider = $('pSlider');
+const $pValue = $('pValue');
+
+// ── Utilities ────────────────────────────────────────────────────────────
+function fmt2(v){ return Number(v).toFixed(2); }
+function fmt1(v){ return Number(v).toFixed(1); }
+
+function equilibrium(P){
+  const Y = alpha + beta / P;
+  const r = alphaIS - betaIS * Y;
+  const MP = M / P;
+  return { Y, r, MP };
+}
+
+// ── Model display ────────────────────────────────────────────────────────
+function renderModel(){
+  $('alphaISVal').textContent = fmt2(alphaIS);
+  $('betaISVal').textContent  = (Math.round(betaIS*10000)/10000).toFixed(4);
+  $('mdyVal').textContent     = String(MDY);
+  $('mdrVal').textContent     = String(MDR);
+  $('mdrVal2').textContent    = String(MDR);
+  $('mVal').textContent       = String(M);
+}
+
+function updateMPReadout(){
+  $('mpReadout').innerHTML =
+    `<i>M</i>/<i>P</i> at <i>P</i> = ${fmt1(currentP)} = ` +
+    `${M} / ${fmt1(currentP)} = <strong>${fmt2(M/currentP)}</strong>`;
+}
+
+// ── Slider visuals (gradient fill matches value) ─────────────────────────
+function updateSliderFill(){
+  const pct = ((currentP - P_MIN) / (P_MAX - P_MIN)) * 100;
+  $slider.style.setProperty('--fill', pct + '%');
+}
+
+// ── Snapshot chips ───────────────────────────────────────────────────────
+function renderSnapshots(){
+  const $row = $('snapRow');
+  $row.innerHTML = '<span class="snap-label">Snapshots:</span>';
+  if(snapshots.length === 0){
+    $row.innerHTML += '<span class="snap-empty">none yet</span>';
+    return;
+  }
+  for(const s of snapshots){
+    $row.insertAdjacentHTML('beforeend',
+      `<span class="snap-chip"><span class="letter">${s.letter}</span> <i>P</i>=${s.P}</span>`);
+  }
+}
+
+// ── Insight panel ────────────────────────────────────────────────────────
+function updateInsight(){
+  const eq = equilibrium(currentP);
+  const MPv = M / currentP;
+  const n = snapshots.length;
+
+  let html = '';
+
+  // Always-present current-state paragraph.
+  html += `<p>At <strong><i>P</i> = ${fmt1(currentP)}</strong>, real money ` +
+          `balances are <i>M</i>/<i>P</i> = ${fmt2(MPv)}. ` +
+          `The money market clears at the LM curve's current position. ` +
+          `The IS-LM equilibrium gives <i>Y</i> = ${fmt2(eq.Y)} and ` +
+          `<i>r</i> = ${fmt2(eq.r)}.</p>`;
+
+  // Mechanism paragraph — what's happening as P moves.
+  if(currentP >= P_MAX - 0.05){
+    html += `<p>This is the high-<i>P</i> end of the sweep. ` +
+            `<strong>Drag the slider down</strong>: real money balances ` +
+            `will rise, the LM curve will shift <em>down</em>, output ` +
+            `will rise, and a new point will pin on the AD curve every ` +
+            `two units of <i>P</i>.</p>`;
+  } else if(n < TOTAL_SNAPS){
+    const remaining = TOTAL_SNAPS - n;
+    html += `<p>As <i>P</i> falls, <i>M</i>/<i>P</i> rises, the LM curve ` +
+            `shifts <em>down</em>, and the IS-LM equilibrium moves down ` +
+            `and to the right along IS — higher <i>Y</i>, lower <i>r</i>. ` +
+            `That's what makes the AD curve slope down. ` +
+            `<strong>${remaining}</strong> snapshot${remaining===1?'':'s'} ` +
+            `to go.</p>`;
+  } else {
+    html += `<p><strong>All five snapshots pinned.</strong> The AD curve ` +
+            `is the hyperbola <i>Y</i> = α + β/<i>P</i>; for this economy, ` +
+            `α = ${fmt2(alpha)} and β = ${fmt2(beta)}. Notice the curve ` +
+            `is downward-sloping but visibly <strong>curved</strong>, not ` +
+            `linear — this is the form you derive algebraically in the ` +
+            `Aggregate Demand Solver lab.</p>`;
+  }
+
+  $('insightBody').innerHTML = html;
+
+  $('eqPills').innerHTML =
+    `<span class="eq-pill"><i>P</i> = ${fmt1(currentP)}</span>` +
+    `<span class="eq-pill"><i>Y</i> = ${fmt2(eq.Y)}</span>` +
+    `<span class="eq-pill"><i>r</i> = ${fmt2(eq.r)}</span>` +
+    `<span class="eq-pill"><i>M</i>/<i>P</i> = ${fmt2(MPv)}</span>`;
+}
+
+function updateADHint(){
+  const n = snapshots.length;
+  $('adHint').textContent =
+    n === 0 ? 'Drag the slider to start tracing the AD curve.' :
+    n < TOTAL_SNAPS ? `${n} of ${TOTAL_SNAPS} snapshots pinned — keep dragging.` :
+                      'All five snapshots pinned — the AD curve is fully traced.';
+}
+
+// ── Canvas helpers ───────────────────────────────────────────────────────
+const PAD = { l:54, r:18, t:18, b:46 };
+
+function setupCanvas(canvas, wrap){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  const W = Math.round(rect.width * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+function makeCoords(W, H, dpr, xMax, yMax){
+  const p = { l:PAD.l*dpr, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  return {
+    xC: x => p.l + (x / xMax) * PW,
+    yC: y => H - p.b - (y / yMax) * PH,
+    p, PW, PH,
+  };
+}
+
+function tickStep(mx){
+  if(mx<=10) return 1; if(mx<=20) return 2; if(mx<=50) return 5;
+  if(mx<=100) return 10; if(mx<=200) return 20; if(mx<=500) return 50;
+  return 100;
+}
+
+function drawAxes(ctx, co, W, H, dpr, xMax, yMax, xLabel, yLabel){
+  const { p } = co;
+
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillRect(p.l, p.t, co.PW, co.PH);
+
+  ctx.fillStyle = '#596878';
+  ctx.font = `400 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  const yStep = tickStep(yMax);
+  for(let y = 0; y <= yMax + 1e-6; y += yStep){
+    const py = co.yC(y);
+    ctx.strokeStyle = '#e7dfd2'; ctx.lineWidth = 1 * dpr;
+    ctx.beginPath(); ctx.moveTo(p.l, py); ctx.lineTo(W - p.r, py); ctx.stroke();
+    ctx.fillStyle = '#596878';
+    ctx.fillText(String(y), p.l - 5*dpr, py);
+  }
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  const xStep = tickStep(xMax);
+  for(let x = 0; x <= xMax + 1e-6; x += xStep){
+    const px = co.xC(x);
+    ctx.strokeStyle = '#e7dfd2'; ctx.lineWidth = 1 * dpr;
+    ctx.beginPath(); ctx.moveTo(px, p.t); ctx.lineTo(px, H - p.b); ctx.stroke();
+    ctx.fillStyle = '#596878';
+    ctx.fillText(String(x), px, H - p.b + 5*dpr);
+  }
+
+  ctx.strokeStyle = '#374151'; ctx.lineWidth = 1.2 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(p.l, p.t); ctx.lineTo(p.l, H - p.b); ctx.lineTo(W - p.r, H - p.b);
+  ctx.stroke();
+
+  ctx.fillStyle = '#374151';
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText(xLabel, p.l + co.PW/2, H - 8*dpr);
+  ctx.save();
+  ctx.translate(12*dpr, p.t + co.PH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(yLabel, 0, 0);
+  ctx.restore();
+}
+
+function clipPlot(ctx, co, W, H){
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(co.p.l, co.p.t, W - co.p.l - co.p.r, H - co.p.t - co.p.b);
+  ctx.clip();
+}
+function unclip(ctx){ ctx.restore(); }
+
+function strokeLine(ctx, x1, y1, x2, y2, color, width, dpr, dash){
+  ctx.save();
+  ctx.strokeStyle = color; ctx.lineWidth = width * dpr;
+  ctx.setLineDash((dash || []).map(d => d * dpr));
+  ctx.beginPath();
+  ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawDot(ctx, x, y, color, r, dpr){
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.5 * dpr;
+  ctx.beginPath();
+  ctx.arc(x, y, r * dpr, 0, Math.PI*2);
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+function drawLetter(ctx, x, y, text, color, dpr, size){
+  size = size || 12;
+  ctx.save();
+  ctx.font = `800 ${Math.round(size * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 3.5*dpr;
+  ctx.strokeText(text, x + 9*dpr, y - 9*dpr);
+  ctx.fillStyle = color;
+  ctx.fillText(text, x + 9*dpr, y - 9*dpr);
+  ctx.restore();
+}
+
+// ── Money market panel ───────────────────────────────────────────────────
+function drawMM(){
+  const canvas = $('mmCanvas');
+  const wrap = canvas.parentNode;
+  const s = setupCanvas(canvas, wrap);
+  if(!s) return;
+  const { ctx, dpr, W, H } = s;
+  ctx.clearRect(0, 0, W, H);
+
+  const co = makeCoords(W, H, dpr, RANGE_MP, RANGE_r);
+  drawAxes(ctx, co, W, H, dpr, RANGE_MP, RANGE_r,
+           'Real money balances M/P', 'Interest rate r');
+
+  clipPlot(ctx, co, W, H);
+
+  // Snapshot ghosts first (so active draws on top)
+  for(const snap of snapshots){
+    const eq = equilibrium(snap.P);
+    // Vertical money supply
+    strokeLine(ctx, co.xC(eq.MP), co.yC(0),
+                    co.xC(eq.MP), co.yC(RANGE_r),
+                    '#596878', 1.4, dpr, [5,4]);
+    // Money demand at the snapshot's Y
+    const r0 = (MDY*eq.Y - 0) / MDR;
+    const r1 = (MDY*eq.Y - RANGE_MP) / MDR;
+    strokeLine(ctx, co.xC(0), co.yC(r0),
+                    co.xC(RANGE_MP), co.yC(r1),
+                    '#596878', 1.4, dpr, [5,4]);
+    // Marker + letter
+    const px = co.xC(eq.MP), py = co.yC(eq.r);
+    drawDot(ctx, px, py, '#596878', 4, dpr);
+    drawLetter(ctx, px, py, snap.letter, '#1f2937', dpr, 11);
+  }
+
+  // Active state
+  const eq = equilibrium(currentP);
+  strokeLine(ctx, co.xC(eq.MP), co.yC(0),
+                  co.xC(eq.MP), co.yC(RANGE_r),
+                  '#2f5d7c', 2.6, dpr);
+  const r0a = (MDY*eq.Y - 0) / MDR;
+  const r1a = (MDY*eq.Y - RANGE_MP) / MDR;
+  strokeLine(ctx, co.xC(0), co.yC(r0a),
+                  co.xC(RANGE_MP), co.yC(r1a),
+                  '#2f5d7c', 2.6, dpr);
+  const pxA = co.xC(eq.MP), pyA = co.yC(eq.r);
+  drawDot(ctx, pxA, pyA, '#2f5d7c', 6.5, dpr);
+
+  unclip(ctx);
+
+  // MS / MD labels for active curve
+  ctx.fillStyle = '#2f5d7c';
+  ctx.font = `700 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  if(co.xC(eq.MP) + 4*dpr < W - PAD.r*dpr){
+    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillText('MS', co.xC(eq.MP) + 4*dpr, co.yC(RANGE_r*0.95));
+  }
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText('MD', co.xC(RANGE_MP*0.04), co.yC(MDY*eq.Y/MDR) + 4*dpr);
+}
+
+// ── IS-LM panel ──────────────────────────────────────────────────────────
+function drawISLM(){
+  const canvas = $('islmCanvas');
+  const wrap = canvas.parentNode;
+  const s = setupCanvas(canvas, wrap);
+  if(!s) return;
+  const { ctx, dpr, W, H } = s;
+  ctx.clearRect(0, 0, W, H);
+
+  const co = makeCoords(W, H, dpr, RANGE_Y, RANGE_r);
+  drawAxes(ctx, co, W, H, dpr, RANGE_Y, RANGE_r, 'Output Y', 'Interest rate r');
+
+  clipPlot(ctx, co, W, H);
+
+  // IS curve (fixed)
+  const isR0 = alphaIS - betaIS * 0;
+  const isR1 = alphaIS - betaIS * RANGE_Y;
+  strokeLine(ctx, co.xC(0), co.yC(isR0),
+                  co.xC(RANGE_Y), co.yC(isR1),
+                  '#374151', 2.2, dpr);
+
+  // Snapshot LMs (faded, dashed)
+  for(const snap of snapshots){
+    const eq = equilibrium(snap.P);
+    const rL0 = (MDY*0       - M/snap.P) / MDR;
+    const rL1 = (MDY*RANGE_Y - M/snap.P) / MDR;
+    strokeLine(ctx, co.xC(0), co.yC(rL0),
+                    co.xC(RANGE_Y), co.yC(rL1),
+                    '#596878', 1.5, dpr, [5,4]);
+    const px = co.xC(eq.Y), py = co.yC(eq.r);
+    drawDot(ctx, px, py, '#596878', 4, dpr);
+    drawLetter(ctx, px, py, snap.letter, '#1f2937', dpr, 11);
+  }
+
+  // Active LM + equilibrium
+  const eq = equilibrium(currentP);
+  const rL0a = (MDY*0       - M/currentP) / MDR;
+  const rL1a = (MDY*RANGE_Y - M/currentP) / MDR;
+  strokeLine(ctx, co.xC(0), co.yC(rL0a),
+                  co.xC(RANGE_Y), co.yC(rL1a),
+                  '#2f5d7c', 2.6, dpr);
+
+  // Active projection lines
+  const pxA = co.xC(eq.Y), pyA = co.yC(eq.r);
+  strokeLine(ctx, pxA, pyA, pxA, co.yC(0), '#374151', 1.2, dpr, [4,4]);
+  strokeLine(ctx, pxA, pyA, co.xC(0), pyA, '#374151', 1.2, dpr, [4,4]);
+  drawDot(ctx, pxA, pyA, '#2f5d7c', 6.5, dpr);
+
+  unclip(ctx);
+
+  // IS / LM labels
+  ctx.fillStyle = '#374151';
+  ctx.font = `700 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  const isRatLabel = alphaIS - betaIS * RANGE_Y * 0.92;
+  ctx.fillText('IS', co.xC(RANGE_Y*0.92) - 2*dpr, co.yC(isRatLabel) + 4*dpr);
+
+  ctx.fillStyle = '#2f5d7c';
+  const lmRatLabel = (MDY*RANGE_Y*0.92 - M/currentP) / MDR;
+  if(lmRatLabel > 0 && lmRatLabel < RANGE_r){
+    ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillText('LM', co.xC(RANGE_Y*0.92) + 2*dpr, co.yC(lmRatLabel) - 2*dpr);
+  }
+}
+
+// ── AD panel ─────────────────────────────────────────────────────────────
+function drawAD(){
+  const canvas = $('adCanvas');
+  const wrap = canvas.parentNode;
+  const s = setupCanvas(canvas, wrap);
+  if(!s) return;
+  const { ctx, dpr, W, H } = s;
+  ctx.clearRect(0, 0, W, H);
+
+  const co = makeCoords(W, H, dpr, AD_YMAX, AD_PMAX);
+  drawAxes(ctx, co, W, H, dpr, AD_YMAX, AD_PMAX, 'Output Y', 'Price level P');
+
+  clipPlot(ctx, co, W, H);
+
+  // Continuous AD curve underneath (faint until all pinned, then darker)
+  const allPinned = (snapshots.length === TOTAL_SNAPS);
+  ctx.save();
+  ctx.strokeStyle = allPinned ? 'rgba(47,93,124,0.70)' : 'rgba(47,93,124,0.28)';
+  ctx.lineWidth = (allPinned ? 2.6 : 2.0) * dpr;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  const N = 220, Pstart = 0.7;
+  let started = false;
+  for(let i = 0; i <= N; i++){
+    const Pv = Pstart + (AD_PMAX - Pstart) * (i / N);
+    const Yv = alpha + beta / Pv;
+    if(Yv < 0 || Yv > AD_YMAX) { started = false; continue; }
+    const px = co.xC(Yv), py = co.yC(Pv);
+    if(!started){ ctx.moveTo(px, py); started = true; }
+    else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  // Snapshot dots (gray)
+  for(const snap of snapshots){
+    const Y = alpha + beta / snap.P;
+    const px = co.xC(Y), py = co.yC(snap.P);
+    drawDot(ctx, px, py, '#596878', 5, dpr);
+    drawLetter(ctx, px, py, snap.letter, '#1f2937', dpr, 12);
+  }
+
+  // Active dot (bright, on top)
+  const eq = equilibrium(currentP);
+  const pxA = co.xC(eq.Y), pyA = co.yC(currentP);
+  // Projections to axes
+  strokeLine(ctx, pxA, pyA, pxA, co.yC(0), '#374151', 1.2, dpr, [4,4]);
+  strokeLine(ctx, pxA, pyA, co.xC(0), pyA, '#374151', 1.2, dpr, [4,4]);
+  drawDot(ctx, pxA, pyA, '#2f5d7c', 7, dpr);
+
+  unclip(ctx);
+
+  // AD label near lower-right
+  if(allPinned){
+    const labelP = 1.4;
+    const labelY = alpha + beta / labelP;
+    if(labelY <= AD_YMAX){
+      ctx.fillStyle = '#2f5d7c';
+      ctx.font = `800 ${Math.round(12 * dpr * _fs)}px "Inter",sans-serif`;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText('AD', co.xC(labelY) + 6*dpr, co.yC(labelP));
+    }
+  }
+}
+
+// ── Canvas descriptions (WCAG 1.1.1 + 4.1.3) ─────────────────────────────
+function updateDescs(){
+  const eq = equilibrium(currentP);
+  const snapList = snapshots.map(s => {
+    const e = equilibrium(s.P);
+    return `${s.letter} (P=${s.P}, Y=${fmt2(e.Y)}, r=${fmt2(e.r)})`;
+  }).join('; ');
+
+  $('mmDesc').textContent =
+    `Money market diagram. Horizontal axis: real money balances M/P, 0 to ${RANGE_MP}. ` +
+    `Vertical axis: interest rate r, 0 to ${RANGE_r}. ` +
+    `Active state at P = ${fmt1(currentP)}: vertical money supply at M/P = ${fmt2(eq.MP)} ` +
+    `meets downward money demand at r = ${fmt2(eq.r)}, with Y = ${fmt2(eq.Y)}. ` +
+    (snapshots.length
+      ? `Pinned snapshots (dashed gray): ${snapList}.`
+      : `No snapshots pinned yet.`);
+
+  $('islmDesc').textContent =
+    `IS-LM diagram. Horizontal axis: output Y, 0 to ${RANGE_Y}. ` +
+    `Vertical axis: interest rate r, 0 to ${RANGE_r}. ` +
+    `IS is fixed: r = ${fmt2(alphaIS)} − ${(Math.round(betaIS*10000)/10000).toFixed(4)}·Y. ` +
+    `Active LM at P = ${fmt1(currentP)} gives equilibrium Y = ${fmt2(eq.Y)}, r = ${fmt2(eq.r)}. ` +
+    (snapshots.length
+      ? `Pinned LM snapshots (dashed gray): ${snapList}. Higher P shifts LM up; lower P shifts LM down.`
+      : `Drag the slider to pin LM snapshots.`);
+
+  $('adDesc').textContent =
+    `Aggregate demand diagram. Horizontal axis: output Y, 0 to ${AD_YMAX}. ` +
+    `Vertical axis: price level P, 0 to ${AD_PMAX}. ` +
+    `The full AD curve Y = ${fmt2(alpha)} + ${fmt2(beta)}/P is drawn. ` +
+    `Active equilibrium at P = ${fmt1(currentP)}: Y = ${fmt2(eq.Y)}. ` +
+    (snapshots.length
+      ? `Pinned points: ${snapList}.`
+      : `Drag the slider to pin labeled points along the curve.`) +
+    (snapshots.length === TOTAL_SNAPS
+      ? ` All five snapshots pinned — the curve is fully traced.`
+      : ` ${TOTAL_SNAPS - snapshots.length} more to pin.`);
+}
+
+// ── Master redraw ────────────────────────────────────────────────────────
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  drawMM();
+  drawISLM();
+  drawAD();
+  updateDescs();
+}
+
+// ── Session recording ────────────────────────────────────────────────────
+function maybeRecordDone(){
+  if(_doneFired) return;
+  if(snapshots.length !== TOTAL_SNAPS) return;
+  _doneFired = true;
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(LAB_ID, 0,
+      'Trace the AD curve by dragging P from 10 down to 2',
+      'all snapshots pinned', true,
+      'all snapshots pinned', true);
+  }
+  if(window.Session && Session.recordLabDone){
+    Session.recordLabDone(LAB_ID, LAB_LABEL, 1, 1, 1);
+  }
+}
+
+// ── Snapshot pinning logic ───────────────────────────────────────────────
+function maybePinSnapshots(){
+  // Pin every integer P that hasn't been pinned yet AND has currentP ≤ that P.
+  // SNAP_VALUES is [10, 9, 8, ..., 2] in pinning order.
+  while(snapshots.length < TOTAL_SNAPS){
+    const nextP = SNAP_VALUES[snapshots.length];
+    if(currentP <= nextP + 1e-6){
+      snapshots.push({ P: nextP, letter: LETTERS[snapshots.length] });
+    } else {
+      break;
+    }
+  }
+}
+
+// ── Slider input ─────────────────────────────────────────────────────────
+function onSliderInput(){
+  currentP = parseFloat($slider.value);
+  $slider.setAttribute('aria-valuenow', currentP.toFixed(1));
+  maybePinSnapshots();
+  $pValue.innerHTML = `<i>P</i> = ${fmt1(currentP)}`;
+  updateSliderFill();
+  updateMPReadout();
+  renderSnapshots();
+  updateInsight();
+  updateADHint();
+  redraw();
+  maybeRecordDone();
+}
+
+$slider.addEventListener('input', onSliderInput);
+
+// ── Reset ────────────────────────────────────────────────────────────────
+$('resetBtn').addEventListener('click', () => {
+  currentP = P_MAX;
+  snapshots = [];
+  $slider.value = String(P_MAX);
+  $slider.setAttribute('aria-valuenow', P_MAX.toFixed(1));
+  // Re-pin the initial snapshot (A at P=10) since we start there.
+  maybePinSnapshots();
+  $pValue.innerHTML = `<i>P</i> = ${fmt1(currentP)}`;
+  updateSliderFill();
+  updateMPReadout();
+  renderSnapshots();
+  updateInsight();
+  updateADHint();
+  redraw();
+  // Note: do NOT clear _doneFired — the lab-done event fires once per session.
+});
+
+// ── Resize ───────────────────────────────────────────────────────────────
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────
+function init(){
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+  renderModel();
+  // Pin snapshot A at the starting position so the user has an anchor.
+  maybePinSnapshots();
+  updateSliderFill();
+  updateMPReadout();
+  renderSnapshots();
+  updateInsight();
+  updateADHint();
+  redraw();
+  setTimeout(redraw, 80);
+}
+init();
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Aggregate Demand Prediction — ECON 105A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea;  --panel:#ffffff;
+      --ink:#1f2937;    --ink-2:#374151;  --muted:#596878;
+      --line:#e7dfd2;   --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;
+      --bad:#b42318;
+      --amber:#8c4800;  /* 6.3:1 on white, for status notes */
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1200px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:10px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Main layout */
+    .lab-wrap{max-width:1200px;margin:0 auto;padding:18px;}
+    .lab-grid{display:grid;grid-template-columns:1.15fr 0.85fr;gap:16px;align-items:start;}
+    @media(max-width:980px){.lab-grid{grid-template-columns:1fr;}}
+
+    .left-col, .right-col{display:grid;gap:14px;}
+
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;
+      padding:16px;box-shadow:var(--shadow);}
+    .card-title{font-size:0.75rem;text-transform:uppercase;letter-spacing:.08em;
+      color:var(--accent);font-weight:800;margin-bottom:10px;}
+
+    /* Top bar inside left col */
+    .topbar{display:flex;justify-content:space-between;align-items:center;
+      gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+    .counter{font-size:0.75rem;color:var(--muted);font-weight:800;
+      text-transform:uppercase;letter-spacing:.07em;}
+    .counter strong{color:var(--ink);font-size:0.875rem;}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+    /* Buttons */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+    .primary-btn{padding:10px 18px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.8125rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover{background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* Scenario card */
+    .scen-stamp{font-size:0.6875rem;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:6px;}
+    .scen-head{font-weight:900;color:var(--ink);font-size:1rem;line-height:1.3;
+      font-family:var(--font-serif);}
+    .scen-brief{margin-top:8px;color:var(--ink-2);font-size:0.8125rem;line-height:1.55;}
+    .scen-steps{margin-top:10px;font-size:0.75rem;color:var(--muted);line-height:1.55;}
+
+    /* Predictions */
+    .pred-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+    @media(max-width:600px){.pred-grid{grid-template-columns:1fr;}}
+    .pred-block{border:1px solid var(--line);border-radius:14px;padding:10px;
+      background:rgba(246,242,234,.45);}
+    .pred-block .ttl{font-weight:900;color:var(--ink);font-size:0.8125rem;margin-bottom:8px;
+      font-family:var(--font-serif);}
+    .pred-row{display:grid;grid-template-columns:1fr;gap:6px;}
+    .pred-row select{
+      width:100%;padding:7px 9px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-weight:700;color:var(--ink);font-size:0.75rem;
+      font-family:var(--font-sans);}
+    .pred-status{margin-top:10px;border-top:1px solid var(--line);padding-top:10px;
+      color:var(--ink-2);font-size:0.8125rem;line-height:1.55;
+      display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap;}
+    .pred-status #predStatus{white-space:pre-line;flex:1 1 200px;min-width:0;}
+
+    /* Sliders */
+    .sliders{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    @media(max-width:600px){.sliders{grid-template-columns:1fr;}}
+    .slider-cell{border:1px solid var(--line);border-radius:12px;padding:10px;
+      background:rgba(246,242,234,.40);}
+    .slider-cell label{display:block;font-size:0.6875rem;
+      text-transform:uppercase;letter-spacing:.08em;color:var(--muted);
+      margin-bottom:6px;font-weight:700;}
+    .slider-cell .row{display:flex;justify-content:space-between;align-items:center;
+      gap:10px;font-variant-numeric:tabular-nums;color:var(--ink);
+      font-weight:800;font-size:0.8125rem;margin-bottom:6px;}
+    input[type="range"]{width:100%;}
+    input[type="range"]:disabled{opacity:.5;cursor:not-allowed;}
+
+    /* Mechanism */
+    .mech-head{display:flex;justify-content:space-between;align-items:center;
+      gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+    .slots{display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+      padding:10px;border-radius:12px;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);min-height:54px;}
+    .slot{min-width:96px;height:34px;border-radius:999px;
+      border:1.5px dashed #8c7f72;background:var(--panel);
+      display:flex;align-items:center;justify-content:center;
+      font-weight:800;color:var(--muted);font-size:0.75rem;
+      padding:0 10px;user-select:none;cursor:pointer;}
+    .slot.filled{border-style:solid;color:var(--ink);
+      background:rgba(47,93,124,.07);border-color:var(--accent);}
+    .arrow-tok{font-weight:900;color:var(--muted);padding:0 4px;user-select:none;}
+    .pool-wrap{margin-top:10px;}
+    .pool-group{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);
+      display:grid;gap:6px;}
+    .pool-group:first-child{margin-top:0;padding-top:0;border-top:0;}
+    .pool-hdr{font-size:0.6875rem;text-transform:uppercase;letter-spacing:.07em;
+      color:var(--muted);font-weight:700;}
+    .pool{display:flex;flex-wrap:wrap;gap:6px;}
+    .pill{padding:0 10px;height:24px;line-height:24px;
+      display:inline-flex;align-items:center;
+      border-radius:999px;border:1.5px solid #8c7f72;
+      background:var(--panel);color:var(--ink);font-weight:800;
+      font-size:0.75rem;user-select:none;cursor:grab;white-space:nowrap;
+      font-family:var(--font-sans);}
+    .pill:active{cursor:grabbing;}
+    .pill.kb-selected{outline:3px solid var(--accent);outline-offset:2px;
+      background:rgba(47,93,124,.10);}
+    .mech-status{margin-top:10px;border-top:1px solid var(--line);padding-top:10px;
+      color:var(--ink-2);font-size:0.8125rem;line-height:1.55;display:flex;gap:8px;
+      align-items:center;flex-wrap:wrap;}
+    .mech-badge{display:inline-block;padding:3px 10px;border-radius:999px;
+      font-weight:800;font-size:0.6875rem;text-transform:uppercase;letter-spacing:.06em;}
+    .mech-badge.ok{background:rgba(21,92,56,.12);color:var(--good);border:1px solid var(--good);}
+    .mech-badge.bad{background:rgba(180,35,24,.10);color:var(--bad);border:1px solid var(--bad);}
+
+    /* Graphs */
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:14px;box-shadow:var(--shadow);}
+    .graph-head{display:flex;justify-content:space-between;align-items:baseline;
+      gap:10px;margin-bottom:8px;}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin:0;}
+    .graph-hint{font-size:0.6875rem;color:var(--muted);}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;overflow:hidden;
+      background:rgba(246,242,234,.45);border:1px solid var(--line);
+      aspect-ratio:16/10;}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+    .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;
+      font-size:0.6875rem;color:var(--ink-2);}
+    .legend-row{display:flex;align-items:center;gap:6px;}
+    .legend-line{width:24px;height:0;border-top:2.5px solid currentColor;flex-shrink:0;}
+    .legend-line.dashed{border-top-style:dashed;}
+
+    /* Running score readout */
+    .score-readout{margin-left:10px;font-weight:700;color:var(--good);
+      font-size:0.75rem;letter-spacing:0;text-transform:none;}
+    .score-readout:empty{display:none;}
+
+    /* Footer */
+    footer{margin-top:24px;}
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;
+      gap:8px;font-size:0.75rem;color:var(--muted);padding-top:12px;
+      border-top:1px solid var(--line);max-width:1200px;margin:0 auto;padding-left:18px;padding-right:18px;}
+    .hidden{display:none!important;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105a/">← ECON 105A Home</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105A — Aggregate Demand</div>
+      <h1>Aggregate Demand Prediction</h1>
+      <p class="sub">
+        Predict what shifts (or moves along) IS, LM, and AD. Then build the
+        mechanism through the money market and test it using the unlocked
+        slider.
+      </p>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>Each scenario follows the same six steps. Practice as many as you like.</p>
+          <ol>
+            <li><strong>Read the headline.</strong> A news-style scenario describes a shock to one of <strong>G</strong>, <strong>T</strong>, <strong>c<sub>0</sub></strong>, <strong>I<sub>0</sub></strong>, <strong>P</strong>, or <strong>M</strong>.</li>
+            <li><strong>Predict</strong> what happens to <strong>IS</strong>, <strong>LM</strong>, and <strong>AD</strong> — choose <em>shift</em> vs <em>move along</em> and the direction for each. Click <strong>Check predictions</strong>.</li>
+            <li><strong>Build the mechanism.</strong> Drag pills into the slots in the correct causal order (or use the keyboard: Tab to a pill, Enter or Space to select, then Tab to a slot and Enter or Space to place; Delete or Backspace to remove). Click <strong>Check mechanism</strong>.</li>
+            <li><strong>Sliders</strong> are locked until you check your predictions. The app then unlocks only the <em>correct</em> slider, and only in the <em>correct direction</em>, so you can <em>see</em> what actually happens.</li>
+            <li>Move the unlocked slider in the allowed direction to <strong>reveal</strong> the new equilibrium on all three diagrams.</li>
+            <li>Click <strong>New Scenario</strong> for another. Your running score updates after each scenario is fully checked.</li>
+          </ol>
+          <p><strong>Scoring:</strong> Each completed scenario is worth 2 points: 1 for predictions (all three correct on the first try) and 1 for the mechanism (chain exactly correct on the first try). The session records your cumulative score so you can stop whenever you like.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+  <div class="lab-grid">
+
+    <!-- LEFT COLUMN -->
+    <div class="left-col">
+
+      <div class="card">
+        <div class="topbar">
+          <div class="counter" aria-live="polite" aria-atomic="true">
+            Scenario <strong id="counterText">—</strong>
+            <span id="scoreReadout" class="score-readout"></span>
+          </div>
+          <div class="actions">
+            <button id="newBtn" class="primary-btn">New Scenario</button>
+            <button id="resetBtn" class="option-btn">Reset</button>
+          </div>
+        </div>
+        <div class="scen-stamp" id="scenStamp" aria-live="polite"></div>
+        <div class="scen-head" id="scenHead" aria-live="polite">Click “New Scenario” to start.</div>
+        <div class="scen-brief" id="scenBrief"></div>
+        <div class="scen-steps" id="scenSteps"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Predictions</div>
+        <div class="pred-grid">
+          <div class="pred-block">
+            <div class="ttl">IS</div>
+            <div class="pred-row">
+              <select id="isAction" aria-label="IS: shift or move along">
+                <option value="">Action…</option>
+                <option value="shift">Shift</option>
+                <option value="move">Move along</option>
+              </select>
+              <select id="isDir" aria-label="IS: direction">
+                <option value="">Direction…</option>
+              </select>
+            </div>
+          </div>
+          <div class="pred-block">
+            <div class="ttl">LM</div>
+            <div class="pred-row">
+              <select id="lmAction" aria-label="LM: shift or move along">
+                <option value="">Action…</option>
+                <option value="shift">Shift</option>
+                <option value="move">Move along</option>
+              </select>
+              <select id="lmDir" aria-label="LM: direction">
+                <option value="">Direction…</option>
+              </select>
+            </div>
+          </div>
+          <div class="pred-block">
+            <div class="ttl">AD</div>
+            <div class="pred-row">
+              <select id="adAction" aria-label="AD: shift or move along">
+                <option value="">Action…</option>
+                <option value="shift">Shift</option>
+                <option value="move">Move along</option>
+              </select>
+              <select id="adDir" aria-label="AD: direction">
+                <option value="">Direction…</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="topbar" style="margin-top:10px;">
+          <div></div>
+          <div class="actions">
+            <button id="checkPredBtn" class="primary-btn">Check predictions</button>
+            <button id="whyPredBtn" class="option-btn">Why?</button>
+          </div>
+        </div>
+        <div class="pred-status" id="predStatusWrap" aria-live="polite" aria-atomic="true">
+          <span id="predBadge" class="mech-badge" hidden></span>
+          <span id="predStatus"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Sliders</div>
+        <div class="sliders">
+          <div class="slider-cell">
+            <label for="Gslider">Government purchases (G)</label>
+            <div class="row"><span><i>G</i></span><span id="Gdisp">—</span></div>
+            <input id="Gslider" type="range" min="30" max="70" step="1" value="50" disabled>
+          </div>
+          <div class="slider-cell">
+            <label for="Tslider">Taxes (T)</label>
+            <div class="row"><span><i>T</i></span><span id="Tdisp">—</span></div>
+            <input id="Tslider" type="range" min="20" max="80" step="1" value="50" disabled>
+          </div>
+          <div class="slider-cell">
+            <label for="Cslider">Consumption (c<sub>0</sub>)</label>
+            <div class="row"><span><i>c</i><sub>0</sub></span><span id="Cdisp">—</span></div>
+            <input id="Cslider" type="range" min="60" max="140" step="1" value="100" disabled>
+          </div>
+          <div class="slider-cell">
+            <label for="Islider">Investment (I<sub>0</sub>)</label>
+            <div class="row"><span><i>I</i><sub>0</sub></span><span id="Idisp">—</span></div>
+            <input id="Islider" type="range" min="90" max="210" step="1" value="150" disabled>
+          </div>
+          <div class="slider-cell">
+            <label for="Pslider">Price level (P)</label>
+            <div class="row"><span><i>P</i></span><span id="Pdisp">—</span></div>
+            <input id="Pslider" type="range" min="2" max="8" step="0.1" value="5" disabled>
+          </div>
+          <div class="slider-cell">
+            <label for="Mslider">Money supply (M)</label>
+            <div class="row"><span><i>M</i></span><span id="Mdisp">—</span></div>
+            <input id="Mslider" type="range" min="455" max="845" step="1" value="650" disabled>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="mech-head">
+          <div class="card-title" style="margin-bottom:0;">Build the mechanism</div>
+          <div class="actions">
+            <button id="checkMechBtn" class="primary-btn">Check mechanism</button>
+            <button id="clearMechBtn" class="option-btn">Clear</button>
+          </div>
+        </div>
+        <div class="slots" id="slots" role="group" aria-label="Mechanism steps"></div>
+        <div class="pool-wrap"><div id="poolGroups"></div></div>
+        <div class="mech-status" id="mechStatusWrap" aria-live="polite" aria-atomic="true">
+          <span id="mechBadge" class="mech-badge" hidden></span>
+          <span id="mechMsg"></span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="right-col">
+
+      <div class="graph-card">
+        <div class="graph-head">
+          <div class="graph-title" id="mmTitle">Money Market</div>
+          <span class="graph-hint">Dashed = baseline, solid = current (after reveal)</span>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="mmCanvas" role="img"
+            aria-labelledby="mmTitle" aria-describedby="mmDesc"></canvas>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span class="legend-row" style="color:var(--accent);">
+            <span class="legend-line dashed"></span> Baseline</span>
+          <span class="legend-row" style="color:var(--good);">
+            <span class="legend-line"></span> Current</span>
+        </div>
+      </div>
+
+      <div class="graph-card">
+        <div class="graph-head">
+          <div class="graph-title" id="islmTitle">IS-LM</div>
+          <span class="graph-hint">Dashed = baseline, solid = current (after reveal)</span>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="islmCanvas" role="img"
+            aria-labelledby="islmTitle" aria-describedby="islmDesc"></canvas>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span class="legend-row" style="color:var(--accent);">
+            <span class="legend-line dashed"></span> Baseline</span>
+          <span class="legend-row" style="color:var(--good);">
+            <span class="legend-line"></span> Current</span>
+        </div>
+      </div>
+
+      <div class="graph-card">
+        <div class="graph-head">
+          <div class="graph-title" id="adTitle">Aggregate Demand</div>
+          <span class="graph-hint">Dashed = baseline, solid = current (after reveal)</span>
+        </div>
+        <div class="canvas-wrap">
+          <canvas id="adCanvas" role="img"
+            aria-labelledby="adTitle" aria-describedby="adDesc"></canvas>
+        </div>
+      </div>
+
+      <section class="sr-only" id="graphsDesc" aria-live="polite" aria-atomic="true">
+        <p id="mmDesc">Money market diagram loading.</p>
+        <p id="islmDesc">IS-LM diagram loading.</p>
+        <p id="adDesc">Aggregate demand diagram loading.</p>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <span>ECON 105A — Aggregate Demand</span>
+    <span>Hosted on GitHub Pages</span>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>

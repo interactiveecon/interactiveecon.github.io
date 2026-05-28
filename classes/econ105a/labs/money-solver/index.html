@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Money Solver — ECON 105A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+  <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;  --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ─────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Buttons */
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:none;border-radius:12px;font-family:var(--font-sans);font-size:0.875rem;font-weight:700;cursor:pointer;transition:background .12s;}
+    .btn.primary{background:var(--accent);color:#fff;}
+    .btn.primary:hover:not(:disabled){background:#264d68;}
+    .btn.primary:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* Layout */
+    .lab-container{max-width:960px;margin:0 auto;padding:18px;}
+
+    /* Problem card */
+    .problem-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow);margin-bottom:14px;}
+    .problem-header{font-family:var(--font-serif);font-size:1.25rem;font-weight:700;color:var(--ink);margin:0 0 6px;}
+    .problem-sub{font-size:0.8125rem;color:var(--muted);margin:0 0 14px;line-height:1.5;}
+    .param-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+    @media(max-width:640px){.param-grid{grid-template-columns:1fr;}}
+    .param{background:rgba(246,242,234,.55);border:1px solid var(--line);border-radius:12px;padding:9px 13px;}
+    .param .label{font-size:0.6875rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px;}
+    .param .value{font-size:0.9375rem;font-weight:700;color:var(--ink);}
+    .problem-task{margin-top:12px;font-size:0.875rem;color:var(--ink-2);line-height:1.55;}
+
+    /* Step cards */
+    .step-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);margin-bottom:12px;}
+    .step-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+    .step-num{display:inline-block;font-size:0.625rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);background:rgba(47,93,124,.08);border:1px solid rgba(47,93,124,.18);border-radius:6px;padding:2px 7px;margin-bottom:4px;}
+    .step-title{font-size:0.9375rem;font-weight:700;color:var(--ink);line-height:1.3;}
+    .step-instruction{font-size:0.8125rem;color:var(--ink-2);line-height:1.55;margin:8px 0 0;}
+
+    /* Action buttons row — border #8c7f72 = 3.5:1 on white (WCAG 1.4.11 ✓) */
+    .step-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+    .step-btn{flex-shrink:0;padding:6px 12px;border:1.5px solid #8c7f72;background:rgba(47,93,124,.06);color:var(--accent);border-radius:10px;font-size:0.75rem;font-weight:700;font-family:var(--font-sans);cursor:pointer;transition:background .12s,border-color .12s;white-space:nowrap;}
+    .step-btn:hover:not(:disabled){background:rgba(47,93,124,.14);border-color:var(--accent);}
+    .step-btn:disabled{opacity:.55;cursor:not-allowed;}
+    .step-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+    .step-btn.primary:hover:not(:disabled){background:#264d68;}
+    .step-btn.done{background:rgba(21,92,56,.08);border-color:rgba(21,92,56,.3);color:var(--good);}
+
+    /* Entry area */
+    .entry-area{margin-top:12px;padding:10px 12px;background:rgba(246,242,234,.5);border:1px solid var(--line);border-radius:12px;}
+    .entry-row{display:flex;align-items:center;flex-wrap:wrap;gap:5px;font-size:0.9375rem;font-weight:600;color:var(--ink);line-height:2.2;}
+    .entry-row + .entry-row{margin-top:4px;}
+    .entry-sym{color:var(--ink-2);white-space:nowrap;font-size:0.9375rem;}
+
+    /* Inline number inputs — border #8c7f72 = 3.5:1 on white (WCAG 1.4.11 ✓) */
+    .fi{width:100px;padding:4px 6px;border:1.5px solid #8c7f72;border-radius:8px;font-size:0.9375rem;font-family:var(--font-sans);font-weight:700;text-align:center;background:#fff;color:var(--ink);outline:none;transition:border-color .12s,background .12s;}
+    .fi.wide{width:120px;}
+    .fi:focus{border-color:var(--accent);}
+    .fi.correct{border-color:var(--good);background:rgba(21,92,56,.06);}
+    .fi.wrong{border-color:var(--bad);background:rgba(180,35,24,.06);}
+    .fi:disabled{background:rgba(246,242,234,.9);color:var(--muted);cursor:not-allowed;}
+
+    /* Feedback — role="status" region, announced by AT */
+    .entry-fb{margin-top:8px;padding:7px 11px;border-radius:10px;font-size:0.8125rem;font-weight:600;line-height:1.4;animation:fadeSlide .18s ease;}
+    .entry-fb.correct{background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.2);color:var(--good);}
+    .entry-fb.wrong{background:rgba(180,35,24,.06);border:1px solid rgba(180,35,24,.2);color:var(--bad);}
+
+    /* Revealed content */
+    .step-hint{margin-top:10px;padding:9px 13px;background:rgba(47,93,124,.04);border:1px solid rgba(47,93,124,.14);border-radius:12px;animation:fadeSlide .2s ease;font-size:0.8125rem;color:var(--ink-2);line-height:1.55;}
+    .step-formula{margin-top:8px;padding:9px 13px;background:rgba(47,93,124,.06);border:1px solid rgba(47,93,124,.2);border-radius:12px;animation:fadeSlide .2s ease;}
+    .step-answer{margin-top:8px;padding:11px 13px;background:rgba(21,92,56,.05);border:1px solid rgba(21,92,56,.2);border-radius:12px;animation:fadeSlide .2s ease;}
+    .reveal-label{font-size:0.625rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin-bottom:6px;}
+    .reveal-label.good{color:var(--good);}
+    .step-formula .formula-content,
+    .step-answer .answer-content{font-size:0.8125rem;line-height:1.85;color:var(--ink);overflow-x:auto;}
+    .katex-line{display:block;}
+
+    @keyframes fadeSlide{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+    .hidden{display:none !important;}
+
+    /* Lab-done banner */
+    .lab-done-banner{margin-top:14px;padding:14px 18px;border-radius:14px;
+      background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.25);
+      color:var(--ink);font-size:0.875rem;line-height:1.55;}
+    .lab-done-banner .banner-title{font-family:var(--font-serif);font-size:1.125rem;font-weight:700;color:var(--good);margin:0 0 6px;}
+    .lab-done-banner .banner-score{margin:6px 0 0;font-size:0.8125rem;color:var(--ink-2);}
+
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+  </style>
+</head>
+<body>
+
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105a/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105A — Money</div>
+      <h1>Money Solver</h1>
+      <p class="sub">
+        Compute the money multiplier, money supply, currency, deposits, and
+        reserves from the three primitives of the money-supply model: the
+        monetary base, the currency-deposit ratio, and the reserve-deposit
+        ratio.
+      </p>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>In this lab, you will practice computing the money supply from its
+          three primitives: the monetary base, the currency-deposit ratio, and
+          the reserve-deposit ratio. You'll see how a small monetary base can
+          create a much larger money supply through fractional-reserve banking.</p>
+          <p>You will be asked to answer the following questions:</p>
+          <ol>
+            <li><strong>Money multiplier.</strong> Compute
+                <em>m</em> from <em>cr</em> and <em>rr</em>.</li>
+            <li><strong>Money supply.</strong> Combine the multiplier
+                with the monetary base to find <em>M</em>.</li>
+            <li><strong>Currency.</strong> Use <em>M</em> and the
+                currency-deposit ratio to find <em>C</em>.</li>
+            <li><strong>Deposits.</strong> Find <em>D</em>, the part
+                of the money supply that is not currency.</li>
+            <li><strong>Reserves.</strong> Find <em>R</em>, the amount
+                that banks keep on hand rather than lending out.</li>
+          </ol>
+          <p>For each step, enter your answer and click
+          <strong>Check Answer</strong>. If your answer is incorrect, a
+          conceptual <strong>Hint</strong>, the relevant <strong>Formula</strong>,
+          and a full worked <strong>Solution</strong> become available in turn.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-container">
+
+  <div class="problem-card">
+    <h2 class="problem-header">Problem</h2>
+    <p class="problem-sub">
+      Suppose the economy has the following parameters:
+    </p>
+    <div class="param-grid" id="paramGrid"></div>
+    <p class="problem-task">
+      Solve for the money multiplier (<em>m</em>), the money supply
+      (<em>M</em>), the currency held by the public (<em>C</em>), total
+      deposits (<em>D</em>), and reserves held by banks (<em>R</em>).
+    </p>
+  </div>
+
+  <div id="stepsContainer"></div>
+
+  <div id="labDoneBanner" class="lab-done-banner hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+    <button class="btn primary" id="newProblemBtn">New Problem</button>
+    <button class="btn primary" id="downloadPdfBtn" style="background:#8c7f72;">Download Summary PDF</button>
+  </div>
+
+</main>
+
+<footer style="margin-top:32px;">
+  <div class="lab-container">
+    <div class="footer-inner">
+      <span>ECON 105A — Intermediate Macroeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // LAB_ID:    money-solver
+  // LAB_LABEL: Money Solver
+  // URL:       /classes/econ105a/labs/money-solver/?disc=1
+  //
+  // Week-template entry:
+  // { id: 'money-solver', name: 'Money Solver', icon: '💵',
+  //   desc: 'Compute the money multiplier, money supply, currency, deposits, and reserves.',
+  //   url: '/classes/econ105a/labs/money-solver/?disc=1' }
+  // ─────────────────────────────────────────────────────────────────────────
+  const LAB_ID      = 'money-solver';
+  const LAB_LABEL   = 'Money Solver';
+  const WEEK_LABEL  = 'Money';
+  const SESSION_KEY = 'econ002_session';
+  const TOTAL_STEPS = 5;
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let _rng = null;
+  let params = {};   // {B, cr, rr}
+  let comp   = {};   // {m, M, C, D, R}
+  const stepMeta     = Array.from({length:TOTAL_STEPS}, () => ({s:'check', usedReveal:false}));
+  const firstAttempt = Array(TOTAL_STEPS).fill(true);
+  const firstCorrect = Array(TOTAL_STEPS).fill(false);
+  const firstAnsText = Array(TOTAL_STEPS).fill('—');
+  const stepDone     = Array(TOTAL_STEPS).fill(false);
+  let _steps = [];
+  let _labDoneFired = false;
+
+  // ── DOM ────────────────────────────────────────────────────────────────────
+  const $paramGrid = document.getElementById('paramGrid');
+  const $steps     = document.getElementById('stepsContainer');
+  const $banner    = document.getElementById('labDoneBanner');
+  // ── Utilities ──────────────────────────────────────────────────────────────
+  function rng(){ return _rng ? _rng() : Math.random(); }
+  function pick(arr){ return arr[Math.floor(rng() * arr.length)]; }
+  function rndDp(v,dp){ const m = Math.pow(10,dp); return Math.round(v*m)/m; }
+  function fmtNum(v,dp){
+    if(!isFinite(v)) return '—';
+    return v.toFixed(dp);
+  }
+  function fmtMoney(v){
+    return '$' + v.toFixed(2);
+  }
+  function katexH(tex){
+    return window.katex ? katex.renderToString(tex,{throwOnError:false}) : '<span>'+tex+'</span>';
+  }
+  function renderK(el,tex){
+    if(window.katex) katex.render(tex,el,{throwOnError:false}); else el.textContent=tex;
+  }
+
+  // ── Compute answers ────────────────────────────────────────────────────────
+  // Given primitives B, cr, rr:
+  //   m = (cr + 1) / (cr + rr)
+  //   M = m · B
+  //   D = B / (cr + rr) = M / (cr + 1)
+  //   C = cr · D
+  //   R = rr · D
+  // Identity: B = C + R, M = C + D
+  function compute(p){
+    const {B, cr, rr} = p;
+    const m = (cr + 1) / (cr + rr);
+    const M = m * B;
+    const D = B / (cr + rr);
+    const C = cr * D;
+    const R = rr * D;
+    return {m, M, D, C, R};
+  }
+
+  // ── Problem generation ────────────────────────────────────────────────────
+  function generateParams(){
+    if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+    const rrChoices = [0.05, 0.10, 0.15, 0.20, 0.25];
+    const crChoices = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+    const bChoices  = [500, 600, 700, 800, 900, 1000, 1200, 1500, 1800, 2000];
+    for(let tries=0; tries<50; tries++){
+      const rr = pick(rrChoices);
+      const cr = pick(crChoices);
+      const B  = pick(bChoices);
+      const p  = {B, cr, rr};
+      const k  = compute(p);
+      if(k.m < 1.5 || k.m > 6) continue;
+      if(k.M <= 0 || k.D <= 0 || k.C <= 0 || k.R <= 0) continue;
+      params = p; comp = k; return;
+    }
+    // Deterministic textbook fallback (notes p. 6)
+    params = {B: 800, cr: 0.8, rr: 0.10};
+    comp   = compute(params);
+  }
+
+  // ── Render problem parameters via KaTeX ───────────────────────────────────
+  function renderParamGrid(){
+    const {B, cr, rr} = params;
+    const rows = [
+      ['Monetary base',             `B = \\$${B}`],
+      ['Currency-deposit ratio',    `cr = ${fmtNum(cr,2)}`],
+      ['Reserve-deposit ratio',     `rr = ${fmtNum(rr,2)}\\;\\;(${Math.round(rr*100)}\\%)`],
+    ];
+    $paramGrid.innerHTML = rows.map((r,i) =>
+      `<div class="param"><div class="label">${r[0]}</div><div class="value" id="paramVal${i}"></div></div>`
+    ).join('');
+    rows.forEach((r,i) => renderK(document.getElementById('paramVal'+i), r[1]));
+  }
+
+  // ── Step descriptors ──────────────────────────────────────────────────────
+  function buildSteps(){
+    const {B, cr, rr} = params;
+    const {m, M, C, D, R} = comp;
+    const crStr = fmtNum(cr,2);
+    const rrStr = fmtNum(rr,2);
+    const mStr  = fmtNum(m,4);
+    const MStr  = fmtNum(M,2);
+    const CStr  = fmtNum(C,2);
+    const DStr  = fmtNum(D,2);
+    const RStr  = fmtNum(R,2);
+    const s = [];
+
+    // ── Step 1: Money Multiplier ─────────────────────────────────────────
+    s.push({
+      n:1, qIdx:0,
+      qText:'Find the money multiplier m.',
+      title:'Money Multiplier  m',
+      instruction:'Compute the money multiplier from the currency-deposit ratio and the reserve-deposit ratio. Enter your answer to 4 decimal places.',
+      eHTML:`<div class="entry-row">
+        <span class="entry-sym">m&nbsp;=&nbsp;</span>
+        <input class="fi wide" id="s1a" aria-label="money multiplier" placeholder="?" autocomplete="off" inputmode="decimal"/>
+      </div>`,
+      ids:['s1a'],
+      answers:[m],
+      tols:[0.001],
+      hint:'The money multiplier tells us how many dollars of money supply are created by each dollar of the monetary base. It depends on how much currency the public wants to hold (cr) and how much of each deposit banks keep in reserve (rr).',
+      fmlLines:[`m = \\dfrac{cr + 1}{cr + rr}`],
+      ansLines:[
+        `m = \\dfrac{${crStr} + 1}{${crStr} + ${rrStr}} = \\dfrac{${fmtNum(cr+1,2)}}{${fmtNum(cr+rr,2)}} = ${mStr}`
+      ],
+      ansText:`m = ${mStr}`,
+      enteredText:e => `m = ${e[0]}`,
+    });
+
+    // ── Step 2: Money Supply ─────────────────────────────────────────────
+    s.push({
+      n:2, qIdx:1,
+      qText:'Using the multiplier from Step 1, find the money supply M.',
+      title:'Money Supply  M',
+      instruction:'The money supply is the multiplier times the monetary base. Enter your answer in dollars (to 2 decimals).',
+      eHTML:`<div class="entry-row">
+        <span class="entry-sym">M&nbsp;=&nbsp;$</span>
+        <input class="fi wide" id="s2a" aria-label="money supply in dollars" placeholder="?" autocomplete="off" inputmode="decimal"/>
+      </div>`,
+      ids:['s2a'],
+      answers:[M],
+      tols:[0.5],
+      hint:'The money supply is the multiplier times the monetary base. The Fed controls B, but the actual amount of money in circulation is much larger because banks create money by lending.',
+      fmlLines:[`M = m \\cdot B`],
+      ansLines:[
+        `M = ${mStr} \\cdot ${B} = \\$${MStr}`
+      ],
+      ansText:`M = $${MStr}`,
+      enteredText:e => `M = $${e[0]}`,
+    });
+
+    // ── Step 3: Currency C ───────────────────────────────────────────────
+    s.push({
+      n:3, qIdx:2,
+      qText:'Find the amount of currency C held by the public.',
+      title:'Currency  C',
+      instruction:'Currency is part of both the monetary base and the money supply. Use the relationship between C, D, and the currency-deposit ratio to solve. Enter your answer in dollars.',
+      eHTML:`<div class="entry-row">
+        <span class="entry-sym">C&nbsp;=&nbsp;$</span>
+        <input class="fi wide" id="s3a" aria-label="currency held by the public in dollars" placeholder="?" autocomplete="off" inputmode="decimal"/>
+      </div>`,
+      ids:['s3a'],
+      answers:[C],
+      tols:[0.5],
+      hint:'Currency is part of both the monetary base (B = C + R) and the money supply (M = C + D). The currency-deposit ratio tells us how C relates to D. From M = C + D and cr = C/D, you can solve for C.',
+      fmlLines:[
+        `M = C + D \\quad\\text{and}\\quad cr = \\dfrac{C}{D} \\;\\Rightarrow\\; D = \\dfrac{C}{cr}`,
+        `M = C + \\dfrac{C}{cr} = C \\cdot \\dfrac{cr + 1}{cr}`,
+        `C = M \\cdot \\dfrac{cr}{cr + 1}`,
+      ],
+      ansLines:[
+        `C = M \\cdot \\dfrac{cr}{cr + 1} = ${MStr} \\cdot \\dfrac{${crStr}}{${fmtNum(cr+1,2)}} = \\$${CStr}`
+      ],
+      ansText:`C = $${CStr}`,
+      enteredText:e => `C = $${e[0]}`,
+    });
+
+    // ── Step 4: Deposits D ───────────────────────────────────────────────
+    s.push({
+      n:4, qIdx:3,
+      qText:'Find the total amount of deposits D.',
+      title:'Deposits  D',
+      instruction:'Deposits make up the rest of the money supply after currency. Enter your answer in dollars.',
+      eHTML:`<div class="entry-row">
+        <span class="entry-sym">D&nbsp;=&nbsp;$</span>
+        <input class="fi wide" id="s4a" aria-label="total deposits in dollars" placeholder="?" autocomplete="off" inputmode="decimal"/>
+      </div>`,
+      ids:['s4a'],
+      answers:[D],
+      tols:[0.5],
+      hint:'Deposits make up the rest of the money supply after currency. You can get D directly from M − C, or from the definition cr = C/D so D = C/cr.',
+      fmlLines:[
+        `D = M - C \\;\\;=\\;\\; \\dfrac{C}{cr} \\;\\;=\\;\\; \\dfrac{B}{cr + rr}`
+      ],
+      ansLines:[
+        `D = M - C = ${MStr} - ${CStr} = \\$${DStr}`,
+        `\\text{Check: } \\dfrac{C}{cr} = \\dfrac{${CStr}}{${crStr}} = \\$${DStr}\\;\\checkmark`,
+      ],
+      ansText:`D = $${DStr}`,
+      enteredText:e => `D = $${e[0]}`,
+    });
+
+    // ── Step 5: Reserves R ───────────────────────────────────────────────
+    s.push({
+      n:5, qIdx:4,
+      qText:'Find the amount of reserves R held by banks.',
+      title:'Reserves  R',
+      instruction:'Reserves are the fraction of deposits that banks keep on hand rather than lending out. Enter your answer in dollars.',
+      eHTML:`<div class="entry-row">
+        <span class="entry-sym">R&nbsp;=&nbsp;$</span>
+        <input class="fi wide" id="s5a" aria-label="reserves held by banks in dollars" placeholder="?" autocomplete="off" inputmode="decimal"/>
+      </div>`,
+      ids:['s5a'],
+      answers:[R],
+      tols:[0.5],
+      hint:'Reserves are the fraction of deposits that banks keep on hand rather than lending out. By definition rr = R/D.',
+      fmlLines:[
+        `R = rr \\cdot D`
+      ],
+      ansLines:[
+        `R = ${rrStr} \\cdot ${DStr} = \\$${RStr}`,
+        `\\text{Check: } C + R = ${CStr} + ${RStr} = \\$${fmtNum(C+R,2)} = B \\;\\checkmark`
+      ],
+      ansText:`R = $${RStr}`,
+      enteredText:e => `R = $${e[0]}`,
+    });
+
+    return s;
+  }
+
+  // ── Render a step card ────────────────────────────────────────────────────
+  function cardHTML(step){
+    return `<div class="step-card" id="sc${step.n}">
+      <div class="step-card-header">
+        <div>
+          <div class="step-num">Step ${step.n}</div>
+          <div class="step-title">${step.title}</div>
+        </div>
+      </div>
+      <p class="step-instruction">${step.instruction}</p>
+      <div class="entry-area">${step.eHTML}</div>
+      <div id="fb${step.n}" class="hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div class="step-actions">
+        <button class="step-btn primary" id="btnCheck${step.n}" aria-label="Check your answer for step ${step.n}">Check Answer</button>
+        <button class="step-btn" id="btnHint${step.n}"     aria-label="Show a hint for step ${step.n}"     disabled>Show Hint</button>
+        <button class="step-btn" id="btnFormula${step.n}"  aria-label="Show the formula for step ${step.n}" disabled>Show Formula</button>
+        <button class="step-btn" id="btnSolution${step.n}" aria-label="Show the worked solution for step ${step.n}" disabled>Show Solution</button>
+      </div>
+      <div class="step-hint hidden" id="hint${step.n}">
+        <div class="reveal-label">Hint</div>
+        <div id="hintc${step.n}"></div>
+      </div>
+      <div class="step-formula hidden" id="fml${step.n}">
+        <div class="reveal-label">Formula</div>
+        <div class="formula-content" id="fc${step.n}"></div>
+      </div>
+      <div class="step-answer hidden" id="ans${step.n}">
+        <div class="reveal-label good">Worked Solution</div>
+        <div class="answer-content" id="ac${step.n}"></div>
+      </div>
+    </div>`;
+  }
+
+  // ── Check inputs for a step ───────────────────────────────────────────────
+  function checkStep(step){
+    for(const id of step.ids){
+      if(document.getElementById(id).value.trim()==='') return {ok:false,empty:true};
+    }
+    let all = true;
+    const entered = [];
+    step.ids.forEach((id,i)=>{
+      const raw = document.getElementById(id).value.trim();
+      const v   = parseFloat(raw);
+      const ok  = !isNaN(v) && Math.abs(v - step.answers[i]) <= step.tols[i];
+      if(!ok) all = false;
+      entered.push(raw);
+      document.getElementById(id).classList.toggle('correct',ok);
+      document.getElementById(id).classList.toggle('wrong',!ok);
+    });
+    return {ok:all, entered};
+  }
+
+  function showFB(n, ok, msg){
+    const el = document.getElementById('fb'+n);
+    el.className = 'entry-fb '+(ok ? 'correct' : 'wrong');
+    el.classList.remove('hidden');
+    el.textContent = (ok ? '✓ ' : '✗ ') + msg;
+  }
+
+  function lockInputs(step){
+    step.ids.forEach(id => { document.getElementById(id).disabled = true; });
+  }
+
+  function revealHint(n){
+    const el = document.getElementById('hint'+n);
+    if(!el.classList.contains('hidden')) return;
+    document.getElementById('hintc'+n).textContent = _steps[n-1].hint;
+    el.classList.remove('hidden');
+  }
+  function revealFml(n){
+    const el = document.getElementById('fml'+n);
+    if(!el.classList.contains('hidden')) return;
+    const inner = document.getElementById('fc'+n);
+    inner.innerHTML = _steps[n-1].fmlLines
+      .map(l => '<span class="katex-line">'+katexH(l)+'</span>').join('');
+    el.classList.remove('hidden');
+  }
+  function revealAns(n){
+    const el = document.getElementById('ans'+n);
+    if(!el.classList.contains('hidden')) return;
+    const inner = document.getElementById('ac'+n);
+    inner.innerHTML = _steps[n-1].ansLines
+      .map(l => '<span class="katex-line">'+katexH(l)+'</span>').join('');
+    el.classList.remove('hidden');
+  }
+
+  function recordQ(step, firstAns, firstOk, finalAns, finalOk){
+    if(!(window.Session && Session.recordQuestion)) return;
+    Session.recordQuestion(LAB_ID, step.qIdx, step.qText,
+                           firstAns, firstOk,
+                           finalAns, finalOk);
+  }
+
+  function setBtnState(n, which, state){
+    const id = {check:'btnCheck',hint:'btnHint',formula:'btnFormula',solution:'btnSolution'}[which];
+    const b = document.getElementById(id+n);
+    if(!b) return;
+    if(state.disabled !== undefined) b.disabled = state.disabled;
+    if(state.text) b.textContent = state.text;
+    if(state.cls) b.className = 'step-btn '+state.cls;
+  }
+
+  function markDone(n, wasCorrect){
+    if(stepDone[n-1]) return;
+    stepDone[n-1] = true;
+    const step = _steps[n-1];
+    stepMeta[n-1].s = 'done';
+    revealHint(n); revealFml(n); revealAns(n);
+    lockInputs(step);
+    if(wasCorrect){
+      step.ids.forEach(id => document.getElementById(id).classList.add('correct'));
+    }
+    setBtnState(n, 'check',    {disabled:true, text:'✓ Done', cls:'done'});
+    setBtnState(n, 'hint',     {disabled:true});
+    setBtnState(n, 'formula',  {disabled:true});
+    setBtnState(n, 'solution', {disabled:true});
+    maybeFinishLab();
+  }
+
+  // ── Button handlers (per step) ────────────────────────────────────────────
+  function onCheck(n){
+    const meta = stepMeta[n-1];
+    if(meta.s !== 'check') return;
+    const step = _steps[n-1];
+    const res  = checkStep(step);
+    if(res.empty){
+      showFB(n, false, 'Please fill in all fields before checking.');
+      return;
+    }
+    if(firstAttempt[n-1]){
+      firstAttempt[n-1] = false;
+      firstCorrect[n-1] = res.ok;
+      firstAnsText[n-1] = step.enteredText(res.entered);
+      recordQ(step,
+              firstAnsText[n-1], firstCorrect[n-1],
+              firstAnsText[n-1], firstCorrect[n-1]);
+    }
+    if(res.ok){
+      showFB(n, true, 'Correct.');
+      markDone(n, true);
+    } else {
+      showFB(n, false, 'Not quite — try again, or click Show Hint for help.');
+      setBtnState(n, 'hint', {disabled:false});
+    }
+  }
+  function onHint(n){
+    const meta = stepMeta[n-1];
+    meta.usedReveal = true;
+    revealHint(n);
+    setBtnState(n, 'hint',    {disabled:true});
+    setBtnState(n, 'formula', {disabled:false});
+  }
+  function onFormula(n){
+    const meta = stepMeta[n-1];
+    meta.usedReveal = true;
+    revealFml(n);
+    setBtnState(n, 'formula',  {disabled:true});
+    setBtnState(n, 'solution', {disabled:false});
+  }
+  function onSolution(n){
+    const meta = stepMeta[n-1];
+    meta.usedReveal = true;
+    revealAns(n);
+    setBtnState(n, 'solution', {disabled:true});
+    const step = _steps[n-1];
+    recordQ(step,
+            firstAnsText[n-1], firstCorrect[n-1],
+            step.ansText,      true);
+    markDone(n, false);
+  }
+
+  // ── Lab completion ────────────────────────────────────────────────────────
+  function maybeFinishLab(){
+    if(_labDoneFired) return;
+    const allDone = stepDone.every(Boolean);
+    if(!allDone) return;
+    _labDoneFired = true;
+    const firstScore = firstCorrect.filter(Boolean).length;
+    const finalScore = TOTAL_STEPS;
+    const total      = TOTAL_STEPS;
+    if(window.Session && Session.recordLabDone){
+      Session.recordLabDone(LAB_ID, LAB_LABEL, firstScore, finalScore, total);
+    }
+    const {B, cr, rr} = params;
+    const {m, M, C, D, R} = comp;
+    const rrPct = Math.round(rr*100);
+    $banner.classList.remove('hidden');
+    $banner.innerHTML = `
+      <p class="banner-title">Money supply solved.</p>
+      <p>The Fed controls a monetary base of $${B}. Because banks hold only
+      ${rrPct}% of each deposit in reserve, and the public holds $${fmtNum(cr,2)}
+      of currency per $1 of deposits, the money multiplier is
+      ${fmtNum(m,4)}. This turns the $${B} monetary base into a money
+      supply of $${fmtNum(M,2)} &mdash; split between $${fmtNum(C,2)} of
+      currency in circulation and $${fmtNum(D,2)} of deposits at banks
+      (of which $${fmtNum(R,2)} is held as reserves and the rest is lent out).</p>
+      <p class="banner-score">Score &mdash; first attempt: <strong>${firstScore} / ${total}</strong>
+      &nbsp;&middot;&nbsp; final: <strong>${finalScore} / ${total}</strong>.</p>
+    `;
+  }
+
+  // ── Render whole problem ─────────────────────────────────────────────────
+  function renderProblem(){
+    renderParamGrid();
+    stepMeta.forEach(m => { m.s = 'check'; m.usedReveal = false; });
+    firstAttempt.fill(true);
+    firstCorrect.fill(false);
+    firstAnsText.fill('—');
+    stepDone.fill(false);
+    _labDoneFired = false;
+    $banner.classList.add('hidden');
+
+    _steps = buildSteps();
+    $steps.innerHTML = _steps.map(cardHTML).join('');
+
+    _steps.forEach(step => {
+      document.getElementById('btnCheck'+step.n)   .addEventListener('click', () => onCheck(step.n));
+      document.getElementById('btnHint'+step.n)    .addEventListener('click', () => onHint(step.n));
+      document.getElementById('btnFormula'+step.n) .addEventListener('click', () => onFormula(step.n));
+      document.getElementById('btnSolution'+step.n).addEventListener('click', () => onSolution(step.n));
+      step.ids.forEach(id => {
+        document.getElementById(id).addEventListener('keydown', e => {
+          if(e.key === 'Enter') onCheck(step.n);
+        });
+      });
+    });
+  }
+
+  function clearLabSessionData(){
+    try{
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if(!raw) return;
+      const d = JSON.parse(raw);
+      if(d && d.labs && d.labs[LAB_ID]){
+        delete d.labs[LAB_ID];
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(d));
+      }
+    }catch(e){ /* ignore */ }
+  }
+
+  document.getElementById('newProblemBtn').addEventListener('click', () => {
+    clearLabSessionData();
+    generateParams();
+    renderProblem();
+  });
+
+  const _pdfBtn = document.getElementById('downloadPdfBtn');
+  if(new URLSearchParams(location.search).get('disc') === '1'){
+    _pdfBtn.addEventListener('click', () => {
+      if(window.DiscussionPDF && DiscussionPDF.generate){
+        DiscussionPDF.generate();
+      } else {
+        alert('PDF export is not available — try refreshing the page.');
+      }
+    });
+  } else {
+    _pdfBtn.remove();
+  }
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+  function init(){
+    generateParams();
+    renderProblem();
+  }
+  function kickoff(){
+    const isDiscussion = new URLSearchParams(location.search).get('disc') === '1';
+    if(isDiscussion && window.DiscussionModal){
+      DiscussionModal.init({
+        weekLabel: WEEK_LABEL,
+        onReady: function(){ init(); }
+      });
+    } else {
+      init();
+    }
+  }
+  function bootWhenKatexReady(){
+    if(window.katex){ kickoff(); return; }
+    let p = 0;
+    const iv = setInterval(() => {
+      p += 1;
+      if(window.katex || p > 60){ clearInterval(iv); kickoff(); }
+    }, 80);
+  }
+  bootWhenKatexReady();
+
+})();
+</script>
+</body>
+</html>

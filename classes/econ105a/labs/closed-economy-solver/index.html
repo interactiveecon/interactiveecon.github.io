@@ -1,0 +1,1250 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Closed Economy Solver — ECON 105A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+  <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;  --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ─────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+    .instructions-body .eq-block{margin:10px 0;padding:8px 12px;
+      background:rgba(47,93,124,.05);border:1px solid rgba(47,93,124,.14);
+      border-radius:8px;overflow-x:auto;}
+    .instructions-body h4{font-family:var(--font-serif);font-size:1rem;font-weight:700;
+      color:var(--ink);margin:14px 0 6px;}
+
+    /* Buttons */
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:none;border-radius:12px;font-family:var(--font-sans);font-size:0.875rem;font-weight:700;cursor:pointer;transition:background .12s;}
+    .btn.primary{background:var(--accent);color:#fff;}
+    .btn.primary:hover:not(:disabled){background:#264d68;}
+    .btn.primary:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* Layout */
+    .lab-container{max-width:1160px;margin:0 auto;padding:18px;}
+    .lab-grid{display:grid;grid-template-columns:1fr 380px;gap:18px;align-items:start;}
+    @media(max-width:880px){.lab-grid{grid-template-columns:1fr;}}
+
+    /* Problem card */
+    .problem-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow);margin-bottom:14px;}
+    .problem-header{font-family:var(--font-serif);font-size:1.25rem;font-weight:700;color:var(--ink);margin:0 0 6px;}
+    .problem-sub{font-size:0.8125rem;color:var(--muted);margin:0 0 14px;line-height:1.5;}
+    .param-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+    @media(max-width:520px){.param-grid{grid-template-columns:1fr;}}
+    .param{background:rgba(246,242,234,.55);border:1px solid var(--line);border-radius:12px;padding:9px 13px;}
+    .param .label{font-size:0.6875rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px;}
+    .param .value{font-size:0.9375rem;font-weight:700;color:var(--ink);}
+
+    /* Step cards */
+    .step-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);margin-bottom:12px;}
+    .step-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+    .step-num{display:inline-block;font-size:0.625rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);background:rgba(47,93,124,.08);border:1px solid rgba(47,93,124,.18);border-radius:6px;padding:2px 7px;margin-bottom:4px;}
+    .step-title{font-size:0.9375rem;font-weight:700;color:var(--ink);line-height:1.3;}
+    .step-instruction{font-size:0.8125rem;color:var(--ink-2);line-height:1.55;margin:8px 0 0;}
+
+    /* Action buttons row — border #8c7f72 = 3.5:1 on white (WCAG 1.4.11 ✓) */
+    .step-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+    .step-btn{flex-shrink:0;padding:6px 12px;border:1.5px solid #8c7f72;background:rgba(47,93,124,.06);color:var(--accent);border-radius:10px;font-size:0.75rem;font-weight:700;font-family:var(--font-sans);cursor:pointer;transition:background .12s,border-color .12s;white-space:nowrap;}
+    .step-btn:hover:not(:disabled){background:rgba(47,93,124,.14);border-color:var(--accent);}
+    .step-btn:disabled{opacity:.55;cursor:not-allowed;}
+    .step-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+    .step-btn.primary:hover:not(:disabled){background:#264d68;}
+    .step-btn.done{background:rgba(21,92,56,.08);border-color:rgba(21,92,56,.3);color:var(--good);}
+
+    /* Entry area */
+    .entry-area{margin-top:12px;padding:10px 12px;background:rgba(246,242,234,.5);border:1px solid var(--line);border-radius:12px;}
+    .entry-row{display:flex;align-items:center;flex-wrap:wrap;gap:5px;font-size:0.9375rem;font-weight:600;color:var(--ink);line-height:2.2;}
+    .entry-row + .entry-row{margin-top:4px;}
+    .entry-sym{color:var(--ink-2);white-space:nowrap;font-size:0.9375rem;}
+
+    /* Inline number inputs — border #8c7f72 = 3.5:1 on white (WCAG 1.4.11 ✓) */
+    .fi{width:72px;padding:4px 6px;border:1.5px solid #8c7f72;border-radius:8px;font-size:0.9375rem;font-family:var(--font-sans);font-weight:700;text-align:center;background:#fff;color:var(--ink);outline:none;transition:border-color .12s,background .12s;}
+    .fi.wide{width:90px;}
+    .fi:focus{border-color:var(--accent);}
+    .fi.correct{border-color:var(--good);background:rgba(21,92,56,.06);}
+    .fi.wrong{border-color:var(--bad);background:rgba(180,35,24,.06);}
+    .fi:disabled{background:rgba(246,242,234,.9);color:var(--muted);cursor:not-allowed;}
+
+    /* Feedback — role="status" region, announced by AT */
+    .entry-fb{margin-top:8px;padding:7px 11px;border-radius:10px;font-size:0.8125rem;font-weight:600;line-height:1.4;animation:fadeSlide .18s ease;}
+    .entry-fb.correct{background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.2);color:var(--good);}
+    .entry-fb.wrong{background:rgba(180,35,24,.06);border:1px solid rgba(180,35,24,.2);color:var(--bad);}
+
+    /* Revealed content */
+    .step-hint{margin-top:10px;padding:9px 13px;background:rgba(47,93,124,.04);border:1px solid rgba(47,93,124,.14);border-radius:12px;animation:fadeSlide .2s ease;font-size:0.8125rem;color:var(--ink-2);line-height:1.55;}
+    .step-formula{margin-top:8px;padding:9px 13px;background:rgba(47,93,124,.06);border:1px solid rgba(47,93,124,.2);border-radius:12px;animation:fadeSlide .2s ease;}
+    .step-answer{margin-top:8px;padding:11px 13px;background:rgba(21,92,56,.05);border:1px solid rgba(21,92,56,.2);border-radius:12px;animation:fadeSlide .2s ease;}
+    .reveal-label{font-size:0.625rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin-bottom:6px;}
+    .reveal-label.good{color:var(--good);}
+    .step-formula .formula-content,
+    .step-answer .answer-content{font-size:0.8125rem;line-height:1.85;color:var(--ink);overflow-x:auto;}
+    .katex-line{display:block;}
+
+    @keyframes fadeSlide{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+    .hidden{display:none !important;}
+
+    /* Lab-done banner */
+    .lab-done-banner{margin-top:14px;padding:14px 18px;border-radius:14px;
+      background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.25);
+      color:var(--ink);font-size:0.875rem;line-height:1.55;}
+    .lab-done-banner .banner-title{font-family:var(--font-serif);font-size:1.125rem;font-weight:700;color:var(--good);margin:0 0 6px;}
+    .lab-done-banner .banner-score{margin:6px 0 0;font-size:0.8125rem;color:var(--ink-2);}
+
+    /* Graph card */
+    .graph-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);position:sticky;top:18px;}
+    .graph-title{font-size:0.8125rem;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+    .graph-canvas-wrap{position:relative;width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;background:rgba(246,242,234,.45);border:1px solid var(--line);}
+    #graphCanvas{display:block;width:100%;height:100%;}
+    .graph-legend{display:flex;flex-direction:column;gap:5px;margin-top:10px;}
+    .legend-row{display:flex;align-items:center;gap:7px;font-size:0.75rem;color:var(--ink-2);}
+    .legend-swatch{width:22px;height:3px;border-radius:2px;flex-shrink:0;}
+    .legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+    .katex{font-size:1.0em;}
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+  </style>
+</head>
+<body>
+
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105a/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105A — Closed Economy in the Long-Run</div>
+      <h1>Closed Economy Solver</h1>
+      <p class="sub">
+        Solve a closed-economy loanable funds model: derive private savings,
+        public savings, and national savings as functions of the interest rate,
+        find the equilibrium interest rate, and plug it back in to recover the
+        savings breakdown.
+      </p>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>You are given output <strong>Y</strong>, a consumption function
+          <strong>C = c<sub>0</sub> + MPC&middot;(Y&minus;T) &minus; c<sub>1</sub>r</strong>,
+          an investment function <strong>I = I<sub>0</sub> &minus; I<sub>1</sub>r</strong>,
+          and fiscal variables <strong>G</strong> and <strong>T</strong>. Work
+          through five steps to characterize the loanable-funds equilibrium.</p>
+          <p>You will be asked to answer the following questions:</p>
+          <ol>
+            <li><strong>Private savings as a function of r.</strong>
+                Find the intercept and the coefficient on r in S<sub>PR</sub>(r).</li>
+            <li><strong>Public savings.</strong> A single number, T &minus; G.</li>
+            <li><strong>National savings as a function of r.</strong>
+                Find the intercept and the coefficient on r in S(r).</li>
+            <li><strong>Equilibrium interest rate r*.</strong>
+                Set S(r) = I(r) and solve for r (as a percent, to 2 decimals).</li>
+            <li><strong>Plug r* back in.</strong> Use your r* to recover
+                S<sub>PR</sub>(r*), S<sub>PU</sub>, and S(r*).</li>
+          </ol>
+          <p>For each step, enter your answer and click
+          <strong>Check Answer</strong>. If your answer is incorrect, a
+          conceptual <strong>Hint</strong>, the relevant <strong>Formula</strong>,
+          and a full worked <strong>Solution</strong> become available in turn.</p>
+        </div>
+      </details>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Worked Example</summary>
+        <div class="instructions-body" id="exampleBody"></div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-container">
+  <div class="lab-grid">
+
+    <!-- LEFT COLUMN -->
+    <div>
+      <div class="problem-card">
+        <h2 class="problem-header">Problem</h2>
+        <p class="problem-sub">
+          A closed economy is described by the following equations. Output is
+          fixed at Y. The government collects taxes T and spends G. The
+          interest rate r is expressed in percent.
+        </p>
+        <div class="param-grid" id="paramGrid"></div>
+      </div>
+
+      <div id="stepsContainer"></div>
+
+      <div id="labDoneBanner" class="lab-done-banner hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn primary" id="newProblemBtn">New Problem</button>
+        <button class="btn primary" id="downloadPdfBtn" style="background:#8c7f72;">Download Summary PDF</button>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div>
+      <div class="graph-card">
+        <div class="graph-title" id="graphCanvasTitle">Loanable Funds Market</div>
+        <div class="graph-canvas-wrap">
+          <canvas id="graphCanvas"
+                  role="img"
+                  aria-labelledby="graphCanvasTitle"
+                  aria-describedby="graphCanvasDesc"></canvas>
+        </div>
+        <!-- Canvas accessible description — aria-live so updates are announced (WCAG 1.1.1, 4.1.3) -->
+        <p class="sr-only" id="graphCanvasDesc"
+           aria-live="polite" aria-atomic="true">Graph with savings and investment on the horizontal axis and the interest rate on the vertical axis. Complete the steps on the left to reveal the equilibrium interest rate and the savings breakdown.</p>
+        <div class="graph-legend" aria-hidden="true">
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#b42318;"></div>
+            <span>Investment demand I(r)</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-swatch" style="background:#155c38;"></div>
+            <span>National savings S(r)</span>
+          </div>
+          <div class="legend-row hidden" id="lgEq">
+            <div class="legend-dot" style="background:#1f2937;"></div>
+            <span id="lgEqLabel">Equilibrium (S* = I*, r*)</span>
+          </div>
+          <div class="legend-row hidden" id="lgBreak">
+            <div class="legend-swatch" style="background:#2f5d7c;"></div>
+            <span id="lgBreakLabel">Private &amp; public savings breakdown</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer style="margin-top:32px;">
+  <div class="lab-container">
+    <div class="footer-inner">
+      <span>ECON 105A — Intermediate Macroeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // LAB_ID:    'closed-economy-solver'
+  // LAB_LABEL: 'Closed Economy Solver'
+  // url:       '/classes/econ105a/labs/closed-economy-solver/?disc=1'
+  //
+  // Sample week-template entry (paste into a discussion week's LABS array):
+  //   { id:   'closed-economy-solver',
+  //     name: 'Closed Economy Solver',
+  //     icon: '💰',
+  //     desc: 'Solve for private, public, and national savings, then find the equilibrium interest rate in a closed-economy loanable funds model.',
+  //     url:  '/classes/econ105a/labs/closed-economy-solver/?disc=1' }
+  // ─────────────────────────────────────────────────────────────────────────
+  const LAB_ID      = 'closed-economy-solver';
+  const LAB_LABEL   = 'Closed Economy Solver';
+  const WEEK_LABEL  = 'Closed Economy in the Long-Run';
+  const SESSION_KEY = 'econ002_session';
+  const TOTAL_STEPS = 5;
+
+  // Font-scale factor — recomputed on every redraw (WCAG 1.4.4 for canvas text)
+  let _fs = 1;
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let _rng = null;
+  let params = {};   // {Y,c0,MPC,c1,I0,I1,G,T}
+  let comp   = {};   // computed answers
+  const stepMeta     = Array.from({length:TOTAL_STEPS}, () => ({s:'check', usedReveal:false}));
+  const firstAttempt = Array(TOTAL_STEPS).fill(true);
+  const firstCorrect = Array(TOTAL_STEPS).fill(false);
+  const firstAnsText = Array(TOTAL_STEPS).fill('—');
+  const stepDone     = Array(TOTAL_STEPS).fill(false);
+  let _steps = [];
+  let _labDoneFired = false;
+  const revealed = { eq:false, breakdown:false };
+
+  // ── DOM ────────────────────────────────────────────────────────────────────
+  const $paramGrid = document.getElementById('paramGrid');
+  const $canvas    = document.getElementById('graphCanvas');
+  const $graphDesc = document.getElementById('graphCanvasDesc');
+  const $steps     = document.getElementById('stepsContainer');
+  const $banner    = document.getElementById('labDoneBanner');
+
+  // ── Utilities ──────────────────────────────────────────────────────────────
+  function rng(){ return _rng ? _rng() : Math.random(); }
+  function ri(lo,hi){ return lo + Math.floor(rng()*(hi-lo+1)); }
+  function rndDp(v,dp){ const m = Math.pow(10,dp); return Math.round(v*m)/m; }
+  function fmtNum(v,dp){
+    if(!isFinite(v)) return '—';
+    let s = v.toFixed(dp);
+    if(s.indexOf('.') !== -1) s = s.replace(/0+$/,'').replace(/\.$/,'');
+    return s;
+  }
+  function fmtSigned(v,dp){
+    if(v >= 0) return `+ ${fmtNum(v,dp)}`;
+    return `− ${fmtNum(-v,dp)}`;
+  }
+  function katexH(tex){
+    return window.katex ? katex.renderToString(tex,{throwOnError:false}) : '<span>'+tex+'</span>';
+  }
+  function renderK(el,tex){
+    if(window.katex) katex.render(tex,el,{throwOnError:false}); else el.textContent=tex;
+  }
+
+  // ── Compute answers ────────────────────────────────────────────────────────
+  // Notation:
+  //   C  = c0 + MPC*(Y - T) - c1*r
+  //   I  = I0 - I1*r
+  //   S_PR = (Y - T)(1 - MPC) - c0 + c1*r
+  //   S_PU = T - G
+  //   S    = S_PR + S_PU = Y - C - G
+  //   r* solves S(r*) = I(r*)
+  function compute(p){
+    const {Y,c0,MPC,c1,I0,I1,G,T} = p;
+    const sprInt   = (Y - T) * (1 - MPC) - c0;        // S_PR intercept
+    const sprSlope = c1;                              // coefficient on r
+    const spu      = T - G;                           // public savings (scalar)
+    const sInt     = sprInt + spu;                    // S intercept
+    const sSlope   = c1;                              // S slope on r
+    const denom    = c1 + I1;
+    const rStar    = (I0 - sInt) / denom;             // in percent
+    const sprStar  = sprInt + sprSlope * rStar;
+    const sStar    = sInt + sSlope * rStar;
+    const iStar    = I0 - I1 * rStar;                 // = sStar at equilibrium
+    return {
+      sprInt:   rndDp(sprInt,   3),
+      sprSlope: rndDp(sprSlope, 3),
+      spu:      rndDp(spu,      3),
+      sInt:     rndDp(sInt,     3),
+      sSlope:   rndDp(sSlope,   3),
+      rStar:    rndDp(rStar,    4),
+      sprStar:  rndDp(sprStar,  3),
+      sStar:    rndDp(sStar,    3),
+      iStar:    rndDp(iStar,    3),
+      denom
+    };
+  }
+
+  // ── Problem generation ─────────────────────────────────────────────────────
+  function generateParams(){
+    if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+    for(let tries=0; tries<50; tries++){
+      const Y   = ri(40, 80) * 100;                // 4000..8000
+      const c0  = ri(2, 8) * 100;                  // 200..800
+      const MPC = rndDp(0.40 + rng()*0.45, 2);     // 0.40..0.85
+      // Half the time consumption does not depend on r (c1=0); otherwise c1 ∈ [10,40].
+      const c1  = (rng() < 0.5) ? 0 : ri(10, 40);
+      const I1  = ri(20, 60);
+      const I0lo = Math.ceil(0.5 * Y);
+      const I0hi = Math.floor(0.9 * Y);
+      const I0  = ri(I0lo, I0hi);
+      const G   = ri(4, 12) * 100;                 // 400..1200
+      const T   = ri(4, 12) * 100;                 // 400..1200
+      const p   = {Y,c0,MPC,c1,I0,I1,G,T};
+      const k   = compute(p);
+      if(k.denom < 20)                continue;
+      if(k.rStar < 0.5 || k.rStar > 20) continue;
+      params = p; comp = k; return;
+    }
+    // Deterministic fallback — hand-picked, r* = 6.04
+    params = {Y:5000, c0:500, MPC:0.60, c1:20, I0:3000, I1:40, G:1000, T:800};
+    comp   = compute(params);
+  }
+
+  // ── Render problem parameters via KaTeX ────────────────────────────────────
+  function renderParamGrid(){
+    const {Y,c0,MPC,c1,I0,I1,G,T} = params;
+    const cTex = c1 > 0
+      ? `C = ${c0} + ${MPC}(Y - T) - ${c1}r`
+      : `C = ${c0} + ${MPC}(Y - T)`;
+    const rows = [
+      ['Output',                  `Y = ${Y}`],
+      ['Consumption',             cTex],
+      ['Investment',              `I = ${I0} - ${I1}r`],
+      ['Government spending',     `G = ${G}`],
+      ['Taxes',                   `T = ${T}`],
+    ];
+    $paramGrid.innerHTML = rows.map((r,i) =>
+      `<div class="param"${i===0?' style="grid-column:1/-1;"':''}><div class="label">${r[0]}</div><div class="value" id="paramVal${i}"></div></div>`
+    ).join('');
+    rows.forEach((r,i) => renderK(document.getElementById('paramVal'+i), r[1]));
+  }
+
+  // ── Step descriptors ───────────────────────────────────────────────────────
+  function buildSteps(){
+    const {Y,c0,MPC,c1,I0,I1,G,T} = params;
+    const {sprInt,sprSlope,spu,sInt,sSlope,rStar,sprStar,sStar,denom} = comp;
+    const hasR  = c1 > 0;
+    const rTermPR = hasR ? ` + ${fmtNum(sprSlope,2)}\\,r` : '';
+    const rTermS  = hasR ? ` + ${fmtNum(sSlope,2)}\\,r`   : '';
+    const cTexProb = hasR
+      ? `${c0} + ${MPC}(${Y}-${T}) - ${c1}r`
+      : `${c0} + ${MPC}(${Y}-${T})`;
+    const s = [];
+
+    // ── Step 1: Private Savings ─────────────────────────────────────────────
+    s.push({
+      n:1, qIdx:0,
+      qText:'Find private savings as a function of r. Enter the intercept and the coefficient on r in S_PR(r) = a + b·r.',
+      title:'Private Savings  S_PR(r)',
+      instruction:'Express private savings as a linear function of the interest rate r. Enter the intercept (in dollars) and the coefficient on r.',
+      eHTML:`<div class="entry-row">
+        <span class="entry-sym">S<sub>PR</sub>&nbsp;=&nbsp;</span>
+        <input class="fi wide" id="s1a" aria-label="private savings intercept" placeholder="?" autocomplete="off" inputmode="decimal"/>
+        <span class="entry-sym">&nbsp;+&nbsp;</span>
+        <input class="fi" id="s1b" aria-label="private savings coefficient on r" placeholder="?" autocomplete="off" inputmode="decimal"/>
+        <span class="entry-sym">&nbsp;·&nbsp;r</span>
+      </div>`,
+      ids:['s1a','s1b'],
+      answers:[sprInt, sprSlope],
+      tols:[0.5, 0.5],
+      hint:'Private savings is what households have left over after paying taxes and consuming. It is disposable income minus consumption — substitute the given C and collect terms in r.',
+      fmlLines:[`S_{PR} = (Y - T) - C`],
+      ansLines:[
+        `S_{PR} = (${Y} - ${T}) - \\big(${cTexProb}\\big)`,
+        `\\phantom{S_{PR}} = ${Y - T} - ${c0} - ${rndDp(MPC*(Y-T),3)}${hasR ? ` + ${c1}r` : ''}`,
+        `\\boxed{S_{PR} = ${fmtNum(sprInt,2)}${rTermPR}}`
+      ],
+      ansText:`S_PR = ${fmtNum(sprInt,2)}${hasR ? ` + ${fmtNum(sprSlope,2)} r` : ''}`,
+      enteredText:e => `S_PR = ${e[0]} + ${e[1]} r`,
+    });
+
+    // ── Step 2: Public Savings ──────────────────────────────────────────────
+    s.push({
+      n:2, qIdx:1,
+      qText:'Find public savings.',
+      title:'Public Savings  S_PU',
+      instruction:'Public savings is the government\'s budget balance. It is a single number — it does not depend on r.',
+      eHTML:`<div class="entry-row">
+        <span class="entry-sym">S<sub>PU</sub>&nbsp;=&nbsp;</span>
+        <input class="fi wide" id="s2a" aria-label="public savings" placeholder="?" autocomplete="off" inputmode="decimal"/>
+      </div>`,
+      ids:['s2a'],
+      answers:[spu],
+      tols:[0.5],
+      hint:'Public savings is the government\'s budget surplus — the taxes it collects minus the spending it does.',
+      fmlLines:[`S_{PU} = T - G`],
+      ansLines:[
+        `S_{PU} = ${T} - ${G} = ${fmtNum(spu,2)}`,
+      ],
+      ansText:`S_PU = ${fmtNum(spu,2)}`,
+      enteredText:e => `S_PU = ${e[0]}`,
+    });
+
+    // ── Step 3: National Savings ────────────────────────────────────────────
+    s.push({
+      n:3, qIdx:2,
+      qText:'Find national savings as a function of r. Enter the intercept and the coefficient on r in S(r) = a + b·r.',
+      title:'National Savings  S(r)',
+      instruction:'National savings is the sum of private and public savings. Enter the intercept (in dollars) and the coefficient on r.',
+      eHTML:`<div class="entry-row">
+        <span class="entry-sym">S&nbsp;=&nbsp;</span>
+        <input class="fi wide" id="s3a" aria-label="national savings intercept" placeholder="?" autocomplete="off" inputmode="decimal"/>
+        <span class="entry-sym">&nbsp;+&nbsp;</span>
+        <input class="fi" id="s3b" aria-label="national savings coefficient on r" placeholder="?" autocomplete="off" inputmode="decimal"/>
+        <span class="entry-sym">&nbsp;·&nbsp;r</span>
+      </div>`,
+      ids:['s3a','s3b'],
+      answers:[sInt, sSlope],
+      tols:[0.5, 0.5],
+      hint:'National savings is all the savings in the economy — private plus public. Equivalently, it is output minus consumption minus government spending: S = Y − C − G.',
+      fmlLines:[`S = S_{PR} + S_{PU} = Y - C - G`],
+      ansLines:[
+        `S = \\underbrace{(${fmtNum(sprInt,2)}${rTermPR})}_{S_{PR}} + \\underbrace{(${fmtNum(spu,2)})}_{S_{PU}}`,
+        `\\boxed{S = ${fmtNum(sInt,2)}${rTermS}}`
+      ],
+      ansText:`S = ${fmtNum(sInt,2)}${hasR ? ` + ${fmtNum(sSlope,2)} r` : ''}`,
+      enteredText:e => `S = ${e[0]} + ${e[1]} r`,
+    });
+
+    // ── Step 4: Equilibrium interest rate ───────────────────────────────────
+    s.push({
+      n:4, qIdx:3,
+      qText:'Find the equilibrium interest rate r* (as a percent, to 2 decimals).',
+      title:'Equilibrium Interest Rate  r*',
+      instruction:'In the loanable funds market, set the supply of savings equal to the demand for investment and solve for r. Report r* as a percent (for example, enter 4.25 to mean 4.25%).',
+      eHTML:`<div class="entry-row">
+        <span class="entry-sym">r*&nbsp;=&nbsp;</span>
+        <input class="fi wide" id="s4a" aria-label="equilibrium interest rate as a percent" placeholder="?" autocomplete="off" inputmode="decimal"/>
+        <span class="entry-sym">&nbsp;%</span>
+      </div>`,
+      ids:['s4a'],
+      answers:[rStar],
+      tols:[0.05],
+      hint:'In the loanable funds market, the interest rate adjusts so that the supply of savings equals the demand for investment.',
+      fmlLines:[`S(r) = I(r)`],
+      ansLines: hasR ? [
+        `${fmtNum(sInt,2)} + ${fmtNum(sSlope,2)}r = ${I0} - ${I1}r`,
+        `(${fmtNum(sSlope,2)} + ${I1})\\,r = ${I0} - ${fmtNum(sInt,2)}`,
+        `r^{*} = \\dfrac{${I0} - ${fmtNum(sInt,2)}}{${fmtNum(sSlope,2)} + ${I1}} = ${fmtNum(rStar,2)}\\%`
+      ] : [
+        `${fmtNum(sInt,2)} = ${I0} - ${I1}r`,
+        `${I1}\\,r = ${I0} - ${fmtNum(sInt,2)}`,
+        `r^{*} = \\dfrac{${I0} - ${fmtNum(sInt,2)}}{${I1}} = ${fmtNum(rStar,2)}\\%`
+      ],
+      ansText:`r* = ${fmtNum(rStar,2)}%`,
+      enteredText:e => `r* = ${e[0]}%`,
+    });
+
+    // ── Step 5: Plug r* back in ─────────────────────────────────────────────
+    s.push({
+      n:5, qIdx:4,
+      qText:'Using r*, find the equilibrium values of private savings, public savings, and national savings.',
+      title:'Plug r* Back In',
+      instruction:'Substitute r* into each of the savings functions from steps 1–3. Public savings does not depend on r.',
+      eHTML:`<div class="entry-row">
+        <span class="entry-sym">S<sub>PR</sub>(r*)&nbsp;=&nbsp;</span>
+        <input class="fi wide" id="s5a" aria-label="private savings at the equilibrium interest rate" placeholder="?" autocomplete="off" inputmode="decimal"/>
+      </div>
+      <div class="entry-row">
+        <span class="entry-sym">S<sub>PU</sub>&nbsp;=&nbsp;</span>
+        <input class="fi wide" id="s5b" aria-label="public savings" placeholder="?" autocomplete="off" inputmode="decimal"/>
+      </div>
+      <div class="entry-row">
+        <span class="entry-sym">S(r*)&nbsp;=&nbsp;</span>
+        <input class="fi wide" id="s5c" aria-label="national savings at the equilibrium interest rate" placeholder="?" autocomplete="off" inputmode="decimal"/>
+      </div>`,
+      ids:['s5a','s5b','s5c'],
+      answers:[sprStar, spu, sStar],
+      tols:[2, 0.5, 2],
+      hint:'Once you have r*, just substitute it into each savings function from steps 1–3. Public savings does not depend on r, so it is unchanged.',
+      fmlLines:[
+        `S_{PR}(r^{*}) = ${fmtNum(sprInt,2)}${rTermPR.replace(/r$/,'r^{*}')}`,
+        `S_{PU}        = T - G`,
+        `S(r^{*})      = ${fmtNum(sInt,2)}${rTermS.replace(/r$/,'r^{*}')}`,
+      ],
+      ansLines: hasR ? [
+        `S_{PR}(r^{*}) = ${fmtNum(sprInt,2)} + ${fmtNum(sprSlope,2)}\\cdot ${fmtNum(rStar,2)} = ${fmtNum(sprStar,2)}`,
+        `S_{PU}        = ${fmtNum(spu,2)}`,
+        `S(r^{*})      = ${fmtNum(sInt,2)} + ${fmtNum(sSlope,2)}\\cdot ${fmtNum(rStar,2)} = ${fmtNum(sStar,2)}`,
+      ] : [
+        `S_{PR}(r^{*}) = ${fmtNum(sprInt,2)}`,
+        `S_{PU}        = ${fmtNum(spu,2)}`,
+        `S(r^{*})      = ${fmtNum(sInt,2)}`,
+      ],
+      ansText:`S_PR(r*) = ${fmtNum(sprStar,2)}, S_PU = ${fmtNum(spu,2)}, S(r*) = ${fmtNum(sStar,2)}`,
+      enteredText:e => `S_PR(r*) = ${e[0]}, S_PU = ${e[1]}, S(r*) = ${e[2]}`,
+    });
+
+    return s;
+  }
+
+  // ── Render a step card ─────────────────────────────────────────────────────
+  function cardHTML(step){
+    return `<div class="step-card" id="sc${step.n}">
+      <div class="step-card-header">
+        <div>
+          <div class="step-num">Step ${step.n}</div>
+          <div class="step-title">${step.title}</div>
+        </div>
+      </div>
+      <p class="step-instruction">${step.instruction}</p>
+      <div class="entry-area">${step.eHTML}</div>
+      <div id="fb${step.n}" class="hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div class="step-actions">
+        <button class="step-btn primary" id="btnCheck${step.n}" aria-label="Check your answer for step ${step.n}">Check Answer</button>
+        <button class="step-btn" id="btnHint${step.n}"     aria-label="Show a hint for step ${step.n}"     disabled>Show Hint</button>
+        <button class="step-btn" id="btnFormula${step.n}"  aria-label="Show the formula for step ${step.n}" disabled>Show Formula</button>
+        <button class="step-btn" id="btnSolution${step.n}" aria-label="Show the worked solution for step ${step.n}" disabled>Show Solution</button>
+      </div>
+      <div class="step-hint hidden" id="hint${step.n}">
+        <div class="reveal-label">Hint</div>
+        <div id="hintc${step.n}"></div>
+      </div>
+      <div class="step-formula hidden" id="fml${step.n}">
+        <div class="reveal-label">Formula</div>
+        <div class="formula-content" id="fc${step.n}"></div>
+      </div>
+      <div class="step-answer hidden" id="ans${step.n}">
+        <div class="reveal-label good">Worked Solution</div>
+        <div class="answer-content" id="ac${step.n}"></div>
+      </div>
+    </div>`;
+  }
+
+  // ── Check inputs for a step ────────────────────────────────────────────────
+  function checkStep(step){
+    for(const id of step.ids){
+      if(document.getElementById(id).value.trim()==='') return {ok:false,empty:true};
+    }
+    let all = true;
+    const entered = [];
+    step.ids.forEach((id,i)=>{
+      const raw = document.getElementById(id).value.trim();
+      const v   = parseFloat(raw);
+      const ok  = !isNaN(v) && Math.abs(v - step.answers[i]) <= step.tols[i];
+      if(!ok) all = false;
+      entered.push(raw);
+      document.getElementById(id).classList.toggle('correct',ok);
+      document.getElementById(id).classList.toggle('wrong',!ok);
+    });
+    return {ok:all, entered};
+  }
+
+  function showFB(n, ok, msg){
+    const el = document.getElementById('fb'+n);
+    el.className = 'entry-fb '+(ok ? 'correct' : 'wrong');
+    el.classList.remove('hidden');
+    el.textContent = (ok ? '✓ ' : '✗ ') + msg;
+  }
+
+  function lockInputs(step){
+    step.ids.forEach(id => { document.getElementById(id).disabled = true; });
+  }
+
+  function revealHint(n){
+    const el = document.getElementById('hint'+n);
+    if(!el.classList.contains('hidden')) return;
+    document.getElementById('hintc'+n).textContent = _steps[n-1].hint;
+    el.classList.remove('hidden');
+  }
+  function revealFml(n){
+    const el = document.getElementById('fml'+n);
+    if(!el.classList.contains('hidden')) return;
+    const inner = document.getElementById('fc'+n);
+    inner.innerHTML = _steps[n-1].fmlLines
+      .map(l => '<span class="katex-line">'+katexH(l)+'</span>').join('');
+    el.classList.remove('hidden');
+  }
+  function revealAns(n){
+    const el = document.getElementById('ans'+n);
+    if(!el.classList.contains('hidden')) return;
+    const inner = document.getElementById('ac'+n);
+    inner.innerHTML = _steps[n-1].ansLines
+      .map(l => '<span class="katex-line">'+katexH(l)+'</span>').join('');
+    el.classList.remove('hidden');
+  }
+
+  function recordQ(step, firstAns, firstOk, finalAns, finalOk){
+    if(!(window.Session && Session.recordQuestion)) return;
+    Session.recordQuestion(LAB_ID, step.qIdx, step.qText,
+                           firstAns, firstOk,
+                           finalAns, finalOk);
+  }
+
+  function setBtnState(n, which, state){
+    const id = {check:'btnCheck',hint:'btnHint',formula:'btnFormula',solution:'btnSolution'}[which];
+    const b = document.getElementById(id+n);
+    if(!b) return;
+    if(state.disabled !== undefined) b.disabled = state.disabled;
+    if(state.text) b.textContent = state.text;
+    if(state.cls) b.className = 'step-btn '+state.cls;
+  }
+
+  function markDone(n, wasCorrect){
+    if(stepDone[n-1]) return;
+    stepDone[n-1] = true;
+    const step = _steps[n-1];
+    stepMeta[n-1].s = 'done';
+    revealHint(n); revealFml(n); revealAns(n);
+    lockInputs(step);
+    if(wasCorrect){
+      step.ids.forEach(id => document.getElementById(id).classList.add('correct'));
+    }
+    setBtnState(n, 'check',    {disabled:true, text:'✓ Done', cls:'done'});
+    setBtnState(n, 'hint',     {disabled:true});
+    setBtnState(n, 'formula',  {disabled:true});
+    setBtnState(n, 'solution', {disabled:true});
+    // Reveal graph layers when step 4 or 5 is complete
+    if(n === 4 && firstCorrect[3]) {
+      // Only reveal the equilibrium dot when student actually got it right
+      // (any path to "done" counts, since solution is now visible)
+    }
+    if(n === 4) { revealed.eq = true; }
+    if(n === 5) { revealed.breakdown = true; }
+    updateLegend();
+    drawGraph();
+    maybeFinishLab();
+  }
+
+  // ── Button handlers (per step) ─────────────────────────────────────────────
+  function onCheck(n){
+    const meta = stepMeta[n-1];
+    if(meta.s !== 'check') return;
+    const step = _steps[n-1];
+    const res  = checkStep(step);
+    if(res.empty){
+      showFB(n, false, 'Please fill in all fields before checking.');
+      return;
+    }
+    if(firstAttempt[n-1]){
+      firstAttempt[n-1] = false;
+      firstCorrect[n-1] = res.ok;
+      firstAnsText[n-1] = step.enteredText(res.entered);
+      recordQ(step,
+              firstAnsText[n-1], firstCorrect[n-1],
+              firstAnsText[n-1], firstCorrect[n-1]);
+    }
+    if(res.ok){
+      showFB(n, true, 'Correct.');
+      markDone(n, true);
+    } else {
+      showFB(n, false, 'Not quite — try again, or click Show Hint for help.');
+      setBtnState(n, 'hint', {disabled:false});
+    }
+  }
+  function onHint(n){
+    const meta = stepMeta[n-1];
+    meta.usedReveal = true;
+    revealHint(n);
+    setBtnState(n, 'hint',    {disabled:true});
+    setBtnState(n, 'formula', {disabled:false});
+  }
+  function onFormula(n){
+    const meta = stepMeta[n-1];
+    meta.usedReveal = true;
+    revealFml(n);
+    setBtnState(n, 'formula',  {disabled:true});
+    setBtnState(n, 'solution', {disabled:false});
+  }
+  function onSolution(n){
+    const meta = stepMeta[n-1];
+    meta.usedReveal = true;
+    revealAns(n);
+    setBtnState(n, 'solution', {disabled:true});
+    const step = _steps[n-1];
+    recordQ(step,
+            firstAnsText[n-1], firstCorrect[n-1],
+            step.ansText,      true);
+    markDone(n, false);
+  }
+
+  // ── Lab completion ─────────────────────────────────────────────────────────
+  function maybeFinishLab(){
+    if(_labDoneFired) return;
+    const allDone = stepDone.every(Boolean);
+    if(!allDone) return;
+    _labDoneFired = true;
+    const firstScore = firstCorrect.filter(Boolean).length;
+    const finalScore = TOTAL_STEPS;
+    const total      = TOTAL_STEPS;
+    if(window.Session && Session.recordLabDone){
+      Session.recordLabDone(LAB_ID, LAB_LABEL, firstScore, finalScore, total);
+    }
+    const {Y,G,T} = params;
+    const {rStar,sprStar,spu,sStar} = comp;
+    const surplusWord = spu >= 0 ? 'surplus' : 'deficit';
+    $banner.classList.remove('hidden');
+    $banner.innerHTML = `
+      <p class="banner-title">Equilibrium reached.</p>
+      <p>At r* = ${fmtNum(rStar,2)}%, households want to save $${fmtNum(sprStar,2)} in
+      private savings, the government runs a $${fmtNum(Math.abs(spu),2)} ${surplusWord},
+      and total national savings of $${fmtNum(sStar,2)} exactly equals firms' demand
+      for investment funds. The loanable funds market clears.</p>
+      <p class="banner-score">Score — first attempt: <strong>${firstScore} / ${total}</strong>
+      &nbsp;·&nbsp; final: <strong>${finalScore} / ${total}</strong>.</p>
+    `;
+  }
+
+  // ── Legend sync ────────────────────────────────────────────────────────────
+  function updateLegend(){
+    document.getElementById('lgEq').classList.toggle('hidden', !revealed.eq);
+    document.getElementById('lgBreak').classList.toggle('hidden', !revealed.breakdown);
+    if(revealed.eq){
+      document.getElementById('lgEqLabel').textContent =
+        `Equilibrium (S* = I* = ${fmtNum(comp.sStar,2)},  r* = ${fmtNum(comp.rStar,2)}%)`;
+    }
+    if(revealed.breakdown){
+      document.getElementById('lgBreakLabel').textContent =
+        `S_PR(r*) = ${fmtNum(comp.sprStar,2)}, S_PU = ${fmtNum(comp.spu,2)}`;
+    }
+  }
+
+  // ── Canvas accessible description (WCAG 1.1.1 / 4.1.3) ────────────────────
+  function updateGraphDesc(){
+    const {rStar,sprStar,sStar,spu} = comp;
+    const parts = [
+      `Graph of the loanable funds market. Savings and investment, both in dollars, are on the horizontal axis. The interest rate r, in percent, is on the vertical axis. The downward-sloping red line is investment demand I(r). The upward-sloping green line is national savings S(r).`,
+    ];
+    if(revealed.eq){
+      parts.push(`The two curves cross at the equilibrium, marked by a dark dot: r* equals ${fmtNum(rStar,2)} percent and S* equals I* equals ${fmtNum(sStar,2)} dollars. Dashed lines drop from the equilibrium to both axes.`);
+    } else {
+      parts.push(`The equilibrium intersection is shown faintly without labels until step four is complete.`);
+    }
+    if(revealed.breakdown){
+      const surplusWord = spu >= 0 ? 'surplus' : 'deficit';
+      parts.push(`The horizontal-axis breakdown shows that of the ${fmtNum(sStar,2)} dollars of national savings, ${fmtNum(sprStar,2)} is private savings and ${fmtNum(spu,2)} is public savings (a government ${surplusWord} of ${fmtNum(Math.abs(spu),2)} dollars).`);
+    }
+    $graphDesc.textContent = parts.join(' ');
+  }
+
+  // ── Render whole problem ───────────────────────────────────────────────────
+  function renderProblem(){
+    renderParamGrid();
+    stepMeta.forEach(m => { m.s = 'check'; m.usedReveal = false; });
+    firstAttempt.fill(true);
+    firstCorrect.fill(false);
+    firstAnsText.fill('—');
+    stepDone.fill(false);
+    revealed.eq = false; revealed.breakdown = false;
+    _labDoneFired = false;
+    $banner.classList.add('hidden');
+
+    _steps = buildSteps();
+    $steps.innerHTML = _steps.map(cardHTML).join('');
+
+    _steps.forEach(step => {
+      document.getElementById('btnCheck'+step.n)   .addEventListener('click', () => onCheck(step.n));
+      document.getElementById('btnHint'+step.n)    .addEventListener('click', () => onHint(step.n));
+      document.getElementById('btnFormula'+step.n) .addEventListener('click', () => onFormula(step.n));
+      document.getElementById('btnSolution'+step.n).addEventListener('click', () => onSolution(step.n));
+      step.ids.forEach(id => {
+        document.getElementById(id).addEventListener('keydown', e => {
+          if(e.key === 'Enter') onCheck(step.n);
+        });
+      });
+    });
+
+    updateLegend();
+    drawGraph();
+  }
+
+  function clearLabSessionData(){
+    try{
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if(!raw) return;
+      const d = JSON.parse(raw);
+      if(d && d.labs && d.labs[LAB_ID]){
+        delete d.labs[LAB_ID];
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(d));
+      }
+    }catch(e){ /* ignore */ }
+  }
+
+  document.getElementById('newProblemBtn').addEventListener('click', () => {
+    clearLabSessionData();
+    generateParams();
+    renderProblem();
+  });
+
+  const _pdfBtn = document.getElementById('downloadPdfBtn');
+  if(new URLSearchParams(location.search).get('disc') === '1'){
+    _pdfBtn.addEventListener('click', () => {
+      if(window.DiscussionPDF && DiscussionPDF.generate){
+        DiscussionPDF.generate();
+      } else {
+        alert('PDF export is not available — try refreshing the page.');
+      }
+    });
+  } else {
+    _pdfBtn.remove();
+  }
+
+  // ── Canvas helper ──────────────────────────────────────────────────────────
+  function setupCanvas(){
+    const dpr  = window.devicePixelRatio || 1;
+    const rect = $canvas.getBoundingClientRect();
+    const W    = Math.round(rect.width  * dpr);
+    const H    = Math.round(rect.height * dpr);
+    if(!W || !H) return null;
+    if($canvas.width !== W || $canvas.height !== H){
+      $canvas.width = W; $canvas.height = H;
+    }
+    return { ctx: $canvas.getContext('2d'), dpr, W, H };
+  }
+
+  function snapUp(raw){
+    const sNice = [5,10,20,25,50,75,100,150,200,250,300,400,500,600,750,
+                   1000,1250,1500,2000,2500,3000,4000,5000,6000,8000,10000];
+    return sNice.find(v => v >= raw) || Math.ceil(raw/1000)*1000;
+  }
+
+  // ── Draw graph ─────────────────────────────────────────────────────────────
+  function drawGraph(){
+    _fs = Math.max(0.75, Math.min(2.5,
+      parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+
+    const setup = setupCanvas();
+    if(!setup) return;
+    const {ctx,dpr,W,H} = setup;
+    ctx.clearRect(0,0,W,H);
+    if(!comp || comp.rStar === undefined) return;
+
+    const {I0,I1} = params;
+    const {sInt,sSlope,rStar,sStar,sprStar,spu} = comp;
+
+    const pad = {l:64*dpr, r:22*dpr, t:18*dpr, b:102*dpr};
+    const X0 = pad.l, X1 = W - pad.r, Y0 = pad.t, Y1 = H - pad.b;
+    const PW = X1 - X0, PH = Y1 - Y0;
+
+    // Axis ranges
+    // r-axis: 0 to max(20, ceil(r*+5)) percent
+    const rMax = Math.max(20, Math.ceil(rStar + 5));
+    // x-axis (savings/investment in $): cover both curves over r ∈ [0,rMax]
+    const Sat0 = sInt;
+    const SatM = sInt + sSlope * rMax;
+    const Iat0 = I0;
+    const IatM = I0 - I1 * rMax;
+    const xValues = [Sat0, SatM, Iat0, IatM, sStar, sprStar];
+    let xMin = Math.min(0, ...xValues);
+    let xMax = Math.max(...xValues);
+    if(xMin > 0) xMin = 0;
+    // pad and snap
+    const span = Math.max(50, xMax - xMin);
+    xMax = xMin + snapUp(span * 1.1);
+
+    const xC = x => X0 + ((x - xMin)/(xMax - xMin))*PW;
+    const yC = r => Y1 - (r/rMax)*PH;
+
+    // Background panel
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.fillRect(X0,Y0,PW,PH);
+
+    // Axes
+    ctx.strokeStyle = 'rgba(0,0,0,0.32)';
+    ctx.lineWidth   = 1.5*dpr;
+    ctx.beginPath(); ctx.moveTo(X0,Y1); ctx.lineTo(X1,Y1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0,Y1); ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,0.32)';
+    ctx.beginPath(); ctx.moveTo(X1,Y1); ctx.lineTo(X1-8*dpr,Y1-4*dpr); ctx.lineTo(X1-8*dpr,Y1+4*dpr); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(X0,Y0); ctx.lineTo(X0-4*dpr,Y0+8*dpr); ctx.lineTo(X0+4*dpr,Y0+8*dpr); ctx.closePath(); ctx.fill();
+
+    // Axis titles
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.font = `700 ${Math.round(12*dpr*_fs)}px "Inter",sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('Savings / Investment ($)', (X0+X1)/2, Y1+86*dpr);
+    ctx.save();
+    ctx.translate(X0-46*dpr, (Y0+Y1)/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.textBaseline = 'top';
+    ctx.fillText('Interest rate r (%)', 0, 0);
+    ctx.restore();
+
+    // r-axis ticks
+    ctx.font = `600 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    const rStep = rMax <= 10 ? 2 : rMax <= 20 ? 4 : rMax <= 30 ? 5 : 10;
+    for(let r=rStep; r<=rMax; r+=rStep){
+      const cy = yC(r);
+      ctx.strokeStyle = 'rgba(0,0,0,0.09)';
+      ctx.lineWidth   = 1*dpr;
+      ctx.beginPath(); ctx.moveTo(X0,cy); ctx.lineTo(X1,cy); ctx.stroke();
+      ctx.fillStyle = 'rgba(0,0,0,0.65)';
+      ctx.fillText(r, X0-7*dpr, cy);
+    }
+    // x-axis ticks
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    const xSpan = xMax - xMin;
+    const xRaw  = xSpan/5;
+    const xPow  = Math.pow(10, Math.floor(Math.log10(Math.max(1,xRaw))));
+    const xm    = xRaw/xPow;
+    const xStep = (xm < 1.5 ? 1 : xm < 3 ? 2 : xm < 7 ? 5 : 10) * xPow;
+    const xStart = Math.ceil(xMin/xStep)*xStep;
+    for(let v=xStart; v<=xMax+0.0001; v+=xStep){
+      if(Math.abs(v - xMin) < xStep*0.05) continue;
+      const cx = xC(v);
+      ctx.strokeStyle = 'rgba(0,0,0,0.09)';
+      ctx.lineWidth   = 1*dpr;
+      ctx.beginPath(); ctx.moveTo(cx,Y0); ctx.lineTo(cx,Y1); ctx.stroke();
+      ctx.fillStyle = 'rgba(0,0,0,0.65)';
+      ctx.fillText(Math.round(v), cx, Y1+5*dpr);
+    }
+
+    // x=0 vertical reference (in case it sits inside the plot)
+    if(xMin < 0 && xMax > 0){
+      const cx = xC(0);
+      ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+      ctx.lineWidth   = 1*dpr;
+      ctx.beginPath(); ctx.moveTo(cx,Y0); ctx.lineTo(cx,Y1); ctx.stroke();
+    }
+
+    // Clip plot area
+    ctx.save();
+    ctx.beginPath(); ctx.rect(X0, Y0, PW, PH); ctx.clip();
+
+    // S(r): r ∈ [0, rMax], x = sInt + sSlope·r
+    ctx.strokeStyle = '#155c38';
+    ctx.lineWidth   = 2.5*dpr;
+    ctx.beginPath();
+    let started = false;
+    for(let k=0;k<=200;k++){
+      const r = (k/200)*rMax;
+      const x = sInt + sSlope*r;
+      const cx = xC(x), cy = yC(r);
+      if(!started){ ctx.moveTo(cx,cy); started = true; } else ctx.lineTo(cx,cy);
+    }
+    ctx.stroke();
+
+    // I(r): r ∈ [0, rMax], x = I0 - I1·r
+    ctx.strokeStyle = '#b42318';
+    ctx.lineWidth   = 2.5*dpr;
+    ctx.beginPath();
+    started = false;
+    for(let k=0;k<=200;k++){
+      const r = (k/200)*rMax;
+      const x = I0 - I1*r;
+      const cx = xC(x), cy = yC(r);
+      if(!started){ ctx.moveTo(cx,cy); started = true; } else ctx.lineTo(cx,cy);
+    }
+    ctx.stroke();
+
+    // Faded equilibrium dot (before step 4) — visible but no labels
+    if(!revealed.eq){
+      const cx = xC(sStar), cy = yC(rStar);
+      ctx.beginPath(); ctx.arc(cx,cy, 6*dpr, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(31,41,55,0.18)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx,cy, 3*dpr, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(31,41,55,0.32)'; ctx.fill();
+    }
+
+    // Equilibrium guides + dot (after step 4)
+    if(revealed.eq){
+      const cx = xC(sStar), cy = yC(rStar);
+      ctx.setLineDash([5*dpr,4*dpr]);
+      ctx.strokeStyle = 'rgba(31,41,55,0.55)';
+      ctx.lineWidth = 1.25*dpr;
+      ctx.beginPath(); ctx.moveTo(X0,cy);     ctx.lineTo(cx,cy);  ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx,Y1);     ctx.lineTo(cx,cy);  ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.beginPath(); ctx.arc(cx,cy, 9*dpr, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(31,41,55,0.18)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx,cy, 5.5*dpr, 0, Math.PI*2);
+      ctx.fillStyle = '#1f2937'; ctx.fill();
+      ctx.beginPath(); ctx.arc(cx,cy, 5.5*dpr, 0, Math.PI*2);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5*dpr; ctx.stroke();
+    }
+
+    ctx.restore(); // end clip
+
+    // Curve labels with white halos
+    const halo = (text, color, x, r, dyPx) => {
+      const cx = xC(x), cy = yC(r) + dyPx*dpr;
+      ctx.font = `700 ${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth   = 3.5*dpr;
+      ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+      ctx.strokeText(text, cx, cy);
+      ctx.fillStyle = color;
+      ctx.fillText(text, cx, cy);
+    };
+    // S label at r ≈ 0.85·rMax
+    {
+      const rLab = rMax * 0.86;
+      const xLab = sInt + sSlope * rLab;
+      halo('S(r)', '#155c38', xLab, rLab, -10);
+    }
+    // I label at r ≈ 0.15·rMax (near bottom — high quantity end)
+    {
+      const rLab = rMax * 0.14;
+      const xLab = I0 - I1 * rLab;
+      halo('I(r)', '#b42318', xLab, rLab, -10);
+    }
+
+    // r* and S* axis annotations (after step 4) — just the numbers, no prefix
+    if(revealed.eq){
+      ctx.font = `700 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+      ctx.strokeStyle = 'rgba(255,255,255,0.92)'; ctx.lineWidth = 3*dpr;
+      ctx.fillStyle = '#1f2937';
+      // r* — to the left of the y-axis at the equilibrium height
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      const lblR = `${fmtNum(comp.rStar,2)}%`;
+      ctx.strokeText(lblR, X0-9*dpr, yC(comp.rStar));
+      ctx.fillText  (lblR, X0-9*dpr, yC(comp.rStar));
+      // S* — below the x-axis tick labels at the equilibrium x
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      const lblS = `${fmtNum(comp.sStar,2)}`;
+      ctx.strokeText(lblS, xC(comp.sStar), Y1+20*dpr);
+      ctx.fillText  (lblS, xC(comp.sStar), Y1+20*dpr);
+    }
+
+    // S_PR / S_PU breakdown brackets — below the x-axis (after step 5)
+    if(revealed.breakdown){
+      const x0c  = xC(0);
+      const xPRc = xC(comp.sprStar);
+      const xSc  = xC(comp.sStar);
+
+      // Two stacked rows so positive and negative S_PU both render cleanly:
+      //   Row 1 (closer to axis): S_PR from 0 → sprStar
+      //   Row 2 (further down):   S_PU from sprStar → sStar
+      const row1Y = Y1 + 38*dpr;     // bracket line y
+      const row1L = Y1 + 50*dpr;     // bracket label y (textBaseline top)
+      const row2Y = Y1 + 62*dpr;
+      const row2L = Y1 + 74*dpr;
+      const tick  = 5*dpr;
+
+      // — Row 1: S_PR —
+      ctx.strokeStyle = '#2f5d7c';
+      ctx.lineWidth   = 2*dpr;
+      ctx.beginPath();
+      ctx.moveTo(x0c,  row1Y - tick); ctx.lineTo(x0c,  row1Y);
+      ctx.lineTo(xPRc, row1Y);        ctx.lineTo(xPRc, row1Y - tick);
+      ctx.stroke();
+      ctx.font = `700 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+      ctx.fillStyle = '#2f5d7c';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.strokeStyle = 'rgba(255,255,255,0.92)'; ctx.lineWidth = 3*dpr;
+      const lblPR = `S_PR = ${fmtNum(comp.sprStar,2)}`;
+      ctx.strokeText(lblPR, (x0c + xPRc)/2, row1L);
+      ctx.fillText  (lblPR, (x0c + xPRc)/2, row1L);
+
+      // — Row 2: S_PU — (color signals sign)
+      const puColor = comp.spu >= 0 ? '#155c38' : '#b42318';
+      ctx.strokeStyle = puColor;
+      ctx.lineWidth   = 2*dpr;
+      ctx.beginPath();
+      ctx.moveTo(xPRc, row2Y - tick); ctx.lineTo(xPRc, row2Y);
+      ctx.lineTo(xSc,  row2Y);        ctx.lineTo(xSc,  row2Y - tick);
+      ctx.stroke();
+      ctx.fillStyle = puColor;
+      ctx.strokeStyle = 'rgba(255,255,255,0.92)'; ctx.lineWidth = 3*dpr;
+      const puWord  = comp.spu >= 0 ? 'surplus' : 'deficit';
+      const lblPU   = `S_PU = ${fmtNum(comp.spu,2)} (${puWord})`;
+      ctx.strokeText(lblPU, (xPRc + xSc)/2, row2L);
+      ctx.fillText  (lblPU, (xPRc + xSc)/2, row2L);
+    }
+
+    updateGraphDesc();
+  }
+
+  // ── Resize handler ─────────────────────────────────────────────────────────
+  let _resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(drawGraph, 80);
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  function init(){
+    generateParams();
+    renderProblem();
+  }
+  function bootWhenKatexReady(){
+    if(window.katex){ kickoff(); return; }
+    let p = 0;
+    const iv = setInterval(() => {
+      p += 1;
+      if(window.katex || p > 60){ clearInterval(iv); kickoff(); }
+    }, 80);
+  }
+  function renderExample(){
+    const el = document.getElementById('exampleBody');
+    if(!el) return;
+    const D = (tex) => window.katex
+      ? katex.renderToString(tex, {throwOnError:false, displayMode:true})
+      : tex;
+    const I = (tex) => window.katex
+      ? katex.renderToString(tex, {throwOnError:false})
+      : tex;
+    el.innerHTML = `
+      <p>Suppose we have the following economy:</p>
+      <div class="eq-block">${D('\\begin{aligned} Y &= 4633 \\\\ C &= 300 + 0.43(Y-T) - 22r \\\\ I &= 6683 - 30r \\\\ G &= 437 \\\\ T &= 394 \\end{aligned}')}</div>
+
+      <h4>Step 1 — Private savings</h4>
+      <p>Disposable income minus consumption:</p>
+      <div class="eq-block">${D('\\begin{aligned} S_{PR} &= (Y-T) - C \\\\ S_{PR} &= (4633 - 394) - \\big(300 + 0.43(4633-394) - 22r\\big) \\\\ S_{PR} &= 2116.23 + 22r \\end{aligned}')}</div>
+
+      <h4>Step 2 — Public savings</h4>
+      <p>The government's budget balance:</p>
+      <div class="eq-block">${D('\\begin{aligned} S_{PU} &= T - G \\\\ S_{PU} &= 394 - 437 \\\\ S_{PU} &= -43 \\end{aligned}')}</div>
+
+      <h4>Step 3 — National savings</h4>
+      <p>There are two ways to do this (same answer either way).</p>
+      <p><strong>Method A.</strong> Add private and public savings together:</p>
+      <div class="eq-block">${D('\\begin{aligned} S &= S_{PR} + S_{PU} \\\\ S &= (2116.23 + 22r) + (-43) \\\\ S &= 2073.23 + 22r \\end{aligned}')}</div>
+      <p><strong>Method B.</strong> Use the identity ${I('S = Y - C - G')}:</p>
+      <div class="eq-block">${D('\\begin{aligned} S &= Y - C - G \\\\ S &= 4633 - \\big(300 + 0.43(4633-394) - 22r\\big) - 437 \\\\ S &= 2073.23 + 22r \\end{aligned}')}</div>
+
+      <h4>Step 4 — Equilibrium interest rate</h4>
+      <p>Set total savings equal to investment:</p>
+      <div class="eq-block">${D('\\begin{aligned} I(r) &= S(r) \\\\ 6683 - 30r &= 2073.23 + 22r \\\\ 4609.77 &= 52\\,r \\\\ r^{*} &= 88.65\\% \\end{aligned}')}</div>
+
+      <h4>Step 5 — Plug ${I('r^{*}')} back in</h4>
+      <div class="eq-block">${D('\\begin{aligned} S_{PR}(r^{*}) &= 2116.23 + 22 \\cdot 88.65 = 4066.52 \\\\ S_{PU}        &= -43 \\\\ S(r^{*})      &= 2073.23 + 22 \\cdot 88.65 = 4023.52 \\end{aligned}')}</div>
+      <p>At the equilibrium interest rate, households save $4,066.52 privately and the government runs a $43 deficit, leaving $4,023.52 in national savings — exactly the quantity of investment firms demand at ${I('r^{*}')}.</p>
+    `;
+  }
+
+  function kickoff(){
+    renderExample();
+    const isDiscussion = new URLSearchParams(location.search).get('disc') === '1';
+    if(isDiscussion && window.DiscussionModal){
+      DiscussionModal.init({
+        weekLabel: WEEK_LABEL,
+        onReady: function(){ init(); }
+      });
+    } else {
+      init();
+    }
+  }
+  bootWhenKatexReady();
+
+})();
+</script>
+</body>
+</html>

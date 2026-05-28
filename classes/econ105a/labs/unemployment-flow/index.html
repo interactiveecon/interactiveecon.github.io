@@ -1,0 +1,1239 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Steady-State Flow Simulator — ECON 105A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --font-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;  --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ─────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol,.instructions-body ul{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Layout */
+    .lab-wrap{max-width:1160px;margin:0 auto;padding:18px;}
+
+    /* Parameters card */
+    .params-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;padding:14px 16px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .params-card h2{margin:0 0 10px;font-size:0.6875rem;font-weight:800;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.08em;}
+    .slider-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 22px;}
+    @media(max-width:700px){.slider-grid{grid-template-columns:1fr;}}
+    .slider-row{display:flex;flex-direction:column;gap:6px;}
+    .slider-row .slabel{display:flex;justify-content:space-between;
+      align-items:baseline;gap:8px;}
+    .slider-row .sname{font-size:0.8125rem;font-weight:700;color:var(--ink);}
+    .slider-row .sdesc{font-size:0.6875rem;color:var(--muted);
+      line-height:1.4;margin-top:-2px;}
+    .slider-row .svalue{font-size:0.875rem;font-weight:700;
+      color:var(--accent);font-variant-numeric:tabular-nums;
+      min-width:3.5em;text-align:right;}
+    .slider-row input[type="range"]{width:100%;margin:0;
+      accent-color:var(--accent);}
+    .slider-row input[type="range"]:focus-visible{
+      outline:3px solid var(--accent);outline-offset:4px;}
+
+    .ss-readout{margin-top:14px;padding:12px 14px;border-top:1px solid var(--line);
+      font-size:0.8125rem;color:var(--ink-2);line-height:1.7;}
+    .ss-readout .ss-label{font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.07em;font-size:0.6875rem;
+      display:block;margin-bottom:4px;}
+    .ss-readout .ss-line{display:block;}
+    .ss-readout .ss-num{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
+      color:var(--ink);font-weight:600;}
+
+    /* Controls bar */
+    .controls-bar{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;padding:12px 16px;margin-bottom:14px;
+      display:flex;flex-wrap:wrap;align-items:center;gap:10px;
+      box-shadow:var(--shadow);}
+    .controls-bar .bar-label{font-size:0.6875rem;font-weight:800;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.08em;}
+    .controls-bar .month-count{margin-left:auto;font-size:0.875rem;font-weight:700;
+      color:var(--ink);font-variant-numeric:tabular-nums;
+      padding:6px 12px;border-radius:8px;background:rgba(47,93,124,.08);}
+    .controls-bar .month-count strong{color:var(--accent);}
+    .controls-bar .speed-group{display:flex;align-items:center;gap:8px;
+      font-size:0.75rem;color:var(--muted);}
+    .controls-bar .speed-group input[type="range"]{width:110px;accent-color:var(--accent);}
+    .controls-bar .speed-group .speed-val{font-variant-numeric:tabular-nums;
+      color:var(--ink-2);min-width:4.5em;}
+
+    /* Buttons */
+    .ctrl-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;
+      transition:background .12s,border-color .12s,color .12s;}
+    .ctrl-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .ctrl-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .ctrl-btn.running{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+    /* Canvas row */
+    .canvas-row{display:grid;grid-template-columns:1fr 1fr;
+      gap:14px;margin-bottom:14px;}
+    @media(max-width:900px){.canvas-row{grid-template-columns:1fr;}}
+
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;
+      overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+
+    /* Phase strip */
+    .phase-strip{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;padding:12px 16px;box-shadow:var(--shadow);
+      font-size:0.8125rem;color:var(--ink-2);line-height:1.6;
+      display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;}
+    .phase-strip .ps-item{display:inline-flex;gap:6px;align-items:baseline;}
+    .phase-strip .ps-key{color:var(--muted);font-size:0.6875rem;
+      text-transform:uppercase;letter-spacing:.06em;font-weight:700;}
+    .phase-strip .ps-val{font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink);}
+    .phase-strip .ps-status{font-weight:700;}
+    .phase-strip .ps-status.converging{color:var(--accent);}
+    .phase-strip .ps-status.atss{color:var(--good);}
+
+    /* Footer */
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+
+    .hidden{display:none!important;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105a/labs/">← ECON 105A</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105A — Unemployment</div>
+      <h1>Steady-State Flow Simulator</h1>
+      <p class="sub">
+        Watch how the labor market converges to its steady-state unemployment
+        rate by simulating the monthly flows of workers between employment
+        and unemployment.
+      </p>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>The matching model assumes that the labor market is in <strong>steady state</strong>: in every month, the number of workers losing jobs equals the number of workers finding jobs, so the unemployment rate stays constant. This lab lets you watch that steady state emerge from the underlying flows.</p>
+          <p>Set the parameters:</p>
+          <ol>
+            <li><strong>Job-separation rate (s).</strong> Fraction of employed workers losing their jobs each month.</li>
+            <li><strong>Job-finding rate (f).</strong> Fraction of unemployed workers finding a job each month.</li>
+            <li><strong>Labor force (H).</strong> Total workers (employed + unemployed).</li>
+            <li><strong>Initial unemployment (U₀).</strong> Where the simulation starts.</li>
+          </ol>
+          <p>Then use the simulation controls:</p>
+          <ul>
+            <li><strong>Step</strong> advances the simulation by one month.</li>
+            <li><strong>Run</strong> advances one month every 150ms until you click <strong>Pause</strong> or it reaches steady state.</li>
+            <li><strong>Run to steady state</strong> jumps straight to convergence.</li>
+            <li><strong>Reset</strong> returns to month 0 with the current parameters.</li>
+          </ul>
+          <p>Try setting U₀ to very different starting points (0 workers unemployed, or all 100 workers unemployed) and watch what happens. The unemployment rate always converges to the same value: <strong>u* = s/(s+f)</strong>.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- Parameters card -->
+  <div class="params-card">
+    <h2>Parameters</h2>
+    <div class="slider-grid">
+      <div class="slider-row">
+        <div class="slabel">
+          <label for="sliderS" class="sname">Job-separation rate (s)</label>
+          <span class="svalue" id="valueS">0.035</span>
+        </div>
+        <input type="range" id="sliderS" min="0.005" max="0.10" step="0.005" value="0.035"
+               aria-describedby="descS">
+        <div class="sdesc" id="descS">Fraction of employed workers losing their jobs each month.</div>
+      </div>
+
+      <div class="slider-row">
+        <div class="slabel">
+          <label for="sliderF" class="sname">Job-finding rate (f)</label>
+          <span class="svalue" id="valueF">0.30</span>
+        </div>
+        <input type="range" id="sliderF" min="0.05" max="0.60" step="0.01" value="0.30"
+               aria-describedby="descF">
+        <div class="sdesc" id="descF">Fraction of unemployed workers finding a job each month.</div>
+      </div>
+
+      <div class="slider-row">
+        <div class="slabel">
+          <label for="sliderH" class="sname">Labor force (H)</label>
+          <span class="svalue" id="valueH">100</span>
+        </div>
+        <input type="range" id="sliderH" min="50" max="200" step="10" value="100"
+               aria-describedby="descH">
+        <div class="sdesc" id="descH">Total number of workers (employed plus unemployed).</div>
+      </div>
+
+      <div class="slider-row">
+        <div class="slabel">
+          <label for="sliderU0" class="sname">Initial unemployment (U₀)</label>
+          <span class="svalue" id="valueU0">50</span>
+        </div>
+        <input type="range" id="sliderU0" min="0" max="100" step="1" value="50"
+               aria-describedby="descU0">
+        <div class="sdesc" id="descU0">Number of workers unemployed at month 0.</div>
+      </div>
+    </div>
+
+    <div class="ss-readout" id="ssReadout" aria-live="polite" aria-atomic="true">
+      <span class="ss-label">Steady state (implied by current parameters)</span>
+      <span class="ss-line" id="ssLine1"></span>
+      <span class="ss-line" id="ssLine2"></span>
+      <span class="ss-line" id="ssLine3"></span>
+    </div>
+  </div>
+
+  <!-- Simulation controls -->
+  <div class="controls-bar" role="group" aria-label="Simulation controls">
+    <span class="bar-label">Simulation</span>
+    <button class="ctrl-btn" id="btnStep" type="button">Step</button>
+    <button class="ctrl-btn" id="btnRun" type="button" aria-label="Run">▶ Run</button>
+    <button class="ctrl-btn" id="btnRunSS" type="button">⏭ Run to steady state</button>
+    <button class="ctrl-btn" id="btnReset" type="button">↺ Reset</button>
+    <span class="speed-group">
+      <label for="sliderSpeed">Speed</label>
+      <input type="range" id="sliderSpeed" min="50" max="500" step="10" value="150"
+             aria-describedby="speedDesc">
+      <span class="speed-val" id="speedVal">150 ms/step</span>
+      <span class="sr-only" id="speedDesc">Milliseconds between simulation steps in Run mode.</span>
+    </span>
+    <span class="month-count" role="status" aria-live="polite" aria-atomic="true"
+          id="monthCount">Month: <strong>0</strong></span>
+  </div>
+
+  <!-- Canvases -->
+  <div class="canvas-row">
+    <div class="graph-card">
+      <div class="graph-title" id="flowGraphTitle">Monthly flows between employment and unemployment</div>
+      <div class="canvas-wrap">
+        <canvas id="flowCanvas"
+                role="img"
+                aria-labelledby="flowGraphTitle"
+                aria-describedby="flowGraphDesc"
+                style="aspect-ratio:5/3;"></canvas>
+      </div>
+    </div>
+
+    <div class="graph-card">
+      <div class="graph-title" id="seriesGraphTitle">Flows over time</div>
+      <div class="canvas-wrap">
+        <canvas id="seriesCanvas"
+                role="img"
+                aria-labelledby="seriesGraphTitle"
+                aria-describedby="seriesGraphDesc"
+                style="aspect-ratio:1/1;"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase strip -->
+  <div class="phase-strip" id="phaseStrip" aria-live="polite" aria-atomic="true">
+    <span class="ps-item"><span class="ps-key">Month</span><span class="ps-val" id="psMonth">0</span></span>
+    <span class="ps-item"><span class="ps-key">L</span><span class="ps-val" id="psL">50.0</span></span>
+    <span class="ps-item"><span class="ps-key">U</span><span class="ps-val" id="psU">50.0</span></span>
+    <span class="ps-item"><span class="ps-key">Distance to steady state</span><span class="ps-val" id="psDist">—</span></span>
+    <span class="ps-status converging" id="psStatus">Converging…</span>
+  </div>
+
+  <!-- Live-region descriptions for both canvases -->
+  <section class="sr-only" id="graphsDesc"
+           aria-live="polite" aria-atomic="true">
+    <p id="flowGraphDesc">Flow diagram. Initial state.</p>
+    <p id="seriesGraphDesc">Time-series chart. Initial state.</p>
+  </section>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 105A — Intermediate Macroeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+/*
+ * LAB_ID:    unemployment-flow
+ * LAB_LABEL: Unemployment — Steady-State Flow Simulator
+ * Type:      Single-phase, exploratory (no Session integration, no scoring)
+ *
+ * This lab teaches the steady-state condition sL = fU and the derivation of
+ * u* = s/(s+f) by letting students watch the underlying flow dynamics
+ * converge from arbitrary initial conditions. It is pedagogically upstream
+ * of the unemployment exploration lab (classes/econ105a/labs/unemployment/),
+ * which does comparative statics on the equilibrium.
+ */
+(function(){
+'use strict';
+
+// ────────────────────────────────────────────────────────────────────
+// Constants
+// ────────────────────────────────────────────────────────────────────
+const CONVERGENCE_TOL = 1e-7;        // |L_{t+1} - L_t| / H < this → at SS
+                                     // Tight enough that the displayed sL
+                                     // and fU labels (2-decimal precision)
+                                     // are always visibly identical at SS,
+                                     // reinforcing that the flows agree
+                                     // *exactly* in steady state.
+const ANNOUNCE_THROTTLE_MS = 1000;   // debounce phase-strip announcements
+
+// Prefers-reduced-motion
+const REDUCED_MOTION = window.matchMedia &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ────────────────────────────────────────────────────────────────────
+// State
+// ────────────────────────────────────────────────────────────────────
+const state = {
+  // Model parameters
+  s: 0.035,
+  f: 0.30,
+  H: 100,
+  U0: 50,
+
+  // Simulation state
+  t: 0,
+  L: 50,
+  U: 50,
+  history: [{t:0, L:50, U:50}],
+  running: false,
+  speed: REDUCED_MOTION ? 500 : 150,
+  _runHandle: null,
+
+  // Chart x-range, grows as we go past it
+  tMax: 24,
+};
+
+// ────────────────────────────────────────────────────────────────────
+// DOM
+// ────────────────────────────────────────────────────────────────────
+const $sliderS  = document.getElementById('sliderS');
+const $sliderF  = document.getElementById('sliderF');
+const $sliderH  = document.getElementById('sliderH');
+const $sliderU0 = document.getElementById('sliderU0');
+const $valueS   = document.getElementById('valueS');
+const $valueF   = document.getElementById('valueF');
+const $valueH   = document.getElementById('valueH');
+const $valueU0  = document.getElementById('valueU0');
+
+const $sliderSpeed = document.getElementById('sliderSpeed');
+const $speedVal    = document.getElementById('speedVal');
+
+const $btnStep   = document.getElementById('btnStep');
+const $btnRun    = document.getElementById('btnRun');
+const $btnRunSS  = document.getElementById('btnRunSS');
+const $btnReset  = document.getElementById('btnReset');
+
+const $monthCount = document.getElementById('monthCount');
+
+const $ssLine1 = document.getElementById('ssLine1');
+const $ssLine2 = document.getElementById('ssLine2');
+const $ssLine3 = document.getElementById('ssLine3');
+
+const $flowCanvas   = document.getElementById('flowCanvas');
+const $seriesCanvas = document.getElementById('seriesCanvas');
+const $flowDesc     = document.getElementById('flowGraphDesc');
+const $seriesDesc   = document.getElementById('seriesGraphDesc');
+
+const $psMonth  = document.getElementById('psMonth');
+const $psL      = document.getElementById('psL');
+const $psU      = document.getElementById('psU');
+const $psDist   = document.getElementById('psDist');
+const $psStatus = document.getElementById('psStatus');
+
+// Font scale (recomputed each redraw)
+let _fs = 1;
+
+// ────────────────────────────────────────────────────────────────────
+// Model
+// ────────────────────────────────────────────────────────────────────
+function steadyState(s, f, H){
+  const denom = (s + f);
+  const uStar = denom > 0 ? s / denom : 0;
+  return { uStar, LStar: H * (1 - uStar), UStar: H * uStar };
+}
+
+function stepOnce(){
+  const inflow  = state.f * state.U;   // U → L (hires)
+  const outflow = state.s * state.L;   // L → U (separations)
+  state.L = state.L + inflow - outflow;
+  state.U = state.U - inflow + outflow;
+  state.t += 1;
+  state.history.push({t: state.t, L: state.L, U: state.U});
+  // Grow chart x-range if needed
+  while(state.t > state.tMax){
+    state.tMax *= 2;
+  }
+}
+
+function atSteadyState(){
+  const { LStar } = steadyState(state.s, state.f, state.H);
+  return Math.abs(state.L - LStar) / Math.max(1e-9, state.H) < CONVERGENCE_TOL;
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Canvas helpers
+// ────────────────────────────────────────────────────────────────────
+function setupCanvas(canvas){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const W = Math.round(rect.width * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+function drawArrowHead(ctx, x0, y0, x1, y1, size){
+  const ang = Math.atan2(y1-y0, x1-x0);
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x1 - size*Math.cos(ang - 0.45),
+             y1 - size*Math.sin(ang - 0.45));
+  ctx.lineTo(x1 - size*Math.cos(ang + 0.45),
+             y1 - size*Math.sin(ang + 0.45));
+  ctx.closePath();
+  ctx.fill();
+}
+
+// Stroke width for flow arrows: workers/month → px width
+// Use sqrt scaling for visual sensitivity at small values.
+function flowStrokeWidth(flow, dpr){
+  // flow in workers/month, expected range 0 to ~maxPlausible (~15)
+  const maxF = 15;
+  const norm = Math.min(1, Math.sqrt(Math.max(0, flow) / maxF));
+  return (1.5 + norm * 10.5) * dpr;
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Flow diagram canvas
+// ────────────────────────────────────────────────────────────────────
+function drawFlow(){
+  const setup = setupCanvas($flowCanvas);
+  if(!setup) return;
+  const { ctx, dpr, W, H } = setup;
+  ctx.clearRect(0,0,W,H);
+
+  const L = state.L, U = state.U, Htot = state.H;
+  const sL = state.s * L;
+  const fU = state.f * U;
+
+  // Vertical band allocation (top → bottom):
+  //   headings, boxes (with horizontal arrows in the gap between), status
+  const mx = 28 * dpr;
+  const headingZone = 16 * dpr;
+  const statusZone  = 16 * dpr;
+  const boxH = Math.max(110*dpr, H - headingZone - statusZone - 16*dpr);
+  const yBoxTop = headingZone + 8*dpr;
+  const yBoxBot = yBoxTop + boxH;
+  const yMid = yBoxTop + boxH/2;
+
+  // Wide gap between boxes — the arrows live here as straight horizontal lines.
+  const gap = 170 * dpr;
+  const totalBoxW = Math.max(80 * dpr, W - 2*mx - gap);
+  const Lshare = Htot > 0 ? Math.max(0, Math.min(1, L / Htot)) : 0.5;
+  const Ushare = 1 - Lshare;
+  const minBoxW = 48 * dpr;
+  let wL = Math.max(minBoxW, totalBoxW * Lshare);
+  let wU = Math.max(minBoxW, totalBoxW * Ushare);
+  if(wL + wU > totalBoxW){
+    const scale = totalBoxW / (wL + wU);
+    wL *= scale; wU *= scale;
+  }
+  const xL = mx;
+  const xR = mx + wL + gap;
+
+  // ── Boxes ──
+  ctx.fillStyle = 'rgba(21, 92, 56, 0.10)';
+  ctx.strokeStyle = '#155c38';
+  ctx.lineWidth = 2*dpr;
+  ctx.beginPath();
+  ctx.rect(xL, yBoxTop, wL, boxH);
+  ctx.fill(); ctx.stroke();
+
+  ctx.fillStyle = 'rgba(180, 35, 24, 0.10)';
+  ctx.strokeStyle = '#b42318';
+  ctx.beginPath();
+  ctx.rect(xR, yBoxTop, wU, boxH);
+  ctx.fill(); ctx.stroke();
+
+  // Box headings — anchored to box centers, but at fixed top-of-canvas row
+  // so they never collide with the top arrow label.
+  ctx.font = `700 ${Math.round(12*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillStyle = '#155c38';
+  ctx.fillText('Employed (L)', xL + wL/2, 4*dpr);
+  ctx.fillStyle = '#b42318';
+  ctx.fillText('Unemployed (U)', xR + wU/2, 4*dpr);
+
+  // Numbers inside boxes
+  ctx.font = `700 ${Math.round(18*dpr*_fs)}px "Source Serif 4",serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#155c38';
+  ctx.fillText(L.toFixed(1), xL + wL/2, yMid);
+  ctx.fillStyle = '#b42318';
+  ctx.fillText(U.toFixed(1), xR + wU/2, yMid);
+
+  // ── Arrow paths (straight horizontal lines in the gap) ──
+  // Top arrow: L → U (separations, sL), red
+  // Bottom arrow: U → L (hires, fU), green
+  const x1 = xL + wL;            // right edge of L box
+  const x2 = xR;                 // left edge of U box
+  const labelX = (x1 + x2) / 2;  // center of the gap, used for labels
+
+  const lwTop = flowStrokeWidth(sL, dpr);
+  const lwBot = flowStrokeWidth(fU, dpr);
+  const headTopSize = Math.max(10*dpr, lwTop * 1.8);
+  const headBotSize = Math.max(10*dpr, lwBot * 1.8);
+
+  // Place arrows symmetric around yMid; offset enough to fit two-line labels
+  // (primary + breakdown) between them without overlapping.
+  const arrowOffset = Math.max(36*dpr, boxH * 0.28);
+  const yTop = yMid - arrowOffset;
+  const yBot = yMid + arrowOffset;
+
+  // Top arrow (L → U) — head on the right edge of the gap, plugging into U box.
+  ctx.strokeStyle = '#b42318';
+  ctx.fillStyle   = '#b42318';
+  ctx.lineCap = 'butt';
+  ctx.lineWidth = lwTop;
+  ctx.beginPath();
+  ctx.moveTo(x1, yTop);
+  ctx.lineTo(x2 - headTopSize * 0.9, yTop);
+  ctx.stroke();
+  drawArrowHead(ctx, x2 - headTopSize * 0.9, yTop, x2, yTop, headTopSize);
+
+  // Bottom arrow (U → L) — head on the left edge of the gap, plugging into L box.
+  ctx.strokeStyle = '#155c38';
+  ctx.fillStyle   = '#155c38';
+  ctx.lineWidth = lwBot;
+  ctx.beginPath();
+  ctx.moveTo(x2, yBot);
+  ctx.lineTo(x1 + headBotSize * 0.9, yBot);
+  ctx.stroke();
+  drawArrowHead(ctx, x1 + headBotSize * 0.9, yBot, x1, yBot, headBotSize);
+
+  // ── Arrow labels ──
+  // Two-line stacked labels (primary equation on top, breakdown below) so
+  // they fit comfortably in the gap between the boxes.
+  ctx.textAlign = 'center';
+
+  // Top arrow (red, s · L)
+  ctx.font = `700 ${Math.round(12*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textBaseline = 'bottom';
+  ctx.fillStyle = '#b42318';
+  ctx.fillText(
+    's · L = ' + sL.toFixed(2) + '/mo',
+    labelX, yTop - lwTop/2 - 6*dpr);
+  ctx.font = `600 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = '#596878';
+  ctx.fillText(
+    state.s.toFixed(3) + ' × ' + L.toFixed(1),
+    labelX, yTop - lwTop/2 - 20*dpr);
+
+  // Bottom arrow (green, f · U)
+  ctx.font = `700 ${Math.round(12*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = '#155c38';
+  ctx.fillText(
+    'f · U = ' + fU.toFixed(2) + '/mo',
+    labelX, yBot + lwBot/2 + 6*dpr);
+  ctx.font = `600 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = '#596878';
+  ctx.fillText(
+    state.f.toFixed(2) + ' × ' + U.toFixed(1),
+    labelX, yBot + lwBot/2 + 20*dpr);
+
+  // ── Balanced badge / imbalance note (bottom of canvas) ──
+  // Use the same tolerance as atSteadyState() so the badge and the phase
+  // strip status agree (|sL − fU| = |L_{t+1} − L_t|, so the criteria match).
+  const diff = sL - fU;
+  const balanced = Math.abs(diff) < CONVERGENCE_TOL * Math.max(1, Htot);
+  ctx.font = `700 ${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  if(balanced){
+    ctx.fillStyle = '#155c38';
+    ctx.fillText('✓ Flows balanced', labelX, H - 4*dpr);
+  } else {
+    ctx.fillStyle = '#596878';
+    const direction = diff > 0 ? 'into unemployment' : 'into employment';
+    ctx.fillText(
+      'Net flow ' + direction + ': ' + Math.abs(diff).toFixed(2) + ' workers/month',
+      labelX, H - 4*dpr);
+  }
+
+  // Particles (if running and not reduced motion) — straight-line paths.
+  if(state.running && !REDUCED_MOTION){
+    drawParticles(ctx, dpr, {
+      top: {
+        p0:[x1, yTop],
+        p3:[x2 - headTopSize * 0.9, yTop],
+        color:'#b42318', flow:sL,
+      },
+      bot: {
+        p0:[x2, yBot],
+        p3:[x1 + headBotSize * 0.9, yBot],
+        color:'#155c38', flow:fU,
+      },
+    });
+  }
+}
+
+// ── Particle animation ──
+// Particles are simple: each particle has a phase ∈ [0,1] traveling along
+// a bezier path. Frequency proportional to flow magnitude.
+let _particles = { top: [], bot: [] };
+let _rafHandle = null;
+let _lastFrameTs = 0;
+
+function spawnParticles(dt, key, rate){
+  // rate in particles/sec proportional to flow magnitude. Cap at 8/sec.
+  const cap = 8;
+  const r = Math.min(cap, rate);
+  const expected = r * dt;
+  // Poisson-ish: spawn floor + maybe one extra
+  let n = Math.floor(expected);
+  if(Math.random() < (expected - n)) n++;
+  for(let i=0;i<n;i++){
+    _particles[key].push({ phase: 0 });
+  }
+}
+
+function tickParticles(now){
+  if(!state.running || REDUCED_MOTION){
+    _particles.top.length = 0;
+    _particles.bot.length = 0;
+    _rafHandle = null;
+    return;
+  }
+  const dt = _lastFrameTs ? Math.min(0.1, (now - _lastFrameTs) / 1000) : 0;
+  _lastFrameTs = now;
+  const sL = state.s * state.L;
+  const fU = state.f * state.U;
+  // Frequency proportional to flow / typical-max
+  spawnParticles(dt, 'top', sL * 0.8);
+  spawnParticles(dt, 'bot', fU * 0.8);
+  // Advance particles
+  const speed = 0.55; // phase units / sec
+  ['top','bot'].forEach(k => {
+    for(const p of _particles[k]){ p.phase += speed * dt; }
+    _particles[k] = _particles[k].filter(p => p.phase < 1);
+  });
+  // Re-render flow canvas (particles drawn in drawFlow via overlay)
+  drawFlow();
+  _rafHandle = requestAnimationFrame(tickParticles);
+}
+
+function drawParticles(ctx, dpr, paths){
+  ['top','bot'].forEach(k => {
+    const path = paths[k];
+    const list = _particles[k];
+    ctx.fillStyle = path.color;
+    for(const p of list){
+      const t = p.phase;
+      const x = path.p0[0] + (path.p3[0] - path.p0[0]) * t;
+      const y = path.p0[1] + (path.p3[1] - path.p0[1]) * t;
+      ctx.beginPath();
+      ctx.arc(x, y, 2.5*dpr, 0, Math.PI*2);
+      ctx.fill();
+    }
+  });
+}
+
+function startParticleLoop(){
+  if(REDUCED_MOTION) return;
+  if(_rafHandle) return;
+  _lastFrameTs = 0;
+  _rafHandle = requestAnimationFrame(tickParticles);
+}
+function stopParticleLoop(){
+  if(_rafHandle){ cancelAnimationFrame(_rafHandle); _rafHandle = null; }
+  _particles.top.length = 0;
+  _particles.bot.length = 0;
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Time-series canvas
+// ────────────────────────────────────────────────────────────────────
+const TS_PAD = { l:54, r:60, t:18, b:48 };
+
+function drawSeries(){
+  const setup = setupCanvas($seriesCanvas);
+  if(!setup) return;
+  const { ctx, dpr, W, H } = setup;
+  ctx.clearRect(0,0,W,H);
+
+  const p = { l: TS_PAD.l*dpr, r: TS_PAD.r*dpr, t: TS_PAD.t*dpr, b: TS_PAD.b*dpr };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  const xMax = Math.max(1, state.tMax);
+  const yMax = Math.max(1, state.H);
+  const xC = t => p.l + (t / xMax) * PW;
+  const yC = v => H - p.b - (v / yMax) * PH;
+
+  const ss = steadyState(state.s, state.f, state.H);
+
+  // ── Axes ──
+  ctx.strokeStyle = 'rgba(0,0,0,0.30)';
+  ctx.lineWidth = 1.5*dpr;
+  ctx.beginPath();
+  ctx.moveTo(p.l, H - p.b); ctx.lineTo(W - p.r, H - p.b); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(p.l, p.t); ctx.lineTo(p.l, H - p.b); ctx.stroke();
+  ctx.fillStyle = 'rgba(0,0,0,0.30)';
+  drawArrowHead(ctx, W - p.r - 10*dpr, H - p.b, W - p.r, H - p.b, 7*dpr);
+  drawArrowHead(ctx, p.l, p.t + 10*dpr, p.l, p.t, 7*dpr);
+
+  // ── Gridlines + ticks ──
+  ctx.font = `600 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.62)';
+
+  // Y ticks
+  const yStep = tickStep(yMax);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for(let v=0; v<=yMax+1e-6; v+=yStep){
+    const cy = yC(v);
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1*dpr;
+    ctx.beginPath(); ctx.moveTo(p.l, cy); ctx.lineTo(W - p.r, cy); ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,0.62)';
+    ctx.fillText(v.toFixed(0), p.l - 6*dpr, cy);
+  }
+
+  // X ticks
+  const xStep = tickStep(xMax);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for(let v=0; v<=xMax+1e-6; v+=xStep){
+    const cx = xC(v);
+    ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 1*dpr;
+    ctx.beginPath(); ctx.moveTo(cx, p.t); ctx.lineTo(cx, H - p.b); ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,0.62)';
+    ctx.fillText(v.toFixed(0), cx, H - p.b + 6*dpr);
+  }
+
+  // ── Axis titles ──
+  ctx.font = `700 ${Math.round(12*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = 'rgba(0,0,0,0.72)';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText('Month', (p.l + (W - p.r))/2, H - p.b + 24*dpr);
+  ctx.save();
+  ctx.translate(p.l - 42*dpr, (p.t + (H - p.b))/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+  ctx.fillText('Number of workers', 0, 0);
+  ctx.restore();
+
+  // ── Clip plot area ──
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(p.l, p.t, PW, PH);
+  ctx.clip();
+
+  // ── Convergence band (±1% of H around L*, U*) ──
+  const band = 0.01 * state.H;
+  ctx.fillStyle = 'rgba(120,120,120,0.10)';
+  // L band
+  ctx.fillRect(p.l, yC(Math.min(yMax, ss.LStar + band)),
+               PW, yC(Math.max(0, ss.LStar - band)) - yC(Math.min(yMax, ss.LStar + band)));
+  // U band
+  ctx.fillRect(p.l, yC(Math.min(yMax, ss.UStar + band)),
+               PW, yC(Math.max(0, ss.UStar - band)) - yC(Math.min(yMax, ss.UStar + band)));
+
+  // ── Steady-state reference lines ──
+  ctx.strokeStyle = '#155c38';
+  ctx.lineWidth = 1.5*dpr;
+  ctx.setLineDash([6*dpr, 4*dpr]);
+  ctx.beginPath();
+  ctx.moveTo(p.l, yC(ss.LStar));
+  ctx.lineTo(W - p.r, yC(ss.LStar));
+  ctx.stroke();
+
+  ctx.strokeStyle = '#b42318';
+  ctx.beginPath();
+  ctx.moveTo(p.l, yC(ss.UStar));
+  ctx.lineTo(W - p.r, yC(ss.UStar));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // ── Time-series lines ──
+  const H_ = state.history;
+  // L line (green)
+  ctx.strokeStyle = '#155c38';
+  ctx.lineWidth = 2*dpr;
+  ctx.beginPath();
+  for(let i=0;i<H_.length;i++){
+    const pt = H_[i];
+    const cx = xC(pt.t), cy = yC(pt.L);
+    if(i===0) ctx.moveTo(cx, cy); else ctx.lineTo(cx, cy);
+  }
+  ctx.stroke();
+
+  // U line (red)
+  ctx.strokeStyle = '#b42318';
+  ctx.lineWidth = 2*dpr;
+  ctx.beginPath();
+  for(let i=0;i<H_.length;i++){
+    const pt = H_[i];
+    const cx = xC(pt.t), cy = yC(pt.U);
+    if(i===0) ctx.moveTo(cx, cy); else ctx.lineTo(cx, cy);
+  }
+  ctx.stroke();
+
+  // Current-month marker
+  if(H_.length > 0){
+    const last = H_[H_.length - 1];
+    const cx = xC(last.t);
+    ctx.strokeStyle = 'rgba(55,65,81,0.5)';
+    ctx.lineWidth = 1*dpr;
+    ctx.setLineDash([3*dpr, 3*dpr]);
+    ctx.beginPath();
+    ctx.moveTo(cx, p.t); ctx.lineTo(cx, H - p.b);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Filled dots
+    ctx.fillStyle = '#155c38';
+    ctx.beginPath();
+    ctx.arc(cx, yC(last.L), 4*dpr, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = '#b42318';
+    ctx.beginPath();
+    ctx.arc(cx, yC(last.U), 4*dpr, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  ctx.restore(); // end clip
+
+  // ── Reference-line labels (outside clip, at right edge) ──
+  ctx.font = `700 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#155c38';
+  ctx.fillText('L* = ' + ss.LStar.toFixed(1), W - p.r + 4*dpr, yC(ss.LStar));
+  ctx.fillStyle = '#b42318';
+  ctx.fillText('U* = ' + ss.UStar.toFixed(1), W - p.r + 4*dpr, yC(ss.UStar));
+
+  // Legend (top-left of plot)
+  ctx.font = `700 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  const lgX = p.l + 8*dpr;
+  const lgY1 = p.t + 12*dpr;
+  const lgY2 = p.t + 28*dpr;
+  ctx.strokeStyle = '#155c38'; ctx.lineWidth = 2*dpr;
+  ctx.beginPath(); ctx.moveTo(lgX, lgY1); ctx.lineTo(lgX + 18*dpr, lgY1); ctx.stroke();
+  ctx.fillStyle = '#155c38';
+  ctx.fillText('Employed (L)', lgX + 22*dpr, lgY1);
+  ctx.strokeStyle = '#b42318';
+  ctx.beginPath(); ctx.moveTo(lgX, lgY2); ctx.lineTo(lgX + 18*dpr, lgY2); ctx.stroke();
+  ctx.fillStyle = '#b42318';
+  ctx.fillText('Unemployed (U)', lgX + 22*dpr, lgY2);
+}
+
+function tickStep(mx){
+  if(mx<=10) return 1; if(mx<=20) return 2; if(mx<=50) return 5;
+  if(mx<=100) return 10; if(mx<=200) return 20; if(mx<=500) return 50;
+  return 100;
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Live-region descriptions
+// ────────────────────────────────────────────────────────────────────
+function updateGraphDescriptions(){
+  const L = state.L, U = state.U;
+  const sL = state.s * L;
+  const fU = state.f * U;
+  const diff = sL - fU;
+  const balanced = Math.abs(diff) < 0.01 * Math.max(1, state.H);
+  const ss = steadyState(state.s, state.f, state.H);
+  const dist = Math.abs(L - ss.LStar);
+
+  let fl = 'Flow diagram, month ' + state.t + '. ' +
+    'Employed L = ' + L.toFixed(1) + ' workers. ' +
+    'Unemployed U = ' + U.toFixed(1) + ' workers. ' +
+    'Monthly outflow from employment to unemployment, s times L, equals ' +
+      sL.toFixed(2) + ' workers. ' +
+    'Monthly inflow from unemployment to employment, f times U, equals ' +
+      fU.toFixed(2) + ' workers. ';
+  if(balanced){
+    fl += 'Flows are balanced; the system is at steady state.';
+  } else {
+    const dir = diff > 0 ? 'into unemployment' : 'into employment';
+    fl += 'Flows differ by ' + Math.abs(diff).toFixed(2) +
+          ' workers per month, with a net flow ' + dir + '.';
+  }
+  $flowDesc.textContent = fl;
+
+  let ts = 'Time-series chart. Month ' + state.t + '. ' +
+    'Employed L = ' + L.toFixed(1) + ', unemployed U = ' + U.toFixed(1) + '. ' +
+    'Steady-state target: L* = ' + ss.LStar.toFixed(1) +
+    ', U* = ' + ss.UStar.toFixed(1) + '. ' +
+    'Distance from steady state: ' + dist.toFixed(2) + ' workers. ';
+  if(atSteadyState()){
+    ts += 'The simulation has reached steady state.';
+  } else {
+    ts += 'The system is still converging.';
+  }
+  $seriesDesc.textContent = ts;
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Steady-state readout (parameters card)
+// ────────────────────────────────────────────────────────────────────
+function updateSSReadout(){
+  const ss = steadyState(state.s, state.f, state.H);
+  $ssLine1.innerHTML =
+    'u* = s / (s + f) = ' +
+    '<span class="ss-num">' + state.s.toFixed(3) + ' / (' +
+    state.s.toFixed(3) + ' + ' + state.f.toFixed(3) + ')</span> = ' +
+    '<span class="ss-num">' + ss.uStar.toFixed(3) +
+    '  (' + (ss.uStar*100).toFixed(1) + '%)</span>';
+  $ssLine2.innerHTML =
+    'L* = H × (1 − u*) = ' +
+    '<span class="ss-num">' + state.H + ' × ' +
+    (1 - ss.uStar).toFixed(3) + '</span> = ' +
+    '<span class="ss-num">' + ss.LStar.toFixed(1) + '</span>';
+  $ssLine3.innerHTML =
+    'U* = H × u* = ' +
+    '<span class="ss-num">' + state.H + ' × ' +
+    ss.uStar.toFixed(3) + '</span> = ' +
+    '<span class="ss-num">' + ss.UStar.toFixed(1) + '</span>';
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Phase strip (throttled during Run)
+// ────────────────────────────────────────────────────────────────────
+let _lastAnnounceTs = 0;
+let _pendingAnnounce = null;
+
+function updatePhaseStripDOM(force){
+  const ss = steadyState(state.s, state.f, state.H);
+  const dist = Math.abs(state.L - ss.LStar);
+  const atSS = atSteadyState();
+
+  $psMonth.textContent = state.t;
+  $psL.textContent = state.L.toFixed(2);
+  $psU.textContent = state.U.toFixed(2);
+  $psDist.textContent = dist.toFixed(2) + ' workers';
+  if(atSS){
+    $psStatus.textContent = '✓ At steady state';
+    $psStatus.className = 'ps-status atss';
+  } else {
+    $psStatus.textContent = 'Converging…';
+    $psStatus.className = 'ps-status converging';
+  }
+  // Month counter (separate aria-live region with role=status)
+  $monthCount.innerHTML = 'Month: <strong>' + state.t + '</strong>';
+}
+
+function updatePhaseStrip(){
+  // Always update DOM. The aria-live attribute on the container means
+  // every text change is announced; throttle by debouncing rapid updates
+  // during Run mode.
+  if(!state.running){
+    updatePhaseStripDOM(true);
+    return;
+  }
+  const now = performance.now();
+  if(now - _lastAnnounceTs >= ANNOUNCE_THROTTLE_MS){
+    updatePhaseStripDOM(true);
+    _lastAnnounceTs = now;
+    if(_pendingAnnounce){
+      clearTimeout(_pendingAnnounce);
+      _pendingAnnounce = null;
+    }
+  } else {
+    if(!_pendingAnnounce){
+      const wait = ANNOUNCE_THROTTLE_MS - (now - _lastAnnounceTs);
+      _pendingAnnounce = setTimeout(() => {
+        _pendingAnnounce = null;
+        updatePhaseStripDOM(true);
+        _lastAnnounceTs = performance.now();
+      }, Math.max(0, wait));
+    }
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Redraw
+// ────────────────────────────────────────────────────────────────────
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  drawFlow();
+  drawSeries();
+  updateSSReadout();
+  updateGraphDescriptions();
+  updatePhaseStrip();
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Simulation control
+// ────────────────────────────────────────────────────────────────────
+function updateRunButton(){
+  if(state.running){
+    $btnRun.textContent = '⏸ Pause';
+    $btnRun.setAttribute('aria-label', 'Pause');
+    $btnRun.classList.add('running');
+  } else {
+    $btnRun.textContent = '▶ Run';
+    $btnRun.setAttribute('aria-label', 'Run');
+    $btnRun.classList.remove('running');
+  }
+}
+
+function startRun(){
+  if(state.running) return;
+  if(atSteadyState()){
+    // already there — nothing to do
+    return;
+  }
+  state.running = true;
+  updateRunButton();
+  startParticleLoop();
+  state._runHandle = setInterval(() => {
+    stepOnce();
+    redraw();
+    if(atSteadyState()){
+      stopRun();
+    }
+  }, state.speed);
+}
+
+function stopRun(){
+  if(!state.running) return;
+  state.running = false;
+  if(state._runHandle){
+    clearInterval(state._runHandle);
+    state._runHandle = null;
+  }
+  stopParticleLoop();
+  updateRunButton();
+  redraw();
+}
+
+function toggleRun(){
+  if(state.running) stopRun();
+  else startRun();
+}
+
+function runToSteadyState(){
+  stopRun();
+  let safety = 0;
+  while(!atSteadyState() && safety < 1000){
+    stepOnce();
+    safety++;
+  }
+  redraw();
+}
+
+function resetSim(){
+  stopRun();
+  state.t = 0;
+  state.L = state.H - state.U0;
+  state.U = state.U0;
+  state.history = [{t:0, L:state.L, U:state.U}];
+  state.tMax = 24;
+  redraw();
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Slider wiring
+// ────────────────────────────────────────────────────────────────────
+function syncSliderDisplays(){
+  $valueS.textContent  = state.s.toFixed(3);
+  $valueF.textContent  = state.f.toFixed(2);
+  $valueH.textContent  = String(state.H);
+  $valueU0.textContent = String(state.U0);
+  $sliderU0.max = String(state.H);
+}
+
+function onParamChange(){
+  // Parameter change invalidates trajectory — reset.
+  resetSim();
+}
+
+$sliderS.addEventListener('input', e => {
+  state.s = parseFloat(e.target.value);
+  syncSliderDisplays();
+  updateSSReadout();
+  onParamChange();
+});
+$sliderF.addEventListener('input', e => {
+  state.f = parseFloat(e.target.value);
+  syncSliderDisplays();
+  updateSSReadout();
+  onParamChange();
+});
+$sliderH.addEventListener('input', e => {
+  const newH = parseInt(e.target.value, 10);
+  state.H = newH;
+  // Clamp U0 to new H
+  if(state.U0 > newH){
+    state.U0 = newH;
+    $sliderU0.value = String(newH);
+  }
+  $sliderU0.max = String(newH);
+  syncSliderDisplays();
+  updateSSReadout();
+  onParamChange();
+});
+$sliderU0.addEventListener('input', e => {
+  state.U0 = parseInt(e.target.value, 10);
+  syncSliderDisplays();
+  onParamChange();
+});
+
+$sliderSpeed.addEventListener('input', e => {
+  state.speed = parseInt(e.target.value, 10);
+  $speedVal.textContent = state.speed + ' ms/step';
+  // If currently running, restart timer with new speed
+  if(state.running){
+    if(state._runHandle){
+      clearInterval(state._runHandle);
+    }
+    state._runHandle = setInterval(() => {
+      stepOnce();
+      redraw();
+      if(atSteadyState()) stopRun();
+    }, state.speed);
+  }
+});
+
+// Buttons
+$btnStep.addEventListener('click', () => {
+  stopRun();
+  if(atSteadyState()){
+    // Still allow a step — useful at the boundary, but if already
+    // exactly at SS this would do nothing visible.
+  }
+  stepOnce();
+  redraw();
+});
+$btnRun.addEventListener('click', toggleRun);
+$btnRunSS.addEventListener('click', runToSteadyState);
+$btnReset.addEventListener('click', resetSim);
+
+// Resize
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+// ────────────────────────────────────────────────────────────────────
+// Init
+// ────────────────────────────────────────────────────────────────────
+function init(){
+  // Initial state — values match the slider defaults in HTML.
+  state.s = 0.035;
+  state.f = 0.30;
+  state.H = 100;
+  state.U0 = 50;
+  state.t = 0;
+  state.L = state.H - state.U0;
+  state.U = state.U0;
+  state.history = [{t:0, L:state.L, U:state.U}];
+  state.tMax = 24;
+  state.speed = REDUCED_MOTION ? 500 : 150;
+  $sliderSpeed.value = String(state.speed);
+  $speedVal.textContent = state.speed + ' ms/step';
+  syncSliderDisplays();
+  updateRunButton();
+  redraw();
+}
+
+init();
+
+})();
+</script>
+</body>
+</html>

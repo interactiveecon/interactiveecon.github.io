@@ -1,0 +1,1691 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Circular Flow Builder — ECON 105A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38; --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* Skip link (WCAG 2.4.1) */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* Visually hidden (WCAG 1.1.1) */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* Focus indicator (WCAG 2.4.7) */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* Reduced motion */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}
+    }
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions box */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Lab wrap */
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+
+    /* Cards */
+    .card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px;box-shadow:var(--shadow);
+      margin-bottom:16px;}
+    .card h2{font-family:var(--font-serif);font-size:1.25rem;font-weight:700;
+      color:var(--ink);margin:0 0 6px;}
+    .card .card-sub{font-size:0.8125rem;color:var(--muted);margin:0 0 12px;
+      line-height:1.5;}
+
+    /* Phase header pill */
+    .phase-pill{display:inline-block;font-size:0.625rem;font-weight:800;
+      text-transform:uppercase;letter-spacing:.08em;background:var(--accent);
+      color:#fff;padding:3px 10px;border-radius:999px;margin-bottom:8px;}
+    .phase-pill.done{background:var(--good);}
+
+    /* Canvas card */
+    .canvas-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);
+      margin-bottom:16px;}
+    .canvas-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .canvas-wrap{position:relative;width:100%;aspect-ratio:25/16;
+      border-radius:10px;overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;
+      touch-action:none;}
+
+    /* Help text */
+    .help-text{font-size:0.8125rem;color:var(--ink-2);line-height:1.5;
+      margin:4px 0 12px;}
+
+    /* Chip bank */
+    .chip-bank{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px;
+      padding:10px;background:rgba(246,242,234,.55);
+      border:1px dashed var(--line-2);border-radius:12px;min-height:54px;}
+    .chip{display:inline-flex;align-items:center;gap:6px;
+      padding:8px 12px;border-radius:10px;
+      background:var(--panel);border:1.5px solid #8c7f72;
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:grab;user-select:none;
+      transition:border-color .12s,background .12s,transform .12s;
+      touch-action:none;}
+    .chip:hover:not(.placed){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .chip:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    .chip.dragging{cursor:grabbing;opacity:.55;}
+    .chip.placed{background:rgba(21,92,56,.08);
+      border-color:rgba(21,92,56,.4);color:var(--good);
+      cursor:default;}
+    .chip.placed::before{content:'✓';margin-right:2px;font-weight:900;}
+    .chip.shake{animation:shake .35s ease;}
+    @keyframes shake{
+      0%,100%{transform:translateX(0);}
+      20%{transform:translateX(-6px);}
+      40%{transform:translateX(6px);}
+      60%{transform:translateX(-4px);}
+      80%{transform:translateX(4px);}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .chip.shake{animation:none;
+        box-shadow:0 0 0 3px rgba(180,35,24,.4);}
+    }
+
+    /* Chip selects (keyboard fallback) */
+    .chip-selects{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+      gap:10px;margin-bottom:12px;}
+    .chip-select-row{display:flex;flex-direction:column;gap:4px;
+      padding:8px 10px;background:rgba(246,242,234,.55);
+      border:1px solid var(--line);border-radius:10px;}
+    .chip-select-row label{font-size:0.75rem;font-weight:700;
+      color:var(--ink-2);}
+    .chip-select-row select{padding:6px 8px;border:1.5px solid #8c7f72;
+      border-radius:8px;background:#fff;font-family:var(--font-sans);
+      font-size:0.8125rem;color:var(--ink);}
+    .chip-select-row select:focus{border-color:var(--accent);outline:none;}
+    .chip-select-row select:disabled{background:rgba(21,92,56,.06);
+      border-color:rgba(21,92,56,.3);color:var(--good);cursor:not-allowed;}
+
+    /* Buttons */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover:not(:disabled){background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* Status / announcement region */
+    .status-line{margin:6px 0;padding:8px 12px;border-radius:10px;
+      font-size:0.8125rem;font-weight:600;line-height:1.4;min-height:1em;}
+    .status-line.correct{background:rgba(21,92,56,.08);
+      border:1px solid rgba(21,92,56,.25);color:var(--good);}
+    .status-line.wrong{background:rgba(180,35,24,.06);
+      border:1px solid rgba(180,35,24,.25);color:var(--bad);}
+    .status-line.info{background:rgba(47,93,124,.06);
+      border:1px solid rgba(47,93,124,.22);color:var(--accent);}
+
+    /* Phase 2 — box inspector */
+    .inspector-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;
+      align-items:start;}
+    @media(max-width:720px){.inspector-grid{grid-template-columns:1fr;}}
+    .flow-table{background:rgba(246,242,234,.55);border:1px solid var(--line);
+      border-radius:10px;padding:10px 12px;}
+    .flow-table h3{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin:0 0 6px;}
+    .flow-row{display:flex;align-items:center;justify-content:space-between;
+      gap:8px;padding:6px 0;border-bottom:1px dashed var(--line-2);
+      font-size:0.8125rem;color:var(--ink-2);}
+    .flow-row:last-child{border-bottom:none;}
+    .flow-row .arrow-icon{font-weight:900;}
+    .flow-row.in .arrow-icon{color:var(--good);}
+    .flow-row.out .arrow-icon{color:var(--bad);}
+    .identity{margin-top:8px;padding:8px 10px;border-radius:8px;
+      background:rgba(47,93,124,.06);border:1px solid rgba(47,93,124,.18);
+      font-family:var(--font-serif);font-weight:700;font-size:0.9375rem;
+      color:var(--ink);line-height:1.5;}
+
+    /* Multiple choice */
+    .mc-group{border:1px solid var(--line);border-radius:12px;
+      padding:12px 14px;margin-top:10px;background:rgba(246,242,234,.35);}
+    .mc-group legend{font-weight:700;color:var(--ink);
+      font-size:0.875rem;padding:0 6px;}
+    .mc-prompt{font-size:0.875rem;color:var(--ink-2);
+      line-height:1.55;margin:4px 0 10px;}
+    .mc-option{display:flex;align-items:flex-start;gap:8px;
+      padding:7px 10px;border-radius:8px;margin-bottom:5px;
+      cursor:pointer;font-size:0.875rem;color:var(--ink);
+      border:1.5px solid transparent;transition:background .12s,border-color .12s;}
+    .mc-option:hover{background:rgba(47,93,124,.05);}
+    .mc-option input{margin-top:3px;}
+    .mc-option.chosen{background:rgba(47,93,124,.08);
+      border-color:rgba(47,93,124,.25);}
+    .mc-option.correct-final{background:rgba(21,92,56,.08);
+      border-color:rgba(21,92,56,.3);}
+    .mc-option.wrong-final{background:rgba(180,35,24,.06);
+      border-color:rgba(180,35,24,.3);}
+    .mc-group fieldset{border:none;padding:0;margin:0;}
+
+    /* Lab-done banner & result panel */
+    .lab-done-banner{margin-top:14px;padding:12px 16px;border-radius:12px;
+      background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.25);
+      color:var(--good);font-weight:700;font-size:0.875rem;line-height:1.45;}
+    .result-panel{margin-top:14px;padding:16px;border-radius:14px;
+      background:rgba(47,93,124,.06);border:1px solid rgba(47,93,124,.25);
+      font-size:0.9375rem;line-height:1.6;color:var(--ink);}
+    .result-panel strong{color:var(--accent);}
+    .result-panel .ident-line{display:block;font-family:var(--font-serif);
+      font-weight:700;font-size:1rem;margin:6px 0;}
+
+    .action-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+
+    .hidden{display:none !important;}
+
+    /* Footer */
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;
+      gap:8px;font-size:0.75rem;color:var(--muted);padding-top:12px;
+      border-top:1px solid var(--line);margin-top:24px;}
+  </style>
+</head>
+<body>
+
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105a/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105A — Closed Economy in the Long-Run</div>
+      <h1>Circular Flow Builder</h1>
+      <p class="sub">
+        Build the circular flow diagram from scratch, verify each box's
+        money-in equals money-out, then derive the chapter's central
+        identity: <em>S<sub>PR</sub> + S<sub>PU</sub> = S = I</em>.
+      </p>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>The diagram has five boxes — Households, Government, Firms, Markets for Factors of Production, Financial Markets, and Markets for Goods and Services — connected by nine arrows showing flows of money.</p>
+          <p>You will work through three phases:</p>
+          <ol>
+            <li><strong>Phase 1 — Build:</strong> place the nine flow labels (Consumption, Investment, Taxes, etc.) onto the correct arrows. You can drag the chips with the mouse, or pick an arrow from the dropdown next to each chip with the keyboard.</li>
+            <li><strong>Phase 2 — Verify:</strong> inspect each box and confirm that the money flowing in equals the money flowing out.</li>
+            <li><strong>Phase 3 — Derive:</strong> use the box identities you just verified to derive the equations for private saving, public saving, and the equilibrium condition S = I.</li>
+          </ol>
+          <p>The lab works equally well with mouse drag-and-drop <em>or</em> the keyboard dropdowns — pick whichever you prefer.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- ── Phase 1 ─────────────────────────────────────────────── -->
+  <section class="canvas-card" aria-labelledby="diagramTitle">
+    <div class="canvas-title" id="diagramTitle">Circular Flow Diagram</div>
+    <div class="canvas-wrap">
+      <canvas id="flowCanvas"
+              role="img"
+              aria-labelledby="diagramTitle"
+              aria-describedby="flowCanvasDesc"></canvas>
+    </div>
+    <p class="sr-only" id="flowCanvasDesc"
+       aria-live="polite" aria-atomic="true">
+      Five boxes connected by nine arrows. The boxes are Households on the
+      left, Firms on the right, Markets for Factors of Production across the
+      top, Markets for Goods and Services across the bottom, and Government
+      and Financial Markets in the middle column. Arrows are unlabeled.
+      Place a label on each arrow to identify the flow it represents.
+    </p>
+  </section>
+
+  <section class="card" id="phase1Card" role="application" aria-labelledby="phase1Title">
+    <span class="phase-pill" id="phase1Pill">Phase 1 of 3 — Build</span>
+    <h2 id="phase1Title">Place each label on the correct arrow</h2>
+    <p class="card-sub">
+      Drag a chip from the bank onto an arrow. If you prefer keyboard input,
+      pick an arrow from the dropdown next to each chip. A wrong guess
+      sends the chip back to the bank.
+    </p>
+
+    <p class="help-text" id="phase1Help">
+      <strong>Tip:</strong> the diagram follows Figure 1 of the lecture notes.
+      Income flows from the factor market to households; consumption flows
+      from households to the goods market; firms earn revenue and pay it
+      back out as factor payments; the government collects taxes and
+      spends/saves; the financial market channels saving into investment.
+    </p>
+
+    <div id="chipBank" class="chip-bank" role="list"
+         aria-label="Labels available to place on arrows"></div>
+
+    <div id="chipSelects" class="chip-selects"
+         aria-label="Keyboard alternative: pick an arrow for each label"></div>
+
+    <div id="phase1Status" class="status-line info" role="status"
+         aria-live="polite" aria-atomic="true">
+      Place all nine labels to continue to Phase 2.
+    </div>
+
+    <div class="action-row">
+      <button class="option-btn" id="resetBtn" type="button">Reset placements</button>
+    </div>
+  </section>
+
+  <!-- ── Phase 2 ─────────────────────────────────────────────── -->
+  <section class="card hidden" id="phase2Card" aria-labelledby="phase2Title">
+    <span class="phase-pill" id="phase2Pill">Phase 2 of 3 — Verify</span>
+    <h2 id="phase2Title">Box-balance check</h2>
+    <p class="card-sub">
+      Each box must have the same money flowing in as flowing out. Inspect
+      each box and answer the identity question.
+    </p>
+
+    <div class="chip-select-row" style="max-width:480px;">
+      <label for="boxSelect">Select a box to inspect</label>
+      <select id="boxSelect" aria-describedby="boxSelectHelp">
+        <option value="">— Choose a box —</option>
+        <option value="HH">Households</option>
+        <option value="GOVT">Government</option>
+        <option value="FIRMS">Firms</option>
+        <option value="MGS">Markets for Goods and Services</option>
+        <option value="FM">Financial Markets</option>
+      </select>
+    </div>
+    <p class="sr-only" id="boxSelectHelp">
+      Selecting a box highlights it in the diagram and shows which arrows
+      flow into and out of it.
+    </p>
+
+    <div id="inspector" class="inspector-grid hidden" style="margin-top:14px;">
+      <div>
+        <div class="flow-table" id="flowsTable">
+          <h3 id="flowsTableHeading">Money flows</h3>
+          <div id="flowsList"></div>
+          <div class="identity hidden" id="identityLine"></div>
+        </div>
+      </div>
+      <div id="mcContainer"></div>
+    </div>
+
+    <div id="phase2Status" class="status-line info" role="status"
+         aria-live="polite" aria-atomic="true" style="margin-top:12px;">
+      Inspect each of the five boxes and answer its identity question.
+    </div>
+  </section>
+
+  <!-- ── Phase 3 ─────────────────────────────────────────────── -->
+  <section class="card hidden" id="phase3Card" aria-labelledby="phase3Title">
+    <span class="phase-pill" id="phase3Pill">Phase 3 of 3 — Derive</span>
+    <h2 id="phase3Title">Derive the savings identities</h2>
+    <p class="card-sub">
+      Now use what you verified box-by-box to derive the three savings
+      equations the chapter is built on.
+    </p>
+
+    <div id="phase3Questions"></div>
+
+    <div id="phase3Status" class="status-line info" role="status"
+         aria-live="polite" aria-atomic="true" style="margin-top:12px;">
+      Answer the three questions to finish the lab.
+    </div>
+
+    <div class="result-panel hidden" id="finalResult" role="region"
+         aria-label="Lab summary">
+      <strong>You've just derived the central identity of the chapter:</strong>
+      <span class="ident-line">S<sub>PR</sub> + S<sub>PU</sub> = S = I</span>
+      <span class="ident-line">(Y − T − C) + (T − G) = Y − C − G = I</span>
+      <p style="margin:8px 0 0;">
+        The interest rate is the price that makes this identity hold —
+        that's what the <a href="/classes/econ105a/labs/closed-economy-solver/">Closed Economy Solver</a>
+        and <a href="/classes/econ105a/labs/closed-economy-graph/">Graph</a> labs are about.
+      </p>
+    </div>
+  </section>
+
+  <div id="labDoneBanner" class="lab-done-banner hidden" role="status"
+       aria-live="polite" aria-atomic="true"></div>
+
+  <div class="action-row">
+    <button class="primary-btn" id="restartBtn" type="button">Restart Lab</button>
+  </div>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 105A — Intermediate Macroeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ─────────────────────────────────────────────────────────────────────────
+   LAB_ID:    'circular-flow-builder'
+   LAB_LABEL: 'Circular Flow Builder'
+   url:       '/classes/econ105a/labs/circular-flow-builder/?disc=1'
+
+   Sample week-template entry:
+   { id:   'circular-flow-builder',
+     name: 'Circular Flow Builder',
+     icon: '🔁',
+     desc: 'Build the circular flow diagram, verify each box balances, '
+         + 'and derive S_PR + S_PU = S = I.',
+     url:  '/classes/econ105a/labs/circular-flow-builder/?disc=1' }
+   ──────────────────────────────────────────────────────────────────────── */
+
+const LAB_ID    = 'circular-flow-builder';
+const LAB_LABEL = 'Circular Flow Builder';
+const TOTAL_Q   = 17;
+
+// ── State ────────────────────────────────────────────────────────────────
+let _rng = null;
+let _fs  = 1;                          // canvas font-scale factor
+let _firstScore = 0;
+let _finalScore = 0;
+let _labDoneFired = false;
+
+// Per-chip / per-arrow state
+const placement = {};   // arrowId -> labelKey when placed
+const chipState = {};   // labelKey -> {arrowId|null, firstAttempt:{arrowId,correct}|null, locked:bool}
+
+// Phase 2 state
+const boxAnswers = {};  // boxKey -> {choiceIdx, correct, firstChoiceIdx, firstCorrect}
+let _currentBox = null;
+
+// Phase 3 state
+const p3Answers = {};   // qIdx -> {choiceIdx, correct, firstChoiceIdx, firstCorrect}
+
+// Drag state
+let _drag = null;       // {labelKey, el, startX, startY, ghostX, ghostY}
+
+function rng(){ return _rng ? _rng() : Math.random(); }
+function shuffled(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(rng()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+// ── Geometry: virtual 1000 × 640 coordinates ─────────────────────────────
+const VW = 1000, VH = 640;
+
+const BOXES = {
+  MFP:   { label:'Markets for Factors of Production', kind:'market',
+           x:280, y:20,  w:440, h:80 },
+  MGS:   { label:'Markets for Goods and Services',    kind:'market',
+           x:280, y:540, w:440, h:80 },
+  HH:    { label:'Households',                         kind:'agent',
+           x:40,  y:250, w:200, h:110 },
+  FIRMS: { label:'Firms',                              kind:'agent',
+           x:760, y:250, w:200, h:110 },
+  GOVT:  { label:'Government',                         kind:'agent',
+           x:410, y:170, w:180, h:80 },
+  FM:    { label:'Financial Markets',                  kind:'market',
+           x:410, y:360, w:180, h:80 },
+};
+
+// Arrows: id, from, to, label key, quadratic-Bezier control points
+// (s = start, c = control, e = end), label offset (perpendicular)
+const ARROWS = [
+  { id:'A1', from:'HH',    to:'MGS',   labelKey:'consumption',
+    s:[ 90, 360], c:[ 60, 600], e:[280, 600], offset:[ 0, 16] },
+  { id:'A2', from:'MGS',   to:'FIRMS', labelKey:'firm-revenue',
+    s:[720, 600], c:[940, 600], e:[940, 360], offset:[ 0, 16] },
+  { id:'A3', from:'FIRMS', to:'MFP',   labelKey:'factor-payments',
+    s:[940, 250], c:[940, 20 ], e:[720, 20 ], offset:[ 0,-16] },
+  { id:'A4', from:'MFP',   to:'HH',    labelKey:'income',
+    s:[280, 20 ], c:[ 60, 20 ], e:[ 60, 250], offset:[ 0,-16] },
+  { id:'A5', from:'HH',    to:'GOVT',  labelKey:'taxes',
+    s:[240, 280], c:[330, 240], e:[410, 200], offset:[ 0,-14] },
+  { id:'A6', from:'HH',    to:'FM',    labelKey:'private-saving',
+    s:[240, 340], c:[330, 370], e:[410, 400], offset:[ 0, 16] },
+  { id:'A7', from:'GOVT',  to:'FM',    labelKey:'public-saving',
+    s:[500, 250], c:[500, 305], e:[500, 360], offset:[18, 0] },
+  { id:'A8', from:'GOVT',  to:'MGS',   labelKey:'government-purchases',
+    s:[590, 230], c:[670, 420], e:[640, 540], offset:[16, 0] },
+  { id:'A9', from:'FM',    to:'MGS',   labelKey:'investment',
+    s:[500, 440], c:[500, 490], e:[500, 540], offset:[18, 0] },
+];
+
+// Labels (chip data). qIndex used for Session.recordQuestion.
+const LABELS = {
+  'consumption':           { qIdx:0, name:'Consumption',           sym:'C',     correctArrow:'A1' },
+  'firm-revenue':          { qIdx:1, name:'Firm revenue',          sym:'Rev',   correctArrow:'A2' },
+  'factor-payments':       { qIdx:2, name:'Factor payments',       sym:'Y',     correctArrow:'A3' },
+  'income':                { qIdx:3, name:'Income',                sym:'Y',     correctArrow:'A4' },
+  'taxes':                 { qIdx:4, name:'Taxes',                 sym:'T',     correctArrow:'A5' },
+  'private-saving':        { qIdx:5, name:'Private saving',        sym:'S_PR',  correctArrow:'A6' },
+  'public-saving':         { qIdx:6, name:'Public saving',         sym:'S_PU',  correctArrow:'A7' },
+  'government-purchases':  { qIdx:7, name:'Government purchases',  sym:'G',     correctArrow:'A8' },
+  'investment':            { qIdx:8, name:'Investment',            sym:'I',     correctArrow:'A9' },
+};
+
+// Helpful arrow names for the dropdown options
+const ARROW_NAMES = {
+  A1: 'Arrow 1: Households → Markets for Goods and Services',
+  A2: 'Arrow 2: Markets for Goods and Services → Firms',
+  A3: 'Arrow 3: Firms → Markets for Factors of Production',
+  A4: 'Arrow 4: Markets for Factors of Production → Households',
+  A5: 'Arrow 5: Households → Government',
+  A6: 'Arrow 6: Households → Financial Markets',
+  A7: 'Arrow 7: Government → Financial Markets',
+  A8: 'Arrow 8: Government → Markets for Goods and Services',
+  A9: 'Arrow 9: Financial Markets → Markets for Goods and Services',
+};
+
+// ── Phase 2 data: per-box flows and identity question ────────────────────
+const BOX_INFO = {
+  HH: {
+    title: 'Households',
+    flows: [
+      { dir:'in',  label:'Income',          sym:'Y',    from:'Markets for Factors of Production' },
+      { dir:'out', label:'Consumption',     sym:'C',    to:'Markets for Goods and Services' },
+      { dir:'out', label:'Taxes',           sym:'T',    to:'Government' },
+      { dir:'out', label:'Private saving',  sym:'S_PR', to:'Financial Markets' },
+    ],
+    identity: 'Y = C + T + S_PR',
+    prompt: 'What does the household budget identity tell us? Income (Y) flowing in must equal what flowing out?',
+    choices: [
+      { text:'Taxes + Consumption + Private Saving',  correct:true  },
+      { text:'Taxes + Consumption',                   correct:false },
+      { text:'Consumption + Private Saving',          correct:false },
+      { text:'Just Consumption',                      correct:false },
+    ],
+    qIdx: 9,
+  },
+  GOVT: {
+    title: 'Government',
+    flows: [
+      { dir:'in',  label:'Taxes',                 sym:'T',    from:'Households' },
+      { dir:'out', label:'Government purchases',  sym:'G',    to:'Markets for Goods and Services' },
+      { dir:'out', label:'Public saving',         sym:'S_PU', to:'Financial Markets' },
+    ],
+    identity: 'T = G + S_PU',
+    prompt: 'What does the government budget identity tell us? Taxes (T) flowing in must equal what flowing out?',
+    choices: [
+      { text:'Government purchases + Public saving',  correct:true  },
+      { text:'Just Government purchases',             correct:false },
+      { text:'Government purchases − Public saving',  correct:false },
+      { text:'Public saving',                         correct:false },
+    ],
+    qIdx: 10,
+  },
+  FIRMS: {
+    title: 'Firms',
+    flows: [
+      { dir:'in',  label:'Firm revenue',     sym:'Rev', from:'Markets for Goods and Services' },
+      { dir:'out', label:'Factor payments',  sym:'Y',   to:'Markets for Factors of Production' },
+    ],
+    identity: 'Firm revenue = Factor payments = Y',
+    prompt: 'What does the firm identity tell us? Revenue from goods sales must equal what is paid out?',
+    choices: [
+      { text:'Firm revenue = Factor payments',              correct:true  },
+      { text:'Firm revenue = Factor payments + Investment', correct:false },
+      { text:'Firm revenue = Income',                       correct:false },
+      { text:'Firm revenue = Consumption',                  correct:false },
+    ],
+    qIdx: 11,
+  },
+  MGS: {
+    title: 'Markets for Goods and Services',
+    flows: [
+      { dir:'in',  label:'Consumption',           sym:'C', from:'Households' },
+      { dir:'in',  label:'Investment',            sym:'I', from:'Financial Markets' },
+      { dir:'in',  label:'Government purchases',  sym:'G', from:'Government' },
+      { dir:'out', label:'Firm revenue',          sym:'Rev', to:'Firms' },
+    ],
+    identity: 'C + I + G = Firm revenue',
+    prompt: 'What flows into the goods market and what flows out?',
+    choices: [
+      { text:'C + I + G in; Firm revenue out',       correct:true  },
+      { text:'C + G in; Investment out',             correct:false },
+      { text:'C in; Firm revenue out',               correct:false },
+      { text:'C + I + G in; Factor payments out',    correct:false },
+    ],
+    qIdx: 12,
+  },
+  FM: {
+    title: 'Financial Markets',
+    flows: [
+      { dir:'in',  label:'Private saving',  sym:'S_PR', from:'Households' },
+      { dir:'in',  label:'Public saving',   sym:'S_PU', from:'Government' },
+      { dir:'out', label:'Investment',      sym:'I',    to:'Markets for Goods and Services' },
+    ],
+    identity: 'S_PR + S_PU = I',
+    prompt: 'What does the financial-markets identity tell us?',
+    choices: [
+      { text:'Private saving + Public saving = Investment',  correct:true  },
+      { text:'Private saving = Investment',                  correct:false },
+      { text:'Public saving = Investment',                   correct:false },
+      { text:'Private saving + Investment = Public saving',  correct:false },
+    ],
+    qIdx: 13,
+  },
+};
+
+const BOX_ORDER = ['HH','GOVT','FIRMS','MGS','FM'];
+
+// ── Phase 3 questions ────────────────────────────────────────────────────
+const P3_QUESTIONS = [
+  {
+    qIdx: 14,
+    title: 'Private Saving',
+    prompt: 'From the Households box, income (Y) flows in; Taxes (T), Consumption (C), and Private Saving (S_PR) flow out. Therefore S_PR = ?',
+    choices: [
+      { text:'(Y − T) − C',  correct:true  },
+      { text:'Y − C',        correct:false },
+      { text:'T − C',        correct:false },
+      { text:'Y − T + C',    correct:false },
+    ],
+  },
+  {
+    qIdx: 15,
+    title: 'Public Saving',
+    prompt: 'From the Government box, Taxes (T) flow in; Government Purchases (G) and Public Saving (S_PU) flow out. Therefore S_PU = ?',
+    choices: [
+      { text:'T − G',       correct:true  },
+      { text:'G − T',       correct:false },
+      { text:'T + G',       correct:false },
+      { text:'(T − G) − C', correct:false },
+    ],
+  },
+  {
+    qIdx: 16,
+    title: 'National Saving = Investment',
+    prompt: 'From the Financial Markets box, both private and public saving flow in, and investment flows out. Therefore in equilibrium S = ?',
+    choices: [
+      { text:'I',         correct:true  },
+      { text:'I + G',     correct:false },
+      { text:'Y − I',     correct:false },
+      { text:'C + G',     correct:false },
+    ],
+  },
+];
+
+// ── DOM refs ─────────────────────────────────────────────────────────────
+const $canvas      = document.getElementById('flowCanvas');
+const $canvasDesc  = document.getElementById('flowCanvasDesc');
+const $chipBank    = document.getElementById('chipBank');
+const $chipSelects = document.getElementById('chipSelects');
+const $phase1Card  = document.getElementById('phase1Card');
+const $phase1Pill  = document.getElementById('phase1Pill');
+const $phase1Stat  = document.getElementById('phase1Status');
+const $phase2Card  = document.getElementById('phase2Card');
+const $phase2Pill  = document.getElementById('phase2Pill');
+const $phase2Stat  = document.getElementById('phase2Status');
+const $phase3Card  = document.getElementById('phase3Card');
+const $phase3Pill  = document.getElementById('phase3Pill');
+const $phase3Stat  = document.getElementById('phase3Status');
+const $boxSelect   = document.getElementById('boxSelect');
+const $inspector   = document.getElementById('inspector');
+const $flowsList   = document.getElementById('flowsList');
+const $flowsHead   = document.getElementById('flowsTableHeading');
+const $identity    = document.getElementById('identityLine');
+const $mcContainer = document.getElementById('mcContainer');
+const $phase3Qs    = document.getElementById('phase3Questions');
+const $finalResult = document.getElementById('finalResult');
+const $labBanner   = document.getElementById('labDoneBanner');
+const $resetBtn    = document.getElementById('resetBtn');
+const $restartBtn  = document.getElementById('restartBtn');
+
+// ── Generate / initialize ────────────────────────────────────────────────
+function generateParams(){
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+
+  // Reset all state
+  _firstScore = 0;
+  _finalScore = 0;
+  _labDoneFired = false;
+
+  for(const id of Object.keys(placement)) delete placement[id];
+  for(const k of Object.keys(chipState)) delete chipState[k];
+  for(const k of Object.keys(boxAnswers)) delete boxAnswers[k];
+  for(const k of Object.keys(p3Answers)) delete p3Answers[k];
+
+  Object.keys(LABELS).forEach(k => {
+    chipState[k] = { arrowId:null, firstAttempt:null, locked:false };
+  });
+
+  _currentBox = null;
+  $phase2Card.classList.add('hidden');
+  $phase3Card.classList.add('hidden');
+  $finalResult.classList.add('hidden');
+  $labBanner.classList.add('hidden');
+  $inspector.classList.add('hidden');
+  $phase1Pill.textContent = 'Phase 1 of 3 — Build';
+  $phase1Pill.classList.remove('done');
+  $phase2Pill.textContent = 'Phase 2 of 3 — Verify';
+  $phase2Pill.classList.remove('done');
+  $phase3Pill.textContent = 'Phase 3 of 3 — Derive';
+  $phase3Pill.classList.remove('done');
+  $boxSelect.value = '';
+  $boxSelect.disabled = false;
+
+  renderChips();
+  renderChipSelects();
+  renderPhase3Questions();
+  setStatus($phase1Stat, 'info',
+    'Place all nine labels to continue to Phase 2.');
+  setStatus($phase2Stat, 'info',
+    'Inspect each of the five boxes and answer its identity question.');
+  setStatus($phase3Stat, 'info',
+    'Answer the three questions to finish the lab.');
+}
+
+function setStatus(el, kind, msg){
+  el.className = 'status-line ' + kind;
+  el.textContent = msg;
+}
+
+// ── Render chips & selects ───────────────────────────────────────────────
+function renderChips(){
+  $chipBank.innerHTML = '';
+  const order = shuffled(Object.keys(LABELS));
+  order.forEach(k => {
+    const lab = LABELS[k];
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'chip';
+    chip.dataset.labelKey = k;
+    chip.setAttribute('role','listitem');
+    chip.setAttribute('aria-label', lab.name + ' — drag onto an arrow or use the dropdown to place it');
+    chip.textContent = lab.name;
+    chip.addEventListener('pointerdown', onChipPointerDown);
+    chip.addEventListener('keydown', onChipKeyDown);
+    $chipBank.appendChild(chip);
+  });
+}
+
+function renderChipSelects(){
+  $chipSelects.innerHTML = '';
+  Object.keys(LABELS).forEach(k => {
+    const lab = LABELS[k];
+    const row = document.createElement('div');
+    row.className = 'chip-select-row';
+    const labEl = document.createElement('label');
+    labEl.htmlFor = 'sel-' + k;
+    labEl.textContent = 'Place “' + lab.name + '” on:';
+    const sel = document.createElement('select');
+    sel.id = 'sel-' + k;
+    sel.dataset.labelKey = k;
+    sel.setAttribute('aria-label', 'Choose an arrow for ' + lab.name);
+    const opt0 = document.createElement('option');
+    opt0.value = '';
+    opt0.textContent = '— Unassigned —';
+    sel.appendChild(opt0);
+    ARROWS.forEach(a => {
+      const o = document.createElement('option');
+      o.value = a.id;
+      o.textContent = ARROW_NAMES[a.id];
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change', onSelectChange);
+    row.appendChild(labEl);
+    row.appendChild(sel);
+    $chipSelects.appendChild(row);
+  });
+}
+
+function onChipKeyDown(e){
+  // Simple keyboard hint: Enter/Space focuses the chip's dropdown.
+  if(e.key === 'Enter' || e.key === ' '){
+    e.preventDefault();
+    const k = e.currentTarget.dataset.labelKey;
+    const sel = document.getElementById('sel-' + k);
+    if(sel) sel.focus();
+  }
+}
+
+function onSelectChange(e){
+  const sel = e.currentTarget;
+  const k   = sel.dataset.labelKey;
+  const arrowId = sel.value;
+  if(!arrowId){ return; }
+  if(chipState[k].locked){ sel.value = chipState[k].arrowId; return; }
+  attemptPlace(k, arrowId, /*fromSelect*/true);
+}
+
+// Attempt to place a chip on an arrow. Records first-attempt + on correct
+// placement, locks chip + records the question.
+function attemptPlace(labelKey, arrowId, fromSelect){
+  const lab   = LABELS[labelKey];
+  const state = chipState[labelKey];
+  if(state.locked) return;
+
+  // If another chip already locked onto this arrow, can't use it
+  if(placement[arrowId] && placement[arrowId] !== labelKey){
+    setStatus($phase1Stat, 'wrong',
+      'That arrow is already taken by "' + LABELS[placement[arrowId]].name + '". Try a different one.');
+    shakeChip(labelKey);
+    // reset select if from select
+    const sel = document.getElementById('sel-' + labelKey);
+    if(sel) sel.value = '';
+    return;
+  }
+
+  const isCorrect = (lab.correctArrow === arrowId);
+
+  // Record first attempt only the first time this chip was tried
+  if(!state.firstAttempt){
+    state.firstAttempt = { arrowId:arrowId, correct:isCorrect };
+    if(isCorrect) _firstScore++;
+    // Record question now with first-attempt info; placeholder for final
+    const att = state.firstAttempt;
+    if(window.Session && Session.recordQuestion){
+      Session.recordQuestion(LAB_ID, lab.qIdx,
+        'Place "' + lab.name + '" on the correct arrow',
+        ARROW_NAMES[att.arrowId], att.correct,
+        ARROW_NAMES[att.arrowId], att.correct);
+    }
+  }
+
+  if(!isCorrect){
+    setStatus($phase1Stat, 'wrong',
+      'That’s not where "' + lab.name + '" goes. Try a different arrow.');
+    shakeChip(labelKey);
+    const sel = document.getElementById('sel-' + labelKey);
+    if(sel) sel.value = '';
+    redraw();
+    return;
+  }
+
+  // Correct placement — lock it
+  state.arrowId = arrowId;
+  state.locked  = true;
+  placement[arrowId] = labelKey;
+
+  // Update the chip + select visuals
+  const chipEl = chipForKey(labelKey);
+  if(chipEl){
+    chipEl.classList.add('placed');
+    chipEl.setAttribute('aria-label',
+      lab.name + ' placed on ' + ARROW_NAMES[arrowId]);
+    chipEl.tabIndex = -1;
+  }
+  const sel = document.getElementById('sel-' + labelKey);
+  if(sel){
+    sel.value = arrowId;
+    sel.disabled = true;
+  }
+
+  // Re-record the question with final = correct (first remains whatever it was)
+  if(window.Session && Session.recordQuestion){
+    const att = state.firstAttempt;
+    Session.recordQuestion(LAB_ID, lab.qIdx,
+      'Place "' + lab.name + '" on the correct arrow',
+      ARROW_NAMES[att.arrowId], att.correct,
+      ARROW_NAMES[arrowId], true);
+  }
+  _finalScore = Math.max(_finalScore, countPlaced());
+
+  setStatus($phase1Stat, 'correct',
+    '✓ "' + lab.name + '" placed on ' + ARROW_NAMES[arrowId] + '.');
+
+  redraw();
+
+  if(countPlaced() === 9){
+    onPhase1Done();
+  }
+}
+
+function chipForKey(k){
+  return $chipBank.querySelector('[data-label-key="'+k+'"]');
+}
+
+function shakeChip(k){
+  const c = chipForKey(k);
+  if(!c) return;
+  c.classList.remove('shake');
+  // Force reflow so the animation restarts
+  void c.offsetWidth;
+  c.classList.add('shake');
+  setTimeout(()=>c.classList.remove('shake'), 400);
+}
+
+function countPlaced(){
+  let n = 0;
+  Object.keys(chipState).forEach(k => { if(chipState[k].locked) n++; });
+  return n;
+}
+
+// ── Reset placements ─────────────────────────────────────────────────────
+$resetBtn.addEventListener('click', () => {
+  // Only allow during phase 1 (before all chips locked)
+  if($phase2Card.classList.contains('hidden') === false){
+    // Phase 1 already done — restart the whole lab
+    return;
+  }
+  Object.keys(chipState).forEach(k => {
+    chipState[k] = { arrowId:null, firstAttempt:null, locked:false };
+  });
+  Object.keys(placement).forEach(id => delete placement[id]);
+  _firstScore = 0;
+  _finalScore = 0;
+  renderChips();
+  renderChipSelects();
+  setStatus($phase1Stat,'info',
+    'Reset complete. Place all nine labels to continue.');
+  redraw();
+});
+
+$restartBtn.addEventListener('click', () => {
+  generateParams();
+  redraw();
+});
+
+// ── Phase 1 -> 2 transition ──────────────────────────────────────────────
+function onPhase1Done(){
+  $phase1Pill.textContent = 'Phase 1 — Complete ✓';
+  $phase1Pill.classList.add('done');
+  setStatus($phase1Stat,'correct',
+    'All nine labels placed. Now verify each box in Phase 2.');
+  $phase2Card.classList.remove('hidden');
+  // Scroll Phase 2 into view but only the first time
+  if(!$phase2Card.dataset.shown){
+    $phase2Card.dataset.shown = '1';
+    setTimeout(()=>{ $phase2Card.scrollIntoView({behavior:'smooth',block:'start'}); }, 60);
+  }
+}
+
+// ── Phase 2: box inspector ──────────────────────────────────────────────
+$boxSelect.addEventListener('change', () => {
+  const v = $boxSelect.value;
+  if(!v){
+    _currentBox = null;
+    $inspector.classList.add('hidden');
+    redraw();
+    return;
+  }
+  _currentBox = v;
+  renderInspector(v);
+  $inspector.classList.remove('hidden');
+  redraw();
+});
+
+function renderInspector(boxKey){
+  const info = BOX_INFO[boxKey];
+  $flowsHead.textContent = info.title + ' — money flows';
+  $flowsList.innerHTML = '';
+  info.flows.forEach(f => {
+    const row = document.createElement('div');
+    row.className = 'flow-row ' + f.dir;
+    const left = document.createElement('span');
+    left.innerHTML = '<span class="arrow-icon" aria-hidden="true">'
+                   + (f.dir==='in'?'→ IN':'OUT →')
+                   + '</span> '
+                   + f.label
+                   + ' <em style="color:var(--muted);font-style:normal;">(' + prettySym(f.sym) + ')</em>';
+    const right = document.createElement('span');
+    right.style.color = 'var(--muted)';
+    right.style.fontSize = '0.75rem';
+    right.textContent = f.dir==='in' ? ('from ' + f.from) : ('to ' + f.to);
+    row.appendChild(left); row.appendChild(right);
+    $flowsList.appendChild(row);
+  });
+  // Identity hidden until the student answers
+  const already = boxAnswers[boxKey];
+  if(already && already.correct){
+    $identity.innerHTML = '<strong>Identity:</strong> ' + prettyIdent(info.identity)
+      + ' &nbsp;— money in equals money out.';
+    $identity.classList.remove('hidden');
+  } else {
+    $identity.classList.add('hidden');
+    $identity.innerHTML = '';
+  }
+  renderBoxMC(boxKey);
+}
+
+function prettySym(s){
+  return s.replace(/_PR/g,'<sub>PR</sub>').replace(/_PU/g,'<sub>PU</sub>');
+}
+function prettyIdent(s){
+  return s.replace(/S_PR/g,'S<sub>PR</sub>').replace(/S_PU/g,'S<sub>PU</sub>');
+}
+
+function renderBoxMC(boxKey){
+  const info = BOX_INFO[boxKey];
+  const already = boxAnswers[boxKey];
+  $mcContainer.innerHTML = '';
+  const fs = document.createElement('fieldset');
+  fs.className = 'mc-group';
+  const lg = document.createElement('legend');
+  lg.textContent = info.title + ' identity';
+  fs.appendChild(lg);
+  const p = document.createElement('p');
+  p.className = 'mc-prompt';
+  p.textContent = info.prompt;
+  fs.appendChild(p);
+
+  // Shuffle choice order (stable per box)
+  if(!info._order){
+    info._order = shuffled(info.choices.map((_,i)=>i));
+  }
+  info._order.forEach((origIdx, displayIdx) => {
+    const c = info.choices[origIdx];
+    const label = document.createElement('label');
+    label.className = 'mc-option';
+    const inp = document.createElement('input');
+    inp.type = 'radio';
+    inp.name = 'mc-' + boxKey;
+    inp.value = origIdx;
+    if(already){
+      inp.checked = (origIdx === already.choiceIdx);
+      inp.disabled = already.correct;
+      if(already.correct && c.correct) label.classList.add('correct-final');
+      if(!already.correct && origIdx === already.choiceIdx && !c.correct) label.classList.add('wrong-final');
+    }
+    const span = document.createElement('span');
+    span.innerHTML = c.text;
+    label.appendChild(inp);
+    label.appendChild(span);
+    fs.appendChild(label);
+  });
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'option-btn';
+  btn.style.marginTop = '8px';
+  btn.textContent = already && already.correct ? 'Answered ✓' : 'Check Answer';
+  btn.disabled = !!(already && already.correct);
+  btn.addEventListener('click', () => onCheckBox(boxKey, fs));
+  fs.appendChild(btn);
+
+  const fb = document.createElement('div');
+  fb.className = 'status-line info';
+  fb.id = 'mc-fb-' + boxKey;
+  fb.setAttribute('role','status');
+  fb.setAttribute('aria-live','polite');
+  fb.style.marginTop = '8px';
+  fb.textContent = already
+    ? (already.correct ? '✓ Correct.' : 'Try again — check what each arrow says.')
+    : 'Select an answer and click Check.';
+  fb.className = 'status-line ' + (already ? (already.correct?'correct':'wrong') : 'info');
+  fs.appendChild(fb);
+
+  $mcContainer.appendChild(fs);
+}
+
+function onCheckBox(boxKey, fs){
+  const info = BOX_INFO[boxKey];
+  const picked = fs.querySelector('input[name="mc-'+boxKey+'"]:checked');
+  const fb = document.getElementById('mc-fb-'+boxKey);
+  if(!picked){
+    fb.className = 'status-line wrong';
+    fb.textContent = 'Please pick an answer first.';
+    return;
+  }
+  const origIdx = parseInt(picked.value, 10);
+  const choice  = info.choices[origIdx];
+  const isCorrect = !!choice.correct;
+  const prior = boxAnswers[boxKey];
+
+  let firstChoiceIdx, firstCorrect;
+  if(!prior){
+    firstChoiceIdx = origIdx;
+    firstCorrect = isCorrect;
+    if(isCorrect) _firstScore++;
+  } else {
+    firstChoiceIdx = prior.firstChoiceIdx;
+    firstCorrect   = prior.firstCorrect;
+  }
+
+  boxAnswers[boxKey] = {
+    choiceIdx: origIdx,
+    correct: isCorrect,
+    firstChoiceIdx,
+    firstCorrect,
+  };
+
+  // Record session question (single-phase: first = final on this lab)
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(LAB_ID, info.qIdx, info.prompt,
+      stripTags(info.choices[firstChoiceIdx].text), firstCorrect,
+      stripTags(info.choices[origIdx].text), isCorrect);
+  }
+
+  if(isCorrect){
+    fb.className = 'status-line correct';
+    fb.textContent = '✓ Correct — money in equals money out for this box.';
+    $identity.innerHTML = '<strong>Identity:</strong> ' + prettyIdent(info.identity)
+      + ' &nbsp;— money in equals money out.';
+    $identity.classList.remove('hidden');
+    _finalScore = computeFinalScore();
+    // Disable the inputs in this group
+    fs.querySelectorAll('input').forEach(inp => inp.disabled = true);
+    const btn = fs.querySelector('button');
+    if(btn){ btn.textContent = 'Answered ✓'; btn.disabled = true; }
+    // Mark the chosen label
+    fs.querySelectorAll('label.mc-option').forEach(l => {
+      const ipt = l.querySelector('input');
+      if(ipt && parseInt(ipt.value,10) === origIdx) l.classList.add('correct-final');
+    });
+    onAnyBoxAnswered();
+  } else {
+    fb.className = 'status-line wrong';
+    fb.textContent = 'Not quite — look at the flows table and try again.';
+  }
+}
+
+function stripTags(s){ return s.replace(/<[^>]*>/g,''); }
+
+function onAnyBoxAnswered(){
+  const doneCount = BOX_ORDER.filter(b => boxAnswers[b] && boxAnswers[b].correct).length;
+  if(doneCount === 5){
+    $phase2Pill.textContent = 'Phase 2 — Complete ✓';
+    $phase2Pill.classList.add('done');
+    setStatus($phase2Stat,'correct',
+      'All five boxes verified. Now derive the savings identities in Phase 3.');
+    $phase3Card.classList.remove('hidden');
+    if(!$phase3Card.dataset.shown){
+      $phase3Card.dataset.shown = '1';
+      setTimeout(()=>{ $phase3Card.scrollIntoView({behavior:'smooth',block:'start'}); }, 60);
+    }
+  } else {
+    setStatus($phase2Stat,'info',
+      doneCount + ' of 5 boxes verified.');
+  }
+}
+
+function computeFinalScore(){
+  let n = 0;
+  // Phase 1
+  Object.keys(chipState).forEach(k => { if(chipState[k].locked) n++; });
+  // Phase 2
+  BOX_ORDER.forEach(b => { if(boxAnswers[b] && boxAnswers[b].correct) n++; });
+  // Phase 3
+  Object.keys(p3Answers).forEach(q => { if(p3Answers[q].correct) n++; });
+  return n;
+}
+
+// ── Phase 3 ─────────────────────────────────────────────────────────────
+function renderPhase3Questions(){
+  $phase3Qs.innerHTML = '';
+  P3_QUESTIONS.forEach(q => {
+    if(!q._order) q._order = shuffled(q.choices.map((_,i)=>i));
+    const fs = document.createElement('fieldset');
+    fs.className = 'mc-group';
+    fs.dataset.qidx = q.qIdx;
+    const lg = document.createElement('legend');
+    lg.textContent = 'Q' + (q.qIdx - 13) + ' — ' + q.title;
+    fs.appendChild(lg);
+    const p = document.createElement('p');
+    p.className = 'mc-prompt';
+    p.innerHTML = q.prompt.replace(/S_PR/g,'S<sub>PR</sub>').replace(/S_PU/g,'S<sub>PU</sub>');
+    fs.appendChild(p);
+    q._order.forEach(origIdx => {
+      const c = q.choices[origIdx];
+      const label = document.createElement('label');
+      label.className = 'mc-option';
+      const inp = document.createElement('input');
+      inp.type = 'radio';
+      inp.name = 'p3-' + q.qIdx;
+      inp.value = origIdx;
+      const span = document.createElement('span');
+      span.textContent = c.text;
+      label.appendChild(inp); label.appendChild(span);
+      fs.appendChild(label);
+    });
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'option-btn';
+    btn.style.marginTop = '8px';
+    btn.textContent = 'Check Answer';
+    btn.addEventListener('click', () => onCheckP3(q, fs));
+    fs.appendChild(btn);
+    const fb = document.createElement('div');
+    fb.className = 'status-line info';
+    fb.id = 'p3-fb-' + q.qIdx;
+    fb.setAttribute('role','status');
+    fb.setAttribute('aria-live','polite');
+    fb.style.marginTop = '8px';
+    fb.textContent = 'Select an answer and click Check.';
+    fs.appendChild(fb);
+    $phase3Qs.appendChild(fs);
+  });
+}
+
+function onCheckP3(q, fs){
+  const picked = fs.querySelector('input[name="p3-'+q.qIdx+'"]:checked');
+  const fb = document.getElementById('p3-fb-'+q.qIdx);
+  if(!picked){
+    fb.className = 'status-line wrong';
+    fb.textContent = 'Please pick an answer first.';
+    return;
+  }
+  const origIdx = parseInt(picked.value,10);
+  const c = q.choices[origIdx];
+  const isCorrect = !!c.correct;
+  const prior = p3Answers[q.qIdx];
+
+  let firstChoiceIdx, firstCorrect;
+  if(!prior){
+    firstChoiceIdx = origIdx; firstCorrect = isCorrect;
+    if(isCorrect) _firstScore++;
+  } else {
+    firstChoiceIdx = prior.firstChoiceIdx;
+    firstCorrect   = prior.firstCorrect;
+  }
+  p3Answers[q.qIdx] = { choiceIdx:origIdx, correct:isCorrect,
+    firstChoiceIdx, firstCorrect };
+
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(LAB_ID, q.qIdx, q.prompt,
+      q.choices[firstChoiceIdx].text, firstCorrect,
+      q.choices[origIdx].text, isCorrect);
+  }
+
+  if(isCorrect){
+    fb.className = 'status-line correct';
+    fb.textContent = '✓ Correct.';
+    fs.querySelectorAll('input').forEach(inp => inp.disabled = true);
+    fs.querySelectorAll('label.mc-option').forEach(l => {
+      const ipt = l.querySelector('input');
+      if(ipt && parseInt(ipt.value,10) === origIdx) l.classList.add('correct-final');
+    });
+    const btn = fs.querySelector('button');
+    if(btn){ btn.textContent = 'Answered ✓'; btn.disabled = true; }
+    _finalScore = computeFinalScore();
+    checkPhase3Done();
+  } else {
+    fb.className = 'status-line wrong';
+    fb.textContent = 'Not quite — look back at the box you verified.';
+  }
+}
+
+function checkPhase3Done(){
+  const done = P3_QUESTIONS.filter(q => p3Answers[q.qIdx] && p3Answers[q.qIdx].correct).length;
+  if(done === 3){
+    $phase3Pill.textContent = 'Phase 3 — Complete ✓';
+    $phase3Pill.classList.add('done');
+    setStatus($phase3Stat,'correct',
+      'All three savings identities derived. Lab complete!');
+    $finalResult.classList.remove('hidden');
+    fireLabDone();
+  } else {
+    setStatus($phase3Stat,'info', done + ' of 3 derivation questions answered correctly.');
+  }
+}
+
+function fireLabDone(){
+  if(_labDoneFired) return;
+  _labDoneFired = true;
+  _finalScore = computeFinalScore();
+  if(window.Session && Session.recordLabDone){
+    Session.recordLabDone(LAB_ID, LAB_LABEL,
+      _firstScore, _finalScore, TOTAL_Q);
+  }
+  $labBanner.classList.remove('hidden');
+  $labBanner.textContent = '✓ Lab complete. First-attempt score: '
+    + _firstScore + ' / ' + TOTAL_Q
+    + ' • Final score: ' + _finalScore + ' / ' + TOTAL_Q + '.';
+}
+
+// ── Canvas: drawing + drag detection ─────────────────────────────────────
+function setupCanvas(){
+  const wrap = $canvas.parentElement;
+  const rect = wrap.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const W = Math.round(rect.width * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if($canvas.width !== W || $canvas.height !== H){
+    $canvas.width = W; $canvas.height = H;
+  }
+  return { ctx: $canvas.getContext('2d'), dpr, W, H,
+           cssW: rect.width, cssH: rect.height };
+}
+
+// Map virtual coords (0..VW × 0..VH) to canvas px
+function vToPx(c, x, y){
+  const sx = c.W / VW;
+  const sy = c.H / VH;
+  return [x * sx, y * sy];
+}
+
+// Inverse: client px to virtual
+function clientToV(clientX, clientY){
+  const r = $canvas.getBoundingClientRect();
+  const x = (clientX - r.left) / r.width  * VW;
+  const y = (clientY - r.top ) / r.height * VH;
+  return [x, y];
+}
+
+function bezPt(s, c, e, t){
+  const u = 1-t;
+  return [ u*u*s[0] + 2*u*t*c[0] + t*t*e[0],
+           u*u*s[1] + 2*u*t*c[1] + t*t*e[1] ];
+}
+function bezTan(s, c, e, t){
+  return [ 2*(1-t)*(c[0]-s[0]) + 2*t*(e[0]-c[0]),
+           2*(1-t)*(c[1]-s[1]) + 2*t*(e[1]-c[1]) ];
+}
+
+function drawRoundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,   x+w,y+h, r);
+  ctx.arcTo(x+w,y+h, x,y+h,   r);
+  ctx.arcTo(x,y+h,   x,y,     r);
+  ctx.arcTo(x,y,     x+w,y,   r);
+  ctx.closePath();
+}
+
+function wrapText(ctx, text, maxWidth){
+  // Hand-rolled simple wrap for 1-3 lines
+  const words = text.split(/\s+/);
+  const lines = [];
+  let cur = '';
+  for(const w of words){
+    const tryLine = cur ? cur + ' ' + w : w;
+    if(ctx.measureText(tryLine).width > maxWidth && cur){
+      lines.push(cur);
+      cur = w;
+    } else {
+      cur = tryLine;
+    }
+  }
+  if(cur) lines.push(cur);
+  return lines;
+}
+
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+
+  const c = setupCanvas();
+  if(!c) return;
+  const { ctx, dpr, W, H } = c;
+
+  // Clear
+  ctx.fillStyle = 'rgba(246,242,234,0.45)';
+  ctx.fillRect(0,0,W,H);
+
+  // Per-box accessible highlight (Phase 2 box selection)
+  // Determine arrow ownership for currently selected box
+  const inArrows = new Set(), outArrows = new Set();
+  if(_currentBox){
+    ARROWS.forEach(a => {
+      if(a.to   === _currentBox) inArrows.add(a.id);
+      if(a.from === _currentBox) outArrows.add(a.id);
+    });
+  }
+
+  // Draw arrows first (under boxes' labels)
+  ARROWS.forEach(a => drawArrow(ctx, c, a, inArrows, outArrows));
+
+  // Draw boxes
+  Object.keys(BOXES).forEach(k => drawBox(ctx, c, k, BOXES[k]));
+
+  // Update the canvas accessible description
+  updateCanvasDesc();
+}
+
+function drawBox(ctx, c, key, box){
+  const [x, y]  = vToPx(c, box.x, box.y);
+  const [w, h]  = [box.w * c.W / VW, box.h * c.H / VH];
+  const isAgent = (box.kind === 'agent');
+  const isSelected = (_currentBox === key);
+  const r = 12 * c.dpr;
+
+  ctx.save();
+  drawRoundRect(ctx, x, y, w, h, r);
+  ctx.fillStyle = isSelected ? 'rgba(47,93,124,0.10)' : '#ffffff';
+  ctx.fill();
+  ctx.lineWidth = (isSelected ? 3 : 2) * c.dpr;
+  ctx.strokeStyle = isSelected ? '#2f5d7c'
+                   : (isAgent ? '#374151' : '#596878');
+  if(!isAgent){ ctx.setLineDash([6 * c.dpr, 4 * c.dpr]); }
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // Label inside box (may be wrapped)
+  ctx.save();
+  const sizePx = (isAgent ? 14 : 12) * c.dpr * _fs;
+  ctx.font = (isAgent?'700 ':'600 ') + Math.round(sizePx) + 'px "Inter", sans-serif';
+  ctx.fillStyle = '#1f2937';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const lines = wrapText(ctx, box.label, w * 0.85);
+  const lh = sizePx * 1.18;
+  const totalH = lh * lines.length;
+  const startY = y + h/2 - totalH/2 + lh/2;
+  lines.forEach((ln, i) => {
+    ctx.fillText(ln, x + w/2, startY + i*lh);
+  });
+  ctx.restore();
+}
+
+function drawArrow(ctx, c, a, inArrows, outArrows){
+  const sPx = vToPx(c, a.s[0], a.s[1]);
+  const cPx = vToPx(c, a.c[0], a.c[1]);
+  const ePx = vToPx(c, a.e[0], a.e[1]);
+  const labelKey = placement[a.id];
+  const placed   = !!labelKey;
+
+  // Highlight state
+  let strokeColor = '#596878';
+  let lineWidth   = 2 * c.dpr;
+  let arrowDir    = 'normal'; // 'in' or 'out' label
+  if(_currentBox){
+    if(inArrows.has(a.id))      { strokeColor = '#155c38'; lineWidth = 3.2 * c.dpr; arrowDir = 'in'; }
+    else if(outArrows.has(a.id)){ strokeColor = '#b42318'; lineWidth = 3.2 * c.dpr; arrowDir = 'out'; }
+    else                        { strokeColor = '#b3a99a'; lineWidth = 1.6 * c.dpr; }
+  } else if(placed){
+    strokeColor = '#2f5d7c';
+    lineWidth   = 2.4 * c.dpr;
+  }
+  // Drag highlight: brighten the closest arrow if dragging
+  if(_drag && _drag.nearestArrow === a.id){
+    strokeColor = '#2f5d7c';
+    lineWidth = 3.5 * c.dpr;
+  }
+
+  ctx.save();
+  // Plot-area clip (extra padding so labels never poke beyond)
+  ctx.beginPath();
+  ctx.rect(0, 0, c.W, c.H);
+  ctx.clip();
+
+  ctx.strokeStyle = strokeColor;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(sPx[0], sPx[1]);
+  ctx.quadraticCurveTo(cPx[0], cPx[1], ePx[0], ePx[1]);
+  ctx.stroke();
+
+  // Arrowhead at end
+  const tan = bezTan(sPx, cPx, ePx, 1);
+  drawArrowhead(ctx, ePx[0], ePx[1], tan[0], tan[1], strokeColor, c.dpr);
+
+  // Label at midpoint with perpendicular offset
+  const mid = bezPt(sPx, cPx, ePx, 0.5);
+  const tanMid = bezTan(sPx, cPx, ePx, 0.5);
+  const tlen = Math.hypot(tanMid[0], tanMid[1]) || 1;
+  // Perpendicular (rotated 90° clockwise relative to direction of travel)
+  const offX = a.offset[0] * c.W / VW;
+  const offY = a.offset[1] * c.H / VH;
+
+  const sizePx = 11 * c.dpr * _fs;
+  ctx.font = '700 ' + Math.round(sizePx) + 'px "Inter", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  let labelText = '';
+  if(placed){ labelText = LABELS[labelKey].name; }
+  else if(_drag && _drag.nearestArrow === a.id){ labelText = 'Drop here?'; }
+  else { labelText = '·'; }
+
+  if(labelText){
+    const lx = mid[0] + offX;
+    const ly = mid[1] + offY;
+    // Background pill so labels stay readable over background
+    const tw = ctx.measureText(labelText).width;
+    const padX = 6 * c.dpr, padY = 3 * c.dpr;
+    const pillH = sizePx + 2*padY;
+    const pillW = tw + 2*padX;
+    ctx.fillStyle = placed ? 'rgba(255,255,255,0.92)' : 'rgba(255,255,255,0.7)';
+    drawRoundRect(ctx, lx - pillW/2, ly - pillH/2, pillW, pillH, 6*c.dpr);
+    ctx.fill();
+    if(placed){
+      ctx.strokeStyle = '#155c38';
+      ctx.lineWidth = 1 * c.dpr;
+      ctx.stroke();
+    }
+    ctx.fillStyle = placed ? '#155c38' : '#596878';
+    ctx.fillText(labelText, lx, ly);
+
+    // Phase-2 IN/OUT chip near the arrowhead
+    if(_currentBox && arrowDir !== 'normal'){
+      const tag = (arrowDir === 'in' ? 'IN' : 'OUT');
+      const tagColor = (arrowDir === 'in' ? '#155c38' : '#b42318');
+      ctx.font = '800 ' + Math.round(9 * c.dpr * _fs) + 'px "Inter", sans-serif';
+      const ttw = ctx.measureText(tag).width;
+      // Place near the endpoint, offset along the perpendicular
+      const px = ePx[0] - (tan[0]/tlen) * 28 * c.dpr;
+      const py = ePx[1] - (tan[1]/tlen) * 28 * c.dpr;
+      ctx.fillStyle = tagColor;
+      drawRoundRect(ctx, px - ttw/2 - 5*c.dpr, py - 9*c.dpr,
+                    ttw + 10*c.dpr, 18*c.dpr, 5*c.dpr);
+      ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(tag, px, py);
+    }
+  }
+  ctx.restore();
+}
+
+function drawArrowhead(ctx, x, y, dx, dy, color, dpr){
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx/len, uy = dy/len;
+  // Perpendicular
+  const px = -uy, py = ux;
+  const size = 9 * dpr;
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x - size*ux + 0.55*size*px, y - size*uy + 0.55*size*py);
+  ctx.lineTo(x - size*ux - 0.55*size*px, y - size*uy - 0.55*size*py);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+// ── Drag handlers (pointer events) ───────────────────────────────────────
+function onChipPointerDown(e){
+  const chip = e.currentTarget;
+  if(chip.classList.contains('placed')) return;
+  // Only start drag for primary pointer (mouse/touch)
+  if(e.button !== undefined && e.button !== 0) return;
+  e.preventDefault();
+  const k = chip.dataset.labelKey;
+  const r = chip.getBoundingClientRect();
+  // Create a floating ghost
+  const ghost = chip.cloneNode(true);
+  ghost.classList.add('dragging');
+  ghost.style.position = 'fixed';
+  ghost.style.left = r.left + 'px';
+  ghost.style.top  = r.top + 'px';
+  ghost.style.width = r.width + 'px';
+  ghost.style.pointerEvents = 'none';
+  ghost.style.zIndex = 1000;
+  document.body.appendChild(ghost);
+  chip.classList.add('dragging');
+  _drag = {
+    labelKey: k,
+    chipEl: chip,
+    ghost,
+    offX: e.clientX - r.left,
+    offY: e.clientY - r.top,
+    nearestArrow: null,
+    pointerId: e.pointerId,
+  };
+  try { chip.setPointerCapture(e.pointerId); } catch(_){}
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerUp);
+}
+
+function onPointerMove(e){
+  if(!_drag) return;
+  _drag.ghost.style.left = (e.clientX - _drag.offX) + 'px';
+  _drag.ghost.style.top  = (e.clientY - _drag.offY) + 'px';
+  // Determine nearest arrow when over canvas
+  const r = $canvas.getBoundingClientRect();
+  if(e.clientX >= r.left && e.clientX <= r.right &&
+     e.clientY >= r.top  && e.clientY <= r.bottom){
+    const [vx, vy] = clientToV(e.clientX, e.clientY);
+    _drag.nearestArrow = nearestArrowAt(vx, vy);
+  } else {
+    _drag.nearestArrow = null;
+  }
+  redraw();
+}
+
+function onPointerUp(e){
+  if(!_drag) return;
+  const k = _drag.labelKey;
+  const target = _drag.nearestArrow;
+  // Cleanup
+  if(_drag.ghost && _drag.ghost.parentNode){
+    _drag.ghost.parentNode.removeChild(_drag.ghost);
+  }
+  _drag.chipEl.classList.remove('dragging');
+  try { _drag.chipEl.releasePointerCapture(_drag.pointerId); } catch(_){}
+  _drag = null;
+  window.removeEventListener('pointermove', onPointerMove);
+  window.removeEventListener('pointerup', onPointerUp);
+  window.removeEventListener('pointercancel', onPointerUp);
+
+  if(target){
+    attemptPlace(k, target, false);
+  } else {
+    redraw();
+  }
+}
+
+function nearestArrowAt(vx, vy){
+  // Find arrow whose midpoint hot-zone contains (vx, vy)
+  let best = null;
+  let bestD = Infinity;
+  ARROWS.forEach(a => {
+    if(placement[a.id]) return; // already placed — can't drop here
+    const mid = bezPt(a.s, a.c, a.e, 0.5);
+    const dx = vx - mid[0], dy = vy - mid[1];
+    const d = Math.hypot(dx, dy);
+    if(d < 90 && d < bestD){ best = a.id; bestD = d; }
+  });
+  return best;
+}
+
+// ── Canvas description (live region) ─────────────────────────────────────
+function updateCanvasDesc(){
+  let parts = [];
+  const placedCount = countPlaced();
+  if(placedCount < 9){
+    parts.push('Phase 1. ' + placedCount + ' of 9 arrows labeled.');
+    const remaining = ARROWS
+      .filter(a => !placement[a.id])
+      .map(a => ARROW_NAMES[a.id]);
+    if(remaining.length <= 4){
+      parts.push('Still unlabeled: ' + remaining.join('; ') + '.');
+    } else {
+      parts.push(remaining.length + ' arrows remain.');
+    }
+  } else {
+    parts.push('All nine arrows labeled.');
+  }
+  if(_currentBox){
+    const info = BOX_INFO[_currentBox];
+    const ins  = info.flows.filter(f=>f.dir==='in' ).map(f=>f.label).join(', ');
+    const outs = info.flows.filter(f=>f.dir==='out').map(f=>f.label).join(', ');
+    parts.push('Inspecting ' + info.title + '. Money in: ' + (ins||'none') +
+               '. Money out: ' + (outs||'none') + '.');
+  }
+  $canvasDesc.textContent = parts.join(' ');
+}
+
+// ── Resize ───────────────────────────────────────────────────────────────
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+// ── Boot via DiscussionModal ─────────────────────────────────────────────
+if(window.DiscussionModal && DiscussionModal.init){
+  DiscussionModal.init({
+    weekLabel: 'Closed Economy in the Long-Run',
+    onReady: function(){
+      generateParams();
+      redraw();
+    }
+  });
+} else {
+  generateParams();
+  redraw();
+}
+
+})();
+</script>
+</body>
+</html>

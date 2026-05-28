@@ -1,0 +1,1101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Aggregate Demand Solver — ECON 105A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;  --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ─────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+    .instructions-body .example-econ{background:rgba(246,242,234,.55);
+      border:1px solid var(--line);border-radius:10px;padding:10px 13px;
+      margin:8px 0;font-size:0.8125rem;line-height:1.7;}
+    .instructions-body .example-econ .row{display:block;}
+    .instructions-body .example-step{margin-top:12px;}
+    .instructions-body .example-step .step-tag{display:inline-block;font-size:0.625rem;
+      font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);
+      background:rgba(47,93,124,.08);border:1px solid rgba(47,93,124,.18);
+      border-radius:6px;padding:2px 7px;margin-right:6px;vertical-align:middle;}
+    .instructions-body .example-step .step-label{font-weight:700;color:var(--ink);}
+    .instructions-body .worked-line{display:block;padding:2px 0;font-family:var(--font-sans);
+      font-size:0.8125rem;line-height:1.8;}
+    .instructions-body .worked-line i{font-family:var(--font-serif);font-style:italic;}
+    .instructions-body .worked-box{display:inline-block;margin-top:4px;padding:3px 9px;
+      border:1.5px solid var(--good);border-radius:8px;background:rgba(21,92,56,.06);
+      color:var(--good);font-weight:700;}
+
+    /* Buttons */
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border:none;border-radius:12px;font-family:var(--font-sans);font-size:0.875rem;font-weight:700;cursor:pointer;transition:background .12s;}
+    .btn.primary{background:var(--accent);color:#fff;}
+    .btn.primary:hover:not(:disabled){background:#264d68;}
+    .btn.primary:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* Layout */
+    .lab-container{max-width:1160px;margin:0 auto;padding:18px;}
+    .lab-grid{display:grid;grid-template-columns:1fr 380px;gap:18px;align-items:start;}
+    @media(max-width:880px){.lab-grid{grid-template-columns:1fr;}
+      .graph-card{position:static !important;}
+      .graph-card-wrap{order:-1;}}
+
+    /* Problem card */
+    .problem-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow);margin-bottom:14px;}
+    .problem-header{font-family:var(--font-serif);font-size:1.25rem;font-weight:700;color:var(--ink);margin:0 0 6px;}
+    .problem-sub{font-size:0.8125rem;color:var(--muted);margin:0 0 14px;line-height:1.5;}
+    .param-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+    @media(max-width:520px){.param-grid{grid-template-columns:1fr;}}
+    .param{background:rgba(246,242,234,.55);border:1px solid var(--line);border-radius:12px;padding:9px 13px;}
+    .param.full{grid-column:1/-1;}
+    .param .label{font-size:0.6875rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:3px;}
+    .param .value{font-size:0.9375rem;font-weight:700;color:var(--ink);font-family:var(--font-sans);line-height:1.5;}
+
+    /* Math typography */
+    .eq i{font-style:italic;font-family:var(--font-serif);}
+    .eq sub, .eq sup{font-size:0.75em;}
+    .frac{display:inline-flex;flex-direction:column;vertical-align:-0.45em;
+      text-align:center;margin:0 2px;line-height:1.05;}
+    .frac .num{border-bottom:1.5px solid currentColor;padding:0 4px;}
+    .frac .den{padding:0 4px;}
+    .frac.input-frac{vertical-align:-0.95em;line-height:1.1;}
+    .frac.input-frac .num{padding:2px 4px;}
+    .frac.input-frac .den{padding:2px 4px;font-style:italic;font-family:var(--font-serif);}
+
+    /* Step cards */
+    .step-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);margin-bottom:12px;transition:opacity .18s;}
+    .step-card.locked{opacity:.55;}
+    .step-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+    .step-num{display:inline-block;font-size:0.625rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);background:rgba(47,93,124,.08);border:1px solid rgba(47,93,124,.18);border-radius:6px;padding:2px 7px;margin-bottom:4px;}
+    .step-title{font-size:0.9375rem;font-weight:700;color:var(--ink);line-height:1.3;}
+    .step-instruction{font-size:0.8125rem;color:var(--ink-2);line-height:1.55;margin:8px 0 0;}
+
+    /* Action buttons row — border #8c7f72 = 3.5:1 on white (WCAG 1.4.11 ✓) */
+    .step-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+    .step-btn{flex-shrink:0;padding:6px 12px;border:1.5px solid #8c7f72;background:rgba(47,93,124,.06);color:var(--accent);border-radius:10px;font-size:0.75rem;font-weight:700;font-family:var(--font-sans);cursor:pointer;transition:background .12s,border-color .12s;white-space:nowrap;}
+    .step-btn:hover:not(:disabled){background:rgba(47,93,124,.14);border-color:var(--accent);}
+    .step-btn:disabled{opacity:.55;cursor:not-allowed;}
+    .step-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+    .step-btn.primary:hover:not(:disabled){background:#264d68;}
+    .step-btn.done{background:rgba(21,92,56,.08);border-color:rgba(21,92,56,.3);color:var(--good);}
+
+    /* Entry area */
+    .entry-area{margin-top:12px;padding:10px 12px;background:rgba(246,242,234,.5);border:1px solid var(--line);border-radius:12px;}
+    .entry-row{display:flex;align-items:center;flex-wrap:wrap;gap:5px;font-size:0.9375rem;font-weight:600;color:var(--ink);line-height:2.2;}
+    .entry-sym{color:var(--ink-2);white-space:nowrap;font-size:1rem;font-family:var(--font-serif);font-style:italic;}
+    .entry-sym.plain{font-style:normal;font-family:var(--font-sans);font-weight:700;color:var(--ink-2);}
+    .entry-note{font-size:0.75rem;color:var(--muted);margin-top:6px;line-height:1.5;}
+
+    /* Inline number inputs — border #8c7f72 = 3.5:1 on white (WCAG 1.4.11 ✓) */
+    .fi{width:78px;padding:4px 6px;border:1.5px solid #8c7f72;border-radius:8px;font-size:0.9375rem;font-family:var(--font-sans);font-weight:700;text-align:center;background:#fff;color:var(--ink);outline:none;transition:border-color .12s,background .12s;}
+    .fi.wide{width:96px;}
+    .fi.narrow{width:64px;}
+    .fi:focus{border-color:var(--accent);}
+    .fi.correct{border-color:var(--good);background:rgba(21,92,56,.06);}
+    .fi.wrong{border-color:var(--bad);background:rgba(180,35,24,.06);}
+    .fi:disabled{background:rgba(246,242,234,.9);color:var(--muted);cursor:not-allowed;}
+
+    /* Feedback */
+    .entry-fb{margin-top:8px;padding:7px 11px;border-radius:10px;font-size:0.8125rem;font-weight:600;line-height:1.4;animation:fadeSlide .18s ease;}
+    .entry-fb.correct{background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.2);color:var(--good);}
+    .entry-fb.wrong{background:rgba(180,35,24,.06);border:1px solid rgba(180,35,24,.2);color:var(--bad);}
+
+    /* Revealed content */
+    .step-hint{margin-top:10px;padding:9px 13px;background:rgba(47,93,124,.04);border:1px solid rgba(47,93,124,.14);border-radius:12px;animation:fadeSlide .2s ease;font-size:0.8125rem;color:var(--ink-2);line-height:1.55;}
+    .step-answer{margin-top:8px;padding:11px 13px;background:rgba(21,92,56,.05);border:1px solid rgba(21,92,56,.2);border-radius:12px;animation:fadeSlide .2s ease;}
+    .reveal-label{font-size:0.625rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin-bottom:6px;}
+    .reveal-label.good{color:var(--good);}
+    .answer-content{font-size:0.875rem;line-height:1.85;color:var(--ink);overflow-x:auto;}
+    .sol-line{display:block;padding:1px 0;font-family:var(--font-sans);}
+    .sol-line i{font-family:var(--font-serif);font-style:italic;}
+    .sol-line.boxed{display:inline-block;margin-top:4px;padding:4px 10px;
+      border:1.5px solid var(--good);border-radius:8px;background:rgba(21,92,56,.06);
+      color:var(--good);font-weight:700;}
+
+    @keyframes fadeSlide{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+    .hidden{display:none !important;}
+
+    /* Lab-done banner */
+    .lab-done-banner{margin-top:14px;padding:14px 18px;border-radius:14px;
+      background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.25);
+      color:var(--ink);font-size:0.875rem;line-height:1.55;}
+    .lab-done-banner .banner-title{font-family:var(--font-serif);font-size:1.125rem;font-weight:700;color:var(--good);margin:0 0 6px;}
+    .lab-done-banner .banner-score{margin:6px 0 0;font-size:0.8125rem;color:var(--ink-2);}
+
+    /* Graph card */
+    .graph-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);position:sticky;top:18px;}
+    .graph-title{font-size:0.8125rem;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+    .graph-canvas-wrap{position:relative;width:100%;aspect-ratio:1/1;border-radius:12px;overflow:hidden;background:rgba(246,242,234,.45);border:1px solid var(--line);}
+    #graphCanvas{display:block;width:100%;height:100%;}
+    .graph-legend{display:flex;flex-direction:column;gap:5px;margin-top:10px;}
+    .legend-row{display:flex;align-items:center;gap:7px;font-size:0.75rem;color:var(--ink-2);}
+    .legend-swatch{width:24px;height:3px;border-radius:2px;flex-shrink:0;}
+    .legend-swatch.dashed{background:repeating-linear-gradient(90deg,currentColor 0 4px,transparent 4px 8px);height:3px;}
+    .legend-swatch.faint{opacity:.5;}
+    .legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+  </style>
+</head>
+<body>
+
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105a/labs/">← ECON 105A Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105A — Aggregate Demand</div>
+      <h1>Aggregate Demand Solver</h1>
+      <p class="sub">
+        Build the aggregate demand curve from its IS-LM foundations. Solve the
+        IS curve for <i>r</i>, solve the LM curve for <i>r</i> (with <i>P</i>
+        kept symbolic), then set IS&nbsp;=&nbsp;LM and solve for <i>Y</i> as a
+        function of <i>P</i>.
+      </p>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>You are given a consumption function with an interest-rate term,
+          an investment function, fiscal variables <strong>G</strong> and
+          <strong>T</strong>, a real money-demand function
+          <strong>L(r,Y) = MDY·Y − MDR·r</strong>, and the nominal money
+          supply <strong>M</strong>. The price level <strong>P</strong> is
+          deliberately left as a variable — that is what lets us trace out the
+          AD curve.</p>
+          <p>You will be asked to answer the following questions:</p>
+          <ol>
+            <li><strong>The IS curve, solved for <i>r</i>.</strong>
+                Express the goods-market equilibrium interest rate as a linear
+                function of <i>Y</i>. Enter the intercept and the (positive)
+                coefficient on <i>Y</i>.</li>
+            <li><strong>The LM curve, solved for <i>r</i>.</strong>
+                Express the money-market equilibrium interest rate as a linear
+                function of <i>Y</i> and 1/<i>P</i>. Enter the coefficient on
+                <i>Y</i> and the numerator that sits over <i>P</i>.</li>
+            <li><strong>The AD curve.</strong> Set IS = LM and solve for
+                <i>Y</i> as a function of <i>P</i>. The answer has the form
+                <i>Y</i> = α + β/<i>P</i>. Enter α and β.</li>
+          </ol>
+          <p>For each step, enter your answer and click <strong>Check
+          Answer</strong>. A short <strong>Hint</strong> is always available;
+          once you have submitted an attempt, you can also reveal a full
+          worked <strong>Solution</strong>. The next step unlocks as soon as
+          you submit (right or wrong).</p>
+        </div>
+      </details>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Worked Example</summary>
+        <div class="instructions-body">
+          <p>Suppose the economy is described by:</p>
+          <div class="example-econ eq">
+            <span class="row"><i>C</i> = 100 + 0.50 (<i>Y</i> − <i>T</i>)</span>
+            <span class="row"><i>I</i> = 100 − 20 <i>r</i></span>
+            <span class="row"><i>G</i> = 50, &nbsp; <i>T</i> = 40</span>
+            <span class="row"><i>L</i>(<i>r</i>, <i>Y</i>) = 2 <i>Y</i> − 20 <i>r</i></span>
+            <span class="row"><i>M</i> = 600, &nbsp; <i>P</i> is a variable</span>
+          </div>
+
+          <div class="example-step">
+            <span class="step-tag">Step 1</span><span class="step-label">IS curve, solved for <i>r</i></span>
+            <p>Set <i>Y</i> = <i>C</i> + <i>I</i> + <i>G</i>, then group the <i>r</i> terms:</p>
+            <span class="worked-line"><i>Y</i> = 100 + 0.50(<i>Y</i> − 40) + 100 − 20<i>r</i> + 50</span>
+            <span class="worked-line">20 <i>r</i> = 100 − 0.50·40 + 100 + 50 − (1 − 0.50) <i>Y</i></span>
+            <span class="worked-line">20 <i>r</i> = 230 − 0.50 <i>Y</i></span>
+            <span class="worked-line"><i>r</i> = <span class="frac"><span class="num">230</span><span class="den">20</span></span> − <span class="frac"><span class="num">0.50</span><span class="den">20</span></span> <i>Y</i></span>
+            <span class="worked-line"><span class="worked-box"><i>r</i> = 11.50 − 0.025 <i>Y</i></span></span>
+          </div>
+
+          <div class="example-step">
+            <span class="step-tag">Step 2</span><span class="step-label">LM curve, solved for <i>r</i></span>
+            <p>Set <i>M</i>/<i>P</i> = <i>L</i>(<i>r</i>, <i>Y</i>) and solve for <i>r</i>, keeping <i>P</i> symbolic:</p>
+            <span class="worked-line"><span class="frac"><span class="num">600</span><span class="den"><i>P</i></span></span> = 2 <i>Y</i> − 20 <i>r</i></span>
+            <span class="worked-line">20 <i>r</i> = 2 <i>Y</i> − <span class="frac"><span class="num">600</span><span class="den"><i>P</i></span></span></span>
+            <span class="worked-line"><i>r</i> = <span class="frac"><span class="num">2</span><span class="den">20</span></span> <i>Y</i> − <span class="frac"><span class="num">600</span><span class="den">20·<i>P</i></span></span></span>
+            <span class="worked-line"><span class="worked-box"><i>r</i> = 0.10 <i>Y</i> − <span class="frac"><span class="num">30</span><span class="den"><i>P</i></span></span></span></span>
+          </div>
+
+          <div class="example-step">
+            <span class="step-tag">Step 3</span><span class="step-label">AD curve</span>
+            <p>Set IS = LM (both equal <i>r</i>) and solve for <i>Y</i>:</p>
+            <span class="worked-line">11.50 − 0.025 <i>Y</i> = 0.10 <i>Y</i> − <span class="frac"><span class="num">30</span><span class="den"><i>P</i></span></span></span>
+            <span class="worked-line">11.50 + <span class="frac"><span class="num">30</span><span class="den"><i>P</i></span></span> = (0.025 + 0.10) <i>Y</i> = 0.125 <i>Y</i></span>
+            <span class="worked-line"><i>Y</i> = <span class="frac"><span class="num">11.50</span><span class="den">0.125</span></span> + <span class="frac"><span class="num">30</span><span class="den">0.125·<i>P</i></span></span></span>
+            <span class="worked-line"><span class="worked-box"><i>Y</i> = 92 + <span class="frac"><span class="num">240</span><span class="den"><i>P</i></span></span></span></span>
+          </div>
+
+          <p style="margin-top:14px;">So at <i>P</i> = 1 the economy demands <i>Y</i> = 332; at
+          <i>P</i> = 3, <i>Y</i> = 172; at <i>P</i> = 10, <i>Y</i> = 116.
+          Plotting (<i>Y</i>, <i>P</i>) traces out the downward-sloping
+          aggregate demand curve.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-container">
+  <div class="lab-grid">
+
+    <!-- LEFT COLUMN -->
+    <div>
+      <div class="problem-card">
+        <h2 class="problem-header">The Economy</h2>
+        <p class="problem-sub">
+          A short-run economy with both a goods market and a money market.
+          The interest rate <i>r</i> is expressed in percent. The price level
+          <i>P</i> is left as a variable so we can derive the aggregate demand
+          curve.
+        </p>
+        <div class="param-grid" id="paramGrid"></div>
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn primary" id="newProblemBtn">New Problem</button>
+        </div>
+      </div>
+
+      <div id="stepsContainer"></div>
+
+      <div id="labDoneBanner" class="lab-done-banner hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+    </div>
+
+    <!-- RIGHT COLUMN -->
+    <div class="graph-card-wrap">
+      <div class="graph-card">
+        <div class="graph-title" id="graphCanvasTitle">Aggregate Demand Curve</div>
+        <div class="graph-canvas-wrap">
+          <canvas id="graphCanvas"
+                  role="img"
+                  aria-labelledby="graphCanvasTitle"
+                  aria-describedby="graphCanvasDesc"></canvas>
+        </div>
+        <!-- Canvas accessible description — aria-live so updates are announced (WCAG 1.1.1, 4.1.3) -->
+        <p class="sr-only" id="graphCanvasDesc"
+           aria-live="polite" aria-atomic="true">Aggregate demand diagram with output Y on the horizontal axis and the price level P on the vertical axis.</p>
+        <div class="graph-legend" aria-hidden="true">
+          <div class="legend-row" id="lgTrue">
+            <div class="legend-swatch faint" style="background:#2f5d7c;"></div>
+            <span>True AD curve</span>
+          </div>
+          <div class="legend-row hidden" id="lgAttempt">
+            <div class="legend-swatch dashed" id="lgAttemptSwatch" style="color:#b42318;"></div>
+            <span id="lgAttemptLabel">Your attempt</span>
+          </div>
+          <div class="legend-row hidden" id="lgPts">
+            <div class="legend-dot" style="background:#155c38;"></div>
+            <span>Sample (Y, P) points</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<footer style="margin-top:32px;">
+  <div class="lab-container">
+    <div class="footer-inner">
+      <span>ECON 105A — Intermediate Macroeconomic Theory</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Sample week-template entry (paste into a discussion week's LABS array):
+  //   { id:   'aggregate-demand-solver',
+  //     name: 'Aggregate Demand Solver',
+  //     icon: '📉',
+  //     desc: 'Derive the AD curve step by step from IS and LM.',
+  //     url:  '/classes/econ105a/labs/aggregate-demand-solver/?disc=1' }
+  // ─────────────────────────────────────────────────────────────────────────
+  const LAB_ID    = 'aggregate-demand-solver';
+  const LAB_LABEL = 'Aggregate Demand Solver';
+  const TOTAL_STEPS = 3;
+
+  // Canvas font scale (WCAG 1.4.4) — recomputed at start of every redraw.
+  let _fs = 1;
+
+  // ── State ──────────────────────────────────────────────────────────────────
+  let _rng = null;
+  let params = {};
+  let comp   = {};
+  const stepMeta     = Array.from({length:TOTAL_STEPS}, () => ({s:'check'}));
+  const stepUnlocked = Array(TOTAL_STEPS).fill(false);
+  const firstAttempt = Array(TOTAL_STEPS).fill(true);
+  const firstCorrect = Array(TOTAL_STEPS).fill(false);
+  const firstAnsText = Array(TOTAL_STEPS).fill('—');
+  const stepDone     = Array(TOTAL_STEPS).fill(false);
+  let _steps = [];
+  let _labDoneFired = false;
+
+  // ── DOM ────────────────────────────────────────────────────────────────────
+  const $paramGrid = document.getElementById('paramGrid');
+  const $canvas    = document.getElementById('graphCanvas');
+  const $graphDesc = document.getElementById('graphCanvasDesc');
+  const $steps     = document.getElementById('stepsContainer');
+  const $banner    = document.getElementById('labDoneBanner');
+
+  // ── Utilities ──────────────────────────────────────────────────────────────
+  function rng(){ return _rng ? _rng() : Math.random(); }
+  function ri(lo,hi){ return lo + Math.floor(rng()*(hi-lo+1)); }
+  function rnd2(v){ return Math.round(v*100)/100; }
+  function fmt2(v){
+    if(!isFinite(v)) return '—';
+    return v.toFixed(2);
+  }
+  function fmtInt(v){ return String(Math.round(v)); }
+
+  // Render a "numerator over P" fraction with P kept symbolic.
+  function fracOverP(num){
+    return `<span class="frac"><span class="num">${num}</span><span class="den"><i>P</i></span></span>`;
+  }
+
+  // ── Compute the three step answers and the AD-curve coefficients ───────────
+  //
+  // IS solved for r (Step 1):
+  //   r = αIS − βIS · Y
+  //   αIS = (c0 − MPC·T + I0 + G) / (c1 + I1)
+  //   βIS = (1 − MPC) / (c1 + I1)
+  //
+  // LM solved for r (Step 2):
+  //   r = a · Y − b / P
+  //   a = MDY / MDR
+  //   b = M / MDR
+  //
+  // AD curve (Step 3): set IS = LM and solve for Y.
+  //   Y = α + β / P
+  //   α = MDR · (c0 − MPC·T + I0 + G) / D
+  //   β = (c1 + I1) · M / D
+  //   D = MDR · (1 − MPC) + (c1 + I1) · MDY
+  function compute(p){
+    const {c0,MPC,c1,I0,I1,G,T,M,MDY,MDR} = p;
+    const Anum = c0 - MPC*T + I0 + G;          // shared numerator
+    const c1I1 = c1 + I1;
+    const oneMinus = 1 - MPC;
+
+    const alphaIS = Anum / c1I1;
+    const betaIS  = oneMinus / c1I1;
+    const a       = MDY / MDR;
+    const b       = M / MDR;
+
+    const D       = MDR * oneMinus + c1I1 * MDY;
+    const alpha   = MDR * Anum / D;
+    const beta    = c1I1 * M / D;
+
+    return {
+      alphaIS: rnd2(alphaIS), betaIS: rnd2(betaIS),
+      a: rnd2(a), b: rnd2(b),
+      alpha: rnd2(alpha), beta: rnd2(beta),
+      D: rnd2(D),
+      Anum: rnd2(Anum), c1I1, oneMinus: rnd2(oneMinus),
+    };
+  }
+
+  // ── Problem generation ─────────────────────────────────────────────────────
+  function generateParams(){
+    if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+    let last = null;
+    for(let tries=0; tries<60; tries++){
+      const c0  = ri(50, 200);
+      const MPC = rnd2(0.25 + rng()*0.74); // 0.25..0.99
+      const c1  = (rng() < 0.5) ? 0 : ri(0, 50);
+      const I0  = ri(50, 200);
+      const I1  = ri(10, 50);
+      const G   = ri(20, 80);
+      const T   = ri(20, 80);
+      const M   = ri(500, 800);
+      const MDY = ri(1, 5);
+      const MDR = ri(10, 50);
+      const p   = {c0,MPC,c1,I0,I1,G,T,M,MDY,MDR};
+      const k   = compute(p);
+      last = {p,k};
+      if(!isFinite(k.alpha) || !isFinite(k.beta)) continue;
+      if(k.alpha < 50 || k.alpha > 800)            continue;
+      if(k.beta  < 100 || k.beta  > 4000)          continue;
+      params = p; comp = k; return;
+    }
+    // Fallback: hand-picked parameters known to land within both bounds.
+    // Anum = 100 − 30 + 150 + 80 = 300; D = 40·0.4 + 30·2 = 16 + 60 = 76.
+    // α = 40·300/76 ≈ 157.89; β = 30·800/76 ≈ 315.79.
+    params = {c0:100,MPC:0.60,c1:0,I0:150,I1:30,G:80,T:50,
+              M:800,MDY:2,MDR:40};
+    comp   = compute(params);
+  }
+
+  // ── Render problem parameters ──────────────────────────────────────────────
+  function renderParamGrid(){
+    const {c0,MPC,c1,I0,I1,G,T,M,MDY,MDR} = params;
+    const cExpr = c1 > 0
+      ? `<i>C</i> = ${c0} + ${MPC.toFixed(2)} (<i>Y</i> − <i>T</i>) − ${c1} <i>r</i>`
+      : `<i>C</i> = ${c0} + ${MPC.toFixed(2)} (<i>Y</i> − <i>T</i>)`;
+    const rows = [
+      {full:true,  label:'Consumption',          v:cExpr},
+      {full:true,  label:'Investment',           v:`<i>I</i> = ${I0} − ${I1} <i>r</i>`},
+      {full:false, label:'Government spending',  v:`<i>G</i> = ${G}`},
+      {full:false, label:'Taxes',                v:`<i>T</i> = ${T}`},
+      {full:true,  label:'Real money demand',    v:`<i>L</i>(<i>r</i>, <i>Y</i>) = ${MDY} <i>Y</i> − ${MDR} <i>r</i>`},
+      {full:false, label:'Money supply',         v:`<i>M</i> = ${M}`},
+      {full:false, label:'Price level',          v:`<i>P</i> &nbsp;<span style="font-weight:500;color:var(--muted);">(variable — solve for AD)</span>`},
+    ];
+    $paramGrid.innerHTML = rows.map(r =>
+      `<div class="param${r.full?' full':''}">
+         <div class="label">${r.label}</div>
+         <div class="value eq">${r.v}</div>
+       </div>`
+    ).join('');
+  }
+
+  // ── Build the three step descriptors ───────────────────────────────────────
+  function buildSteps(){
+    const {c0,MPC,c1,I0,I1,G,T,M,MDY,MDR} = params;
+    const {alphaIS, betaIS, a, b, alpha, beta, D, Anum, c1I1, oneMinus} = comp;
+    const hasC1 = c1 > 0;
+
+    const s = [];
+
+    // ── Step 1: IS curve solved for r ───────────────────────────────────────
+    const c1term = hasC1 ? ` − ${c1} <i>r</i>` : '';
+    const c1plus = hasC1 ? `${c1} + ` : '';
+    s.push({
+      n:1, qIdx:0,
+      qText:'Solve the IS curve for r. Enter the intercept and the (positive) coefficient on Y in r = α − β·Y.',
+      title:'The IS Curve, Solved for r',
+      instruction:'Start from goods-market equilibrium Y = C + I + G. Substitute the consumption and investment functions, collect the r terms on one side, and solve for r as a linear function of Y. Enter the intercept and the magnitude of the coefficient on Y (the form already includes the minus sign).',
+      eHTML:`<div class="entry-row eq">
+        <span class="entry-sym"><i>r</i> =</span>
+        <input class="fi wide" id="s1a" aria-label="IS intercept" placeholder="?" autocomplete="off" inputmode="decimal"/>
+        <span class="entry-sym plain">−</span>
+        <input class="fi" id="s1b" aria-label="IS coefficient on Y (positive number)" placeholder="?" autocomplete="off" inputmode="decimal"/>
+        <span class="entry-sym">· <i>Y</i></span>
+      </div>`,
+      ids:['s1a','s1b'],
+      answers:[alphaIS, betaIS],
+      tols:[0.01, 0.01],
+      hint:'From Y = C + I + G, group the r terms together: (c1 + I1)·r appears with a minus sign. Move it across, then divide both sides by (c1 + I1) to isolate r.',
+      ansHTML: [
+        `<span class="sol-line"><i>Y</i> = <i>C</i> + <i>I</i> + <i>G</i></span>`,
+        `<span class="sol-line"><i>Y</i> = ${c0} + ${MPC.toFixed(2)}(<i>Y</i> − ${T})${c1term} + ${I0} − ${I1}<i>r</i> + ${G}</span>`,
+        `<span class="sol-line">(${c1plus}${I1}) <i>r</i> = ${c0} − ${MPC.toFixed(2)}·${T} + ${I0} + ${G} − (1 − ${MPC.toFixed(2)}) <i>Y</i></span>`,
+        `<span class="sol-line">${c1I1} <i>r</i> = ${fmt2(Anum)} − ${fmt2(oneMinus)} <i>Y</i></span>`,
+        `<span class="sol-line"><i>r</i> = <span class="frac"><span class="num">${fmt2(Anum)}</span><span class="den">${c1I1}</span></span> − <span class="frac"><span class="num">${fmt2(oneMinus)}</span><span class="den">${c1I1}</span></span> <i>Y</i></span>`,
+        `<span class="sol-line boxed"><i>r</i> = ${fmt2(alphaIS)} − ${fmt2(betaIS)} <i>Y</i></span>`,
+      ].join(''),
+      ansText:`IS: r = ${fmt2(alphaIS)} − ${fmt2(betaIS)} Y`,
+      enteredText:e => `IS: r = ${e[0]} − ${e[1]} Y`,
+    });
+
+    // ── Step 2: LM curve solved for r ───────────────────────────────────────
+    s.push({
+      n:2, qIdx:1,
+      qText:'Solve the LM curve for r. Enter the coefficient on Y and the numerator over P in r = a·Y − b/P.',
+      title:'The LM Curve, Solved for r',
+      instruction:'Money-market equilibrium is M/P = MDY·Y − MDR·r. Solve for r as a linear function of Y and 1/P. Enter the coefficient on Y (a) and the numerator that sits over P (b). Leave P symbolic — do not plug in a value for P.',
+      eHTML:`<div class="entry-row eq">
+        <span class="entry-sym"><i>r</i> =</span>
+        <input class="fi" id="s2a" aria-label="LM coefficient on Y" placeholder="?" autocomplete="off" inputmode="decimal"/>
+        <span class="entry-sym">· <i>Y</i></span>
+        <span class="entry-sym plain">−</span>
+        <span class="frac input-frac"><span class="num"><input class="fi narrow" id="s2b" aria-label="numerator of the 1/P term in the LM curve" placeholder="?" autocomplete="off" inputmode="decimal"/></span><span class="den">P</span></span>
+      </div>
+      <p class="entry-note">The second input is the <em>numerator</em> over <i>P</i>. <i>P</i> stays as a variable.</p>`,
+      ids:['s2a','s2b'],
+      answers:[a, b],
+      tols:[0.01, 0.01],
+      hint:'Start from M/P = MDY·Y − MDR·r. Move MDR·r to the left and the M/P to the right, then divide both sides by MDR. The result has the form r = (MDY/MDR)·Y − (M/MDR)/P.',
+      ansHTML:[
+        `<span class="sol-line"><span class="frac"><span class="num"><i>M</i></span><span class="den"><i>P</i></span></span> = ${MDY} <i>Y</i> − ${MDR} <i>r</i></span>`,
+        `<span class="sol-line">${MDR} <i>r</i> = ${MDY} <i>Y</i> − ${fracOverP(M)}</span>`,
+        `<span class="sol-line"><i>r</i> = <span class="frac"><span class="num">${MDY}</span><span class="den">${MDR}</span></span> <i>Y</i> − <span class="frac"><span class="num">${M}</span><span class="den">${MDR}·<i>P</i></span></span></span>`,
+        `<span class="sol-line"><i>r</i> = ${fmt2(a)} <i>Y</i> − ${fracOverP(fmt2(b))}</span>`,
+        `<span class="sol-line boxed"><i>r</i> = ${fmt2(a)} <i>Y</i> − ${fracOverP(fmt2(b))}</span>`,
+      ].join(''),
+      ansText:`LM: r = ${fmt2(a)} Y − ${fmt2(b)}/P`,
+      enteredText:e => `LM: r = ${e[0]} Y − ${e[1]}/P`,
+    });
+
+    // ── Step 3: AD curve ────────────────────────────────────────────────────
+    s.push({
+      n:3, qIdx:2,
+      qText:'Find the AD curve. Set IS = LM and solve for Y as a function of P, in the form Y = α + β/P.',
+      title:'The AD Curve',
+      instruction:'Set your IS expression equal to your LM expression (both equal r). Collect all Y terms on one side, the rest on the other, and divide. Your answer is the value of α and β in Y = α + β/P. Keep P symbolic — do not substitute a value for P.',
+      eHTML:`<div class="entry-row eq">
+        <span class="entry-sym"><i>Y</i> =</span>
+        <input class="fi wide" id="s3a" aria-label="AD intercept α" placeholder="?" autocomplete="off" inputmode="decimal"/>
+        <span class="entry-sym plain">+</span>
+        <span class="frac input-frac"><span class="num"><input class="fi narrow" id="s3b" aria-label="AD numerator β (the term over P)" placeholder="?" autocomplete="off" inputmode="decimal"/></span><span class="den">P</span></span>
+      </div>
+      <p class="entry-note">The second input is the <em>numerator</em> β over <i>P</i>. The AD curve is a hyperbola — the live graph to the right shows your current attempt against the true curve.</p>`,
+      ids:['s3a','s3b'],
+      answers:[alpha, beta],
+      tols:[0.5, 5],
+      hint:'Set the IS and LM expressions equal: αIS − βIS·Y = a·Y − b/P. Move all Y terms to the right and 1/P to the left: αIS + b/P = (βIS + a)·Y. Then divide by (βIS + a) and split into α + β/P.',
+      ansHTML:[
+        `<span class="sol-line">Set IS = LM (both equal <i>r</i>):</span>`,
+        `<span class="sol-line">${fmt2(alphaIS)} − ${fmt2(betaIS)} <i>Y</i> = ${fmt2(a)} <i>Y</i> − ${fracOverP(fmt2(b))}</span>`,
+        `<span class="sol-line">${fmt2(alphaIS)} + ${fracOverP(fmt2(b))} = (${fmt2(betaIS)} + ${fmt2(a)}) <i>Y</i></span>`,
+        `<span class="sol-line">${fmt2(alphaIS)} + ${fracOverP(fmt2(b))} = ${fmt2(betaIS + a)} <i>Y</i></span>`,
+        `<span class="sol-line"><i>Y</i> = <span class="frac"><span class="num">${fmt2(alphaIS)}</span><span class="den">${fmt2(betaIS + a)}</span></span> + <span class="frac"><span class="num">${fmt2(b)}</span><span class="den">${fmt2(betaIS + a)}·<i>P</i></span></span></span>`,
+        `<span class="sol-line">Equivalently, multiply numerator and denominator by MDR·(c1+I1) = ${MDR}·${c1I1} = ${MDR*c1I1} so the denominator is the common <i>D</i>:</span>`,
+        `<span class="sol-line"><i>D</i> = MDR·(1−MPC) + (c1+I1)·MDY = ${MDR}·${fmt2(oneMinus)} + ${c1I1}·${MDY} = ${fmt2(D)}</span>`,
+        `<span class="sol-line">α = <span class="frac"><span class="num">MDR · (c0 − MPC·T + I0 + G)</span><span class="den"><i>D</i></span></span> = <span class="frac"><span class="num">${MDR} · ${fmt2(Anum)}</span><span class="den">${fmt2(D)}</span></span> = ${fmt2(alpha)}</span>`,
+        `<span class="sol-line">β = <span class="frac"><span class="num">(c1 + I1) · M</span><span class="den"><i>D</i></span></span> = <span class="frac"><span class="num">${c1I1} · ${M}</span><span class="den">${fmt2(D)}</span></span> = ${fmt2(beta)}</span>`,
+        `<span class="sol-line boxed"><i>Y</i> = ${fmt2(alpha)} + ${fracOverP(fmt2(beta))}</span>`,
+      ].join(''),
+      ansText:`AD: Y = ${fmt2(alpha)} + ${fmt2(beta)}/P`,
+      enteredText:e => `AD: Y = ${e[0]} + ${e[1]}/P`,
+    });
+
+    return s;
+  }
+
+  // ── Render a step card ─────────────────────────────────────────────────────
+  function cardHTML(step){
+    const locked = step.n > 1;
+    return `<div class="step-card${locked ? ' locked' : ''}" id="sc${step.n}">
+      <div class="step-card-header">
+        <div>
+          <div class="step-num">Step ${step.n}</div>
+          <div class="step-title">${step.title}</div>
+        </div>
+      </div>
+      <p class="step-instruction">${step.instruction}</p>
+      <div class="entry-area">${step.eHTML}</div>
+      <div id="fb${step.n}" class="hidden" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div class="step-actions">
+        <button class="step-btn primary" id="btnCheck${step.n}" aria-label="Check your answer for step ${step.n}"${locked ? ' disabled' : ''}>Check Answer</button>
+        <button class="step-btn" id="btnHint${step.n}" aria-label="Show a hint for step ${step.n}"${locked ? ' disabled' : ''} aria-expanded="false">Show Hint</button>
+        <button class="step-btn" id="btnSolution${step.n}" aria-label="Show the worked solution for step ${step.n}" disabled aria-expanded="false">Show Solution</button>
+      </div>
+      <div class="step-hint hidden" id="hint${step.n}">
+        <div class="reveal-label">Hint</div>
+        <div id="hintc${step.n}"></div>
+      </div>
+      <div class="step-answer hidden" id="ans${step.n}">
+        <div class="reveal-label good">Worked Solution</div>
+        <div class="answer-content" id="ac${step.n}"></div>
+      </div>
+    </div>`;
+  }
+
+  // ── Check inputs for a step ────────────────────────────────────────────────
+  function checkStep(step){
+    for(const id of step.ids){
+      if(document.getElementById(id).value.trim()==='') return {ok:false,empty:true};
+    }
+    let all = true;
+    const entered = [];
+    step.ids.forEach((id,i)=>{
+      const raw = document.getElementById(id).value.trim();
+      const v   = parseFloat(raw);
+      const ok  = !isNaN(v) && Math.abs(v - step.answers[i]) <= step.tols[i];
+      if(!ok) all = false;
+      entered.push(raw);
+      const el = document.getElementById(id);
+      el.classList.toggle('correct',ok);
+      el.classList.toggle('wrong',!ok);
+    });
+    return {ok:all, entered};
+  }
+
+  // Read step 3's current entry values (for live AD-curve overlay).
+  function readStep3Entry(){
+    const step = _steps[2];
+    if(!step) return null;
+    const vals = step.ids.map(id => {
+      const el = document.getElementById(id);
+      if(!el) return null;
+      const raw = el.value.trim();
+      if(raw === '') return null;
+      const v = parseFloat(raw);
+      return isNaN(v) ? null : v;
+    });
+    if(vals.some(v => v === null)) return null;
+    const ok = vals.every((v,i) => Math.abs(v - step.answers[i]) <= step.tols[i]);
+    return {alpha:vals[0], beta:vals[1], ok};
+  }
+
+  function showFB(n, ok, msg){
+    const el = document.getElementById('fb'+n);
+    el.className = 'entry-fb '+(ok ? 'correct' : 'wrong');
+    el.classList.remove('hidden');
+    el.textContent = (ok ? '✓ ' : '✗ ') + msg;
+  }
+
+  function lockInputs(step){
+    step.ids.forEach(id => { document.getElementById(id).disabled = true; });
+  }
+
+  function revealHint(n){
+    const el = document.getElementById('hint'+n);
+    if(!el.classList.contains('hidden')) return;
+    document.getElementById('hintc'+n).textContent = _steps[n-1].hint;
+    el.classList.remove('hidden');
+    const b = document.getElementById('btnHint'+n);
+    if(b) b.setAttribute('aria-expanded','true');
+  }
+  function revealAns(n){
+    const el = document.getElementById('ans'+n);
+    if(!el.classList.contains('hidden')) return;
+    document.getElementById('ac'+n).innerHTML = _steps[n-1].ansHTML;
+    el.classList.remove('hidden');
+    const b = document.getElementById('btnSolution'+n);
+    if(b) b.setAttribute('aria-expanded','true');
+  }
+
+  function recordQ(step, ansText, ok){
+    if(!(window.Session && Session.recordQuestion)) return;
+    Session.recordQuestion(LAB_ID, step.qIdx, step.qText,
+                           ansText, ok,
+                           ansText, ok);
+  }
+
+  function setBtnState(n, which, state){
+    const id = {check:'btnCheck',hint:'btnHint',solution:'btnSolution'}[which];
+    const b = document.getElementById(id+n);
+    if(!b) return;
+    if(state.disabled !== undefined) b.disabled = state.disabled;
+    if(state.text) b.textContent = state.text;
+    if(state.cls) b.className = 'step-btn '+state.cls;
+  }
+
+  function unlockStep(n){
+    if(stepUnlocked[n-1]) return;
+    stepUnlocked[n-1] = true;
+    const card = document.getElementById('sc'+n);
+    if(card) card.classList.remove('locked');
+    setBtnState(n,'check',{disabled:false});
+    setBtnState(n,'hint', {disabled:false});
+  }
+
+  function markDone(n, wasCorrect){
+    if(stepDone[n-1]) return;
+    stepDone[n-1] = true;
+    const step = _steps[n-1];
+    stepMeta[n-1].s = 'done';
+    revealAns(n);
+    lockInputs(step);
+    if(wasCorrect){
+      step.ids.forEach(id => document.getElementById(id).classList.add('correct'));
+    }
+    setBtnState(n, 'check',    {disabled:true, text:'✓ Done', cls:'done'});
+    setBtnState(n, 'solution', {disabled:true});
+    if(n < TOTAL_STEPS) unlockStep(n+1);
+    drawGraph();
+    maybeFinishLab();
+  }
+
+  // ── Button handlers ────────────────────────────────────────────────────────
+  function onCheck(n){
+    const meta = stepMeta[n-1];
+    if(meta.s !== 'check') return;
+    const step = _steps[n-1];
+    const res  = checkStep(step);
+    if(res.empty){
+      showFB(n, false, 'Please fill in all fields before checking.');
+      return;
+    }
+    if(firstAttempt[n-1]){
+      firstAttempt[n-1] = false;
+      firstCorrect[n-1] = res.ok;
+      firstAnsText[n-1] = step.enteredText(res.entered);
+      recordQ(step, firstAnsText[n-1], firstCorrect[n-1]);
+    } else {
+      recordQ(step, step.enteredText(res.entered), res.ok);
+    }
+    if(n < TOTAL_STEPS) unlockStep(n+1);
+    setBtnState(n, 'solution', {disabled:false});
+
+    if(res.ok){
+      showFB(n, true, 'Correct.');
+      markDone(n, true);
+    } else {
+      showFB(n, false, 'Not quite — try again, or use the hint or worked solution.');
+    }
+    drawGraph();
+  }
+  function onHint(n){
+    revealHint(n);
+    setBtnState(n, 'hint', {disabled:true});
+  }
+  function onSolution(n){
+    const step = _steps[n-1];
+    revealAns(n);
+    setBtnState(n, 'solution', {disabled:true});
+    if(firstAttempt[n-1]){
+      firstAttempt[n-1] = false;
+      firstCorrect[n-1] = false;
+      firstAnsText[n-1] = '—';
+      recordQ(step, step.ansText, true);
+    } else {
+      recordQ(step, step.ansText, true);
+    }
+    markDone(n, false);
+  }
+
+  // ── Lab completion ─────────────────────────────────────────────────────────
+  function maybeFinishLab(){
+    if(_labDoneFired) return;
+    if(!stepDone.every(Boolean)) return;
+    _labDoneFired = true;
+    const firstScore = firstCorrect.filter(Boolean).length;
+    const finalScore = TOTAL_STEPS;
+    if(window.Session && Session.recordLabDone){
+      Session.recordLabDone(LAB_ID, LAB_LABEL, firstScore, finalScore, TOTAL_STEPS);
+    }
+    const {alpha, beta} = comp;
+    $banner.classList.remove('hidden');
+    $banner.innerHTML = `
+      <p class="banner-title">Aggregate demand curve derived.</p>
+      <p>The AD curve for this economy is
+        <strong><i>Y</i> = ${fmt2(alpha)} + ${fmt2(beta)}/<i>P</i></strong>.
+        Each point on this curve is a combination of <i>Y</i> and <i>P</i>
+        at which both the goods market and the money market clear.</p>
+      <p class="banner-score">Score — first attempt: <strong>${firstScore} / ${TOTAL_STEPS}</strong>
+      &nbsp;·&nbsp; final: <strong>${finalScore} / ${TOTAL_STEPS}</strong>.</p>
+    `;
+  }
+
+  // ── Canvas accessible description (WCAG 1.1.1 / 4.1.3) ─────────────────────
+  function updateGraphDesc(){
+    const parts = [
+      `Aggregate demand diagram. Output Y is on the horizontal axis; the price level P is on the vertical axis, with P ranging from 1 at the bottom to 10 at the top.`,
+      `The true aggregate demand curve is plotted as a faint downward-sloping hyperbola.`,
+    ];
+    if(stepDone[2]){
+      parts.push(`Step 3 is solved: Y equals ${fmt2(comp.alpha)} plus ${fmt2(comp.beta)} divided by P. The curve passes through approximately (${fmt2(comp.alpha + comp.beta)}, 1), (${fmt2(comp.alpha + comp.beta/3)}, 3), and (${fmt2(comp.alpha + comp.beta/10)}, 10).`);
+    } else {
+      const att = readStep3Entry();
+      if(att){
+        if(att.ok){
+          parts.push(`Your attempted AD curve coincides with the true curve within tolerance.`);
+        } else {
+          parts.push(`Your attempted AD curve (Y = ${att.alpha} + ${att.beta} divided by P) is plotted as a dashed line in a contrasting color; it does not yet match the true curve.`);
+        }
+      } else {
+        parts.push(`Enter values for α and β in Step 3 to overlay your attempted AD curve.`);
+      }
+    }
+    $graphDesc.textContent = parts.join(' ');
+  }
+
+  // ── Render whole problem ───────────────────────────────────────────────────
+  function renderProblem(){
+    renderParamGrid();
+    stepMeta.forEach(m => { m.s = 'check'; });
+    firstAttempt.fill(true);
+    firstCorrect.fill(false);
+    firstAnsText.fill('—');
+    stepDone.fill(false);
+    stepUnlocked.fill(false);
+    stepUnlocked[0] = true;
+    _labDoneFired = false;
+    $banner.classList.add('hidden');
+
+    _steps = buildSteps();
+    $steps.innerHTML = _steps.map(cardHTML).join('');
+
+    _steps.forEach(step => {
+      document.getElementById('btnCheck'+step.n)
+        .addEventListener('click', () => onCheck(step.n));
+      document.getElementById('btnHint'+step.n)
+        .addEventListener('click', () => onHint(step.n));
+      document.getElementById('btnSolution'+step.n)
+        .addEventListener('click', () => onSolution(step.n));
+      step.ids.forEach(id => {
+        const el = document.getElementById(id);
+        el.addEventListener('keydown', e => {
+          if(e.key === 'Enter') onCheck(step.n);
+        });
+      });
+    });
+
+    // Live AD-curve overlay: redraw on every keystroke in Step 3.
+    ['s3a','s3b'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.addEventListener('input', () => {
+        if(!stepDone[2]) drawGraph();
+      });
+    });
+
+    drawGraph();
+  }
+
+  document.getElementById('newProblemBtn').addEventListener('click', () => {
+    // Clear any stored data for this lab so New Problem starts fresh.
+    try{
+      const KEY = 'econ002_session';
+      const raw = sessionStorage.getItem(KEY);
+      if(raw){
+        const d = JSON.parse(raw);
+        if(d && d.labs && d.labs[LAB_ID]){
+          delete d.labs[LAB_ID];
+          sessionStorage.setItem(KEY, JSON.stringify(d));
+        }
+      }
+    }catch(e){ /* ignore */ }
+    generateParams();
+    renderProblem();
+  });
+
+  // ── Canvas helpers ─────────────────────────────────────────────────────────
+  function setupCanvas(){
+    const dpr  = window.devicePixelRatio || 1;
+    const rect = $canvas.getBoundingClientRect();
+    const W    = Math.round(rect.width  * dpr);
+    const H    = Math.round(rect.height * dpr);
+    if(!W || !H) return null;
+    if($canvas.width !== W || $canvas.height !== H){
+      $canvas.width = W; $canvas.height = H;
+    }
+    return { ctx: $canvas.getContext('2d'), dpr, W, H };
+  }
+
+  function snapUp(raw){
+    const s=[5,10,15,20,25,30,40,50,75,100,150,200,250,300,400,500,
+             600,750,1000,1250,1500,2000,2500,3000,3500,4000,5000,6000,8000];
+    return s.find(v => v >= raw) || Math.ceil(raw/500)*500;
+  }
+
+  // ── Draw AD-curve graph ────────────────────────────────────────────────────
+  function drawGraph(){
+    _fs = Math.max(0.75, Math.min(2.5,
+      parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+
+    const setup = setupCanvas();
+    if(!setup) return;
+    const {ctx,dpr,W,H} = setup;
+    ctx.clearRect(0,0,W,H);
+    if(!comp || comp.alpha === undefined){ updateGraphDesc(); return; }
+
+    const {alpha, beta} = comp;
+
+    const pad = {l:74*dpr, r:22*dpr, t:18*dpr, b:62*dpr};
+    const X0 = pad.l, X1 = W - pad.r, Y0 = pad.t, Y1 = H - pad.b;
+    const PW = X1 - X0, PH = Y1 - Y0;
+
+    // P range: 1..10 (price level on vertical axis).
+    const pMin = 1, pMax = 10;
+
+    // Y range: pick to comfortably accommodate the true curve plus any
+    // reasonable student attempt.
+    const att = readStep3Entry();
+    const yAtP1Candidates = [alpha + beta];
+    if(att) yAtP1Candidates.push(att.alpha + att.beta);
+    const yMaxRaw = Math.max(...yAtP1Candidates) * 1.08;
+    const yMax = Math.max(100, snapUp(yMaxRaw));
+
+    const xC = y => X0 + (y / yMax) * PW;
+    const yC = p => Y1 - ((p - pMin) / (pMax - pMin)) * PH;
+
+    // background panel
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillRect(X0, Y0, PW, PH);
+
+    // axes (L-shape on left and bottom)
+    ctx.strokeStyle = 'rgba(31,41,55,0.45)';
+    ctx.lineWidth = 1.4 * dpr;
+    ctx.beginPath();
+    ctx.moveTo(X0, Y0); ctx.lineTo(X0, Y1); ctx.lineTo(X1, Y1);
+    ctx.stroke();
+
+    // P tick labels at P = 1, 3, 10
+    ctx.fillStyle = '#1f2937';
+    ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    [1,3,10].forEach(pv => {
+      ctx.strokeStyle = 'rgba(31,41,55,0.55)';
+      ctx.lineWidth = 1.2 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(X0 - 4*dpr, yC(pv)); ctx.lineTo(X0, yC(pv));
+      ctx.stroke();
+      ctx.fillText(String(pv), X0 - 6*dpr, yC(pv));
+    });
+
+    // axis titles
+    ctx.fillStyle = '#1f2937';
+    ctx.font = `700 ${Math.round(12 * dpr * _fs)}px "Inter",sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText('Output Y', (X0 + X1)/2, H - 14*dpr);
+    ctx.save();
+    ctx.translate(14*dpr, (Y0 + Y1)/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('Price level P', 0, 0);
+    ctx.restore();
+
+    // Helper: plot Y = a + b/P over P ∈ [pMin, pMax].
+    function plotADCurve(a, b, color, dashed, width){
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(X0, Y0, PW, PH);
+      ctx.clip();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = (width || 2) * dpr;
+      ctx.setLineDash(dashed ? [7*dpr, 5*dpr] : []);
+      ctx.beginPath();
+      const N = 160;
+      for(let i=0; i<=N; i++){
+        const p = pMin + (pMax - pMin) * (i / N);
+        const y = a + b / p;
+        const px = xC(y), py = yC(p);
+        if(i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    const isDoneCorrect = stepDone[2];
+
+    if(isDoneCorrect){
+      // Solid good-colored AD curve.
+      plotADCurve(alpha, beta, '#155c38', false, 2.4);
+
+      // Sample (Y, P) points at P = 1, 3, 10.
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(X0, Y0, PW, PH);
+      ctx.clip();
+      [1,3,10].forEach(pv => {
+        const yv = alpha + beta / pv;
+        const px = xC(yv), py = yC(pv);
+        ctx.fillStyle = '#155c38';
+        ctx.beginPath();
+        ctx.arc(px, py, 4.5 * dpr, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = '#1f2937';
+        ctx.font = `700 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+        ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+        ctx.fillText(`(${fmt2(yv)}, ${pv})`, px + 7*dpr, py - 4*dpr);
+      });
+      ctx.restore();
+    } else {
+      // Always-on faint true curve.
+      plotADCurve(alpha, beta, 'rgba(47,93,124,0.35)', false, 2);
+
+      // Student attempt overlay, if any.
+      if(att){
+        const color = att.ok ? '#155c38' : '#b42318';
+        plotADCurve(att.alpha, att.beta, color, true, 2.2);
+      }
+    }
+
+    // Legend updates
+    const $lgAttempt      = document.getElementById('lgAttempt');
+    const $lgAttemptSwatch= document.getElementById('lgAttemptSwatch');
+    const $lgAttemptLabel = document.getElementById('lgAttemptLabel');
+    const $lgPts          = document.getElementById('lgPts');
+    const $lgTrue         = document.getElementById('lgTrue');
+
+    if(isDoneCorrect){
+      $lgTrue.classList.add('hidden');
+      $lgAttempt.classList.add('hidden');
+      $lgPts.classList.remove('hidden');
+    } else {
+      $lgTrue.classList.remove('hidden');
+      $lgPts.classList.add('hidden');
+      if(att){
+        $lgAttempt.classList.remove('hidden');
+        const c = att.ok ? '#155c38' : '#b42318';
+        $lgAttemptSwatch.style.color = c;
+        $lgAttemptLabel.textContent  = att.ok
+          ? 'Your attempt — within tolerance ✓'
+          : 'Your attempt — not yet correct ✗';
+      } else {
+        $lgAttempt.classList.add('hidden');
+      }
+    }
+
+    updateGraphDesc();
+  }
+
+  // ── Resize ─────────────────────────────────────────────────────────────────
+  let _resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(drawGraph, 80);
+  });
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  generateParams();
+  renderProblem();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>What Went Wrong? — ECON 105A</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea;  --panel:#ffffff;
+      --ink:#1f2937;    --ink-2:#374151;  --muted:#596878;
+      --line:#e7dfd2;   --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;
+      --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1120px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;
+      display:grid;grid-template-columns:1.4fr 1fr;gap:18px;align-items:start;}
+    @media(max-width:980px){.header-inner{grid-template-columns:1fr;}}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:10px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ul{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Score card */
+    .controls-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:14px;box-shadow:var(--shadow);}
+    .score-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;}
+    .score-badge{display:inline-flex;align-items:center;gap:6px;
+      padding:4px 12px;border-radius:999px;font-size:0.75rem;font-weight:800;
+      border:1.5px solid #8c7f72;background:var(--panel);}
+    .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+    .dot-green{background:var(--good);}
+    .dot-red{background:var(--bad);}
+    .status{margin-top:6px;min-height:20px;color:var(--muted);font-size:0.8125rem;}
+
+    /* Layout */
+    main.lab-wrap{max-width:1120px;margin:0 auto;padding:18px;display:grid;gap:14px;}
+
+    /* Progress */
+    .progress-row{display:flex;align-items:center;gap:12px;}
+    .progress-track{flex:1;height:6px;background:var(--line);border-radius:999px;overflow:hidden;}
+    .progress-fill{height:100%;background:var(--accent);border-radius:999px;transition:width .4s ease;}
+    .progress-label{font-size:0.75rem;color:var(--muted);font-weight:700;white-space:nowrap;}
+
+    /* Topic badges */
+    .topic-badge{display:inline-block;padding:3px 10px;border-radius:999px;
+      font-size:0.6875rem;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+      border:1.5px solid;margin-bottom:10px;}
+    .topic-fiscal  {color:#2f5d7c;border-color:rgba(47,93,124,.35); background:rgba(47,93,124,.08);}
+    .topic-monetary{color:#155c38;border-color:rgba(21,92,56,.40);  background:rgba(21,92,56,.07);}
+    .topic-is     {color:#6b21a8;border-color:rgba(107,33,168,.30); background:rgba(107,33,168,.07);}
+    .topic-ad     {color:#8c4800;border-color:rgba(140,72,0,.35);   background:rgba(140,72,0,.07);}
+
+    /* Question card */
+    .q-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:22px 24px;box-shadow:var(--shadow);}
+    .q-number{font-size:0.6875rem;text-transform:uppercase;letter-spacing:.09em;
+      color:var(--muted);font-weight:700;margin-bottom:8px;}
+    .q-prompt{font-size:0.9375rem;font-weight:700;color:var(--ink);line-height:1.5;margin-bottom:6px;}
+    .q-instr{font-size:0.8125rem;color:var(--muted);margin-bottom:18px;}
+
+    /* Chain */
+    .chain{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin-bottom:20px;}
+    .chain-arrow{font-size:0.9375rem;color:var(--muted);font-weight:700;flex-shrink:0;}
+    .step-pill{padding:8px 16px;border-radius:999px;
+      border:2px solid #8c7f72;background:rgba(255,255,255,.9);
+      font-size:0.8125rem;font-weight:700;color:var(--ink);
+      cursor:pointer;user-select:none;font-family:var(--font-sans);
+      transition:border-color .12s, background .12s, transform .08s, opacity .15s;}
+    .step-pill:hover:not(.locked){
+      border-color:var(--accent);background:rgba(47,93,124,.07);transform:translateY(-1px);}
+    /* Secondary non-color indicators (WCAG 1.4.1) */
+    .step-pill.correct::before {content:"✓ ";}
+    .step-pill.revealed::before{content:"✓ ";}
+    .step-pill.wrong::before   {content:"✗ ";}
+    .step-pill.correct {border-color:var(--good)!important;background:rgba(21,92,56,.11)!important;color:var(--good)!important;}
+    .step-pill.wrong   {border-color:var(--bad)!important; background:rgba(180,35,24,.11)!important;color:var(--bad)!important;}
+    .step-pill.revealed{border-color:var(--good)!important;background:rgba(21,92,56,.11)!important;color:var(--good)!important;}
+    .step-pill.dimmed  {opacity:.40;}
+    .step-pill.locked  {cursor:default;pointer-events:none;}
+
+    /* Feedback */
+    .feedback-box{border-radius:14px;padding:14px 16px;
+      font-size:0.8125rem;line-height:1.7;display:none;margin-bottom:4px;}
+    .feedback-box.show{display:block;}
+    .fb-correct{background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.30);}
+    .fb-wrong  {background:rgba(180,35,24,.07);border:1px solid rgba(180,35,24,.28);}
+    .fb-head   {font-weight:800;margin-bottom:5px;}
+    .fb-head.ok {color:var(--good);}
+    .fb-head.bad{color:var(--bad);}
+
+    /* Buttons + nav */
+    .nav-row{display:flex;gap:10px;margin-top:18px;align-items:center;flex-wrap:wrap;}
+    .btn{padding:9px 22px;border-radius:12px;font-size:0.8125rem;font-weight:700;cursor:pointer;
+      border:1.5px solid #8c7f72;background:var(--panel);color:var(--ink-2);
+      font-family:var(--font-sans);
+      transition:background .12s, border-color .12s;}
+    .btn:hover:not(:disabled){background:rgba(47,93,124,.07);border-color:rgba(47,93,124,.35);color:var(--accent);}
+    .btn:disabled{opacity:.35;cursor:default;}
+    .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+    .btn.primary:hover:not(:disabled){background:#26506c;border-color:#26506c;color:#fff;}
+
+    /* Final card */
+    .final-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:32px 28px;box-shadow:var(--shadow);
+      text-align:center;display:none;}
+    .final-card.show{display:block;}
+    .final-big{font-size:3.5rem;font-weight:900;color:var(--accent);line-height:1;margin:12px 0 4px;}
+    .final-sub{font-size:0.875rem;color:var(--muted);margin-bottom:16px;}
+    .final-msg{font-size:0.875rem;color:var(--ink-2);line-height:1.65;max-width:54ch;margin:0 auto 24px;}
+    .final-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+
+    .hidden{display:none!important;}
+
+    @keyframes fadeUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+    .fade-in{animation:fadeUp .18s ease forwards;}
+
+    /* Footer */
+    footer{border-top:1px solid var(--line);margin-top:24px;}
+    .footer-inner{max-width:1120px;margin:0 auto;padding:14px 18px;
+      display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+      font-size:0.75rem;color:var(--muted);}
+
+    @media(max-width:520px){
+      .q-card{padding:18px 16px;}
+      h1{font-size:1.75rem;}
+    }
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105a/">← ECON 105A Home</a>
+    </nav>
+    <div class="header-inner">
+      <div class="title-block">
+        <div class="kicker">ECON 105A — Aggregate Demand</div>
+        <h1>What Went Wrong?</h1>
+        <p class="sub">Each question shows a causal chain with exactly one broken link. Find the <em>first</em> step where the logic goes wrong and click it. Covers fiscal policy, monetary policy (through the money supply and LM curve), IS curve mechanics, and aggregate demand.</p>
+        <details class="instructions-box">
+          <summary class="instructions-toggle">How to use this app</summary>
+          <div class="instructions-body">
+            <ul>
+              <li>Read the starting condition, then trace the chain left to right.</li>
+              <li>Click the <strong>first step</strong> where the logic breaks down — where what's claimed doesn't follow from the step before it.</li>
+              <li><strong>✓ Green border</strong> = you found the error. <strong>✗ Red border</strong> = not quite — the correct broken step is marked with ✓.</li>
+              <li>Read the explanation, then click <strong>Next →</strong> to continue.</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+      <div class="controls-card">
+        <div class="score-row" aria-label="Score">
+          <div class="score-badge"><div class="dot dot-green" aria-hidden="true"></div><span id="nCorrect">0</span>&nbsp;correct</div>
+          <div class="score-badge"><div class="dot dot-red" aria-hidden="true"></div><span id="nWrong">0</span>&nbsp;incorrect</div>
+        </div>
+        <div class="status" id="statusMsg" role="status" aria-live="polite" aria-atomic="true">Click the broken step in the chain.</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <div class="progress-row">
+    <div class="progress-track"><div class="progress-fill" id="pFill" style="width:0%"></div></div>
+    <div class="progress-label" id="pLabel" aria-live="polite" aria-atomic="true">0 / 20</div>
+  </div>
+
+  <div class="q-card fade-in" id="qCard">
+    <div class="q-number"    id="qNum"></div>
+    <div class="topic-badge" id="topicBadge"></div>
+    <div class="q-prompt"    id="qPrompt"></div>
+    <div class="q-instr">Click the <strong>first step</strong> where the logic breaks down:</div>
+    <div class="chain"       id="chainEl"></div>
+    <div class="feedback-box" id="fbBox" aria-live="polite" aria-atomic="true">
+      <div class="fb-head" id="fbHead"></div>
+      <div id="fbText"></div>
+    </div>
+    <div class="sr-only" id="fbAnnounce" aria-live="assertive" aria-atomic="true"></div>
+    <div class="nav-row">
+      <button class="btn primary" id="nextBtn" disabled>Next &#8594;</button>
+      <button class="btn" id="skipBtn">Skip</button>
+    </div>
+  </div>
+
+  <div class="final-card" id="finalCard">
+    <div class="kicker">All done!</div>
+    <div class="final-big" id="finalBig"></div>
+    <div class="final-sub" id="finalSub"></div>
+    <div class="final-msg" id="finalMsg"></div>
+    <div class="final-actions">
+      <button class="btn primary" id="restartBtn">Start Over</button>
+      <button class="btn" id="pdfBtn">Download Summary PDF</button>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <span>ECON 105A — Aggregate Demand</span>
+    <span>Hosted on GitHub Pages</span>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+/* ─────────────────────────────────────────────────────────────────────────
+   Sample week-template entry (paste into a discussion week's LABS array):
+     { id: 'what-went-wrong', name: 'What Went Wrong?', icon: '🔍',
+       desc: 'Find the first broken link in each macro causal chain.',
+       url: '/classes/econ105a/labs/what-went-wrong/?disc=1' }
+   ───────────────────────────────────────────────────────────────────────── */
+(function(){
+'use strict';
+
+const LAB_ID    = 'what-went-wrong';
+const LAB_LABEL = 'What Went Wrong?';
+
+const DISC_MODE = new URLSearchParams(location.search).has('disc');
+const SESSION_LENGTH = 20;
+
+// ── Question bank ────────────────────────────────────────────────────────
+// Tokens follow the ECON 105A vocabulary: G, T, C, I, P, M, M/P,
+// Money Demand, PE, Y, r, IS, LM, AD.  Never reference FFR, FR, or Z.
+const BANK = [
+
+  // ── FISCAL (12) ────────────────────────────────────────────────────────
+  { topic:'fiscal',
+    prompt:'The government increases spending (G↑). What goes wrong in this chain?',
+    steps:['G↑','PE↑','Unplanned inventory surplus','Firms increase production','Y↑'],
+    wrong:2,
+    explain:'When PE rises above Y, inventories fall below plan — that\'s an <strong>unplanned inventory shortage</strong>, not a surplus. The shortage signals firms to ramp up production, raising Y.' },
+
+  { topic:'fiscal',
+    prompt:'The government cuts taxes (T↓). What goes wrong?',
+    steps:['T↓','Disposable income↑','C↓','PE↓','Y↓'],
+    wrong:2,
+    explain:'Lower taxes raise disposable income (Y − T), which causes <strong>C to rise</strong>: C = C₀ + MPC·(Y − T). A tax cut shifts PE upward, not downward.' },
+
+  { topic:'fiscal',
+    prompt:'The government reduces spending (G↓). What goes wrong?',
+    steps:['G↓','PE↓','Y↓ at every interest rate','IS shifts right','Y↓ and r↓ in equilibrium'],
+    wrong:3,
+    explain:'A fall in G lowers output at every interest rate, so IS shifts <strong>left</strong>, not right. A rightward shift would mean higher output at each rate — the opposite of a spending cut.' },
+
+  { topic:'fiscal',
+    prompt:'The government raises taxes (T↑). What goes wrong?',
+    steps:['T↑','C↓','PE↓','IS shifts left','r↑ in new equilibrium'],
+    wrong:4,
+    explain:'A leftward IS shift moves the equilibrium down and to the left along the LM curve — both Y and r <strong>fall</strong>. The interest rate rises only if IS shifts right or LM shifts up.' },
+
+  { topic:'fiscal',
+    prompt:'Congress raises G and cuts T simultaneously. What goes wrong?',
+    steps:['G↑ and T↓','Both raise PE','IS shifts left','Y↑ and r↑ in equilibrium'],
+    wrong:2,
+    explain:'Both a rise in G and a fall in T increase planned expenditure, so IS shifts <strong>right</strong>, not left. A rightward shift raises equilibrium Y and r.' },
+
+  { topic:'fiscal',
+    prompt:'The government increases spending (G↑). What goes wrong?',
+    steps:['G↑','IS shifts right','LM shifts up (and left)','Y↑ and r↑ in equilibrium'],
+    wrong:2,
+    explain:'Fiscal policy shifts the <strong>IS curve only</strong>. The LM curve shifts when M or P changes — not when G changes. LM stays put, and the new equilibrium is found by moving up the LM curve.' },
+
+  { topic:'fiscal',
+    prompt:'The government raises taxes (T↑). What goes wrong?',
+    steps:['T↑','C↓ by MPC × ΔT','Y↓ by (1/(1−MPC)) × ΔT','IS shifts left'],
+    wrong:2,
+    explain:'The tax multiplier is <strong>−MPC/(1−MPC)</strong>, not −1/(1−MPC). Because taxes affect output only indirectly through consumption, the multiplier is smaller in absolute value than the government purchases multiplier.' },
+
+  { topic:'fiscal',
+    prompt:'G and T both rise by the same amount ΔX (balanced budget). What goes wrong?',
+    steps:['G↑ = T↑ = ΔX','G↑ raises Y by (1/(1−MPC))·ΔX','T↑ lowers Y by (1/(1−MPC))·ΔX','Net ΔY = 0 — IS unchanged'],
+    wrong:2,
+    explain:'The tax multiplier is <strong>−MPC/(1−MPC)</strong>, not −1/(1−MPC). The spending increase has a larger effect than the tax increase, so net Y rises by ΔX (the balanced-budget multiplier equals 1) and IS shifts right.' },
+
+  { topic:'fiscal',
+    prompt:'The government increases spending (G↑). What goes wrong in this AD argument?',
+    steps:['G↑','IS shifts right','Y↑ at the current price level','Movement along the AD curve'],
+    wrong:3,
+    explain:'A policy-driven rise in Y at a given price level <strong>shifts the AD curve right</strong> — it is not a movement along it. Movements along AD occur when the price level itself changes, causing a new IS-LM equilibrium.' },
+
+  { topic:'fiscal',
+    prompt:'The government cuts spending (G↓). What goes wrong?',
+    steps:['G↓','PE↓','IS shifts right','Y↓ and r↓ in equilibrium'],
+    wrong:2,
+    explain:'A fall in G reduces planned expenditure at every output level, shifting IS <strong>left</strong>, not right. A leftward IS shift then produces lower Y and lower r in the IS-LM equilibrium.' },
+
+  { topic:'fiscal',
+    prompt:'The government increases G. What goes wrong in this argument about the IS shift?',
+    steps:['G↑','PE↑','IS shifts right by (MPC/(1−MPC))×ΔG','Y↑ and r↑ in equilibrium'],
+    wrong:2,
+    explain:'The IS curve shifts right by the <strong>government purchases multiplier</strong> times ΔG: (1/(1−MPC))×ΔG. The formula MPC/(1−MPC) is the tax multiplier (in absolute value), which is smaller because taxes affect spending only indirectly through consumption.' },
+
+  // NEW LM-specific (LM2): crowding out / constant-r error
+  { topic:'fiscal',
+    prompt:'The government raises spending (G↑). What goes wrong in this crowding-out argument?',
+    steps:['G↑','IS shifts right','Y↑','Money demand rises','r unchanged'],
+    wrong:4,
+    explain:'When Y rises, money demand rises. With the money supply M held fixed, the money market can only clear at a <strong>higher r</strong>. The rising interest rate is what produces partial crowding out of investment — r does not stay constant.' },
+
+  // ── MONETARY (16) ──────────────────────────────────────────────────────
+  { topic:'monetary',
+    prompt:'The Fed contracts the money supply (M↓). What goes wrong?',
+    steps:['Fed contracts the money supply (M↓)','M/P↓','r↑','Investment↑','PE↑','Y↑'],
+    wrong:3,
+    explain:'A higher interest rate raises the cost of borrowing, so <strong>investment falls</strong> (I = I₀ − I₁·r). Fewer projects clear the higher r, so PE and Y fall — the opposite of what is claimed.' },
+
+  { topic:'monetary',
+    prompt:'The Fed contracts the money supply (M↓). What goes wrong?',
+    steps:['Fed contracts the money supply (M↓)','M/P↓','IS shifts left','Y↓ and r↑'],
+    wrong:2,
+    explain:'Monetary policy shifts the <strong>LM curve up (and left)</strong>, not the IS curve. IS shifts only when G, T, or autonomous spending change. A contraction of M raises r and lowers Y by moving the equilibrium up the unchanged IS curve.' },
+
+  { topic:'monetary',
+    prompt:'The price level rises (P↑). What goes wrong?',
+    steps:['P↑','M/P↓','LM shifts up (and left)','Y↑ and r↑ in equilibrium'],
+    wrong:3,
+    explain:'An upward LM shift moves the intersection with IS <strong>up and to the left</strong> — r rises but Y <strong>falls</strong>. The higher interest rate reduces investment, planned expenditure, and output.' },
+
+  { topic:'monetary',
+    prompt:'The Fed expands the money supply (M↑). What goes wrong in this goods-market chain?',
+    steps:['Fed expands the money supply (M↑)','M/P↑','r↓','I↑','PE↑','Unplanned inventory surplus','Firms increase production','Y↑'],
+    wrong:5,
+    explain:'When PE rises above current output Y, inventories fall below plan — an <strong>unplanned inventory shortage</strong>, not a surplus. The shortage signals firms to increase production. A surplus would cause them to cut back.' },
+
+  { topic:'monetary',
+    prompt:'Output rises above its natural rate. The Fed responds. What goes wrong?',
+    steps:['Y above natural rate','Fed contracts the money supply (M↓)','IS shifts left','Y falls back toward natural rate'],
+    wrong:2,
+    explain:'A contraction of M shifts the <strong>LM curve up (and left)</strong>, not the IS curve. IS shifts only with changes to G, T, or autonomous spending. The new equilibrium has higher r and lower Y along the unchanged IS curve.' },
+
+  { topic:'monetary',
+    prompt:'Inflation rises (P↑). What goes wrong in this AD argument?',
+    steps:['P↑','M/P↓','LM shifts up (and left)','Y↓ in the IS-LM diagram','AD curve shifts left'],
+    wrong:4,
+    explain:'A change in the price level causes a <strong>movement along the AD curve</strong>, not a shift of it. The AD curve is constructed by varying P and finding the resulting IS-LM equilibrium Y. AD only shifts when something other than P moves the equilibrium.' },
+
+  { topic:'monetary',
+    prompt:'The Fed expands the money supply (M↑). What goes wrong?',
+    steps:['Fed expands the money supply (M↑)','IS shifts right','Y↑ and r↓','AD shifts right'],
+    wrong:1,
+    explain:'Expanding M shifts the <strong>LM curve down (and right)</strong>, not the IS curve. IS responds only to changes in fiscal policy (G or T) or autonomous spending. Monetary policy works entirely through the LM curve.' },
+
+  { topic:'monetary',
+    prompt:'The Fed expands the money supply (M↑). What goes wrong in this goods-market chain?',
+    steps:['Fed expands the money supply (M↑)','M/P↑','r↓','I↑','PE↑','Unplanned inventory surplus','Y↑'],
+    wrong:5,
+    explain:'When PE rises above current output Y, inventories fall below plan — an <strong>unplanned inventory shortage</strong>, not a surplus. The shortage prompts firms to increase production, raising Y.' },
+
+  { topic:'monetary',
+    prompt:'The Fed contracts the money supply (M↓). What goes wrong in this AD argument?',
+    steps:['Fed contracts the money supply (M↓)','M/P↓','LM shifts up (and left)','Y↓ at every price level','Movement along the AD curve'],
+    wrong:4,
+    explain:'When the Fed lowers Y at every price level, it <strong>shifts the AD curve left</strong>. This is not a movement along AD — movements along AD occur only when the price level itself changes.' },
+
+  { topic:'monetary',
+    prompt:'The Fed expands the money supply (M↑). What goes wrong in this IS-LM argument?',
+    steps:['Fed expands the money supply (M↑)','M/P↑','LM shifts down (and right)','Equilibrium moves along IS to higher Y','r rises to maintain balance','Y↑'],
+    wrong:4,
+    explain:'Moving down along the IS curve, r and Y move in <strong>opposite directions</strong>. When LM shifts down, the new intersection is at higher Y and <strong>lower r</strong>, not higher r. The lower interest rate is what drives the increase in investment and Y.' },
+
+  { topic:'monetary',
+    prompt:'The Fed contracts the money supply (M↓). What goes wrong in this IS-LM argument?',
+    steps:['Fed contracts the money supply (M↓)','M/P↓','LM shifts up (and left)','New equilibrium: r↑ and Y↑','AD shifts left'],
+    wrong:3,
+    explain:'An upward LM shift moves the intersection with IS up and to the <strong>left</strong> — the interest rate rises but output <strong>falls</strong>. Higher r reduces investment, lowering PE and Y.' },
+
+  { topic:'monetary',
+    prompt:'The Fed contracts the money supply (M↓). What goes wrong in this goods-market chain?',
+    steps:['Fed contracts the money supply (M↓)','M/P↓','r↑','I↓','PE↓','Unplanned inventory shortage','Firms cut production','Y↓'],
+    wrong:5,
+    explain:'When PE falls below current output Y, firms find they are producing <strong>more</strong> than households plan to buy — an <strong>unplanned inventory surplus</strong>, not a shortage. The surplus signals firms to cut production.' },
+
+  // NEW LM-specific (LM1): money-market direction error
+  { topic:'monetary',
+    prompt:'The Fed expands the money supply (M↑). What goes wrong?',
+    steps:['Fed expands the money supply (M↑)','M/P↑','r↑','Investment↓','Y↓'],
+    wrong:2,
+    explain:'More real money balances mean the money market clears at a <strong>lower</strong> interest rate, not a higher one. A rightward shift of money supply along money demand lowers r. The rest of the chain has the sign backwards as a result.' },
+
+  // NEW LM-specific (LM4): real vs nominal money
+  { topic:'monetary',
+    prompt:'The price level rises (P↑). What goes wrong?',
+    steps:['P↑','M↑','M/P↑','LM shifts down (and right)'],
+    wrong:1,
+    explain:'A rise in the price level does <strong>not</strong> change the nominal money supply M. It lowers <strong>real</strong> balances M/P, so M/P falls and the LM curve shifts <strong>up (and left)</strong> — the opposite of what\'s claimed.' },
+
+  // NEW LM-specific (LM5): money-supply transmission to investment
+  { topic:'monetary',
+    prompt:'The Fed contracts the money supply (M↓). What goes wrong?',
+    steps:['Fed contracts the money supply (M↓)','M/P↓','r↑','Investment↑','PE↑','Y↑'],
+    wrong:3,
+    explain:'A higher interest rate raises the cost of borrowing, so investment <strong>falls</strong> (I = I₀ − I₁·r). Contractionary monetary policy reduces investment, planned expenditure, and output.' },
+
+  // NEW LM-specific (LM6): LM shift vs movement along
+  { topic:'monetary',
+    prompt:'The Fed expands the money supply (M↑). What goes wrong in this IS-LM argument?',
+    steps:['Fed expands the money supply (M↑)','Equilibrium moves up along LM to higher Y','r↓','Y↑'],
+    wrong:1,
+    explain:'An increase in M <strong>shifts the LM curve</strong> down and to the right — it does not move the economy along a fixed LM. The new equilibrium is on a new LM curve, at higher Y and lower r.' },
+
+  // ── IS CURVE / GOODS MARKET (11) ───────────────────────────────────────
+  { topic:'is',
+    prompt:'The real interest rate rises (r↑). What goes wrong?',
+    steps:['r↑','I↑','PE↑','PE > Y','Unplanned inventory shortage','Firms increase production','Y↑'],
+    wrong:1,
+    explain:'A higher interest rate raises the cost of borrowing, so <strong>investment falls</strong> (I = I₀ − I₁·r). Fewer projects earn a return above the higher r. This is precisely why the IS curve slopes downward.' },
+
+  { topic:'is',
+    prompt:'The interest rate falls (r↓). What goes wrong in this IS-curve argument?',
+    steps:['r↓','I↑','PE↑','Unplanned inventory surplus','Firms increase production','Y↑','Negative r–Y relationship confirmed'],
+    wrong:3,
+    explain:'When PE rises above current output Y, inventories fall below plan — an <strong>unplanned inventory shortage</strong>, not a surplus. The shortage signals firms to increase production. A surplus would cause them to cut back.' },
+
+  { topic:'is',
+    prompt:'Autonomous investment falls (I₀↓, not due to r). What goes wrong?',
+    steps:['I₀↓','PE↓','Unplanned inventory buildup','Y↓ by (1/(1−MPC))×ΔI₀','IS shifts right'],
+    wrong:4,
+    explain:'A fall in autonomous investment lowers PE at every interest rate, reducing equilibrium output at every r. This means the IS curve shifts <strong>left</strong>, not right. A rightward shift would imply higher output at each rate.' },
+
+  { topic:'is',
+    prompt:'The MPC rises. What goes wrong in this multiplier argument?',
+    steps:['MPC↑','Multiplier 1/(1−MPC) falls','Any ΔG has a smaller effect on Y','IS shifts less for a given ΔG'],
+    wrong:1,
+    explain:'A higher MPC means (1−MPC) is <strong>smaller</strong>, so 1/(1−MPC) is <strong>larger</strong>, not smaller. More of each dollar of new income gets re-spent on consumption, amplifying the effect of any autonomous spending change.' },
+
+  { topic:'is',
+    prompt:'Output (Y) is currently above planned expenditure (PE). What goes wrong?',
+    steps:['Y > PE','Inventories fall below plan','Firms cut production','Y falls toward PE'],
+    wrong:1,
+    explain:'When Y exceeds PE, firms produce <strong>more</strong> than households plan to buy, so inventories pile up <strong>above</strong> plan — an unplanned surplus, not a shortage. The surplus prompts firms to cut production until Y = PE.' },
+
+  { topic:'is',
+    prompt:'Consumer confidence falls, reducing autonomous consumption (C₀↓). What goes wrong?',
+    steps:['C₀↓','PE↓','IS shifts right','Y↓ and r↓ in IS-LM equilibrium'],
+    wrong:2,
+    explain:'A fall in autonomous consumption lowers PE at every interest rate, shifting IS <strong>left</strong>, not right. A rightward IS shift would imply higher output at each rate — the opposite of a confidence shock.' },
+
+  { topic:'is',
+    prompt:'Investment becomes more sensitive to the interest rate (I₁ rises in I = I₀ − I₁·r). What goes wrong?',
+    steps:['I₁↑','For any given Δr, ΔI is larger','IS curve becomes steeper','The multiplier is unchanged'],
+    wrong:2,
+    explain:'When investment responds more strongly to interest rate changes, each unit change in r moves Y by more — so the IS curve becomes <strong>flatter</strong>, not steeper. A steeper IS would mean Y responds <em>less</em> to r changes.' },
+
+  { topic:'is',
+    prompt:'The economy is in equilibrium (Y = PE). The interest rate then rises. What goes wrong?',
+    steps:['r↑','I↓','PE↓','Now PE < Y','Unplanned inventory shortage','Firms cut production','Y↓'],
+    wrong:4,
+    explain:'When PE falls below Y, firms produce more than is purchased, so inventories rise above plan — an <strong>unplanned inventory surplus</strong>, not a shortage. The surplus signals firms to cut production until Y = PE.' },
+
+  { topic:'is',
+    prompt:'Taxes fall (T↓). What goes wrong in this multiplier argument?',
+    steps:['T↓','Disposable income (Y−T)↑','C↑ by the full ΔT','PE↑','Y↑'],
+    wrong:2,
+    explain:'Consumption rises by <strong>MPC × ΔT</strong>, not the full ΔT. Households save a fraction (1 − MPC) of any income gain, so only the MPC portion flows into new consumption. This is why the tax multiplier is −MPC/(1−MPC), smaller than the government purchases multiplier.' },
+
+  { topic:'is',
+    prompt:'Government purchases rise by 100 (G↑ = 100). What goes wrong in this multiplier argument?',
+    steps:['G↑ by 100','PE↑ by 100','Y↑ by 100 (same as ΔG)','Equilibrium restored at new Y'],
+    wrong:2,
+    explain:'Output rises by <strong>more</strong> than ΔG because of the multiplier. The initial rise in G raises income, which raises consumption, which raises income further, and so on. The total increase is (1/(1−MPC)) × ΔG, which exceeds ΔG whenever MPC > 0.' },
+
+  // NEW LM-specific (LM3): LM slope reasoning
+  { topic:'is',
+    prompt:'Output rises (Y↑) with the money supply held constant. What goes wrong in this LM-slope argument?',
+    steps:['Y↑','Money demand↑','With M fixed, r must fall to clear the money market','Lower r confirmed along LM'],
+    wrong:2,
+    explain:'With the money supply fixed, higher money demand must be choked off by a <strong>higher r</strong>, not a lower one. This positive relationship between Y and r is exactly why the LM curve slopes <strong>upward</strong>.' },
+
+  // ── AGGREGATE DEMAND (7) ───────────────────────────────────────────────
+  { topic:'ad',
+    prompt:'The Fed expands the money supply (M↑). What goes wrong in this AD argument?',
+    steps:['Fed expands the money supply (M↑)','LM shifts down (and right)','Y↑ at every price level','AD shifts left'],
+    wrong:3,
+    explain:'If Y rises at every price level, the AD curve shifts <strong>right</strong>, not left. A leftward AD shift would mean lower output at each price level — the opposite of what a money-supply expansion produces.' },
+
+  { topic:'ad',
+    prompt:'The price level falls (P↓). What goes wrong in this AD-derivation argument?',
+    steps:['P↓','M/P↓','LM shifts down (and right)','r↓ and Y↑','Movement along the AD curve — downward slope confirmed'],
+    wrong:1,
+    explain:'With nominal M fixed, a fall in P <strong>raises</strong> real balances (M/P↑), not lowers them. The increase in M/P shifts LM down (and right), producing the lower r and higher Y that trace out the downward slope of AD.' },
+
+  { topic:'ad',
+    prompt:'Business confidence falls, reducing autonomous investment (I₀↓). What goes wrong?',
+    steps:['I₀↓','PE↓','IS shifts left','Y↓ at every price level','AD shifts right'],
+    wrong:4,
+    explain:'A fall in autonomous investment lowers Y at every price level, so the AD curve shifts <strong>left</strong>, not right. A rightward AD shift would require a policy or shock that raises output at each price level.' },
+
+  { topic:'ad',
+    prompt:'The price level rises (P↑). What goes wrong in this AD-derivation argument?',
+    steps:['P↑','M/P↓','LM shifts up (and left)','IS shifts left','Y↓','Movement along AD curve confirmed'],
+    wrong:3,
+    explain:'A rise in the price level shifts the <strong>LM curve up (and left)</strong> only. The IS curve is unaffected by P — it shifts only with changes to G, T, or autonomous spending. The equilibrium then moves up along the existing IS curve.' },
+
+  { topic:'ad',
+    prompt:'Expansionary fiscal policy (G↑) is implemented. What goes wrong in this IS-LM argument?',
+    steps:['G↑','LM shifts down (and right)','r↓ and Y↑','AD shifts right'],
+    wrong:1,
+    explain:'Fiscal policy shifts the <strong>IS curve right</strong>, not the LM curve. LM shifts only when M or P changes. G↑ leaves LM in place; the new equilibrium is found by moving up along the existing LM curve to higher Y <em>and</em> higher r.' },
+
+  { topic:'ad',
+    prompt:'The AD curve shifts left. What goes wrong in this explanation of why?',
+    steps:['AD shifts left','Y↓ at every price level','IS shifted left or LM shifted up (and left)','Price level must have risen'],
+    wrong:3,
+    explain:'A leftward AD shift is caused by IS shifting left or LM shifting up — step 3 is correct. But a rise in the price level causes a <strong>movement along</strong> the AD curve, not a shift of it. Price level changes trace out the curve; they cannot explain why it shifted.' },
+
+  { topic:'ad',
+    prompt:'The government raises G and the Fed simultaneously contracts the money supply (M↓). What goes wrong in this AD argument?',
+    steps:['G↑ shifts IS right','M↓ shifts LM up (and left)','The two effects cancel exactly','AD is unchanged'],
+    wrong:2,
+    explain:'The two policies push in opposite directions on Y, but there is no reason they <strong>cancel exactly</strong>. The net effect on AD depends on the relative size of the fiscal expansion versus the monetary contraction. Only in a special case would they offset perfectly.' }
+];
+
+// ── RNG ──────────────────────────────────────────────────────────────────
+let _rng = null;
+function rng(){ return _rng ? _rng() : Math.random(); }
+
+function shuffle(a){
+  const b = a.slice();
+  for(let i = b.length - 1; i > 0; i--){
+    const j = Math.floor(rng() * (i + 1));
+    [b[i], b[j]] = [b[j], b[i]];
+  }
+  return b;
+}
+
+// ── State ────────────────────────────────────────────────────────────────
+let order = [];           // SESSION_LENGTH indices into BANK
+let idx = 0;              // current question index in `order`
+let nC = 0, nW = 0;       // running tally
+let pickedThisQ = false;  // guard so a question is recorded once
+let sessionRecorded = false; // in disc mode, lock after final record
+
+// ── DOM ──────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const elQCard      = $('qCard');
+const elFinalCard  = $('finalCard');
+const elNext       = $('nextBtn');
+const elSkip       = $('skipBtn');
+const elRestart    = $('restartBtn');
+const elPdf        = $('pdfBtn');
+
+// ── Build the per-session question list ──────────────────────────────────
+function buildOrder(){
+  const all = shuffle(BANK.map((_, i) => i));
+  return all.slice(0, Math.min(SESSION_LENGTH, all.length));
+}
+
+// ── Render ───────────────────────────────────────────────────────────────
+const TOPIC_LABEL = {
+  fiscal:'Fiscal Policy',
+  monetary:'Monetary Policy',
+  is:'IS Curve & Goods Market',
+  ad:'Aggregate Demand'
+};
+const TOPIC_CLASS = {
+  fiscal:'topic-fiscal',
+  monetary:'topic-monetary',
+  is:'topic-is',
+  ad:'topic-ad'
+};
+
+function render(){
+  const s = BANK[order[idx]];
+  pickedThisQ = false;
+  elNext.disabled = true;
+
+  $('qNum').textContent = 'Question ' + (idx + 1) + ' of ' + SESSION_LENGTH;
+
+  const badge = $('topicBadge');
+  badge.textContent = TOPIC_LABEL[s.topic] || s.topic;
+  badge.className = 'topic-badge ' + (TOPIC_CLASS[s.topic] || 'topic-fiscal');
+
+  $('qPrompt').textContent = s.prompt;
+
+  const chain = $('chainEl');
+  chain.innerHTML = '';
+  s.steps.forEach((text, i) => {
+    if(i > 0){
+      const a = document.createElement('span');
+      a.className = 'chain-arrow';
+      a.textContent = '→';
+      a.setAttribute('aria-hidden', 'true');
+      chain.appendChild(a);
+    }
+    const p = document.createElement('button');
+    p.type = 'button';
+    p.className = 'step-pill';
+    p.textContent = text;
+    p.dataset.i = String(i);
+    p.addEventListener('click', () => pick(i));
+    chain.appendChild(p);
+  });
+
+  $('fbBox').className = 'feedback-box';
+  $('fbAnnounce').textContent = '';
+  $('statusMsg').textContent = 'Click the broken step in the chain.';
+
+  updateProgress();
+
+  elQCard.classList.remove('fade-in');
+  void elQCard.offsetWidth;
+  elQCard.classList.add('fade-in');
+}
+
+function pick(ci){
+  if(pickedThisQ) return;
+  pickedThisQ = true;
+  const s = BANK[order[idx]];
+  const pills = document.querySelectorAll('.step-pill');
+  pills.forEach(p => {
+    p.classList.add('locked');
+    p.setAttribute('aria-disabled', 'true');
+  });
+
+  const ok = ci === s.wrong;
+  if(ok){ nC++; } else { nW++; }
+  updateScores();
+
+  pills.forEach((p, i) => {
+    if(i === s.wrong){ p.classList.add(ok ? 'correct' : 'revealed'); }
+    else if(i === ci && !ok){ p.classList.add('wrong'); }
+    else { p.classList.add('dimmed'); }
+  });
+
+  const fb = $('fbBox');
+  const head = $('fbHead');
+  if(ok){
+    fb.className = 'feedback-box show fb-correct';
+    head.className = 'fb-head ok';
+    head.textContent = '✓ Correct!';
+  } else {
+    fb.className = 'feedback-box show fb-wrong';
+    head.className = 'fb-head bad';
+    head.textContent = '✗ Not quite — the broken step was: "' + s.steps[s.wrong] + '"';
+  }
+  $('fbText').innerHTML = s.explain;
+  elNext.disabled = false;
+
+  const statusText = ok
+    ? 'Correct! Read the explanation, then continue.'
+    : 'Incorrect. The broken step was: "' + s.steps[s.wrong] + '". Read the explanation, then continue.';
+  $('statusMsg').textContent = statusText;
+
+  const plainExplain = s.explain.replace(/<[^>]+>/g, '');
+  $('fbAnnounce').textContent = (ok
+    ? '✓ Correct! '
+    : '✗ Incorrect. The broken step was: "' + s.steps[s.wrong] + '". ')
+    + plainExplain;
+
+  recordPick(idx, s, s.steps[ci], ok);
+}
+
+function recordPick(qIndex, s, pickedLabel, ok){
+  if(!window.Session || !Session.recordQuestion) return;
+  // Single-attempt format: first and final are identical.
+  Session.recordQuestion(LAB_ID, qIndex, s.prompt,
+    pickedLabel, ok, pickedLabel, ok);
+}
+
+function recordSkip(qIndex, s){
+  if(!window.Session || !Session.recordQuestion) return;
+  Session.recordQuestion(LAB_ID, qIndex, s.prompt,
+    'skipped', false, 'skipped', false);
+}
+
+function advance(){
+  idx++;
+  if(idx >= SESSION_LENGTH){ showFinal(); }
+  else { render(); }
+}
+
+function skip(){
+  // Standalone: skip without scoring.  Disc mode: button is hidden.
+  if(DISC_MODE){
+    // Defensive — should not be reached because button is hidden.
+    if(!pickedThisQ){
+      const s = BANK[order[idx]];
+      pickedThisQ = true;
+      nW++;
+      updateScores();
+      recordSkip(idx, s);
+    }
+  }
+  advance();
+}
+
+function updateScores(){
+  $('nCorrect').textContent = nC;
+  $('nWrong').textContent = nW;
+  updateProgress();
+}
+
+function updateProgress(){
+  const pct = (idx / SESSION_LENGTH) * 100;
+  $('pFill').style.width = pct + '%';
+  $('pLabel').textContent = idx + ' / ' + SESSION_LENGTH;
+}
+
+function showFinal(){
+  $('pFill').style.width = '100%';
+  $('pLabel').textContent = SESSION_LENGTH + ' / ' + SESSION_LENGTH;
+  elQCard.style.display = 'none';
+  elFinalCard.classList.add('show');
+  $('finalBig').textContent = String(nC);
+  $('finalSub').textContent = 'out of ' + SESSION_LENGTH + ' correct';
+  const pct = Math.round(nC / SESSION_LENGTH * 100);
+  let msg;
+  if(pct === 100)      msg = 'Perfect! You can spot a broken causal chain at a glance — exactly the skill that separates strong exam answers from weak ones.';
+  else if(pct >= 80)   msg = 'Strong performance. For the ones you missed, make sure you can explain not just that the step is wrong, but precisely what the correct step should be.';
+  else if(pct >= 60)   msg = 'Good effort. The most common errors are confusing IS vs. LM as the shifting curve and misreading the direction of r in the new equilibrium. Review those and try again.';
+  else                 msg = 'Keep at it. Work through each policy change step by step: which curve shifts, in which direction, and what happens to Y and r. The pattern becomes clear with practice.';
+  $('finalMsg').textContent = msg;
+
+  if(window.Session && Session.recordLabDone){
+    // Single-attempt lab: first score = final score.
+    Session.recordLabDone(LAB_ID, LAB_LABEL, nC, nC, SESSION_LENGTH);
+    sessionRecorded = true;
+  }
+
+  // In discussion mode, lock the session: hide Start Over, show PDF.
+  if(DISC_MODE){
+    elRestart.classList.add('hidden');
+    elPdf.classList.remove('hidden');
+  } else {
+    elRestart.classList.remove('hidden');
+    elPdf.classList.add('hidden');
+  }
+}
+
+function restart(){
+  if(DISC_MODE && sessionRecorded) return; // safety
+  order = buildOrder();
+  idx = 0; nC = 0; nW = 0; pickedThisQ = false;
+  elFinalCard.classList.remove('show');
+  elQCard.style.display = '';
+  updateScores();
+  render();
+}
+
+// ── Wire events ──────────────────────────────────────────────────────────
+elNext.addEventListener('click', advance);
+elSkip.addEventListener('click', skip);
+elRestart.addEventListener('click', restart);
+elPdf.addEventListener('click', () => {
+  if(window.DiscussionPDF && DiscussionPDF.generate) DiscussionPDF.generate();
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────
+function init(){
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+  if(DISC_MODE){
+    elSkip.classList.add('hidden');   // no skipping in discussion mode
+    elPdf.classList.add('hidden');    // shown after final
+  } else {
+    elPdf.classList.add('hidden');    // standalone never uses PDF
+  }
+  restart();
+}
+
+if(DISC_MODE && window.DiscussionModal && DiscussionModal.init){
+  DiscussionModal.init({
+    weekLabel: 'What Went Wrong?',
+    onReady: function(){ init(); }
+  });
+} else {
+  init();
+}
+
+})();
+</script>
+</body>
+</html>
