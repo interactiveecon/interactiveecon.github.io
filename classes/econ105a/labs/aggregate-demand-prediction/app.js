@@ -11,24 +11,31 @@ const LAB_ID    = 'aggregate-demand-prediction';
 const LAB_LABEL = 'Aggregate Demand Prediction';
 
 // ── Model parameters ────────────────────────────────────────────────────
-const MPC = 0.75, c1 = 0, I1 = 30, MDY = 3, MDR = 30;
-const BASE = { G:50, T:50, C:100, I:150, P:5, M:650 };
+// Investment is deliberately made much less interest-elastic (small I1) than a
+// textbook baseline so the IS curve is steep — this makes the interest-rate
+// response to each shock large and easy to see. The autonomous-spending sliders
+// (G, T, C, I) are scaled down to match so a steep IS still keeps every
+// equilibrium inside the plotted ranges. Shift directions, scenarios, and the
+// mechanism are unchanged; only the displayed dollar magnitudes differ.
+const MPC = 0.75, c1 = 0, I1 = 5, MDY = 3, MDR = 30;
+const BASE = { G:20, T:40, C:25, I:35, P:5, M:650 };
+// Baseline: A = C − MPC·T + I + G = 50 → alphaIS = 10, betaIS = 0.05 (6× steeper).
 
-// Plot ranges (chosen to cover slider extremes with margin)
+// Plot ranges (chosen to cover single-shock slider extremes with margin)
 const RANGE = {
-  Y:   240,   // IS-LM x-axis
-  r:   12,    // IS-LM y-axis
-  MP:  460,   // Money market x-axis  (max M/P ≈ 845/2 = 422)
-  AD_Y: 240,
+  Y:   180,   // IS-LM x-axis  (max Y ≈ 139 at P=2)
+  r:   12,    // shared interest-rate axis (MM + IS-LM)
+  MP:  360,   // Money market x-axis  (max M/P = 650/2 = 325 at P=2)
+  AD_Y: 180,  // AD x-axis (shares Y with IS-LM)
   AD_P: 9,
 };
 
 // Slider ranges — MUST match HTML min/max/step
 const SLIDER_R = {
-  G: { min:30,  max:70,  step:1 },    // ±40% of 50
-  T: { min:20,  max:80,  step:1 },    // ±60% of 50 (compensates for MPC=0.75)
-  C: { min:60,  max:140, step:1 },    // ±40% of 100
-  I: { min:90,  max:210, step:1 },    // ±40% of 150
+  G: { min:10,  max:30,  step:1 },    // ±50% of 20
+  T: { min:20,  max:60,  step:1 },    // wide (compensates for MPC=0.75)
+  C: { min:15,  max:35,  step:1 },    // ±40% of 25
+  I: { min:20,  max:50,  step:1 },    // base 35
   P: { min:2,   max:8,   step:0.1 },  // wider so AD movement is visible
   M: { min:455, max:845, step:1 },    // ±30% of 650
 };
@@ -415,7 +422,7 @@ const els = {
   checkMechBtn:$('checkMechBtn'), clearMechBtn:$('clearMechBtn'),
   mechBadge:$('mechBadge'), mechMsg:$('mechMsg'),
 
-  mmCanvas:$('mmCanvas'), islmCanvas:$('islmCanvas'), adCanvas:$('adCanvas'),
+  figCanvas:$('figCanvas'),
   mmDesc:$('mmDesc'), islmDesc:$('islmDesc'), adDesc:$('adDesc'),
 };
 
@@ -761,8 +768,6 @@ function onSliderInput(){
 }
 
 // ── Canvas helpers ─────────────────────────────────────────────────────
-const PAD = { l:54, r:18, t:16, b:42 };
-
 function setupCanvas(canvas){
   const wrap = canvas.parentNode;
   const dpr = window.devicePixelRatio || 1;
@@ -775,64 +780,10 @@ function setupCanvas(canvas){
   }
   return { ctx: canvas.getContext('2d'), dpr, W, H };
 }
-function makeCoords(W, H, dpr, xMax, yMax){
-  const p = { l:PAD.l*dpr, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr };
-  const PW = W - p.l - p.r, PH = H - p.t - p.b;
-  return {
-    xC: x => p.l + (x / xMax) * PW,
-    yC: y => H - p.b - (y / yMax) * PH,
-    p, PW, PH,
-  };
-}
 function tickStep(mx){
   if(mx<=10) return 1; if(mx<=20) return 2; if(mx<=50) return 5;
   if(mx<=100) return 10; if(mx<=200) return 20; if(mx<=500) return 50;
   return 100;
-}
-function drawAxes(ctx, co, W, H, dpr, xMax, yMax, xLabel, yLabel){
-  const { p } = co;
-  ctx.fillStyle = 'rgba(255,255,255,0.55)';
-  ctx.fillRect(p.l, p.t, co.PW, co.PH);
-  ctx.fillStyle = '#596878';
-  ctx.font = `400 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
-  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-  const yStep = tickStep(yMax);
-  for(let y = 0; y <= yMax + 1e-6; y += yStep){
-    const py = co.yC(y);
-    ctx.strokeStyle = '#e7dfd2'; ctx.lineWidth = 1*dpr;
-    ctx.beginPath(); ctx.moveTo(p.l, py); ctx.lineTo(W - p.r, py); ctx.stroke();
-    ctx.fillStyle = '#596878';
-    ctx.fillText(String(y), p.l - 5*dpr, py);
-  }
-  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  const xStep = tickStep(xMax);
-  for(let x = 0; x <= xMax + 1e-6; x += xStep){
-    const px = co.xC(x);
-    ctx.strokeStyle = '#e7dfd2'; ctx.lineWidth = 1*dpr;
-    ctx.beginPath(); ctx.moveTo(px, p.t); ctx.lineTo(px, H - p.b); ctx.stroke();
-    ctx.fillStyle = '#596878';
-    ctx.fillText(String(x), px, H - p.b + 5*dpr);
-  }
-  ctx.strokeStyle = '#374151'; ctx.lineWidth = 1.2*dpr;
-  ctx.beginPath();
-  ctx.moveTo(p.l, p.t); ctx.lineTo(p.l, H - p.b); ctx.lineTo(W - p.r, H - p.b);
-  ctx.stroke();
-  ctx.fillStyle = '#374151';
-  ctx.font = `700 ${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-  ctx.fillText(xLabel, p.l + co.PW/2, H - 8*dpr);
-  ctx.save();
-  ctx.translate(12*dpr, p.t + co.PH/2);
-  ctx.rotate(-Math.PI/2);
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(yLabel, 0, 0);
-  ctx.restore();
-}
-function clipPlot(ctx, co, W, H){
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(co.p.l, co.p.t, W - co.p.l - co.p.r, H - co.p.t - co.p.b);
-  ctx.clip();
 }
 function unclip(ctx){ ctx.restore(); }
 function strokeLine(ctx, x1, y1, x2, y2, color, width, dpr, dash){
@@ -866,192 +817,236 @@ function drawLetter(ctx, x, y, text, color, dpr, dx, dy){
 
 const COLOR_BASE = '#2f5d7c';     // accent — baseline (dashed)
 const COLOR_GOOD = '#155c38';     // current — solid (used in all cases)
-const COLOR_GUIDE = '#374151';    // projection lines
 
-// ── Money market panel ─────────────────────────────────────────────────
-function drawMM(){
-  const s = setupCanvas(els.mmCanvas); if(!s) return;
+// ── Unified four-quadrant figure ───────────────────────────────────────
+const GUIDE = '#8c4800';   // amber — 6.3:1 on white (WCAG AA)
+
+// Draw one panel's frame (background, gridlines, ticks, axes, titles). Empty
+// axis-label strings are skipped — used for the inner IS-LM panel whose axes
+// are shared with (and labelled on) its neighbours.
+function drawPanelFrame(ctx, pl, dpr, xMax, yMax, xLabel, yLabel, title){
+  const PW = pl.r - pl.l, PH = pl.b - pl.t;
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillRect(pl.l, pl.t, PW, PH);
+  ctx.fillStyle = '#596878';
+  ctx.font = `400 ${Math.round(9*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.strokeStyle = '#e7dfd2'; ctx.lineWidth = 1*dpr;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  const yStep = tickStep(yMax);
+  for(let y = 0; y <= yMax + 1e-6; y += yStep){
+    const py = pl.b - (y/yMax)*PH;
+    ctx.beginPath(); ctx.moveTo(pl.l, py); ctx.lineTo(pl.r, py); ctx.stroke();
+    ctx.fillText(String(Math.round(y)), pl.l - 4*dpr, py);
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  const xStep = tickStep(xMax);
+  for(let x = 0; x <= xMax + 1e-6; x += xStep){
+    const px = pl.l + (x/xMax)*PW;
+    ctx.beginPath(); ctx.moveTo(px, pl.t); ctx.lineTo(px, pl.b); ctx.stroke();
+    ctx.fillText(String(Math.round(x)), px, pl.b + 4*dpr);
+  }
+  ctx.strokeStyle = '#374151'; ctx.lineWidth = 1.2*dpr;
+  ctx.beginPath();
+  ctx.moveTo(pl.l, pl.t); ctx.lineTo(pl.l, pl.b); ctx.lineTo(pl.r, pl.b);
+  ctx.stroke();
+  ctx.fillStyle = '#374151';
+  ctx.font = `700 ${Math.round(9.5*dpr*_fs)}px "Inter",sans-serif`;
+  if(xLabel){
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(xLabel, pl.l + PW/2, pl.b + 24*dpr);
+  }
+  if(yLabel){
+    ctx.save();
+    ctx.translate(pl.l - 28*dpr, pl.t + PH/2);
+    ctx.rotate(-Math.PI/2);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(yLabel, 0, 0);
+    ctx.restore();
+  }
+  ctx.fillStyle = '#2f5d7c';
+  ctx.font = `800 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText(title, pl.l, pl.t - 5*dpr);
+}
+
+function clipRect(ctx, pl){
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(pl.l, pl.t, pl.r - pl.l, pl.b - pl.t);
+  ctx.clip();
+}
+
+function drawReadingGuide(ctx, dpr, cx, cy){
+  const x = cx + 8*dpr;
+  let y = cy + 20*dpr;
+  const lh = 18*dpr;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#2f5d7c';
+  ctx.font = `800 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.fillText('HOW TO READ THIS FIGURE', x, y);
+  y += lh*1.2;
+  ctx.font = `600 ${Math.round(9.5*dpr*_fs)}px "Inter",sans-serif`;
+  const lines = [
+    ['#2f5d7c', 'Dashed A = baseline.'],
+    ['#155c38', 'Solid B = after the shock.'],
+    ['#374151', 'r is shared: Money Market and IS–LM.'],
+    ['#374151', 'Y is shared: IS–LM and AD.'],
+    ['#8c4800', 'Amber guides carry r and Y between them.'],
+    ['#374151', 'Move the unlocked slider to reveal B.'],
+  ];
+  for(const [col, txt] of lines){ ctx.fillStyle = col; ctx.fillText(txt, x, y); y += lh; }
+}
+
+// ── Unified four-quadrant figure ───────────────────────────────────────
+// One canvas holds all three plots arranged so the shared axes line up:
+//   • Money Market (top-left) and IS-LM (top-right) share the r axis — same
+//     vertical scale at the same screen height.
+//   • IS-LM (top-right) and AD (bottom-right) share the Y axis — same
+//     horizontal scale at the same screen x.
+// Amber dashed guides carry the live equilibrium's r across the top row and Y
+// down the right column. Dashed = baseline (A); solid = after reveal (B).
+function drawFigure(){
+  const s = setupCanvas(els.figCanvas); if(!s) return;
   const { ctx, dpr, W, H } = s;
   ctx.clearRect(0,0,W,H);
-  const co = makeCoords(W, H, dpr, RANGE.MP, RANGE.r);
-  drawAxes(ctx, co, W, H, dpr, RANGE.MP, RANGE.r, 'Real money balances M/P', 'Interest rate r');
-  clipPlot(ctx, co, W, H);
-  // Baseline (dashed)
+
+  const OM  = 6*dpr, GX = 18*dpr, GY = 18*dpr;
+  const AXL = 42*dpr, AXR = 12*dpr, AXT = 20*dpr, AXB = 34*dpr;
+  const colW = (W - 2*OM - GX) / 2;
+  const rowH = (H - 2*OM - GY) / 2;
+  const cellX0 = OM, cellX1 = OM + colW + GX;
+  const cellY0 = OM, cellY1 = OM + rowH + GY;
+  const plotIn = (cx, cy) => ({
+    l: cx + AXL, r: cx + colW - AXR, t: cy + AXT, b: cy + rowH - AXB
+  });
+  const pMM = plotIn(cellX0, cellY0);   // money market (top-left)
+  const pIS = plotIn(cellX1, cellY0);   // IS-LM        (top-right)
+  const pAD = plotIn(cellX1, cellY1);   // AD           (bottom-right)
+
+  // Shared transforms: rY serves MM+IS-LM (same t/b); yX serves IS-LM+AD (same l/r).
+  const rY  = r => pIS.b - (r/RANGE.r)   * (pIS.b - pIS.t);
+  const mmX = v => pMM.l + (v/RANGE.MP)  * (pMM.r - pMM.l);
+  const yX  = Y => pIS.l + (Y/RANGE.Y)   * (pIS.r - pIS.l);
+  const adY = P => pAD.b - (P/RANGE.AD_P)* (pAD.b - pAD.t);
+
   const e0 = baseEq;
-  strokeLine(ctx, co.xC(e0.MP), co.yC(0), co.xC(e0.MP), co.yC(RANGE.r),
-             COLOR_BASE, 2.0, dpr, [6,4]);
-  const r0_0 = (MDY*e0.Y - 0) / MDR;
-  const r0_1 = (MDY*e0.Y - RANGE.MP) / MDR;
-  strokeLine(ctx, co.xC(0), co.yC(r0_0), co.xC(RANGE.MP), co.yC(r0_1),
-             COLOR_BASE, 2.0, dpr, [6,4]);
-  const mmA = { x: co.xC(e0.MP), y: co.yC(e0.r) };
-  drawDot(ctx, mmA.x, mmA.y, COLOR_BASE, 5, dpr);
+  const rev = _revealed;
+  const e = rev ? equilibrium(_cur) : null;
 
-  // Only the directly-shocked curve moves in this panel:
-  //   P or M shock   → MS shifts (M/P changed); MD stays at baseline Y.
-  //   G/T/C/I shock  → MD shifts (Y changed);   MS stays at baseline M/P.
-  let mmB = null;
-  if(_revealed){
-    const e = equilibrium(_cur);
-    const v = _currentScenario && _currentScenario.var;
-    const isMSshock = (v === 'P' || v === 'M');
-    if(isMSshock){
-      strokeLine(ctx, co.xC(e.MP), co.yC(0), co.xC(e.MP), co.yC(RANGE.r),
-                 COLOR_GOOD, 2.8, dpr);
-    } else {
-      const rN_0 = (MDY*e.Y - 0) / MDR;
-      const rN_1 = (MDY*e.Y - RANGE.MP) / MDR;
-      strokeLine(ctx, co.xC(0), co.yC(rN_0), co.xC(RANGE.MP), co.yC(rN_1),
-                 COLOR_GOOD, 2.8, dpr);
-    }
-    mmB = { x: co.xC(e.MP), y: co.yC(e.r) };
-    drawDot(ctx, mmB.x, mmB.y, COLOR_GOOD, 6, dpr);
+  // ── MONEY MARKET (top-left) ──────────────────────────────────────────
+  drawPanelFrame(ctx, pMM, dpr, RANGE.MP, RANGE.r,
+                 'Real money balances M/P', 'Interest rate r', 'MONEY MARKET');
+  clipRect(ctx, pMM);
+  strokeLine(ctx, mmX(e0.MP), rY(0), mmX(e0.MP), rY(RANGE.r), COLOR_BASE, 2.0, dpr, [6,4]);
+  strokeLine(ctx, mmX(0), rY((MDY*e0.Y)/MDR),
+                  mmX(RANGE.MP), rY((MDY*e0.Y - RANGE.MP)/MDR), COLOR_BASE, 2.0, dpr, [6,4]);
+  drawDot(ctx, mmX(e0.MP), rY(e0.r), COLOR_BASE, 5, dpr);
+  if(rev){
+    // Both curves reflect the new equilibrium. Real money supply (M/P) shifts
+    // only if P or M changed, but money demand depends on income Y — and Y
+    // changes for every shock — so the MD line shifts whenever equilibrium
+    // output moves. B is their intersection, so it always sits on the new MD.
+    strokeLine(ctx, mmX(e.MP), rY(0), mmX(e.MP), rY(RANGE.r), COLOR_GOOD, 2.8, dpr);
+    strokeLine(ctx, mmX(0), rY((MDY*e.Y)/MDR),
+                    mmX(RANGE.MP), rY((MDY*e.Y - RANGE.MP)/MDR), COLOR_GOOD, 2.8, dpr);
+    drawDot(ctx, mmX(e.MP), rY(e.r), COLOR_GOOD, 6, dpr);
   }
   unclip(ctx);
-
-  // Equilibrium letter labels — A baseline, B current
-  drawLetter(ctx, mmA.x, mmA.y, 'A', COLOR_BASE, dpr);
-  if(mmB) drawLetter(ctx, mmB.x, mmB.y, 'B', COLOR_GOOD, dpr);
-
-  // Curve labels
+  drawLetter(ctx, mmX(e0.MP), rY(e0.r), 'A', COLOR_BASE, dpr);
+  if(rev) drawLetter(ctx, mmX(e.MP), rY(e.r), 'B', COLOR_GOOD, dpr);
   ctx.fillStyle = COLOR_BASE;
-  ctx.font = `700 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.font = `700 ${Math.round(9.5*dpr*_fs)}px "Inter",sans-serif`;
   ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-  ctx.fillText('MS', co.xC(e0.MP) + 4*dpr, co.yC(RANGE.r*0.95));
-  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  if(mmX(e0.MP) + 4*dpr < pMM.r) ctx.fillText('MS', mmX(e0.MP) + 4*dpr, rY(RANGE.r*0.95));
   const mdY = (MDY*e0.Y - RANGE.MP*0.06) / MDR;
-  if(mdY > 0 && mdY < RANGE.r) ctx.fillText('MD', co.xC(RANGE.MP*0.06), co.yC(mdY) + 4*dpr);
-}
-
-// ── IS-LM panel ────────────────────────────────────────────────────────
-function drawISLM(){
-  const s = setupCanvas(els.islmCanvas); if(!s) return;
-  const { ctx, dpr, W, H } = s;
-  ctx.clearRect(0,0,W,H);
-  const co = makeCoords(W, H, dpr, RANGE.Y, RANGE.r);
-  drawAxes(ctx, co, W, H, dpr, RANGE.Y, RANGE.r, 'Output Y', 'Interest rate r');
-  clipPlot(ctx, co, W, H);
-
-  // Baseline IS and LM (dashed)
-  const k0 = baseEq;
-  const isR_0 = k0.alphaIS - k0.betaIS*0;
-  const isR_1 = k0.alphaIS - k0.betaIS*RANGE.Y;
-  strokeLine(ctx, co.xC(0), co.yC(isR_0), co.xC(RANGE.Y), co.yC(isR_1),
-             COLOR_BASE, 2.0, dpr, [6,4]);
-  const lmR_0 = (MDY*0       - BASE.M/BASE.P) / MDR;
-  const lmR_1 = (MDY*RANGE.Y - BASE.M/BASE.P) / MDR;
-  strokeLine(ctx, co.xC(0), co.yC(lmR_0), co.xC(RANGE.Y), co.yC(lmR_1),
-             COLOR_BASE, 2.0, dpr, [6,4]);
-  const islmA = { x: co.xC(k0.Y), y: co.yC(k0.r) };
-  drawDot(ctx, islmA.x, islmA.y, COLOR_BASE, 5, dpr);
-
-  let islmB = null;
-  if(_revealed){
-    const k = equilibrium(_cur);
-    const isRn_0 = k.alphaIS - k.betaIS*0;
-    const isRn_1 = k.alphaIS - k.betaIS*RANGE.Y;
-    strokeLine(ctx, co.xC(0), co.yC(isRn_0), co.xC(RANGE.Y), co.yC(isRn_1),
-               COLOR_GOOD, 2.8, dpr);
-    const lmRn_0 = (MDY*0       - _cur.M/_cur.P) / MDR;
-    const lmRn_1 = (MDY*RANGE.Y - _cur.M/_cur.P) / MDR;
-    strokeLine(ctx, co.xC(0), co.yC(lmRn_0), co.xC(RANGE.Y), co.yC(lmRn_1),
-               COLOR_GOOD, 2.8, dpr);
-    const px = co.xC(clamp(k.Y, 0, RANGE.Y));
-    const py = co.yC(clamp(k.r, 0, RANGE.r));
-    strokeLine(ctx, px, py, px, co.yC(0), COLOR_GUIDE, 1.0, dpr, [3,4]);
-    strokeLine(ctx, px, py, co.xC(0), py, COLOR_GUIDE, 1.0, dpr, [3,4]);
-    islmB = { x: px, y: py };
-    drawDot(ctx, islmB.x, islmB.y, COLOR_GOOD, 6, dpr);
+  if(mdY > 0 && mdY < RANGE.r){
+    ctx.textBaseline = 'top';
+    ctx.fillText('MD', mmX(RANGE.MP*0.06), rY(mdY) + 4*dpr);
   }
 
-  // Baseline projections
-  strokeLine(ctx, islmA.x, islmA.y, islmA.x, co.yC(0), COLOR_GUIDE, 1.0, dpr, [3,4]);
-  strokeLine(ctx, islmA.x, islmA.y, co.xC(0), islmA.y, COLOR_GUIDE, 1.0, dpr, [3,4]);
-
+  // ── IS-LM (top-right) — axis titles omitted (shared, labelled on neighbours) ─
+  drawPanelFrame(ctx, pIS, dpr, RANGE.Y, RANGE.r, '', '', 'IS–LM');
+  clipRect(ctx, pIS);
+  strokeLine(ctx, yX(0), rY(e0.alphaIS),
+                  yX(RANGE.Y), rY(e0.alphaIS - e0.betaIS*RANGE.Y), COLOR_BASE, 2.0, dpr, [6,4]);
+  strokeLine(ctx, yX(0), rY((MDY*0 - BASE.M/BASE.P)/MDR),
+                  yX(RANGE.Y), rY((MDY*RANGE.Y - BASE.M/BASE.P)/MDR), COLOR_BASE, 2.0, dpr, [6,4]);
+  drawDot(ctx, yX(e0.Y), rY(e0.r), COLOR_BASE, 5, dpr);
+  if(rev){
+    strokeLine(ctx, yX(0), rY(e.alphaIS),
+                    yX(RANGE.Y), rY(e.alphaIS - e.betaIS*RANGE.Y), COLOR_GOOD, 2.8, dpr);
+    strokeLine(ctx, yX(0), rY((MDY*0 - _cur.M/_cur.P)/MDR),
+                    yX(RANGE.Y), rY((MDY*RANGE.Y - _cur.M/_cur.P)/MDR), COLOR_GOOD, 2.8, dpr);
+    drawDot(ctx, yX(clamp(e.Y,0,RANGE.Y)), rY(clamp(e.r,0,RANGE.r)), COLOR_GOOD, 6, dpr);
+  }
   unclip(ctx);
-
-  // Equilibrium letter labels
-  drawLetter(ctx, islmA.x, islmA.y, 'A', COLOR_BASE, dpr);
-  if(islmB) drawLetter(ctx, islmB.x, islmB.y, 'B', COLOR_GOOD, dpr);
-
-  // IS / LM labels (on the baseline curves)
+  drawLetter(ctx, yX(e0.Y), rY(e0.r), 'A', COLOR_BASE, dpr);
+  if(rev) drawLetter(ctx, yX(clamp(e.Y,0,RANGE.Y)), rY(clamp(e.r,0,RANGE.r)), 'B', COLOR_GOOD, dpr);
   ctx.fillStyle = COLOR_BASE;
-  ctx.font = `700 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.font = `700 ${Math.round(9.5*dpr*_fs)}px "Inter",sans-serif`;
   ctx.textAlign = 'right'; ctx.textBaseline = 'top';
-  const isLbl_r = k0.alphaIS - k0.betaIS*RANGE.Y*0.92;
-  if(isLbl_r > 0 && isLbl_r < RANGE.r){
-    ctx.fillText('IS', co.xC(RANGE.Y*0.92) - 2*dpr, co.yC(isLbl_r) + 4*dpr);
-  }
+  const isLbl = e0.alphaIS - e0.betaIS*RANGE.Y*0.92;
+  if(isLbl > 0 && isLbl < RANGE.r) ctx.fillText('IS', yX(RANGE.Y*0.92) - 2*dpr, rY(isLbl) + 4*dpr);
   ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-  const lmLbl_r = (MDY*RANGE.Y*0.92 - BASE.M/BASE.P) / MDR;
-  if(lmLbl_r > 0 && lmLbl_r < RANGE.r){
-    ctx.fillText('LM', co.xC(RANGE.Y*0.92) + 2*dpr, co.yC(lmLbl_r) - 2*dpr);
-  }
-}
+  const lmLbl = (MDY*RANGE.Y*0.92 - BASE.M/BASE.P) / MDR;
+  if(lmLbl > 0 && lmLbl < RANGE.r) ctx.fillText('LM', yX(RANGE.Y*0.92) + 2*dpr, rY(lmLbl) - 2*dpr);
 
-// ── AD panel ───────────────────────────────────────────────────────────
-function drawAD(){
-  const s = setupCanvas(els.adCanvas); if(!s) return;
-  const { ctx, dpr, W, H } = s;
-  ctx.clearRect(0,0,W,H);
-  const co = makeCoords(W, H, dpr, RANGE.AD_Y, RANGE.AD_P);
-  drawAxes(ctx, co, W, H, dpr, RANGE.AD_Y, RANGE.AD_P, 'Output Y', 'Price level P');
-  clipPlot(ctx, co, W, H);
-
-  function drawCurve(pts, color, width, dash){
+  // ── AGGREGATE DEMAND (bottom-right) ──────────────────────────────────
+  drawPanelFrame(ctx, pAD, dpr, RANGE.Y, RANGE.AD_P,
+                 'Output Y', 'Price level P', 'AGGREGATE DEMAND');
+  clipRect(ctx, pAD);
+  const drawADCurve = (pts, color, width, dash) => {
     ctx.save();
     ctx.strokeStyle = color; ctx.lineWidth = width*dpr;
     ctx.setLineDash((dash||[]).map(d => d*dpr));
     ctx.beginPath();
     let started = false;
     for(const pt of pts){
-      if(pt.Y < 0 || pt.Y > RANGE.AD_Y || pt.P < 0 || pt.P > RANGE.AD_P){ started = false; continue; }
-      const x = co.xC(pt.Y), y = co.yC(pt.P);
-      if(!started){ ctx.moveTo(x,y); started = true; }
-      else ctx.lineTo(x,y);
+      if(pt.Y < 0 || pt.Y > RANGE.Y || pt.P < 0 || pt.P > RANGE.AD_P){ started = false; continue; }
+      const x = yX(pt.Y), y = adY(pt.P);
+      if(!started){ ctx.moveTo(x,y); started = true; } else ctx.lineTo(x,y);
     }
-    ctx.stroke();
-    ctx.restore();
+    ctx.stroke(); ctx.restore();
+  };
+  drawADCurve(baseAD, COLOR_BASE, 2.0, [6,4]);
+  drawDot(ctx, yX(e0.Y), adY(BASE.P), COLOR_BASE, 5, dpr);
+  if(rev){
+    drawADCurve(adCurvePoints(_cur), COLOR_GOOD, 2.8, []);
+    drawDot(ctx, yX(clamp(e.Y,0,RANGE.Y)), adY(clamp(_cur.P,0,RANGE.AD_P)), COLOR_GOOD, 6, dpr);
   }
-
-  drawCurve(baseAD, COLOR_BASE, 2.0, [6,4]);
-  const adA = { x: co.xC(baseEq.Y), y: co.yC(BASE.P) };
-  drawDot(ctx, adA.x, adA.y, COLOR_BASE, 5, dpr);
-
-  let adB = null;
-  if(_revealed){
-    const curAD = adCurvePoints(_cur);
-    drawCurve(curAD, COLOR_GOOD, 2.8, []);
-    const k = equilibrium(_cur);
-    const Yc = clamp(k.Y, 0, RANGE.AD_Y);
-    const Pc = clamp(_cur.P, 0, RANGE.AD_P);
-    const px = co.xC(Yc), py = co.yC(Pc);
-    strokeLine(ctx, px, py, px, co.yC(0), COLOR_GUIDE, 1.0, dpr, [3,4]);
-    strokeLine(ctx, px, py, co.xC(0), py, COLOR_GUIDE, 1.0, dpr, [3,4]);
-    adB = { x: px, y: py };
-    drawDot(ctx, adB.x, adB.y, COLOR_GOOD, 6, dpr);
-  }
-
-  // Baseline projection
-  strokeLine(ctx, adA.x, adA.y, adA.x, co.yC(0), COLOR_GUIDE, 1.0, dpr, [3,4]);
-  strokeLine(ctx, adA.x, adA.y, co.xC(0), adA.y, COLOR_GUIDE, 1.0, dpr, [3,4]);
-
   unclip(ctx);
-
-  // Equilibrium letter labels
-  drawLetter(ctx, adA.x, adA.y, 'A', COLOR_BASE, dpr);
-  if(adB) drawLetter(ctx, adB.x, adB.y, 'B', COLOR_GOOD, dpr);
-
-  // AD label
+  drawLetter(ctx, yX(e0.Y), adY(BASE.P), 'A', COLOR_BASE, dpr);
+  if(rev) drawLetter(ctx, yX(clamp(e.Y,0,RANGE.Y)), adY(clamp(_cur.P,0,RANGE.AD_P)), 'B', COLOR_GOOD, dpr);
   ctx.fillStyle = COLOR_BASE;
-  ctx.font = `800 ${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.font = `800 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-  const labP = 1.5;
-  const labY = baseEq.alpha + baseEq.beta / labP;
-  if(labY > 0 && labY < RANGE.AD_Y){
-    ctx.fillText('AD', co.xC(labY) + 6*dpr, co.yC(labP));
-  }
+  const labP = 1.5, labY = e0.alpha + e0.beta/labP;
+  if(labY > 0 && labY < RANGE.Y) ctx.fillText('AD', yX(labY) + 6*dpr, adY(labP));
+
+  // ── Shared-axis guides (amber) — track the live equilibrium ──────────
+  const gEq = rev ? e : e0;
+  const gP  = rev ? _cur.P : BASE.P;
+  const gY  = clamp(gEq.Y, 0, RANGE.Y);
+  const gr  = clamp(gEq.r, 0, RANGE.r);
+  const grPx = rY(gr);
+  strokeLine(ctx, mmX(clamp(gEq.MP,0,RANGE.MP)), grPx, yX(gY), grPx, GUIDE, 1.6, dpr, [6,4]);
+  strokeLine(ctx, yX(gY), grPx, yX(gY), adY(clamp(gP,0,RANGE.AD_P)), GUIDE, 1.6, dpr, [6,4]);
+  ctx.fillStyle = GUIDE;
+  ctx.font = `800 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText(`r = ${fmt2(gEq.r)}`, (pMM.r + pIS.l)/2, grPx - 3*dpr);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(`Y = ${fmt0(gEq.Y)}`, yX(gY) + 5*dpr, (pIS.b + pAD.t)/2);
+
+  // Redraw the live equilibrium dots on top of the guides.
+  const liveColor = rev ? COLOR_GOOD : COLOR_BASE, liveR = rev ? 6 : 5;
+  drawDot(ctx, mmX(clamp(gEq.MP,0,RANGE.MP)), grPx, liveColor, liveR, dpr);
+  drawDot(ctx, yX(gY), grPx, liveColor, liveR, dpr);
+  drawDot(ctx, yX(gY), adY(clamp(gP,0,RANGE.AD_P)), liveColor, liveR, dpr);
+
+  drawReadingGuide(ctx, dpr, cellX0, cellY1);
 }
+
 
 // ── Descriptions ──────────────────────────────────────────────────────
 function updateDescs(){
@@ -1076,11 +1071,12 @@ function updateDescs(){
     return;
   }
   const e = equilibrium(_cur);
-  const v = _currentScenario && _currentScenario.var;
-  const isMSshock = (v === 'P' || v === 'M');
-  const shifted = isMSshock
-    ? `Money supply shifted from M/P=${fmt0(e0.MP)} to M/P=${fmt2(e.MP)}; money demand unchanged (baseline Y).`
-    : `Money demand shifted as Y changed from ${fmt0(e0.Y)} to ${fmt2(e.Y)}; money supply unchanged.`;
+  const msMoved = Math.abs(e.MP - e0.MP) > 1e-6;
+  const shifted =
+    `Real money supply ${msMoved
+      ? `shifted from M/P=${fmt0(e0.MP)} to M/P=${fmt2(e.MP)}`
+      : `is unchanged at M/P=${fmt0(e0.MP)}`}; ` +
+    `money demand shifted as income Y changed from ${fmt0(e0.Y)} to ${fmt2(e.Y)}.`;
   els.mmDesc.textContent =
     `Money market diagram. Baseline (dashed) equilibrium at A: M/P=${fmt0(e0.MP)}, r=${fmt2(e0.r)}. ` +
     `${shifted} New equilibrium at B: r=${fmt2(e.r)}.`;
@@ -1098,7 +1094,7 @@ function updateDescs(){
 function redraw(){
   _fs = Math.max(0.75, Math.min(2.5,
     parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
-  drawMM(); drawISLM(); drawAD();
+  drawFigure();
   updateDescs();
 }
 
@@ -1213,10 +1209,19 @@ els.clearMechBtn.addEventListener('click', clearAllSlots);
   .forEach(sl => sl.addEventListener('input', onSliderInput));
 
 let _resizeTimer;
-window.addEventListener('resize', () => {
+function scheduleRedraw(){
   clearTimeout(_resizeTimer);
   _resizeTimer = setTimeout(redraw, 80);
-});
+}
+window.addEventListener('resize', scheduleRedraw);
+
+// A ResizeObserver catches container size changes that never fire a window
+// `resize` event (a collapsed pane/iframe/embed that later expands, a late
+// reflow) — without it a canvas drawn at the wrong size stays stretched.
+if(window.ResizeObserver && els.figCanvas){
+  const ro = new ResizeObserver(scheduleRedraw);
+  ro.observe(els.figCanvas.parentNode);
+}
 
 // ── Init ──────────────────────────────────────────────────────────────
 function init(){
