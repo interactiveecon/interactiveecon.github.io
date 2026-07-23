@@ -1,0 +1,1481 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Real Wage Adjustment — ECON 105B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea;
+      --panel:#ffffff;
+      --ink:#1f2937;
+      --ink-2:#374151;
+      --muted:#596878;
+      --line:#e7dfd2;
+      --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;
+      --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3 / good practice) ────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Main wrap */
+    .lab-wrap{max-width:1160px;margin:0 auto;padding:18px;}
+
+    /* Two canvas row */
+    .canvas-row{display:grid;grid-template-columns:1fr 1fr;
+      gap:14px;margin-bottom:14px;}
+    @media(max-width:900px){.canvas-row{grid-template-columns:1fr;}}
+
+    .canvas-row.single{grid-template-columns:1fr;}
+
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-head{display:flex;justify-content:space-between;align-items:baseline;
+      gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin:0;}
+    .graph-hint{font-size:0.75rem;color:var(--muted);}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;
+      overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+    .canvas-wrap.square{aspect-ratio:1/1;}
+    .canvas-wrap.wide{aspect-ratio:16/7;}
+
+    /* Legend */
+    .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;
+      font-size:0.75rem;color:var(--ink-2);}
+    .legend-row{display:flex;align-items:center;gap:6px;}
+    .legend-line{width:26px;height:0;border-top:2.5px solid currentColor;flex-shrink:0;}
+    .legend-line.dashed{border-top-style:dashed;}
+    .legend-line.dotted{border-top-style:dotted;}
+
+    /* Controls grid */
+    .controls-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;
+      margin-bottom:14px;}
+    @media(max-width:900px){.controls-grid{grid-template-columns:1fr;}}
+
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;
+      padding:16px;box-shadow:var(--shadow);}
+    .card-title{font-size:0.75rem;text-transform:uppercase;letter-spacing:.08em;
+      color:var(--accent);font-weight:800;margin-bottom:10px;}
+
+    /* Phase stepper */
+    .phase-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+    .phase-chip{flex:1;min-width:120px;padding:10px 12px;border-radius:12px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-size:0.75rem;font-weight:700;color:var(--ink-2);
+      display:flex;flex-direction:column;gap:2px;}
+    .phase-chip[data-active="true"]{border-color:var(--accent);
+      background:rgba(47,93,124,.10);color:var(--accent);}
+    .phase-chip[data-done="true"]{border-color:var(--good);
+      background:rgba(21,92,56,.08);color:var(--good);}
+    .phase-chip .step-num{font-size:0.625rem;letter-spacing:.08em;
+      text-transform:uppercase;font-weight:800;opacity:.7;}
+    .phase-chip .step-name{font-size:0.8125rem;font-weight:800;}
+
+    .phase-strip{padding:10px 12px;border-radius:12px;
+      border:1.5px solid var(--line-2);background:rgba(246,242,234,.5);
+      font-size:0.8125rem;color:var(--ink-2);line-height:1.45;
+      margin-bottom:10px;}
+    .phase-strip strong{color:var(--ink);}
+
+    /* Sliders */
+    .slider-head{display:flex;justify-content:space-between;align-items:baseline;
+      margin-bottom:8px;flex-wrap:wrap;gap:6px;}
+    .slider-head .value{font-size:1.125rem;font-weight:800;color:var(--accent);
+      font-variant-numeric:tabular-nums;}
+    .slider-hint{font-size:0.6875rem;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.07em;font-weight:700;}
+    input[type=range]{
+      -webkit-appearance:none;appearance:none;
+      width:100%;height:8px;border-radius:999px;
+      background:linear-gradient(90deg,var(--accent) 0%,var(--accent) var(--fill,50%),
+        var(--line-2) var(--fill,50%),var(--line-2) 100%);
+      outline:none;border:none;margin:6px 0 4px;cursor:pointer;
+    }
+    input[type=range]::-webkit-slider-thumb{
+      -webkit-appearance:none;appearance:none;
+      width:22px;height:22px;border-radius:50%;
+      background:var(--accent);border:3px solid #fff;
+      box-shadow:0 1px 4px rgba(17,24,39,.25);cursor:grab;
+    }
+    input[type=range]::-moz-range-thumb{
+      width:22px;height:22px;border-radius:50%;
+      background:var(--accent);border:3px solid #fff;
+      box-shadow:0 1px 4px rgba(17,24,39,.25);cursor:grab;
+    }
+    .slider-ticks{display:flex;justify-content:space-between;
+      font-size:0.625rem;color:var(--muted);font-weight:700;
+      font-variant-numeric:tabular-nums;padding:0 2px;margin-top:2px;}
+    input[type=range]:disabled{opacity:.45;cursor:not-allowed;}
+
+    .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+
+    /* Buttons (CLAUDE.md standard) */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn[aria-pressed="true"]{border-color:var(--accent);
+      background:rgba(47,93,124,.14);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover:not(:disabled){background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    .ghost-btn{padding:8px 16px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:transparent;
+      color:var(--ink-2);font-family:var(--font-sans);
+      font-size:0.8125rem;font-weight:700;cursor:pointer;transition:background .12s;}
+    .ghost-btn:hover{background:rgba(0,0,0,.04);}
+
+    /* Numeric readouts */
+    .read-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+    @media(max-width:600px){.read-grid{grid-template-columns:repeat(2,1fr);}}
+    .read-cell{padding:10px 12px;border-radius:12px;
+      border:1.5px solid #8c7f72;background:rgba(246,242,234,.5);}
+    .read-label{font-size:0.6875rem;text-transform:uppercase;
+      letter-spacing:.07em;font-weight:800;color:var(--muted);}
+    .read-value{font-size:1.25rem;font-weight:800;color:var(--ink);
+      font-variant-numeric:tabular-nums;margin-top:2px;}
+    .read-cell.status-good{border-color:var(--good);
+      background:rgba(21,92,56,.08);}
+    .read-cell.status-good .read-value{color:var(--good);}
+    .read-cell.status-bad{border-color:var(--bad);
+      background:rgba(180,35,24,.08);}
+    .read-cell.status-bad .read-value{color:var(--bad);}
+    .read-tag{display:inline-block;font-size:0.625rem;font-weight:800;
+      padding:1px 6px;border-radius:999px;margin-left:6px;
+      vertical-align:middle;letter-spacing:.06em;text-transform:uppercase;}
+    .read-tag.eq{background:rgba(21,92,56,.15);color:var(--good);}
+    .read-tag.lo{background:rgba(180,35,24,.15);color:var(--bad);}
+
+    /* Predict box */
+    .predict-box{padding:12px 14px;border-radius:12px;
+      background:#fff7e6;border:1.5px solid #d9a44a;
+      font-size:0.8125rem;color:#8c4800;line-height:1.55;margin-top:12px;}
+    .predict-box strong{color:#5a2e00;}
+    .predict-box .predict-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+    .predict-pill{padding:6px 12px;border-radius:999px;border:1.5px solid #8c4800;
+      background:#fff;color:#8c4800;font-size:0.75rem;font-weight:800;cursor:pointer;}
+    .predict-pill[aria-pressed="true"]{background:#8c4800;color:#fff;}
+    .predict-pill:hover{background:#f3e3cc;}
+    .predict-pill[aria-pressed="true"]:hover{background:#7a3f00;color:#fff;}
+    .predict-result{margin-top:8px;font-size:0.8125rem;color:#5a2e00;
+      padding:8px 12px;border-radius:8px;background:rgba(255,255,255,.6);
+      border:1px dashed #d9a44a;}
+
+    /* Insight */
+    .insight-body{font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .insight-body p{margin:0 0 8px;}
+    .insight-body p:last-child{margin-bottom:0;}
+    .insight-body strong{color:var(--ink);}
+
+    /* Footer */
+    footer{margin-top:32px;}
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;
+      gap:8px;font-size:0.75rem;color:var(--muted);padding-top:12px;
+      border-top:1px solid var(--line);margin-top:24px;}
+  </style>
+</head>
+<body>
+
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105b/labs/">← ECON 105B Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105B — Aggregate Supply</div>
+      <h1>Real Wage Adjustment</h1>
+      <p class="sub">
+        Watch the mechanism that drives long-run output back to the natural
+        rate <i>Ȳ</i> after a rise in the price level: the real wage
+        <i>W/P</i> is eroded, workers demand higher nominal <i>W</i>, marginal
+        cost shifts up, and the representative firm ends at the same output at
+        a higher price.
+      </p>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>This lab makes concrete the lecture's claim that
+          <strong>long-run output returns to <i>Ȳ</i></strong> after a price
+          shock. The mechanism rests on three facts:</p>
+          <ol>
+            <li>Workers care about the <strong>real wage</strong>
+                <i>W/P</i>, not the nominal wage <i>W</i>.</li>
+            <li>Firms hire labor until <strong>MPL = <i>W/P</i></strong>. MPL
+                falls as more labor is hired (diminishing returns); at the
+                <strong>natural level of employment</strong> it equals 10 —
+                the level set by capital and labor.</li>
+            <li>When <i>P</i> rises with a sticky wage, the real wage falls, so
+                firms <strong>hire more labor</strong> and MPL slides down to
+                match — output rises above <i>Ȳ</i>. Workers then demand a
+                higher nominal <i>W</i>; as it rises, the real wage,
+                employment, MPL, and output all return to their natural
+                levels, leaving only the price level higher.</li>
+          </ol>
+          <p>Use the <strong>price-level slider</strong> to choose the size of
+          the shock, then click <strong>Next</strong> to step through the
+          three phases.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- Discussion week-template entry (paste into a discussion week's LABS array):
+       { id: 'real-wage-adjustment', name: 'Real Wage Adjustment', icon: '⚖️',
+         desc: 'Step through how a price-level shock erodes the real wage, triggers nominal wage adjustment, and returns long-run output to the natural rate.',
+         url: '/classes/econ105b/labs/real-wage-adjustment/?disc=1' }
+  -->
+
+  <!-- Row 1: Real wage panel + Firm panel -->
+  <div class="canvas-row">
+
+    <div class="graph-card">
+      <div class="graph-head">
+        <div class="graph-title" id="rwTitle">Real Wage &amp; MPL</div>
+        <span class="graph-hint">MPL falls to match (Phase 2), restored (Phase 3)</span>
+      </div>
+      <div class="canvas-wrap square">
+        <canvas id="rwCanvas"
+                role="img"
+                aria-labelledby="rwTitle"
+                aria-describedby="rwDesc"></canvas>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span class="legend-row" style="color:var(--accent);">
+          <span class="legend-line" style="border-top-width:14px;border-radius:2px;"></span>
+          <span id="rwLegendBar">W/P</span> bar</span>
+        <span class="legend-row" style="color:var(--good);">
+          <span class="legend-line dashed"></span>
+          <span id="rwLegendMpl">Natural MPL = 10</span></span>
+        <span class="legend-row" style="color:var(--good);">
+          <span class="legend-line dotted"></span> MPL falls to match (Phase 2)</span>
+      </div>
+    </div>
+
+    <div class="graph-card">
+      <div class="graph-head">
+        <div class="graph-title" id="firmTitle">Representative Firm</div>
+        <span class="graph-hint">D, MR, MC and the profit-max point</span>
+      </div>
+      <div class="canvas-wrap square">
+        <canvas id="firmCanvas"
+                role="img"
+                aria-labelledby="firmTitle"
+                aria-describedby="firmDesc"></canvas>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span class="legend-row" style="color:#2f5d7c;">
+          <span class="legend-line"></span> Demand D / D′</span>
+        <span class="legend-row" style="color:#7a3aa7;">
+          <span class="legend-line dashed"></span> Marginal revenue MR / MR′</span>
+        <span class="legend-row" style="color:#8c4800;">
+          <span class="legend-line dotted"></span> Marginal cost MC</span>
+        <span class="legend-row" style="color:#b42318;">
+          <span class="legend-line dotted"></span> MC′ (after wage adjustment)</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Row 2: AS/AD panel (full width) -->
+  <div class="canvas-row single">
+    <div class="graph-card">
+      <div class="graph-head">
+        <div class="graph-title" id="adTitle">Aggregate Supply &amp; Demand</div>
+        <span class="graph-hint">Long-run: AD, LRAS at <i>Ȳ</i></span>
+      </div>
+      <div class="canvas-wrap wide">
+        <canvas id="adCanvas"
+                role="img"
+                aria-labelledby="adTitle"
+                aria-describedby="adDesc"></canvas>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span class="legend-row" style="color:var(--accent);">
+          <span class="legend-line"></span> AD / AD′</span>
+        <span class="legend-row" style="color:var(--good);">
+          <span class="legend-line"></span> SRAS / SRAS′</span>
+        <span class="legend-row" style="color:var(--ink-2);">
+          <span class="legend-line dashed"></span> LRAS (at <i>Ȳ</i>)</span>
+        <span class="legend-row" style="color:var(--bad);">
+          <span class="legend-line dotted"></span> Transition (Phase 2)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live region for canvas descriptions (WCAG 1.1.1 + 4.1.3) -->
+  <section class="sr-only" id="graphsDesc" aria-live="polite" aria-atomic="true">
+    <p id="rwDesc">Real wage panel loading.</p>
+    <p id="firmDesc">Representative firm panel loading.</p>
+    <p id="adDesc">Aggregate supply and demand panel loading.</p>
+  </section>
+
+  <!-- Controls grid -->
+  <div class="controls-grid">
+
+    <!-- Phase + shock size -->
+    <div class="card">
+      <div class="card-title">Walkthrough</div>
+
+      <div class="phase-row" role="group" aria-label="Phases">
+        <div class="phase-chip" id="chip1">
+          <span class="step-num">Phase 1</span>
+          <span class="step-name">Initial equilibrium</span>
+        </div>
+        <div class="phase-chip" id="chip2">
+          <span class="step-num">Phase 2</span>
+          <span class="step-name">Price rises — real wage eroded</span>
+        </div>
+        <div class="phase-chip" id="chip3">
+          <span class="step-num">Phase 3</span>
+          <span class="step-name">Nominal wage restored — back to <i>Ȳ</i></span>
+        </div>
+      </div>
+
+      <div class="phase-strip" id="phaseStrip" aria-live="polite" aria-atomic="true">
+        <strong>Phase 1.</strong> Initial equilibrium. Adjust the price-level
+        shock below, then click <strong>Next</strong>.
+      </div>
+
+      <div class="btn-row">
+        <button class="ghost-btn"   id="backBtn"  aria-label="Previous phase">← Back</button>
+        <button class="primary-btn" id="nextBtn"  aria-label="Next phase">Next →</button>
+        <button class="ghost-btn"   id="resetBtn" aria-label="Reset to Phase 1">Reset</button>
+      </div>
+
+      <div class="card-title" id="shockLabel" style="margin-top:18px;">
+        Size of the price-level shock (<i>P₂</i> ÷ <i>P₁</i>)
+      </div>
+      <div class="slider-head">
+        <div class="value" id="shockValue">P₂ = 140  (+40%)</div>
+        <span class="slider-hint">larger shock = bigger erosion</span>
+      </div>
+      <input type="range" id="shockSlider"
+             min="110" max="180" step="5" value="140"
+             aria-labelledby="shockLabel"
+             aria-valuemin="110" aria-valuemax="180" aria-valuenow="140"/>
+      <div class="slider-ticks" aria-hidden="true">
+        <span>+10%</span><span>+25%</span><span>+40%</span><span>+55%</span><span>+80%</span>
+      </div>
+    </div>
+
+    <!-- Readouts + predict + insight -->
+    <div class="card">
+      <div class="card-title">Live values</div>
+      <div class="read-grid">
+        <div class="read-cell">
+          <div class="read-label" id="readWLabel">W (nominal wage)</div>
+          <div class="read-value" id="readW">1000</div>
+        </div>
+        <div class="read-cell">
+          <div class="read-label">P (price level)</div>
+          <div class="read-value" id="readP">100</div>
+        </div>
+        <div class="read-cell" id="readWPCell">
+          <div class="read-label"><span id="readWPLabel">W / P</span></div>
+          <div class="read-value" id="readWP">10.00<span class="read-tag eq" id="readWPTag">= MPL</span></div>
+        </div>
+        <div class="read-cell">
+          <div class="read-label" id="readMplLabel">MPL</div>
+          <div class="read-value" id="readMpl">10.00</div>
+        </div>
+      </div>
+
+      <div class="predict-box" id="predictBox" hidden>
+        <strong>Predict:</strong> when workers demand a higher nominal wage and
+        marginal cost shifts up, what happens to <strong>output</strong>?
+        <div class="predict-actions" role="group" aria-label="Output prediction">
+          <button class="predict-pill" id="predDown" aria-pressed="false">Falls below <i>Ȳ</i></button>
+          <button class="predict-pill" id="predSame" aria-pressed="false">Returns to <i>Ȳ</i></button>
+          <button class="predict-pill" id="predUp"   aria-pressed="false">Stays above <i>Ȳ</i></button>
+        </div>
+        <div class="predict-result" id="predictResult" hidden>
+          The correct answer is <strong>returns to <i>Ȳ</i></strong>. Once
+          marginal cost shifts up by the same proportion as the price level,
+          the firm's optimal quantity is back where it started — only the
+          price has changed.
+        </div>
+      </div>
+
+      <div class="card-title" style="margin-top:16px;">What's happening</div>
+      <div class="insight-body" id="insightBody" aria-live="polite" aria-atomic="true">
+        Pick a price-level shock, then step through the three phases.
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 105B — Aggregate Supply</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+// ─────────────────────────────────────────────────────────────────────────
+// Discussion-week template entry (paste into a week's LABS array):
+//   { id: 'real-wage-adjustment', name: 'Real Wage Adjustment', icon: '⚖️',
+//     desc: 'Step through how a price-level shock erodes the real wage, triggers nominal wage adjustment, and returns long-run output to the natural rate.',
+//     url: '/classes/econ105b/labs/real-wage-adjustment/?disc=1' }
+// ─────────────────────────────────────────────────────────────────────────
+const LAB_ID    = 'real-wage-adjustment';
+const LAB_LABEL = 'Real Wage Adjustment';
+
+// ── Model constants ─────────────────────────────────────────────────────
+// Labor: W₁ = MPL × P₁ = 1000. Firms hire until MPL = W/P; at the natural
+//        level of employment MPL = 10 (set by capital and labor).
+// Phase 2: short-run transition. AD rises; with sticky wages the price
+//           climbs only partway to P₂, to Pₜ = P₁ + (P₂−P₁)/2 (= AD′∩SRAS₀).
+//           Nominal wage W unchanged at 1000 → real wage W/Pₜ < 10 (eroded).
+//           Firms hire more labor, so MPL slides down to W/Pₜ (= the real
+//           wage) and output rises above Ȳ.
+// Phase 3: Workers demand W₂ = MPL × P₂ → real wage back to 10; employment,
+//           MPL, and output all return to their natural levels.
+//
+// Firm: linear inverse demand p = a − q, constant MC = c
+//   Initial:    a₀ = 14, c₀ = 6  →  q* = 4, p* = 10
+//   Shock size: d = (P₂ − P₁) / 10
+//   Phase 2:    D shifts up to p = (a₀+d) − q, MC unchanged at c₀
+//                 →  q = q* + d/2,  p = p* + d/2  (more output, higher price)
+//   Phase 3:    MC also shifts up to c₀+d
+//                 →  q = q*,        p = p* + d    (same output, higher price)
+//
+// AS/AD: LRAS vertical at Ȳ = 100; AD: P = 200 − Y, AD′: P = 200 + (P₂−P₁) − Y
+//   Phase 1 eq: (Ȳ, P₁) on LRAS
+//   Phase 2:    AD shifts to AD′; in-transition point at (Ȳ + d_macro/2, midpoint)
+//   Phase 3 eq: (Ȳ, P₂) on LRAS
+
+const P1       = 100;
+const Y_BAR    = 100;
+const MPL      = 10;
+const W1       = MPL * P1;          // 1000
+
+const A0       = 14;
+const C0       = 6;
+const Q_STAR   = (A0 - C0) / 2;     // 4
+const P_FIRM_STAR = (A0 + C0) / 2;  // 10
+const Q_MAX_FIRM = 14;
+const P_MAX_FIRM = 22;
+
+const Y_MAX    = 200;
+const P_MAX_AX = 200;
+
+// ── State ───────────────────────────────────────────────────────────────
+let _rng = null;
+let _fs  = 1;
+let phase    = 1;                   // 1 | 2 | 3
+let P2       = 140;                 // slider; controls shock magnitude
+let prediction = null;              // 'down' | 'same' | 'up' | null
+let _doneFired = false;
+
+// ── DOM ─────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const $chip1 = $('chip1'), $chip2 = $('chip2'), $chip3 = $('chip3');
+const $phaseStrip   = $('phaseStrip');
+const $backBtn      = $('backBtn');
+const $nextBtn      = $('nextBtn');
+const $resetBtn     = $('resetBtn');
+const $shockSlider  = $('shockSlider');
+const $shockValue   = $('shockValue');
+const $readW        = $('readW');
+const $readP        = $('readP');
+const $readWP       = $('readWP');
+const $readMpl      = $('readMpl');
+const $readWPCell   = $('readWPCell');
+const $readWLabel   = $('readWLabel');
+const $readWPLabel  = $('readWPLabel');
+const $readMplLabel = $('readMplLabel');
+const $predictBox   = $('predictBox');
+const $predictResult= $('predictResult');
+const $predDown     = $('predDown');
+const $predSame     = $('predSame');
+const $predUp       = $('predUp');
+const $insightBody  = $('insightBody');
+const $rwLegendBar  = $('rwLegendBar');
+const $rwLegendMpl  = $('rwLegendMpl');
+
+// ── Utilities ───────────────────────────────────────────────────────────
+function fmt0(v){ return Math.round(v).toString(); }
+function fmt2(v){ return Number(v).toFixed(2); }
+function pctChange(p){ return Math.round(((p - P1) / P1) * 100); }
+function macroDelta(){ return P2 - P1; }
+function firmDelta(){ return macroDelta() / 10; }
+// Short-run (Phase 2) price level: AD′ ∩ SRAS₀ = (Ȳ + dM/2, P₁ + dM/2).
+// The price rises only partway toward P₂ while nominal wages are sticky;
+// it completes its rise to P₂ in the long run (Phase 3).
+function transitionP(){ return P1 + macroDelta() / 2; }
+function labels(){
+  return { W:'W', WP:'W / P', MPL:'MPL', Wlabel:'W (nominal wage)',
+           Wname:'wage', Mname:'MPL', who:'workers',
+           wp_word:'real wage' };
+}
+
+// Compute live numeric state given current phase.
+function liveState(){
+  const L = labels();
+  if(phase === 1) return { W:W1, P:P1, WP:MPL, mpl:MPL, eroded:false, restored:true, L };
+  if(phase === 2){
+    const Pt = transitionP();          // price has risen only partway to P₂
+    const wp = W1 / Pt;                // eroded real wage
+    // Firms hire until MPL = W/P. The lower real wage draws in more labor,
+    // so MPL slides DOWN its (diminishing) curve to meet the real wage.
+    return { W:W1, P:Pt, WP:wp, mpl:wp, eroded:true, restored:false, L };
+  }
+  // phase 3
+  const W2 = MPL * P2;
+  return { W:W2, P:P2, WP:MPL, mpl:MPL, eroded:false, restored:true, L };
+}
+
+// ── Slider visuals ──────────────────────────────────────────────────────
+function updateSliderFill(){
+  const pct = ((P2 - 110) / (180 - 110)) * 100;
+  $shockSlider.style.setProperty('--fill', pct + '%');
+}
+
+function updateSliderLabel(){
+  $shockValue.textContent = `P₂ = ${P2}  (+${pctChange(P2)}%)`;
+}
+
+// ── Phase UI sync ───────────────────────────────────────────────────────
+function syncPhaseUI(){
+  [$chip1, $chip2, $chip3].forEach((c, i) => {
+    const p = i + 1;
+    c.setAttribute('data-active', p === phase ? 'true' : 'false');
+    c.setAttribute('data-done',   p < phase    ? 'true' : 'false');
+  });
+
+  $backBtn.disabled = (phase === 1);
+  $nextBtn.disabled = (phase === 3);
+  $shockSlider.disabled = (phase !== 1);
+
+  // Show prediction prompt only at Phase 2 (before the user goes to 3).
+  if(phase === 2){
+    $predictBox.hidden = false;
+  } else {
+    $predictBox.hidden = true;
+    $predictResult.hidden = true;
+    [$predDown, $predSame, $predUp].forEach(b => b.setAttribute('aria-pressed','false'));
+    prediction = null;
+  }
+
+  // Phase strip text (live-region announcement)
+  const L = labels();
+  let text;
+  if(phase === 1){
+    text = `<strong>Phase 1.</strong> Initial equilibrium. ` +
+      `${L.WP} = ${L.MPL} = ${fmt2(MPL)}, output ${fmt0(Y_BAR)}, ` +
+      `price ${fmt0(P1)}. Adjust the shock and click Next.`;
+  } else if(phase === 2){
+    const s = liveState();
+    text = `<strong>Phase 2 — eroded.</strong> Price level rose partway to ${fmt0(s.P)} ` +
+      `(heading toward P₂ = ${fmt0(P2)}). ` +
+      `Nominal ${L.Wname} is still ${fmt0(W1)}, so the ${L.wp_word} ` +
+      `${L.WP} fell to ${fmt2(s.WP)}. Firms hire more labor, pulling ${L.MPL} ` +
+      `down to ${fmt2(s.mpl)} to match — output rises above ${fmt0(Y_BAR)}. ` +
+      `Predict what happens to output next, then click Next.`;
+  } else {
+    const s = liveState();
+    text = `<strong>Phase 3 — restored.</strong> ${L.who.charAt(0).toUpperCase()+L.who.slice(1)} ` +
+      `demanded ${L.W} = ${fmt0(s.W)} so ${L.WP} returned to ${L.MPL} = ` +
+      `${fmt2(MPL)}. Output is back at ${fmt0(Y_BAR)}; price is ${fmt0(P2)}.`;
+  }
+  $phaseStrip.innerHTML = text;
+}
+
+// ── Live numeric readouts ───────────────────────────────────────────────
+function syncReadouts(){
+  const s = liveState();
+  const L = s.L;
+
+  $readWLabel.textContent  = L.Wlabel;
+  $readWPLabel.textContent = L.WP;
+  $readMplLabel.textContent= L.Mname;
+
+  $readW.textContent   = fmt0(s.W);
+  $readP.textContent   = fmt0(s.P);
+
+  // MPL falls to meet the real wage in Phase 2 (firms hire more labor).
+  $readMpl.innerHTML = s.eroded
+    ? `${fmt2(s.mpl)}<span class="read-tag lo">&darr; hire more</span>`
+    : fmt2(s.mpl);
+
+  // Firms always set MPL = W/P, so the real wage and MPL are equal in every
+  // phase. What the tag flags is whether the real wage is at its natural
+  // level (${fmt2(MPL)}) or eroded below it.
+  $readWPCell.classList.remove('status-good','status-bad');
+  let tag = '';
+  if(s.eroded){
+    $readWPCell.classList.add('status-bad');
+    tag = `<span class="read-tag lo">eroded</span>`;
+  } else {
+    $readWPCell.classList.add('status-good');
+    tag = `<span class="read-tag eq">= ${L.MPL}</span>`;
+  }
+  $readWP.innerHTML = `${fmt2(s.WP)}${tag}`;
+
+  // Real-wage panel legend label
+  $rwLegendBar.textContent = L.WP;
+  $rwLegendMpl.textContent = `Natural ${L.MPL} = ${fmt2(MPL)}`;
+}
+
+// ── Insight text ────────────────────────────────────────────────────────
+function syncInsight(){
+  const L = labels();
+  const s = liveState();
+  let html;
+  if(phase === 1){
+    html = `<p>Workers care about the <strong>${L.wp_word}</strong>
+      ${L.WP}, not the nominal ${L.Wname}. Firms hire labor until
+      <strong>${L.MPL} = ${L.WP}</strong>. At the natural level of employment
+      that pins ${L.MPL} at <strong>${fmt2(MPL)}</strong> — the level set by
+      the economy's capital and labor.</p>
+      <p>Right now the economy sits at <i>Ȳ</i> = ${fmt0(Y_BAR)} and
+      <i>P₁</i> = ${fmt0(P1)} with ${L.W} = ${fmt0(W1)}, so
+      ${L.WP} = ${L.MPL} = ${fmt2(MPL)}.</p>`;
+  } else if(phase === 2){
+    html = `<p>Aggregate demand has risen. In the short run the price level
+      climbs only partway — from <i>P₁</i> = ${fmt0(P1)} toward
+      <i>P₂</i> = ${fmt0(P2)}, reaching ${fmt0(s.P)} — but nominal ${L.Wname}
+      <strong>${L.W} = ${fmt0(W1)} hasn't adjusted yet</strong>. So the
+      ${L.wp_word} is <strong>eroded</strong>:
+      ${L.WP} = ${fmt0(W1)} / ${fmt0(s.P)} = ${fmt2(s.WP)}, down from
+      ${fmt2(MPL)}.</p>
+      <p>The cheaper labor makes firms <strong>hire more</strong>, so output
+      rises above <i>Ȳ</i>. As employment climbs, diminishing returns pull
+      ${L.MPL} <strong>down its curve to ${fmt2(s.mpl)}</strong> — right where
+      it again equals the lower ${L.wp_word}.</p>`;
+  } else {
+    const W2 = MPL * P2;
+    html = `<p>${L.who.charAt(0).toUpperCase()+L.who.slice(1)} demand a higher
+      nominal ${L.Wname} — <strong>exactly enough that ${L.WP} returns to
+      ${fmt2(MPL)}</strong>. With ${L.W} = ${L.MPL} × <i>P₂</i> = ${fmt0(MPL)} ×
+      ${fmt0(P2)} = ${fmt0(W2)}, the ${L.wp_word} is back to
+      ${fmt2(MPL)}.</p>
+      <p>Employment falls back to its natural level, so ${L.MPL} rises back to
+      ${fmt2(MPL)} and output returns to <i>Ȳ</i> = ${fmt0(Y_BAR)}. Marginal
+      cost has shifted up by the same proportion, so the firm's profit-max
+      point is back at <i>q*</i> = ${fmt0(Q_STAR)} at a <em>higher</em> price
+      <i>p</i> = ${fmt0(P_FIRM_STAR + firmDelta())} — only the price level has
+      risen.</p>`;
+  }
+  $insightBody.innerHTML = html;
+}
+
+// ── Canvas helpers ──────────────────────────────────────────────────────
+function setupCanvas(canvas, wrap){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  const W = Math.round(rect.width * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+function makeCoords(W, H, dpr, xMax, yMax, padCfg){
+  const pad = padCfg || { l:52, r:16, t:16, b:48 };
+  const p = { l:pad.l*dpr, r:pad.r*dpr, t:pad.t*dpr, b:pad.b*dpr };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  return {
+    xC: x => p.l + (x / xMax) * PW,
+    yC: y => H - p.b - (y / yMax) * PH,
+    p, PW, PH,
+  };
+}
+function clipPlot(ctx, co, W, H){
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(co.p.l, co.p.t, W - co.p.l - co.p.r, H - co.p.t - co.p.b);
+  ctx.clip();
+}
+function unclip(ctx){ ctx.restore(); }
+function strokeLine(ctx, x1, y1, x2, y2, color, width, dpr, dash){
+  ctx.save();
+  ctx.strokeStyle = color; ctx.lineWidth = width * dpr;
+  ctx.setLineDash((dash || []).map(d => d * dpr));
+  ctx.beginPath();
+  ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.restore();
+}
+function drawDot(ctx, x, y, color, r, dpr){
+  ctx.save();
+  ctx.fillStyle = color; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5*dpr;
+  ctx.beginPath(); ctx.arc(x, y, r*dpr, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+function drawLabel(ctx, x, y, text, color, dpr, size, opts){
+  size = size || 11;
+  opts = opts || {};
+  ctx.save();
+  ctx.font = `${opts.weight || 800} ${Math.round(size * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = opts.align || 'left';
+  ctx.textBaseline = opts.baseline || 'middle';
+  if(opts.halo !== false){
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3.5*dpr;
+    ctx.strokeText(text, x, y);
+  }
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+// ── REAL WAGE PANEL ─────────────────────────────────────────────────────
+// Three side-by-side bars: Phase 1, Phase 2, Phase 3.
+// MPL horizontal line drawn through all three. Active phase highlighted.
+function drawRealWage(){
+  const canvas = $('rwCanvas');
+  const wrap = canvas.parentNode;
+  const s_ = setupCanvas(canvas, wrap);
+  if(!s_) return;
+  const { ctx, dpr, W, H } = s_;
+  ctx.clearRect(0, 0, W, H);
+
+  const L = labels();
+  const yMax = 14;                  // generous headroom over MPL=10
+  const co = makeCoords(W, H, dpr, 3, yMax, { l:54, r:16, t:34, b:54 });
+
+  // Background
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillRect(co.p.l, co.p.t, co.PW, co.PH);
+
+  // Y gridlines + tick labels
+  ctx.font = `400 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.fillStyle = '#596878';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for(let y = 0; y <= yMax; y += 2){
+    const py = co.yC(y);
+    ctx.strokeStyle = '#e7dfd2'; ctx.lineWidth = 1 * dpr;
+    ctx.beginPath(); ctx.moveTo(co.p.l, py); ctx.lineTo(W - co.p.r, py); ctx.stroke();
+    ctx.fillStyle = '#596878';
+    ctx.fillText(String(y), co.p.l - 5*dpr, py);
+  }
+
+  // Bottom & left axis lines
+  ctx.strokeStyle = '#374151'; ctx.lineWidth = 1.2 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(co.p.l, co.p.t); ctx.lineTo(co.p.l, H - co.p.b);
+  ctx.lineTo(W - co.p.r, H - co.p.b);
+  ctx.stroke();
+
+  // Y axis label
+  ctx.fillStyle = '#374151';
+  ctx.save();
+  ctx.translate(12*dpr, co.p.t + co.PH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(`${L.wp_word.charAt(0).toUpperCase()+L.wp_word.slice(1)} (${L.WP})`, 0, 0);
+  ctx.restore();
+
+  // Three bar positions across x ∈ [0, 3]
+  const phases = [
+    { idx:1, label:'Phase 1',  name:'Initial',  wp: MPL,       color:'#2f5d7c' },
+    { idx:2, label:'Phase 2',  name:'Eroded',   wp: W1/transitionP(), color:'#b42318' },
+    { idx:3, label:'Phase 3',  name:'Restored', wp: MPL,       color:'#155c38' },
+  ];
+
+  const barHalfWidth = 0.30;        // bar half-width in x-units (out of 3)
+
+  // Clip for the bars
+  clipPlot(ctx, co, W, H);
+
+  phases.forEach((ph, i) => {
+    const cx = 0.5 + i;             // bar centers at 0.5, 1.5, 2.5
+    const x0 = co.xC(cx - barHalfWidth);
+    const x1 = co.xC(cx + barHalfWidth);
+    const y0 = co.yC(0);
+    const y1 = co.yC(ph.wp);
+    const isActive = ph.idx === phase;
+    const isDone   = ph.idx <  phase;
+    const isFuture = ph.idx >  phase;
+
+    // Bar fill
+    ctx.save();
+    ctx.fillStyle = ph.color;
+    ctx.globalAlpha = isActive ? 0.85 : isFuture ? 0.18 : 0.55;
+    ctx.fillRect(x0, y1, x1 - x0, y0 - y1);
+    ctx.restore();
+
+    // Bar border
+    ctx.save();
+    ctx.strokeStyle = ph.color;
+    ctx.lineWidth = (isActive ? 2.8 : 1.5) * dpr;
+    if(isFuture){ ctx.setLineDash([4*dpr, 4*dpr]); }
+    ctx.strokeRect(x0, y1, x1 - x0, y0 - y1);
+    ctx.restore();
+
+    // Phase 2: MPL slides DOWN from its natural level to meet the eroded
+    // real wage as firms hire more labor. Arrow drawn just right of the bar,
+    // plus a solid MPL marker sitting on the bar top (MPL now = W/P).
+    if(ph.idx === 2 && phase === 2 && ph.wp < MPL){
+      const xMid = co.xC(cx + barHalfWidth + 0.12);
+      const yMpl = co.yC(MPL);          // natural MPL (10)
+      const yTop = co.yC(ph.wp);        // new, lower MPL = real wage
+      strokeLine(ctx, xMid, yMpl, xMid, yTop, '#155c38', 2, dpr, [3, 3]);
+      // Single arrowhead at the bottom — MPL falling to the lower level
+      const ah = 4.5 * dpr;
+      ctx.save();
+      ctx.fillStyle = '#155c38';
+      ctx.beginPath();
+      ctx.moveTo(xMid, yTop);
+      ctx.lineTo(xMid - ah, yTop - ah);
+      ctx.lineTo(xMid + ah, yTop - ah);
+      ctx.closePath(); ctx.fill();
+      ctx.restore();
+      // Solid MPL marker on the bar top: MPL now equals the real wage
+      strokeLine(ctx, co.xC(cx - barHalfWidth - 0.06), yTop,
+        co.xC(cx + barHalfWidth + 0.06), yTop, '#155c38', 2.8, dpr);
+    }
+  });
+
+  // Natural MPL line over the plot (long-run level, pinned by K and L)
+  strokeLine(ctx, co.xC(0), co.yC(MPL), co.xC(3), co.yC(MPL),
+    '#155c38', 2.4, dpr, [6, 5]);
+
+  unclip(ctx);
+
+  // Bar value labels (outside clip)
+  ctx.fillStyle = '#1f2937';
+  phases.forEach((ph, i) => {
+    const cx = 0.5 + i;
+    const isActive = ph.idx === phase;
+    const tx = co.xC(cx);
+    const ty = co.yC(ph.wp) - 8*dpr;
+    drawLabel(ctx, tx, ty, fmt2(ph.wp),
+      isActive ? ph.color : '#374151', dpr, isActive ? 13 : 11,
+      { align:'center', baseline:'middle' });
+
+    // Phase tick label & status word at bottom
+    drawLabel(ctx, tx, H - co.p.b + 16*dpr,
+      ph.label, isActive ? ph.color : '#596878', dpr, 10,
+      { align:'center', baseline:'middle', weight: isActive ? 800 : 600 });
+    drawLabel(ctx, tx, H - co.p.b + 30*dpr,
+      ph.name, isActive ? ph.color : '#596878', dpr, 10,
+      { align:'center', baseline:'middle', weight: 600 });
+  });
+
+  // Natural MPL label on the line
+  drawLabel(ctx, co.xC(3) - 4*dpr, co.yC(MPL) - 10*dpr,
+    `Natural ${L.MPL} = ${fmt2(MPL)}`, '#155c38', dpr, 11,
+    { align:'right', baseline:'middle' });
+
+  // "MPL falls" annotation (Phase 2 only)
+  if(phase === 2){
+    const cx = 1.5;
+    const xMid = co.xC(cx + barHalfWidth + 0.34);
+    const yMid = (co.yC(MPL) + co.yC(W1/transitionP())) / 2;
+    drawLabel(ctx, xMid, yMid,
+      'MPL falls', '#155c38', dpr, 11,
+      { align:'left', baseline:'middle' });
+  }
+
+  // Status word in top-right
+  let status, statusColor;
+  if(phase === 1){ status = 'At natural rate'; statusColor = '#2f5d7c'; }
+  else if(phase === 2){ status = 'MPL falls to match W/P'; statusColor = '#b42318'; }
+  else { status = 'Back to natural rate'; statusColor = '#155c38'; }
+  drawLabel(ctx, W - co.p.r - 4*dpr, co.p.t - 18*dpr,
+    status, statusColor, dpr, 11,
+    { align:'right', baseline:'middle' });
+
+  updateRwDesc();
+}
+
+function updateRwDesc(){
+  const L = labels();
+  const s = liveState();
+  let txt;
+  if(phase === 1){
+    txt = `Real wage panel. Phase 1, initial equilibrium. The Phase 1 bar ` +
+      `reaches the dashed natural ${L.MPL} line at ${fmt2(MPL)}. The ` +
+      `Phase 2 and Phase 3 bars are shown faded for context.`;
+  } else if(phase === 2){
+    txt = `Real wage panel. Phase 2, eroded. The dashed line marks the ` +
+      `natural ${L.MPL} at ${fmt2(MPL)}. The Phase 2 bar, highlighted, ` +
+      `falls to ${fmt2(s.WP)} — the eroded real wage. A green arrow shows ` +
+      `${L.MPL} sliding down to ${fmt2(s.mpl)} to meet it as firms hire ` +
+      `more labor, so output rises above the natural rate.`;
+  } else {
+    txt = `Real wage panel. Phase 3, restored. Employment returns to its ` +
+      `natural level, so ${L.MPL} rises back to ${fmt2(MPL)} and the Phase 3 ` +
+      `bar, highlighted in green, returns to the dashed natural ${L.MPL} ` +
+      `line. The Phase 2 erosion is shown faded for comparison.`;
+  }
+  $('rwDesc').textContent = txt;
+}
+
+// ── FIRM PANEL ──────────────────────────────────────────────────────────
+function drawFirm(){
+  const canvas = $('firmCanvas');
+  const wrap = canvas.parentNode;
+  const s_ = setupCanvas(canvas, wrap);
+  if(!s_) return;
+  const { ctx, dpr, W, H } = s_;
+  ctx.clearRect(0, 0, W, H);
+
+  const co = makeCoords(W, H, dpr, Q_MAX_FIRM, P_MAX_FIRM,
+    { l:46, r:14, t:18, b:42 });
+
+  // Background
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillRect(co.p.l, co.p.t, co.PW, co.PH);
+
+  // Gridlines + tick labels
+  ctx.fillStyle = '#596878';
+  ctx.font = `400 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for(let pr = 0; pr <= P_MAX_FIRM; pr += 4){
+    const py = co.yC(pr);
+    ctx.strokeStyle = '#e7dfd2'; ctx.lineWidth = 1 * dpr;
+    ctx.beginPath(); ctx.moveTo(co.p.l, py); ctx.lineTo(W - co.p.r, py); ctx.stroke();
+    ctx.fillStyle = '#596878';
+    ctx.fillText(String(pr), co.p.l - 5*dpr, py);
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for(let q = 0; q <= Q_MAX_FIRM; q += 2){
+    const px = co.xC(q);
+    ctx.strokeStyle = '#e7dfd2'; ctx.lineWidth = 1 * dpr;
+    ctx.beginPath(); ctx.moveTo(px, co.p.t); ctx.lineTo(px, H - co.p.b); ctx.stroke();
+    ctx.fillStyle = '#596878';
+    ctx.fillText(String(q), px, H - co.p.b + 5*dpr);
+  }
+
+  // Axis lines
+  ctx.strokeStyle = '#374151'; ctx.lineWidth = 1.2 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(co.p.l, co.p.t); ctx.lineTo(co.p.l, H - co.p.b);
+  ctx.lineTo(W - co.p.r, H - co.p.b);
+  ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle = '#374151';
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('Quantity q', co.p.l + co.PW/2, H - 8*dpr);
+  ctx.save();
+  ctx.translate(11*dpr, co.p.t + co.PH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('Price p', 0, 0);
+  ctx.restore();
+
+  // Clip for curves
+  clipPlot(ctx, co, W, H);
+
+  const d = firmDelta();
+  const COL_D    = '#2f5d7c';
+  const COL_D0   = '#7aa3bf';
+  const COL_MR   = '#7a3aa7';
+  const COL_MR0  = '#b48cd1';
+  const COL_MC   = '#8c4800';
+  const COL_MCp  = '#b42318';
+
+  // Initial D and MR — always show. Fade when a shock is applied.
+  const hasShock = phase >= 2;
+  // D₀: p = A0 − q, from (0, A0) to (A0, 0)
+  strokeLine(ctx, co.xC(0), co.yC(A0), co.xC(A0), co.yC(0),
+    hasShock ? COL_D0 : COL_D,
+    hasShock ? 1.6 : 2.4, dpr,
+    hasShock ? [6, 4] : null);
+  // MR₀: p = A0 − 2q, from (0, A0) to (A0/2, 0)
+  strokeLine(ctx, co.xC(0), co.yC(A0), co.xC(A0/2), co.yC(0),
+    hasShock ? COL_MR0 : COL_MR,
+    hasShock ? 1.4 : 2.0, dpr,
+    hasShock ? [3, 4] : [4, 4]);
+
+  // Initial MC₀ horizontal
+  strokeLine(ctx, co.xC(0), co.yC(C0), co.xC(Q_MAX_FIRM), co.yC(C0),
+    COL_MC, 2.2, dpr, [3, 4]);
+
+  // Shocked curves (Phase 2 and 3) — endpoints unclipped; rect clip handles
+  // off-canvas portions so the slope stays exactly −1 (D′) / −2 (MR′).
+  if(hasShock){
+    const a1 = A0 + d;
+    // D′: p = a1 − q, true endpoints (0, a1) and (a1, 0)
+    strokeLine(ctx, co.xC(0), co.yC(a1),
+      co.xC(a1), co.yC(0),
+      COL_D, 2.6, dpr);
+    // MR′: p = a1 − 2q, true endpoints (0, a1) and (a1/2, 0)
+    strokeLine(ctx, co.xC(0), co.yC(a1),
+      co.xC(a1/2), co.yC(0),
+      COL_MR, 2.0, dpr, [4, 4]);
+  }
+
+  // Shocked MC' (Phase 3 only)
+  if(phase >= 3){
+    const c1 = C0 + d;
+    strokeLine(ctx, co.xC(0), co.yC(c1), co.xC(Q_MAX_FIRM), co.yC(c1),
+      COL_MCp, 2.4, dpr, [3, 4]);
+  }
+
+  // Equilibrium dots
+  // Phase 1 (initial) — always shown.
+  const pxA = co.xC(Q_STAR), pyA = co.yC(P_FIRM_STAR);
+  strokeLine(ctx, pxA, pyA, pxA, co.yC(0), '#374151', 1, dpr, [3,3]);
+  strokeLine(ctx, pxA, pyA, co.xC(0), pyA, '#374151', 1, dpr, [3,3]);
+  drawDot(ctx, pxA, pyA, '#1f2937', 5.5, dpr);
+
+  if(phase === 2){
+    // Phase 2 firm point: q = q* + d/2, p = p* + d/2
+    const qB = Q_STAR + d/2, pB = P_FIRM_STAR + d/2;
+    const pxB = co.xC(qB), pyB = co.yC(pB);
+    strokeLine(ctx, pxB, pyB, pxB, co.yC(0), '#b42318', 1, dpr, [3,3]);
+    strokeLine(ctx, pxB, pyB, co.xC(0), pyB, '#b42318', 1, dpr, [3,3]);
+    drawDot(ctx, pxB, pyB, '#b42318', 6.5, dpr);
+  }
+  if(phase >= 3){
+    // Phase 3 firm point: q = q*, p = p* + d
+    const qC = Q_STAR, pC = P_FIRM_STAR + d;
+    const pxC = co.xC(qC), pyC = co.yC(pC);
+    strokeLine(ctx, pxC, pyC, pxC, co.yC(0), '#155c38', 1, dpr, [3,3]);
+    strokeLine(ctx, pxC, pyC, co.xC(0), pyC, '#155c38', 1, dpr, [3,3]);
+    drawDot(ctx, pxC, pyC, '#155c38', 6.5, dpr);
+  }
+
+  unclip(ctx);
+
+  // Dot labels A / B / C
+  drawLabel(ctx, co.xC(Q_STAR) + 8*dpr, co.yC(P_FIRM_STAR) - 9*dpr,
+    'A', '#1f2937', dpr, 12, { align:'left', baseline:'middle' });
+  if(phase === 2){
+    const qB = Q_STAR + d/2, pB = P_FIRM_STAR + d/2;
+    drawLabel(ctx, co.xC(qB) + 8*dpr, co.yC(pB) - 9*dpr,
+      'B', '#b42318', dpr, 12, { align:'left', baseline:'middle' });
+  }
+  if(phase >= 3){
+    const qC = Q_STAR, pC = P_FIRM_STAR + d;
+    drawLabel(ctx, co.xC(qC) + 8*dpr, co.yC(pC) - 9*dpr,
+      'C', '#155c38', dpr, 12, { align:'left', baseline:'middle' });
+  }
+
+  // Curve labels at right edge
+  drawLabel(ctx, co.xC(A0) - 6*dpr, co.yC(0) + 10*dpr,
+    'D', hasShock ? COL_D0 : COL_D,
+    dpr, 11, { align:'right', baseline:'middle' });
+  if(hasShock){
+    const a1 = A0 + d;
+    // Label sits on the visible portion of D′ — find where it crosses the
+    // right edge of the plot (q = Q_MAX_FIRM) and label just left of that.
+    const labQ = Math.min(Q_MAX_FIRM - 0.4, a1 - 0.4);
+    const labP = a1 - labQ;
+    drawLabel(ctx, co.xC(labQ), co.yC(labP) - 10*dpr,
+      'D′', COL_D, dpr, 11, { align:'right', baseline:'middle' });
+  }
+  drawLabel(ctx, co.xC(Q_MAX_FIRM) - 4*dpr, co.yC(C0) - 8*dpr,
+    'MC', COL_MC, dpr, 11, { align:'right', baseline:'middle' });
+  if(phase >= 3){
+    drawLabel(ctx, co.xC(Q_MAX_FIRM) - 4*dpr, co.yC(C0 + d) - 8*dpr,
+      "MC′", COL_MCp, dpr, 11, { align:'right', baseline:'middle' });
+  }
+
+  updateFirmDesc();
+}
+
+function updateFirmDesc(){
+  const d = firmDelta();
+  let txt = `Representative firm panel. Demand D, marginal revenue MR, and ` +
+    `marginal cost MC. Initial equilibrium at point A: q = ${fmt0(Q_STAR)}, ` +
+    `p = ${fmt0(P_FIRM_STAR)}.`;
+  if(phase === 2){
+    const qB = Q_STAR + d/2, pB = P_FIRM_STAR + d/2;
+    txt += ` Phase 2: demand has shifted up to D′ but MC is unchanged, so ` +
+      `the firm produces at point B with q = ${fmt2(qB)}, p = ${fmt2(pB)} — ` +
+      `more output than Ȳ. The new demand and marginal-revenue curves are ` +
+      `drawn in solid blue and purple; the originals are faded and dashed.`;
+  } else if(phase >= 3){
+    const pC = P_FIRM_STAR + d;
+    txt += ` Phase 3: marginal cost has shifted up to MC′ (drawn in red) by ` +
+      `the same amount the demand shifted, so the firm returns to ` +
+      `q = ${fmt0(Q_STAR)} at a higher price p = ${fmt2(pC)} — point C. ` +
+      `Output is back where it started; only the price has risen.`;
+  }
+  $('firmDesc').textContent = txt;
+}
+
+// ── AS/AD PANEL ─────────────────────────────────────────────────────────
+function drawAD(){
+  const canvas = $('adCanvas');
+  const wrap = canvas.parentNode;
+  const s_ = setupCanvas(canvas, wrap);
+  if(!s_) return;
+  const { ctx, dpr, W, H } = s_;
+  ctx.clearRect(0, 0, W, H);
+
+  const co = makeCoords(W, H, dpr, Y_MAX, P_MAX_AX,
+    { l:54, r:18, t:18, b:44 });
+
+  // Background
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillRect(co.p.l, co.p.t, co.PW, co.PH);
+
+  // Gridlines + ticks
+  ctx.fillStyle = '#596878';
+  ctx.font = `400 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for(let y = 0; y <= P_MAX_AX; y += 20){
+    const py = co.yC(y);
+    ctx.strokeStyle = '#e7dfd2'; ctx.lineWidth = 1 * dpr;
+    ctx.beginPath(); ctx.moveTo(co.p.l, py); ctx.lineTo(W - co.p.r, py); ctx.stroke();
+    ctx.fillStyle = '#596878';
+    ctx.fillText(String(y), co.p.l - 5*dpr, py);
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for(let x = 0; x <= Y_MAX; x += 20){
+    const px = co.xC(x);
+    ctx.strokeStyle = '#e7dfd2'; ctx.lineWidth = 1 * dpr;
+    ctx.beginPath(); ctx.moveTo(px, co.p.t); ctx.lineTo(px, H - co.p.b); ctx.stroke();
+    ctx.fillStyle = '#596878';
+    ctx.fillText(String(x), px, H - co.p.b + 5*dpr);
+  }
+
+  // Axis lines
+  ctx.strokeStyle = '#374151'; ctx.lineWidth = 1.2 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(co.p.l, co.p.t); ctx.lineTo(co.p.l, H - co.p.b);
+  ctx.lineTo(W - co.p.r, H - co.p.b);
+  ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle = '#374151';
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText('Output Y', co.p.l + co.PW/2, H - 8*dpr);
+  ctx.save();
+  ctx.translate(13*dpr, co.p.t + co.PH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('Price level P', 0, 0);
+  ctx.restore();
+
+  clipPlot(ctx, co, W, H);
+
+  const dM = macroDelta();
+  const hasShock = phase >= 2;
+  // Short-run AS (sticky-wage): SRAS₀ through (Ȳ, P₁) with slope +1
+  // (P = Y). SRAS shifts up by dM in Phase 3 to SRAS′ (P = Y + dM).
+  // With these slopes:
+  //   AD′ ∩ SRAS₀ = (Ȳ + dM/2, P₁ + dM/2) — Phase 2 transition point B
+  //   AD′ ∩ SRAS′ = (Ȳ, P₂)               — Phase 3 long-run point C
+
+  // LRAS — vertical at Y_BAR
+  strokeLine(ctx, co.xC(Y_BAR), co.yC(0), co.xC(Y_BAR), co.yC(P_MAX_AX),
+    '#374151', 2.0, dpr, [6, 5]);
+
+  // SRAS₀: P = Y, true endpoints — rect clip handles off-canvas portions
+  strokeLine(ctx, co.xC(0), co.yC(0),
+    co.xC(P_MAX_AX), co.yC(P_MAX_AX),
+    phase >= 3 ? '#a3c4a8' : '#155c38',
+    phase >= 3 ? 1.8 : 2.4, dpr,
+    phase >= 3 ? [6, 4] : null);
+
+  // SRAS′: P = Y + dM, shown in Phase 3
+  if(phase >= 3 && dM > 0){
+    strokeLine(ctx, co.xC(0), co.yC(dM),
+      co.xC(P_MAX_AX - dM), co.yC(P_MAX_AX),
+      '#155c38', 2.4, dpr);
+  }
+
+  // AD₀: P = 200 − Y, true endpoints (0, 200) and (200, 0)
+  strokeLine(ctx, co.xC(0), co.yC(P_MAX_AX),
+    co.xC(Y_MAX), co.yC(0),
+    hasShock ? '#7aa3bf' : '#2f5d7c',
+    hasShock ? 1.8 : 2.6, dpr,
+    hasShock ? [6, 4] : null);
+
+  // AD′: P = (200 + dM) − Y, true endpoints (0, 200+dM) and (200+dM, 0).
+  // Endpoints are intentionally unclipped — the rect clip below the
+  // strokeLine call cuts off-canvas pixels but preserves the slope of −1.
+  if(hasShock){
+    strokeLine(ctx, co.xC(0), co.yC(P_MAX_AX + dM),
+      co.xC(Y_MAX + dM), co.yC(0),
+      '#2f5d7c', 2.6, dpr);
+  }
+
+  // Equilibrium dots
+  // Phase 1 (A): always drawn
+  const pxA = co.xC(Y_BAR), pyA = co.yC(P1);
+  strokeLine(ctx, pxA, pyA, pxA, co.yC(0), '#374151', 1, dpr, [3, 3]);
+  strokeLine(ctx, pxA, pyA, co.xC(0), pyA, '#374151', 1, dpr, [3, 3]);
+  drawDot(ctx, pxA, pyA, '#1f2937', 5.5, dpr);
+
+  // Phase 2 transition: Y temporarily above Y_BAR, P partway up
+  if(phase === 2){
+    const yT = Y_BAR + dM/2;
+    const pT = P1 + dM/2;
+    const pxT = co.xC(yT), pyT = co.yC(pT);
+    strokeLine(ctx, pxT, pyT, pxT, co.yC(0), '#b42318', 1, dpr, [3, 3]);
+    strokeLine(ctx, pxT, pyT, co.xC(0), pyT, '#b42318', 1, dpr, [3, 3]);
+    drawDot(ctx, pxT, pyT, '#b42318', 6.5, dpr);
+  }
+
+  // Phase 3 (C): long-run eq at (Y_BAR, P2)
+  if(phase >= 3){
+    const pxC = co.xC(Y_BAR), pyC = co.yC(P2);
+    strokeLine(ctx, pxC, pyC, co.xC(0), pyC, '#155c38', 1, dpr, [3, 3]);
+    drawDot(ctx, pxC, pyC, '#155c38', 6.5, dpr);
+  }
+
+  unclip(ctx);
+
+  // Dot labels (outside clip)
+  drawLabel(ctx, pxA + 9*dpr, pyA + 12*dpr,
+    'A', '#1f2937', dpr, 12, { align:'left', baseline:'middle' });
+  if(phase === 2){
+    const yT = Y_BAR + dM/2;
+    const pT = P1 + dM/2;
+    drawLabel(ctx, co.xC(yT) + 9*dpr, co.yC(pT) - 10*dpr,
+      'B (transition)', '#b42318', dpr, 11, { align:'left', baseline:'middle' });
+  }
+  if(phase >= 3){
+    drawLabel(ctx, co.xC(Y_BAR) + 9*dpr, co.yC(P2) - 10*dpr,
+      'C', '#155c38', dpr, 12, { align:'left', baseline:'middle' });
+  }
+
+  // Curve labels — anchored on the actually-visible portion of each curve.
+  // AD₀ at right axis where P = 200 − Y_MAX_VIS: at q≈Y_MAX, P≈0 (low-right).
+  drawLabel(ctx, co.xC(Y_MAX*0.94), co.yC(P_MAX_AX*0.04),
+    'AD', hasShock ? '#7aa3bf' : '#2f5d7c', dpr, 11,
+    { align:'right', baseline:'top' });
+  if(hasShock){
+    // AD′ exits the visible plot at Y = Y_MAX where P = (200+dM) − Y_MAX = dM.
+    // Place the label just below that exit point.
+    drawLabel(ctx, co.xC(Y_MAX*0.94), co.yC(Math.max(8, dM - 4)),
+      'AD′', '#2f5d7c', dpr, 11, { align:'right', baseline:'top' });
+  }
+  drawLabel(ctx, co.xC(Y_BAR) + 6*dpr, co.yC(P_MAX_AX*0.95),
+    'LRAS (Ȳ)', '#374151', dpr, 11, { align:'left', baseline:'top' });
+
+  // SRAS₀ label — line is P = Y; at Y = 60 it's at P = 60. Label just above.
+  drawLabel(ctx, co.xC(60), co.yC(60) - 8*dpr,
+    'SRAS', phase >= 3 ? '#a3c4a8' : '#155c38', dpr, 11,
+    { align:'left', baseline:'middle' });
+  // SRAS′ label (Phase 3): line is P = Y + dM; at Y = 60 it's at P = 60 + dM.
+  if(phase >= 3 && dM > 0){
+    drawLabel(ctx, co.xC(60), co.yC(60 + dM) - 8*dpr,
+      'SRAS′', '#155c38', dpr, 11, { align:'left', baseline:'middle' });
+  }
+
+  // Axis ticks for Y_BAR / P1 / P2
+  drawLabel(ctx, co.xC(Y_BAR), H - co.p.b + 18*dpr,
+    'Ȳ', '#1f2937', dpr, 11, { align:'center', baseline:'middle' });
+  drawLabel(ctx, co.p.l - 24*dpr, co.yC(P1),
+    'P₁', '#1f2937', dpr, 11, { align:'right', baseline:'middle' });
+  if(phase >= 3 && Math.abs(P2 - P1) > 6){
+    drawLabel(ctx, co.p.l - 24*dpr, co.yC(P2),
+      'P₂', '#155c38', dpr, 11, { align:'right', baseline:'middle' });
+  }
+
+  updateADDesc();
+}
+
+function updateADDesc(){
+  const dM = macroDelta();
+  let txt = `Aggregate supply and demand panel. LRAS is vertical at Ȳ = ` +
+    `${fmt0(Y_BAR)}. Short-run aggregate supply SRAS slopes up through ` +
+    `(Ȳ, P₁). Aggregate demand AD slopes down. Phase 1 equilibrium at ` +
+    `point A — AD, SRAS, and LRAS all meet at output Ȳ = ${fmt0(Y_BAR)} ` +
+    `and price level ${fmt0(P1)}.`;
+  if(phase === 2){
+    const yT = Y_BAR + dM/2, pT = P1 + dM/2;
+    txt += ` Phase 2: AD has shifted up to AD′. Because nominal wages ` +
+      `haven't adjusted, SRAS hasn't moved. AD′ now meets SRAS at the ` +
+      `short-run point B, with output ${fmt0(yT)} (above Ȳ) and price ` +
+      `level ${fmt0(pT)} — drawn in red as off the long-run AS.`;
+  } else if(phase >= 3){
+    txt += ` Phase 3: nominal wages have risen, shifting SRAS up to SRAS′. ` +
+      `AD′ and SRAS′ now meet on the LRAS at point C — output back at ` +
+      `Ȳ = ${fmt0(Y_BAR)}, price level risen to P₂ = ${fmt0(P2)}. ` +
+      `Output is unchanged; only the price level moved.`;
+  }
+  $('adDesc').textContent = txt;
+}
+
+// ── Redraw orchestration ────────────────────────────────────────────────
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  drawRealWage();
+  drawFirm();
+  drawAD();
+}
+
+function recompute(){
+  syncPhaseUI();
+  syncReadouts();
+  syncInsight();
+  redraw();
+}
+
+// ── Session tracking (single-phase / exploration lab) ───────────────────
+function maybeFireDone(){
+  if(_doneFired) return;
+  // Lab is considered "complete" when the user reaches Phase 3 with a
+  // prediction recorded. We treat it as a 1-question lab: the prediction.
+  if(phase !== 3 || prediction === null) return;
+  _doneFired = true;
+
+  const qText = 'When workers demand a higher nominal wage and marginal cost '
+              + 'shifts up, what happens to output?';
+  const answerWord = prediction === 'down' ? 'Falls below Ȳ'
+                  : prediction === 'up'   ? 'Stays above Ȳ'
+                  : 'Returns to Ȳ';
+  const isCorrect = prediction === 'same';
+
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(LAB_ID, 0, qText,
+      answerWord, isCorrect, answerWord, isCorrect);
+  }
+  if(window.Session && Session.recordLabDone){
+    const score = isCorrect ? 1 : 0;
+    Session.recordLabDone(LAB_ID, LAB_LABEL, score, score, 1);
+  }
+}
+
+// ── Event wiring ────────────────────────────────────────────────────────
+$nextBtn.addEventListener('click', () => {
+  if(phase < 3){ phase += 1; recompute(); maybeFireDone(); }
+});
+$backBtn.addEventListener('click', () => {
+  if(phase > 1){ phase -= 1; recompute(); }
+});
+$resetBtn.addEventListener('click', () => {
+  phase = 1; prediction = null; _doneFired = false;
+  $predictResult.hidden = true;
+  recompute();
+});
+
+$shockSlider.addEventListener('input', () => {
+  P2 = parseInt($shockSlider.value, 10);
+  $shockSlider.setAttribute('aria-valuenow', String(P2));
+  updateSliderFill();
+  updateSliderLabel();
+  // Slider is disabled outside Phase 1, but in case it's enabled — redraw.
+  if(phase === 1) recompute(); else syncReadouts();
+});
+
+[['predDown', 'down'], ['predSame', 'same'], ['predUp', 'up']]
+  .forEach(([id, val]) => {
+    $(id).addEventListener('click', () => {
+      prediction = val;
+      [$predDown, $predSame, $predUp].forEach(b =>
+        b.setAttribute('aria-pressed','false'));
+      $(id).setAttribute('aria-pressed','true');
+      $predictResult.hidden = false;
+    });
+  });
+
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+// ── Init ────────────────────────────────────────────────────────────────
+function init(){
+  // Seed RNG per lab (even though this lab is deterministic — it costs
+  // nothing and keeps the discussion-compatibility pattern consistent).
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+  updateSliderFill();
+  updateSliderLabel();
+  recompute();
+}
+
+init();
+
+})();
+</script>
+</body>
+</html>

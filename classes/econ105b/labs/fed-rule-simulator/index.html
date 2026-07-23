@@ -1,0 +1,1747 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Fed Rule Simulator — ECON 105B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea;
+      --panel:#ffffff;
+      --ink:#1f2937;
+      --ink-2:#374151;
+      --muted:#596878;
+      --line:#e7dfd2;
+      --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;
+      --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1240px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Main wrap */
+    .lab-wrap{max-width:1240px;margin:0 auto;padding:18px;}
+
+    /* Cards / panels */
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;
+      padding:16px;box-shadow:var(--shadow);margin-bottom:14px;}
+    .card-title{font-size:0.75rem;text-transform:uppercase;letter-spacing:.08em;
+      color:var(--accent);font-weight:800;margin-bottom:6px;}
+    .card-sub{font-size:0.75rem;color:var(--muted);margin-bottom:12px;}
+
+    /* Graph cards */
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-head{display:flex;justify-content:space-between;align-items:baseline;
+      gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin:0;}
+    .graph-hint{font-size:0.75rem;color:var(--muted);}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;
+      overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+    .canvas-wrap.tall{aspect-ratio:16/10;}
+    .canvas-wrap.bars{aspect-ratio:3/2;}
+
+    .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;
+      font-size:0.75rem;color:var(--ink-2);}
+    .legend-row{display:flex;align-items:center;gap:6px;}
+    .legend-line{width:26px;height:0;border-top:2.5px solid currentColor;flex-shrink:0;}
+    .legend-line.dashed{border-top-style:dashed;}
+    .legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;
+      background:currentColor;border:2px solid #fff;box-shadow:0 0 0 1px currentColor;}
+    .legend-coord{font-variant-numeric:tabular-nums;font-weight:700;
+      margin-left:4px;}
+    .legend-coord.muted{color:var(--muted);font-weight:400;}
+
+    /* Per-period info box (description of shock and Fed response) */
+    .period-info{margin-top:12px;display:grid;
+      grid-template-columns:repeat(2,1fr);gap:8px;}
+    @media(max-width:720px){.period-info{grid-template-columns:1fr;}}
+    .period-info[hidden]{display:none;}
+    .info-row{padding:10px 12px;border-radius:10px;
+      border:1.5px solid var(--line-2);background:rgba(246,242,234,.5);
+      display:flex;flex-direction:column;gap:3px;}
+    .info-row.shock{border-color:var(--bad);background:rgba(180,35,24,.06);}
+    .info-row.fed{border-color:#1f3a52;background:rgba(31,58,82,.07);}
+    .info-row.coord-nofed{border-color:var(--bad);background:rgba(180,35,24,.04);}
+    .info-row.coord-rule{border-color:#1f2937;background:rgba(31,41,55,.04);}
+    .info-tag{font-size:0.6875rem;text-transform:uppercase;
+      letter-spacing:.08em;font-weight:800;color:var(--muted);}
+    .info-row.shock .info-tag{color:var(--bad);}
+    .info-row.fed .info-tag{color:#1f3a52;}
+    .info-row.coord-nofed .info-tag{color:var(--bad);}
+    .info-row.coord-rule .info-tag{color:#1f2937;}
+    .info-text{font-size:0.875rem;color:var(--ink-2);line-height:1.45;}
+    .info-text strong{color:var(--ink);}
+    .info-coord{font-variant-numeric:tabular-nums;font-size:0.9375rem;
+      font-weight:800;color:var(--ink);}
+
+    /* Two-col row */
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+    @media(max-width:960px){.two-col{grid-template-columns:1fr;}}
+
+    /* Sliders */
+    .slider-row{margin-bottom:14px;}
+    .slider-row:last-child{margin-bottom:0;}
+    .slider-head{display:flex;justify-content:space-between;align-items:baseline;
+      margin-bottom:6px;flex-wrap:wrap;gap:6px;}
+    .slider-name{font-size:0.8125rem;font-weight:700;color:var(--ink-2);}
+    .slider-name .tag{display:inline-block;padding:1px 6px;border-radius:6px;
+      font-size:0.625rem;font-weight:800;margin-left:6px;
+      text-transform:uppercase;letter-spacing:.06em;
+      background:rgba(47,93,124,.14);color:var(--accent);}
+    .slider-val{font-size:0.9375rem;font-weight:800;color:var(--accent);
+      font-variant-numeric:tabular-nums;}
+    .slider-desc{font-size:0.75rem;color:var(--muted);margin-top:4px;line-height:1.4;}
+
+    input[type=range]{
+      -webkit-appearance:none;appearance:none;
+      width:100%;height:8px;border-radius:999px;
+      background:linear-gradient(90deg,var(--accent) 0%,var(--accent) var(--fill,0%),
+        var(--line-2) var(--fill,0%),var(--line-2) 100%);
+      outline:none;border:none;margin:4px 0 2px;cursor:pointer;
+    }
+    input[type=range]::-webkit-slider-thumb{
+      -webkit-appearance:none;appearance:none;
+      width:20px;height:20px;border-radius:50%;
+      background:var(--accent);border:3px solid #fff;
+      box-shadow:0 1px 4px rgba(17,24,39,.25);cursor:grab;
+    }
+    input[type=range]::-moz-range-thumb{
+      width:20px;height:20px;border-radius:50%;
+      background:var(--accent);border:3px solid #fff;
+      box-shadow:0 1px 4px rgba(17,24,39,.25);cursor:grab;
+    }
+    .slider-ticks{
+      display:flex;justify-content:space-between;align-items:center;
+      font-size:0.625rem;color:var(--muted);font-weight:700;
+      font-variant-numeric:tabular-nums;padding:0 2px;}
+
+    /* Buttons */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn[aria-pressed="true"]{border-color:var(--accent);
+      background:rgba(47,93,124,.14);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover{background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    .ghost-btn{padding:8px 16px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:transparent;
+      color:var(--ink-2);font-family:var(--font-sans);
+      font-size:0.8125rem;font-weight:700;cursor:pointer;transition:background .12s;}
+    .ghost-btn:hover{background:rgba(0,0,0,.04);}
+
+    .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;}
+    .battery-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;}
+    .period-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+      margin-top:10px;}
+    .period-controls .step-btn{padding:6px 12px;border-radius:8px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;
+      display:inline-flex;align-items:center;gap:5px;}
+    .period-controls .step-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .period-controls .step-btn:disabled{opacity:.38;cursor:not-allowed;}
+    .period-controls .play-btn{padding:6px 14px;border-radius:8px;
+      border:1.5px solid var(--accent);background:rgba(47,93,124,.10);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:800;
+      color:var(--accent);cursor:pointer;transition:all .12s;
+      display:inline-flex;align-items:center;gap:5px;}
+    .period-controls .play-btn:hover{background:rgba(47,93,124,.18);}
+    .period-controls .play-btn[aria-pressed="true"]{background:var(--accent);
+      color:#fff;}
+    .period-controls .step-divider{flex:0 0 1px;height:24px;
+      background:var(--line-2);}
+    .period-group{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+    .period-btn{padding:6px 10px;border-radius:8px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.75rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;
+      min-width:32px;font-variant-numeric:tabular-nums;}
+    .period-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .period-btn[aria-pressed="true"]{border-color:var(--accent);
+      background:rgba(47,93,124,.18);color:var(--accent);}
+    .period-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* Scorecard */
+    .score-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;
+      margin-top:6px;}
+    @media(max-width:560px){.score-grid{grid-template-columns:1fr;}}
+    .score-cell{padding:14px 16px;border-radius:14px;
+      border:1.5px solid var(--line-2);background:rgba(246,242,234,.5);}
+    .score-cell.output{border-color:var(--accent);background:rgba(47,93,124,.08);}
+    .score-cell.price{border-color:#8c4800;background:rgba(140,72,0,.07);}
+    .score-label{font-size:0.6875rem;text-transform:uppercase;
+      letter-spacing:.08em;font-weight:800;color:var(--muted);}
+    .score-cell.output .score-label{color:var(--accent);}
+    .score-cell.price .score-label{color:#8c4800;}
+    .score-value{font-size:2rem;font-weight:800;color:var(--ink);
+      font-variant-numeric:tabular-nums;line-height:1.05;margin-top:4px;
+      font-family:var(--font-serif);}
+    .score-sub{font-size:0.75rem;color:var(--ink-2);
+      font-variant-numeric:tabular-nums;margin-top:4px;}
+    .score-baseline{font-size:0.75rem;color:var(--ink-2);margin-top:8px;
+      padding-top:8px;border-top:1px dashed var(--line-2);
+      font-variant-numeric:tabular-nums;}
+    .score-baseline .delta{display:inline-block;margin-left:6px;
+      padding:1px 7px;border-radius:6px;font-weight:800;font-size:0.6875rem;
+      letter-spacing:.04em;}
+    .score-baseline .delta.better{background:rgba(21,92,56,.12);color:var(--good);
+      border:1px solid rgba(21,92,56,.30);}
+    .score-baseline .delta.worse{background:rgba(180,35,24,.10);color:var(--bad);
+      border:1px solid rgba(180,35,24,.30);}
+    .score-baseline .delta.neutral{background:rgba(0,0,0,.04);color:var(--muted);
+      border:1px solid var(--line-2);}
+
+    .interp-box{margin-top:12px;padding:12px 14px;border-radius:12px;
+      background:#fff7e6;border:1.5px solid #d9a44a;
+      font-size:0.875rem;color:#5a2e00;line-height:1.55;}
+    .interp-box strong{color:#3d1f00;}
+    .interp-box.idle{background:rgba(246,242,234,.6);border-color:var(--line-2);
+      color:var(--ink-2);}
+    .interp-box.stagflation{background:rgba(180,35,24,.07);border-color:var(--bad);
+      color:#7a1810;}
+    .interp-box.stagflation strong{color:#5a0f08;}
+
+    /* Compare runs */
+    .runs-table{width:100%;border-collapse:collapse;margin-top:6px;
+      font-size:0.8125rem;}
+    .runs-table th,.runs-table td{padding:8px 10px;text-align:left;
+      border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;}
+    .runs-table th{font-size:0.6875rem;text-transform:uppercase;
+      letter-spacing:.07em;color:var(--muted);font-weight:800;}
+    .runs-table td.num{text-align:right;font-weight:700;color:var(--ink);}
+    .runs-table .badge{display:inline-block;padding:2px 8px;border-radius:999px;
+      font-size:0.6875rem;font-weight:800;letter-spacing:.04em;
+      background:rgba(47,93,124,.10);color:var(--accent);
+      border:1px solid rgba(47,93,124,.30);}
+    .runs-empty{font-size:0.8125rem;color:var(--muted);font-style:italic;
+      padding:10px 0;}
+
+    /* Footer */
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;
+      gap:8px;font-size:0.75rem;color:var(--muted);padding-top:12px;
+      border-top:1px solid var(--line);margin-top:24px;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105b/labs/">← ECON 105B Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105B — Stabilization Policy</div>
+      <h1>Fed Rule Simulator</h1>
+      <p class="sub">
+        Be the Fed. Choose the weights in the reaction function
+        <i>r</i> = α<i>Y</i> + β<i>P</i> + γ<i>Z</i>, run your rule against a
+        battery of demand and supply shocks, and see how it scores on
+        output stability vs. price stability.
+      </p>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>The Fed's dual mandate is to stabilize <strong>output</strong>
+          (around the natural rate Ȳ = 50) and <strong>prices</strong>
+          (around the target P* = 50). The Fed's rule is
+          <i>r</i> = α<i>Y</i> + β<i>P</i> + γ<i>Z</i>, where α, β, γ are
+          weights that you, the policymaker, choose.</p>
+          <ol>
+            <li><strong>Pick your weights.</strong> α puts pressure on
+            output gaps, β on price gaps, γ is the response to an
+            observable demand-side signal <i>Z</i> the Fed can lean against
+            proactively.</li>
+            <li><strong>Pick a shock battery.</strong> Demand-only,
+            supply-only, or mixed.</li>
+            <li><strong>Run.</strong> The economy faces each shock in
+            sequence under your rule. The scorecard reports two numbers:
+            output volatility and price volatility — never collapsed into
+            one. The whole lesson is the tradeoff.</li>
+            <li><strong>Compare.</strong> The last three runs stay on
+            screen so you can see how tweaking the weights moves the two
+            numbers in opposite directions.</li>
+          </ol>
+          <p>Try the same rule against a different battery. A rule tuned
+          for demand shocks misbehaves under supply shocks — that's the
+          stagflation discussion from lecture.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- ── AD-AS panel (top) ──────────────────────────────────────── -->
+  <div class="graph-card" style="margin-bottom:14px;">
+    <div class="graph-head">
+      <div class="graph-title" id="adasTitle">AD-AS — Selected Period</div>
+      <span class="graph-hint">Output (<i>Y</i>) vs. Price Level (<i>P</i>)</span>
+    </div>
+    <div class="canvas-wrap tall">
+      <canvas id="adasCanvas"
+              role="img"
+              aria-labelledby="adasTitle"
+              aria-describedby="adasDesc"></canvas>
+    </div>
+    <div class="legend">
+      <span class="legend-row" style="color:var(--accent);">
+        <span class="legend-line" aria-hidden="true"></span> AD₀ (original)</span>
+      <span class="legend-row" style="color:var(--bad);">
+        <span class="legend-line dashed" aria-hidden="true"></span>
+        AD after shock (no Fed)</span>
+      <span class="legend-row" style="color:#1f3a52;">
+        <span class="legend-line" aria-hidden="true"></span> AD after Fed</span>
+      <span class="legend-row" style="color:#8c4800;">
+        <span class="legend-line" aria-hidden="true"></span>
+        SRAS / SRAS after supply shock</span>
+      <span class="legend-row" style="color:var(--good);">
+        <span class="legend-line dashed" aria-hidden="true"></span> LRAS at Ȳ</span>
+      <span class="legend-row" style="color:var(--bad);">
+        <span class="legend-dot" aria-hidden="true"></span>
+        Equilibrium without Fed
+        <span class="legend-coord muted" id="legendNoFedCoord">(—, —)</span></span>
+      <span class="legend-row" style="color:var(--ink-2);">
+        <span class="legend-dot" aria-hidden="true"></span>
+        Equilibrium under your rule
+        <span class="legend-coord muted" id="legendRuleCoord">(—, —)</span></span>
+    </div>
+
+    <!-- Plain-language description of the selected period -->
+    <div class="period-info" id="periodInfo" hidden
+         aria-live="polite" aria-atomic="true">
+      <div class="info-row shock">
+        <span class="info-tag">Shock this period</span>
+        <span class="info-text" id="shockText">—</span>
+      </div>
+      <div class="info-row fed">
+        <span class="info-tag">Fed's response</span>
+        <span class="info-text" id="fedText">—</span>
+      </div>
+      <div class="info-row coord-nofed">
+        <span class="info-tag">Equilibrium without Fed</span>
+        <span class="info-coord" id="noFedCoordText">(—, —)</span>
+      </div>
+      <div class="info-row coord-rule">
+        <span class="info-tag">Equilibrium under your rule</span>
+        <span class="info-coord" id="ruleCoordText">(—, —)</span>
+      </div>
+    </div>
+    <div class="period-controls" id="periodControls" style="display:none;">
+      <button class="step-btn" id="prevPeriodBtn" type="button"
+              aria-label="Previous period">◀ Prev</button>
+      <button class="play-btn" id="playPeriodBtn" type="button"
+              aria-pressed="false"
+              aria-label="Play through periods one at a time">
+        <span id="playPeriodLabel">▶ Play through</span>
+      </button>
+      <button class="step-btn" id="nextPeriodBtn" type="button"
+              aria-label="Next period">Next ▶</button>
+      <span class="step-divider" aria-hidden="true"></span>
+      <span style="font-size:0.75rem;color:var(--muted);font-weight:700;
+                   text-transform:uppercase;letter-spacing:.06em;">
+        Or jump to:
+      </span>
+    </div>
+    <div class="period-group" role="group" aria-label="Select period to display"
+         id="periodGroup">
+      <!-- period buttons inserted by JS once a run exists -->
+    </div>
+    <div class="runs-empty" id="periodEmpty">
+      Press <strong>Run sequence</strong> to populate periods.
+    </div>
+  </div>
+
+  <!-- ── Y and P outcome bars ───────────────────────────────────── -->
+  <div class="two-col">
+    <div class="graph-card">
+      <div class="graph-head">
+        <div class="graph-title" id="yBarsTitle">Output (Y) across the sequence</div>
+        <span class="graph-hint">Reference: Ȳ = 50</span>
+      </div>
+      <div class="canvas-wrap bars">
+        <canvas id="yBarsCanvas"
+                role="img"
+                aria-labelledby="yBarsTitle"
+                aria-describedby="yBarsDesc"></canvas>
+      </div>
+    </div>
+
+    <div class="graph-card">
+      <div class="graph-head">
+        <div class="graph-title" id="pBarsTitle">Price Level (P) across the sequence</div>
+        <span class="graph-hint">Reference: P* = 50</span>
+      </div>
+      <div class="canvas-wrap bars">
+        <canvas id="pBarsCanvas"
+                role="img"
+                aria-labelledby="pBarsTitle"
+                aria-describedby="pBarsDesc"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live region for canvas descriptions -->
+  <section class="sr-only" id="graphsDesc"
+           aria-live="polite" aria-atomic="true">
+    <p id="adasDesc">AD-AS diagram. Run a sequence to populate.</p>
+    <p id="yBarsDesc">Output bar chart. Run a sequence to populate.</p>
+    <p id="pBarsDesc">Price bar chart. Run a sequence to populate.</p>
+  </section>
+
+  <!-- ── Scorecard ──────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">Scorecard</div>
+    <div class="card-sub">Two numbers, always shown separately. The
+      tradeoff between them is the lesson.</div>
+    <div class="score-grid" aria-live="polite" aria-atomic="true">
+      <div class="score-cell output">
+        <div class="score-label">Output volatility</div>
+        <div class="score-value" id="yVol">—</div>
+        <div class="score-sub" id="yVolSub">root-mean-square gap from Ȳ</div>
+        <div class="score-baseline" id="yBaseline" hidden>
+          vs. no policy: <strong id="yBaseVal">—</strong>
+          <span class="delta neutral" id="yDelta">—</span>
+        </div>
+      </div>
+      <div class="score-cell price">
+        <div class="score-label">Price volatility</div>
+        <div class="score-value" id="pVol">—</div>
+        <div class="score-sub" id="pVolSub">root-mean-square gap from P*</div>
+        <div class="score-baseline" id="pBaseline" hidden>
+          vs. no policy: <strong id="pBaseVal">—</strong>
+          <span class="delta neutral" id="pDelta">—</span>
+        </div>
+      </div>
+    </div>
+    <div class="interp-box idle" id="interpBox" aria-live="polite" aria-atomic="true">
+      Pick weights and a shock battery, then press <strong>Run sequence</strong>.
+    </div>
+  </div>
+
+  <!-- ── Controls: Rule + Shock battery ─────────────────────────── -->
+  <div class="two-col">
+
+    <div class="card">
+      <div class="card-title">Your rule: r = α Y + β P + γ Z</div>
+      <div class="card-sub">Higher weight = stronger response to that signal.</div>
+
+      <div class="slider-row">
+        <div class="slider-head">
+          <span class="slider-name">α — weight on output (Y)
+            <span class="tag">Output gap</span></span>
+          <span class="slider-val" id="alphaVal">0.0</span>
+        </div>
+        <input type="range" id="alphaSlider"
+               min="0" max="3" step="0.5" value="0"
+               aria-label="Alpha — weight on output gap"
+               aria-valuemin="0" aria-valuemax="3" aria-valuenow="0">
+        <div class="slider-ticks"><span>0</span><span>1</span><span>2</span><span>3</span></div>
+        <div class="slider-desc" id="alphaDesc">Hawkish-on-output off.</div>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-head">
+          <span class="slider-name">β — weight on prices (P)
+            <span class="tag">Price gap</span></span>
+          <span class="slider-val" id="betaVal">0.0</span>
+        </div>
+        <input type="range" id="betaSlider"
+               min="0" max="3" step="0.5" value="0"
+               aria-label="Beta — weight on price gap"
+               aria-valuemin="0" aria-valuemax="3" aria-valuenow="0">
+        <div class="slider-ticks"><span>0</span><span>1</span><span>2</span><span>3</span></div>
+        <div class="slider-desc" id="betaDesc">Hawkish-on-prices off.</div>
+      </div>
+
+      <div class="slider-row">
+        <div class="slider-head">
+          <span class="slider-name">γ — weight on signal (Z)
+            <span class="tag">Forward look</span></span>
+          <span class="slider-val" id="gammaVal">0.0</span>
+        </div>
+        <input type="range" id="gammaSlider"
+               min="0" max="1" step="0.25" value="0"
+               aria-label="Gamma — weight on observable demand signal Z"
+               aria-valuemin="0" aria-valuemax="1" aria-valuenow="0">
+        <div class="slider-ticks"><span>0</span><span>0.5</span><span>1</span></div>
+        <div class="slider-desc" id="gammaDesc">
+          γZ in this lab = Fed's direct response to an observable
+          demand signal. γ = 1 fully offsets demand shocks proactively;
+          γ has no effect on supply shocks.
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="primary-btn" id="runBtn">Run sequence</button>
+        <button class="ghost-btn" id="resetBtn">Reset weights</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Shock battery</div>
+      <div class="card-sub">Same 6 periods replayed under whichever rule
+        you've set. Pick what kind of economy you face.</div>
+      <div class="battery-group" role="group" aria-label="Select shock battery"
+           id="batteryGroup">
+        <button class="option-btn" data-battery="demand"
+                aria-pressed="true">Demand shocks only</button>
+        <button class="option-btn" data-battery="supply"
+                aria-pressed="false">Supply shocks only</button>
+        <button class="option-btn" data-battery="mixed"
+                aria-pressed="false">Mixed economy</button>
+      </div>
+
+      <div style="margin-top:14px;font-size:0.8125rem;color:var(--ink-2);
+                  line-height:1.55;" id="batteryDesc">
+        <strong>Demand-only:</strong> AD shifts up and down (consumer
+        confidence, investment, fiscal swings). The Fed observes a clean
+        signal Z equal to the demand shock.
+      </div>
+
+      <div style="margin-top:12px;font-size:0.8125rem;color:var(--muted);
+                  line-height:1.5;">
+        <strong>Model parameters:</strong> Ȳ = 50, P* = 50, AD₀ = 100.
+        AD slope −1, SRAS slope +1. Fed policy enters AD as
+        MP = −α(Y − Ȳ) − β(P − P*) − γZ and the economy clears in one
+        period.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Compare runs ───────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">Compare your last three runs</div>
+    <div class="card-sub">Watch how moving one weight up moves the two
+      volatility numbers in opposite directions.</div>
+    <div id="runsTableWrap" aria-live="polite" aria-atomic="false">
+      <div class="runs-empty" id="runsEmpty">
+        No runs yet. Press <strong>Run sequence</strong> to record your
+        first.
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 105B — Intermediate Macroeconomic Theory II</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+// ───────── Session seams (no-op for now) ──────────────────────────────
+// LAB_ID    = 'fed-rule-simulator'
+// LAB_LABEL = 'Fed Rule Simulator'
+// url       = '/classes/econ105b/labs/fed-rule-simulator/?disc=1'
+const LAB_ID    = 'fed-rule-simulator';
+const LAB_LABEL = 'Fed Rule Simulator';
+
+const SessionSeam = {
+  rngForLab(){
+    if(window.Session && Session.rngForLab) return Session.rngForLab(LAB_ID);
+    return null;
+  },
+  recordQuestion(){ /* no-op until discussion-mode wiring */ },
+  recordLabDone(){ /* no-op until discussion-mode wiring */ },
+};
+
+// ───────── Model constants ────────────────────────────────────────────
+// Same baseline as the long/short-run lab:
+//   a = 1, s = 0.5 → SRAS slope = (1-s)/s = 1
+//   AD₀ = 100, Ȳ = 50, P* = 50
+const AD0 = 100, YB = 50, EP_BASE = 50;
+const Y_TARGET = YB, P_TARGET = EP_BASE;
+
+// Axis ranges for AD-AS canvas
+const Y_MAX = 100, P_MAX = 100;
+
+// ───────── Model: equilibrium(shock, rule) ────────────────────────────
+//
+// AD:    P = AD₀ + D + MP − Y
+// SRAS:  P = (EP_BASE − SS) + (Y − YB)
+// Fed:   MP = −α(Y − YB) − β(P − P*) − γ·Z
+//        with Z = D for demand shocks (Fed sees the demand impulse)
+//
+// Closed form (solving for fixed point):
+//   Y = [100 + 50(α+β) + (1−γ)D + (1+β)SS] / (2 + α + β)
+//   P = Y − SS
+//
+// Sign convention:
+//   D  > 0 = positive demand shock (AD up)
+//   SS > 0 = positive supply shock (SRAS down/right, P falls)
+//   SS < 0 = adverse supply shock (oil-shock style)
+function equilibrium(shock, rule){
+  const D  = shock.D  || 0;
+  const SS = shock.SS || 0;
+  const Z  = (shock.Z !== undefined) ? shock.Z : D;
+  const a = rule.alpha, b = rule.beta, g = rule.gamma;
+
+  const denom = 2 + a + b;
+  const Y = (100 + 50*(a + b) + (1 - g)*D + (1 + b)*SS - g*0) / denom;
+  // Note: γ enters via −γ·Z. We pass it through the (1-γ)D term only when
+  // Z = D. For Z ≠ D the linear extension is the same algebra; we add
+  // γ·(D − Z) as a correction so the rule respects the supplied Z.
+  const Y_corr = Y + g * (D - Z) / denom;
+  const Y_final = Y_corr;
+  const P = Y_final - SS;
+
+  // Compute the Fed's chosen MP (useful for the AD-AS panel)
+  const MP = -a*(Y_final - YB) - b*(P - P_TARGET) - g*Z;
+  return { Y: Y_final, P, MP, D, SS, Z };
+}
+
+// ───────── score(history) → {yVol, pVol} ──────────────────────────────
+// Two RMSE numbers, never merged into one.
+function score(history){
+  if(!history || !history.length) return { yVol: 0, pVol: 0, n: 0 };
+  let sy = 0, sp = 0;
+  for(const eq of history){
+    sy += (eq.Y - Y_TARGET) * (eq.Y - Y_TARGET);
+    sp += (eq.P - P_TARGET) * (eq.P - P_TARGET);
+  }
+  return {
+    yVol: Math.sqrt(sy / history.length),
+    pVol: Math.sqrt(sp / history.length),
+    n: history.length,
+  };
+}
+
+// ───────── Shock batteries ────────────────────────────────────────────
+const BATTERIES = {
+  demand: {
+    label: 'Demand shocks only',
+    shocks: [
+      { D: 15,  SS: 0  },
+      { D: -10, SS: 0  },
+      { D: 20,  SS: 0  },
+      { D: 5,   SS: 0  },
+      { D: -20, SS: 0  },
+      { D: -15, SS: 0  },
+    ],
+    desc: '<strong>Demand-only:</strong> AD shifts up and down (consumer ' +
+          'confidence, investment, fiscal swings). The Fed observes a ' +
+          'clean signal Z equal to the demand shock — so γ matters here.',
+  },
+  supply: {
+    label: 'Supply shocks only',
+    shocks: [
+      { D: 0, SS: -10 },
+      { D: 0, SS: -15 },
+      { D: 0, SS: 5   },
+      { D: 0, SS: -20 },
+      { D: 0, SS: -8  },
+      { D: 0, SS: 10  },
+    ],
+    desc: '<strong>Supply-only:</strong> SRAS shifts up (oil/energy ' +
+          'shocks) and down (technology, lower input costs). The Fed has ' +
+          'no clean Z signal — γ does nothing here. This is where the ' +
+          'dual-mandate tradeoff bites.',
+  },
+  mixed: {
+    label: 'Mixed economy',
+    shocks: [
+      { D: 15,  SS: -8  },
+      { D: -10, SS: 5   },
+      { D: 0,   SS: -15 },
+      { D: 18,  SS: 0   },
+      { D: -12, SS: -10 },
+      { D: 5,   SS: -5  },
+    ],
+    desc: '<strong>Mixed:</strong> demand and supply shocks together. ' +
+          'No single rule wins on both volatility numbers in every ' +
+          'period — picking weights is unavoidably a choice.',
+  },
+};
+// In supply-only batteries, Z = 0 (no clean signal). Demand and mixed
+// expose D as Z so γ can lean against it.
+function shocksWithZ(batteryKey){
+  const b = BATTERIES[batteryKey];
+  return b.shocks.map(s => {
+    const Z = (batteryKey === 'supply') ? 0 : s.D;
+    return Object.assign({}, s, { Z });
+  });
+}
+
+// ───────── Hand-validation sanity checks (run once at load) ───────────
+// These mirror the cases enumerated in the build plan. They throw to the
+// console rather than disrupting the lab if anything drifts.
+(function selfTest(){
+  function near(a, b, tol){ return Math.abs(a - b) <= (tol || 0.01); }
+  // Closed form: Y = [100 + 50(α+β) + (1−γ)D + (1+β)SS] / (2+α+β); P = Y − SS
+  const tests = [
+    { d:{D:20,SS:0},  r:{alpha:0,beta:0,gamma:0}, Y:60,   P:60   },
+    { d:{D:20,SS:0},  r:{alpha:2,beta:0,gamma:0}, Y:55,   P:55   },
+    { d:{D:20,SS:0},  r:{alpha:0,beta:2,gamma:0}, Y:55,   P:55   },
+    { d:{D:20,SS:0},  r:{alpha:0,beta:0,gamma:1}, Y:50,   P:50   },
+    { d:{D:0,SS:-10}, r:{alpha:0,beta:0,gamma:0}, Y:45,   P:55   },
+    { d:{D:0,SS:-10}, r:{alpha:2,beta:0,gamma:0}, Y:47.5, P:57.5 },
+    { d:{D:0,SS:-10}, r:{alpha:0,beta:2,gamma:0}, Y:42.5, P:52.5 },
+  ];
+  for(const t of tests){
+    const eq = equilibrium(Object.assign({Z:t.d.D}, t.d), t.r);
+    if(!near(eq.Y, t.Y) || !near(eq.P, t.P)){
+      console.warn('[FedRule] self-test drift', t, eq);
+    }
+  }
+})();
+
+// ───────── State ──────────────────────────────────────────────────────
+const state = {
+  rule: { alpha: 0, beta: 0, gamma: 0 },
+  battery: 'demand',
+  history: null,        // last run's equilibria (array) or null
+  baselineScore: null,  // {yVol,pVol} under α=β=γ=0 same battery
+  runs: [],             // last up-to-3 runs for the compare panel
+  selectedPeriod: 0,
+  playInterval: null,   // setInterval handle for step-through play
+};
+const PASSIVE_RULE = { alpha: 0, beta: 0, gamma: 0 };
+const PLAY_MS = 1500;
+
+// ───────── DOM ────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+// Slider wiring
+function describeAlpha(v){
+  if(v === 0) return 'Hawkish-on-output off.';
+  if(v <= 1)  return 'Mild lean against output gaps.';
+  if(v <= 2)  return 'Hawkish on output — Fed pushes Y back to Ȳ hard.';
+  return 'Very hawkish on output — large policy swings to stabilize Y.';
+}
+function describeBeta(v){
+  if(v === 0) return 'Hawkish-on-prices off.';
+  if(v <= 1)  return 'Mild lean against price gaps.';
+  if(v <= 2)  return 'Hawkish on inflation — Fed prioritizes P near P*.';
+  return 'Very hawkish on inflation — large policy swings to stabilize P.';
+}
+function describeGamma(v){
+  if(v === 0) return 'No forward-looking response.';
+  if(v <= 0.25) return 'Mild proactive offset of observed demand shocks.';
+  if(v <= 0.75) return 'Moderate proactive offset of demand shocks (γZ).';
+  return 'Full proactive offset — γ = 1 perfectly cancels demand shocks.';
+}
+
+function syncSlider(id, valId, descId, key, descFn){
+  const el = $(id), valEl = $(valId), descEl = $(descId);
+  function apply(){
+    const v = +el.value;
+    state.rule[key] = v;
+    valEl.textContent = v.toFixed(1);
+    const mn = +el.min, mx = +el.max;
+    el.style.setProperty('--fill', (((v - mn) / (mx - mn)) * 100) + '%');
+    el.setAttribute('aria-valuenow', String(v));
+    if(descEl) descEl.textContent = descFn(v);
+  }
+  el.addEventListener('input', apply);
+  apply();
+}
+
+syncSlider('alphaSlider','alphaVal','alphaDesc','alpha', describeAlpha);
+syncSlider('betaSlider', 'betaVal', 'betaDesc', 'beta',  describeBeta);
+syncSlider('gammaSlider','gammaVal','gammaDesc','gamma', describeGamma);
+
+// Battery selector
+const BATTERY_BTNS = Array.from(
+  document.querySelectorAll('#batteryGroup [data-battery]'));
+function selectBattery(key){
+  state.battery = key;
+  BATTERY_BTNS.forEach(b => {
+    const is = b.dataset.battery === key;
+    b.classList.toggle('active', is);
+    b.setAttribute('aria-pressed', is ? 'true' : 'false');
+  });
+  $('batteryDesc').innerHTML = BATTERIES[key].desc;
+}
+BATTERY_BTNS.forEach(b => {
+  b.addEventListener('click', () => selectBattery(b.dataset.battery));
+});
+selectBattery('demand');
+
+// Period selector (populated after a run)
+function renderPeriodButtons(){
+  const group = $('periodGroup');
+  const empty = $('periodEmpty');
+  const controls = $('periodControls');
+  group.innerHTML = '';
+  if(!state.history){
+    empty.style.display = '';
+    controls.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  controls.style.display = '';
+  state.history.forEach((eq, i) => {
+    const b = document.createElement('button');
+    b.className = 'period-btn';
+    b.type = 'button';
+    b.textContent = 'Period ' + (i + 1);
+    b.setAttribute('aria-pressed', i === state.selectedPeriod ? 'true' : 'false');
+    b.addEventListener('click', () => {
+      stopPlay();
+      state.selectedPeriod = i;
+      renderPeriodButtons();
+      redraw();
+    });
+    group.appendChild(b);
+  });
+  // Enable/disable Prev/Next based on position
+  $('prevPeriodBtn').disabled = state.selectedPeriod <= 0;
+  $('nextPeriodBtn').disabled = state.selectedPeriod >= state.history.length - 1;
+}
+
+function gotoPeriod(i){
+  if(!state.history) return;
+  const n = state.history.length;
+  state.selectedPeriod = Math.max(0, Math.min(n - 1, i));
+  renderPeriodButtons();
+  redraw();
+}
+
+function stepPeriod(delta){
+  stopPlay();
+  if(!state.history) return;
+  gotoPeriod(state.selectedPeriod + delta);
+}
+
+function startPlay(){
+  if(!state.history) return;
+  stopPlay();
+  // Start from period 1 if currently at the last period
+  if(state.selectedPeriod >= state.history.length - 1){
+    state.selectedPeriod = 0;
+    renderPeriodButtons();
+    redraw();
+  }
+  const btn = $('playPeriodBtn');
+  btn.setAttribute('aria-pressed', 'true');
+  $('playPeriodLabel').textContent = '⏸ Pause';
+  state.playInterval = setInterval(() => {
+    if(!state.history){ stopPlay(); return; }
+    if(state.selectedPeriod >= state.history.length - 1){
+      stopPlay();
+      return;
+    }
+    gotoPeriod(state.selectedPeriod + 1);
+  }, PLAY_MS);
+}
+
+function stopPlay(){
+  if(state.playInterval){
+    clearInterval(state.playInterval);
+    state.playInterval = null;
+  }
+  const btn = $('playPeriodBtn');
+  if(btn){
+    btn.setAttribute('aria-pressed', 'false');
+    $('playPeriodLabel').textContent = '▶ Play through';
+  }
+}
+
+function togglePlay(){
+  if(state.playInterval) stopPlay();
+  else startPlay();
+}
+
+// Wire step-through controls
+$('prevPeriodBtn').addEventListener('click', () => stepPeriod(-1));
+$('nextPeriodBtn').addEventListener('click', () => stepPeriod(1));
+$('playPeriodBtn').addEventListener('click', togglePlay);
+
+// Run / Reset
+$('runBtn').addEventListener('click', runSequence);
+$('resetBtn').addEventListener('click', resetRule);
+
+function resetRule(){
+  stopPlay();
+  ['alphaSlider','betaSlider','gammaSlider'].forEach(id => {
+    const el = $(id);
+    el.value = 0;
+    el.dispatchEvent(new Event('input'));
+  });
+  state.history = null;
+  state.baselineScore = null;
+  state.selectedPeriod = 0;
+  renderPeriodButtons();
+  $('yVol').textContent = '—';
+  $('pVol').textContent = '—';
+  $('yVolSub').textContent = 'root-mean-square gap from Ȳ';
+  $('pVolSub').textContent = 'root-mean-square gap from P*';
+  $('yBaseline').hidden = true;
+  $('pBaseline').hidden = true;
+  const ib = $('interpBox');
+  ib.className = 'interp-box idle';
+  ib.innerHTML = 'Pick weights and a shock battery, then press ' +
+    '<strong>Run sequence</strong>.';
+  redraw();
+}
+
+function renderBaselineCell(scoreVal, baseVal, baseElId, baseValElId,
+                            deltaElId){
+  $(baseElId).hidden = false;
+  $(baseValElId).textContent = baseVal.toFixed(2);
+  const deltaEl = $(deltaElId);
+  // Lower is better. Negative pct = improvement.
+  if(baseVal < 0.05){
+    deltaEl.textContent = 'baseline already 0';
+    deltaEl.className = 'delta neutral';
+    return;
+  }
+  const pct = ((scoreVal - baseVal) / baseVal) * 100;
+  const abs = Math.abs(pct);
+  if(abs < 1){
+    deltaEl.textContent = 'about the same';
+    deltaEl.className = 'delta neutral';
+  } else if(pct < 0){
+    deltaEl.textContent = '−' + abs.toFixed(0) + '% (better)';
+    deltaEl.className = 'delta better';
+  } else {
+    deltaEl.textContent = '+' + abs.toFixed(0) + '% (worse)';
+    deltaEl.className = 'delta worse';
+  }
+}
+
+function runSequence(){
+  stopPlay();
+  const shocks = shocksWithZ(state.battery);
+  const history = shocks.map(s => equilibrium(s, state.rule));
+  state.history = history;
+  state.selectedPeriod = 0;
+
+  // Laissez-faire baseline on the same battery, for context.
+  const baseHistory = shocks.map(s => equilibrium(s, PASSIVE_RULE));
+  state.baselineScore = score(baseHistory);
+
+  const sc = score(history);
+  $('yVol').textContent = sc.yVol.toFixed(2);
+  $('pVol').textContent = sc.pVol.toFixed(2);
+  $('yVolSub').textContent = sc.n + ' periods · RMSE of (Y − 50)';
+  $('pVolSub').textContent = sc.n + ' periods · RMSE of (P − 50)';
+  renderBaselineCell(sc.yVol, state.baselineScore.yVol,
+                     'yBaseline', 'yBaseVal', 'yDelta');
+  renderBaselineCell(sc.pVol, state.baselineScore.pVol,
+                     'pBaseline', 'pBaseVal', 'pDelta');
+
+  updateInterp(sc);
+  pushRun(sc);
+  renderPeriodButtons();
+  renderRunsTable();
+
+  // Session seam — record per-run as a "question"
+  SessionSeam.recordQuestion(LAB_ID, 0, 'Rule under ' + state.battery,
+    JSON.stringify(state.rule), true, JSON.stringify(state.rule), true);
+
+  redraw();
+}
+
+function pushRun(sc){
+  state.runs.unshift({
+    rule: Object.assign({}, state.rule),
+    battery: state.battery,
+    yVol: sc.yVol,
+    pVol: sc.pVol,
+    ts: Date.now(),
+  });
+  if(state.runs.length > 3) state.runs.length = 3;
+}
+
+function renderRunsTable(){
+  const wrap = $('runsTableWrap');
+  if(!state.runs.length){
+    wrap.innerHTML = '<div class="runs-empty">No runs yet. Press ' +
+      '<strong>Run sequence</strong> to record your first.</div>';
+    return;
+  }
+  const rows = state.runs.map((r, i) => {
+    const tag = i === 0 ? '<span class="badge">Latest</span>' :
+                i === 1 ? '<span class="badge" style="background:rgba(140,72,0,.10);color:#8c4800;border-color:rgba(140,72,0,.30);">Previous</span>' :
+                '<span class="badge" style="background:rgba(0,0,0,.05);color:var(--muted);border-color:var(--line-2);">Older</span>';
+    const battery = BATTERIES[r.battery].label;
+    return '<tr>' +
+      '<td>' + tag + '</td>' +
+      '<td>' + battery + '</td>' +
+      '<td class="num">α ' + r.rule.alpha.toFixed(1) +
+        ' · β ' + r.rule.beta.toFixed(1) +
+        ' · γ ' + r.rule.gamma.toFixed(2) + '</td>' +
+      '<td class="num" style="color:var(--accent);">' + r.yVol.toFixed(2) + '</td>' +
+      '<td class="num" style="color:#8c4800;">' + r.pVol.toFixed(2) + '</td>' +
+      '</tr>';
+  }).join('');
+  wrap.innerHTML =
+    '<table class="runs-table"><thead><tr>' +
+      '<th>Run</th><th>Battery</th><th>Rule</th>' +
+      '<th style="text-align:right;">Y vol</th>' +
+      '<th style="text-align:right;">P vol</th>' +
+    '</tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+// ───────── Interpretation logic ───────────────────────────────────────
+function updateInterp(sc){
+  const ib = $('interpBox');
+  const { alpha, beta, gamma } = state.rule;
+  const { yVol, pVol } = sc;
+  const battery = state.battery;
+
+  // Stagflation detection: supply-only battery with both vols stuck high
+  // regardless of rule choice → surface the dual-mandate caveat.
+  if(battery === 'supply' && yVol > 3 && pVol > 3){
+    ib.className = 'interp-box stagflation';
+    ib.innerHTML = '<strong>Stagflation tradeoff:</strong> under supply ' +
+      'shocks, output and prices move in <em>opposite</em> directions. ' +
+      'No rule can stabilize both — leaning against Y (higher α) cools ' +
+      'inflation but deepens recessions; leaning against P (higher β) ' +
+      'protects prices but lets Y swing. This is the exact bind the ' +
+      'lecture describes: the Fed must choose which side of the dual ' +
+      'mandate to honor.';
+    return;
+  }
+
+  ib.className = 'interp-box';
+  // Characterize the rule
+  let stance;
+  if(alpha + beta + gamma < 0.25){
+    stance = '<strong>Laissez-faire rule:</strong> the Fed is essentially ' +
+      'passive. Shocks pass through to output and prices nearly ' +
+      'untouched.';
+  } else if(gamma >= 0.75 && battery !== 'supply'){
+    stance = '<strong>Forward-looking rule:</strong> γ near 1 lets the ' +
+      'Fed offset observed demand shocks before they hit equilibrium. ' +
+      'On demand-only batteries this is close to a perfect score.';
+  } else if(alpha > beta + 0.5){
+    stance = '<strong>Hawkish-on-output rule:</strong> α dominates. You ' +
+      'kept Y close to Ȳ but let P move more. This is the choice the Fed ' +
+      'makes when unemployment is the bigger concern.';
+  } else if(beta > alpha + 0.5){
+    stance = '<strong>Hawkish-on-inflation rule:</strong> β dominates. ' +
+      'You kept P close to P* but let Y move more. This is the choice ' +
+      'the Fed makes when inflation is the bigger concern.';
+  } else {
+    stance = '<strong>Balanced rule:</strong> equal weight on output ' +
+      'and inflation. Both volatility numbers come down together.';
+  }
+
+  // Append a battery-specific note
+  let coda;
+  if(battery === 'demand'){
+    coda = ' Notice that under <em>demand-only</em> shocks, AD-AS moves ' +
+      'along the SRAS curve — so Y and P move <em>together</em>, and ' +
+      'any rule that suppresses one suppresses the other. There is no ' +
+      'dual-mandate tradeoff here.';
+  } else if(battery === 'supply'){
+    coda = ' Supply shocks split Y and P apart — the dual-mandate ' +
+      'tradeoff is unavoidable. Compare your two volatility numbers.';
+  } else {
+    coda = ' Mixed shocks blend the two regimes. Your rule has to ' +
+      'compromise across them.';
+  }
+
+  ib.innerHTML = stance + coda;
+}
+
+// ───────── Canvas engine ──────────────────────────────────────────────
+let _fs = 1;
+const PAD = { l:54, r:22, t:18, b:46 };
+
+function setupCanvas(canvas, wrap){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  const W = Math.round(rect.width  * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+function makeCoords(W, H, dpr, xMax, yMax, yMin){
+  yMin = yMin || 0;
+  const p = { l:PAD.l*dpr, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  const yRange = yMax - yMin;
+  return {
+    xC: x => p.l + (x / xMax) * PW,
+    yC: y => H - p.b - ((y - yMin) / yRange) * PH,
+    p, PW, PH, yMin, yMax,
+  };
+}
+
+function tickStep(mx){
+  if(mx<=10) return 1; if(mx<=20) return 2; if(mx<=50) return 5;
+  if(mx<=100) return 10; if(mx<=200) return 20; if(mx<=500) return 50;
+  return 100;
+}
+
+function clipPlot(ctx, co, W, H){
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(co.p.l, co.p.t, W - co.p.l - co.p.r, H - co.p.t - co.p.b);
+  ctx.clip();
+}
+function unclip(ctx){ ctx.restore(); }
+
+function strokeLine(ctx, x1, y1, x2, y2, color, width, dpr, dash){
+  ctx.save();
+  ctx.strokeStyle = color; ctx.lineWidth = width * dpr;
+  ctx.setLineDash((dash || []).map(d => d * dpr));
+  ctx.beginPath();
+  ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawAxes(ctx, co, W, H, dpr, xMax, yMin, yMax, xLabel, yLabel,
+                  xLabels){
+  const { p } = co;
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillRect(p.l, p.t, co.PW, co.PH);
+
+  ctx.font = `400 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+
+  // Y ticks
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  const yStep = tickStep(yMax - yMin);
+  for(let y = Math.ceil(yMin/yStep)*yStep; y <= yMax + 1e-6; y += yStep){
+    const py = co.yC(y);
+    ctx.strokeStyle = '#e7dfd2'; ctx.lineWidth = 1 * dpr;
+    ctx.beginPath(); ctx.moveTo(p.l, py); ctx.lineTo(W - p.r, py); ctx.stroke();
+    ctx.fillStyle = '#596878';
+    ctx.fillText(String(y), p.l - 5*dpr, py);
+  }
+
+  // X ticks — either numeric or labeled
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  if(xLabels){
+    for(let i = 0; i < xLabels.length; i++){
+      const px = co.xC(i + 0.5) * (xMax / xLabels.length) /
+                 (xMax / xLabels.length); // pass-through to keep type
+      const xc = co.xC((i + 0.5) * (xMax / xLabels.length));
+      ctx.fillStyle = '#596878';
+      ctx.fillText(xLabels[i], xc, H - p.b + 5*dpr);
+    }
+  } else {
+    const xStep = tickStep(xMax);
+    for(let x = 0; x <= xMax + 1e-6; x += xStep){
+      const px = co.xC(x);
+      ctx.strokeStyle = '#e7dfd2'; ctx.lineWidth = 1 * dpr;
+      ctx.beginPath(); ctx.moveTo(px, p.t); ctx.lineTo(px, H - p.b); ctx.stroke();
+      ctx.fillStyle = '#596878';
+      ctx.fillText(String(x), px, H - p.b + 5*dpr);
+    }
+  }
+
+  // Frame
+  ctx.strokeStyle = '#374151'; ctx.lineWidth = 1.2 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(p.l, p.t); ctx.lineTo(p.l, H - p.b); ctx.lineTo(W - p.r, H - p.b);
+  ctx.stroke();
+
+  // Axis labels
+  ctx.fillStyle = '#374151';
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText(xLabel, p.l + co.PW/2, H - 8*dpr);
+
+  ctx.save();
+  ctx.translate(14*dpr, p.t + co.PH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(yLabel, 0, 0);
+  ctx.restore();
+}
+
+function drawDot(ctx, x, y, color, r, dpr){
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2 * dpr;
+  ctx.beginPath();
+  ctx.arc(x, y, r * dpr, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+function drawCurveLabel(ctx, x, y, text, color, dpr){
+  ctx.save();
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  const hasSubOrPrime = /[₀-₉′″]/.test(text);
+  const rawW = ctx.measureText(text).width;
+  const w = hasSubOrPrime ? rawW + 6 * dpr : rawW;
+  const padH = 5 * dpr, padV = 2 * dpr;
+  const rectH = (12 * dpr * _fs) + 2*padV;
+  const bx = x - w/2 - padH, by = y - rectH/2;
+  ctx.fillStyle = 'rgba(255,255,255,0.88)';
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(bx, by, w + 2*padH, rectH, 3*dpr);
+  else ctx.rect(bx, by, w + 2*padH, rectH);
+  ctx.fill();
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+// ───────── AD-AS panel ────────────────────────────────────────────────
+function drawADAS(){
+  const canvas = $('adasCanvas');
+  const wrap = canvas.parentElement;
+  const setup = setupCanvas(canvas, wrap);
+  if(!setup) return;
+  const { ctx, dpr, W, H } = setup;
+  ctx.clearRect(0, 0, W, H);
+
+  const co = makeCoords(W, H, dpr, Y_MAX, P_MAX, 0);
+  drawAxes(ctx, co, W, H, dpr, Y_MAX, 0, P_MAX,
+           'Output (Y)', 'Price level (P)');
+
+  // Pick the shock + equilibrium to display
+  let eq = null, eqNoFed = null, shock = null;
+  if(state.history && state.history[state.selectedPeriod]){
+    eq = state.history[state.selectedPeriod];
+    shock = { D: eq.D, SS: eq.SS, Z: eq.Z };
+    // Equilibrium that would obtain under PASSIVE_RULE for this same shock
+    eqNoFed = equilibrium(shock, PASSIVE_RULE);
+  }
+  const D = shock ? shock.D : 0;
+  const SS = shock ? shock.SS : 0;
+
+  // ── LRAS at Ȳ (vertical, dashed green) ──
+  clipPlot(ctx, co, W, H);
+  strokeLine(ctx,
+    co.xC(YB), co.yC(0),
+    co.xC(YB), co.yC(P_MAX),
+    '#155c38', 2.4, dpr, [6, 4]);
+  unclip(ctx);
+
+  ctx.save();
+  ctx.fillStyle = '#155c38';
+  ctx.font = `800 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText('LRAS', co.xC(YB), co.yC(P_MAX) - 2 * dpr);
+  ctx.restore();
+
+  // ── SRAS curves ──
+  // Initial: P = (EP_BASE) + (Y − YB) → intercept at Y=0 is EP_BASE − YB = 0
+  // Shocked: P = (EP_BASE − SS) + (Y − YB), intercept at Y=0 is −SS
+  function drawSRAS(SSv, color, width, dash, label){
+    clipPlot(ctx, co, W, H);
+    const intercept = (EP_BASE - SSv) - YB;
+    const y0 = 0, p0 = intercept + y0;
+    const y1 = Y_MAX, p1 = intercept + y1;
+    strokeLine(ctx, co.xC(y0), co.yC(p0), co.xC(y1), co.yC(p1),
+               color, width, dpr, dash);
+    unclip(ctx);
+    if(label){
+      const yL = 75, pL = intercept + yL;
+      if(pL > 4 && pL < P_MAX - 4){
+        drawCurveLabel(ctx, co.xC(yL + 2), co.yC(pL - 4), label, color, dpr);
+      }
+    }
+  }
+  drawSRAS(0, '#8c4800', SS !== 0 ? 1.8 : 2.6, [], 'SRAS');
+  if(SS !== 0){
+    drawSRAS(SS, '#b42318', 2.4, [], 'SRAS′');
+  }
+
+  // ── AD curves ─────────────────────────────────────────────────────
+  // Up to three lines, in causal order so the student can read the story:
+  //   1. AD₀                — the original AD (no shock, no policy)
+  //   2. AD after shock     — shock applied, Fed silent (dashed red)
+  //   3. AD after Fed       — Fed's MP layered on top (solid dark blue)
+  // Each one is drawn only when distinct from its predecessor.
+  function drawAD(intercept, color, width, dash, label, labelY){
+    clipPlot(ctx, co, W, H);
+    const y0 = 0, p0 = intercept - y0;
+    const y1 = Y_MAX, p1 = intercept - y1;
+    strokeLine(ctx, co.xC(y0), co.yC(p0), co.xC(y1), co.yC(p1),
+               color, width, dpr, dash);
+    unclip(ctx);
+    if(label){
+      const yL = (labelY !== undefined) ? labelY : 25;
+      const pL = intercept - yL;
+      if(pL > 4 && pL < P_MAX - 4){
+        drawCurveLabel(ctx, co.xC(yL), co.yC(pL + 5), label, color, dpr);
+      }
+    }
+  }
+  const hasShock     = !!eq && D !== 0;
+  const hasFedAction = !!eq && Math.abs(eq.MP) > 1e-6;
+  // AD₀
+  drawAD(AD0, '#2f5d7c',
+         (hasShock || hasFedAction) ? 1.6 : 2.6,
+         [], 'AD₀', 18);
+  // AD after shock (no Fed)
+  if(hasShock){
+    drawAD(AD0 + D, '#b42318', 2.4, [6, 4], 'AD after shock', 32);
+  }
+  // AD after Fed
+  if(hasFedAction){
+    drawAD(AD0 + D + eq.MP, '#1f3a52', 2.6, [], 'AD after Fed', 46);
+  }
+
+  // ── Shift arrows ──────────────────────────────────────────────────
+  // AD arrows live on a horizontal reference line. The shock arrow rides
+  // higher in the panel; the Fed's offset rides slightly lower so labels
+  // don't collide.
+  if(hasShock){
+    const PA = 88;  // AD₀ → AD-after-shock arrow rides at this price level
+    const x1 = co.xC(AD0 - PA);
+    const x2 = co.xC(AD0 + D - PA);
+    drawShiftArrow(ctx, x1, co.yC(PA), x2, co.yC(PA), '#b42318', dpr,
+      'shock ' + (D > 0 ? '+' : '') + D);
+  }
+  if(hasFedAction){
+    const PB = 78;
+    const x1 = co.xC(AD0 + D - PB);
+    const x2 = co.xC(AD0 + D + eq.MP - PB);
+    drawShiftArrow(ctx, x1, co.yC(PB), x2, co.yC(PB), '#1f3a52', dpr,
+      'Fed ' + (eq.MP > 0 ? '+' : '') + eq.MP.toFixed(1));
+  }
+  if(eq && eq.SS !== 0){
+    // SRAS shift arrow — vertical, on the right side of the plot
+    const YA = 78;
+    const p0 = (EP_BASE - 0) + (YA - YB);          // original SRAS at Y=YA
+    const p1 = (EP_BASE - eq.SS) + (YA - YB);      // shifted SRAS at Y=YA
+    drawShiftArrow(ctx, co.xC(YA), co.yC(p0), co.xC(YA), co.yC(p1),
+      '#b42318', dpr,
+      'supply ' + (eq.SS > 0 ? '+' : '') + eq.SS);
+  }
+
+  // ── Projection lines from equilibria to axes (read Y, P off axes) ─
+  // Drawn before dots so the dots sit on top.
+  if(eq && eqNoFed && hasFedAction){
+    drawProjection(ctx, co, eqNoFed.Y, eqNoFed.P, '#b42318', dpr);
+  }
+  if(eq){
+    drawProjection(ctx, co, eq.Y, eq.P, '#1f2937', dpr);
+  }
+
+  // ── Equilibrium dots (no on-canvas text labels — see info box) ────
+  clipPlot(ctx, co, W, H);
+  drawDot(ctx, co.xC(YB), co.yC(EP_BASE), '#9aa5b1', 4, dpr);
+  if(eq && eqNoFed && hasFedAction){
+    drawDot(ctx, co.xC(eqNoFed.Y), co.yC(eqNoFed.P), '#b42318', 5, dpr);
+  }
+  if(eq){
+    drawDot(ctx, co.xC(eq.Y), co.yC(eq.P), '#1f2937', 6, dpr);
+  }
+  unclip(ctx);
+
+  updateADASDesc(eq);
+  updatePeriodInfo(eq, eqNoFed);
+}
+
+// ── Projection helper (dashed lines from an equilibrium to both axes,
+//    with a small value chip on each axis so the student can read it off)
+function drawProjection(ctx, co, yVal, pVal, color, dpr){
+  const px = co.xC(yVal), py = co.yC(pVal);
+  const axisX = co.p.l;             // left edge of plot
+  const axisY = co.yC(co.yMin);     // bottom edge of plot
+
+  // Dashed L from (px, py) down to (px, axisY) and across to (axisX, py)
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.2 * dpr;
+  ctx.globalAlpha = 0.6;
+  ctx.setLineDash([4 * dpr, 4 * dpr]);
+  ctx.beginPath();
+  ctx.moveTo(px, py); ctx.lineTo(px, axisY);
+  ctx.moveTo(px, py); ctx.lineTo(axisX, py);
+  ctx.stroke();
+  ctx.restore();
+
+  // Small value chips at each axis
+  function valueChip(x, y, text, anchor){
+    ctx.save();
+    ctx.font = `800 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+    const tw = ctx.measureText(text).width;
+    const padH = 4 * dpr, padV = 2 * dpr;
+    const rectH = (10 * dpr * _fs) + 2*padV;
+    const rectW = tw + 2*padH;
+    let bx, by;
+    if(anchor === 'below'){
+      bx = x - rectW/2; by = y + 3*dpr;
+    } else { // 'left'
+      bx = x - rectW - 3*dpr; by = y - rectH/2;
+    }
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1 * dpr;
+    ctx.beginPath();
+    if(ctx.roundRect) ctx.roundRect(bx, by, rectW, rectH, 3*dpr);
+    else ctx.rect(bx, by, rectW, rectH);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(text, bx + rectW/2, by + rectH/2);
+    ctx.restore();
+  }
+  valueChip(px, axisY, yVal.toFixed(1), 'below');
+  valueChip(axisX, py,  pVal.toFixed(1), 'left');
+}
+
+// ── Shift arrow helper (used for the AD/SRAS shift indicators) ─────
+function drawShiftArrow(ctx, x1, y1, x2, y2, color, dpr, label){
+  if(Math.hypot(x2 - x1, y2 - y1) < 2 * dpr) return;
+  ctx.save();
+  ctx.strokeStyle = color; ctx.fillStyle = color;
+  ctx.lineWidth = 1.8 * dpr;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+  ctx.stroke();
+  // Arrowhead
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const headLen = 9 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI/6),
+             y2 - headLen * Math.sin(angle - Math.PI/6));
+  ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI/6),
+             y2 - headLen * Math.sin(angle + Math.PI/6));
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+  if(label){
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    // Offset perpendicular to the arrow so the label clears the line
+    const isVertical = Math.abs(y2 - y1) > Math.abs(x2 - x1);
+    const offX = isVertical ? 18 * dpr : 0;
+    const offY = isVertical ? 0 : -10 * dpr;
+    drawCurveLabel(ctx, mx + offX, my + offY, label, color, dpr);
+  }
+}
+
+// ───────── Bar charts for Y and P sequences ───────────────────────────
+function drawBars(canvasId, descId, refValue, valueKey, color, axisLabel){
+  const canvas = $(canvasId);
+  const wrap = canvas.parentElement;
+  const setup = setupCanvas(canvas, wrap);
+  if(!setup) return;
+  const { ctx, dpr, W, H } = setup;
+  ctx.clearRect(0, 0, W, H);
+
+  // Y axis range: always show 30..70 so eye-comparison works.
+  const yMin = 30, yMax = 70;
+  const N = state.history ? state.history.length : 6;
+  const co = makeCoords(W, H, dpr, N, yMax, yMin);
+
+  // Axes
+  drawAxes(ctx, co, W, H, dpr, N, yMin, yMax, 'Period', axisLabel);
+
+  // Reference line at refValue
+  clipPlot(ctx, co, W, H);
+  strokeLine(ctx,
+    co.xC(0), co.yC(refValue),
+    co.xC(N), co.yC(refValue),
+    '#155c38', 2, dpr, [6, 4]);
+  unclip(ctx);
+
+  // Reference label
+  ctx.save();
+  ctx.fillStyle = '#155c38';
+  ctx.font = `700 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+  ctx.fillText(axisLabel === 'Output (Y)' ? 'Ȳ = 50' : 'P* = 50',
+               co.xC(N) - 4*dpr, co.yC(refValue) - 2*dpr);
+  ctx.restore();
+
+  if(!state.history){
+    // Empty placeholder text
+    ctx.save();
+    ctx.fillStyle = '#9aa5b1';
+    ctx.font = `600 ${Math.round(12 * dpr * _fs)}px "Inter",sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('Run a sequence to populate.',
+                 co.p.l + co.PW/2, co.p.t + co.PH/2);
+    ctx.restore();
+    return;
+  }
+
+  // Bars
+  clipPlot(ctx, co, W, H);
+  const barW = co.PW / N * 0.62;
+  const refY = co.yC(refValue);
+  for(let i = 0; i < N; i++){
+    const eq = state.history[i];
+    const v = eq[valueKey];
+    const cx = co.xC(i + 0.5);
+    const yTop = co.yC(v);
+    const isSel = i === state.selectedPeriod;
+    const fill = isSel ? color : color + 'cc';
+    ctx.fillStyle = isSel ? color : (color === '#2f5d7c' ?
+      'rgba(47,93,124,.55)' : 'rgba(140,72,0,.55)');
+    ctx.strokeStyle = isSel ? '#1f2937' : 'rgba(31,41,55,.4)';
+    ctx.lineWidth = isSel ? 2 * dpr : 1 * dpr;
+    const top = Math.min(yTop, refY);
+    const h = Math.abs(yTop - refY);
+    ctx.beginPath();
+    ctx.rect(cx - barW/2, top, barW, h);
+    ctx.fill();
+    ctx.stroke();
+  }
+  unclip(ctx);
+
+  // Period labels under bars
+  ctx.save();
+  ctx.fillStyle = '#596878';
+  ctx.font = `700 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for(let i = 0; i < N; i++){
+    ctx.fillText(String(i + 1), co.xC(i + 0.5), co.p.t + co.PH + 4*dpr);
+  }
+  ctx.restore();
+
+  updateBarsDesc(descId, valueKey, refValue, axisLabel);
+}
+
+// ───────── Live-region descriptions ───────────────────────────────────
+function updateADASDesc(eq){
+  const el = $('adasDesc');
+  if(!eq){
+    el.textContent = 'AD-AS diagram. The vertical green dashed line marks ' +
+      'long-run aggregate supply at the natural rate Ȳ = 50. No shock ' +
+      'is currently displayed. Press Run sequence and then a period button ' +
+      'below to see the AD-AS diagram for that shock.';
+    return;
+  }
+  const period = state.selectedPeriod + 1;
+  const battery = BATTERIES[state.battery].label;
+  const dDesc = eq.D === 0 ? 'no demand shock' :
+                (eq.D > 0 ? 'a positive demand shock of ' + eq.D :
+                            'a negative demand shock of ' + eq.D);
+  const sDesc = eq.SS === 0 ? 'no supply shock' :
+                (eq.SS > 0 ? 'a favorable supply shock of ' + eq.SS :
+                             'an adverse supply shock of ' + eq.SS);
+  // Recompute the no-Fed equilibrium for the narration
+  const noFed = equilibrium({D: eq.D, SS: eq.SS, Z: eq.Z}, PASSIVE_RULE);
+  const hasFedAction = Math.abs(eq.MP) > 1e-6;
+  const shockDesc = (eq.D !== 0 || eq.SS !== 0)
+    ? 'Without any Fed response, this shock alone would shift AD ' +
+      (eq.D > 0 ? 'right' : eq.D < 0 ? 'left' : 'not at all') +
+      ' and shift SRAS ' +
+      (eq.SS > 0 ? 'down' : eq.SS < 0 ? 'up' : 'not at all') +
+      ', producing equilibrium at Y=' + noFed.Y.toFixed(1) +
+      ', P=' + noFed.P.toFixed(1) + '. '
+    : 'No shock this period. ';
+  const policyDesc = !hasFedAction ? 'Your rule produced no Fed policy response, ' +
+    'so the equilibrium under your rule matches the no-Fed equilibrium. '
+    : 'Your rule then layered ' +
+      (eq.MP < 0 ? 'a contractionary policy of ' + eq.MP.toFixed(1) +
+                   ' on top, shifting AD further left' :
+                   'an expansionary policy of +' + eq.MP.toFixed(1) +
+                   ' on top, shifting AD further right') +
+      ', moving equilibrium to Y=' + eq.Y.toFixed(1) +
+      ', P=' + eq.P.toFixed(1) + '. ';
+  el.textContent = 'Period ' + period + ' of the ' + battery + ' battery. ' +
+    'This period faced ' + dDesc + ' and ' + sDesc + '. ' +
+    shockDesc + 'Your rule weights are α=' + state.rule.alpha.toFixed(1) +
+    ', β=' + state.rule.beta.toFixed(1) +
+    ', γ=' + state.rule.gamma.toFixed(2) + '. ' + policyDesc +
+    'Targets are Ȳ=50 and P*=50.';
+}
+
+function updatePeriodInfo(eq, eqNoFed){
+  const box = $('periodInfo');
+  if(!eq){
+    box.hidden = true;
+    $('legendNoFedCoord').textContent = '(—, —)';
+    $('legendNoFedCoord').classList.add('muted');
+    $('legendRuleCoord').textContent = '(—, —)';
+    $('legendRuleCoord').classList.add('muted');
+    return;
+  }
+  box.hidden = false;
+
+  // Shock description
+  let shockMsg;
+  if(eq.D === 0 && eq.SS === 0){
+    shockMsg = '<strong>No shock</strong> — the economy starts the period ' +
+               'on AD₀ and SRAS.';
+  } else {
+    const parts = [];
+    if(eq.D !== 0){
+      const dir = eq.D > 0 ? 'right' : 'left';
+      parts.push('<strong>' +
+        (eq.D > 0 ? 'Positive' : 'Negative') +
+        ' demand shock of ' + (eq.D > 0 ? '+' : '') + eq.D +
+        '</strong> — AD shifts ' + dir);
+    }
+    if(eq.SS !== 0){
+      const dir = eq.SS > 0 ? 'down' : 'up';
+      parts.push('<strong>' +
+        (eq.SS > 0 ? 'Favorable' : 'Adverse') +
+        ' supply shock of ' + (eq.SS > 0 ? '+' : '') + eq.SS +
+        '</strong> — SRAS shifts ' + dir);
+    }
+    shockMsg = parts.join('; ') + '.';
+  }
+  $('shockText').innerHTML = shockMsg;
+
+  // Fed response
+  let fedMsg;
+  const hasFedAction = Math.abs(eq.MP) > 1e-6;
+  if(!hasFedAction){
+    fedMsg = '<strong>No policy response</strong> — your rule produced ' +
+             'MP = 0 for this shock.';
+  } else {
+    const dir = eq.MP > 0 ? 'right' : 'left';
+    const kind = eq.MP > 0 ? 'expansionary' : 'contractionary';
+    fedMsg = '<strong>' + kind.charAt(0).toUpperCase() + kind.slice(1) +
+             ' policy of ' + (eq.MP > 0 ? '+' : '') + eq.MP.toFixed(1) +
+             '</strong> — AD shifts ' + dir +
+             ' (driven by your α=' + state.rule.alpha.toFixed(1) +
+             ', β=' + state.rule.beta.toFixed(1) +
+             ', γ=' + state.rule.gamma.toFixed(2) + ').';
+  }
+  $('fedText').innerHTML = fedMsg;
+
+  // Coordinates — info box + legend
+  const noFedStr = eqNoFed
+    ? '(Y=' + eqNoFed.Y.toFixed(1) + ', P=' + eqNoFed.P.toFixed(1) + ')'
+    : '(—, —)';
+  const ruleStr = '(Y=' + eq.Y.toFixed(1) + ', P=' + eq.P.toFixed(1) + ')';
+  $('noFedCoordText').textContent = noFedStr;
+  $('ruleCoordText').textContent = ruleStr;
+  $('legendNoFedCoord').textContent = noFedStr;
+  $('legendNoFedCoord').classList.remove('muted');
+  $('legendRuleCoord').textContent = ruleStr;
+  $('legendRuleCoord').classList.remove('muted');
+}
+
+function updateBarsDesc(descId, valueKey, refValue, axisLabel){
+  const el = $(descId);
+  if(!state.history){
+    el.textContent = axisLabel + ' bar chart. Empty — run a sequence to ' +
+      'populate.';
+    return;
+  }
+  const vals = state.history.map(e => e[valueKey]);
+  const minV = Math.min.apply(null, vals);
+  const maxV = Math.max.apply(null, vals);
+  const sc = score(state.history);
+  const vol = valueKey === 'Y' ? sc.yVol : sc.pVol;
+  const list = vals.map((v, i) =>
+    'Period ' + (i + 1) + ': ' + v.toFixed(1)).join('; ');
+  el.textContent = axisLabel + ' across ' + vals.length +
+    ' periods, reference line at ' + refValue + '. ' + list + '. ' +
+    'Range ' + minV.toFixed(1) + ' to ' + maxV.toFixed(1) +
+    '. Volatility (RMSE from reference): ' + vol.toFixed(2) + '.';
+}
+
+// ───────── Redraw ─────────────────────────────────────────────────────
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  drawADAS();
+  drawBars('yBarsCanvas', 'yBarsDesc', Y_TARGET, 'Y', '#2f5d7c', 'Output (Y)');
+  drawBars('pBarsCanvas', 'pBarsDesc', P_TARGET, 'P', '#8c4800', 'Price level (P)');
+}
+
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+// Initial render
+renderPeriodButtons();
+renderRunsTable();
+redraw();
+
+})();
+</script>
+</body>
+</html>

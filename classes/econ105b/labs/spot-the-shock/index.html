@@ -1,0 +1,1521 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Spot the Shock — ECON 105B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea;
+      --panel:#ffffff;
+      --ink:#1f2937;
+      --ink-2:#374151;
+      --muted:#596878;
+      --line:#e7dfd2;
+      --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;
+      --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1240px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Main wrap */
+    .lab-wrap{max-width:1240px;margin:0 auto;padding:18px;}
+
+    /* Two canvas row */
+    .canvas-row{display:grid;grid-template-columns:1fr 1fr;
+      gap:14px;margin-bottom:14px;}
+    @media(max-width:960px){.canvas-row{grid-template-columns:1fr;}}
+
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-head{display:flex;justify-content:space-between;align-items:baseline;
+      gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin:0;}
+    .graph-hint{font-size:0.75rem;color:var(--muted);}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;
+      overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);aspect-ratio:1/1;}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+
+    .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;
+      font-size:0.75rem;color:var(--ink-2);}
+    .legend-row{display:flex;align-items:center;gap:6px;}
+    .legend-line{width:26px;height:0;border-top:2.5px solid currentColor;flex-shrink:0;}
+    .legend-line.dashed{border-top-style:dashed;}
+    .legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;
+      background:currentColor;border:2px solid #fff;box-shadow:0 0 0 1px currentColor;}
+
+    /* Cards */
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;
+      padding:16px;box-shadow:var(--shadow);margin-bottom:14px;}
+    .card-title{font-size:0.75rem;text-transform:uppercase;letter-spacing:.08em;
+      color:var(--accent);font-weight:800;margin-bottom:10px;}
+    .card-sub{font-size:0.8125rem;color:var(--ink-2);margin-bottom:10px;line-height:1.5;}
+
+    /* Prompt + tally header */
+    .prompt-head{display:flex;justify-content:space-between;align-items:baseline;
+      gap:10px;flex-wrap:wrap;}
+    .tally{font-size:0.75rem;text-transform:uppercase;letter-spacing:.08em;
+      color:var(--muted);font-weight:800;
+      font-variant-numeric:tabular-nums;}
+    .tally strong{color:var(--ink);font-size:0.875rem;}
+
+    /* Sub-question rows */
+    .q-row{margin-top:14px;}
+    .q-row:first-of-type{margin-top:10px;}
+    .q-label{font-size:0.8125rem;font-weight:800;color:var(--ink);
+      margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+    .q-label .q-num{display:inline-flex;align-items:center;justify-content:center;
+      width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;
+      font-size:0.6875rem;font-weight:800;}
+    .q-label .q-hint{font-weight:600;color:var(--muted);font-size:0.75rem;
+      text-transform:none;letter-spacing:0;}
+
+    /* Radio buttons disguised as option buttons */
+    .opt-group{display:flex;flex-wrap:wrap;gap:8px;}
+    .opt-group input[type=radio]{
+      position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;
+    }
+    .opt-group label{
+      padding:9px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;
+      display:inline-flex;align-items:center;gap:6px;
+      user-select:none;
+    }
+    .opt-group label:hover{border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .opt-group input[type=radio]:checked + label{
+      border-color:var(--accent);background:rgba(47,93,124,.14);
+      color:var(--accent);}
+    .opt-group input[type=radio]:focus-visible + label{
+      outline:3px solid var(--accent);outline-offset:2px;}
+    .opt-group input[type=radio]:disabled + label{
+      opacity:.38;cursor:not-allowed;}
+    .opt-group.disabled label{opacity:.55;cursor:not-allowed;}
+
+    /* Buttons */
+    .btn-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover:not(:disabled){background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .option-btn{padding:9px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+    .ghost-btn{padding:8px 16px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:transparent;
+      color:var(--ink-2);font-family:var(--font-sans);
+      font-size:0.8125rem;font-weight:700;cursor:pointer;transition:background .12s;}
+    .ghost-btn:hover{background:rgba(0,0,0,.04);}
+
+    /* Feedback chips */
+    .grade-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+      margin-top:12px;}
+    @media(max-width:780px){.grade-grid{grid-template-columns:1fr;}}
+    .grade-chip{padding:10px 12px;border-radius:12px;
+      border:1.5px solid var(--line-2);background:rgba(246,242,234,.5);
+      display:flex;flex-direction:column;gap:2px;}
+    .grade-chip.pass{border-color:var(--good);background:rgba(21,92,56,.08);}
+    .grade-chip.fail{border-color:var(--bad);background:rgba(180,35,24,.06);}
+    .grade-chip-head{display:flex;align-items:center;gap:6px;
+      font-size:0.6875rem;text-transform:uppercase;letter-spacing:.07em;
+      font-weight:800;color:var(--muted);}
+    .grade-chip.pass .grade-chip-head{color:var(--good);}
+    .grade-chip.fail .grade-chip-head{color:var(--bad);}
+    .grade-symbol{display:inline-flex;align-items:center;justify-content:center;
+      width:18px;height:18px;border-radius:50%;font-size:0.75rem;
+      font-weight:900;line-height:1;}
+    .grade-chip.pass .grade-symbol{background:var(--good);color:#fff;}
+    .grade-chip.fail .grade-symbol{background:var(--bad);color:#fff;}
+    .grade-chip-label{font-size:0.8125rem;font-weight:800;color:var(--ink);}
+    .grade-chip-hint{font-size:0.75rem;color:var(--ink-2);line-height:1.45;
+      margin-top:2px;}
+
+    .summary-banner{margin-top:10px;padding:10px 12px;border-radius:12px;
+      font-size:0.875rem;font-weight:700;
+      display:flex;align-items:center;gap:8px;}
+    .summary-banner.pass{background:rgba(21,92,56,.10);color:var(--good);
+      border:1.5px solid var(--good);}
+    .summary-banner.partial{background:#fff7e6;color:#8c4800;
+      border:1.5px solid #d9a44a;}
+    .summary-banner.fail{background:rgba(180,35,24,.06);color:var(--bad);
+      border:1.5px solid var(--bad);}
+    .summary-banner .sym{font-size:1rem;}
+
+    /* Reveal box */
+    .reveal-box{margin-top:10px;padding:10px 12px;border-radius:12px;
+      background:rgba(47,93,124,.07);border:1.5px solid var(--accent);
+      font-size:0.875rem;color:var(--ink);line-height:1.55;}
+    .reveal-box strong{color:var(--accent);}
+
+
+    /* Footer */
+    footer{margin-top:32px;}
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;
+      gap:8px;font-size:0.75rem;color:var(--muted);padding-top:12px;
+      border-top:1px solid var(--line);margin-top:24px;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105b/labs/">← ECON 105B Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105B — Long and Short-Run Equilibrium</div>
+      <h1>Spot the Shock</h1>
+      <p class="sub">
+        Read the diagrams diagnostically. Each problem shows a completed
+        A → B → C path on the linked AD-AS and IS-LM diagrams. Identify
+        which shock could have produced it — the reverse of the standard
+        equilibrium lab.
+      </p>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>The economy starts in long-run equilibrium at point
+          <strong>A</strong> (Y = 50, P = 50). A shock moves it to a new
+          short-run equilibrium at <strong>B</strong>. As wages and prices
+          adjust (via expected inflation π<sup>e</sup>), the economy
+          settles at a new long-run point <strong>C</strong>.</p>
+          <p>For each problem you'll answer two or three sub-questions:</p>
+          <ol>
+            <li><strong>Variable.</strong> Which variable was shocked?
+                Each problem shows one demand option (C, I, G, or T), one
+                short-run supply option (wages, rental rate of capital,
+                or tariffs), one long-run supply option (technology, labor
+                supply, or capital stock), and monetary policy.</li>
+            <li><strong>Direction.</strong> Positive (the relevant curve
+                shifted in the expansionary direction — right for AD / IS /
+                LM / LRAS, down for SRAS) or negative (the curve shifted in
+                the contractionary direction — left for AD / IS / LM /
+                LRAS, up for SRAS).</li>
+            <li><strong>Permanence.</strong> Only shown for supply shocks
+                — temporary (SRAS only) or permanent (LRAS shifts too)?</li>
+          </ol>
+          <p>Each sub-question is graded independently. After submitting,
+          targeted feedback explains the diagnostic that gives the answer
+          away — for example, whether the interest rate rises or falls
+          alongside output is what distinguishes a real-demand shock
+          from a monetary one.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <div class="canvas-row">
+
+    <div class="graph-card">
+      <div class="graph-head">
+        <div class="graph-title" id="adasTitle">AD-AS Diagram</div>
+        <span class="graph-hint">Output (<i>Y</i>) vs. Price Level (<i>P</i>)</span>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="adasCanvas"
+                role="img"
+                aria-labelledby="adasTitle"
+                aria-describedby="adasDesc"></canvas>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span class="legend-row" style="color:var(--accent);">
+          <span class="legend-line"></span> AD&nbsp;/&nbsp;AD′</span>
+        <span class="legend-row" style="color:#8c4800;">
+          <span class="legend-line"></span> SRAS&nbsp;/&nbsp;SRAS′&nbsp;/&nbsp;SRAS″</span>
+        <span class="legend-row" style="color:var(--good);">
+          <span class="legend-line dashed"></span> LRAS&nbsp;/&nbsp;LRAS′</span>
+        <span class="legend-row" style="color:var(--ink-2);">
+          <span class="legend-dot"></span> A, B, C</span>
+      </div>
+    </div>
+
+    <div class="graph-card">
+      <div class="graph-head">
+        <div class="graph-title" id="islmTitle">IS-LM Diagram</div>
+        <span class="graph-hint">Output (<i>Y</i>) vs. Interest Rate (<i>r</i>)</span>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="islmCanvas"
+                role="img"
+                aria-labelledby="islmTitle"
+                aria-describedby="islmDesc"></canvas>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span class="legend-row" style="color:var(--accent);">
+          <span class="legend-line"></span> IS&nbsp;/&nbsp;IS′</span>
+        <span class="legend-row" style="color:#7a3aa7;">
+          <span class="legend-line"></span> LM at each price level</span>
+        <span class="legend-row" style="color:var(--ink-2);">
+          <span class="legend-dot"></span> A, B, C</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Live region for canvas descriptions -->
+  <section class="sr-only" id="graphsDesc"
+           aria-live="polite" aria-atomic="true">
+    <p id="adasDesc">AD-AS diagram loading.</p>
+    <p id="islmDesc">IS-LM diagram loading.</p>
+  </section>
+
+  <!-- Question card -->
+  <div class="card">
+    <div class="prompt-head">
+      <div>
+        <div class="card-title" style="margin-bottom:4px;">Which shock produced this outcome?</div>
+        <div class="card-sub" style="margin:0;">
+          Use the directional fingerprint of the curves and points above —
+          how <i>Y</i>, <i>P</i>, and <i>r</i> moved between A, B, and C —
+          to diagnose the shock.
+        </div>
+      </div>
+      <div class="tally" aria-live="polite" aria-atomic="true">
+        Score <strong id="tallyText">0 / 0</strong>
+      </div>
+    </div>
+
+    <div class="q-row">
+      <div class="q-label">
+        <span class="q-num">1</span>
+        <span>Which variable was shocked?</span>
+        <span class="q-hint">— read the diagrams to identify which variable shifted.</span>
+      </div>
+      <div class="opt-group" id="catGroup" role="radiogroup" aria-label="Which variable was shocked">
+        <input type="radio" name="cat" id="catDemand" value="demand"/>
+        <label for="catDemand" id="catDemandLabel">—</label>
+        <input type="radio" name="cat" id="catSR" value="SR_supply"/>
+        <label for="catSR" id="catSRLabel">—</label>
+        <input type="radio" name="cat" id="catLR" value="LR_supply"/>
+        <label for="catLR" id="catLRLabel">—</label>
+        <input type="radio" name="cat" id="catM" value="M"/>
+        <label for="catM" id="catMLabel">Monetary policy (M)</label>
+      </div>
+    </div>
+
+    <div class="q-row" id="dirRow" hidden>
+      <div class="q-label">
+        <span class="q-num">2</span>
+        <span id="dirQText">What happened to the variable?</span>
+        <span class="q-hint" id="dirHint">— read the diagram, then pick what must have happened to the variable you chose.</span>
+      </div>
+      <div class="opt-group" id="dirGroup" role="radiogroup" aria-label="What happened to the variable">
+        <input type="radio" name="dir" id="dirOpt1" value="inc"/>
+        <label for="dirOpt1" id="dirOpt1Label">Increase</label>
+        <input type="radio" name="dir" id="dirOpt2" value="dec"/>
+        <label for="dirOpt2" id="dirOpt2Label">Decrease</label>
+      </div>
+    </div>
+
+    <div class="q-row" id="permRow" hidden>
+      <div class="q-label">
+        <span class="q-num">3</span>
+        <span>Permanence</span>
+        <span class="q-hint">— for supply shocks: does productive capacity (LRAS) change?</span>
+      </div>
+      <div class="opt-group" id="permGroup" role="radiogroup" aria-label="Shock permanence">
+        <input type="radio" name="perm" id="permTemp" value="temp"/>
+        <label for="permTemp">Temporary (LRAS unchanged)</label>
+        <input type="radio" name="perm" id="permPerm" value="perm"/>
+        <label for="permPerm">Permanent (LRAS shifts)</label>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="primary-btn" id="submitBtn" disabled>Submit Answer</button>
+      <button class="primary-btn" id="newBtn">New Question</button>
+      <button class="option-btn"  id="revealBtn" disabled>Show me the answer</button>
+    </div>
+
+    <div id="feedbackArea" aria-live="polite" aria-atomic="true"></div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 105B — Spot the Shock</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+// ─────────────────────────────────────────────────────────────────────────
+// Lab identifier (kept stable for future discussion compatibility).
+//   Sample week-template entry:
+//   { id: 'spot-the-shock',
+//     name: 'Spot the Shock',
+//     icon: '🔎',
+//     desc: 'Read AD-AS and IS-LM diagrams diagnostically: identify which shock produced the displayed A→B→C path.',
+//     url: '/classes/econ105b/labs/spot-the-shock/?disc=1' }
+// ─────────────────────────────────────────────────────────────────────────
+const LAB_ID    = 'spot-the-shock';
+const LAB_LABEL = 'Spot the Shock';
+
+// Session seam wrappers — currently no-ops.
+const Session = {
+  rngForLab(){ return (window.Session && window.Session.rngForLab)
+                      ? window.Session.rngForLab(LAB_ID) : null; },
+  recordQuestion(){ /* no-op for now */ },
+  recordLabDone(){  /* no-op for now */ },
+};
+
+// ───────── Model parameters (mirrors long-short-run-equilibrium lab) ───
+//   a = 1, s = 0.5  →  SRAS slope (1-s)/s = 1
+//   YB = 50, EP = 50, AD0 = 100
+const A_PARAM = 1, S_PARAM = 0.5;
+const YB = 50, EP_BASE = 50, AD0 = 100;
+const SRAS_SLOPE = A_PARAM * (1 - S_PARAM) / S_PARAM;  // = 1
+
+const Y_MAX = 100, P_MAX = 100, R_MAX = 80;
+
+// ── Shock library ─────────────────────────────────────────────────────
+//
+// Each shock has:
+//   id, category, direction, permanence, label, narrative
+//   apply(rng) → { MS, FS, IS, CS, SS, LRS } — the underlying slider state.
+//
+// Random magnitudes are drawn from a small range so each replay is fresh
+// without changing the diagnostic fingerprint.
+function urand(rng, lo, hi){ return lo + rng() * (hi - lo); }
+function snap(v, step){ return Math.round(v / step) * step; }
+
+// Variable pools — step 1 picks one representative from each pool every
+// question, so the four options shown rotate. Step 1 radio values are
+// the broad category ('demand' / 'SR_supply' / 'LR_supply' / 'M'); the
+// displayed label is the chosen variable's name.
+//
+// Direction follows the *curve*, not the underlying variable:
+//   positive  → the relevant curve shifts in the expansionary direction
+//               (AD/IS/LM/LRAS right, SRAS down/right).
+//   negative  → the curve shifts in the contractionary direction
+//               (AD/IS/LM/LRAS left, SRAS up/left).
+// So the slider state is simply sliderSign = (dir === 'pos' ? +1 : -1).
+const VARS = {
+  demand: [
+    { id:'C', label:'Consumption (C)',         slider:'CS' },
+    { id:'I', label:'Investment (I)',          slider:'IS' },
+    { id:'G', label:'Government purchases (G)', slider:'FS' },
+    { id:'T', label:'Taxes (T)',                slider:'FS' },
+  ],
+  SR_supply: [
+    { id:'wages',   label:'Wages',                   slider:'SS' },
+    { id:'rental',  label:'Rental rate of capital',  slider:'SS' },
+    { id:'tariffs', label:'Tariffs',                 slider:'SS' },
+  ],
+  LR_supply: [
+    { id:'tech',    label:'Technology',     slider:'LRS' },
+    { id:'labor',   label:'Labor supply',   slider:'LRS' },
+    { id:'capital', label:'Capital stock',  slider:'LRS' },
+  ],
+  M: [
+    { id:'M', label:'Monetary policy (M)', slider:'MS' },
+  ],
+};
+
+const CATEGORIES = ['demand', 'SR_supply', 'LR_supply', 'M'];
+function permFor(cat){
+  if(cat === 'SR_supply') return 'temp';
+  if(cat === 'LR_supply') return 'perm';
+  return 'na';
+}
+function magFor(cat, rng){
+  if(cat === 'LR_supply') return snap(urand(rng,6,10), 1);
+  if(cat === 'SR_supply') return snap(urand(rng,10,15), 1);
+  return snap(urand(rng,15,22), 1);
+}
+
+// ───────── Solver ─────────────────────────────────────────────────────
+//
+// solveShock(shockVec) → all coordinates the panels need.
+//
+// shockVec = { MS, FS, IS, CS, SS, LRS } (any missing keys treated as 0).
+//
+// Long-run wage adjustment (π^e) automatically chosen so output at C
+// equals the post-shock natural rate (YB + LRS). Derivation:
+//   EPS = adShift + SS
+// where adShift = MS + FS + IS + CS.
+//
+// SRAS coupling: a permanent productivity gain (LRS > 0) lowers marginal
+// cost, so SRAS shifts down by the same amount LRAS shifts right (the
+// −LRS terms in the SRAS intercept below).
+function solveShock(v){
+  const MS  = v.MS  || 0;
+  const FS  = v.FS  || 0;
+  const ISH = v.IS  || 0;
+  const CS  = v.CS  || 0;
+  const SS  = v.SS  || 0;
+  const LRS = v.LRS || 0;
+
+  const adShift  = MS + FS + ISH + CS;
+  const is_shift = FS + ISH + CS;       // IS shifters (real demand only)
+  const lm_shift = MS;                  // LM shifters (monetary only)
+  const EPS      = adShift + SS;        // closes output gap at C
+
+  const yBarA = YB;
+  const yBarC = YB + LRS;
+
+  // AD curve:    P = AD0 + adShift′ − Y
+  // SRAS curve:  P = (EP_BASE + EPS′ − SS′ − LRS) + (Y − YB − LRS)
+  // LRAS:        Y = YB + LRS
+  //
+  // AD ∩ SRAS  →  Y = (AD0 + adShift′ − EP_BASE − EPS′ + SS′ + 2·LRS + YB) / 2
+  function adSrasY(ad, ssTerm, epsTerm){
+    return (AD0 + ad - EP_BASE - epsTerm + ssTerm + 2 * LRS + YB) / 2;
+  }
+
+  // Point A: undisturbed
+  const A = { Y: YB, P: EP_BASE };
+  A.r = AD0 / 2 - A.Y / 2;
+
+  // Point B: shock applied, no wage adjustment yet
+  const yB = adSrasY(adShift, SS, 0);
+  const pB = AD0 + adShift - yB;
+  const B = { Y: yB, P: pB };
+  B.r = AD0 / 2 + is_shift - B.Y / 2;
+
+  // Point C: shock + long-run wage adjustment (EPS) — Y back to natural rate
+  const yC = adSrasY(adShift, SS, EPS);
+  const pC = AD0 + adShift - yC;
+  const C = { Y: yC, P: pC };
+  C.r = AD0 / 2 + is_shift - C.Y / 2;
+
+  // Curve intercepts for drawing
+  // AD: P = AD0_int − Y
+  const AD0_int_initial = AD0;
+  const AD0_int_shock   = AD0 + adShift;
+
+  // SRAS: P = SRAS_int + Y
+  // SRAS_int = EP_BASE + EPS′ − SS′ − 2·LRS − YB
+  const SRAS_int_initial = EP_BASE - YB;
+  const SRAS_int_short   = EP_BASE - SS - 2 * LRS - YB;
+  const SRAS_int_long    = EP_BASE + EPS - SS - 2 * LRS - YB;
+
+  return {
+    A, B, C,
+    yBarA, yBarC,
+    adShift, is_shift, lm_shift,
+    EPS, SS, LRS, MS, FS, IS:ISH, CS,
+    AD0_int_initial, AD0_int_shock,
+    SRAS_int_initial, SRAS_int_short, SRAS_int_long,
+  };
+}
+
+// ───────── DOM helpers ────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+// ───────── Canvas engine ──────────────────────────────────────────────
+let _fs = 1;
+const PAD = { l:52, r:24, t:18, b:46 };
+
+function setupCanvas(canvas, wrap){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  const W = Math.round(rect.width  * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+function makeCoords(W, H, dpr, xMax, yMax){
+  const p = { l:PAD.l*dpr, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  return {
+    xC: x => p.l + (x / xMax) * PW,
+    yC: y => H - p.b - (y / yMax) * PH,
+    p, PW, PH,
+  };
+}
+
+function tickStep(mx){
+  if(mx<=10) return 1; if(mx<=20) return 2; if(mx<=50) return 5;
+  if(mx<=100) return 10; if(mx<=200) return 20; if(mx<=500) return 50;
+  return 100;
+}
+
+function drawAxes(ctx, co, W, H, dpr, xMax, yMax, xLabel, yLabel){
+  const { p } = co;
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillRect(p.l, p.t, co.PW, co.PH);
+
+  ctx.font = `400 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  const yStep = tickStep(yMax);
+  for(let y = 0; y <= yMax + 1e-6; y += yStep){
+    const py = co.yC(y);
+    ctx.strokeStyle = '#e7dfd2'; ctx.lineWidth = 1 * dpr;
+    ctx.beginPath(); ctx.moveTo(p.l, py); ctx.lineTo(W - p.r, py); ctx.stroke();
+    ctx.fillStyle = '#596878';
+    ctx.fillText(String(y), p.l - 5*dpr, py);
+  }
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  const xStep = tickStep(xMax);
+  for(let x = 0; x <= xMax + 1e-6; x += xStep){
+    const px = co.xC(x);
+    ctx.strokeStyle = '#e7dfd2'; ctx.lineWidth = 1 * dpr;
+    ctx.beginPath(); ctx.moveTo(px, p.t); ctx.lineTo(px, H - p.b); ctx.stroke();
+    ctx.fillStyle = '#596878';
+    ctx.fillText(String(x), px, H - p.b + 5*dpr);
+  }
+  ctx.strokeStyle = '#374151'; ctx.lineWidth = 1.2 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(p.l, p.t); ctx.lineTo(p.l, H - p.b); ctx.lineTo(W - p.r, H - p.b);
+  ctx.stroke();
+
+  ctx.fillStyle = '#374151';
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText(xLabel, p.l + co.PW/2, H - 8*dpr);
+
+  ctx.save();
+  ctx.translate(14*dpr, p.t + co.PH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(yLabel, 0, 0);
+  ctx.restore();
+}
+
+function clipPlot(ctx, co, W, H){
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(co.p.l, co.p.t, W - co.p.l - co.p.r, H - co.p.t - co.p.b);
+  ctx.clip();
+}
+function unclip(ctx){ ctx.restore(); }
+
+function strokeLine(ctx, x1, y1, x2, y2, color, width, dpr, dash){
+  ctx.save();
+  ctx.strokeStyle = color; ctx.lineWidth = width * dpr;
+  ctx.setLineDash((dash || []).map(d => d * dpr));
+  ctx.beginPath();
+  ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawDot(ctx, x, y, color, r, dpr, label){
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2 * dpr;
+  ctx.beginPath();
+  ctx.arc(x, y, r * dpr, 0, Math.PI * 2);
+  ctx.fill(); ctx.stroke();
+  ctx.restore();
+
+  if(label){
+    ctx.save();
+    ctx.font = `800 ${Math.round(13 * dpr * _fs)}px "Source Serif 4",serif`;
+    const labelW = ctx.measureText(label).width;
+    const padH = 4 * dpr, padV = 2 * dpr;
+    const bx = x + 8 * dpr, by = y - (10 * dpr * _fs) - padV;
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.2 * dpr;
+    const rectW = labelW + 2*padH, rectH = (14 * dpr * _fs) + 2*padV;
+    ctx.beginPath();
+    if(ctx.roundRect) ctx.roundRect(bx, by, rectW, rectH, 4*dpr);
+    else ctx.rect(bx, by, rectW, rectH);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(label, bx + padH, by + rectH/2);
+    ctx.restore();
+  }
+}
+
+function drawCurveLabel(ctx, x, y, text, color, dpr){
+  ctx.save();
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  const hasSubOrPrime = /[₀-₉′″]/.test(text);
+  const rawW = ctx.measureText(text).width;
+  const w = hasSubOrPrime ? rawW + 6 * dpr : rawW;
+  const padH = 5 * dpr, padV = 2 * dpr;
+  const rectH = (12 * dpr * _fs) + 2*padV;
+  const bx = x - w/2 - padH, by = y - rectH/2;
+  ctx.fillStyle = 'rgba(255,255,255,0.88)';
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(bx, by, w + 2*padH, rectH, 3*dpr);
+  else ctx.rect(bx, by, w + 2*padH, rectH);
+  ctx.fill();
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+// ───────── AD-AS panel ────────────────────────────────────────────────
+function drawADAS(canvas, m){
+  const wrap = canvas.parentElement;
+  const setup = setupCanvas(canvas, wrap);
+  if(!setup) return;
+  const { ctx, dpr, W, H } = setup;
+  ctx.clearRect(0, 0, W, H);
+
+  const co = makeCoords(W, H, dpr, Y_MAX, P_MAX);
+  drawAxes(ctx, co, W, H, dpr, Y_MAX, P_MAX,
+           'Income / Output  (Y)', 'Price Level  (P)');
+
+  const adShifted   = m.adShift !== 0;
+  const srasShifted = m.SS !== 0 || m.LRS !== 0;        // SRAS at B differs from SRAS₀
+  const srasLong    = m.EPS !== 0 && Math.abs(m.SRAS_int_long - m.SRAS_int_short) > 1e-6;
+  const lrasShifted = m.LRS !== 0;
+
+  // ── LRAS curves (vertical, dashed) ─────────────────────────────────
+  clipPlot(ctx, co, W, H);
+  strokeLine(ctx,
+    co.xC(YB), co.yC(0),
+    co.xC(YB), co.yC(P_MAX),
+    '#155c38', lrasShifted ? 1.5 : 2.4, dpr, [6, 4]);
+  if(lrasShifted){
+    strokeLine(ctx,
+      co.xC(m.yBarC), co.yC(0),
+      co.xC(m.yBarC), co.yC(P_MAX),
+      '#155c38', 2.6, dpr, [8, 3]);
+  }
+  unclip(ctx);
+
+  ctx.save();
+  ctx.fillStyle = '#155c38';
+  ctx.font = `800 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText('LRAS', co.xC(YB), co.yC(P_MAX) - 2 * dpr);
+  if(lrasShifted){
+    ctx.fillText('LRAS′', co.xC(m.yBarC), co.yC(P_MAX) - 2 * dpr);
+  }
+  ctx.restore();
+
+  // ── AD curves ──────────────────────────────────────────────────────
+  function drawAD(intercept, color, width, label){
+    clipPlot(ctx, co, W, H);
+    const y0 = 0,        p0 = intercept - y0;
+    const y1 = Y_MAX,    p1 = intercept - y1;
+    strokeLine(ctx, co.xC(y0), co.yC(p0), co.xC(y1), co.yC(p1),
+               color, width, dpr);
+    unclip(ctx);
+    if(label){
+      const yL = Math.min(Y_MAX - 8, Math.max(8, intercept - 4));
+      const pL = intercept - yL;
+      if(pL > 2 && pL < P_MAX - 2){
+        drawCurveLabel(ctx, co.xC(yL + 4), co.yC(pL - 4), label, color, dpr);
+      }
+    }
+  }
+  drawAD(m.AD0_int_initial, '#2f5d7c', adShifted ? 1.8 : 2.6, 'AD');
+  if(adShifted){
+    drawAD(m.AD0_int_shock, '#b42318', 2.4, 'AD′');
+  }
+
+  // ── SRAS curves ────────────────────────────────────────────────────
+  function drawSRAS(intercept, color, width, label){
+    clipPlot(ctx, co, W, H);
+    const y0 = 0,        p0 = intercept + SRAS_SLOPE * y0;
+    const y1 = Y_MAX,    p1 = intercept + SRAS_SLOPE * y1;
+    strokeLine(ctx, co.xC(y0), co.yC(p0), co.xC(y1), co.yC(p1),
+               color, width, dpr);
+    unclip(ctx);
+    if(label){
+      const yL = Math.min(Y_MAX - 6, (P_MAX - 8 - intercept) / SRAS_SLOPE);
+      const pL = intercept + SRAS_SLOPE * yL;
+      if(pL < P_MAX - 4 && yL > 4){
+        drawCurveLabel(ctx, co.xC(yL), co.yC(pL + 4), label, color, dpr);
+      }
+    }
+  }
+  drawSRAS(m.SRAS_int_initial, '#8c4800',
+           (srasShifted || srasLong) ? 1.8 : 2.6, 'SRAS');
+  if(srasShifted){
+    drawSRAS(m.SRAS_int_short, '#b42318', 2.4, 'SRAS′');
+  }
+  if(srasLong){
+    drawSRAS(m.SRAS_int_long, '#7a3aa7', 2.4, 'SRAS″');
+  }
+
+  // ── Equilibrium markers ────────────────────────────────────────────
+  drawAdasMarkers(ctx, co, m, dpr);
+
+  updateADASDesc(m);
+}
+
+// Combine labels for coincident equilibria so no marker is hidden.
+function drawAdasMarkers(ctx, co, m, dpr){
+  const aB = somePointDiffers(m.A, m.B);
+  const bC = somePointDiffers(m.B, m.C);
+  const aC = somePointDiffers(m.A, m.C);
+
+  if(!aB && !aC){
+    // All three at A
+    drawMarker(ctx, co, m.A, 'A = B = C', '#2f5d7c', dpr);
+    return;
+  }
+  if(!aB){
+    // A ≠ C but B = A (effectively no shock — unusual). Just label A and C.
+    drawMarker(ctx, co, m.A, 'A = B', '#2f5d7c', dpr);
+    if(aC) drawMarker(ctx, co, m.C, 'C', '#7a3aa7', dpr);
+    return;
+  }
+  if(!aC){
+    // C coincides with A (temporary supply: returns to start)
+    drawMarker(ctx, co, m.A, 'A = C', '#2f5d7c', dpr);
+    drawMarker(ctx, co, m.B, 'B', '#b42318', dpr);
+    return;
+  }
+  if(!bC){
+    // B and C coincide (permanent supply with auto-coupled SRAS)
+    drawMarker(ctx, co, m.A, 'A', '#2f5d7c', dpr);
+    drawMarker(ctx, co, m.B, 'B = C', '#b42318', dpr);
+    return;
+  }
+  drawMarker(ctx, co, m.A, 'A', '#2f5d7c', dpr);
+  drawMarker(ctx, co, m.B, 'B', '#b42318', dpr);
+  drawMarker(ctx, co, m.C, 'C', '#7a3aa7', dpr);
+}
+
+function somePointDiffers(p, q){
+  return Math.abs(p.Y - q.Y) > 1e-3 || Math.abs(p.P - q.P) > 1e-3;
+}
+
+function drawMarker(ctx, co, pt, letter, color, dpr){
+  const x = co.xC(pt.Y), y = co.yC(pt.P !== undefined ? pt.P : pt.r);
+  drawDot(ctx, x, y, color, 5.5, dpr, letter);
+}
+
+// ───────── IS-LM panel ────────────────────────────────────────────────
+function drawISLM(canvas, m){
+  const wrap = canvas.parentElement;
+  const setup = setupCanvas(canvas, wrap);
+  if(!setup) return;
+  const { ctx, dpr, W, H } = setup;
+  ctx.clearRect(0, 0, W, H);
+
+  const co = makeCoords(W, H, dpr, Y_MAX, R_MAX);
+  drawAxes(ctx, co, W, H, dpr, Y_MAX, R_MAX,
+           'Income / Output  (Y)', 'Interest Rate  (r)');
+
+  const isShifted = m.is_shift !== 0;
+
+  // ── IS curves ──────────────────────────────────────────────────────
+  // IS: r = AD0/2 + is_shift − Y/2
+  function drawIS(is_shift, color, width, label){
+    clipPlot(ctx, co, W, H);
+    const y0 = 0,     r0 = AD0/2 + is_shift - y0/2;
+    const y1 = Y_MAX, r1 = AD0/2 + is_shift - y1/2;
+    strokeLine(ctx, co.xC(y0), co.yC(r0), co.xC(y1), co.yC(r1),
+               color, width, dpr);
+    unclip(ctx);
+    if(label){
+      const yL = Math.min(Y_MAX - 6, 2 * (AD0/2 + is_shift));
+      const rL = AD0/2 + is_shift - yL/2;
+      if(rL > 4 && yL > 4 && yL < Y_MAX - 4){
+        drawCurveLabel(ctx, co.xC(yL - 6), co.yC(Math.max(4, rL - 3)), label, color, dpr);
+      }
+    }
+  }
+  drawIS(0, '#2f5d7c', isShifted ? 1.8 : 2.6, 'IS');
+  if(isShifted){
+    drawIS(m.is_shift, '#b42318', 2.4, 'IS′');
+  }
+
+  // ── LM curves at each equilibrium's price ──────────────────────────
+  // LM(P): r = −AD0/2 − lm_shift + Y/2 + P
+  function drawLM(lm_shift, P, color, width, label){
+    clipPlot(ctx, co, W, H);
+    const y0 = 0,     r0 = -AD0/2 - lm_shift + y0/2 + P;
+    const y1 = Y_MAX, r1 = -AD0/2 - lm_shift + y1/2 + P;
+    strokeLine(ctx, co.xC(y0), co.yC(r0), co.xC(y1), co.yC(r1),
+               color, width, dpr);
+    unclip(ctx);
+    if(label){
+      const yL = Math.min(Y_MAX - 6, Math.max(6, 2 * (AD0/2 + lm_shift - P + 10)));
+      const rL = -AD0/2 - lm_shift + yL/2 + P;
+      if(rL > 2 && rL < R_MAX - 6 && yL > 4){
+        drawCurveLabel(ctx, co.xC(yL + 4), co.yC(rL + 4), label, color, dpr);
+      }
+    }
+  }
+
+  const showB = somePointDiffersIS(m.A, m.B);
+  const showC = somePointDiffersIS(m.B, m.C) || somePointDiffersIS(m.A, m.C);
+
+  drawLM(0, m.A.P, '#7a3aa7', (showB || showC) ? 1.6 : 2.4, 'LM(P₁)');
+  if(showB && Math.abs(m.B.P - m.A.P) > 1e-3){
+    drawLM(m.lm_shift, m.B.P, '#b42318', 2.2, 'LM(P₂)');
+  } else if(showB && m.lm_shift !== 0){
+    drawLM(m.lm_shift, m.B.P, '#b42318', 2.2, 'LM(P₂)');
+  }
+  if(showC && (Math.abs(m.C.P - m.B.P) > 1e-3)){
+    drawLM(m.lm_shift, m.C.P, '#155c38', 2.2, 'LM(P₃)');
+  }
+
+  // ── Equilibrium markers ────────────────────────────────────────────
+  drawIslmMarkers(ctx, co, m, dpr);
+
+  updateISLMDesc(m);
+}
+
+function drawIslmMarkers(ctx, co, m, dpr){
+  const aB = somePointDiffersIS(m.A, m.B);
+  const bC = somePointDiffersIS(m.B, m.C);
+  const aC = somePointDiffersIS(m.A, m.C);
+  const A = { Y: m.A.Y, P: m.A.r };
+  const B = { Y: m.B.Y, P: m.B.r };
+  const C = { Y: m.C.Y, P: m.C.r };
+
+  if(!aB && !aC){
+    drawMarker(ctx, co, A, 'A = B = C', '#2f5d7c', dpr);
+    return;
+  }
+  if(!aB){
+    drawMarker(ctx, co, A, 'A = B', '#2f5d7c', dpr);
+    if(aC) drawMarker(ctx, co, C, 'C', '#7a3aa7', dpr);
+    return;
+  }
+  if(!aC){
+    drawMarker(ctx, co, A, 'A = C', '#2f5d7c', dpr);
+    drawMarker(ctx, co, B, 'B', '#b42318', dpr);
+    return;
+  }
+  if(!bC){
+    drawMarker(ctx, co, A, 'A', '#2f5d7c', dpr);
+    drawMarker(ctx, co, B, 'B = C', '#b42318', dpr);
+    return;
+  }
+  drawMarker(ctx, co, A, 'A', '#2f5d7c', dpr);
+  drawMarker(ctx, co, B, 'B', '#b42318', dpr);
+  drawMarker(ctx, co, C, 'C', '#7a3aa7', dpr);
+}
+
+function somePointDiffersIS(p, q){
+  return Math.abs(p.Y - q.Y) > 1e-3 || Math.abs(p.r - q.r) > 1e-3;
+}
+
+// ───────── Descriptions (live region) ─────────────────────────────────
+function fmt(v){ return Math.abs(v) < 0.05 ? '0' : v.toFixed(1); }
+function arrowWord(delta){
+  if(Math.abs(delta) < 0.05) return 'unchanged';
+  return delta > 0 ? 'rises' : 'falls';
+}
+
+function updateADASDesc(m){
+  const parts = [];
+  parts.push(`AD-AS diagram. Output 0 to ${Y_MAX} on the horizontal axis, price level 0 to ${P_MAX} on the vertical.`);
+  parts.push(`Point A, the initial long-run equilibrium, sits at output ${fmt(m.A.Y)} and price ${fmt(m.A.P)} where the original AD, SRAS, and LRAS lines meet.`);
+  if(somePointDiffers(m.A, m.B)){
+    const dy = m.B.Y - m.A.Y, dp = m.B.P - m.A.P;
+    parts.push(`After the shock, point B sits at output ${fmt(m.B.Y)} and price ${fmt(m.B.P)}: output ${arrowWord(dy)} and the price level ${arrowWord(dp)} relative to A.`);
+  }
+  if(m.adShift !== 0){
+    const dir = m.adShift > 0 ? 'right' : 'left';
+    parts.push(`Aggregate demand has shifted ${dir} to AD′.`);
+  }
+  if(m.SS !== 0){
+    const dir = m.SS < 0 ? 'up (an adverse SRAS shift)' : 'down (a favourable SRAS shift)';
+    parts.push(`SRAS has shifted ${dir} to SRAS′.`);
+  }
+  if(m.LRS !== 0){
+    const dir = m.LRS > 0 ? 'right' : 'left';
+    parts.push(`LRAS has shifted ${dir} to LRAS′, indicating a permanent change in productive capacity.`);
+  }
+  if(somePointDiffers(m.B, m.C) || somePointDiffers(m.A, m.C)){
+    parts.push(`After wages adjust through expected inflation, point C sits at output ${fmt(m.C.Y)} and price ${fmt(m.C.P)}; output returns to the natural rate at Y equals ${fmt(m.yBarC)}.`);
+  }
+  $('adasDesc').textContent = parts.join(' ');
+}
+
+function updateISLMDesc(m){
+  const parts = [];
+  parts.push(`IS-LM diagram. Output 0 to ${Y_MAX} on the horizontal axis, interest rate 0 to ${R_MAX} on the vertical.`);
+  parts.push(`Point A sits at output ${fmt(m.A.Y)} and interest rate ${fmt(m.A.r)}.`);
+  if(somePointDiffersIS(m.A, m.B)){
+    const dr = m.B.r - m.A.r, dy = m.B.Y - m.A.Y;
+    parts.push(`Point B sits at output ${fmt(m.B.Y)} and interest rate ${fmt(m.B.r)}: output ${arrowWord(dy)} and the interest rate ${arrowWord(dr)} relative to A.`);
+  }
+  if(m.is_shift !== 0){
+    parts.push(`The IS curve has shifted ${m.is_shift > 0 ? 'right' : 'left'} to IS′, indicating a real-sector demand change (consumption, investment, or government).`);
+  }
+  if(m.lm_shift !== 0){
+    parts.push(`The LM curve at point B reflects a monetary shift of ${fmt(m.lm_shift)} in addition to the change in the price level.`);
+  } else if(somePointDiffersIS(m.A, m.B)){
+    parts.push(`The LM curve at point B reflects the change in the price level — no monetary shift.`);
+  }
+  if(somePointDiffersIS(m.B, m.C) || somePointDiffersIS(m.A, m.C)){
+    parts.push(`Point C, after wage adjustment, sits at output ${fmt(m.C.Y)} and interest rate ${fmt(m.C.r)}.`);
+  }
+  $('islmDesc').textContent = parts.join(' ');
+}
+
+// ───────── Redraw ────────────────────────────────────────────────────
+let _currentModel = null;
+
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  if(!_currentModel) return;
+  drawADAS($('adasCanvas'), _currentModel);
+  drawISLM($('islmCanvas'), _currentModel);
+}
+
+// ───────── Quiz state ────────────────────────────────────────────────
+let _rng = null;
+function rng(){ return _rng ? _rng() : Math.random(); }
+function pick(arr){ return arr[Math.floor(rng() * arr.length)]; }
+
+const quiz = {
+  current: null,     // SHOCK_LIBRARY entry
+  shockVec: null,    // applied slider state
+  attempted: 0,
+  correct:   0,
+  submitted: false,  // current question has been submitted at least once
+  questionIndex: 0,
+};
+
+const $tally       = $('tallyText');
+const $submitBtn   = $('submitBtn');
+const $newBtn      = $('newBtn');
+const $revealBtn   = $('revealBtn');
+const $feedback    = $('feedbackArea');
+
+const CAT_INPUTS  = ['catDemand','catSR','catLR','catM'].map(id => $(id));
+const DIR_INPUTS  = ['dirOpt1','dirOpt2'].map(id => $(id));
+const PERM_INPUTS = ['permTemp','permPerm'].map(id => $(id));
+const DIR_ROW     = $('dirRow');
+const PERM_ROW    = $('permRow');
+const PERM_GROUP  = $('permGroup');
+
+function isSupplyCat(c){ return c === 'SR_supply' || c === 'LR_supply'; }
+
+// Per-variable mapping from step-2 option ('inc' / 'dec') to shock
+// direction ('pos' / 'neg'). C / I / G / technology / capital / labor
+// have a direct mapping (Increase = positive shock). T / wages / rental
+// rate / tariffs invert (Increase = negative shock).
+const DIR_MAP = {
+  C:       { inc:'pos', dec:'neg' },
+  I:       { inc:'pos', dec:'neg' },
+  G:       { inc:'pos', dec:'neg' },
+  T:       { inc:'neg', dec:'pos' },
+  wages:   { inc:'neg', dec:'pos' },
+  rental:  { inc:'neg', dec:'pos' },
+  tariffs: { inc:'neg', dec:'pos' },
+  tech:    { inc:'pos', dec:'neg' },
+  labor:   { inc:'pos', dec:'neg' },
+  capital: { inc:'pos', dec:'neg' },
+  M:       { inc:'pos', dec:'neg' },
+};
+
+// Per-variable labels for the two step-2 options.
+function dirOptionLabels(varId){
+  if(varId === 'M') return { inc:'Expansionary', dec:'Contractionary' };
+  return { inc:'Increase', dec:'Decrease' };
+}
+
+// Which option (inc / dec) corresponds to a given shock direction, for
+// a given variable. Used to format the correct-answer label.
+function optionForDir(varId, shockDir){
+  const m = DIR_MAP[varId];
+  return m.inc === shockDir ? 'inc' : 'dec';
+}
+
+function clearAnswerInputs(){
+  [...CAT_INPUTS, ...DIR_INPUTS, ...PERM_INPUTS].forEach(i => { i.checked = false; });
+}
+
+function selectedValue(inputs){
+  const sel = inputs.find(i => i.checked);
+  return sel ? sel.value : null;
+}
+
+function anyAnswerChosen(){
+  return selectedValue(CAT_INPUTS) !== null
+      || selectedValue(DIR_INPUTS) !== null
+      || selectedValue(PERM_INPUTS) !== null;
+}
+
+function updateDirRow(){
+  const cat = selectedValue(CAT_INPUTS);
+  if(!cat || !quiz.current){
+    DIR_ROW.hidden = true;
+    DIR_INPUTS.forEach(i => { i.checked = false; });
+    return;
+  }
+  // Step 1 is selected — relabel step 2 for the chosen variable.
+  const chosenVar = quiz.current.reps[cat];
+  const labels = dirOptionLabels(chosenVar.id);
+  $('dirOpt1Label').textContent = labels.inc;
+  $('dirOpt2Label').textContent = labels.dec;
+  DIR_ROW.hidden = false;
+  // Clear any prior selection so the previous label doesn't leak through
+  // — Increase means different things for C vs. T, etc.
+  DIR_INPUTS.forEach(i => { i.checked = false; });
+}
+
+function updatePermVisibility(){
+  const cat = selectedValue(CAT_INPUTS);
+  const supply = isSupplyCat(cat);
+  PERM_ROW.hidden = !supply;
+  if(!supply){
+    PERM_INPUTS.forEach(i => { i.checked = false; });
+  }
+}
+
+function updateSubmitState(){
+  const cat  = selectedValue(CAT_INPUTS);
+  const dir  = selectedValue(DIR_INPUTS);
+  const perm = selectedValue(PERM_INPUTS);
+  const needPerm = isSupplyCat(cat);
+  const allAnswered = cat !== null && dir !== null && (!needPerm || perm !== null);
+  $submitBtn.disabled = !allAnswered || quiz.current === null;
+}
+
+CAT_INPUTS.forEach(i => {
+  i.addEventListener('change', () => {
+    updateDirRow();
+    updatePermVisibility();
+    updateSubmitState();
+  });
+});
+[...DIR_INPUTS, ...PERM_INPUTS].forEach(i => {
+  i.addEventListener('change', updateSubmitState);
+});
+
+// ───────── New question ─────────────────────────────────────────────
+function newQuestion(){
+  // Pick one representative per pool — these become the labels on the 4
+  // step-1 options for this question.
+  const reps = {
+    demand:    pick(VARS.demand),
+    SR_supply: pick(VARS.SR_supply),
+    LR_supply: pick(VARS.LR_supply),
+    M:         VARS.M[0],
+  };
+  // Pick the category being shocked, and the variable's direction.
+  const cat = pick(CATEGORIES);
+  const dir = pick(['pos', 'neg']);
+  const variable = reps[cat];
+  const mag = magFor(cat, rng);
+
+  // Direction is the *curve* direction: positive = expansionary shift,
+  // negative = contractionary shift. The slider sign is just the dir sign.
+  const sliderSign = dir === 'pos' ? 1 : -1;
+  const shockVec = { [variable.slider]: sliderSign * mag };
+
+  const dirWord = dir === 'pos' ? 'positive' : 'negative';
+
+  quiz.current = {
+    cat,
+    dir,
+    perm: permFor(cat),
+    variable,
+    reps,
+    shockVec,
+    label: `${dirWord} ${variable.label.toLowerCase()} shock`,
+  };
+  quiz.shockVec = shockVec;
+  quiz.submitted = false;
+  quiz.questionIndex += 1;
+
+  _currentModel = solveShock(shockVec);
+
+  // Update step-1 labels with the chosen reps.
+  $('catDemandLabel').textContent = reps.demand.label;
+  $('catSRLabel').textContent     = reps.SR_supply.label;
+  $('catLRLabel').textContent     = reps.LR_supply.label;
+  $('catMLabel').textContent      = reps.M.label;
+
+  clearAnswerInputs();
+  $feedback.innerHTML = '';
+  $revealBtn.disabled = true;
+  updateDirRow();
+  updatePermVisibility();
+  updateSubmitState();
+
+  // Restore enabled state on all radios (could have been disabled by reveal)
+  [...CAT_INPUTS, ...DIR_INPUTS, ...PERM_INPUTS].forEach(i => { i.disabled = false; });
+  PERM_GROUP.classList.remove('disabled');
+
+  redraw();
+}
+
+// ───────── Grading ───────────────────────────────────────────────────
+function chipEl(passed, label, hint){
+  const wrap = document.createElement('div');
+  wrap.className = 'grade-chip ' + (passed ? 'pass' : 'fail');
+  wrap.innerHTML = `
+    <div class="grade-chip-head">
+      <span class="grade-symbol" aria-hidden="true">${passed ? '✓' : '✕'}</span>
+      <span>${passed ? 'Correct' : 'Not quite'}</span>
+    </div>
+    <div class="grade-chip-label">${label}</div>
+    <div class="grade-chip-hint">${hint}</div>`;
+  return wrap;
+}
+
+function summaryBanner(allPass, anyPass, text){
+  const div = document.createElement('div');
+  const cls = allPass ? 'pass' : (anyPass ? 'partial' : 'fail');
+  const sym = allPass ? '✓' : (anyPass ? '!' : '✕');
+  div.className = 'summary-banner ' + cls;
+  div.innerHTML = `<span class="sym" aria-hidden="true">${sym}</span><span>${text}</span>`;
+  return div;
+}
+
+// Diagnostic explanations — what the diagram and story together tell
+// you. Real demand vs. monetary distinguished by r-direction; supply
+// vs. demand distinguished by Y/P co-movement; SR vs. LR supply
+// distinguished by whether LRAS moves.
+function categoryExplanation(m, correct){
+  const sc = quiz.current;
+  const dy = m.B.Y - m.A.Y;
+  const dp = m.B.P - m.A.P;
+  const dr = m.B.r - m.A.r;
+  const chosen = selectedValue(CAT_INPUTS);
+  const yPSame = Math.sign(dy) === Math.sign(dp);
+  const yPMove = yPSame
+    ? `output and the price level moved <strong>in the same direction</strong> from A to B (a demand-side fingerprint)`
+    : `output and the price level moved <strong>in opposite directions</strong> from A to B (a supply-side fingerprint)`;
+  const varName = sc.variable.label;
+
+  if(correct){
+    if(sc.cat === 'demand'){
+      return `Demand shocks shift IS and AD. The fingerprint: ${yPMove}, with <i>r</i> ${arrowWord(dr)} alongside <i>Y</i> — that's the demand signature and it rules out a monetary shock (which would move <i>r</i> opposite to <i>Y</i>).`;
+    }
+    if(sc.cat === 'M'){
+      return `A monetary shock shifts LM, not IS. ${capitalise(yPMove)}, <em>but</em> the interest rate ${arrowWord(dr)} <strong>opposite</strong> to <i>Y</i>. That r-direction is what separates monetary from real demand.`;
+    }
+    if(sc.cat === 'SR_supply'){
+      return `Only SRAS shifted — LRAS stayed put, so productive capacity is unchanged. The supply-side fingerprint: ${yPMove}.`;
+    }
+    if(sc.cat === 'LR_supply'){
+      return `LRAS itself moved (to Y = ${fmt(m.yBarC)}) — productive capacity changed. SRAS shifts with it. The supply-side fingerprint applies (${yPMove}) and the moving LRAS line is the long-run signature.`;
+    }
+  }
+
+  // Wrong — diagnose the gap.
+  if(chosen === 'demand' && sc.cat === 'M'){
+    return `A real-demand shock would move <i>r</i> the same way as <i>Y</i>. Here <i>r</i> ${arrowWord(dr)} <strong>opposite</strong> to <i>Y</i> (which ${arrowWord(dy)}) — that's the monetary signature.`;
+  }
+  if(chosen === 'M' && sc.cat === 'demand'){
+    return `A monetary shock would move <i>r</i> opposite to <i>Y</i>. Here Y ${arrowWord(dy)} and <i>r</i> ${arrowWord(dr)} — same direction — pointing to a real-demand variable, not monetary.`;
+  }
+  if((chosen === 'SR_supply' || chosen === 'LR_supply') && (sc.cat === 'demand' || sc.cat === 'M')){
+    return `A supply shock would move <i>Y</i> and <i>P</i> in opposite directions. Here they moved ${yPSame ? 'together' : 'apart'} — ${yPSame ? 'a demand-side fingerprint, not supply.' : 'consistent with supply.'}`;
+  }
+  if((chosen === 'demand' || chosen === 'M') && (sc.cat === 'SR_supply' || sc.cat === 'LR_supply')){
+    return `A demand or monetary shock would move <i>Y</i> and <i>P</i> in the same direction. Here they moved ${yPSame ? 'together' : 'apart'} — ${yPSame ? 'check the r-direction to tell demand vs. monetary.' : 'that opposite movement is a supply-side fingerprint.'}`;
+  }
+  if(chosen === 'SR_supply' && sc.cat === 'LR_supply'){
+    return `LRAS in the diagram has shifted (to Y = ${fmt(m.yBarC)}) — that means productive capacity itself moved. This is a long-run supply shock, not a short-run cost shock.`;
+  }
+  if(chosen === 'LR_supply' && sc.cat === 'SR_supply'){
+    return `LRAS in the diagram has not shifted — productive capacity is unchanged. Only SRAS moved, so this is a short-run supply shock.`;
+  }
+  return `Re-check the diagram’s fingerprint: Y ${arrowWord(dy)}, P ${arrowWord(dp)}, r ${arrowWord(dr)}, LRAS ${m.LRS !== 0 ? 'shifted' : 'unchanged'}.`;
+}
+
+function directionExplanation(m, correct, studentOpt){
+  const sc = quiz.current;
+  const dy = m.B.Y - m.A.Y;
+  const dp = m.B.P - m.A.P;
+  const dr = m.B.r - m.A.r;
+  const correctVarId = sc.variable.id;
+  const correctOpt = optionForDir(correctVarId, sc.dir);
+  const correctLabel = dirOptionLabels(correctVarId)[correctOpt];
+  const varName = sc.variable.label;
+
+  // Sentence that ties the variable change to the curve shift, given
+  // that direction is now interpreted through the variable, not the curve.
+  const linkSentence = (() => {
+    if(sc.variable.id === 'M'){
+      return sc.dir === 'pos'
+        ? `<strong>Expansionary</strong> monetary policy means the Fed raised M, shifting LM right. Cheaper money lowers <i>r</i> and raises <i>Y</i>: here Y ${arrowWord(dy)}, <i>r</i> ${arrowWord(dr)}.`
+        : `<strong>Contractionary</strong> monetary policy means the Fed lowered M, shifting LM left. Tighter money raises <i>r</i> and lowers <i>Y</i>: here Y ${arrowWord(dy)}, <i>r</i> ${arrowWord(dr)}.`;
+    }
+    if(sc.cat === 'demand'){
+      if(sc.variable.id === 'T'){
+        return sc.dir === 'pos'
+          ? `For taxes, a <strong>decrease</strong> is the positive shock: lower T raises disposable income and shifts AD right (Y ${arrowWord(dy)}, P ${arrowWord(dp)}). An increase would shift AD left.`
+          : `For taxes, an <strong>increase</strong> is the negative shock: higher T lowers disposable income and shifts AD left (Y ${arrowWord(dy)}, P ${arrowWord(dp)}). A decrease would shift AD right.`;
+      }
+      return sc.dir === 'pos'
+        ? `An <strong>increase</strong> in ${varName} is the positive shock: AD shifts right, Y ${arrowWord(dy)}, P ${arrowWord(dp)}.`
+        : `A <strong>decrease</strong> in ${varName} is the negative shock: AD shifts left, Y ${arrowWord(dy)}, P ${arrowWord(dp)}.`;
+    }
+    if(sc.cat === 'SR_supply'){
+      // SR supply variables (wages/rental/tariffs) invert
+      return sc.dir === 'neg'
+        ? `For ${varName.toLowerCase()}, an <strong>increase</strong> is the negative shock: higher costs shift SRAS up/left, Y ${arrowWord(dy)}, P ${arrowWord(dp)}.`
+        : `For ${varName.toLowerCase()}, a <strong>decrease</strong> is the positive shock: lower costs shift SRAS down/right, Y ${arrowWord(dy)}, P ${arrowWord(dp)}.`;
+    }
+    if(sc.cat === 'LR_supply'){
+      return sc.dir === 'pos'
+        ? `An <strong>increase</strong> in ${varName.toLowerCase()} is the positive shock: more productive capacity shifts LRAS right to Y = ${fmt(m.yBarC)}.`
+        : `A <strong>decrease</strong> in ${varName.toLowerCase()} is the negative shock: less productive capacity shifts LRAS left to Y = ${fmt(m.yBarC)}.`;
+    }
+    return '';
+  })();
+
+  if(correct){
+    return linkSentence;
+  }
+  // Wrong — point at the relevant fingerprint and the inversion if relevant.
+  const inverts = (sc.variable.id === 'T'
+                || sc.variable.id === 'wages'
+                || sc.variable.id === 'rental'
+                || sc.variable.id === 'tariffs');
+  const invertNote = inverts
+    ? ` Remember: for ${varName.toLowerCase()}, an <em>increase</em> is the <strong>negative</strong> shock and a <em>decrease</em> is the <strong>positive</strong> shock — the variable's direction and the curve's direction are opposite.`
+    : '';
+  return `Correct answer is <strong>${correctLabel}</strong>. ${linkSentence}${invertNote}`;
+}
+
+function permanenceExplanation(m, correct){
+  const sc = quiz.current;
+  if(correct){
+    if(sc.perm === 'temp'){
+      return `A short-run (temporary) supply shock shifts SRAS but leaves LRAS alone. Diagnostic: the LRAS line did not move, and point C returns to the original output level (Y = ${YB}) once wages and prices adjust — A = C in the diagram.`;
+    }
+    if(sc.perm === 'perm'){
+      return `A long-run (permanent) supply shock moves both SRAS and LRAS. Diagnostic: LRAS has shifted (LRAS′), and point C settles at the <strong>new</strong> natural rate Y = ${fmt(m.yBarC)} rather than returning to ${YB} — B = C in the diagram.`;
+    }
+  }
+  // wrong
+  if(sc.perm === 'temp'){
+    return `LRAS in the diagram is unchanged (still at Y = ${YB}), and C returns to the original output level — that's the signature of a <strong>temporary (short-run)</strong> shock.`;
+  }
+  if(sc.perm === 'perm'){
+    return `LRAS has shifted to LRAS′ (Y = ${fmt(m.yBarC)}), and C does not return to the original output. That is the signature of a <strong>permanent (long-run)</strong> shock.`;
+  }
+  return '';
+}
+
+function capitalise(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+
+function submitAnswer(){
+  const sc = quiz.current;
+  if(!sc) return;
+
+  const cat  = selectedValue(CAT_INPUTS);
+  const dirOpt = selectedValue(DIR_INPUTS);  // 'inc' or 'dec'
+  const perm = selectedValue(PERM_INPUTS);
+
+  // Direction is interpreted through the student's *chosen* variable —
+  // Increase means different shock directions for C vs. T.
+  const chosenVar = cat ? sc.reps[cat] : null;
+  const studentDir = (chosenVar && dirOpt) ? DIR_MAP[chosenVar.id][dirOpt] : null;
+
+  const catOk  = cat  === sc.cat;
+  const dirOk  = studentDir === sc.dir;
+  const correctIsSupply = isSupplyCat(sc.cat);
+  // Permanence only graded when the correct shock is a supply shock.
+  const permOk = correctIsSupply ? (perm === sc.perm) : true;
+
+  const m = _currentModel;
+
+  const totalQs = correctIsSupply ? 3 : 2;
+  const rightCount = (catOk?1:0) + (dirOk?1:0) + (correctIsSupply && permOk ? 1 : 0);
+
+  // Build feedback
+  const wrap = document.createElement('div');
+  const grid = document.createElement('div');
+  grid.className = 'grade-grid';
+  const correctVarId = sc.variable.id;
+  const correctDirOpt = optionForDir(correctVarId, sc.dir);
+  const correctDirLabel = dirOptionLabels(correctVarId)[correctDirOpt];
+  grid.appendChild(chipEl(catOk,  `Variable: ${sc.variable.label}`,  categoryExplanation(m, catOk)));
+  grid.appendChild(chipEl(dirOk,  `Direction: ${correctDirLabel}`, directionExplanation(m, dirOk, dirOpt)));
+  if(correctIsSupply){
+    grid.appendChild(chipEl(permOk, `Permanence: ${labelFor('perm', sc.perm)}`, permanenceExplanation(m, permOk)));
+  }
+  wrap.appendChild(grid);
+
+  const allOk = catOk && dirOk && permOk;
+  const anyOk = catOk || dirOk || (correctIsSupply && permOk);
+  wrap.appendChild(summaryBanner(allOk, anyOk,
+    allOk ? `Correct — that's a ${sc.label.toLowerCase()}. Click New Question to try another.`
+          : `${rightCount} of ${totalQs} correct. Review the feedback above, then update your answer and submit again, or click New Question.`));
+
+  $feedback.innerHTML = '';
+  $feedback.appendChild(wrap);
+
+  // First-attempt scoring
+  if(!quiz.submitted){
+    quiz.attempted += 1;
+    if(allOk) quiz.correct += 1;
+    quiz.submitted = true;
+    $tally.textContent = `${quiz.correct} / ${quiz.attempted}`;
+  }
+  $revealBtn.disabled = false;
+
+  // Session seam — single-phase recording
+  const answerText = `variable=${cat || 'none'}/${chosenVar ? chosenVar.id : 'none'}; direction=${dirOpt || 'none'}→${studentDir || 'n/a'}; permanence=${perm || 'n/a'}`;
+  Session.recordQuestion(LAB_ID, quiz.questionIndex - 1,
+    `Spot the shock: ${sc.label}`,
+    answerText, allOk,
+    answerText, allOk);
+
+  if(allOk){
+    Session.recordLabDone(LAB_ID, LAB_LABEL,
+      quiz.correct, quiz.correct, quiz.attempted);
+  }
+}
+
+function labelFor(group, val){
+  const map = {
+    perm: { temp:'Temporary (short-run)', perm:'Permanent (long-run)' },
+  };
+  return (map[group] && map[group][val]) || val;
+}
+
+function revealAnswer(){
+  const sc = quiz.current;
+  if(!sc) return;
+
+  // Pre-fill correct radios and disable further input
+  CAT_INPUTS.forEach(i  => { i.checked = i.value === sc.cat;  i.disabled = true; });
+  // Relabel + reveal step 2 to match the correct variable.
+  const correctVarId = sc.variable.id;
+  const labels = dirOptionLabels(correctVarId);
+  $('dirOpt1Label').textContent = labels.inc;
+  $('dirOpt2Label').textContent = labels.dec;
+  DIR_ROW.hidden = false;
+  const correctDirOpt = optionForDir(correctVarId, sc.dir);
+  DIR_INPUTS.forEach(i  => { i.checked = i.value === correctDirOpt; i.disabled = true; });
+  const supply = isSupplyCat(sc.cat);
+  PERM_ROW.hidden = !supply;
+  PERM_INPUTS.forEach(i => { i.checked = supply && i.value === sc.perm; i.disabled = true; });
+  PERM_GROUP.classList.add('disabled');
+
+  const m = _currentModel;
+  const dy = m.B.Y - m.A.Y, dp = m.B.P - m.A.P, dr = m.B.r - m.A.r;
+
+  const dirWord = sc.dir === 'pos' ? 'Positive' : 'Negative';
+  const permWord = sc.perm === 'temp' ? ' (temporary)'
+                : sc.perm === 'perm' ? ' (permanent)' : '';
+  const box = document.createElement('div');
+  box.className = 'reveal-box';
+  box.innerHTML = `
+    <p style="margin:0 0 6px;"><strong>Answer:</strong>
+      ${dirWord} shock to <strong>${sc.variable.label}</strong>${permWord}.</p>
+    <p style="margin:0;"><strong>Diagnostic fingerprint:</strong>
+      from A to B, output ${arrowWord(dy)} (Δ${fmt(dy)}),
+      the price level ${arrowWord(dp)} (Δ${fmt(dp)}),
+      the interest rate ${arrowWord(dr)} (Δ${fmt(dr)}),
+      and LRAS ${m.LRS !== 0 ? `shifted ${m.LRS > 0 ? 'right' : 'left'} to Y = ${fmt(m.yBarC)}` : 'is unchanged'}.</p>`;
+
+  $feedback.innerHTML = '';
+  $feedback.appendChild(box);
+  $submitBtn.disabled = true;
+}
+
+// ───────── Wire buttons ──────────────────────────────────────────────
+$submitBtn.addEventListener('click', submitAnswer);
+$newBtn.addEventListener('click', newQuestion);
+$revealBtn.addEventListener('click', revealAnswer);
+
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+// ───────── Init ─────────────────────────────────────────────────────
+function init(){
+  _rng = Session.rngForLab() || null;
+  newQuestion();
+}
+
+init();
+
+})();
+</script>
+</body>
+</html>
