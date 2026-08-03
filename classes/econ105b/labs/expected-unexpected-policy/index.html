@@ -1,0 +1,1630 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Expected vs. Unexpected Policy — ECON 105B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea;
+      --panel:#ffffff;
+      --ink:#1f2937;
+      --ink-2:#374151;
+      --muted:#596878;
+      --line:#e7dfd2;
+      --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;
+      --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3) ────────────────────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1240px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Main wrap */
+    .lab-wrap{max-width:1240px;margin:0 auto;padding:18px;}
+
+    /* Mode bar */
+    .mode-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+      margin-bottom:14px;}
+    .mode-group{display:flex;gap:8px;}
+    .mode-label{font-size:0.75rem;text-transform:uppercase;letter-spacing:.08em;
+      color:var(--muted);font-weight:800;}
+    .mode-pill{margin-left:auto;padding:6px 12px;border-radius:999px;
+      font-size:0.75rem;font-weight:800;letter-spacing:.03em;
+      border:1.5px solid var(--accent);color:var(--accent);
+      background:rgba(47,93,124,.08);}
+    .mode-pill.free{border-color:#8c4800;color:#8c4800;background:rgba(140,72,0,.08);}
+
+    /* Cards + layout */
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;
+      padding:16px;box-shadow:var(--shadow);}
+    .card-title{font-size:0.75rem;text-transform:uppercase;letter-spacing:.08em;
+      color:var(--accent);font-weight:800;margin-bottom:10px;}
+    .card-sub{font-size:0.75rem;color:var(--muted);margin-bottom:10px;}
+
+    .canvas-row{display:grid;grid-template-columns:1fr 1fr;
+      gap:14px;margin-bottom:14px;}
+    @media(max-width:700px){.canvas-row{grid-template-columns:1fr;}}
+    /* Let grid items shrink below their content's min-width so wide tables
+       scroll inside their own overflow-x wrapper instead of stretching the page. */
+    .canvas-row > *, .controls-grid > *{min-width:0;}
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .graph-foot{font-size:0.6875rem;color:var(--muted);margin-top:8px;line-height:1.5;}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;
+      overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);aspect-ratio:4/3;}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+
+    .legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:10px;
+      font-size:0.6875rem;color:var(--ink-2);}
+    .legend-row{display:flex;align-items:center;gap:5px;}
+    .legend-line{width:22px;height:0;border-top:2.5px solid currentColor;flex-shrink:0;}
+    .legend-line.dashed{border-top-style:dashed;}
+
+    /* Controls */
+    .controls-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+    @media(max-width:700px){.controls-grid{grid-template-columns:1fr;}}
+    .ctrl-block{margin-bottom:14px;}
+    .ctrl-block:last-child{margin-bottom:0;}
+    .ctrl-label{font-size:0.8125rem;font-weight:700;color:var(--ink-2);margin-bottom:6px;}
+    .btn-group{display:flex;gap:8px;flex-wrap:wrap;}
+
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn[aria-pressed="true"]{border-color:var(--accent);
+      background:rgba(47,93,124,.16);color:var(--accent);}
+    .option-btn:disabled{opacity:.5;cursor:not-allowed;}
+    .option-btn[aria-pressed="true"]:disabled{opacity:.85;}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover:not(:disabled){background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    .ghost-btn{padding:8px 16px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:transparent;
+      color:var(--ink-2);font-family:var(--font-sans);
+      font-size:0.8125rem;font-weight:700;cursor:pointer;transition:background .12s;}
+    .ghost-btn:hover:not(:disabled){background:rgba(0,0,0,.04);}
+    .ghost-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* EP control */
+    .ep-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    input[type=range]{
+      -webkit-appearance:none;appearance:none;
+      flex:1;min-width:160px;height:8px;border-radius:999px;
+      background:linear-gradient(90deg,var(--accent) 0%,var(--accent) var(--fill,50%),
+        var(--line-2) var(--fill,50%),var(--line-2) 100%);
+      outline:none;border:none;margin:4px 0;cursor:pointer;}
+    input[type=range]:disabled{opacity:.55;cursor:not-allowed;}
+    input[type=range]::-webkit-slider-thumb{
+      -webkit-appearance:none;appearance:none;width:20px;height:20px;
+      border-radius:50%;background:var(--accent);border:3px solid #fff;
+      box-shadow:0 1px 4px rgba(17,24,39,.25);cursor:grab;}
+    input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;
+      background:var(--accent);border:3px solid #fff;
+      box-shadow:0 1px 4px rgba(17,24,39,.25);cursor:grab;}
+    .ep-val{font-size:1.125rem;font-weight:800;color:var(--accent);
+      font-variant-numeric:tabular-nums;min-width:2.6ch;text-align:right;}
+    .step-btn{width:34px;height:34px;border-radius:9px;border:1.5px solid #8c7f72;
+      background:var(--panel);font-size:1rem;font-weight:800;color:var(--ink-2);
+      cursor:pointer;line-height:1;}
+    .step-btn:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+    .step-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* Readout note */
+    .readout-note{padding:10px 12px;border-radius:12px;
+      background:rgba(246,242,234,.7);border:1.5px solid var(--line-2);
+      font-size:0.8125rem;color:var(--ink-2);line-height:1.55;margin-top:10px;}
+    .readout-note code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+      font-size:0.8125rem;color:var(--ink);background:rgba(47,93,124,.09);
+      padding:1px 5px;border-radius:5px;}
+    .readout-note strong{color:var(--ink);}
+
+    .note-box{padding:10px 12px;border-radius:12px;
+      background:#fff7e6;border:1.5px solid #d9a44a;
+      font-size:0.8125rem;color:#8c4800;line-height:1.5;margin-top:10px;}
+    .note-box strong{color:#5a2e00;}
+
+    /* Scenario */
+    .scenario-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);margin-bottom:14px;}
+    .scenario-body{margin-top:8px;font-size:0.9375rem;color:var(--ink-2);
+      line-height:1.55;}
+    .scenario-body strong{color:var(--ink);}
+    .scenario-tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+    .scenario-tag{display:inline-block;padding:3px 9px;border-radius:999px;
+      font-size:0.6875rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+      background:rgba(47,93,124,.10);color:var(--accent);
+      border:1px solid rgba(47,93,124,.30);}
+
+    /* Equilibrium table */
+    .eq-table-wrap{overflow-x:auto;margin-top:6px;}
+    table.eq-table{border-collapse:collapse;width:100%;font-size:0.8125rem;
+      font-variant-numeric:tabular-nums;}
+    table.eq-table caption{text-align:left;font-size:0.75rem;color:var(--muted);
+      margin-bottom:6px;}
+    table.eq-table th,table.eq-table td{padding:7px 10px;border-bottom:1px solid var(--line);
+      text-align:right;white-space:nowrap;}
+    table.eq-table th[scope=row]{text-align:left;font-weight:800;color:var(--ink);}
+    table.eq-table thead th{color:var(--muted);font-weight:800;
+      text-transform:uppercase;letter-spacing:.05em;font-size:0.6875rem;
+      border-bottom:1.5px solid var(--line-2);}
+    .eq-dot{display:inline-block;width:9px;height:9px;border-radius:50%;
+      margin-right:5px;vertical-align:baseline;}
+
+    /* Questions */
+    .q-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;
+      padding:16px;box-shadow:var(--shadow);margin-bottom:14px;}
+    .q-block{padding:14px 0;border-bottom:1px solid var(--line);}
+    .q-block:last-of-type{border-bottom:none;}
+    .q-prompt{font-size:0.9375rem;font-weight:700;color:var(--ink);margin-bottom:4px;}
+    .q-prompt .q-num{color:var(--accent);}
+    .q-hint{font-size:0.75rem;color:var(--muted);margin-bottom:8px;line-height:1.5;}
+    .q-answer{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+    .q-num-input{width:120px;padding:9px 11px;border-radius:10px;
+      border:1.5px solid #8c7f72;font-size:0.9375rem;font-family:var(--font-sans);
+      color:var(--ink);font-variant-numeric:tabular-nums;}
+    .q-num-input:disabled{opacity:.55;background:rgba(246,242,234,.6);}
+    .q-fb{margin-top:8px;font-size:0.8125rem;line-height:1.55;
+      padding:8px 11px;border-radius:10px;display:none;}
+    .q-fb.show{display:block;}
+    .q-fb.correct{background:rgba(21,92,56,.09);border:1.5px solid var(--good);color:var(--good);}
+    .q-fb.wrong{background:rgba(180,35,24,.07);border:1.5px solid var(--bad);color:var(--bad);}
+    .q-fb.neutral{background:rgba(246,242,234,.8);border:1.5px solid var(--line-2);color:var(--ink-2);}
+    .q-fb .sym{font-weight:900;margin-right:5px;}
+    .q-fb strong{color:inherit;}
+
+    .submit-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center;}
+    .summary-banner{margin-top:12px;padding:11px 13px;border-radius:12px;
+      font-size:0.875rem;font-weight:700;display:none;align-items:center;gap:8px;}
+    .summary-banner.show{display:flex;}
+    .summary-banner.pass{background:rgba(21,92,56,.10);color:var(--good);border:1.5px solid var(--good);}
+    .summary-banner.partial{background:#fff7e6;color:#8c4800;border:1.5px solid #d9a44a;}
+
+    footer{margin-top:32px;}
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;
+      gap:8px;font-size:0.75rem;color:var(--muted);padding-top:12px;
+      border-top:1px solid var(--line);margin-top:24px;}
+    .hidden{display:none!important;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105b/labs/">← ECON 105B Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105B — Expectations</div>
+      <h1>Expected vs. Unexpected Policy</h1>
+      <p class="sub">
+        See why an anticipated policy change moves prices but not output, and an
+        unanticipated one does both.
+      </p>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>The economy starts in long-run equilibrium at point <strong>A</strong>
+          (output <i>Ȳ</i> = 50, price level <i>P</i>₁ = 50, real interest rate
+          <i>r</i>₁ = 50). A policy shock hits. Whether the public
+          <strong>anticipated</strong> it decides whether short-run aggregate supply
+          (SRAS) moves in the same period as aggregate demand (AD) — and that decides
+          whether output moves at all. Work through the same shock under both cases
+          and watch all three diagrams stay in agreement.</p>
+          <p>You will be asked to answer the following questions:</p>
+          <ol>
+            <li><strong>Does SRAS shift in the same period as AD?</strong> Yes or No —
+            the mechanism that separates anticipated from unanticipated policy.</li>
+            <li><strong>Identify the short-run equilibrium.</strong> Pick A, B, or C —
+            the same letter labels all three panels at once.</li>
+            <li><strong>Set expected prices to restore full employment.</strong> Enter
+            the expected price level that returns output to <i>Ȳ</i>.</li>
+            <li><strong>Identify the long-run equilibrium.</strong> Pick A, B, or C.</li>
+            <li><strong>Compare the long-run real interest rate to the start.</strong>
+            Higher, lower, or unchanged — the payoff that separates monetary neutrality
+            from fiscal crowding out.</li>
+          </ol>
+          <p>For each step, enter your answer and click <strong>Check Answers</strong>.
+          If an answer is incorrect, an explanation is shown; you can revise and
+          resubmit before your final submission.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- Mode selector -->
+  <div class="mode-bar">
+    <span class="mode-label">Mode</span>
+    <div class="mode-group" role="group" aria-label="Choose lab mode">
+      <button class="option-btn" id="modeProblemBtn" aria-pressed="true">Problem</button>
+      <button class="option-btn" id="modeFreeBtn" aria-pressed="false">Free Explore</button>
+    </div>
+    <span class="mode-pill" id="modePill">Problem mode — answers recorded</span>
+  </div>
+
+  <!-- Scenario (Problem mode only) -->
+  <div class="scenario-card" id="scenarioCard">
+    <div class="card-title">Scenario</div>
+    <div class="scenario-body" id="scenarioBody" aria-live="polite" aria-atomic="true">
+      Loading scenario…
+    </div>
+    <div class="scenario-tag-row" id="scenarioTags"></div>
+  </div>
+
+  <!-- Free-explore banner -->
+  <div class="note-box hidden" id="freeBanner">
+    <strong>Free Explore.</strong> All controls are unlocked and nothing is recorded.
+    Change the instrument, direction, size, and anticipation to see how the three
+    diagrams respond. Switch back to <strong>Problem</strong> mode to answer the
+    graded questions.
+  </div>
+
+  <!-- Graphs -->
+  <div class="canvas-row">
+    <div class="graph-card">
+      <div class="graph-title" id="islmTitle">IS–LM · Output (Y) vs. Real Interest Rate (r)</div>
+      <div class="canvas-wrap">
+        <canvas id="islmCanvas" role="img"
+                aria-labelledby="islmTitle" aria-describedby="islmDesc"></canvas>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span class="legend-row" style="color:var(--accent);"><span class="legend-line"></span> IS</span>
+        <span class="legend-row" style="color:#7a3aa7;"><span class="legend-line dashed"></span> IS′</span>
+        <span class="legend-row" style="color:var(--good);"><span class="legend-line"></span> LM / LM′</span>
+        <span class="legend-row" style="color:var(--ink-2);"><span class="legend-line dashed"></span> LRAS</span>
+      </div>
+    </div>
+
+    <div class="graph-card">
+      <div class="graph-title" id="adasTitle">AS–AD · Output (Y) vs. Price Level (P)</div>
+      <div class="canvas-wrap">
+        <canvas id="adasCanvas" role="img"
+                aria-labelledby="adasTitle" aria-describedby="adasDesc"></canvas>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span class="legend-row" style="color:var(--accent);"><span class="legend-line"></span> AD</span>
+        <span class="legend-row" style="color:#7a3aa7;"><span class="legend-line dashed"></span> AD′</span>
+        <span class="legend-row" style="color:#8c4800;"><span class="legend-line"></span> SRAS</span>
+        <span class="legend-row" style="color:var(--bad);"><span class="legend-line dashed"></span> SRAS′</span>
+        <span class="legend-row" style="color:var(--good);"><span class="legend-line dashed"></span> LRAS</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="canvas-row">
+    <div class="graph-card">
+      <div class="graph-title" id="pcTitle">Phillips Curve · Unemployment (u) vs. Inflation (π)</div>
+      <div class="canvas-wrap">
+        <canvas id="pcCanvas" role="img"
+                aria-labelledby="pcTitle" aria-describedby="pcDesc"></canvas>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span class="legend-row" style="color:#8c4800;"><span class="legend-line"></span> SRPC</span>
+        <span class="legend-row" style="color:var(--bad);"><span class="legend-line dashed"></span> SRPC′</span>
+        <span class="legend-row" style="color:var(--good);"><span class="legend-line dashed"></span> LRPC</span>
+      </div>
+      <div class="graph-foot">
+        The Phillips panel is derived from the same solved equilibrium:
+        output gap = 100·(Y−Ȳ)/Ȳ, then <i>u</i> = ū − gap/k with ū = 5%, Okun
+        <i>k</i> = 4, and <i>π</i> = π₁ + (P − P₁) with π₁ = 2%. Implied Phillips
+        slope β = α·k/2 = 4.
+      </div>
+    </div>
+
+    <!-- Equilibrium value table -->
+    <div class="graph-card">
+      <div class="graph-title">Equilibrium Values</div>
+      <div class="card-sub">Read the numbers off the picture. Values shown to two decimals.</div>
+      <div class="eq-table-wrap">
+        <table class="eq-table" aria-live="polite" aria-atomic="true">
+          <caption id="eqCaption">Current equilibria.</caption>
+          <thead>
+            <tr>
+              <th scope="col">Point</th>
+              <th scope="col">Y</th><th scope="col">P</th><th scope="col">r</th>
+              <th scope="col">u&nbsp;(%)</th><th scope="col">π&nbsp;(%)</th>
+            </tr>
+          </thead>
+          <tbody id="eqTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live region for canvas descriptions -->
+  <section class="sr-only" id="graphsDesc" aria-live="polite" aria-atomic="true">
+    <p id="islmDesc">IS–LM diagram loading.</p>
+    <p id="adasDesc">AS–AD diagram loading.</p>
+    <p id="pcDesc">Phillips curve diagram loading.</p>
+  </section>
+
+  <!-- Controls -->
+  <div class="controls-grid">
+    <div class="card">
+      <div class="card-title">Policy Shock</div>
+      <div class="card-sub" id="ctrlLockNote">Set by the scenario in Problem mode.</div>
+
+      <div class="ctrl-block">
+        <div class="ctrl-label" id="instrLabel">Instrument (choose exactly one)</div>
+        <div class="btn-group" role="group" aria-labelledby="instrLabel">
+          <button class="option-btn" data-instr="monetary"   aria-pressed="true">Monetary</button>
+          <button class="option-btn" data-instr="government" aria-pressed="false">Gov&rsquo;t Purchases</button>
+          <button class="option-btn" data-instr="taxes"      aria-pressed="false">Taxes</button>
+        </div>
+      </div>
+
+      <div class="ctrl-block">
+        <div class="ctrl-label" id="dirLabel">Direction</div>
+        <div class="btn-group" role="group" aria-labelledby="dirLabel">
+          <button class="option-btn" data-dir="expansionary"  aria-pressed="true">Expansionary</button>
+          <button class="option-btn" data-dir="contractionary" aria-pressed="false">Contractionary</button>
+        </div>
+      </div>
+
+      <div class="ctrl-block">
+        <div class="ctrl-label" id="sizeLabel">Size</div>
+        <div class="btn-group" role="group" aria-labelledby="sizeLabel">
+          <button class="option-btn" data-size="small" aria-pressed="true">Small</button>
+          <button class="option-btn" data-size="large" aria-pressed="false">Large</button>
+        </div>
+      </div>
+
+      <div class="ctrl-block">
+        <div class="ctrl-label" id="antLabel">Anticipation</div>
+        <div class="btn-group" role="group" aria-labelledby="antLabel">
+          <button class="option-btn" data-ant="unexpected" aria-pressed="true">Unexpected</button>
+          <button class="option-btn" data-ant="expected"   aria-pressed="false">Expected</button>
+        </div>
+      </div>
+
+      <div class="readout-note" id="shiftReadout" aria-live="polite" aria-atomic="true"></div>
+      <div class="readout-note" style="margin-top:8px;">
+        Multipliers from MPC = 0.5:
+        spending <code>m_G = 1/(1−MPC) = 2</code>,
+        taxes <code>m_T = MPC/(1−MPC) = 1</code>.
+        A tax change must be twice a spending change to move IS by the same amount.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Expected Price Level (EP)</div>
+      <div class="card-sub" id="epSub">
+        Under <strong>unexpected</strong> policy this is your second-stage action:
+        raise EP until output returns to Ȳ and point C lands on LRAS.
+      </div>
+
+      <div class="ep-row">
+        <button class="step-btn" id="epMinus" aria-label="Decrease expected price level by 1">−</button>
+        <input type="range" id="epRange" min="20" max="80" step="1" value="50"
+               aria-label="Expected price level"
+               aria-describedby="epLiveNote"/>
+        <button class="step-btn" id="epPlus" aria-label="Increase expected price level by 1">+</button>
+        <span class="ep-val" id="epVal">50</span>
+      </div>
+
+      <div class="readout-note" id="epLiveNote" aria-live="polite" aria-atomic="true"></div>
+
+      <div class="note-box hidden" id="epLockNote">
+        <strong>Expected policy:</strong> the public adjusts expectations in the same
+        period, so EP is set automatically to the level that restores full employment
+        and locked. SRAS shifts together with AD — the economy never sits at a
+        short-run point off LRAS.
+      </div>
+
+      <div class="submit-row">
+        <button class="ghost-btn" id="epResetBtn">Reset EP to P₁ = 50</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Questions (Problem mode only) -->
+  <div class="q-card" id="questionsCard">
+    <div class="card-title">Questions</div>
+    <div class="card-sub">Answer all five, then check. You may revise before your final submission.</div>
+    <div id="questionsBody"></div>
+
+    <div class="submit-row">
+      <button class="primary-btn" id="checkBtn">Check Answers</button>
+      <button class="primary-btn" id="submitBtn" disabled>Submit Final Answers</button>
+      <button class="ghost-btn" id="pdfBtn">Download Summary PDF</button>
+    </div>
+    <div class="summary-banner" id="summaryBanner" role="status" aria-live="polite"></div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 105B — Expectations</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+// ══════════════════════════════════════════════════════════════════════════
+//  Lab: Expected vs. Unexpected Policy
+//  LAB_ID:    'expected-unexpected-policy'
+//  LAB_LABEL: 'Expected vs. Unexpected Policy'
+//  URL:       /classes/econ105b/labs/expected-unexpected-policy/?disc=1
+//  Week-template LABS entry:
+//    { id:  'expected-unexpected-policy',
+//      name:'Expected vs. Unexpected Policy',
+//      icon:'🔭',
+//      desc:'Trace an anticipated vs. unanticipated policy shock across IS–LM, AS–AD, and the Phillips curve.',
+//      url: '/classes/econ105b/labs/expected-unexpected-policy/?disc=1' }
+// ══════════════════════════════════════════════════════════════════════════
+const LAB_ID    = 'expected-unexpected-policy';
+const LAB_LABEL = 'Expected vs. Unexpected Policy';
+const WEEK_LABEL = 'Expected vs. Unexpected Policy';
+
+// ───────── Calibration constants (fixed) ──────────────────────────────────
+const Ybar  = 50;    // natural rate of output
+const P1    = 50;    // initial price level
+const r1    = 50;    // initial real interest rate
+const A_IS  = 100;   // IS intercept
+const alpha = 2;     // SRAS slope
+const MPC   = 0.5;   // marginal propensity to consume
+const m_G   = 1 / (1 - MPC);   // = 2
+const m_T   = MPC / (1 - MPC); // = 1
+
+// Phillips calibration
+const uBar  = 5;     // natural rate of unemployment, %
+const pi1   = 2;     // initial inflation, %
+const kOkun = 4;     // Okun coefficient
+const beta  = alpha * kOkun / 2;  // = 4 (stated on screen)
+
+const TOL = 0.01;    // numeric grading tolerance
+
+// Size mapping (magnitudes; sign set by direction)
+const SIZE = {
+  monetary:   { small:10, large:20 },  // dM
+  government: { small:5,  large:10 },   // dG
+  taxes:      { small:10, large:20 },   // dT
+};
+
+// ───────── Seeded RNG ──────────────────────────────────────────────────────
+let _rng = null;
+function rng(){ return _rng ? _rng() : Math.random(); }
+function pick(arr){ return arr[Math.floor(rng() * arr.length)]; }
+
+// ───────── Core equilibrium solver ─────────────────────────────────────────
+// AD:   P = A_IS + dIS + dM + P1 − 2Y       (from IS = LM)
+// SRAS: P = EP + alpha·(Y − Ybar)
+// Solve AD = SRAS for Y, then P, then r from IS. Verify IS-r == LM-r.
+function solveEq(dIS, dM, EP){
+  const Y   = (A_IS + dIS + dM + P1 + alpha * Ybar - EP) / (2 + alpha);
+  const P   = EP + alpha * (Y - Ybar);
+  const rIS = A_IS + dIS - Y;                 // from IS curve
+  const rLM = Y - dM + (P - P1);              // from LM curve
+  if(Math.abs(rIS - rLM) > 1e-9)
+    console.error('IS/LM mismatch', {dIS, dM, EP, rIS, rLM});
+  return { Y:Y, P:P, r:rIS };
+}
+
+// Derived macro readouts for a solved point.
+function macro(pt){
+  const gap = 100 * (pt.Y - Ybar) / Ybar;
+  return {
+    Y: pt.Y, P: pt.P, r: pt.r,
+    u:  uBar - gap / kOkun,
+    pi: pi1 + (pt.P - P1),
+  };
+}
+
+// ───────── State ────────────────────────────────────────────────────────────
+const state = {
+  mode: 'problem',                 // 'problem' | 'free'
+  instrument: 'monetary',          // monetary | government | taxes
+  direction:  'expansionary',      // expansionary | contractionary
+  size:       'small',             // small | large
+  anticipation: 'unexpected',      // unexpected | expected
+  ep: P1,                          // expected price control value (integer)
+  scn: null,                       // generated problem scenario (locks the four)
+};
+
+// ───────── Scenario resolution (single source of derived model) ────────────
+function resolve(){
+  const instr = state.instrument, dir = state.direction, sz = state.size;
+  const sgn = (dir === 'expansionary') ? 1 : -1;
+  const mag = SIZE[instr][sz];
+
+  let dM = 0, dG = 0, dT = 0, dIS = 0;
+  if(instr === 'monetary'){
+    dM = sgn * mag;                      // + = money up
+  } else if(instr === 'government'){
+    dG  = sgn * mag;                     // + = spending up
+    dIS = m_G * dG;                      // IS shift
+  } else { // taxes
+    dT  = -sgn * mag;                    // expansionary = tax cut = negative dT
+    dIS = -m_T * dT;                     // IS shift
+  }
+
+  const EPstar = P1 + dIS + dM;          // EP that restores Y = Ybar
+  const expected = (state.anticipation === 'expected');
+
+  // Long-run label: expected monetary returns to A in real terms (neutrality);
+  // every other scenario reaches a distinct long-run point C.
+  const LR = (expected && instr === 'monetary') ? 'A' : 'C';
+
+  // Equilibria
+  const A = macro(solveEq(0, 0, P1));                 // start
+  const B = macro(solveEq(dIS, dM, P1));              // unexpected impact (EP = P1)
+  const C = macro(solveEq(dIS, dM, EPstar));          // long run (Y = Ybar)
+  const rC = 50 + dIS;                                // long-run real rate
+
+  // Answers
+  const q1 = expected ? 'yes' : 'no';
+  const q2 = expected ? LR : 'B';                     // short-run letter
+  const q4 = LR;                                      // long-run letter
+  let q5;                                             // long-run r vs start
+  if(dIS === 0)       q5 = 'unchanged';
+  else if(dIS > 0)    q5 = 'higher';
+  else                q5 = 'lower';
+
+  // IS-shift readout string
+  let shiftStr;
+  const sd = (v) => (v > 0 ? '+' : '') + fmt(v);
+  if(instr === 'monetary'){
+    shiftStr = 'dM = ' + sd(dM) + ' — money supply ' + (dM > 0 ? 'up' : 'down')
+      + ', LM shifts ' + (dM > 0 ? 'right' : 'left') + ' (IS unchanged).';
+  } else if(instr === 'government'){
+    shiftStr = 'dG = ' + sd(dG) + ' shifts IS '
+      + (dIS > 0 ? 'right' : 'left') + ' by ' + fmt(Math.abs(dIS))
+      + ' (m_G = 2).';
+  } else {
+    shiftStr = 'dT = ' + sd(dT) + ' shifts IS '
+      + (dIS > 0 ? 'right' : 'left') + ' by ' + fmt(Math.abs(dIS))
+      + ' (m_T = 1).';
+  }
+
+  return { instr, dir, sz, expected, sgn, mag,
+           dM, dG, dT, dIS, EPstar, LR,
+           A, B, C, rC,
+           q1, q2, q3: EPstar, q4, q5, shiftStr };
+}
+
+// ───────── Number formatting ────────────────────────────────────────────────
+function fmt(v){
+  if(!isFinite(v)) return '—';
+  const r = Math.round(v * 100) / 100;
+  if(Math.abs(r - Math.round(r)) < 1e-9) return String(Math.round(r));
+  return (Math.round(r * 100) / 100).toFixed(2).replace(/0$/, '');
+}
+function fmt2(v){ return (Math.round(v * 100) / 100).toFixed(2); }
+
+// ───────── DOM ──────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const reducedMotion = window.matchMedia &&
+  window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+// Control button groups
+const INSTR_BTNS = Array.from(document.querySelectorAll('[data-instr]'));
+const DIR_BTNS   = Array.from(document.querySelectorAll('[data-dir]'));
+const SIZE_BTNS  = Array.from(document.querySelectorAll('[data-size]'));
+const ANT_BTNS   = Array.from(document.querySelectorAll('[data-ant]'));
+
+function syncGroup(btns, attr, val){
+  btns.forEach(b => b.setAttribute('aria-pressed',
+    b.getAttribute(attr) === val ? 'true' : 'false'));
+}
+function syncAllGroups(){
+  syncGroup(INSTR_BTNS, 'data-instr', state.instrument);
+  syncGroup(DIR_BTNS,   'data-dir',   state.direction);
+  syncGroup(SIZE_BTNS,  'data-size',  state.size);
+  syncGroup(ANT_BTNS,   'data-ant',   state.anticipation);
+}
+
+function setPolicyControlsLocked(locked){
+  [].concat(INSTR_BTNS, DIR_BTNS, SIZE_BTNS, ANT_BTNS)
+    .forEach(b => { b.disabled = locked; });
+  $('ctrlLockNote').textContent = locked
+    ? 'Set by the scenario in Problem mode.'
+    : 'Free Explore — change any control.';
+}
+
+// EP control availability depends on anticipation, not on mode.
+function updateEpAvailability(){
+  const expected = (state.anticipation === 'expected');
+  $('epRange').disabled = expected;
+  $('epMinus').disabled = expected;
+  $('epPlus').disabled  = expected;
+  $('epResetBtn').disabled = expected;
+  $('epLockNote').classList.toggle('hidden', !expected);
+  $('epSub').classList.toggle('hidden', expected);
+}
+
+// ───────── Animation engine ────────────────────────────────────────────────
+// Displayed (animated) geometry: shifted-AD intercept and shifted-SRAS EP.
+const disp = { adInt: A_IS + P1, srasEP: P1 };  // start: unshifted (150, 50)
+let _animRAF = null, _animTimer = null, _from = null, _to = null, _t0 = 0, _dur = 2600;
+
+function _snapFinal(){
+  if(_to){ disp.adInt = _to.adInt; disp.srasEP = _to.srasEP; }
+  if(_animRAF){ cancelAnimationFrame(_animRAF); _animRAF = null; }
+  redraw();
+}
+function animateTo(adIntTarget, srasEPTarget, dur){
+  _to = { adInt: adIntTarget, srasEP: srasEPTarget };
+  if(_animTimer){ clearTimeout(_animTimer); _animTimer = null; }
+  if(reducedMotion){
+    disp.adInt = adIntTarget; disp.srasEP = srasEPTarget;
+    if(_animRAF){ cancelAnimationFrame(_animRAF); _animRAF = null; }
+    redraw();
+    return;
+  }
+  _from = { adInt: disp.adInt, srasEP: disp.srasEP };
+  _dur  = dur;
+  _t0   = performance.now();
+  if(!_animRAF) _animRAF = requestAnimationFrame(_tick);
+  // Robustness: text/table/ARIA reflect target state immediately, and a timer
+  // guarantees the final frame even if rAF is throttled (backgrounded tab).
+  redraw();
+  _animTimer = setTimeout(_snapFinal, dur + 150);
+}
+function _tick(now){
+  const t = Math.min(1, (now - _t0) / _dur);
+  const e = 0.5 - 0.5 * Math.cos(Math.PI * t);   // cosine ease
+  disp.adInt  = _from.adInt  + (_to.adInt  - _from.adInt)  * e;
+  disp.srasEP = _from.srasEP + (_to.srasEP - _from.srasEP) * e;
+  redraw();
+  if(t < 1){ _animRAF = requestAnimationFrame(_tick); }
+  else { _animRAF = null; if(_animTimer){ clearTimeout(_animTimer); _animTimer = null; } }
+}
+
+// Push current state into an animated transition.
+function applyState(dur){
+  const R = resolve();
+  const adIntTarget  = A_IS + R.dIS + R.dM + P1;
+  const srasEPTarget = R.expected ? R.EPstar : state.ep;
+  animateTo(adIntTarget, srasEPTarget, (dur == null ? 2600 : dur));
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  CANVAS ENGINE
+// ══════════════════════════════════════════════════════════════════════════
+let _fs = 1;
+const PAD = { l:54, r:18, t:18, b:46 };
+
+function setupCanvas(canvas, wrap){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  const W = Math.round(rect.width * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){ canvas.width = W; canvas.height = H; }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+function makeCoords(W, H, dpr, xMin, xMax, yMin, yMax){
+  const p = { l:PAD.l*dpr, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  return {
+    xC: x => p.l + ((x - xMin) / (xMax - xMin)) * PW,
+    yC: y => H - p.b - ((y - yMin) / (yMax - yMin)) * PH,
+    p, PW, PH, xMin, xMax, yMin, yMax,
+  };
+}
+
+function niceStep(range){
+  const rough = range / 6;
+  const steps = [1,2,5,10,20,25,50,100,200];
+  return steps.find(s => s >= rough) || 500;
+}
+
+function drawAxes(ctx, co, W, H, dpr, xLabel, yLabel){
+  const { p } = co;
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillRect(p.l, p.t, co.PW, co.PH);
+  ctx.font = `400 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+
+  // Y grid + ticks
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  const yStep = niceStep(co.yMax - co.yMin);
+  const y0 = Math.ceil(co.yMin / yStep) * yStep;
+  for(let y = y0; y <= co.yMax + 1e-6; y += yStep){
+    const py = co.yC(y);
+    ctx.strokeStyle = (Math.abs(y) < 1e-9 ? '#c9bfae' : '#ece5d8');
+    ctx.lineWidth = (Math.abs(y) < 1e-9 ? 1.3 : 1) * dpr;
+    ctx.beginPath(); ctx.moveTo(p.l, py); ctx.lineTo(W - p.r, py); ctx.stroke();
+    ctx.fillStyle = '#596878';
+    ctx.fillText(String(Math.round(y)), p.l - 5*dpr, py);
+  }
+  // X grid + ticks
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  const xStep = niceStep(co.xMax - co.xMin);
+  const x0 = Math.ceil(co.xMin / xStep) * xStep;
+  for(let x = x0; x <= co.xMax + 1e-6; x += xStep){
+    const px = co.xC(x);
+    ctx.strokeStyle = (Math.abs(x) < 1e-9 ? '#c9bfae' : '#ece5d8');
+    ctx.lineWidth = (Math.abs(x) < 1e-9 ? 1.3 : 1) * dpr;
+    ctx.beginPath(); ctx.moveTo(px, p.t); ctx.lineTo(px, H - p.b); ctx.stroke();
+    ctx.fillStyle = '#596878';
+    ctx.fillText(String(Math.round(x)), px, H - p.b + 5*dpr);
+  }
+  // Axis lines
+  ctx.strokeStyle = '#374151'; ctx.lineWidth = 1.2 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(p.l, p.t); ctx.lineTo(p.l, H - p.b); ctx.lineTo(W - p.r, H - p.b);
+  ctx.stroke();
+  // Labels
+  ctx.fillStyle = '#374151';
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText(xLabel, p.l + co.PW/2, H - 8*dpr);
+  ctx.save();
+  ctx.translate(14*dpr, p.t + co.PH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(yLabel, 0, 0);
+  ctx.restore();
+}
+
+function clipPlot(ctx, co, W, H){
+  ctx.save(); ctx.beginPath();
+  ctx.rect(co.p.l, co.p.t, W - co.p.l - co.p.r, H - co.p.t - co.p.b);
+  ctx.clip();
+}
+function unclip(ctx){ ctx.restore(); }
+
+function strokeLine(ctx, x1, y1, x2, y2, color, width, dpr, dash){
+  ctx.save();
+  ctx.strokeStyle = color; ctx.lineWidth = width * dpr;
+  ctx.setLineDash((dash || []).map(d => d * dpr));
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  ctx.restore();
+}
+
+// Draw a full line y = f(x) across the plot given two data points, clipped.
+function plotSegment(ctx, co, W, H, x1, yv1, x2, yv2, color, width, dpr, dash){
+  clipPlot(ctx, co, W, H);
+  strokeLine(ctx, co.xC(x1), co.yC(yv1), co.xC(x2), co.yC(yv2),
+             color, width, dpr, dash);
+  unclip(ctx);
+}
+
+function drawDot(ctx, x, y, color, r, dpr, label){
+  ctx.save();
+  ctx.fillStyle = color; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2 * dpr;
+  ctx.beginPath(); ctx.arc(x, y, r * dpr, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.restore();
+  if(label){
+    ctx.save();
+    ctx.font = `800 ${Math.round(13 * dpr * _fs)}px "Source Serif 4",serif`;
+    const w = ctx.measureText(label).width;
+    const padH = 4*dpr, padV = 2*dpr;
+    const bx = x + 8*dpr, by = y - (10*dpr*_fs) - padV;
+    const rectW = w + 2*padH, rectH = (14*dpr*_fs) + 2*padV;
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.strokeStyle = color; ctx.lineWidth = 1.2*dpr;
+    ctx.beginPath();
+    if(ctx.roundRect) ctx.roundRect(bx, by, rectW, rectH, 4*dpr);
+    else ctx.rect(bx, by, rectW, rectH);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(label, bx + padH, by + rectH/2);
+    ctx.restore();
+  }
+}
+
+function curveLabel(ctx, x, y, text, color, dpr){
+  ctx.save();
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  const hasSub = /[₀-₉′″]/.test(text);
+  const raw = ctx.measureText(text).width;
+  const w = hasSub ? raw + 6*dpr : raw;
+  const padH = 5*dpr, padV = 2*dpr;
+  const rectH = (12*dpr*_fs) + 2*padV;
+  const bx = x - w/2 - padH, by = y - rectH/2;
+  ctx.fillStyle = 'rgba(255,255,255,0.88)';
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(bx, by, w + 2*padH, rectH, 3*dpr);
+  else ctx.rect(bx, by, w + 2*padH, rectH);
+  ctx.fill();
+  ctx.fillStyle = color;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+function guides(ctx, co, W, H, X, Y){
+  clipPlot(ctx, co, W, H);
+  strokeLine(ctx, co.xC(X), co.yC(co.yMin), co.xC(X), co.yC(Y), '#8a8172', 1.1, ctx._dpr || 1, [4,3]);
+  strokeLine(ctx, co.xC(co.xMin), co.yC(Y), co.xC(X), co.yC(Y), '#8a8172', 1.1, ctx._dpr || 1, [4,3]);
+  unclip(ctx);
+}
+
+// ── Colors ──
+const COL = {
+  ad:'#2f5d7c', adS:'#7a3aa7', sras:'#8c4800', srasS:'#b42318',
+  is:'#2f5d7c', isS:'#7a3aa7', lm:'#155c38', lras:'#155c38',
+  A:'#2f5d7c', B:'#b42318', C:'#7a3aa7', muted:'#8a8172',
+};
+
+// Intersection of AD (P = adInt − 2Y) and SRAS (P = ep + alpha(Y − Ybar))
+function intersect(adInt, ep){
+  const Y = (adInt + alpha*Ybar - ep) / (2 + alpha);
+  const P = adInt - 2*Y;
+  return { Y, P };
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  PANEL DRAWERS
+// ══════════════════════════════════════════════════════════════════════════
+
+// Compute the display "marker set" shared by all panels, from disp + state.
+function markers(R){
+  const set = [];
+  const dispShockPt = intersect(disp.adInt, disp.srasEP);   // AD′ ∩ SRAS(EP disp)
+  const dispImpact  = intersect(disp.adInt, P1);            // AD′ ∩ SRAS(EP=P1) — impact B
+
+  // 'A' (start) coords: for expected-monetary, A rides the shifted intersection.
+  if(R.LR === 'A'){
+    // expected monetary: single equilibrium A at shifted intersection
+    set.push({ letter:'A', color:COL.A, dIS:R.dIS,
+               Y:dispShockPt.Y, P:dispShockPt.P, kind:'A' });
+    // faint start reference at pre-shock A
+    set.push({ letter:'', color:COL.muted, dIS:0, Y:Ybar, P:P1, kind:'start' });
+  } else {
+    set.push({ letter:'A', color:COL.A, dIS:0, Y:Ybar, P:P1, kind:'A' });
+    if(!R.expected){
+      // unexpected: impact point B (rides adInt only)
+      set.push({ letter:'B', color:COL.B, dIS:R.dIS,
+                 Y:dispImpact.Y, P:dispImpact.P, kind:'B' });
+      // current short-run point once EP moved; labeled C when at Ybar
+      if(Math.abs(state.ep - P1) > 1e-9 || Math.abs(disp.srasEP - P1) > 1e-9){
+        const atFE = Math.abs(state.ep - R.EPstar) <= TOL;
+        set.push({ letter: atFE ? 'C' : '', color:COL.C, dIS:R.dIS,
+                   Y:dispShockPt.Y, P:dispShockPt.P, kind: atFE ? 'C' : 'cur' });
+      }
+    } else {
+      // expected fiscal: single move A → C, both drawn
+      set.push({ letter:'C', color:COL.C, dIS:R.dIS,
+                 Y:dispShockPt.Y, P:dispShockPt.P, kind:'C' });
+    }
+  }
+  return set;
+}
+
+function drawISLM(R){
+  const canvas = $('islmCanvas'), wrap = canvas.parentElement;
+  const s = setupCanvas(canvas, wrap); if(!s) return;
+  const { ctx, dpr, W, H } = s; ctx._dpr = dpr;
+  ctx.clearRect(0,0,W,H);
+  const co = makeCoords(W,H,dpr, 0,100, 0,80);
+  drawAxes(ctx, co, W, H, dpr, 'Output  (Y)', 'Real interest rate  (r)');
+
+  // LRAS vertical at Ybar
+  plotSegment(ctx, co, W, H, Ybar, 0, Ybar, 80, COL.lras, 1.8, dpr, [6,4]);
+  ctx.save(); ctx.fillStyle = COL.lras;
+  ctx.font = `800 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='bottom';
+  ctx.fillText('LRAS', co.xC(Ybar), co.yC(80) + 12*dpr); ctx.restore();
+
+  // IS original: r = 100 − Y
+  plotSegment(ctx, co, W, H, 0, A_IS, 100, A_IS-100, COL.is, 2.4, dpr);
+  curveLabel(ctx, co.xC(18), co.yC(A_IS-18), 'IS', COL.is, dpr);
+  // IS′ (shifted) if dIS ≠ 0 — fiscal shocks only; IS shifts by dIS.
+  if(Math.abs(R.dIS) > 1e-9){
+    const isInt = A_IS + R.dIS;
+    plotSegment(ctx, co, W, H, 0, isInt, 100, isInt-100, COL.isS, 2.2, dpr, [7,5]);
+    curveLabel(ctx, co.xC(80), co.yC(isInt-80), 'IS′', COL.isS, dpr);
+  }
+
+  // LM through a point with slope +1: r = r0 + (Y − Y0)
+  function lmThrough(Y0, r0, color, width, dash, label){
+    const r_at0 = r0 - Y0;         // r at Y=0
+    plotSegment(ctx, co, W, H, 0, r_at0, 100, r_at0 + 100, color, width, dpr, dash);
+    if(label){
+      const yl = 86, rl = r_at0 + yl;
+      if(rl > 3 && rl < 77) curveLabel(ctx, co.xC(yl), co.yC(rl), label, color, dpr);
+    }
+  }
+  // Draw markers + their LM curves
+  const mk = markers(R);
+  // LM for start / A
+  lmThrough(Ybar, r1, COL.lm, 2.2, [], 'LM');
+  mk.forEach(m => {
+    if(m.kind === 'A' || m.kind === 'start') return;
+    const rr = A_IS + m.dIS - m.Y;
+    lmThrough(m.Y, rr, COL.lm, 2.0, [6,4], m.kind === 'C' ? 'LM′' : null);
+  });
+
+  // Markers
+  mk.forEach(m => {
+    const rr = A_IS + m.dIS - m.Y;
+    const px = co.xC(m.Y), py = co.yC(rr);
+    if(m.letter){ guides(ctx, co, W, H, m.Y, rr); }
+    if(m.kind === 'start'){
+      ctx.save(); ctx.fillStyle='#fff'; ctx.strokeStyle=COL.muted; ctx.lineWidth=1.6*dpr;
+      ctx.beginPath(); ctx.arc(px,py,3.5*dpr,0,Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore();
+      curveLabel(ctx, px, co.yC(rr)+13*dpr, 'start', COL.muted, dpr);
+    } else {
+      drawDot(ctx, px, py, m.color, m.letter ? 6 : 4, dpr, m.letter);
+    }
+  });
+}
+
+function drawADAS(R){
+  const canvas = $('adasCanvas'), wrap = canvas.parentElement;
+  const s = setupCanvas(canvas, wrap); if(!s) return;
+  const { ctx, dpr, W, H } = s; ctx._dpr = dpr;
+  ctx.clearRect(0,0,W,H);
+  const co = makeCoords(W,H,dpr, 0,100, 0,100);
+  drawAxes(ctx, co, W, H, dpr, 'Output  (Y)', 'Price level  (P)');
+
+  // LRAS vertical
+  plotSegment(ctx, co, W, H, Ybar, 0, Ybar, 100, COL.lras, 1.8, dpr, [6,4]);
+  ctx.save(); ctx.fillStyle = COL.lras;
+  ctx.font = `800 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='bottom';
+  ctx.fillText('LRAS', co.xC(Ybar), co.yC(100) + 12*dpr); ctx.restore();
+
+  // AD original: P = 150 − 2Y
+  const ad0 = A_IS + P1;
+  plotSegment(ctx, co, W, H, 0, ad0, ad0/2, 0, COL.ad, 2.4, dpr);
+  curveLabel(ctx, co.xC(20), co.yC(ad0-40), 'AD', COL.ad, dpr);
+  // AD′ shifted (animated disp.adInt)
+  const shifted = Math.abs(disp.adInt - ad0) > 1e-6 || Math.abs(R.dIS + R.dM) > 1e-9;
+  if(shifted){
+    plotSegment(ctx, co, W, H, 0, disp.adInt, disp.adInt/2, 0, COL.adS, 2.2, dpr, [7,5]);
+    curveLabel(ctx, co.xC(34), co.yC(disp.adInt-68), 'AD′', COL.adS, dpr);
+  }
+
+  // SRAS original: P = 2Y − 50  (ep = P1)
+  function srasLine(ep, color, width, dash, label, lx){
+    // P = ep + alpha(Y − Ybar)
+    const y1 = 0, p1v = ep + alpha*(y1 - Ybar);
+    const y2 = 100, p2v = ep + alpha*(y2 - Ybar);
+    plotSegment(ctx, co, W, H, y1, p1v, y2, p2v, color, width, dpr, dash);
+    if(label){
+      const yl = lx, pl = ep + alpha*(yl - Ybar);
+      if(pl > 4 && pl < 96) curveLabel(ctx, co.xC(yl), co.yC(pl+5), label, color, dpr);
+    }
+  }
+  srasLine(P1, COL.sras, 2.4, [], 'SRAS', 70);
+  // SRAS′ shifted (animated disp.srasEP)
+  if(Math.abs(disp.srasEP - P1) > 1e-6){
+    srasLine(disp.srasEP, COL.srasS, 2.2, [7,5], 'SRAS′', 82);
+  }
+
+  // Markers
+  markers(R).forEach(m => {
+    const px = co.xC(m.Y), py = co.yC(m.P);
+    if(m.letter){ guides(ctx, co, W, H, m.Y, m.P); }
+    if(m.kind === 'start'){
+      ctx.save(); ctx.fillStyle='#fff'; ctx.strokeStyle=COL.muted; ctx.lineWidth=1.6*dpr;
+      ctx.beginPath(); ctx.arc(px,py,3.5*dpr,0,Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore();
+      curveLabel(ctx, px, co.yC(m.P)-13*dpr, 'start', COL.muted, dpr);
+    } else {
+      drawDot(ctx, px, py, m.color, m.letter ? 6 : 4, dpr, m.letter);
+    }
+  });
+
+  // Expected-policy on-canvas note — boxed at the empty lower-left of the plot.
+  if(R.expected){
+    noteBox(ctx, dpr,
+      'SRAS shifts in the same period — the economy never reaches a short-run point off LRAS.',
+      co.p.l + 8*dpr, H - co.p.b - 8*dpr, co.PW * 0.62, '#8c4800');
+  }
+}
+
+// Wrap text into an array of lines that each fit maxW.
+function wrapLines(ctx, text, maxW){
+  const words = text.split(' ');
+  const lines = []; let line = '';
+  for(let i=0;i<words.length;i++){
+    const test = line + words[i] + ' ';
+    if(ctx.measureText(test).width > maxW && line){ lines.push(line.trim()); line = words[i] + ' '; }
+    else line = test;
+  }
+  if(line.trim()) lines.push(line.trim());
+  return lines;
+}
+// Draw a translucent-backed note anchored by its bottom-left corner.
+function noteBox(ctx, dpr, text, x, bottomY, maxW, color){
+  ctx.save();
+  ctx.font = `700 ${Math.round(9.5*dpr*_fs)}px "Inter",sans-serif`;
+  const lineH = 12*dpr*_fs;
+  const lines = wrapLines(ctx, text, maxW);
+  const w = Math.min(maxW, Math.max.apply(null, lines.map(l => ctx.measureText(l).width)));
+  const padH = 6*dpr, padV = 5*dpr;
+  const boxH = lines.length*lineH + 2*padV;
+  const boxW = w + 2*padH;
+  const by = bottomY - boxH;
+  ctx.fillStyle = 'rgba(255,247,230,0.92)';
+  ctx.strokeStyle = 'rgba(217,164,74,0.85)'; ctx.lineWidth = 1.2*dpr;
+  ctx.beginPath();
+  if(ctx.roundRect) ctx.roundRect(x, by, boxW, boxH, 6*dpr);
+  else ctx.rect(x, by, boxW, boxH);
+  ctx.fill(); ctx.stroke();
+  ctx.fillStyle = color; ctx.textAlign='left'; ctx.textBaseline='top';
+  lines.forEach((l, i) => ctx.fillText(l, x + padH, by + padV + i*lineH));
+  ctx.restore();
+}
+
+function drawPC(R){
+  const canvas = $('pcCanvas'), wrap = canvas.parentElement;
+  const s = setupCanvas(canvas, wrap); if(!s) return;
+  const { ctx, dpr, W, H } = s; ctx._dpr = dpr;
+  ctx.clearRect(0,0,W,H);
+  const co = makeCoords(W,H,dpr, 0,10, -20,25);
+  drawAxes(ctx, co, W, H, dpr, 'Unemployment  u (%)', 'Inflation  π (%)');
+
+  // LRPC vertical at uBar
+  plotSegment(ctx, co, W, H, uBar, -20, uBar, 25, COL.lras, 1.8, dpr, [6,4]);
+  ctx.save(); ctx.fillStyle = COL.lras;
+  ctx.font = `800 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='bottom';
+  ctx.fillText('LRPC', co.xC(uBar), co.yC(25) + 12*dpr); ctx.restore();
+
+  // SRPC: π = pi1 + (ep − P1) − beta(u − uBar)
+  function srpc(ep, color, width, dash, label, ux){
+    const u1 = 0,  p1v = pi1 + (ep - P1) - beta*(u1 - uBar);
+    const u2 = 10, p2v = pi1 + (ep - P1) - beta*(u2 - uBar);
+    plotSegment(ctx, co, W, H, u1, p1v, u2, p2v, color, width, dpr, dash);
+    if(label){
+      const pl = pi1 + (ep - P1) - beta*(ux - uBar);
+      if(pl > -18 && pl < 23) curveLabel(ctx, co.xC(ux), co.yC(pl)-4*dpr, label, color, dpr);
+    }
+  }
+  srpc(P1, COL.sras, 2.4, [], 'SRPC', 2.0);
+  if(Math.abs(disp.srasEP - P1) > 1e-6){
+    srpc(disp.srasEP, COL.srasS, 2.2, [7,5], 'SRPC′', 1.3);
+  }
+
+  // Markers — convert (Y,P) to (u,π)
+  markers(R).forEach(m => {
+    const gap = 100*(m.Y - Ybar)/Ybar;
+    const u = uBar - gap/kOkun;
+    const pi = pi1 + (m.P - P1);
+    const px = co.xC(u), py = co.yC(pi);
+    if(m.letter){ guides(ctx, co, W, H, u, pi); }
+    if(m.kind === 'start'){
+      ctx.save(); ctx.fillStyle='#fff'; ctx.strokeStyle=COL.muted; ctx.lineWidth=1.6*dpr;
+      ctx.beginPath(); ctx.arc(px,py,3.5*dpr,0,Math.PI*2); ctx.fill(); ctx.stroke(); ctx.restore();
+      curveLabel(ctx, px, py-13*dpr, 'start', COL.muted, dpr);
+    } else {
+      drawDot(ctx, px, py, m.color, m.letter ? 6 : 4, dpr, m.letter);
+    }
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  SR DESCRIPTIONS + TABLE
+// ══════════════════════════════════════════════════════════════════════════
+function updateDescriptions(R){
+  const dir = R.dir, instr = R.instr;
+  const antWord = R.expected ? 'anticipated' : 'unanticipated';
+  const srasWord = R.expected
+    ? 'SRAS shifts in the same period as AD, so output stays at the natural rate 50.'
+    : 'SRAS does not move in the impact period, so output moves away from the natural rate.';
+
+  $('islmDesc').textContent =
+    'IS–LM diagram. IS is downward sloping and LM upward sloping, both through the '
+    + 'starting equilibrium A at output 50 and real interest rate 50, where the '
+    + 'vertical LRAS line sits. This is a ' + dir + ' ' + instr + ' shock, ' + antWord + '. '
+    + (Math.abs(R.dIS) > 1e-9
+        ? 'The IS curve shifts ' + (R.dIS>0?'right':'left') + ' by ' + fmt(Math.abs(R.dIS)) + '. '
+        : 'IS is unchanged; the money-market shift moves LM. ')
+    + 'In the long run output returns to 50 and the real interest rate is '
+    + fmt(R.rC) + ', which is ' + R.q5 + ' relative to the starting value of 50.';
+
+  $('adasDesc').textContent =
+    'AS–AD diagram. AD is downward sloping, SRAS upward sloping, LRAS vertical at output 50. '
+    + srasWord + ' '
+    + (R.expected
+        ? (R.LR === 'A'
+            ? 'Aggregate demand and short-run supply shift together and cross back on LRAS at output 50; the price level rises to ' + fmt(R.C.P) + ' while output and the real interest rate are unchanged — monetary neutrality.'
+            : 'Aggregate demand and short-run supply shift together to a new long-run point C on LRAS at output 50 and price level ' + fmt(R.C.P) + '.')
+        : 'The impact equilibrium B is off LRAS at output ' + fmt2(R.B.Y) + ' and price level ' + fmt2(R.B.P) + '; as expected prices rise, SRAS shifts and the economy returns to LRAS at long-run point C.');
+
+  const uB = uBar - (100*(R.B.Y-Ybar)/Ybar)/kOkun;
+  $('pcDesc').textContent =
+    'Short- and long-run Phillips curves. The long-run Phillips curve is vertical at the '
+    + 'natural unemployment rate 5 percent; the short-run curve slopes down with slope 4. '
+    + 'The starting point is 5 percent unemployment and 2 percent inflation. '
+    + (R.expected
+        ? 'Because the policy is anticipated, unemployment stays at 5 percent while inflation moves to ' + fmt(R.C.pi) + ' percent.'
+        : 'The unanticipated shock first moves the economy along the short-run curve to about ' + fmt2(uB) + ' percent unemployment, then the short-run curve shifts and the economy returns to 5 percent unemployment with inflation ' + fmt(R.C.pi) + ' percent.');
+}
+
+function updateTable(R){
+  const rows = [];
+  const cell = (m) => '<td>'+fmt2(m.Y)+'</td><td>'+fmt2(m.P)+'</td><td>'+fmt2(m.r)
+    + '</td><td>'+fmt2(m.u)+'</td><td>'+fmt2(m.pi)+'</td>';
+  const dot = (c) => '<span class="eq-dot" style="background:'+c+'"></span>';
+
+  rows.push('<tr><th scope="row">'+dot(COL.A)+'A — start</th>'+cell(R.A)+'</tr>');
+
+  if(!R.expected){
+    rows.push('<tr><th scope="row">'+dot(COL.B)+'B — short run</th>'+cell(R.B)+'</tr>');
+    // current point (only if EP moved and not yet at FE)
+    const atFE = Math.abs(state.ep - R.EPstar) <= TOL;
+    if(Math.abs(state.ep - P1) > 1e-9 && !atFE){
+      const cur = macro(solveEq(R.dIS, R.dM, state.ep));
+      rows.push('<tr><th scope="row">'+dot(COL.C)+'Current (EP='+fmt(state.ep)+')</th>'+cell(cur)+'</tr>');
+    }
+    if(atFE){
+      rows.push('<tr><th scope="row">'+dot(COL.C)+'C — long run</th>'+cell(R.C)+'</tr>');
+    }
+  } else {
+    if(R.LR === 'A'){
+      rows.push('<tr><th scope="row">'+dot(COL.A)+'Long run — A</th>'+cell(R.C)+'</tr>');
+    } else {
+      rows.push('<tr><th scope="row">'+dot(COL.C)+'C — long run</th>'+cell(R.C)+'</tr>');
+    }
+  }
+  $('eqTableBody').innerHTML = rows.join('');
+  $('eqCaption').textContent = R.expected
+    ? 'Anticipated ' + R.instr + ' shock: economy moves straight to its long-run point.'
+    : 'Unanticipated ' + R.instr + ' shock: A → B (impact) → C (long run).';
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  MASTER REDRAW
+// ══════════════════════════════════════════════════════════════════════════
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  const R = resolve();
+  drawISLM(R);
+  drawADAS(R);
+  drawPC(R);
+  updateDescriptions(R);
+  updateTable(R);
+
+  // Control-side readouts
+  $('shiftReadout').innerHTML = '<strong>Implied shift:</strong> ' + R.shiftStr
+    + ' &nbsp;dIS = ' + fmt(R.dIS) + ', dM = ' + fmt(R.dM) + '.';
+
+  const atFE = Math.abs(state.ep - R.EPstar) <= TOL;
+  if(R.expected){
+    $('epLiveNote').innerHTML = '<strong>EP locked at ' + fmt(R.EPstar)
+      + '.</strong> Expected prices jump immediately, so output stays at Ȳ = 50.';
+  } else if(Math.abs(state.ep - P1) < 1e-9){
+    $('epLiveNote').innerHTML = 'EP = ' + fmt(state.ep) + ' (= P₁). SRAS has not moved yet — '
+      + 'the economy sits at the short-run point B. Raise EP to push it back to Ȳ.';
+  } else if(atFE){
+    $('epLiveNote').innerHTML = '<strong>EP = ' + fmt(state.ep)
+      + ' restores full employment.</strong> Output is back at Ȳ = 50 — point C is on LRAS.';
+  } else {
+    $('epLiveNote').innerHTML = 'EP = ' + fmt(state.ep) + '. Output is '
+      + (state.ep < R.EPstar ? 'still above' : 'now below') + ' Ȳ — keep adjusting toward LRAS.';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  QUESTIONS + TWO-PHASE GRADING + SESSION
+// ══════════════════════════════════════════════════════════════════════════
+const QUESTIONS = [
+  { id:0, type:'choice', prompt:'Does SRAS shift in the same period as AD?',
+    hint:'This is the mechanism that separates anticipated from unanticipated policy.',
+    options:[['yes','Yes'],['no','No']] },
+  { id:1, type:'choice', prompt:'Identify the short-run equilibrium.',
+    hint:'One letter that labels the impact period on all three panels.',
+    options:[['A','A'],['B','B'],['C','C']] },
+  { id:2, type:'number', prompt:'Set expected prices to the level that restores full employment.',
+    hint:'Use the Expected Price Level (EP) control above, then check. (For an anticipated shock EP is set for you.) Enter the value, tolerance ±0.01.' },
+  { id:3, type:'choice', prompt:'Identify the long-run equilibrium.',
+    hint:'One letter — where the economy settles once expectations have fully adjusted.',
+    options:[['A','A'],['B','B'],['C','C']] },
+  { id:4, type:'choice', prompt:'Compared with the starting point, the long-run real interest rate is…',
+    hint:'This separates monetary neutrality from fiscal crowding out.',
+    options:[['higher','Higher'],['lower','Lower'],['unchanged','Unchanged']] },
+];
+
+const ans = { chosen:{}, };          // qid -> chosen value (for choice)
+let _phase1Done = false;
+let _labDoneFired = false;
+const _first = {};                    // qid -> {text, ok}
+const _final = {};
+
+function renderQuestions(){
+  const html = QUESTIONS.map(q => {
+    let body;
+    if(q.type === 'choice'){
+      body = '<div class="q-answer" role="group" aria-label="'+q.prompt+'">'
+        + q.options.map(o =>
+            '<button class="option-btn q-opt" data-qid="'+q.id+'" data-val="'+o[0]+'" '
+            + 'aria-pressed="false">'+o[1]+'</button>').join('')
+        + '</div>';
+    } else {
+      body = '<div class="q-answer">'
+        + '<label class="sr-only" for="qnum'+q.id+'">Expected price level answer</label>'
+        + '<input class="q-num-input" id="qnum'+q.id+'" type="number" step="1" '
+        + 'inputmode="numeric" placeholder="e.g. 60" aria-describedby="qhint'+q.id+'"/>'
+        + '<button class="ghost-btn q-usenum" data-qid="'+q.id+'">Use current EP</button>'
+        + '</div>';
+    }
+    return '<div class="q-block">'
+      + '<div class="q-prompt"><span class="q-num">Q'+(q.id+1)+'.</span> '+q.prompt+'</div>'
+      + '<div class="q-hint" id="qhint'+q.id+'">'+q.hint+'</div>'
+      + body
+      + '<div class="q-fb" id="qfb'+q.id+'" role="status" aria-live="polite"></div>'
+      + '</div>';
+  }).join('');
+  $('questionsBody').innerHTML = html;
+
+  // wire choice buttons
+  Array.from(document.querySelectorAll('.q-opt')).forEach(b => {
+    b.addEventListener('click', () => {
+      const qid = +b.dataset.qid;
+      ans.chosen[qid] = b.dataset.val;
+      Array.from(document.querySelectorAll('.q-opt[data-qid="'+qid+'"]'))
+        .forEach(o => o.setAttribute('aria-pressed', o === b ? 'true' : 'false'));
+    });
+  });
+  // "Use current EP" copies the live EP control into the number field
+  Array.from(document.querySelectorAll('.q-usenum')).forEach(b => {
+    b.addEventListener('click', () => {
+      $('qnum'+b.dataset.qid).value = fmt(state.ep);
+    });
+  });
+}
+
+function studentAnswer(q){
+  if(q.type === 'choice') return ans.chosen[q.id];
+  const raw = $('qnum'+q.id).value.trim();
+  return raw === '' ? null : parseFloat(raw);
+}
+
+function gradeOne(q, R){
+  const a = studentAnswer(q);
+  let ok = false, correctVal, text;
+  if(q.type === 'number'){
+    correctVal = R.q3;
+    ok = (a !== null && isFinite(a) && Math.abs(a - correctVal) <= TOL);
+    text = (a === null || !isFinite(a)) ? '(no answer)' : 'EP = ' + fmt(a);
+  } else {
+    correctVal = (q.id === 0) ? R.q1 : (q.id === 1) ? R.q2 : (q.id === 3) ? R.q4 : R.q5;
+    ok = (a === correctVal);
+    text = a ? a : '(no answer)';
+  }
+  return { ok, text, correctVal, a };
+}
+
+function explain(q, R, g){
+  const sym = g.ok ? '<span class="sym">✓</span>' : '<span class="sym">✗</span>';
+  let why;
+  if(q.id === 0){
+    why = R.expected
+      ? 'Yes. Because the public anticipated the policy, they revise expected prices in the same period, so SRAS shifts together with AD.'
+      : 'No. An unanticipated shock moves AD alone this period; expected prices — and therefore SRAS — are still stuck, so output moves off Ȳ.';
+  } else if(q.id === 1){
+    why = R.expected
+      ? (R.LR === 'A'
+          ? 'The economy is at A throughout: with anticipated money growth AD and SRAS shift together, output and r never leave A — only the price level is higher.'
+          : 'With an anticipated shock there is no off-LRAS impact point; the economy jumps straight to its long-run point C.')
+      : 'The short-run (impact) equilibrium is B, where the shifted AD meets the unchanged SRAS off LRAS.';
+  } else if(q.id === 2){
+    why = 'Full employment returns when expected prices rise to EP = P₁ + dIS + dM = '
+      + fmt(R.EPstar) + '. That shifts SRAS just enough to put output back at Ȳ = 50.';
+  } else if(q.id === 3){
+    why = (R.LR === 'A')
+      ? 'Long run is A: expected money growth raises EP one-for-one with dM, the LM shift is fully offset, and output and r return to their starting values — money is neutral, only P is higher.'
+      : 'Long run is C: once expectations fully adjust, output is back at Ȳ = 50 but the economy settles at a new point C with price level ' + fmt(R.C.P) + '.';
+  } else {
+    if(R.q5 === 'unchanged')
+      why = 'Unchanged. This is a monetary shock, so dIS = 0 and the long-run real rate returns to r₁ = 50 — monetary neutrality.';
+    else if(R.q5 === 'higher')
+      why = 'Higher. Expansionary fiscal policy shifts IS right (dIS = ' + fmt(R.dIS) + '), so in the long run output is back at Ȳ but the real rate rises to ' + fmt(R.rC) + ' — crowding out.';
+    else
+      why = 'Lower. Contractionary fiscal policy shifts IS left (dIS = ' + fmt(R.dIS) + '), so in the long run output is back at Ȳ but the real rate falls to ' + fmt(R.rC) + '.';
+  }
+  return sym + why;
+}
+
+function showFB(qid, ok, msg){
+  const el = $('qfb'+qid);
+  el.className = 'q-fb show ' + (ok ? 'correct' : 'wrong');
+  el.innerHTML = msg;
+}
+
+function recordPhase(R, isFinal){
+  QUESTIONS.forEach(q => {
+    const g = gradeOne(q, R);
+    if(!isFinal){
+      _first[q.id] = { text:g.text, ok:g.ok };
+      _final[q.id] = { text:g.text, ok:g.ok };
+    } else {
+      _final[q.id] = { text:g.text, ok:g.ok };
+    }
+    showFB(q.id, g.ok, explain(q, R, g));
+    if(window.Session && Session.recordQuestion){
+      Session.recordQuestion(LAB_ID, q.id, 'Q'+(q.id+1)+'. '+q.prompt,
+        _first[q.id].text, _first[q.id].ok,
+        _final[q.id].text, _final[q.id].ok);
+    }
+  });
+}
+
+function handleCheck(){
+  const R = resolve();
+  recordPhase(R, _phase1Done);   // first call sets phase 1; later calls update final
+  _phase1Done = true;
+  $('submitBtn').disabled = false;
+  const nFirst = QUESTIONS.filter(q => _first[q.id] && _first[q.id].ok).length;
+  const nNow   = QUESTIONS.filter(q => _final[q.id] && _final[q.id].ok).length;
+  const banner = $('summaryBanner');
+  banner.className = 'summary-banner show ' + (nNow === 5 ? 'pass' : 'partial');
+  banner.innerHTML = (nNow === 5 ? '✓ ' : '') + nNow + ' of 5 correct'
+    + (nNow === nFirst ? '' : ' (first attempt: ' + nFirst + ' of 5)')
+    + '. Revise any answer and check again, or submit your final answers.';
+}
+
+function handleSubmit(){
+  if(!_phase1Done) return;
+  const R = resolve();
+  recordPhase(R, true);
+  const firstScore = QUESTIONS.filter(q => _first[q.id] && _first[q.id].ok).length;
+  const finalScore = QUESTIONS.filter(q => _final[q.id] && _final[q.id].ok).length;
+  if(!_labDoneFired && window.Session && Session.recordLabDone){
+    Session.recordLabDone(LAB_ID, LAB_LABEL, firstScore, finalScore, 5);
+    _labDoneFired = true;
+  }
+  const banner = $('summaryBanner');
+  banner.className = 'summary-banner show ' + (finalScore === 5 ? 'pass' : 'partial');
+  banner.innerHTML = (finalScore === 5 ? '✓ ' : '')
+    + 'Final submission recorded — ' + firstScore + ' of 5 correct on the first attempt, '
+    + finalScore + ' of 5 after revisions. Download your summary PDF below.';
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  MODE + CONTROL WIRING
+// ══════════════════════════════════════════════════════════════════════════
+function setMode(mode){
+  state.mode = mode;
+  const problem = (mode === 'problem');
+  $('modeProblemBtn').setAttribute('aria-pressed', problem ? 'true':'false');
+  $('modeFreeBtn').setAttribute('aria-pressed', problem ? 'false':'true');
+  $('modePill').textContent = problem ? 'Problem mode — answers recorded'
+                                      : 'Free Explore — nothing recorded';
+  $('modePill').classList.toggle('free', !problem);
+  $('scenarioCard').classList.toggle('hidden', !problem);
+  $('questionsCard').classList.toggle('hidden', !problem);
+  $('freeBanner').classList.toggle('hidden', problem);
+  setPolicyControlsLocked(problem);
+  if(problem && state.scn){
+    // restore scenario-locked values
+    state.instrument   = state.scn.instrument;
+    state.direction    = state.scn.direction;
+    state.size         = state.scn.size;
+    state.anticipation = state.scn.anticipation;
+    syncAllGroups();
+    setEP(state.anticipation === 'expected' ? resolve().EPstar : P1, false);
+  }
+  updateEpAvailability();
+  applyState(0);
+}
+
+function onPolicyChange(){
+  // called after any of the four controls change (free mode only)
+  updateEpAvailability();
+  if(state.anticipation === 'expected'){
+    setEP(resolve().EPstar, false);
+  }
+  applyState(2600);
+}
+
+function setEP(v, animate){
+  v = Math.max(20, Math.min(80, Math.round(v)));
+  state.ep = v;
+  $('epRange').value = v;
+  $('epVal').textContent = fmt(v);
+  const pct = ((v - 20) / (80 - 20)) * 100;
+  $('epRange').style.setProperty('--fill', pct + '%');
+  $('epRange').setAttribute('aria-valuenow', String(v));
+  if(animate) applyState(700); else applyState(0);
+}
+
+function wireControls(){
+  INSTR_BTNS.forEach(b => b.addEventListener('click', () => {
+    if(b.disabled) return;
+    state.instrument = b.dataset.instr; syncAllGroups(); onPolicyChange();
+  }));
+  DIR_BTNS.forEach(b => b.addEventListener('click', () => {
+    if(b.disabled) return;
+    state.direction = b.dataset.dir; syncAllGroups(); onPolicyChange();
+  }));
+  SIZE_BTNS.forEach(b => b.addEventListener('click', () => {
+    if(b.disabled) return;
+    state.size = b.dataset.size; syncAllGroups(); onPolicyChange();
+  }));
+  ANT_BTNS.forEach(b => b.addEventListener('click', () => {
+    if(b.disabled) return;
+    state.anticipation = b.dataset.ant; syncAllGroups(); onPolicyChange();
+  }));
+
+  $('epRange').addEventListener('input', () => {
+    if($('epRange').disabled) return;
+    setEP(+$('epRange').value, true);
+  });
+  $('epMinus').addEventListener('click', () => { if(!$('epMinus').disabled) setEP(state.ep-1, true); });
+  $('epPlus').addEventListener('click',  () => { if(!$('epPlus').disabled)  setEP(state.ep+1, true); });
+  $('epResetBtn').addEventListener('click', () => { if(!$('epResetBtn').disabled) setEP(P1, true); });
+
+  $('modeProblemBtn').addEventListener('click', () => setMode('problem'));
+  $('modeFreeBtn').addEventListener('click', () => setMode('free'));
+
+  $('checkBtn').addEventListener('click', handleCheck);
+  $('submitBtn').addEventListener('click', handleSubmit);
+  $('pdfBtn').addEventListener('click', () => {
+    if(window.DiscussionPDF && DiscussionPDF.generate) DiscussionPDF.generate();
+    else alert('PDF export is unavailable (jsPDF not loaded).');
+  });
+
+  let _rt;
+  window.addEventListener('resize', () => { clearTimeout(_rt); _rt = setTimeout(redraw, 80); });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+//  SCENARIO GENERATION (Problem mode)
+// ══════════════════════════════════════════════════════════════════════════
+function generateParams(){
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+
+  const instrument = pick(['monetary','government','taxes']);
+  const direction  = pick(['expansionary','contractionary']);
+  const size        = pick(['small','large']);
+  const anticipation = pick(['unexpected','expected']);
+  state.scn = { instrument, direction, size, anticipation };
+  state.instrument = instrument;
+  state.direction  = direction;
+  state.size        = size;
+  state.anticipation = anticipation;
+
+  syncAllGroups();
+  updateEpAvailability();
+  // EP starts at P1 for unexpected, auto-set for expected
+  const ep0 = (anticipation === 'expected') ? resolve().EPstar : P1;
+  setEP(ep0, false);
+
+  renderScenarioProse();
+}
+
+function renderScenarioProse(){
+  const s = state.scn;
+  const instrPhrase = {
+    monetary:   { expansionary:'increase the money supply', contractionary:'reduce the money supply' },
+    government: { expansionary:'increase government purchases', contractionary:'cut government purchases' },
+    taxes:      { expansionary:'cut taxes', contractionary:'raise taxes' },
+  }[s.instrument][s.direction];
+  const actor = s.instrument === 'monetary' ? 'The Fed' : 'The government';
+  const antPhrase = s.anticipation === 'expected'
+    ? 'The change is announced well in advance and the public fully believes it.'
+    : 'The change catches the public by surprise — no one had adjusted their price expectations.';
+  const sizeWord = s.size === 'small' ? 'a small' : 'a large';
+
+  $('scenarioBody').innerHTML =
+    '<strong>' + actor + ' will ' + instrPhrase + '</strong> — ' + sizeWord
+    + ' change. ' + antPhrase + ' The economy starts in long-run equilibrium at A '
+    + '(Y = 50, P = 50, r = 50). Work out where it goes in the short run and the long run, '
+    + 'using the Expected Price Level control to restore full employment.';
+
+  $('scenarioTags').innerHTML =
+    tag(cap(s.instrument === 'government' ? "Gov't purchases" : s.instrument))
+    + tag(cap(s.direction)) + tag(cap(s.size)) + tag(cap(s.anticipation));
+}
+function tag(t){ return '<span class="scenario-tag">'+t+'</span>'; }
+function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+
+// ══════════════════════════════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════════════════════════════
+function start(){
+  generateParams();
+  renderQuestions();
+  redraw();
+}
+
+function boot(){
+  wireControls();
+  setMode('problem');
+
+  if(window.DiscussionModal && window.Session){
+    DiscussionModal.init({
+      weekLabel: WEEK_LABEL,
+      onReady: function(){ start(); redraw(); }
+    });
+  } else {
+    start();
+  }
+}
+
+if(document.readyState === 'loading')
+  document.addEventListener('DOMContentLoaded', boot);
+else
+  boot();
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECON 105B · Long and Short-Run Equilibrium: A → B → C</title>
+<style>
+  :root{
+    --ink:#14243A;          /* near-navy ink */
+    --accent:#1F4E79;       /* deep blue (from worksheets) */
+    --accent-soft:#8FAADC;
+    --paper:#F6F4EE;        /* warm chalk-paper */
+    --paper-line:#E4E0D5;
+    --gold:#8A5900;
+    --gold-soft:#FBF1DC;
+    --red:#C0392B;
+    --grey:#5A5F66;
+    --chalk:#FbFaF7;
+    --shadow:0 8px 30px rgba(20,36,58,.10);
+    --mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Georgia','Iowan Old Style',serif;
+    color:var(--ink);
+    background:var(--paper);
+    overflow:hidden;
+  }
+  /* ---------- deck scaffold ---------- */
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;
+    padding:clamp(1.25rem,4vw,4.5rem) clamp(1.5rem,6vw,6rem);
+    /* extra bottom room so content never hides behind the fixed nav bar (~46px) */
+    padding-bottom:calc(46px + clamp(1rem,3vw,2rem));
+    /* if a slide is taller than the screen, scroll it instead of clipping/overlapping */
+    overflow-y:auto;overflow-x:hidden;
+    scroll-padding-bottom:46px;
+    opacity:0;
+    transition:opacity .38s ease;
+  }
+  .slide.active{display:flex;opacity:1;animation:rise .45s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide.active{animation:none}
+    .slide{transition:none}
+    *{transition-duration:.001ms !important;animation-duration:.001ms !important}
+  }
+  /* visible keyboard focus (WCAG 2.4.7) */
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+    outline:3px solid var(--accent);outline-offset:3px;border-radius:6px;
+  }
+  :focus:not(:focus-visible){outline:none}
+  /* ---------- typography ---------- */
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--grey);margin-bottom:1.1rem;font-weight:600;
+  }
+  h1{font-size:clamp(2.4rem,5.5vw,4.4rem);line-height:1.02;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3.2vw,2.4rem);line-height:1.1;font-weight:700;letter-spacing:-.01em;margin-bottom:.4rem}
+  .lede{font-size:clamp(1.05rem,1.7vw,1.35rem);line-height:1.5;color:var(--ink);max-width:52ch}
+  .muted{color:var(--grey)}
+  .serif-note{font-style:italic;color:var(--grey);font-size:1rem;line-height:1.5}
+  strong{font-weight:700}
+  .accent{color:var(--accent)}
+  .red{color:var(--red)}
+  .gold{color:var(--gold)}
+  /* title rule */
+  h2 + .titlerule{height:2px;background:linear-gradient(90deg,var(--accent-soft),transparent);
+    width:min(100%,640px);margin:.2rem 0 1.4rem}
+  /* ---------- model cards ---------- */
+  .models{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin:1.4rem 0;max-width:900px}
+  .model{
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;
+    padding:1.4rem 1.6rem;box-shadow:var(--shadow);position:relative;
+  }
+  .model .tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:.6rem;display:block}
+  .model .eq{font-family:var(--mono);font-size:1.35rem;color:var(--ink)}
+  .model .eq .coef{color:var(--red);font-weight:700}
+  .model.dim{opacity:.4;filter:saturate(.4)}
+  .mdplot{width:100%;max-width:220px;height:auto;margin-top:.7rem;display:block}
+  .model.hi{border-color:var(--accent);box-shadow:0 8px 30px rgba(31,78,121,.22)}
+  /* ---------- boxes ---------- */
+  .prompt,.reveal,.predict{
+    border-radius:10px;padding:1.05rem 1.3rem;max-width:820px;line-height:1.5;
+    font-family:'Georgia',serif;font-size:1.08rem;
+  }
+  .prompt{background:#EEF3FA;border-left:4px solid var(--accent)}
+  .reveal{background:var(--gold-soft);border-left:4px solid var(--gold)}
+  .cue{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;display:block;margin-bottom:.4rem}
+  .prompt .cue{color:var(--accent)}
+  .reveal .cue{color:var(--gold)}
+  .predict .cue{color:var(--red)}
+  .predict{background:#FBEEEC;border-left:4px solid var(--red)}
+  .prompt p,.reveal p,.predict p{margin:0;line-height:1.5}
+  .prompt .cue + p,.reveal .cue + p,.predict .cue + p{margin-top:.15rem}
+  /* chain / mono line */
+  .chain{
+    font-family:var(--mono);background:#EDF1F8;border:1px solid var(--accent-soft);
+    border-radius:8px;padding:.7rem 1rem;font-size:1.05rem;color:var(--accent);
+    display:inline-block;margin-top:.4rem
+  }
+  /* ---------- reveal-on-click ---------- */
+  .hidden-reveal{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .hidden-reveal.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* ---------- interactive graph panel ---------- */
+  .graphwrap{display:grid;grid-template-columns:1.15fr .85fr;gap:2rem;align-items:center;margin-top:.6rem;flex:1 0 auto}
+  @media (max-width:900px){.graphwrap{grid-template-columns:1fr}}
+  .panel{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;padding:1.2rem;box-shadow:var(--shadow)}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .controls{display:flex;flex-direction:column;gap:1.3rem}
+  .slider-row label{font-family:var(--mono);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);display:flex;justify-content:space-between;margin-bottom:.5rem;font-weight:600}
+  .slider-row label .val{color:var(--accent);font-size:1rem}
+  input[type=range]{width:100%;-webkit-appearance:none;height:6px;border-radius:3px;background:var(--paper-line);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 2px 6px rgba(31,78,121,.4);transition:transform .1s}
+  input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.12)}
+  input[type=range]::-moz-range-thumb{width:22px;height:22px;border:none;border-radius:50%;background:var(--accent);cursor:pointer}
+  .readout{font-family:var(--mono);font-size:.92rem;line-height:1.7;color:var(--ink);background:#EDF1F8;border-radius:8px;padding:.8rem 1rem}
+  .readout .big{font-size:1.25rem;color:var(--accent);font-weight:700}
+  .readout .slope-word{font-weight:700}
+  .btn{
+    font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.7rem 1.2rem;cursor:pointer;
+    box-shadow:0 3px 10px rgba(31,78,121,.3);transition:transform .1s,background .2s;align-self:flex-start
+  }
+  .btn:hover{background:#173a5c;transform:translateY(-1px)}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
+  .btn.ghost:hover{background:#EEF3FA}
+  /* ---------- poll ---------- */
+  .poll-opts{display:flex;flex-direction:column;gap:.8rem;max-width:760px;margin-top:1.1rem}
+  .poll-opt{
+    display:flex;align-items:stretch;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;
+    cursor:pointer;background:var(--chalk);transition:border-color .2s,transform .08s;position:relative;
+    width:100%;text-align:left;font:inherit;color:inherit;padding:0
+  }
+  .poll-opt:hover{border-color:var(--accent-soft)}
+  .poll-opt:active{transform:scale(.995)}
+  .poll-opt .num{background:var(--accent);color:#fff;font-family:var(--mono);font-weight:700;
+    display:flex;align-items:center;justify-content:center;padding:0 1.1rem;font-size:1.1rem;z-index:2}
+  .poll-opt .txt{padding:.9rem 1.1rem;line-height:1.4;z-index:2;font-size:1.02rem;font-family:'Georgia',serif}
+  .poll.revealed .poll-opt{opacity:.5;transition:opacity .4s}
+  .poll.revealed .poll-opt.correct{opacity:1;border-color:var(--gold);background:var(--gold-soft)}
+  .poll-opt.correct .num{background:var(--gold)}
+  .poll-opt.correct .txt::after{content:" ✓ correct";color:var(--gold);font-family:var(--mono);font-weight:700;font-size:.82rem}
+  .poll-hint{font-family:var(--mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-top:.9rem;font-weight:600}
+  /* ---------- footer / nav ---------- */
+  .chrome{position:fixed;bottom:0;left:0;right:0;height:46px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 1.4rem;font-family:var(--mono);font-size:.72rem;
+    letter-spacing:.08em;color:var(--grey);pointer-events:none;z-index:50}
+  .chrome .course{text-transform:uppercase}
+  .progress-track{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:60}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-soft));width:0;transition:width .35s ease}
+  .navhint{display:flex;gap:1.2rem;align-items:center;pointer-events:auto}
+  .navhint button{pointer-events:auto;background:none;border:none;color:var(--grey);cursor:pointer;font-family:var(--mono);font-size:.9rem;padding:.2rem .5rem;border-radius:5px}
+  .navhint button:hover{color:var(--accent);background:rgba(31,78,121,.08)}
+  .kbd{font-family:var(--mono);font-size:.66rem;border:1px solid var(--paper-line);border-radius:4px;padding:.1rem .35rem;color:var(--grey)}
+  /* content column helper */
+  .col{display:flex;flex-direction:column;gap:1.1rem;flex:1 0 auto;justify-content:center}
+  .grow{flex:1 0 auto}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+  .calc{font-family:var(--mono);font-size:1.05rem;line-height:1.8}
+  .calc .lbl{color:var(--accent);font-weight:700}
+  .delta{font-size:1.15rem;font-weight:700}
+  .footnote{font-size:.92rem;color:var(--grey);font-style:italic}
+  /* title slide special */
+  .title-slide{justify-content:safe center}
+  .title-slide h1{margin:.6rem 0}
+  .signature{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:2rem}
+  /* ---------- section divider ---------- */
+  .divider{justify-content:safe center;background:linear-gradient(135deg,#1B3B5C,#14243A)}
+  .divider *{color:#F6F4EE}
+  .divider .eyebrow{color:#8FAADC}
+  .divider h1{font-size:clamp(2.2rem,5vw,4rem);color:#fff}
+  .divider .lede{color:#D6DEE9;max-width:46ch}
+  .divider .sectrail{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#8FAADC;margin-top:1.6rem}
+  /* ---------- generic click-reveal ---------- */
+  .reveal-hidden{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .reveal-hidden.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* condition cards (crowding-out / potency) */
+  .condrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem}
+  @media (max-width:900px){.condrow{grid-template-columns:1fr}}
+  .condcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.5rem}
+  .condcard .ctitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .condcard .cbtn{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:.55rem .8rem;cursor:pointer}
+  .condcard .cbtn:hover{background:#173a5c}
+  .condcard .cbody{opacity:0;max-height:0;overflow:hidden;transition:opacity .35s,max-height .45s}
+  .condcard .cbody.shown{opacity:1;max-height:none;overflow:visible;margin-top:.3rem}
+  .condcard svg{width:100%;height:auto}
+  .condcard .cnote{font-size:.9rem;line-height:1.45;color:var(--ink)}
+  .condcard .verdict{font-family:var(--mono);font-size:.78rem;font-weight:700;padding:.2rem 0}
+  .verdict.severe{color:var(--red)}
+  .verdict.mild{color:var(--accent)}
+  /* diagnose (numbered flawed-argument) list */
+  .diag{display:flex;flex-direction:column;gap:.7rem;max-width:860px;margin:1rem 0}
+  .diag-opt{display:flex;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;background:var(--chalk);width:100%;text-align:left;font:inherit;color:inherit;padding:0;cursor:pointer;transition:border-color .2s}
+  .diag-opt:hover{border-color:var(--accent-soft)}
+  .diag-opt .n{background:var(--grey);color:#fff;font-family:var(--mono);font-weight:700;display:flex;align-items:center;padding:0 1rem;font-size:1.05rem}
+  .diag-opt .s{padding:.85rem 1.1rem;line-height:1.45;font-family:'Georgia',serif;font-size:1.02rem}
+  .diag.revealed .diag-opt{opacity:.5}
+  .diag.revealed .diag-opt.bad{opacity:1;border-color:var(--red);background:#FBEEEC}
+  .diag-opt.bad .n{background:var(--red)}
+  .diag.revealed .diag-opt.bad .s::after{content:" ✗ the flaw";color:var(--red);font-family:var(--mono);font-weight:700;font-size:.8rem}
+</style>
+</head>
+<body>
+<div class="progress-track"><div class="progress-fill" id="prog"></div></div>
+<div class="deck" id="deck">
+
+  <!-- 1. TITLE -->
+  <section class="slide active title-slide" data-section="Discussion 4 · Opening">
+    <div class="eyebrow">ECON 105B · Intermediate Macro · Discussion Section</div>
+    <h1>Long and Short-Run<br>Equilibrium: <span class="accent">A → B → C</span></h1>
+    <p class="lede" style="margin-top:1rem">One shock, followed all the way through: the goods market, the money market, the price level, and the labor market — until the economy stops moving.</p>
+    <p class="serif-note" style="margin-top:1.6rem">Work on your own paper. Write before each reveal — the point is your reasoning, not a clean final answer.</p>
+    <div class="signature">Demand Shocks → Supply Shocks → Monetary → Fiscal → Synthesis</div>
+  </section>
+
+
+  <!-- 3. ROADMAP / MODEL CARDS -->
+  <section class="slide" data-section="Discussion 4 · Opening">
+    <div class="eyebrow">Carry these all class</div>
+    <h2>Three relationships, one economy</h2>
+    <div class="titlerule"></div>
+    <p class="lede">Everything today is these three pieces talking to each other. Copy them onto the top of your page.</p>
+    <div class="models" style="grid-template-columns:1fr 1fr 1fr;max-width:1040px">
+      <div class="model hi">
+        <span class="tag">Goods market</span>
+        <div class="eq" style="font-size:1.05rem">PE = C(Y−T) + I(r) + G</div>
+        <p class="cnote" style="font-size:.92rem;line-height:1.45;margin-top:.6rem;color:var(--grey)">Output adjusts until planned expenditure equals output. This is the <strong>IS</strong> side.</p>
+      </div>
+      <div class="model hi">
+        <span class="tag">Money market</span>
+        <div class="eq" style="font-size:1.05rem">M/P = L(r, Y)</div>
+        <p class="cnote" style="font-size:.92rem;line-height:1.45;margin-top:.6rem;color:var(--grey)">The interest rate clears it. This is the <strong>LM</strong> side. Note that <em>P</em> sits in the supply of real balances.</p>
+      </div>
+      <div class="model hi">
+        <span class="tag">Aggregate supply</span>
+        <div class="eq" style="font-size:1.05rem">SRAS ↗ &nbsp;·&nbsp; LRAS: Y = Ȳ</div>
+        <p class="cnote" style="font-size:.92rem;line-height:1.45;margin-top:.6rem;color:var(--grey)"><strong>SRAS slopes up</strong> because some prices are sticky. <strong>LRAS is vertical at Ȳ</strong> because in the long run every price is flexible.</p>
+      </div>
+    </div>
+    <p class="serif-note" style="max-width:80ch">You built the AD curve out of the first two. Today we finally put AD together with AS and let the price level move — which is what turns a short-run answer into a long-run one.</p>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- PART 1 DIVIDER -->
+  <!-- ============================================================ -->
+  <section class="slide divider" data-section="Discussion 4 · Demand Shocks">
+    <div class="eyebrow">Part 1 of 5</div>
+    <h1>The Full<br>Adjustment Path</h1>
+    <p class="lede">One positive demand shock, traced from A to B to C — through the goods market, the money market, the price level, and finally the labor market.</p>
+    <div class="sectrail">Demand Shocks → Supply Shocks → Monetary → Fiscal → Synthesis</div>
+  </section>
+
+  <!-- 5. SETUP -->
+  <section class="slide" data-section="Discussion 4 · Demand Shocks">
+    <div class="eyebrow">Where we start</div>
+    <h2>Point A: a long-run equilibrium</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:900px">
+      <p class="lede">The economy sits in <strong>long-run equilibrium</strong>: interest rate <span class="chain" style="padding:.15rem .5rem;font-size:1rem">r₁</span>, price level <span class="chain" style="padding:.15rem .5rem;font-size:1rem">P₁</span>, output <span class="chain" style="padding:.15rem .5rem;font-size:1rem">Ȳ</span>. Nothing is pushing on anything.</p>
+      <p class="lede">Then: <strong>consumer confidence rises.</strong> Households decide to buy more goods and services at every level of income.</p>
+      <div class="chain" style="font-size:1.05rem">the shock: &nbsp;C ↑ &nbsp;at every Y</div>
+      <p class="serif-note" style="margin-top:.6rem">That is the entire shock. Everything else that happens today is the economy responding to it — and the response takes three separate markets and two different time horizons.</p>
+    </div>
+  </section>
+
+  <!-- 6. Q1 PREDICT -->
+  <section class="slide" data-section="Discussion 4 · Demand Shocks">
+    <div class="eyebrow">Commit before any diagram</div>
+    <h2>Predict</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:860px">
+      <div class="predict">
+        <span class="cue">Question 1 (predict)</span>
+        <p>Copy this table onto your paper and fill in all six boxes. In each box write one of three things: <strong>↑</strong> (higher than before the shock), <strong>↓</strong> (lower), or <strong>0</strong> (back to exactly where it started).</p>
+        <div class="calc" style="font-size:1rem;margin-top:.8rem;display:grid;grid-template-columns:auto repeat(3,5rem);gap:.5rem 1.4rem;max-width:26rem">
+          <span></span><span class="lbl">output Y</span><span class="lbl">price P</span><span class="lbl">rate r</span>
+          <span class="lbl">short run</span><span>______</span><span>______</span><span>______</span>
+          <span class="lbl">long run</span><span>______</span><span>______</span><span>______</span>
+        </div>
+        <p style="margin-top:.7rem">Compare each one to point <strong>A</strong> — the long-run equilibrium <em>before</em> confidence rose. Not to the previous row.</p>
+      </div>
+      <p class="footnote">Don't hedge, and don't leave a box blank — commit to all six. Half the value of the next twenty minutes is finding out which ones you'd have gotten wrong.</p>
+    </div>
+  </section>
+
+  <!-- 7. Q2 PROMPT -->
+  <section class="slide" data-section="Discussion 4 · Demand Shocks">
+    <div class="eyebrow">Write the mechanism</div>
+    <h2>From confidence to the short run</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:880px">
+      <div class="prompt">
+        <span class="cue">Question 2 (write)</span>
+        <p>Write the <strong>full arrow chain</strong> from “confidence ↑” to the short-run equilibrium at point B. Name <em>every market</em> it passes through, in order, and say what clears in each one.</p>
+      </div>
+      <p class="lede" style="margin-top:.2rem">Two hints on form, not content: your chain should have more than four arrows in it, and it should visit the money market at least once.</p>
+      <p class="serif-note">If your chain goes “C↑ → Y↑, done,” you've written the goods-market half. The other half is the reason the answer isn't just the multiplier.</p>
+    </div>
+  </section>
+
+  <!-- 8. REVEAL THE CHAIN -->
+  <section class="slide" data-section="Discussion 4 · Demand Shocks">
+    <div class="eyebrow">Reveal · the chain</div>
+    <h2>The arrow almost everyone skips</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:940px">
+      <button class="btn" data-reveal="hrChain1">Reveal the chain</button>
+      <div class="reveal-hidden" id="hrChain1">
+        <div class="chain" style="font-size:1rem;line-height:1.8">C↑ → PE↑ → U.I.↓ → Y↑ → (M/P)ᵈ↑ → r↑ → I↓ → Y rises by less</div>
+        <div class="reveal" style="margin-top:.9rem">
+          <span class="cue">Why it goes through the money market</span>
+          <p>Higher output means more transactions, so <strong>money demand rises</strong>. The supply of real balances hasn't moved, so the only thing that can re-clear the money market is a <strong>higher interest rate</strong> — and a higher r cuts investment, which claws back part of the original expansion.</p>
+          <p style="margin-top:.6rem">The skipped arrow is <strong>Y↑ → (M/P)ᵈ↑ → r↑</strong>. Once the money market is in the room, <strong>r is not exogenous</strong>. You cannot hold the interest rate fixed and still claim to be describing the economy's response. <span class="muted">(This is exactly the IS–LM logic you already know — the fiscal-policy chain carried the same feedback.)</span></p>
+        </div>
+        <p class="footnote" style="margin-top:.7rem">U.I. = unplanned inventories. Falling inventories are the signal that makes firms raise production in the first place.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. THE STEP STUDENTS SKIP -->
+  <section class="slide" data-section="Discussion 4 · Demand Shocks">
+    <div class="eyebrow">Before the diagram</div>
+    <h2>What the AD shift actually measures</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:920px">
+      <p class="lede">The chain you just wrote ends at an IS–LM equilibrium <strong>with the price level still at P₁</strong>. Call that output <strong>Y₂</strong>.</p>
+      <div class="chain" style="font-size:1rem">the horizontal AD shift &nbsp;=&nbsp; the fixed-P IS–LM outcome &nbsp;=&nbsp; Ȳ → Y₂</div>
+      <button class="btn" data-reveal="hrADstep" style="margin-top:.4rem">Why this matters</button>
+      <div class="reveal-hidden" id="hrADstep">
+        <div class="reveal">
+          <span class="cue">Movement along vs. shift of</span>
+          <p>AD tells you the output that clears goods <em>and</em> money <strong>at each price level</strong>. So when C rises, redo the IS–LM problem <strong>holding P at P₁</strong>: that answer, Y₂, is where AD′ sits at P₁. That is the <strong>shift</strong>.</p>
+          <p style="margin-top:.6rem">But <strong>Y₂ is not the short-run answer.</strong> It is the answer <em>before the price level is allowed to respond</em>. Once flexible-price firms reprice, we slide <strong>along AD′</strong> to a different point. Confusing the shift with the outcome is the single most common error on this diagram.</p>
+        </div>
+      </div>
+      <p class="serif-note" style="margin-top:.8rem">Keep three output levels straight on your page: <strong>Y₁</strong> (goods market alone, r held fixed), <strong>Y₂</strong> (IS–LM at P₁), <strong>Y₃</strong> (short-run equilibrium, once P moves).</p>
+    </div>
+  </section>
+
+  <!-- 10. ANIMATED TWO-PANEL -->
+  <section class="slide" data-section="Discussion 4 · Demand Shocks">
+    <div class="eyebrow">On the diagram · A → A′ → A″ → B · steps 1–5</div>
+    <h2>Watch the shock cross both panels</h2>
+    <div class="titlerule"></div>
+    <div class="panel" style="max-width:1080px">
+      <svg id="pathsvg" viewBox="0 0 940 350" role="img" aria-label="Two panels driven by one confidence shock. Left, the IS–LM diagram: the IS curve shifts right, so at the old interest rate output would jump to Y1 at point A-prime; money demand then rises and the interest rate climbs along the new IS curve to point A-double-prime at output Y2 and rate r2; then the rising price level shrinks real money balances, the LM curve shifts up to LM of P2, and the economy settles at point B with output Y3 and rate r4. Right, the aggregate demand and supply diagram: the AD curve shifts right by exactly the fixed-price outcome Y2, and the economy then rides up the new AD curve along the short-run supply curve to point B, where output is Y3 and the price level has risen to P2. Output ends higher than Y-bar but lower than Y2, and prices end higher.">
+        <defs>
+          <marker id="p4red" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C0392B"/></marker>
+          <marker id="p4grey" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto"><path d="M0,0 L5,3 L0,6 Z" fill="#5A5F66"/></marker>
+        </defs>
+
+        <!-- ============ LEFT: IS–LM ============ -->
+        <text x="60" y="14" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700">GOODS + MONEY MARKETS (IS–LM)</text>
+        <line x1="60" y1="24" x2="60" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+        <line x1="60" y1="300" x2="420" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+        <text x="52" y="32" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">r</text>
+        <text x="420" y="333" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Income/Output (Y)</text>
+
+        <!-- IS and LM(P1) : on load -->
+        <line x1="105" y1="214.3" x2="243" y2="299.9" stroke="#5A5F66" stroke-width="2.4"/>
+        <text x="99" y="211" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700" text-anchor="end">IS</text>
+        <line x1="100" y1="257.7" x2="300" y2="149.3" stroke="#1F4E79" stroke-width="2.4"/>
+        <text x="304" y="147" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700">LM(P₁)</text>
+
+        <!-- IS' : appears in stage 1 -->
+        <line id="p4is2" x1="132" y1="110.1" x2="390" y2="270.1" stroke="#C0392B" stroke-width="2.4" opacity="0"/>
+        <text id="p4is2t" x="394" y="268" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" opacity="0">IS′</text>
+        <line id="p4isarr" x1="196" y1="266" x2="374" y2="266" stroke="#C0392B" stroke-width="2" opacity="0" marker-end="url(#p4red)"/>
+        <text id="p4ann2" x="285" y="259" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="middle" opacity="0">1</text>
+
+        <!-- LM(P2) : appears in stage 3 -->
+        <line id="p4lm2" x1="100" y1="191.2" x2="270" y2="99" stroke="#C0392B" stroke-width="2.4" stroke-dasharray="7 4" opacity="0"/>
+        <text id="p4lm2t" x="274" y="97" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" opacity="0">LM(P₂)</text>
+        <line id="p4lmarr" x1="230" y1="182" x2="230" y2="127" stroke="#C0392B" stroke-width="2" opacity="0" marker-end="url(#p4red)"/>
+        <text id="p4ann7b" x="238" y="155" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" opacity="0">4</text>
+
+        <!-- A : on load -->
+        <line x1="60" y1="236" x2="140" y2="236" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+        <line x1="140" y1="300" x2="140" y2="236" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+        <text x="54" y="240" font-family="monospace" font-size="11" fill="#14243A" text-anchor="end">r₁</text>
+        <text x="140" y="315" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle">Ȳ</text>
+        <circle cx="140" cy="236" r="4.5" fill="#14243A"/>
+        <text x="126" y="266" font-family="monospace" font-size="11" font-weight="700" fill="#14243A" text-anchor="middle">A</text>
+
+        <!-- A' : stage 1 end -->
+        <g id="p4Ap" opacity="0">
+          <line x1="335" y1="300" x2="335" y2="236" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="335" y="315" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle">Y₁</text>
+          <circle cx="335" cy="236" r="4.5" fill="#14243A"/>
+          <text x="343" y="230" font-family="monospace" font-size="11" font-weight="700" fill="#14243A">A′</text>
+        </g>
+
+        <!-- A'' : stage 2 end -->
+        <g id="p4App" opacity="0">
+          <line x1="60" y1="179.6" x2="244" y2="179.6" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+          <line x1="244" y1="300" x2="244" y2="179.6" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="54" y="183.6" font-family="monospace" font-size="11" fill="#14243A" text-anchor="end">r₂</text>
+          <text x="244" y="315" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle">Y₂</text>
+          <circle cx="244" cy="179.6" r="4.5" fill="#14243A"/>
+          <text x="262" y="186" font-family="monospace" font-size="11" font-weight="700" fill="#14243A">A″</text>
+          <text x="300" y="212" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700">2</text>
+        </g>
+
+        <!-- B : stage 3 end -->
+        <g id="p4Bl" opacity="0">
+          <line x1="60" y1="144.1" x2="186.8" y2="144.1" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3"/>
+          <line x1="186.8" y1="300" x2="186.8" y2="144.1" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="54" y="148.1" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="end">r₄</text>
+          <text x="186.8" y="315" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="middle">Y₃</text>
+          <circle cx="186.8" cy="144.1" r="5" fill="#14243A"/>
+          <text x="186.8" y="134" font-family="monospace" font-size="12" font-weight="700" fill="#14243A" text-anchor="middle">B</text>
+        </g>
+
+        <!-- travelling dot (left) -->
+        <circle id="p4dotL" cx="140" cy="236" r="6" fill="#1F4E79"/>
+
+        <!-- ============ RIGHT: AD–AS ============ -->
+        <g transform="translate(500,0)">
+          <text x="60" y="14" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700">AGGREGATE DEMAND + SUPPLY</text>
+          <line x1="60" y1="24" x2="60" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="300" x2="420" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="52" y="32" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="420" y="333" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Income/Output (Y)</text>
+
+          <!-- LRAS, SRAS, AD : on load -->
+          <line x1="140" y1="30" x2="140" y2="300" stroke="#14243A" stroke-width="2.4"/>
+          <text x="140" y="24" font-family="monospace" font-size="10" fill="#14243A" font-weight="700" text-anchor="middle">LRAS</text>
+          <line x1="100" y1="283.9" x2="258" y2="94.8" stroke="#1F4E79" stroke-width="2.4"/>
+          <text x="262" y="93" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700">SRAS</text>
+          <line x1="90" y1="187.1" x2="205" y2="299.6" stroke="#5A5F66" stroke-width="2.4"/>
+          <text x="209" y="297" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700">AD</text>
+
+          <!-- AD' : stage 2 -->
+          <line id="p4ad2" x1="132" y1="126.4" x2="305" y2="295.7" stroke="#C0392B" stroke-width="2.4" opacity="0"/>
+          <text id="p4ad2t" x="309" y="293" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" opacity="0">AD′</text>
+          <line id="p4adarr" x1="182" y1="272" x2="270" y2="272" stroke="#C0392B" stroke-width="2" opacity="0" marker-end="url(#p4red)"/>
+          <text id="p4ann5" x="226" y="265" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="middle" opacity="0">3</text>
+
+          <!-- A : on load -->
+          <line x1="60" y1="236" x2="140" y2="236" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+          <line x1="140" y1="300" x2="140" y2="236" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="54" y="240" font-family="monospace" font-size="11" fill="#14243A" text-anchor="end">P₁</text>
+          <text x="140" y="315" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle">Ȳ</text>
+          <circle cx="140" cy="236" r="4.5" fill="#14243A"/>
+          <text x="128" y="248" font-family="monospace" font-size="11" font-weight="700" fill="#14243A" text-anchor="end">A</text>
+
+          <!-- A'' on AD' at P1 : stage 2 end -->
+          <g id="p4Appr" opacity="0">
+            <line x1="244" y1="300" x2="244" y2="236" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="244" y="315" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle">Y₂</text>
+            <circle cx="244" cy="236" r="4.5" fill="#14243A"/>
+            <text x="252" y="230" font-family="monospace" font-size="11" font-weight="700" fill="#14243A">A″</text>
+          </g>
+
+          <!-- B : stage 3 end -->
+          <g id="p4Br" opacity="0">
+            <line x1="60" y1="180" x2="186.8" y2="180" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3"/>
+            <line x1="186.8" y1="300" x2="186.8" y2="180" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="54" y="184" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="end">P₂</text>
+            <text x="186.8" y="315" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="middle">Y₃</text>
+            <circle cx="186.8" cy="180" r="5" fill="#14243A"/>
+            <text x="186.8" y="168" font-family="monospace" font-size="12" font-weight="700" fill="#14243A" text-anchor="middle">B</text>
+            <line x1="74" y1="232" x2="74" y2="185" stroke="#5A5F66" stroke-width="1.4" marker-end="url(#p4grey)"/>
+            <text x="82" y="210" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700">5</text>
+          </g>
+
+          <!-- travelling dot (right) -->
+          <circle id="p4dotR" cx="140" cy="236" r="6" fill="#1F4E79"/>
+        </g>
+      </svg>
+    </div>
+    <div class="controls" style="flex-direction:row;gap:1rem;align-items:center;margin-top:1rem;max-width:none;flex-wrap:wrap">
+      <button class="btn" id="p4play">▶ Play the confidence shock</button>
+      <button class="btn ghost" id="p4reset">Reset</button>
+      <div class="readout" id="p4read" aria-live="polite" aria-atomic="true" style="flex:1;min-width:320px">
+        At point A — long-run equilibrium. Press play to run the shock.
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. Q3 PROMPT -->
+  <section class="slide" data-section="Discussion 4 · Demand Shocks">
+    <div class="eyebrow">Write · then reveal</div>
+    <h2>Why doesn't it stop at Y₂?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:880px">
+      <p class="lede">The IS–LM answer at the old price level was <strong>Y₂</strong>. The short-run equilibrium is <strong>Y₃</strong>, which is smaller.</p>
+      <div class="prompt">
+        <span class="cue">Question 3 (write)</span>
+        <p>What happens between Y₂ and Y₃? Name <strong>who acts</strong>, <strong>what they do</strong>, and <strong>which curve moves as a result</strong>.</p>
+      </div>
+      <p class="serif-note">One-word hint: the thing we held fixed to define the AD shift is the thing that is no longer fixed.</p>
+    </div>
+  </section>
+
+  <!-- 12. REVEAL: B -->
+  <section class="slide" data-section="Discussion 4 · Demand Shocks">
+    <div class="eyebrow">Reveal · the short run</div>
+    <h2>Prices move, so the money market moves again</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:940px">
+      <button class="btn" data-reveal="hrShortRun">Reveal the answer</button>
+      <div class="reveal-hidden" id="hrShortRun">
+        <div class="chain" style="font-size:1rem;line-height:1.8">AD↑ → flexible-price firms raise P to P₂ → M/P↓ → LM shifts up to LM(P₂) → r↑ to r₄ → I↓ → Y falls back to Y₃</div>
+        <div class="reveal" style="margin-top:.9rem">
+          <span class="cue">Who acts, and why output stops short of Y₂</span>
+          <p>Not everyone can reprice — but the <strong>flexible-price firms can</strong>, and higher demand is exactly their cue to raise prices. That lifts the aggregate price level to <strong>P₂</strong>.</p>
+          <p style="margin-top:.6rem">A higher P is a <strong>smaller supply of real money balances</strong>, M/P. The money market has to re-clear at a higher interest rate, so <strong>LM shifts up</strong>, r climbs to <strong>r₄</strong>, and investment falls again. That second round of crowding-out is the gap between Y₂ and Y₃.</p>
+          <p style="margin-top:.6rem"><strong>Point B — the short-run equilibrium:</strong> output <strong>Y₃</strong>, price level <strong>P₂</strong>, interest rate <strong>r₄</strong>. Output is above Ȳ, but by less than the fixed-price diagram promised.</p>
+        </div>
+        <p class="footnote" style="margin-top:.7rem">Notice the price level did two jobs here: it slid us <em>along</em> AD′, and it shifted <em>LM</em>. Same variable, both panels — that's what keeps the two diagrams consistent.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13. Q4 PREDICT + REVEAL B→C -->
+  <section class="slide" data-section="Discussion 4 · Demand Shocks">
+    <div class="eyebrow">Predict · then show the shift</div>
+    <h2>What carries B to C?</h2>
+    <div class="titlerule"></div>
+    <div class="predict" style="max-width:none">
+      <span class="cue">Question 4 (predict)</span>
+      <p>At B, output is above Ȳ. Something must push it back. <strong>Who is still unsatisfied at point B, and what do they do about it?</strong> Name the group and the curve their action moves.</p>
+    </div>
+    <div style="margin-top:1rem">
+      <div class="panel" style="max-width:1080px">
+        <svg id="btocsvg" viewBox="0 0 940 350" role="img" aria-label="The move from the short-run point B to the long-run point C, in two panels. Left, IS–LM: the price level rises again to P3, so the LM curve shifts up a second time to LM of P3 and the economy climbs the new IS curve from B to C, where output is back at Y-bar and the interest rate is r3, higher than at B. Right, aggregate demand and supply: workers demand higher nominal wages, which shifts the short-run supply curve up to SRAS-prime, and the economy rides up AD-prime from B to C, where output is back at Y-bar and the price level has risen again to P3. Long run: output unchanged, prices higher, interest rate higher.">
+          <defs>
+            <marker id="p4bred" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C0392B"/></marker>
+          </defs>
+
+          <!-- LEFT -->
+          <text x="60" y="14" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700">GOODS + MONEY MARKETS (IS–LM)</text>
+          <line x1="60" y1="24" x2="60" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="300" x2="420" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="52" y="32" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">r</text>
+          <text x="420" y="333" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Income/Output (Y)</text>
+          <line x1="132" y1="110.1" x2="390" y2="270.1" stroke="#C0392B" stroke-width="2.4"/>
+          <text x="394" y="268" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700">IS′</text>
+          <line x1="100" y1="257.7" x2="300" y2="149.3" stroke="#1F4E79" stroke-width="2.4" opacity=".45"/>
+          <text x="304" y="147" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700" opacity=".6">LM(P₁)</text>
+          <line x1="100" y1="191.2" x2="270" y2="99" stroke="#1F4E79" stroke-width="2.4"/>
+          <text x="274" y="97" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700">LM(P₂)</text>
+          <!-- A, B on load -->
+          <line x1="140" y1="300" x2="140" y2="115.1" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="140" y="315" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle">Ȳ</text>
+          <circle cx="140" cy="236" r="4.5" fill="#14243A" opacity=".55"/>
+          <text x="126" y="266" font-family="monospace" font-size="11" font-weight="700" fill="#14243A" text-anchor="middle" opacity=".55">A</text>
+          <line x1="60" y1="144.1" x2="186.8" y2="144.1" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+          <line x1="186.8" y1="300" x2="186.8" y2="144.1" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="54" y="148.1" font-family="monospace" font-size="11" fill="#14243A" text-anchor="end">r₄</text>
+          <text x="186.8" y="315" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle">Y₃</text>
+          <circle cx="186.8" cy="144.1" r="5" fill="#14243A"/>
+          <text x="206" y="152" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">B</text>
+          <!-- revealed: LM(P3), C -->
+          <line id="bc_lm3" x1="100" y1="136.8" x2="250" y2="55.5" stroke="#C0392B" stroke-width="2.4" stroke-dasharray="7 4" opacity="0"/>
+          <text id="bc_lm3t" x="254" y="53" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" opacity="0">LM(P₃)</text>
+          <line id="bc_lmarr" x1="200" y1="132" x2="200" y2="89" stroke="#C0392B" stroke-width="2" opacity="0" marker-end="url(#p4bred)"/>
+          <line id="bc_r3g" x1="60" y1="115.1" x2="140" y2="115.1" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3" opacity="0"/>
+          <text id="bc_r3t" x="54" y="119.1" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="end" opacity="0">r₃</text>
+          <circle id="bc_cl" cx="140" cy="115.1" r="5" fill="#14243A" opacity="0"/>
+          <text id="bc_clt" x="140" y="105" font-family="monospace" font-size="12" font-weight="700" fill="#14243A" text-anchor="middle" opacity="0">C</text>
+
+          <!-- RIGHT -->
+          <g transform="translate(500,0)">
+            <text x="60" y="14" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700">AGGREGATE DEMAND + SUPPLY</text>
+            <line x1="60" y1="24" x2="60" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+            <line x1="60" y1="300" x2="420" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+            <text x="52" y="32" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">P</text>
+            <text x="420" y="333" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Income/Output (Y)</text>
+            <line x1="140" y1="30" x2="140" y2="300" stroke="#14243A" stroke-width="2.4"/>
+            <text x="140" y="24" font-family="monospace" font-size="10" fill="#14243A" font-weight="700" text-anchor="middle">LRAS</text>
+            <line x1="100" y1="283.9" x2="258" y2="94.8" stroke="#1F4E79" stroke-width="2.4"/>
+            <text x="262" y="93" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700">SRAS</text>
+            <line x1="90" y1="187.1" x2="205" y2="299.6" stroke="#5A5F66" stroke-width="2.4" opacity=".45"/>
+            <text x="209" y="297" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700" opacity=".6">AD</text>
+            <line x1="132" y1="126.4" x2="305" y2="295.7" stroke="#C0392B" stroke-width="2.4"/>
+            <text x="309" y="293" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700">AD′</text>
+            <line x1="140" y1="300" x2="140" y2="236" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="140" y="315" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle">Ȳ</text>
+            <text x="54" y="240" font-family="monospace" font-size="11" fill="#14243A" text-anchor="end" opacity=".55">P₁</text>
+            <circle cx="140" cy="236" r="4.5" fill="#14243A" opacity=".55"/>
+            <text x="150" y="240" font-family="monospace" font-size="11" font-weight="700" fill="#14243A" opacity=".55">A</text>
+            <line x1="60" y1="180" x2="186.8" y2="180" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+            <line x1="186.8" y1="300" x2="186.8" y2="180" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="54" y="184" font-family="monospace" font-size="11" fill="#14243A" text-anchor="end">P₂</text>
+            <text x="186.8" y="315" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle">Y₃</text>
+            <circle cx="186.8" cy="180" r="5" fill="#14243A"/>
+            <text x="197" y="183" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">B</text>
+            <!-- revealed: SRAS', C -->
+            <line id="bc_sras2" x1="112" y1="167.7" x2="210" y2="50.5" stroke="#C0392B" stroke-width="2.4" stroke-dasharray="7 4" opacity="0"/>
+            <text id="bc_sras2t" x="214" y="48" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" opacity="0">SRAS′</text>
+            <line id="bc_srasarr" x1="170" y1="196" x2="170" y2="105" stroke="#C0392B" stroke-width="2" opacity="0" marker-end="url(#p4bred)"/>
+            <line id="bc_p3g" x1="60" y1="134.2" x2="140" y2="134.2" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3" opacity="0"/>
+            <text id="bc_p3t" x="54" y="138.2" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="end" opacity="0">P₃</text>
+            <circle id="bc_cr" cx="140" cy="134.2" r="5" fill="#14243A" opacity="0"/>
+            <text id="bc_crt" x="150" y="138" font-family="monospace" font-size="12" font-weight="700" fill="#14243A" opacity="0">C</text>
+          </g>
+        </svg>
+      </div>
+      <div class="controls" style="flex-direction:row;gap:1rem;align-items:center;margin-top:1rem;flex-wrap:wrap">
+        <button class="btn" data-reveal-svg="btoc">▶ Show the long-run shift</button>
+        <div class="readout" id="btocread" aria-live="polite" aria-atomic="true" style="flex:1;min-width:320px">
+          Currently at point B: output Y₃, price level P₂, interest rate r₄.
+        </div>
+      </div>
+      <div class="reveal-hidden" id="hrLongRun">
+          <div class="reveal" style="max-width:none">
+            <span class="cue">Reveal · what carries B to C</span>
+            <p><strong>Workers</strong> are the unsatisfied group. Prices rose to P₂ while the nominal wage didn't, so the <strong>real wage has fallen</strong> — and workers bargain for higher nominal wages to compensate. Higher wages are higher costs, which shifts <strong>SRAS up</strong>. At the same time the formerly sticky-price firms finally reprice, pushing the price level up to <strong>P₃</strong>.</p>
+            <p style="margin-top:.6rem">The higher P shrinks real balances again, so <strong>LM shifts up to LM(P₃)</strong>, r rises to <strong>r₃</strong>, and investment falls further — until output is back at <strong>Ȳ</strong>. That's <strong>point C</strong>, the new long-run equilibrium.</p>
+          </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14. PUNCHLINE -->
+  <section class="slide" data-section="Discussion 4 · Demand Shocks">
+    <div class="eyebrow">The punchline</div>
+    <h2>What the shock actually bought</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:960px">
+      <div class="two" style="max-width:900px">
+        <div class="model hi" style="box-shadow:none">
+          <span class="tag">Short run · point B</span>
+          <div class="calc" style="font-size:1rem">
+            output &nbsp;<strong>Y₃ &gt; Ȳ</strong> &nbsp;(↑)<br>
+            prices &nbsp;<strong>P₂ &gt; P₁</strong> &nbsp;(↑)<br>
+            interest &nbsp;<strong>r₄ &gt; r₁</strong> &nbsp;(↑)
+          </div>
+        </div>
+        <div class="model hi" style="box-shadow:none">
+          <span class="tag">Long run · point C</span>
+          <div class="calc" style="font-size:1rem">
+            output &nbsp;<strong>Ȳ</strong> &nbsp;(no change)<br>
+            prices &nbsp;<strong>P₃ &gt; P₂</strong> &nbsp;(↑)<br>
+            interest &nbsp;<strong>r₃ &gt; r₄</strong> &nbsp;(↑)
+          </div>
+        </div>
+      </div>
+      <button class="btn" data-reveal="hrPunch1">Reveal what happened to spending</button>
+      <div class="reveal-hidden" id="hrPunch1">
+        <div class="reveal">
+          <span class="cue">Complete crowding-out</span>
+          <p>In the long run output is <strong>exactly where it started</strong> — but its composition changed. Consumption is permanently higher (that was the shock). Output is unchanged. So something had to give: the higher interest rate r₃ means <strong>investment fell by precisely the amount consumption rose</strong>.</p>
+          <p style="margin-top:.6rem">The economy got no extra output out of the confidence boom. It got a <strong>higher price level, a higher interest rate, and less investment</strong> — a permanently smaller share of output going to the capital stock.</p>
+        </div>
+        <div class="chain" style="margin-top:.9rem;font-size:1rem">long run: &nbsp;ΔY = 0 &nbsp;·&nbsp; ΔP &gt; 0 &nbsp;·&nbsp; Δr &gt; 0 &nbsp;·&nbsp; ΔC = −ΔI</div>
+      </div>
+      <p class="serif-note" style="margin-top:.9rem">Go back to the six signs you wrote for Question 1. Mark the ones you'd have missed — most people miss the long-run interest rate.</p>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- PART 2 — THE MIRROR CASE -->
+  <!-- ============================================================ -->
+
+  <!-- 15. NEGATIVE DEMAND SHOCK -->
+  <section class="slide" data-section="Discussion 4 · Demand Shocks">
+    <div class="eyebrow">Part 2 of 5 · the mirror case</div>
+    <h2>Run it backwards: taxes rise</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:70ch">A tax increase lowers disposable income, so households buy less: <strong>C falls</strong>, and aggregate demand falls at the price level P₁. Everything from Part 1 now runs in reverse.</p>
+    <div class="graphwrap" style="grid-template-columns:1.05fr .95fr">
+      <div class="panel">
+        <svg id="negadsvg" viewBox="0 0 470 350" role="img" aria-label="A tax increase in the aggregate demand and supply diagram. The AD curve shifts left, so the short-run equilibrium B has both lower output Y1 and a lower price level P2 than the starting point A. Then high unemployment pushes nominal wages down, the short-run supply curve shifts down to SRAS-prime, and the economy reaches long-run point C, where output is back at Y-bar and the price level has fallen further to P3. Long run: output unchanged, prices lower, interest rate lower, investment higher.">
+          <defs>
+            <marker id="naR" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C0392B"/></marker>
+            <marker id="naG" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto"><path d="M0,0 L5,3 L0,6 Z" fill="#5A5F66"/></marker>
+          </defs>
+          <line x1="60" y1="24" x2="60" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="300" x2="430" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="52" y="32" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="430" y="333" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Income/Output (Y)</text>
+          <line x1="200" y1="30" x2="200" y2="300" stroke="#14243A" stroke-width="2.4"/>
+          <text x="200" y="24" font-family="monospace" font-size="10" fill="#14243A" font-weight="700" text-anchor="middle">LRAS</text>
+          <line x1="140" y1="251.8" x2="290" y2="72.3" stroke="#1F4E79" stroke-width="2.4"/>
+          <text x="294" y="70" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700">SRAS</text>
+          <line x1="110" y1="91.9" x2="290" y2="268.1" stroke="#5A5F66" stroke-width="2.4"/>
+          <text x="294" y="266" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700">AD</text>
+          <line x1="60" y1="180" x2="200" y2="180" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+          <line x1="200" y1="300" x2="200" y2="180" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="54" y="184" font-family="monospace" font-size="11" fill="#14243A" text-anchor="end">P₁</text>
+          <text x="200" y="315" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle">Ȳ</text>
+          <circle cx="200" cy="180" r="5" fill="#14243A"/>
+          <text x="218" y="182" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+          <!-- revealed -->
+          <line id="na_ad2" x1="90" y1="150.6" x2="242" y2="299.5" stroke="#C0392B" stroke-width="2.4" opacity="0"/>
+          <text id="na_ad2t" x="86" y="148" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="end" opacity="0">AD′</text>
+          <line id="na_adarr" x1="255" y1="240" x2="189" y2="240" stroke="#C0392B" stroke-width="2" opacity="0" marker-end="url(#naR)"/>
+          <text id="na_adarrt" x="235" y="249" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="middle" opacity="0">T↑</text>
+          <line id="na_bh" x1="60" y1="223.1" x2="164" y2="223.1" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3" opacity="0"/>
+          <line id="na_bv" x1="164" y1="300" x2="164" y2="223.1" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3" opacity="0"/>
+          <text id="na_p2" x="54" y="227.1" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="end" opacity="0">P₂</text>
+          <text id="na_y1" x="164" y="315" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="middle" opacity="0">Y₁</text>
+          <circle id="na_b" cx="164" cy="223.1" r="5" fill="#14243A" opacity="0"/>
+          <text id="na_bt" x="145" y="234" font-family="monospace" font-size="12" font-weight="700" fill="#14243A" text-anchor="middle" opacity="0">B</text>
+          <line id="na_sras2" x1="166" y1="299" x2="280" y2="162.6" stroke="#C0392B" stroke-width="2.4" stroke-dasharray="7 4" opacity="0"/>
+          <text id="na_sras2t" x="284" y="160" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" opacity="0">SRAS′</text>
+          <line id="na_srasarr" x1="230" y1="150" x2="230" y2="216" stroke="#C0392B" stroke-width="2" opacity="0" marker-end="url(#naR)"/>
+          <text id="na_srasarrt" x="238" y="185" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" opacity="0">W↓</text>
+          <line id="na_ch" x1="60" y1="258.3" x2="200" y2="258.3" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3" opacity="0"/>
+          <text id="na_p3" x="54" y="262.3" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="end" opacity="0">P₃</text>
+          <circle id="na_c" cx="200" cy="258.3" r="5" fill="#14243A" opacity="0"/>
+          <text id="na_ct" x="220" y="262" font-family="monospace" font-size="12" font-weight="700" fill="#14243A" text-anchor="middle" opacity="0">C</text>
+          <line id="na_parr" x1="76" y1="176" x2="76" y2="254" stroke="#5A5F66" stroke-width="1.4" opacity="0" marker-end="url(#naG)"/>
+          <line id="na_yarr" x1="196" y1="290" x2="169" y2="290" stroke="#5A5F66" stroke-width="1.4" opacity="0" marker-end="url(#naG)"/>
+        </svg>
+      </div>
+      <div class="controls">
+        <button class="btn" data-reveal-svg="negad1">▶ Step 1 · AD shifts left → B</button>
+        <div class="reveal-hidden" id="hrNegAD1">
+          <div class="reveal">
+            <span class="cue">Step 1 · the short run</span>
+            <p>Firms cut production and lay workers off, and flexible-price firms cut prices. The economy slides down SRAS to <strong>point B</strong> — output <strong>Y₁</strong> and price level <strong>P₂</strong>, both below A.</p>
+          </div>
+        </div>
+        <button class="btn" data-reveal-svg="negad2">▶ Step 2 · SRAS shifts down → C</button>
+        <div class="reveal-hidden" id="hrNegAD2">
+          <div class="reveal">
+            <span class="cue">Step 2 · the labor market closes it</span>
+            <p>The nominal wage hasn't moved but P has fallen, so the <strong>real wage is now too high</strong>. High unemployment is exactly the pressure that pushes the nominal wage back down, restoring the real wage — and falling wages are what shift <strong>SRAS down</strong>. Firms respond by producing more.</p>
+            <p style="margin-top:.6rem"><strong>Long run (C):</strong> output back at <strong>Ȳ</strong>, price level <strong>P₃</strong>. And because P is lower, real balances are larger, so <strong>r is lower and investment is higher</strong> than before the tax rise — the exact mirror of Part 1.</p>
+          </div>
+        </div>
+        <div class="readout" id="negadread" aria-live="polite" aria-atomic="true">
+          At point A: output Ȳ, price level P₁. AD is about to fall.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16. Q5 QUICK CHECK -->
+  <section class="slide" data-section="Discussion 4 · Demand Shocks">
+    <div class="eyebrow">Quick check</div>
+    <h2>Lock in the long run</h2>
+    <div class="titlerule"></div>
+    <p class="lede">A <strong>positive</strong> demand shock hits. Once every price and wage has adjusted, what is the complete long-run picture?</p>
+    <div class="poll" id="pollQ5">
+      <div class="poll-opts">
+        <button type="button" class="poll-opt" data-correct="false"><span class="num">1</span><span class="txt">Higher output, higher prices, higher interest rate, less investment.</span></button>
+        <button type="button" class="poll-opt" data-correct="true"><span class="num">2</span><span class="txt">Same output, higher prices, higher interest rate, less investment.</span></button>
+        <button type="button" class="poll-opt" data-correct="false"><span class="num">3</span><span class="txt">Same output, higher prices, same interest rate, same investment.</span></button>
+        <button type="button" class="poll-opt" data-correct="false"><span class="num">4</span><span class="txt">Same output, same prices, higher interest rate, less investment.</span></button>
+      </div>
+      <p class="poll-hint">Question 5 — students commit on paper (or a show of hands). Then reveal.</p>
+      <button class="btn" data-poll-reveal="pollQ5" style="margin-top:1rem">Reveal the answer</button>
+    </div>
+    <p class="footnote" style="margin-top:1rem">Option 1 is the classic miss: it stops at the short run. Option 3 forgets that a higher price level shrinks real balances, so r cannot stay put.</p>
+  </section>
+
+  <!-- 17. Q6 DIAGNOSE -->
+  <section class="slide" data-section="Discussion 4 · Demand Shocks">
+    <div class="eyebrow">Diagnose · silent poll</div>
+    <h2>Find the flawed sentence</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="margin-bottom:.4rem">Question 6. All three sentences are about the tax increase. All three reach defensible-sounding conclusions. One of them gets there for the wrong reason.</p>
+    <div class="poll-wrap">
+      <div class="diag" id="diagQ6">
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">1</span><span class="s">A tax increase lowers disposable income, so consumption falls and the AD curve shifts left.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">2</span><span class="s">In the short run firms cut production and flexible-price firms cut prices, so output and the price level both fall.</span></button>
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">3</span><span class="s">Output eventually returns to Ȳ because the tax increase is eventually reversed.</span></button>
+      </div>
+      <p class="poll-hint">Students pick a number on paper (or hands). Then reveal.</p>
+      <button class="btn" data-diag-reveal="diagQ6" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem">
+        <span class="cue">Why sentence 3 fails</span>
+        <p>Its <em>conclusion</em> is right — output does return to Ȳ. But the mechanism is invented. Nothing in the model reverses the tax. The tax stays exactly where it was put.</p>
+        <p style="margin-top:.6rem">What returns output to Ȳ is <strong>wage and price flexibility</strong>: unemployment drives the nominal wage down, SRAS shifts down, and the economy walks back to the long-run supply curve on its own. That distinction matters — under sentence 3's story, the long-run price level would return to P₁ too. Under the real mechanism it lands at <strong>P₃, permanently lower</strong>. Right answer, wrong reasoning, and the wrong reasoning predicts the wrong price level.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- PART 3 DIVIDER -->
+  <!-- ============================================================ -->
+  <section class="slide divider" data-section="Discussion 4 · Supply Shocks">
+    <div class="eyebrow">Part 3 of 5</div>
+    <h1>Supply<br>Shocks</h1>
+    <p class="lede">Same diagram, a different curve moves. Everything you have learned about how this economy responds is about to stop working.</p>
+    <div class="sectrail">Demand Shocks ✓ → Supply Shocks → Monetary → Fiscal → Synthesis</div>
+  </section>
+
+  <!-- 19. Q7 PREDICT -->
+  <section class="slide" data-section="Discussion 4 · Supply Shocks">
+    <div class="eyebrow">Commit before the diagram</div>
+    <h2>Predict</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:880px">
+      <p class="lede">The price of oil rises. Oil is an input, so firms' costs go up across the economy.</p>
+      <div class="predict">
+        <span class="cue">Question 7 (predict)</span>
+        <p>Write the signs of <strong>ΔP</strong> and <strong>ΔY</strong> in the short run. Then answer the harder part: <strong>how is this different from every shock we have drawn so far today?</strong> Be specific about what is different — not just "it's supply."</p>
+      </div>
+      <p class="serif-note">Look back at your Question 1 and Question 5 answers before you write. There is a pattern in them that is about to break.</p>
+    </div>
+  </section>
+
+  <!-- 20. REVEAL + STATIC SHIFT -->
+  <section class="slide" data-section="Discussion 4 · Supply Shocks">
+    <div class="eyebrow">On the diagram</div>
+    <h2>Stagflation</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:1.05fr .95fr">
+      <div class="panel">
+        <svg id="oilsvg" viewBox="0 0 470 350" role="img" aria-label="A rise in the price of oil in the aggregate demand and supply diagram. Higher input costs shift the short-run supply curve up and to the left, so the economy moves from A to B along an unchanged AD curve. At B the price level P2 is higher than P1 while output Y1 is lower than Y-bar. Prices and output move in opposite directions — this is stagflation.">
+          <defs>
+            <marker id="oiR" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C0392B"/></marker>
+            <marker id="oiG" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto"><path d="M0,0 L5,3 L0,6 Z" fill="#5A5F66"/></marker>
+          </defs>
+          <line x1="60" y1="24" x2="60" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="300" x2="430" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="52" y="32" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="430" y="333" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Income/Output (Y)</text>
+          <line x1="200" y1="30" x2="200" y2="300" stroke="#14243A" stroke-width="2.4"/>
+          <text x="200" y="24" font-family="monospace" font-size="10" fill="#14243A" font-weight="700" text-anchor="middle">LRAS</text>
+          <line x1="140" y1="251.8" x2="290" y2="72.3" stroke="#1F4E79" stroke-width="2.4"/>
+          <text x="294" y="70" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700">SRAS</text>
+          <line x1="110" y1="91.9" x2="290" y2="268.1" stroke="#5A5F66" stroke-width="2.4"/>
+          <text x="294" y="266" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700">AD</text>
+          <line x1="60" y1="180" x2="200" y2="180" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+          <line x1="200" y1="300" x2="200" y2="180" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="54" y="184" font-family="monospace" font-size="11" fill="#14243A" text-anchor="end">P₁</text>
+          <text x="200" y="315" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle">Ȳ</text>
+          <circle cx="200" cy="180" r="5" fill="#14243A"/>
+          <text x="218" y="182" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+          <!-- revealed -->
+          <line id="oi_sras2" x1="140" y1="191.8" x2="250" y2="60.2" stroke="#C0392B" stroke-width="2.4" stroke-dasharray="7 4" opacity="0"/>
+          <text id="oi_sras2t" x="254" y="58" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" opacity="0">SRAS′</text>
+          <line id="oi_arr" x1="225" y1="146" x2="225" y2="97" stroke="#C0392B" stroke-width="2" opacity="0" marker-end="url(#oiR)"/>
+          <text id="oi_arrt" x="232" y="99" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" opacity="0">P<tspan font-size="8" dy="2.5">Oil</tspan><tspan dy="-2.5">↑</tspan></text>
+          <line id="oi_bh" x1="60" y1="153" x2="172.4" y2="153" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3" opacity="0"/>
+          <line id="oi_bv" x1="172.4" y1="300" x2="172.4" y2="153" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3" opacity="0"/>
+          <text id="oi_p2" x="54" y="157" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="end" opacity="0">P₂</text>
+          <text id="oi_y1" x="172.4" y="315" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="middle" opacity="0">Y₁</text>
+          <circle id="oi_b" cx="172.4" cy="153" r="5" fill="#14243A" opacity="0"/>
+          <text id="oi_bt" x="146" y="168" font-family="monospace" font-size="12" font-weight="700" fill="#14243A" text-anchor="middle" opacity="0">B</text>
+          <line id="oi_parr" x1="76" y1="177" x2="76" y2="157" stroke="#5A5F66" stroke-width="1.4" opacity="0" marker-end="url(#oiG)"/>
+          <text id="oi_parrt" x="84" y="170" font-family="monospace" font-size="10" fill="#5A5F66" font-weight="700" opacity="0">P↑</text>
+          <line id="oi_yarr" x1="196" y1="290" x2="177" y2="290" stroke="#5A5F66" stroke-width="1.4" opacity="0" marker-end="url(#oiG)"/>
+          <text id="oi_yarrt" x="186" y="284" font-family="monospace" font-size="10" fill="#5A5F66" font-weight="700" text-anchor="middle" opacity="0">Y↓</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <button class="btn" data-reveal-svg="oil">▶ Show the shift</button>
+        <div class="readout" id="oilread" aria-live="polite" aria-atomic="true">
+          At point A. The oil price is about to rise.
+        </div>
+        <div class="reveal-hidden" id="hrOil">
+          <div class="reveal">
+            <span class="cue">The asymmetry — this is the hinge</span>
+            <p>Higher input costs mean firms raise prices <em>and</em> cut output. <strong>SRAS shifts up.</strong> AD never moved. The economy slides <em>along</em> AD to point B: price level <strong>P₂ higher</strong>, output <strong>Y₁ lower</strong>. High inflation with high unemployment is called <strong>stagflation</strong>.</p>
+            <p style="margin-top:.6rem">Now say the difference out loud. Every shock before this one moved <strong>P and Y in the same direction</strong> — up together, or down together. A supply shock moves them in <strong>opposite directions</strong>.</p>
+            <p style="margin-top:.6rem">Hold that thought. In Part 4 we ask what policy can do about it, and the answer depends entirely on this one asymmetry.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 21. TRANSMISSION -->
+  <section class="slide" data-section="Discussion 4 · Supply Shocks">
+    <div class="eyebrow">Under the diagram</div>
+    <h2>Why demand falls to meet the new supply</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:940px">
+      <p class="lede">The AD curve did not move — but we still ended up at <em>lower</em> output. Something had to reduce the quantity demanded. Here is the machinery inside that slide along AD.</p>
+      <button class="btn" data-reveal="hrTrans">Reveal the transmission</button>
+      <div class="reveal-hidden" id="hrTrans">
+        <div class="chain" style="font-size:1rem;line-height:1.8">P↑ → M/P↓ → r↑ → I↓ → PE↓ → Y↓ and C↓</div>
+        <div class="reveal" style="margin-top:.9rem">
+          <span class="cue">The fall in expenditure is the enforcement mechanism</span>
+          <p>The higher price level shrinks the supply of real money balances, so the money market re-clears at a <strong>higher interest rate</strong>. Higher r cuts investment; lower investment cuts planned expenditure; lower expenditure cuts output and consumption.</p>
+          <p style="margin-top:.6rem">That reduction in planned expenditure is exactly <strong>what makes aggregate demand equal the new aggregate supply</strong>. Firms wanted to supply less at higher prices; the money market is what makes buyers want less too.</p>
+        </div>
+        <p class="footnote" style="margin-top:.7rem">Same three arrows you used to derive AD — because sliding along AD is all we are doing here.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 22. Q8 TEMPORARY VS PERMANENT -->
+  <section class="slide" data-section="Discussion 4 · Supply Shocks">
+    <div class="eyebrow">Write · then reveal each case</div>
+    <h2>Temporary or permanent?</h2>
+    <div class="titlerule"></div>
+    <div class="prompt" style="max-width:none">
+      <span class="cue">Question 8 (write)</span>
+      <p>What happens in the long run depends on whether the oil shock is temporary or permanent. For <strong>each</strong> case, write down <strong>which curve moves</strong> and <strong>why that curve and not the other one</strong>.</p>
+    </div>
+    <div class="condrow" style="grid-template-columns:1fr 1fr;max-width:900px">
+      <div class="condcard">
+        <div class="ctitle">Case 1 · temporary</div>
+        <button type="button" class="cbtn" data-cond="condTemp">Reveal</button>
+        <div class="cbody" id="condTemp">
+          <svg viewBox="0 0 240 172" role="img" aria-label="A temporary oil shock. The short-run supply curve shifts up to SRAS-prime and the economy moves from A to B, but when the oil price falls back the curve returns to its original position and the economy goes back to point A. Nothing is permanently changed.">
+            <defs><marker id="tmpA" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#C0392B"/></marker></defs>
+            <line x1="30" y1="12" x2="30" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+            <line x1="30" y1="150" x2="230" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+            <text x="24" y="18" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">P</text>
+            <text x="230" y="164" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">Y</text>
+            <line x1="120" y1="20" x2="120" y2="150" stroke="#14243A" stroke-width="1.6"/>
+            <text x="120" y="16" font-family="monospace" font-size="7.5" fill="#14243A" font-weight="700" text-anchor="middle">LRAS</text>
+            <line x1="80" y1="143" x2="180" y2="23" stroke="#1F4E79" stroke-width="1.8"/>
+            <text x="182" y="26" font-family="monospace" font-size="7.5" fill="#1F4E79" font-weight="700">SRAS</text>
+            <line x1="75" y1="109" x2="155" y2="13" stroke="#C0392B" stroke-width="1.8" stroke-dasharray="5 3"/>
+            <text x="157" y="16" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700">SRAS′</text>
+            <line x1="60" y1="35" x2="170" y2="145" stroke="#5A5F66" stroke-width="1.8"/>
+            <text x="172" y="145" font-family="monospace" font-size="7.5" fill="#5A5F66" font-weight="700">AD</text>
+            <circle cx="120" cy="95" r="3.2" fill="#14243A"/><text x="126" y="99" font-family="monospace" font-size="8" font-weight="700">A</text>
+            <circle cx="101.8" cy="76.8" r="3.2" fill="#14243A"/><text x="88" y="82" font-family="monospace" font-size="8" font-weight="700" text-anchor="middle">B</text>
+            <line x1="140" y1="36" x2="140" y2="66" stroke="#C0392B" stroke-width="1.6" marker-end="url(#tmpA)"/>
+            <text x="146" y="36" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700">P<tspan font-size="5.5" dy="1.8">Oil</tspan><tspan dy="-1.8">↓</tspan></text>
+          </svg>
+          <div class="verdict mild">→ back to A · nothing permanent</div>
+          <p class="cnote"><strong>SRAS moves, and then moves back.</strong> The oil price eventually returns to normal, costs fall again, and SRAS returns to where it started. The economy goes back to its original long-run equilibrium — same Ȳ, same P₁.</p>
+        </div>
+      </div>
+      <div class="condcard">
+        <div class="ctitle">Case 2 · permanent</div>
+        <button type="button" class="cbtn" data-cond="condPerm">Reveal</button>
+        <div class="cbody" id="condPerm">
+          <svg viewBox="0 0 240 172" role="img" aria-label="A permanent oil shock. The short-run supply curve shifts up, but because the economy has permanently lost productive capacity the long-run supply curve also shifts left, from LRAS to LRAS-prime. Full-employment output itself falls to a new, lower level. Output does not return to where it started.">
+            <defs><marker id="prmA" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#C0392B"/></marker></defs>
+            <line x1="30" y1="12" x2="30" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+            <line x1="30" y1="150" x2="230" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+            <text x="24" y="18" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">P</text>
+            <text x="230" y="164" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">Y</text>
+            <line x1="120" y1="20" x2="120" y2="150" stroke="#14243A" stroke-width="1.6"/>
+            <text x="120" y="16" font-family="monospace" font-size="7.5" fill="#14243A" font-weight="700" text-anchor="middle">LRAS</text>
+            <line x1="101.8" y1="20" x2="101.8" y2="150" stroke="#C0392B" stroke-width="1.6" stroke-dasharray="5 3"/>
+            <text x="99" y="16" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" text-anchor="end">LRAS′</text>
+            <line x1="80" y1="143" x2="180" y2="23" stroke="#1F4E79" stroke-width="1.8"/>
+            <text x="182" y="26" font-family="monospace" font-size="7.5" fill="#1F4E79" font-weight="700">SRAS</text>
+            <line x1="75" y1="109" x2="155" y2="13" stroke="#C0392B" stroke-width="1.8" stroke-dasharray="5 3"/>
+            <text x="157" y="16" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700">SRAS′</text>
+            <line x1="60" y1="35" x2="170" y2="145" stroke="#5A5F66" stroke-width="1.8"/>
+            <text x="172" y="145" font-family="monospace" font-size="7.5" fill="#5A5F66" font-weight="700">AD</text>
+            <circle cx="120" cy="95" r="3.2" fill="#14243A"/><text x="126" y="99" font-family="monospace" font-size="8" font-weight="700">A</text>
+            <circle cx="101.8" cy="76.8" r="3.2" fill="#14243A"/><text x="88" y="82" font-family="monospace" font-size="8" font-weight="700" text-anchor="middle">B</text>
+            <line x1="118" y1="132" x2="104" y2="132" stroke="#C0392B" stroke-width="1.6" marker-end="url(#prmA)"/>
+            <text x="111" y="126" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" text-anchor="middle">A↓</text>
+            <text x="101.8" y="163" font-family="monospace" font-size="7.5" fill="#C0392B" text-anchor="middle">Ȳ′</text>
+            <text x="126" y="163" font-family="monospace" font-size="7.5" fill="#14243A" text-anchor="middle">Ȳ</text>
+          </svg>
+          <div class="verdict severe">→ LRAS moves · Ȳ itself falls</div>
+          <p class="cnote"><strong>LRAS moves too.</strong> A permanent supply shock is a permanent <strong>loss of productivity</strong> — the economy's productive capacity really has changed, so the vertical long-run curve shifts left to a new, lower Ȳ′. This is a fall in <em>A</em>, the same productivity term you shifted in the growth model.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 23. Q9 DIAGNOSE -->
+  <section class="slide" data-section="Discussion 4 · Supply Shocks">
+    <div class="eyebrow">Diagnose · silent poll</div>
+    <h2>Find the flawed sentence</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="margin-bottom:.4rem">Question 9. A permanent rise in the price of oil. One of these applies a correct principle to the wrong situation.</p>
+    <div class="poll-wrap">
+      <div class="diag" id="diagQ9">
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">1</span><span class="s">A permanent oil shock raises firms' costs, so SRAS shifts up and we get stagflation in the short run.</span></button>
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">2</span><span class="s">Output always returns to Ȳ in the long run, so a permanent oil shock costs us nothing permanent.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">3</span><span class="s">The long-run equilibrium is wherever aggregate demand crosses the long-run aggregate supply curve.</span></button>
+      </div>
+      <p class="poll-hint">Students pick a number on paper (or hands). Then reveal.</p>
+      <button class="btn" data-diag-reveal="diagQ9" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem">
+        <span class="cue">Why sentence 2 fails</span>
+        <p>The principle in sentence 2 is one we spent all of Part 1 establishing, and it is <strong>true</strong>: output returns to the long-run supply curve. The error is in the application. It treats <strong>Ȳ as a fixed number</strong> when the whole point of a <em>permanent</em> shock is that Ȳ itself moved.</p>
+        <p style="margin-top:.6rem">Sentence 3 states the principle correctly — output returns to <strong>LRAS</strong>, wherever LRAS now is. After a permanent shock, LRAS sits at <strong>Ȳ′ &lt; Ȳ</strong>, so the economy returns to a permanently lower level of output. The loss is real and it does not heal.</p>
+        <p style="margin-top:.6rem">This is why the temporary/permanent question in Q8 is not a technicality — it decides whether there is anything to stabilize at all.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- PART 4 DIVIDER -->
+  <!-- ============================================================ -->
+  <section class="slide divider" data-section="Discussion 4 · Monetary Policy">
+    <div class="eyebrow">Part 4 of 5</div>
+    <h1>Monetary<br>Policy</h1>
+    <p class="lede">The Fed is legally required to deliver two things at once. We are about to find out when that is possible and when it is not.</p>
+    <div class="sectrail">Demand Shocks ✓ → Supply Shocks ✓ → Monetary → Fiscal → Synthesis</div>
+  </section>
+
+  <!-- 25. DUAL MANDATE -->
+  <section class="slide" data-section="Discussion 4 · Monetary Policy">
+    <div class="eyebrow">The legal frame</div>
+    <h2>The dual mandate</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:940px">
+      <p class="lede">In <strong>1977</strong>, an amendment to the <strong>Federal Reserve Act</strong> gave the Fed two statutory objectives:</p>
+      <div class="models" style="max-width:760px;margin:.6rem 0">
+        <div class="model hi"><span class="tag">Mandate 1</span><div class="eq" style="font-size:1.1rem">maximum employment</div></div>
+        <div class="model hi"><span class="tag">Mandate 2</span><div class="eq" style="font-size:1.1rem">stable prices</div></div>
+      </div>
+      <div class="chain" style="font-size:1rem">the constraint: &nbsp;the Fed has <strong>no direct lever on output</strong></div>
+      <p class="lede" style="margin-top:.6rem">It cannot hire anyone or build anything. The only thing it controls is the <strong>money supply</strong>, and the only way that reaches output is through the interest rate. Every answer in this part has to travel that route.</p>
+      <p class="serif-note">Keep the two mandates written down side by side. In Part 3 we drew a shock that pushes them in opposite directions — we just haven't said so yet.</p>
+    </div>
+  </section>
+
+  <!-- 26. Q10 MONETARY VS DEMAND SHOCKS -->
+  <section class="slide" data-section="Discussion 4 · Monetary Policy">
+    <div class="eyebrow">Write · then reveal</div>
+    <h2>Leaning against the wind</h2>
+    <div class="titlerule"></div>
+    <div class="prompt" style="max-width:none">
+      <span class="cue">Question 10 (write)</span>
+      <p>A negative demand shock has pushed the economy into a recession — it sits at point B, below A. Write the <strong>chain</strong> the Fed's response has to travel, from the instrument it actually controls all the way to output.</p>
+    </div>
+    <div class="panel" style="max-width:1000px;margin-top:1rem">
+      <svg id="monsvg" viewBox="0 0 520 172" role="img" aria-label="Two monetary policy responses to demand shocks. Left: in a recession the economy sits at B with output and prices below A, and an increase in the money supply shifts aggregate demand right, back to point A. Right: in an expansion the economy sits at B above A, and a decrease in the money supply shifts aggregate demand left, back to point A. In both cases prices and output move together, so one instrument fixes both problems at once.">
+        <defs><marker id="monA" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#C0392B"/></marker></defs>
+        <!-- LEFT: recession -->
+        <text x="30" y="10" font-family="monospace" font-size="8" fill="#5A5F66" font-weight="700">RECESSION · negative AD shock</text>
+        <line x1="30" y1="20" x2="30" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+        <line x1="30" y1="150" x2="230" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+        <text x="24" y="26" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">P</text>
+        <text x="230" y="164" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">Y</text>
+        <line x1="120" y1="22" x2="120" y2="150" stroke="#14243A" stroke-width="1.6"/>
+        <text x="120" y="18" font-family="monospace" font-size="7.5" fill="#14243A" font-weight="700" text-anchor="middle">LRAS</text>
+        <line x1="80" y1="143" x2="180" y2="23" stroke="#1F4E79" stroke-width="1.8"/>
+        <text x="182" y="26" font-family="monospace" font-size="7.5" fill="#1F4E79" font-weight="700">SRAS</text>
+        <line x1="32" y1="62" x2="120" y2="150" stroke="#5A5F66" stroke-width="1.8"/>
+        <text x="36" y="58" font-family="monospace" font-size="7.5" fill="#5A5F66" font-weight="700">AD</text>
+        <circle cx="120" cy="95" r="3.2" fill="#14243A" opacity=".5"/><text x="126" y="99" font-family="monospace" font-size="8" font-weight="700" opacity=".5">A</text>
+        <circle cx="95" cy="125" r="3.2" fill="#14243A"/><text x="95" y="140" font-family="monospace" font-size="8" font-weight="700" text-anchor="middle">B</text>
+        <line id="mn_ad2" x1="75" y1="50" x2="175" y2="150" stroke="#C0392B" stroke-width="1.8" stroke-dasharray="5 3" opacity="0"/>
+        <text id="mn_ad2t" x="177" y="147" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" opacity="0">AD′</text>
+        <line id="mn_arr" x1="113" y1="140" x2="161" y2="140" stroke="#C0392B" stroke-width="1.8" opacity="0" marker-end="url(#monA)"/>
+        <text id="mn_arrt" x="133" y="133" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" text-anchor="middle" opacity="0">M↑</text>
+        <!-- RIGHT: expansion -->
+        <g transform="translate(280,0)">
+          <text x="30" y="10" font-family="monospace" font-size="8" fill="#5A5F66" font-weight="700">EXPANSION · positive AD shock</text>
+          <line x1="30" y1="20" x2="30" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+          <line x1="30" y1="150" x2="230" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+          <text x="24" y="26" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="230" y="164" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">Y</text>
+          <line x1="120" y1="22" x2="120" y2="150" stroke="#14243A" stroke-width="1.6"/>
+          <text x="120" y="18" font-family="monospace" font-size="7.5" fill="#14243A" font-weight="700" text-anchor="middle">LRAS</text>
+          <line x1="80" y1="143" x2="180" y2="23" stroke="#1F4E79" stroke-width="1.8"/>
+          <text x="182" y="26" font-family="monospace" font-size="7.5" fill="#1F4E79" font-weight="700">SRAS</text>
+          <line x1="110" y1="30" x2="215" y2="135" stroke="#5A5F66" stroke-width="1.8"/>
+          <text x="217" y="133" font-family="monospace" font-size="7.5" fill="#5A5F66" font-weight="700">AD</text>
+          <circle cx="120" cy="95" r="3.2" fill="#14243A" opacity=".5"/><text x="113" y="99" font-family="monospace" font-size="8" font-weight="700" text-anchor="end" opacity=".5">A</text>
+          <circle cx="145" cy="65" r="3.2" fill="#14243A"/><text x="145" y="52" font-family="monospace" font-size="8" font-weight="700" text-anchor="middle">B</text>
+          <line id="mn2_ad2" x1="75" y1="50" x2="175" y2="150" stroke="#C0392B" stroke-width="1.8" stroke-dasharray="5 3" opacity="0"/>
+          <text id="mn2_ad2t" x="71" y="48" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" text-anchor="end" opacity="0">AD′</text>
+          <line id="mn2_arr" x1="202" y1="125" x2="154" y2="125" stroke="#C0392B" stroke-width="1.8" opacity="0" marker-end="url(#monA)"/>
+          <text id="mn2_arrt" x="174" y="118" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" text-anchor="middle" opacity="0">M↓</text>
+        </g>
+      </svg>
+    </div>
+    <div class="controls" style="flex-direction:row;gap:1rem;align-items:center;margin-top:1rem;flex-wrap:wrap">
+      <button class="btn" data-reveal-svg="mon">▶ Show both responses</button>
+      <div class="readout" id="monread" aria-live="polite" aria-atomic="true" style="flex:1;min-width:320px">
+        Left: the economy is stuck at B, below A. Right: the economy is overheating at B, above A.
+      </div>
+    </div>
+    <div class="reveal-hidden" id="hrMon">
+      <div class="chain" style="font-size:1rem;line-height:1.8">M↑ → M/P↑ → r↓ → I↑ → PE↑ → Y↑ &nbsp;·&nbsp; AD shifts right, back to A</div>
+      <div class="reveal" style="max-width:none;margin-top:.8rem">
+        <span class="cue">Lean against the wind</span>
+        <p>In the recession the Fed <strong>raises M</strong>: real balances grow, r falls, investment rises, planned expenditure rises, firms produce more and raise prices. AD shifts right and the economy returns to A. In the expansion it does the reverse — <strong>lowers M</strong>, r rises, investment falls, AD shifts left, back to A.</p>
+        <p style="margin-top:.6rem">When the economy is down the Fed brings it up; when it is up the Fed brings it down. The goal is <strong>stability</strong>, not growth. And notice what makes this work: a change in the money supply moves <strong>prices and output in the same direction</strong>, and a demand shock moved them in the same direction too. One instrument, both mandates, no conflict.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 27. FED RULE + Q11 -->
+  <section class="slide" data-section="Discussion 4 · Monetary Policy">
+    <div class="eyebrow">How the Fed knows when to act</div>
+    <h2>The Fed rule</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:940px">
+      <p class="lede">The Fed watches prices and output. That information is summarized in a rule for the interest rate it targets:</p>
+      <div class="model hi" style="max-width:620px">
+        <span class="tag">The Fed rule</span>
+        <div class="eq">r = <span class="coef">α</span>Y + <span class="coef">β</span>P + <span class="coef">γ</span>Z</div>
+        <p class="cnote" style="font-size:.95rem;line-height:1.5;margin-top:.7rem;color:var(--grey)">with α, β, γ &gt; 0. &nbsp;<strong>Z</strong> collects the other factors that might affect the Fed's decision.</p>
+      </div>
+      <div class="prompt" style="max-width:none">
+        <span class="cue">Question 11 (write)</span>
+        <p>Read the rule <strong>in words</strong>, not symbols. What does <strong>α &gt; 0</strong> commit the Fed to doing? State it as a sentence about what the Fed does when it sees a particular number move.</p>
+      </div>
+      <button class="btn" data-reveal="hrFedRule">Reveal</button>
+      <div class="reveal-hidden" id="hrFedRule">
+        <div class="reveal" style="max-width:none">
+          <span class="cue">Answer</span>
+          <p><strong>α &gt; 0 commits the Fed to raising its interest-rate target whenever output is high</strong> — and lowering it whenever output is low. β &gt; 0 does the same for the price level. That is "lean against the wind", written as an equation.</p>
+          <p style="margin-top:.6rem">Note what the rule can and cannot see. It reads <strong>Y</strong> and <strong>P</strong>, the two numbers. It does <em>not</em> read <strong>which curve moved to produce them</strong>. That distinction is the whole of the next slide.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 28. Q12 SHOULD THE FED ALWAYS RAISE RATES -->
+  <section class="slide" data-section="Discussion 4 · Monetary Policy">
+    <div class="eyebrow">Predict · then reveal</div>
+    <h2>Output is rising fast. Raise rates?</h2>
+    <div class="titlerule"></div>
+    <div class="predict" style="max-width:none">
+      <span class="cue">Question 12 (predict)</span>
+      <p>The Fed rule says α &gt; 0, and output is climbing. <strong>Should the Fed always raise rates in response to rising output?</strong> Commit to yes or no — then write the condition your answer depends on.</p>
+    </div>
+    <div class="graphwrap" style="grid-template-columns:.95fr 1.05fr;margin-top:.4rem">
+      <div class="panel">
+        <svg id="lrassvg" viewBox="0 0 260 172" role="img" aria-label="A positive long-run supply shock. The long-run supply curve shifts right from Y-bar to Y-bar-prime and the short-run supply curve shifts right with it, so the economy reaches point B on the new long-run curve at the lower price level P2 — the new equilibrium is deflationary. If the Fed accommodates by raising the money supply, aggregate demand shifts right to AD-prime; wages then rise and the short-run supply curve shifts back up to SRAS double-prime, and the economy settles at point C, at the new higher output Y-bar-prime and the original price level P1.">
+          <defs><marker id="lrA" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#C0392B"/></marker></defs>
+          <line x1="30" y1="12" x2="30" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+          <line x1="30" y1="150" x2="250" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+          <text x="24" y="18" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="250" y="164" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">Y</text>
+          <!-- on load: LRAS, SRAS, AD, point A -->
+          <line x1="110" y1="20" x2="110" y2="150" stroke="#14243A" stroke-width="1.6"/>
+          <text x="106" y="16" font-family="monospace" font-size="7.5" fill="#14243A" font-weight="700" text-anchor="end">LRAS</text>
+          <line x1="75" y1="137" x2="155" y2="41" stroke="#1F4E79" stroke-width="1.8"/>
+          <text x="157" y="39" font-family="monospace" font-size="7.5" fill="#1F4E79" font-weight="700">SRAS</text>
+          <line x1="60" y1="45" x2="163" y2="148" stroke="#5A5F66" stroke-width="1.8"/>
+          <text x="56" y="43" font-family="monospace" font-size="7.5" fill="#5A5F66" font-weight="700" text-anchor="end">AD</text>
+          <circle cx="110" cy="95" r="3.2" fill="#14243A"/>
+          <text x="128" y="96" font-family="monospace" font-size="8" font-weight="700" text-anchor="middle">A</text>
+          <text x="110" y="163" font-family="monospace" font-size="7.5" fill="#14243A" text-anchor="middle">Ȳ</text>
+          <!-- step 1: the LRAS shock -->
+          <line id="lr_lras2" x1="150" y1="20" x2="150" y2="150" stroke="#C0392B" stroke-width="1.6" stroke-dasharray="5 3" opacity="0"/>
+          <text id="lr_lras2t" x="153" y="16" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" opacity="0">LRAS′</text>
+          <text id="lr_ybar2" x="150" y="163" font-family="monospace" font-size="7.5" fill="#C0392B" text-anchor="middle" opacity="0">Ȳ′</text>
+          <line id="lr_sras2" x1="138" y1="149.4" x2="205" y2="69" stroke="#C0392B" stroke-width="1.8" stroke-dasharray="5 3" opacity="0"/>
+          <text id="lr_sras2t" x="207" y="66" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" opacity="0">SRAS′</text>
+          <circle id="lr_b" cx="150" cy="135" r="3.2" fill="#14243A" opacity="0"/>
+          <text id="lr_bt" x="162" y="138" font-family="monospace" font-size="8" font-weight="700" text-anchor="middle" opacity="0">B</text>
+          <line id="lr_p2g" x1="30" y1="135" x2="150" y2="135" stroke="#C0392B" stroke-width=".8" stroke-dasharray="3 2" opacity="0"/>
+          <text id="lr_p2t" x="27" y="138" font-family="monospace" font-size="7.5" fill="#C0392B" text-anchor="end" opacity="0">P₂</text>
+          <line id="lr_p1g" x1="30" y1="95" x2="110" y2="95" stroke="#9AA0A6" stroke-width=".8" stroke-dasharray="3 2" opacity="0"/>
+          <text id="lr_p1t" x="27" y="98" font-family="monospace" font-size="7.5" fill="#14243A" text-anchor="end" opacity="0">P₁</text>
+          <!-- step 2: the Fed accommodates -->
+          <line id="lr_ad2" x1="95" y1="40" x2="203" y2="148" stroke="#C0392B" stroke-width="1.8" opacity="0"/>
+          <text id="lr_ad2t" x="205" y="146" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" opacity="0">AD′</text>
+          <line id="lr_adarr" x1="158" y1="140" x2="191" y2="140" stroke="#C0392B" stroke-width="1.6" opacity="0" marker-end="url(#lrA)"/>
+          <text id="lr_adarrt" x="174" y="134" font-family="monospace" font-size="8" fill="#C0392B" font-weight="700" text-anchor="middle" opacity="0">M↑</text>
+          <line id="lr_sras3" x1="105" y1="149" x2="190" y2="47" stroke="#C0392B" stroke-width="1.8" opacity="0"/>
+          <text id="lr_sras3t" x="192" y="44" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" opacity="0">SRAS″</text>
+          <line id="lr_warr" x1="197" y1="75" x2="170" y2="75" stroke="#C0392B" stroke-width="1.6" opacity="0" marker-end="url(#lrA)"/>
+          <text id="lr_wt" x="183" y="71" font-family="monospace" font-size="8" fill="#C0392B" font-weight="700" text-anchor="middle" opacity="0">W↑</text>
+          <circle id="lr_c" cx="150" cy="95" r="3.2" fill="#14243A" opacity="0"/>
+          <text id="lr_ct" x="165" y="96" font-family="monospace" font-size="8" font-weight="700" text-anchor="middle" opacity="0">C</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="reveal" style="background:#EEF3FA;border-left-color:#1F4E79;font-size:1rem">
+          <span class="cue" style="color:#1F4E79">If it is an AD shock</span>
+          <p><strong>Yes — raise rates.</strong> The long-run effect of that shock is inflationary (that was Part 1), so leaning against it is exactly right. The diagram below is the <em>other</em> case.</p>
+        </div>
+        <button class="btn" data-reveal-svg="lras1">▶ Step 1 · the LRAS shock</button>
+        <div class="reveal-hidden" id="hrLras1">
+          <div class="reveal">
+            <span class="cue">Step 1 · a positive LRAS shock is deflationary</span>
+            <p>LRAS shifts right to <strong>Ȳ′</strong>, and SRAS follows it right. Output grows — but the new equilibrium <strong>B</strong> sits at a <strong>lower price level P₂</strong>. Deflation is bad for business and can hold back growth.</p>
+          </div>
+        </div>
+        <button class="btn" data-reveal-svg="lras2">▶ Step 2 · the Fed accommodates</button>
+        <div class="reveal-hidden" id="hrLras2">
+          <div class="reveal">
+            <span class="cue">Step 2 · this is a Z-term, not an α-response</span>
+            <p>The Fed <strong>accommodates</strong> the shock by <em>increasing</em> the money supply to keep prices stable. AD shifts right to AD′; wages then rise, pushing SRAS up to SRAS″; the economy settles at <strong>C</strong> — the original price level <strong>P₁</strong> at the new, higher <strong>Ȳ′</strong>.</p>
+            <p style="margin-top:.6rem"><strong>The 1990s.</strong> The tech boom and the spread of the internet made output grow fast, which shows up in Y. But the <em>nature</em> of that growth said this was LRAS moving, not AD — so the economy could absorb a lot of money without high inflation. Alan Greenspan kept interest rates low.</p>
+          </div>
+        </div>
+        <div class="readout" id="lrasread" aria-live="polite" aria-atomic="true">
+          Output is rising. The rule sees the number — it does not see the cause.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 29. Q13 THE DILEMMA -->
+  <section class="slide" data-section="Discussion 4 · Monetary Policy">
+    <div class="eyebrow">Predict · then reveal both options</div>
+    <h2>Can the Fed undo stagflation?</h2>
+    <div class="titlerule"></div>
+    <div class="predict" style="max-width:none">
+      <span class="cue">Question 13 (predict)</span>
+      <p>A negative supply shock has produced stagflation: prices up, output down. Both mandates are violated at once. <strong>What should the Fed do — and what will it get?</strong> Write your answer before anything is revealed.</p>
+    </div>
+    <div class="panel" style="max-width:1000px;margin-top:1rem">
+      <svg id="dilemmasvg" viewBox="0 0 520 190" role="img" aria-label="The Fed's dilemma after a negative supply shock. In both panels the short-run supply curve has already shifted up to SRAS-prime and the economy sits at the stagflation point B, with a higher price level and lower output. Left panel: to keep prices stable the Fed cuts the money supply, aggregate demand shifts left, and the economy reaches B-prime where the price level is back to P1 but output has fallen even further, to Y2. Right panel: to keep output stable the Fed raises the money supply, aggregate demand shifts right, and the economy reaches B-prime where output is back at Y-bar but the price level is even higher than at B. Neither option fixes both.">
+        <defs><marker id="dilA" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#C0392B"/></marker></defs>
+        <!-- LEFT: prices stable -->
+        <text x="30" y="10" font-family="monospace" font-size="8" fill="#5A5F66" font-weight="700">KEEPING PRICES STABLE</text>
+        <line x1="30" y1="20" x2="30" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+        <line x1="30" y1="150" x2="230" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+        <text x="24" y="26" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">P</text>
+        <text x="230" y="164" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">Y</text>
+        <line x1="120" y1="22" x2="120" y2="150" stroke="#14243A" stroke-width="1.6"/>
+        <text x="120" y="18" font-family="monospace" font-size="7.5" fill="#14243A" font-weight="700" text-anchor="middle">LRAS</text>
+        <line x1="80" y1="143" x2="180" y2="23" stroke="#1F4E79" stroke-width="1.8" opacity=".45"/>
+        <text x="182" y="26" font-family="monospace" font-size="7.5" fill="#1F4E79" font-weight="700" opacity=".6">SRAS</text>
+        <line x1="75" y1="109" x2="147" y2="22" stroke="#1F4E79" stroke-width="1.8"/>
+        <text x="149" y="26" font-family="monospace" font-size="7.5" fill="#1F4E79" font-weight="700">SRAS′</text>
+        <line x1="60" y1="35" x2="170" y2="145" stroke="#5A5F66" stroke-width="1.8"/>
+        <text x="172" y="145" font-family="monospace" font-size="7.5" fill="#5A5F66" font-weight="700">AD</text>
+        <text x="70" y="112" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" text-anchor="end">P<tspan font-size="5.5" dy="1.8">Oil</tspan><tspan dy="-1.8">↑</tspan></text>
+        <circle cx="120" cy="95" r="3.2" fill="#14243A" opacity=".5"/><text x="126" y="99" font-family="monospace" font-size="8" font-weight="700" opacity=".5">A</text>
+        <circle cx="101.8" cy="76.8" r="3.2" fill="#14243A"/><text x="88" y="82" font-family="monospace" font-size="8" font-weight="700" text-anchor="middle">B</text><line x1="92" y1="124" x2="92" y2="93" stroke="#C0392B" stroke-width="1.6" marker-end="url(#dilA)"/>
+        <line x1="30" y1="95" x2="120" y2="95" stroke="#9AA0A6" stroke-width=".8" stroke-dasharray="3 2"/>
+        <text x="27" y="98" font-family="monospace" font-size="7.5" fill="#14243A" text-anchor="end">P₁</text>
+        <line id="dl_ad2" x1="45" y1="53.3" x2="141" y2="149.3" stroke="#C0392B" stroke-width="1.8" stroke-dasharray="5 3" opacity="0"/>
+        <text id="dl_ad2t" x="143" y="147" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" opacity="0">AD′</text>
+        <line id="dl_arr" x1="152" y1="130" x2="125" y2="130" stroke="#C0392B" stroke-width="1.8" opacity="0" marker-end="url(#dilA)"/>
+        <text id="dl_arrt" x="128" y="120" font-family="monospace" font-size="8" fill="#C0392B" font-weight="700" text-anchor="middle" opacity="0">M↓</text>
+        <circle id="dl_bp" cx="86.7" cy="95" r="3.2" fill="#14243A" opacity="0"/>
+        <text id="dl_bpt" x="96" y="118" font-family="monospace" font-size="8" font-weight="700" text-anchor="middle" opacity="0">B′</text>
+        <line id="dl_y2" x1="86.7" y1="150" x2="86.7" y2="95" stroke="#C0392B" stroke-width=".8" stroke-dasharray="3 2" opacity="0"/>
+        <text id="dl_y2t" x="86.7" y="163" font-family="monospace" font-size="7.5" fill="#C0392B" text-anchor="middle" opacity="0">Y₂</text>
+        <text id="dl_verd" x="30" y="182" font-family="monospace" font-size="8" fill="#C0392B" font-weight="700" opacity="0">✓ prices back at P₁ &nbsp; ✗ output falls further</text>
+        <!-- RIGHT: output stable -->
+        <g transform="translate(280,0)">
+          <text x="30" y="10" font-family="monospace" font-size="8" fill="#5A5F66" font-weight="700">KEEPING OUTPUT (UNEMPLOYMENT) STABLE</text>
+          <line x1="30" y1="20" x2="30" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+          <line x1="30" y1="150" x2="230" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+          <text x="24" y="26" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="230" y="164" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">Y</text>
+          <line x1="120" y1="22" x2="120" y2="150" stroke="#14243A" stroke-width="1.6"/>
+          <text x="120" y="18" font-family="monospace" font-size="7.5" fill="#14243A" font-weight="700" text-anchor="middle">LRAS</text>
+          <line x1="80" y1="143" x2="180" y2="23" stroke="#1F4E79" stroke-width="1.8" opacity=".45"/>
+          <text x="182" y="26" font-family="monospace" font-size="7.5" fill="#1F4E79" font-weight="700" opacity=".6">SRAS</text>
+          <line x1="75" y1="109" x2="147" y2="22" stroke="#1F4E79" stroke-width="1.8"/>
+          <text x="149" y="26" font-family="monospace" font-size="7.5" fill="#1F4E79" font-weight="700">SRAS′</text>
+          <line x1="60" y1="35" x2="170" y2="145" stroke="#5A5F66" stroke-width="1.8"/>
+          <text x="172" y="145" font-family="monospace" font-size="7.5" fill="#5A5F66" font-weight="700">AD</text>
+          <text x="70" y="112" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" text-anchor="end">P<tspan font-size="5.5" dy="1.8">Oil</tspan><tspan dy="-1.8">↑</tspan></text>
+          <circle cx="120" cy="95" r="3.2" fill="#14243A" opacity=".5"/><text x="126" y="99" font-family="monospace" font-size="8" font-weight="700" opacity=".5">A</text>
+          <circle cx="101.8" cy="76.8" r="3.2" fill="#14243A"/><text x="88" y="82" font-family="monospace" font-size="8" font-weight="700" text-anchor="middle">B</text><line x1="92" y1="124" x2="92" y2="93" stroke="#C0392B" stroke-width="1.6" marker-end="url(#dilA)"/>
+          <line x1="30" y1="95" x2="120" y2="95" stroke="#9AA0A6" stroke-width=".8" stroke-dasharray="3 2"/>
+          <text x="27" y="98" font-family="monospace" font-size="7.5" fill="#14243A" text-anchor="end">P₁</text>
+          <line id="dl2_ad2" x1="85" y1="20" x2="195" y2="130" stroke="#C0392B" stroke-width="1.8" stroke-dasharray="5 3" opacity="0"/>
+          <text id="dl2_ad2t" x="197" y="130" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" opacity="0">AD′</text>
+          <line id="dl2_arr" x1="153" y1="128" x2="187" y2="128" stroke="#C0392B" stroke-width="1.8" opacity="0" marker-end="url(#dilA)"/>
+          <text id="dl2_arrt" x="170" y="122" font-family="monospace" font-size="8" fill="#C0392B" font-weight="700" text-anchor="middle" opacity="0">M↑</text>
+          <circle id="dl2_bp" cx="120" cy="55" r="3.2" fill="#14243A" opacity="0"/>
+          <text id="dl2_bpt" x="126" y="53" font-family="monospace" font-size="8" font-weight="700" opacity="0">B′</text>
+          <line id="dl2_p3" x1="30" y1="55" x2="120" y2="55" stroke="#C0392B" stroke-width=".8" stroke-dasharray="3 2" opacity="0"/>
+          <text id="dl2_p3t" x="27" y="58" font-family="monospace" font-size="7.5" fill="#C0392B" text-anchor="end" opacity="0">P₃</text>
+          <text id="dl2_verd" x="30" y="182" font-family="monospace" font-size="8" fill="#C0392B" font-weight="700" opacity="0">✓ output back at Ȳ &nbsp; ✗ prices end even higher</text>
+        </g>
+      </svg>
+    </div>
+    <div class="controls" style="flex-direction:row;gap:1rem;align-items:center;margin-top:1rem;flex-wrap:wrap">
+      <button class="btn" data-reveal-svg="dilemma">▶ Reveal both options</button>
+      <div class="readout" id="dilread" aria-live="polite" aria-atomic="true" style="flex:1;min-width:320px">
+        Both panels start at the stagflation point B: prices up, output down.
+      </div>
+    </div>
+    <div class="reveal-hidden" id="hrDilemma">
+      <div class="reveal" style="max-width:none">
+        <span class="cue">The lever that stopped working</span>
+        <p>To fix prices the Fed must <strong>lower AD (M↓)</strong> — real balances fall, r rises, investment falls, output and consumption fall. Prices return to P₁, but <strong>output falls by even more than if the Fed had done nothing</strong>.</p>
+        <p style="margin-top:.6rem">To fix output the Fed must <strong>raise AD (M↑)</strong> — real balances rise, r falls, investment rises, output and consumption rise. Output returns to Ȳ, but <strong>prices end even higher than the short run would have delivered on its own</strong>.</p>
+        <p style="margin-top:.6rem"><strong>Here is why.</strong> Changes in the money supply move prices and output in the <em>same</em> direction. A supply shock moved them in <em>opposite</em> directions. So fixing one mandate necessarily worsens the other. The Fed cannot undo a supply shock — it can only <strong>choose which one to rescue: inflation or unemployment</strong>. That decision is context-specific, and it is not an economics question with a right answer.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- PART 5 DIVIDER -->
+  <!-- ============================================================ -->
+  <section class="slide divider" data-section="Discussion 4 · Fiscal Policy">
+    <div class="eyebrow">Part 5 of 5</div>
+    <h1>Fiscal<br>Policy</h1>
+    <p class="lede">A different instrument, a different branch of government, and a channel that reaches output directly. Ask yourself whether any of that changes the dilemma you just met.</p>
+    <div class="sectrail">Demand Shocks ✓ → Supply Shocks ✓ → Monetary ✓ → Fiscal → Synthesis</div>
+  </section>
+
+  <!-- 31. LEGAL AND POLITICAL FRAME -->
+  <section class="slide" data-section="Discussion 4 · Fiscal Policy">
+    <div class="eyebrow">The legal and political frame</div>
+    <h2>Who else is obligated to stabilize</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:940px">
+      <p class="lede">Much like the Fed, the federal government is <strong>legally obligated</strong> to maintain full employment and price stability — under the <strong>Employment Act of 1946</strong>. Fiscal policy can be used in similar ways to monetary policy to stabilize the economy.</p>
+      <div class="two" style="max-width:900px;margin-top:.4rem">
+        <div class="model hi" style="box-shadow:none">
+          <span class="tag">Before Reagan</span>
+          <p class="cnote" style="font-size:.98rem;line-height:1.55">Fiscal policy was largely concerned with keeping the federal <strong>budget deficit to a minimum</strong>. Departures from the balanced-budget priority — changing G or T — were made <em>in order to stabilize the economy</em>.</p>
+        </div>
+        <div class="model hi" style="box-shadow:none">
+          <span class="tag">Since Reagan</span>
+          <p class="cnote" style="font-size:.98rem;line-height:1.55">Changes in government spending and taxes have more often been motivated by <strong>political rather than business-cycle concerns</strong>.</p>
+        </div>
+      </div>
+      <p class="serif-note" style="margin-top:.4rem">Worth holding alongside the model: the diagrams treat G and T as dials a planner turns. The institution that actually turns them answers to voters on a two-year cycle.</p>
+    </div>
+  </section>
+
+  <!-- 32. Q14 THE FISCAL CHANNEL -->
+  <section class="slide" data-section="Discussion 4 · Fiscal Policy">
+    <div class="eyebrow">Write · then reveal</div>
+    <h2>A different route to the same curve</h2>
+    <div class="titlerule"></div>
+    <div class="prompt" style="max-width:none">
+      <span class="cue">Question 14 (write)</span>
+      <p>Both instruments end up shifting AD. But they get there differently. <strong>How does the fiscal channel reach output differently from the monetary channel?</strong> Write both chains side by side and mark where they diverge.</p>
+    </div>
+    <div class="panel" style="max-width:1000px;margin-top:1rem">
+      <svg id="fiscalsvg" viewBox="0 0 520 172" role="img" aria-label="Two fiscal policy responses to demand shocks. Left: in a recession the economy sits at B below A, and raising government spending or cutting taxes shifts aggregate demand right, back to point A. Right: in an expansion the economy sits at B above A, and cutting government spending or raising taxes shifts aggregate demand left, back to point A. Prices and output move together in both cases, exactly as with monetary policy.">
+        <defs><marker id="fisA" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#C0392B"/></marker></defs>
+        <text x="30" y="10" font-family="monospace" font-size="8" fill="#5A5F66" font-weight="700">NEGATIVE AD SHOCK</text>
+        <line x1="30" y1="20" x2="30" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+        <line x1="30" y1="150" x2="230" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+        <text x="24" y="26" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">P</text>
+        <text x="230" y="164" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">Y</text>
+        <line x1="120" y1="22" x2="120" y2="150" stroke="#14243A" stroke-width="1.6"/>
+        <text x="120" y="18" font-family="monospace" font-size="7.5" fill="#14243A" font-weight="700" text-anchor="middle">LRAS</text>
+        <line x1="80" y1="143" x2="180" y2="23" stroke="#1F4E79" stroke-width="1.8"/>
+        <text x="182" y="26" font-family="monospace" font-size="7.5" fill="#1F4E79" font-weight="700">SRAS</text>
+        <line x1="32" y1="62" x2="120" y2="150" stroke="#5A5F66" stroke-width="1.8"/>
+        <text x="36" y="58" font-family="monospace" font-size="7.5" fill="#5A5F66" font-weight="700">AD</text>
+        <circle cx="120" cy="95" r="3.2" fill="#14243A" opacity=".5"/><text x="126" y="99" font-family="monospace" font-size="8" font-weight="700" opacity=".5">A</text>
+        <circle cx="95" cy="125" r="3.2" fill="#14243A"/><text x="95" y="140" font-family="monospace" font-size="8" font-weight="700" text-anchor="middle">B</text>
+        <line id="fs_ad2" x1="75" y1="50" x2="175" y2="150" stroke="#C0392B" stroke-width="1.8" stroke-dasharray="5 3" opacity="0"/>
+        <text id="fs_ad2t" x="177" y="147" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" opacity="0">AD′</text>
+        <line id="fs_arr" x1="113" y1="140" x2="161" y2="140" stroke="#C0392B" stroke-width="1.8" opacity="0" marker-end="url(#fisA)"/>
+        <text id="fs_arrt" x="133" y="133" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" text-anchor="middle" opacity="0">G↑/T↓</text>
+        <g transform="translate(280,0)">
+          <text x="30" y="10" font-family="monospace" font-size="8" fill="#5A5F66" font-weight="700">POSITIVE AD SHOCK</text>
+          <line x1="30" y1="20" x2="30" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+          <line x1="30" y1="150" x2="230" y2="150" stroke="#8A8F96" stroke-width="1.1"/>
+          <text x="24" y="26" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="230" y="164" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">Y</text>
+          <line x1="120" y1="22" x2="120" y2="150" stroke="#14243A" stroke-width="1.6"/>
+          <text x="120" y="18" font-family="monospace" font-size="7.5" fill="#14243A" font-weight="700" text-anchor="middle">LRAS</text>
+          <line x1="80" y1="143" x2="180" y2="23" stroke="#1F4E79" stroke-width="1.8"/>
+          <text x="182" y="26" font-family="monospace" font-size="7.5" fill="#1F4E79" font-weight="700">SRAS</text>
+          <line x1="110" y1="30" x2="215" y2="135" stroke="#5A5F66" stroke-width="1.8"/>
+          <text x="217" y="133" font-family="monospace" font-size="7.5" fill="#5A5F66" font-weight="700">AD</text>
+          <circle cx="120" cy="95" r="3.2" fill="#14243A" opacity=".5"/><text x="113" y="99" font-family="monospace" font-size="8" font-weight="700" text-anchor="end" opacity=".5">A</text>
+          <circle cx="145" cy="65" r="3.2" fill="#14243A"/><text x="145" y="52" font-family="monospace" font-size="8" font-weight="700" text-anchor="middle">B</text>
+          <line id="fs2_ad2" x1="75" y1="50" x2="175" y2="150" stroke="#C0392B" stroke-width="1.8" stroke-dasharray="5 3" opacity="0"/>
+          <text id="fs2_ad2t" x="71" y="48" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" text-anchor="end" opacity="0">AD′</text>
+          <line id="fs2_arr" x1="202" y1="125" x2="154" y2="125" stroke="#C0392B" stroke-width="1.8" opacity="0" marker-end="url(#fisA)"/>
+          <text id="fs2_arrt" x="174" y="118" font-family="monospace" font-size="7.5" fill="#C0392B" font-weight="700" text-anchor="middle" opacity="0">G↓/T↑</text>
+        </g>
+      </svg>
+    </div>
+    <div class="controls" style="flex-direction:row;gap:1rem;align-items:center;margin-top:1rem;flex-wrap:wrap">
+      <button class="btn" data-reveal-svg="fiscal">▶ Show both responses</button>
+      <div class="readout" id="fiscalread" aria-live="polite" aria-atomic="true" style="flex:1;min-width:320px">
+        Left: recession at B. Right: overheating at B. Congress and the President hold the instruments.
+      </div>
+    </div>
+    <div class="reveal-hidden" id="hrFiscal">
+      <div class="two" style="max-width:none">
+        <div class="chain" style="font-size:.95rem;line-height:1.8;display:block">fiscal: &nbsp;G↑ (or T↓ → C↑) → PE↑ → Y↑</div>
+        <div class="chain" style="font-size:.95rem;line-height:1.8;display:block">monetary: &nbsp;M↑ → M/P↑ → <strong>r↓ → I↑</strong> → PE↑ → Y↑</div>
+      </div>
+      <div class="reveal" style="max-width:none;margin-top:.8rem">
+        <span class="cue">Where the two chains diverge</span>
+        <p><strong>Fiscal policy enters the goods market directly.</strong> G <em>is</em> a term in planned expenditure — no intermediary. T works through consumption, one step removed but still inside the goods market. Unlike monetary policy, fiscal policy has a direct impact on output.</p>
+        <p style="margin-top:.6rem"><strong>Monetary policy has to travel first.</strong> M only reaches output via <strong>r → I</strong>. That is why the LM and IS slopes decided how potent each instrument was — the monetary chain has two extra links that can be weak.</p>
+        <p style="margin-top:.6rem">But look at where both chains <em>end</em>: PE↑ → Y↑, and AD shifts. <strong>Different routes, same destination.</strong> Hold on to that for the next slide.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 33. Q15 DIAGNOSE + Q16 QUICK CHECK -->
+  <section class="slide" data-section="Discussion 4 · Fiscal Policy">
+    <div class="eyebrow">Diagnose · silent poll</div>
+    <h2>Does the direct channel help?</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="margin-bottom:.4rem"><strong>Question 15.</strong> Two of these sentences are true statements. The third draws a false conclusion from them.</p>
+    <div class="poll-wrap">
+      <div class="diag" id="diagQ15">
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">1</span><span class="s">Fiscal policy reaches output directly — G is a component of planned expenditure — while monetary policy must work through r and then I.</span></button>
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">2</span><span class="s">So fiscal policy handles supply shocks better than monetary policy does.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">3</span><span class="s">Under a negative supply shock, policymakers want lower prices and higher output at the same time.</span></button>
+      </div>
+      <p class="poll-hint">Students pick a number on paper (or hands). Then reveal.</p>
+      <button class="btn" data-diag-reveal="diagQ15" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem">
+        <span class="cue">Why sentence 2 fails</span>
+        <p>Sentence 1 is <strong>true</strong>, and it is the premise sentence 2 leans on. The channel really is more direct. But the conclusion does not follow, because <strong>the channel was never the problem</strong>.</p>
+        <p style="margin-top:.6rem">Both instruments end in the same place: they <strong>shift AD</strong>, and shifting AD moves prices and output in the <em>same</em> direction. A supply shock moves them in <em>opposite</em> directions. So fiscal policy faces the <strong>identical trade-off</strong> — lower G or higher T brings prices down but drives output down further; higher G or lower T restores output but pushes prices higher still. Congress must choose between inflation and unemployment exactly as the Fed must.</p>
+        <p style="margin-top:.6rem">A faster route to a lever does not change what the lever is attached to.</p>
+      </div>
+    </div>
+    <div style="margin-top:1.6rem">
+      <p class="lede" style="margin-bottom:.2rem"><strong>Question 16.</strong> Given the choice, which way does fiscal policy actually get used in practice?</p>
+      <div class="poll" id="pollQ16">
+        <div class="poll-opts">
+          <button type="button" class="poll-opt" data-correct="false"><span class="num">1</span><span class="txt">Contractionary policy is used more often, because deficits are politically unpopular.</span></button>
+          <button type="button" class="poll-opt" data-correct="true"><span class="num">2</span><span class="txt">Expansionary policy is easier to sell, so it is pursued more often — which is why Keynesian economics is sometimes called inflationary.</span></button>
+          <button type="button" class="poll-opt" data-correct="false"><span class="num">3</span><span class="txt">Both directions are used about equally; the choice is technical, not political.</span></button>
+        </div>
+        <p class="poll-hint">Students commit, then reveal.</p>
+        <button class="btn" data-poll-reveal="pollQ16" style="margin-top:.8rem">Reveal the answer</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SYNTHESIS DIVIDER -->
+  <!-- ============================================================ -->
+  <section class="slide divider" data-section="Discussion 4 · Synthesis">
+    <div class="eyebrow">Synthesis</div>
+    <h1>Putting the<br>Class Together</h1>
+    <p class="lede">Three kinds of shock, two time horizons, and one question that decides everything: can stabilization policy restore both prices and output?</p>
+    <div class="sectrail">Demand Shocks ✓ → Supply Shocks ✓ → Monetary ✓ → Fiscal ✓ → Synthesis</div>
+  </section>
+
+  <!-- 35. SYNTHESIS GRID -->
+  <section class="slide" data-section="Discussion 4 · Synthesis">
+    <div class="eyebrow">The whole class on one page</div>
+    <h2>Three shocks, side by side</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:74ch">Fill in each column on your own paper first — short-run P and Y, long-run P and Y, and whether AD policy can restore both. Then reveal.</p>
+    <div class="condrow">
+      <div class="condcard">
+        <div class="ctitle">Aggregate demand shock</div>
+        <button type="button" class="cbtn" data-cond="synAD">Reveal</button>
+        <div class="cbody" id="synAD">
+          <div class="calc" style="font-size:.92rem;line-height:1.7">
+            <span class="lbl">short run</span><br>P ↑ &nbsp;·&nbsp; Y ↑ &nbsp;<em>(same direction)</em><br>
+            <span class="lbl">long run</span><br>P ↑ &nbsp;·&nbsp; Y back at Ȳ<br>
+            <span class="lbl">r and I</span><br>r ↑ &nbsp;·&nbsp; I ↓
+          </div>
+          <div class="verdict mild">✓ AD policy can restore both</div>
+          <p class="cnote">The shock moved P and Y together, and AD policy moves them together. One instrument reverses the whole thing. <em>Signs shown for a positive shock; a negative shock is the mirror.</em></p>
+        </div>
+      </div>
+      <div class="condcard">
+        <div class="ctitle">Temporary supply shock</div>
+        <button type="button" class="cbtn" data-cond="synTemp">Reveal</button>
+        <div class="cbody" id="synTemp">
+          <div class="calc" style="font-size:.92rem;line-height:1.7">
+            <span class="lbl">short run</span><br>P ↑ &nbsp;·&nbsp; Y ↓ &nbsp;<em>(opposite)</em><br>
+            <span class="lbl">long run</span><br>P back at P₁ &nbsp;·&nbsp; Y back at Ȳ<br>
+            <span class="lbl">curve that moved</span><br>SRAS only — and it returns
+          </div>
+          <div class="verdict severe">✗ AD policy must choose one</div>
+          <p class="cnote">Stagflation. Policy can rescue prices <em>or</em> output, never both — but the shock unwinds itself once the input price returns to normal. Doing nothing is a real option here.</p>
+        </div>
+      </div>
+      <div class="condcard">
+        <div class="ctitle">Permanent supply shock</div>
+        <button type="button" class="cbtn" data-cond="synPerm">Reveal</button>
+        <div class="cbody" id="synPerm">
+          <div class="calc" style="font-size:.92rem;line-height:1.7">
+            <span class="lbl">short run</span><br>P ↑ &nbsp;·&nbsp; Y ↓ &nbsp;<em>(opposite)</em><br>
+            <span class="lbl">long run</span><br>P ↑ &nbsp;·&nbsp; Y settles at <strong>Ȳ′ &lt; Ȳ</strong><br>
+            <span class="lbl">curve that moved</span><br>SRAS <em>and</em> LRAS
+          </div>
+          <div class="verdict severe">✗ and there is nothing to restore</div>
+          <p class="cnote">Productive capacity itself fell. Output does return to the long-run curve — but the long-run curve moved. No AD policy can put Ȳ back, because AD policy cannot create capacity.</p>
+        </div>
+      </div>
+    </div>
+    <div class="chain" style="margin-top:1.2rem;font-size:1rem;line-height:1.7;display:block;max-width:none">
+      the throughline: &nbsp;stabilization policy can only move <strong>AD</strong> &nbsp;·&nbsp; AD moves P and Y in the <strong>same</strong> direction<br>
+      demand shocks move them the same way → policy can undo them &nbsp;·&nbsp; supply shocks move them opposite ways → policy can only choose which one to rescue
+    </div>
+  </section>
+
+  <!-- 36. Q17–Q18 SCENARIO SORTER -->
+  <section class="slide" data-section="Discussion 4 · Synthesis">
+    <div class="eyebrow">Apply it · four cases</div>
+    <h2>Sort the scenarios</h2>
+    <div class="titlerule"></div>
+    <div class="prompt" style="max-width:none">
+      <span class="cue">Questions 17 and 18 (write)</span>
+      <p><strong>Q17:</strong> classify each scenario below — AD shock, temporary supply shock, or permanent supply/LRAS shock. <strong>Q18:</strong> for each one, say what stabilization policy should do, and name the cost of doing it.</p>
+      <ol style="margin:.6rem 0 0 2.4rem;line-height:1.8">
+        <li>Consumer confidence <strong>collapses</strong> after a financial scare.</li>
+        <li>A <strong>supply-chain disruption</strong> raises input costs; it is expected to resolve within a year.</li>
+        <li>An economy <strong>permanently loses access</strong> to a major energy source.</li>
+        <li>A genuine <strong>productivity boom</strong> — new technology makes every worker more productive.</li>
+      </ol>
+    </div>
+    <button class="btn" data-reveal="hrScenarios" style="margin-top:1rem">Reveal all four</button>
+    <div class="reveal-hidden" id="hrScenarios">
+      <div class="condrow" style="grid-template-columns:1fr 1fr">
+        <div class="condcard">
+          <div class="ctitle">1 · confidence collapses</div>
+          <div class="verdict mild">negative AD shock</div>
+          <p class="cnote">P and Y fall together. <strong>Policy: expand</strong> — M↑, or G↑/T↓. AD shifts back right and the economy returns to A. <strong>Cost: essentially none in this model</strong> — both mandates are served by the same move. This is the easy case, and it is the only easy case.</p>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">2 · supply chain, resolves in a year</div>
+          <div class="verdict severe">temporary supply shock</div>
+          <p class="cnote">Stagflation: P↑, Y↓. <strong>Policy: seriously consider doing nothing.</strong> Any AD response worsens one mandate to help the other, and the shock unwinds on its own when costs normalize and SRAS returns. <strong>Cost of acting: you buy a short-run fix and are left with the side effect after the shock has already gone.</strong></p>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">3 · permanent energy loss</div>
+          <div class="verdict severe">permanent supply / LRAS shock</div>
+          <p class="cnote">P↑, Y↓, and <strong>LRAS shifts left to Ȳ′</strong>. Policy still faces the stagflation trade-off — but worse, <strong>there is no old Ȳ to return to</strong>. Chasing the old output level with AD policy just delivers inflation against a capacity that no longer exists. <strong>Cost: the real loss is permanent and no demand instrument can reverse it.</strong></p>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">4 · productivity boom</div>
+          <div class="verdict mild">positive LRAS shock</div>
+          <p class="cnote">Output grows fast — but this is LRAS moving right, not AD, so the new long-run equilibrium is <strong>deflationary</strong>. The Fed rule sees high Y and wants to raise r; the right read is the opposite. <strong>Policy: accommodate with M↑ (a Z-term) to keep prices stable.</strong> This is Greenspan in the 1990s — output booming, rates held low, and no inflation, because the economy's capacity had genuinely grown.</p>
+        </div>
+      </div>
+      <p class="serif-note" style="margin-top:.9rem">Scenarios 1 and 4 both show rapid movement in output. They call for <em>opposite</em> policies. The number alone never tells you which curve moved.</p>
+    </div>
+  </section>
+
+  <!-- 37. Q19 CLOSE -->
+  <section class="slide" data-section="Discussion 4 · Synthesis">
+    <div class="eyebrow">Close · write one line</div>
+    <h2>In your own words</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:860px">
+      <div class="prompt" style="font-size:1.2rem">
+        <span class="cue">Question 19 (write)</span>
+        <p>“A demand shock <strong>can</strong> be undone by stabilization policy because ______________________________, but a supply shock <strong>forces a choice</strong> because ______________________________.”</p>
+      </div>
+      <p class="serif-note" style="margin-top:1.4rem">You followed one shock from a change in confidence through the goods market, the money market, the price level and the labor market, and out the other side at a new long-run equilibrium. Then you found the one kind of shock where that machinery leaves policymakers with a decision instead of an answer.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="chrome">
+  <span class="course" id="sectionLabel">ECON 105B · Discussion 4</span>
+  <span class="navhint">
+    <button id="prevBtn" aria-label="Previous slide">← prev</button>
+    <span aria-live="polite" aria-atomic="true">Slide <span id="cur">1</span> of <span id="tot">14</span></span>
+    <button id="nextBtn" aria-label="Next slide">next →</button>
+  </span>
+</div>
+
+<script>
+(function(){
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  const prog=document.getElementById('prog');
+  const cur=document.getElementById('cur');
+  document.getElementById('tot').textContent=slides.length;
+
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    prog.style.width=((i)/(slides.length-1)*100)+'%';
+    cur.textContent=i+1;
+    const sec=slides[i].getAttribute('data-section');
+    const lbl=document.getElementById('sectionLabel');
+    if(lbl) lbl.textContent = sec ? ('ECON 105B · '+sec) : 'ECON 105B · Discussion 4';
+  }
+  function next(){show(i+1)}
+  function prev(){show(i-1)}
+
+  document.getElementById('nextBtn').onclick=next;
+  document.getElementById('prevBtn').onclick=prev;
+  window.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();next()}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}
+    else if(e.key.toLowerCase()==='f'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  /* ---- generic click-to-reveal: button[data-reveal="targetId"] ---- */
+  document.querySelectorAll('[data-reveal]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const t=document.getElementById(btn.getAttribute('data-reveal'));
+      if(t){t.classList.add('shown');}
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- generic diagnose (flawed-argument) groups ---- */
+  document.querySelectorAll('.diag').forEach(group=>{
+    const opts=[...group.querySelectorAll('.diag-opt')];
+    const revealBtn=group.parentElement.querySelector('[data-diag-reveal]');
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    if(revealBtn){
+      revealBtn.addEventListener('click',()=>{
+        group.classList.add('revealed');
+        opts.forEach(o=>{if(o.dataset.bad==='true')o.classList.add('bad');});
+        revealBtn.style.display='none';
+        const note=group.parentElement.querySelector('[data-diag-note]');
+        if(note) note.style.display='block';
+      });
+    }
+  });
+
+  /* ---- generic quick-check polls: button[data-poll-reveal="pollId"] ---- */
+  document.querySelectorAll('[data-poll-reveal]').forEach(btn=>{
+    const group=document.getElementById(btn.getAttribute('data-poll-reveal'));
+    if(!group) return;
+    const opts=[...group.querySelectorAll('.poll-opt')];
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    btn.addEventListener('click',()=>{
+      group.classList.add('revealed');
+      opts.forEach(o=>{ if(o.dataset.correct==='true') o.classList.add('correct'); });
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- policy-graph shift reveals: button[data-reveal-svg="key"] ----
+     Each key lists the SVG element ids that fade in together, plus an
+     optional text block id and an optional live-region update.        */
+  const svgShifts={
+    btoc:{ids:['bc_lm3','bc_lm3t','bc_lmarr','bc_r3g','bc_r3t','bc_cl','bc_clt',
+               'bc_sras2','bc_sras2t','bc_srasarr','bc_p3g','bc_p3t','bc_cr','bc_crt'],
+           text:'hrLongRun',
+           read:['btocread','Long run, point C: output back at Ȳ, price level P₃, interest rate r₃ — higher than at B.']},
+    negad1:{ids:['na_ad2','na_ad2t','na_adarr','na_adarrt','na_bh','na_bv','na_p2','na_y1','na_b','na_bt'],
+            text:'hrNegAD1',
+            read:['negadread','Step 1 — short run, point B: output Y₁ and price level P₂, both below A.']},
+    negad2:{ids:['na_sras2','na_sras2t','na_srasarr','na_srasarrt','na_ch','na_p3','na_c','na_ct','na_parr','na_yarr'],
+            text:'hrNegAD2',
+            read:['negadread','Step 2 — long run, point C: output back at Ȳ, price level P₃. Permanently lower prices mean larger real balances, so r is lower and investment higher.']},
+    oil:{ids:['oi_sras2','oi_sras2t','oi_arr','oi_arrt','oi_bh','oi_bv','oi_p2','oi_y1','oi_b','oi_bt',
+              'oi_parr','oi_parrt','oi_yarr','oi_yarrt'],
+         text:'hrOil',
+         read:['oilread','Point B: price level P₂ higher, output Y₁ lower. P and Y moved in opposite directions — stagflation.']},
+    mon:{ids:['mn_ad2','mn_ad2t','mn_arr','mn_arrt','mn2_ad2','mn2_ad2t','mn2_arr','mn2_arrt'],
+         text:'hrMon',
+         read:['monread','Left: M↑ shifts AD right, back to A. Right: M↓ shifts AD left, back to A. One instrument serves both mandates.']},
+    lras1:{ids:['lr_lras2','lr_lras2t','lr_ybar2','lr_sras2','lr_sras2t','lr_b','lr_bt','lr_p2g','lr_p2t','lr_p1g','lr_p1t'],
+           text:'hrLras1',
+           read:['lrasread','Step 1 — LRAS and SRAS both shift right. Output grows, but point B sits at the lower price level P₂: the new equilibrium is deflationary.']},
+    lras2:{ids:['lr_ad2','lr_ad2t','lr_adarr','lr_adarrt','lr_sras3','lr_sras3t','lr_warr','lr_wt','lr_c','lr_ct'],
+           text:'hrLras2',
+           read:['lrasread','Step 2 — the Fed accommodates with M↑. AD shifts right, wages push SRAS up to SRAS″, and the economy settles at C: the original price level P₁ at the new, higher Ȳ′.']},
+    dilemma:{ids:['dl_ad2','dl_ad2t','dl_arr','dl_arrt','dl_bp','dl_bpt','dl_y2','dl_y2t','dl_verd',
+                  'dl2_ad2','dl2_ad2t','dl2_arr','dl2_arrt','dl2_bp','dl2_bpt','dl2_p3','dl2_p3t','dl2_verd'],
+             text:'hrDilemma',
+             read:['dilread','Left: prices back at P₁, but output falls to Y₂ — below B. Right: output back at Ȳ, but prices rise to P₃ — above B. Neither option restores both.']},
+    fiscal:{ids:['fs_ad2','fs_ad2t','fs_arr','fs_arrt','fs2_ad2','fs2_ad2t','fs2_arr','fs2_arrt'],
+            text:'hrFiscal',
+            read:['fiscalread','Left: G↑ or T↓ shifts AD right, back to A. Right: G↓ or T↑ shifts AD left, back to A. Different route, same destination as the monetary response.']}
+  };
+  document.querySelectorAll('[data-reveal-svg]').forEach(btn=>{
+    const cfg=svgShifts[btn.getAttribute('data-reveal-svg')]||{};
+    btn.addEventListener('click',()=>{
+      (cfg.ids||[]).forEach(id=>{const el=document.getElementById(id); if(el) el.setAttribute('opacity',1);});
+      if(cfg.text){const t=document.getElementById(cfg.text); if(t) t.classList.add('shown');}
+      if(cfg.read){const r=document.getElementById(cfg.read[0]); if(r) r.textContent=cfg.read[1];}
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- condition cards: button[data-cond="bodyId"] ---- */
+  document.querySelectorAll('[data-cond]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const body=document.getElementById(btn.getAttribute('data-cond'));
+      if(body){body.classList.add('shown');}
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- Slide 10: the confidence shock across both panels ----
+     One place(t) drives everything. t runs 0 → 3:
+       t∈[0,1) A→A′   goods market alone, r still r₁
+       t∈[1,2) A′→A″  money market bites: r↑ along IS′; AD shift traced at P₁
+       t∈[2,3] A″→B   P rises to P₂: LM shifts up; ride up AD′ to SRAS      */
+  const p4play=document.getElementById('p4play');
+  if(p4play){
+    const dotL=document.getElementById('p4dotL'), dotR=document.getElementById('p4dotR'),
+          read=document.getElementById('p4read'), p4reset=document.getElementById('p4reset');
+    // curve geometry, in viewBox units, from the equations drawn on the diagram
+    const IS2 =x=>236+0.62*(x-335);        // IS′  : r as a function of Y
+    const ADP =x=>236+0.979*(x-244);       // AD′  : P as a function of Y
+    const A={x:140,y:236}, Ap={x:335,y:236}, App={x:244,y:179.6}, Bl={x:186.8,y:144.1};
+    const Ar={x:140,y:236}, Appr={x:244,y:236}, Br={x:186.8,y:180};
+    const grp=id=>document.getElementById(id);
+    // step 1 IS shift · step 2 money-market feedback · step 3 AD shift
+    // step 4 LM shift · step 5 the price rise — numbers appear in that order
+    const stage1=['p4is2','p4is2t','p4isarr','p4ann2'];   // step 1
+    const adCurve=['p4ad2','p4ad2t'];                     // AD' drawn early: the dot rides it
+    const adStep=['p4adarr','p4ann5'];                    // step 3 number waits for Y₂
+    const stage3=['p4lm2','p4lm2t','p4lmarr','p4ann7b'];  // step 4
+    const clamp=v=>Math.max(0,Math.min(1,v));
+    const lerp=(a,b,e)=>a+(b-a)*e;
+    const MSG=[
+      'Step 1 — goods market only. Confidence↑ shifts IS right; at the old rate r₁ output would run all the way to Y₁ (point A′).',
+      'Step 2 — the money market bites. Higher Y raises money demand, so r climbs along IS′ to r₂ and output falls back to Y₂ (point A″). Step 3 — at the fixed price P₁, that is where AD′ sits: the horizontal AD shift.',
+      'Step 4 — prices respond. Flexible-price firms raise P to P₂, real balances fall, LM shifts up and r rises to r₄. Step 5 — the price level lands at P₂ and we reach the short-run equilibrium B at output Y₃.'
+    ];
+    let raf, lastSeg=-1;
+    function place(t){
+      const seg=Math.min(2,Math.floor(t)), frac=t-seg;
+      const e=0.5-0.5*Math.cos(Math.PI*Math.min(1,frac));
+      let lx,ly,rx,ry;
+      if(seg===0){                                   // A → A′ along r₁
+        lx=lerp(A.x,Ap.x,e); ly=A.y;
+        rx=Ar.x; ry=Ar.y;
+      }else if(seg===1){                             // A′ → A″ along IS′ ; AD point traces the shift at P₁
+        lx=lerp(Ap.x,App.x,e); ly=IS2(lx);
+        rx=lerp(Ar.x,Appr.x,e); ry=Ar.y;
+      }else{                                         // A″ → B : left along IS′, right along AD′
+        lx=lerp(App.x,Bl.x,e); ly=IS2(lx);
+        rx=lerp(Appr.x,Br.x,e); ry=ADP(rx);
+      }
+      dotL.setAttribute('cx',lx); dotL.setAttribute('cy',ly);
+      dotR.setAttribute('cx',rx); dotR.setAttribute('cy',ry);
+      // curves and annotations fade in as their stage opens
+      stage1.forEach(id=>grp(id).setAttribute('opacity',clamp((t-0.02)*6)));
+      adCurve.forEach(id=>grp(id).setAttribute('opacity',clamp((t-1.00)*6)));
+      adStep.forEach(id=>grp(id).setAttribute('opacity',clamp((t-1.78)*8)));
+      stage3.forEach(id=>grp(id).setAttribute('opacity',clamp((t-2.00)*6)));
+      // way-points and end-state labels only make sense once reached
+      grp('p4Ap').setAttribute('opacity',clamp((t-0.85)*8));
+      grp('p4App').setAttribute('opacity',clamp((t-1.85)*8));
+      grp('p4Appr').setAttribute('opacity',clamp((t-1.85)*8));
+      grp('p4Bl').setAttribute('opacity',clamp((t-2.85)*8));
+      grp('p4Br').setAttribute('opacity',clamp((t-2.85)*8));
+      if(seg!==lastSeg){lastSeg=seg; read.textContent=MSG[seg];}
+    }
+    function reset(){
+      cancelAnimationFrame(raf); lastSeg=-1; place(0);
+      read.textContent='At point A — long-run equilibrium. Press play to run the shock.';
+    }
+    function finish(){
+      lastSeg=-1; place(3);
+      read.textContent='Step 5 complete. Point B — the short-run equilibrium: output Y₃, price level P₂, interest rate r₄. Output is up, but by less than Y₂ promised.';
+    }
+    const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+    function play(){
+      reset();
+      if(reduced){finish();return;}   // skip the sweep for reduced-motion users
+      const dur=6600,t0=performance.now();
+      function step(now){
+        const p=Math.min(1,(now-t0)/dur);
+        place(3*p);
+        if(p>=1){finish();}
+        else raf=requestAnimationFrame(step);
+      }
+      raf=requestAnimationFrame(step);
+    }
+    p4play.onclick=play;
+    p4reset.onclick=reset;
+    reset();
+  }
+
+  show(0);
+})();
+</script>
+</body>
+</html>

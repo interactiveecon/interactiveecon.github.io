@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECON 105B · Aggregate Supply: Who Gets to Reprice?</title>
+<style>
+  :root{
+    --ink:#14243A;          /* near-navy ink */
+    --accent:#1F4E79;       /* deep blue (from worksheets) */
+    --accent-soft:#8FAADC;
+    --paper:#F6F4EE;        /* warm chalk-paper */
+    --paper-line:#E4E0D5;
+    --gold:#8A5900;
+    --gold-soft:#FBF1DC;
+    --red:#C0392B;
+    --grey:#5A5F66;
+    --chalk:#FbFaF7;
+    --shadow:0 8px 30px rgba(20,36,58,.10);
+    --mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Georgia','Iowan Old Style',serif;
+    color:var(--ink);
+    background:var(--paper);
+    overflow:hidden;
+  }
+  /* ---------- deck scaffold ---------- */
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;
+    padding:clamp(1.25rem,4vw,4.5rem) clamp(1.5rem,6vw,6rem);
+    /* extra bottom room so content never hides behind the fixed nav bar (~46px) */
+    padding-bottom:calc(46px + clamp(1rem,3vw,2rem));
+    /* if a slide is taller than the screen, scroll it instead of clipping/overlapping */
+    overflow-y:auto;overflow-x:hidden;
+    scroll-padding-bottom:46px;
+    opacity:0;
+    transition:opacity .38s ease;
+  }
+  .slide.active{display:flex;opacity:1;animation:rise .45s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide.active{animation:none}
+    .slide{transition:none}
+    *{transition-duration:.001ms !important;animation-duration:.001ms !important}
+  }
+  /* visible keyboard focus (WCAG 2.4.7) */
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+    outline:3px solid var(--accent);outline-offset:3px;border-radius:6px;
+  }
+  :focus:not(:focus-visible){outline:none}
+  /* ---------- typography ---------- */
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--grey);margin-bottom:1.1rem;font-weight:600;
+  }
+  h1{font-size:clamp(2.4rem,5.5vw,4.4rem);line-height:1.02;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3.2vw,2.4rem);line-height:1.1;font-weight:700;letter-spacing:-.01em;margin-bottom:.4rem}
+  .lede{font-size:clamp(1.05rem,1.7vw,1.35rem);line-height:1.5;color:var(--ink);max-width:52ch}
+  .muted{color:var(--grey)}
+  .serif-note{font-style:italic;color:var(--grey);font-size:1rem;line-height:1.5}
+  strong{font-weight:700}
+  .accent{color:var(--accent)}
+  .red{color:var(--red)}
+  .gold{color:var(--gold)}
+  /* title rule */
+  h2 + .titlerule{height:2px;background:linear-gradient(90deg,var(--accent-soft),transparent);
+    width:min(100%,640px);margin:.2rem 0 1.4rem}
+  /* ---------- model cards ---------- */
+  .models{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin:1.4rem 0;max-width:900px}
+  .model{
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;
+    padding:1.4rem 1.6rem;box-shadow:var(--shadow);position:relative;
+  }
+  .model .tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:.6rem;display:block}
+  .model .eq{font-family:var(--mono);font-size:1.35rem;color:var(--ink)}
+  .model .eq .coef{color:var(--red);font-weight:700}
+  .model.dim{opacity:.4;filter:saturate(.4)}
+  .model.hi{border-color:var(--accent);box-shadow:0 8px 30px rgba(31,78,121,.22)}
+  /* ---------- boxes ---------- */
+  .prompt,.reveal,.predict{
+    border-radius:10px;padding:1.05rem 1.3rem;max-width:820px;line-height:1.5;
+    font-family:'Georgia',serif;font-size:1.08rem;
+  }
+  .prompt{background:#EEF3FA;border-left:4px solid var(--accent)}
+  .reveal{background:var(--gold-soft);border-left:4px solid var(--gold)}
+  .cue{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;display:block;margin-bottom:.4rem}
+  .prompt .cue{color:var(--accent)}
+  .reveal .cue{color:var(--gold)}
+  .predict .cue{color:var(--red)}
+  .predict{background:#FBEEEC;border-left:4px solid var(--red)}
+  .prompt p,.reveal p,.predict p{margin:0;line-height:1.5}
+  .prompt .cue + p,.reveal .cue + p,.predict .cue + p{margin-top:.15rem}
+  /* chain / mono line */
+  .chain{
+    font-family:var(--mono);background:#EDF1F8;border:1px solid var(--accent-soft);
+    border-radius:8px;padding:.7rem 1rem;font-size:1.05rem;color:var(--accent);
+    display:inline-block;margin-top:.4rem
+  }
+  /* ---------- interactive graph panel ---------- */
+  .graphwrap{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start;margin-top:.6rem;flex:1 0 auto}
+  @media (max-width:900px){.graphwrap{grid-template-columns:1fr}}
+  .panel{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;padding:1.2rem;box-shadow:var(--shadow)}
+  .panel .ptitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-bottom:.3rem;font-weight:700}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  /* On short displays (720p projectors) cap graph height so the graph-heavy
+     slides still fit on one screen. preserveAspectRatio keeps the drawing
+     undistorted — it just scales down and centres inside the panel. */
+  @media (max-height:820px){ .panel svg{max-height:44vh} }
+  .controls{display:flex;flex-direction:column;gap:1.3rem}
+  .readout{font-family:var(--mono);font-size:.92rem;line-height:1.7;color:var(--ink);background:#EDF1F8;border-radius:8px;padding:.8rem 1rem}
+  .readout .big{font-size:1.25rem;color:var(--accent);font-weight:700}
+  .readout .slope-word{font-weight:700}
+  .btn{
+    font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.7rem 1.2rem;cursor:pointer;
+    box-shadow:0 3px 10px rgba(31,78,121,.3);transition:transform .1s,background .2s;align-self:flex-start
+  }
+  .btn:hover{background:#173a5c;transform:translateY(-1px)}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
+  .btn.ghost:hover{background:#EEF3FA}
+  /* ---------- poll ---------- */
+  .poll-opts{display:flex;flex-direction:column;gap:.8rem;max-width:760px;margin-top:1.1rem}
+  .poll-opt{
+    display:flex;align-items:stretch;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;
+    cursor:pointer;background:var(--chalk);transition:border-color .2s,transform .08s;position:relative;
+    width:100%;text-align:left;font:inherit;color:inherit;padding:0
+  }
+  .poll-opt:hover{border-color:var(--accent-soft)}
+  .poll-opt:active{transform:scale(.995)}
+  .poll-opt .num{background:var(--accent);color:#fff;font-family:var(--mono);font-weight:700;
+    display:flex;align-items:center;justify-content:center;padding:0 1.1rem;font-size:1.1rem;z-index:2}
+  .poll-opt .txt{padding:.9rem 1.1rem;line-height:1.4;z-index:2;font-size:1.02rem;font-family:'Georgia',serif}
+  .poll.revealed .poll-opt{opacity:.5;transition:opacity .4s}
+  .poll.revealed .poll-opt.correct{opacity:1;border-color:var(--gold);background:var(--gold-soft)}
+  .poll-opt.correct .num{background:var(--gold)}
+  .poll-opt.correct .txt::after{content:" ✓ correct";color:var(--gold);font-family:var(--mono);font-weight:700;font-size:.82rem}
+  .poll-hint{font-family:var(--mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-top:.9rem;font-weight:600}
+  /* ---------- footer / nav ---------- */
+  .chrome{position:fixed;bottom:0;left:0;right:0;height:46px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 1.4rem;font-family:var(--mono);font-size:.72rem;
+    letter-spacing:.08em;color:var(--grey);pointer-events:none;z-index:50}
+  .chrome .course{text-transform:uppercase}
+  .progress-track{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:60}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-soft));width:0;transition:width .35s ease}
+  .navhint{display:flex;gap:1.2rem;align-items:center;pointer-events:auto}
+  .navhint button{pointer-events:auto;background:none;border:none;color:var(--grey);cursor:pointer;font-family:var(--mono);font-size:.9rem;padding:.2rem .5rem;border-radius:5px}
+  .navhint button:hover{color:var(--accent);background:rgba(31,78,121,.08)}
+  /* content column helper */
+  .col{display:flex;flex-direction:column;gap:1.1rem;flex:1 0 auto;justify-content:center}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+  @media (max-width:900px){.two{grid-template-columns:1fr}}
+  .calc{font-family:var(--mono);font-size:1.05rem;line-height:1.8}
+  .calc .lbl{color:var(--accent);font-weight:700}
+  .delta{font-size:1.15rem;font-weight:700}
+  .footnote{font-size:.92rem;color:var(--grey);font-style:italic}
+  /* title slide special */
+  .title-slide{justify-content:safe center}
+  .title-slide h1{margin:.6rem 0}
+  .signature{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:2rem}
+  /* ---------- section divider ---------- */
+  .divider{justify-content:safe center;background:linear-gradient(135deg,#1B3B5C,#14243A)}
+  .divider *{color:#F6F4EE}
+  .divider .eyebrow{color:#8FAADC}
+  .divider h1{font-size:clamp(2.2rem,5vw,4rem);color:#fff}
+  .divider .lede{color:#D6DEE9;max-width:46ch}
+  .divider .sectrail{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#8FAADC;margin-top:1.6rem}
+  .divider .through{font-family:var(--mono);font-size:.8rem;line-height:1.6;color:#D6DEE9;
+    border-left:3px solid #8FAADC;padding-left:.9rem;margin-top:1.4rem;max-width:56ch}
+  /* ---------- generic click-reveal ---------- */
+  .reveal-hidden{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .reveal-hidden.shown{opacity:1;max-height:1400px;margin-top:1.1rem}
+  /* condition cards (3-across) */
+  .condrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem}
+  @media (max-width:900px){.condrow{grid-template-columns:1fr}}
+  .condcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.5rem}
+  .condcard .ctitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .condcard .cbtn{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:.55rem .8rem;cursor:pointer}
+  .condcard .cbtn:hover{background:#173a5c}
+  .condcard .cbody{opacity:0;max-height:0;overflow:hidden;transition:opacity .35s,max-height .45s}
+  .condcard .cbody.shown{opacity:1;max-height:900px;margin-top:.3rem}
+  .condcard .cnote{font-size:.9rem;line-height:1.45;color:var(--ink)}
+  .condcard .verdict{font-family:var(--mono);font-size:.78rem;font-weight:700;padding:.2rem 0}
+  .verdict.severe{color:var(--red)}
+  .verdict.mild{color:var(--accent)}
+  /* diagnose (numbered flawed-argument) list */
+  .diag{display:flex;flex-direction:column;gap:.7rem;max-width:860px;margin:1rem 0}
+  .diag-opt{display:flex;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;background:var(--chalk);width:100%;text-align:left;font:inherit;color:inherit;padding:0;cursor:pointer;transition:border-color .2s}
+  .diag-opt:hover{border-color:var(--accent-soft)}
+  .diag-opt .n{background:var(--grey);color:#fff;font-family:var(--mono);font-weight:700;display:flex;align-items:center;padding:0 1rem;font-size:1.05rem}
+  .diag-opt .s{padding:.85rem 1.1rem;line-height:1.45;font-family:'Georgia',serif;font-size:1.02rem}
+  .diag.revealed .diag-opt{opacity:.5}
+  .diag.revealed .diag-opt.bad{opacity:1;border-color:var(--red);background:#FBEEEC}
+  .diag-opt.bad .n{background:var(--red)}
+  .diag.revealed .diag-opt.bad .s::after{content:" ✗ the flaw";color:var(--red);font-family:var(--mono);font-weight:700;font-size:.8rem}
+</style>
+</head>
+<body>
+<div class="progress-track"><div class="progress-fill" id="prog"></div></div>
+<div class="deck" id="deck">
+
+  <!-- ══════════════ FRONT MATTER ══════════════ -->
+
+  <!-- 1. TITLE -->
+  <section class="slide active title-slide" data-section="Discussion 2 · Opening">
+    <div class="eyebrow">ECON 105B · Intermediate Macro · Discussion 2</div>
+    <h1>Aggregate Supply:<br><span class="accent">Who Gets to Reprice?</span></h1>
+    <p class="lede" style="margin-top:1rem">One number decides whether a demand shock becomes output or inflation: the share of firms that cannot change their price. We build that number from a single firm and end with the whole SRAS curve.</p>
+    <p class="serif-note" style="margin-top:1.6rem">Work on your own paper. Write before each reveal — the point is your reasoning, not a clean final answer.</p>
+    <div class="signature">Firm → LRAS → Sticky/Flexible → SRAS</div>
+  </section>
+
+
+  <!-- 2. WHERE WE ARE -->
+  <section class="slide" data-section="Discussion 2 · Opening">
+    <div class="eyebrow">Where we are</div>
+    <h2>AD tells you the shift. It can't tell you the split.</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:880px">
+      <p class="lede">Last time we built the aggregate demand curve out of IS–LM and worked out what shifts it: fiscal policy, monetary policy, anything that moves spending at a given price level.</p>
+      <div class="chain">G↑ or M↑ → AD shifts right → ???</div>
+      <p class="lede" style="margin-top:.3rem">But an AD shift only tells you that the economy moves along <em>some</em> supply relationship. It says nothing about how the movement <strong>splits</strong> between more output and higher prices — and that split is the entire policy question. A boom that is all Y is a success. A boom that is all P is inflation with nothing to show for it.</p>
+      <div class="prompt">
+        <span class="cue">Where this ends up</span>
+        <p>The answer turns out to be <strong>one number</strong>. Not a new theory of firms, not a new market — one share, between 0 and 1. We'll build it from a single firm deciding what to charge, and by the end it will be the slope of the whole SRAS curve.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 1 ══════════════ -->
+
+  <!-- 3. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 2 · The Firm">
+    <div class="eyebrow">Part 1 of 4</div>
+    <h1>The Firm's<br>Pricing Rule</h1>
+    <p class="lede">Before any aggregate curve exists, someone has to set a price. Start with one firm that gets to choose.</p>
+    <div class="sectrail">Firm → LRAS → Sticky/Flexible → SRAS</div>
+    <div class="through">Throughline: one parameter — the share of firms that cannot reprice, s — decides whether an AD shock becomes output or prices.</div>
+  </section>
+
+  <!-- 4. READ THE MODEL + Q1 -->
+  <section class="slide" data-section="Discussion 2 · The Firm">
+    <div class="eyebrow">One monopolistically competitive firm</div>
+    <h2>Read the equations before you compute</h2>
+    <div class="titlerule"></div>
+    <p class="lede">The firm faces its own downward-sloping demand curve and maximizes profit, Π = TR − TC. That gives the familiar condition <strong>MR = MC</strong>.</p>
+    <div class="models" style="grid-template-columns:1fr 1fr 1fr;max-width:1000px">
+      <div class="model hi">
+        <span class="tag">Inverse demand</span>
+        <div class="eq">P = <span class="coef">9</span> − q</div>
+      </div>
+      <div class="model hi">
+        <span class="tag">Marginal revenue</span>
+        <div class="eq">MR = <span class="coef">9</span> − 2q</div>
+      </div>
+      <div class="model hi">
+        <span class="tag">Marginal cost</span>
+        <div class="eq">MC = q</div>
+      </div>
+    </div>
+    <p class="footnote" style="margin:-.6rem 0 .8rem">The intercept <span class="red"><strong>9</strong></span> is the demand shifter — call it <span class="red"><strong>A</strong></span>. It's the only thing we will shock all discussion.</p>
+    <div class="prompt">
+      <span class="cue">Question 1 (write)</span>
+      <p>Find the firm's profit-maximizing <strong>quantity q</strong> and the <strong>price P</strong> it charges. Careful: which curve do you read the price off?</p>
+    </div>
+  </section>
+
+  <!-- 5. REVEAL Q1 -->
+  <section class="slide" data-section="Discussion 2 · The Firm">
+    <div class="eyebrow">Question 1</div>
+    <h2>A price-setter, not a price-taker</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1000px;align-items:start">
+      <div class="panel">
+        <div class="ptitle">The firm at A = 9</div>
+        <svg viewBox="0 0 420 340" role="img" aria-label="A single firm's demand, marginal revenue, and marginal cost curves. Marginal revenue equals marginal cost at a quantity of 3 units, and the price read off the demand curve at that quantity is 6 dollars, which sits above marginal cost of 3.">
+          <line x1="55" y1="25" x2="55" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="55" y1="300" x2="405" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="46" y="32" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="405" y="322" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">q</text>
+          <line x1="55" y1="145.3" x2="400" y2="282.8" stroke="#1F4E79" stroke-width="2.6"/>
+          <text x="300" y="236" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">D</text>
+          <line x1="55" y1="145.3" x2="249.1" y2="300" stroke="#1F4E79" stroke-width="2" stroke-dasharray="6 4"/>
+          <text x="156" y="214" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">MR</text>
+          <line x1="55" y1="300" x2="400" y2="162.5" stroke="#C0392B" stroke-width="2.6"/>
+          <text x="372" y="156" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700">MC</text>
+          <line x1="184.4" y1="196.9" x2="184.4" y2="300" stroke="#5A5F66" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <line x1="55" y1="196.9" x2="184.4" y2="196.9" stroke="#5A5F66" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <line x1="55" y1="248.4" x2="184.4" y2="248.4" stroke="#C0392B" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <circle cx="184.4" cy="196.9" r="5" fill="#14243A"/>
+          <circle cx="184.4" cy="248.4" r="4" fill="#C0392B"/>
+          <text x="184.4" y="316" font-family="monospace" font-size="12" fill="#14243A" text-anchor="middle" font-weight="700">q = 3</text>
+          <text x="49" y="201" font-family="monospace" font-size="12" fill="#14243A" text-anchor="end" font-weight="700">P = 6</text>
+          <text x="49" y="252" font-family="monospace" font-size="12" fill="#C0392B" text-anchor="end" font-weight="700">MC = 3</text>
+          <text x="196" y="182" font-family="monospace" font-size="11" fill="#8A5900" font-weight="700">markup</text>
+        </svg>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="model hi" style="box-shadow:none">
+          <span class="tag">Set MR = MC</span>
+          <div class="calc">
+            9 − 2q = q<br>
+            9 = 3q &nbsp;⇒&nbsp; <strong>q = 3</strong><br>
+            price off <em>demand</em>: P = 9 − 3 = <strong>6</strong><br>
+            <span class="lbl">(MC at q = 3 is only 3)</span>
+          </div>
+        </div>
+        <div class="reveal">
+          <span class="cue">Reveal</span>
+          <p><strong>q = 3, P = 6.</strong> Read the quantity off MR = MC, but read the <em>price</em> off the demand curve — MR is what the firm earns on the marginal unit, not what any customer pays.</p>
+          <p style="margin-top:.5rem">The part that matters for the rest of the hour: <strong>P = 6 sits well above MC = 3.</strong> Because demand slopes down, this firm <em>chooses</em> its price rather than being handed one. That single fact is what makes the whole unit possible — a price-taker has no price to be sticky about.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Q2 + REVEAL -->
+  <section class="slide" data-section="Discussion 2 · The Firm">
+    <div class="eyebrow">From one firm to the economy</div>
+    <h2>Where does the firm's demand come from?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:900px">
+      <div class="prompt">
+        <span class="cue">Question 2 (write)</span>
+        <p>We just took A = 9 as given. But what actually determines the demand facing <strong>one firm</strong>? Name the two things.</p>
+      </div>
+      <button class="btn" data-reveal="hrQ2">Reveal the answer</button>
+      <div class="reveal-hidden" id="hrQ2">
+        <div class="reveal">
+          <span class="cue">Reveal</span>
+          <p><strong>Aggregate demand</strong>, plus the firm's <strong>price relative to the price level</strong>. When the economy is booming, everyone's demand curve shifts out. And at any level of aggregate spending, a firm that charges more than its rivals loses customers to them.</p>
+        </div>
+        <div class="chain" style="margin-top:.9rem">AD↑ → firm's D↑ → MR↑ → q↑, p↑</div>
+        <div class="predict" style="margin-top:1rem">
+          <span class="cue">The hinge</span>
+          <p>Notice what a firm must do to set a price: <strong>forecast the aggregate price level P and aggregate output Y.</strong> A price posted today has to be right for an economy the firm can only guess at. Every remaining slide is a consequence of that — some firms get to revise the guess, and some are stuck with it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 2 ══════════════ -->
+
+  <!-- 7. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 2 · LRAS">
+    <div class="eyebrow">Part 2 of 4</div>
+    <h1>Why LRAS<br>Is Vertical</h1>
+    <p class="lede">First the easy case: give <em>every</em> firm the freedom to reprice, and watch what a demand boom can and cannot do.</p>
+    <div class="sectrail">Firm ✓ → LRAS → Sticky/Flexible → SRAS</div>
+    <div class="through">Throughline: one parameter — the share of firms that cannot reprice, s — decides whether an AD shock becomes output or prices.</div>
+  </section>
+
+  <!-- 8. Q3 PREDICT -->
+  <section class="slide" data-section="Discussion 2 · LRAS">
+    <div class="eyebrow">Commit before computing</div>
+    <h2>Predict</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:860px">
+      <p class="lede">Aggregate demand rises. Every firm in the economy — including ours, and including everyone who sells our firm its inputs — is completely free to change its price.</p>
+      <div class="predict">
+        <span class="cue">Question 3 (predict)</span>
+        <p>Where does the representative firm's <strong>quantity</strong> end up? Higher than 3, back at 3, or lower? Commit to a number on paper <em>before</em> the next slide, and write one sentence saying why.</p>
+      </div>
+      <p class="footnote">Most people answer this one twice — once now, and differently in three slides. Write the first answer down anyway; the gap between them is the lesson.</p>
+    </div>
+  </section>
+
+  <!-- 9. TWO-PANEL STATIC SHIFT -->
+  <section class="slide" data-section="Discussion 2 · LRAS">
+    <div class="eyebrow">The demand shock arrives</div>
+    <h2>AD rises — and the firm expands</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="ptitle">The economy · AD and LRAS</div>
+        <svg viewBox="0 0 460 350" role="img" aria-label="Aggregate demand and a vertical long-run aggregate supply curve at output of 1000. When aggregate demand shifts right, the equilibrium slides straight up the vertical LRAS: the price level rises from 100 to 250 while output stays fixed at 1000.">
+          <line x1="60" y1="25" x2="60" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="51" y="32" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="440" y="332" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">Y</text>
+          <line x1="134" y1="25" x2="134" y2="310" stroke="#14243A" stroke-width="2.8"/>
+          <text x="134" y="20" font-family="monospace" font-size="12" fill="#14243A" text-anchor="middle" font-weight="700">LRAS</text>
+          <text x="134" y="326" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">Ȳ = 1000</text>
+          <line x1="60" y1="198" x2="208" y2="310" stroke="#1F4E79" stroke-width="2.6"/>
+          <text x="212" y="304" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">AD</text>
+          <line x1="60" y1="254" x2="134" y2="254" stroke="#5A5F66" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <circle cx="134" cy="254" r="5" fill="#14243A"/>
+          <text x="54" y="258" font-family="monospace" font-size="12" fill="#14243A" text-anchor="end" font-weight="700">100</text>
+          <!-- revealed -->
+          <line id="L_ad2" x1="60" y1="30" x2="430" y2="310" stroke="#1F4E79" stroke-width="2.6" stroke-dasharray="7 4" opacity="0"/>
+          <text id="L_ad2t" x="340" y="205" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" opacity="0">AD′</text>
+          <path id="L_arrow" d="M 180 250 L 250 190" stroke="#8A5900" stroke-width="2" marker-end="url(#ah1)" opacity="0"/>
+          <line id="L_hg2" x1="60" y1="86" x2="134" y2="86" stroke="#8A5900" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <circle id="L_dot2" cx="134" cy="86" r="5" fill="#8A5900" opacity="0"/>
+          <text id="L_p2t" x="54" y="90" font-family="monospace" font-size="12" fill="#8A5900" text-anchor="end" font-weight="700" opacity="0">250</text>
+          <text id="L_note" x="246" y="276" font-family="monospace" font-size="11" fill="#8A5900" font-weight="700" opacity="0">P↑ · Y unchanged</text>
+          <defs><marker id="ah1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#8A5900"/></marker></defs>
+        </svg>
+        <p class="serif-note" style="font-size:.85rem;margin-top:.3rem">Take the vertical LRAS as given for now — Part 2 is about <em>earning</em> it.</p>
+      </div>
+      <div class="panel">
+        <div class="ptitle">Our firm · A rises from 9 to 15</div>
+        <svg viewBox="0 0 420 340" role="img" aria-label="The same firm after the demand shock. Demand and marginal revenue both shift out, and with marginal cost unchanged the firm's profit-maximizing quantity rises from 3 units to 5 units while its price rises from 6 to 10 dollars.">
+          <line x1="55" y1="25" x2="55" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="55" y1="300" x2="405" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="46" y="32" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="405" y="322" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">q</text>
+          <line x1="55" y1="145.3" x2="400" y2="282.8" stroke="#1F4E79" stroke-width="2.2" opacity=".5"/>
+          <text x="368" y="274" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">D</text>
+          <line x1="55" y1="145.3" x2="249.1" y2="300" stroke="#1F4E79" stroke-width="1.8" stroke-dasharray="6 4" opacity=".5"/>
+          <line x1="55" y1="300" x2="400" y2="162.5" stroke="#C0392B" stroke-width="2.6"/>
+          <text x="146" y="258" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700">MC</text>
+          <line x1="184.4" y1="196.9" x2="184.4" y2="300" stroke="#5A5F66" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <line x1="55" y1="196.9" x2="184.4" y2="196.9" stroke="#5A5F66" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <circle cx="184.4" cy="196.9" r="4.5" fill="#14243A"/>
+          <text x="184.4" y="316" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">q = 3</text>
+          <text x="49" y="201" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">P = 6</text>
+          <!-- revealed -->
+          <line id="F_d2" x1="55" y1="42.2" x2="400" y2="179.7" stroke="#1F4E79" stroke-width="2.6" opacity="0"/>
+          <text id="F_d2t" x="318" y="140" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" opacity="0">D′</text>
+          <line id="F_mr2" x1="55" y1="42.2" x2="378.4" y2="300" stroke="#1F4E79" stroke-width="2" stroke-dasharray="6 4" opacity="0"/>
+          <text id="F_mr2t" x="230" y="176" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" opacity="0">MR′</text>
+          <line id="F_vg2" x1="270.6" y1="128.1" x2="270.6" y2="300" stroke="#8A5900" stroke-width="1.3" stroke-dasharray="4 3" opacity="0"/>
+          <line id="F_hg2" x1="55" y1="128.1" x2="270.6" y2="128.1" stroke="#8A5900" stroke-width="1.3" stroke-dasharray="4 3" opacity="0"/>
+          <circle id="F_dot2" cx="270.6" cy="128.1" r="5" fill="#8A5900" opacity="0"/>
+          <text id="F_q2t" x="270.6" y="316" font-family="monospace" font-size="12" fill="#8A5900" text-anchor="middle" font-weight="700" opacity="0">q = 5</text>
+          <text id="F_p2t" x="49" y="132" font-family="monospace" font-size="12" fill="#8A5900" text-anchor="end" font-weight="700" opacity="0">P = 10</text>
+        </svg>
+        <p class="serif-note" style="font-size:.85rem;margin-top:.3rem">MR′ = MC: 15 − 2q = q ⇒ q = 5, and P = 15 − 5 = 10.</p>
+      </div>
+    </div>
+    <button class="btn" data-reveal-svg="lras" style="margin-top:1rem">Show the AD shift</button>
+  </section>
+
+  <!-- 10. Q4 PROMPT -->
+  <section class="slide" data-section="Discussion 2 · LRAS">
+    <div class="eyebrow">The contradiction</div>
+    <h2>Two things that can't both be true</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:880px">
+      <div class="two" style="max-width:820px">
+        <div class="model hi" style="box-shadow:none">
+          <span class="tag">The firm</span>
+          <div class="calc">q: 3 → <strong>5</strong><br><span class="lbl">it produced more</span></div>
+        </div>
+        <div class="model hi" style="box-shadow:none">
+          <span class="tag">The economy</span>
+          <div class="calc">Y: 1000 → <strong>1000</strong><br><span class="lbl">it produced the same</span></div>
+        </div>
+      </div>
+      <p class="lede" style="margin-top:.4rem">Every firm is the representative firm. If each one raised output from 3 to 5, aggregate output rose by two-thirds — but LRAS says Y didn't move at all.</p>
+      <div class="prompt">
+        <span class="cue">Question 4 (write)</span>
+        <p>Something has to give. <strong>Where did the extra output go?</strong> Don't answer "it didn't happen" — the firm's calculation was correct. Find the market we've been ignoring.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. REVEAL: FACTOR MARKETS -->
+  <section class="slide" data-section="Discussion 2 · LRAS">
+    <div class="eyebrow">The market we ignored</div>
+    <h2>Factor markets close the loop</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:1.05fr .95fr">
+      <div class="col" style="justify-content:flex-start;gap:.8rem">
+        <div class="reveal">
+          <span class="cue">Reveal · the mechanism</span>
+          <p>We held <strong>MC fixed</strong> while every price in the economy rose. That's the error. Workers don't care about the nominal wage W, they care about the <strong>real</strong> wage W/P — and in the long run W/P is pinned down by the marginal product of labor, which depends on the capital stock and the labor force, not on the price level.</p>
+          <p style="margin-top:.5rem">So when P rises, W/P falls below MPL, workers are worse off at the old wage, and W is bid up <strong>one-for-one with P</strong> until W/P = MPL again. Capital owners run the identical argument: R/P = MPK. Every input price rises by the same proportion as output prices.</p>
+          <p style="margin-top:.5rem">Which means the firm's marginal cost <em>was never going to stay put</em>. MC rises until MR′ = MC′ back at <strong>q = 3</strong>.</p>
+        </div>
+        <div class="chain" style="line-height:1.7">P↑ → W/P↓ → W↑ &amp; R↑ → MC↑ → q back to 3</div>
+        <p class="footnote">Nothing forced the firm to contract. It expanded because expanding was profitable, then contracted because it stopped being profitable — both times freely.</p>
+      </div>
+      <div class="panel">
+        <div class="ptitle">Our firm · MC catches up</div>
+        <svg viewBox="0 0 420 340" role="img" aria-label="The firm after input prices adjust. Marginal cost shifts up until it again meets the new marginal revenue at 3 units, so the firm's quantity returns to 3 while its price rises from 6 to 12 dollars.">
+          <line x1="55" y1="25" x2="55" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="55" y1="300" x2="405" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="46" y="32" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="405" y="322" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">q</text>
+          <line x1="55" y1="42.2" x2="400" y2="179.7" stroke="#1F4E79" stroke-width="2.6"/>
+          <text x="318" y="140" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">D′</text>
+          <line x1="55" y1="42.2" x2="378.4" y2="300" stroke="#1F4E79" stroke-width="2" stroke-dasharray="6 4"/>
+          <text x="382" y="294" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">MR′</text>
+          <line x1="55" y1="300" x2="400" y2="162.5" stroke="#C0392B" stroke-width="2.2" opacity=".45"/>
+          <text x="146" y="258" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700">MC</text>
+          <circle cx="270.6" cy="128.1" r="4.5" fill="#5A5F66"/>
+          <text x="280" y="118" font-family="monospace" font-size="11" fill="#5A5F66">q=5 (before)</text>
+          <!-- revealed -->
+          <line id="G_mc2" x1="55" y1="300" x2="285" y2="25" stroke="#C0392B" stroke-width="2.8" opacity="0"/>
+          <text id="G_mc2t" x="292" y="34" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700" opacity="0">MC′</text>
+          <path id="G_arrow" d="M 300 214 L 250 168" stroke="#C0392B" stroke-width="2" marker-end="url(#ah2)" opacity="0"/>
+          <line id="G_vg3" x1="184.4" y1="93.8" x2="184.4" y2="300" stroke="#8A5900" stroke-width="1.3" stroke-dasharray="4 3" opacity="0"/>
+          <line id="G_hg3" x1="55" y1="93.8" x2="184.4" y2="93.8" stroke="#8A5900" stroke-width="1.3" stroke-dasharray="4 3" opacity="0"/>
+          <circle id="G_dot3" cx="184.4" cy="93.8" r="5" fill="#8A5900" opacity="0"/>
+          <text id="G_q3t" x="184.4" y="316" font-family="monospace" font-size="12" fill="#8A5900" text-anchor="middle" font-weight="700" opacity="0">q = 3 again</text>
+          <text id="G_p3t" x="49" y="98" font-family="monospace" font-size="12" fill="#8A5900" text-anchor="end" font-weight="700" opacity="0">P = 12</text>
+          <defs><marker id="ah2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#C0392B"/></marker></defs>
+        </svg>
+        <button class="btn" data-reveal-svg="factor" style="margin-top:.8rem">Show MC adjust</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12. PUNCHLINE -->
+  <section class="slide" data-section="Discussion 2 · LRAS">
+    <div class="eyebrow">The punchline</div>
+    <h2>In the long run, demand moves prices — not output</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:920px">
+      <p class="lede">Every nominal magnitude went up together: output prices, wages, rents. Every <em>real</em> magnitude — quantity produced, the real wage, the real rental rate — came back exactly where it started. Aggregate demand had no lasting grip on anything real.</p>
+      <div class="reveal">
+        <span class="cue">Why this is the same result you already know</span>
+        <p>Long-run output is determined by capital, labor, and technology — the production function — with no role for the demand side at all. <strong>LRAS is vertical at Ȳ</strong>, so long-run growth comes from technology and population, and never from printing money or raising G.</p>
+      </div>
+      <div style="display:flex;gap:1.4rem;flex-wrap:wrap;margin-top:.4rem">
+        <div class="chain">long run: ΔAD → ΔP only</div>
+        <div class="chain" style="background:#FBEEEC;border-color:#E3A9A1;color:#C0392B">Ȳ moves only when K, L, or technology move</div>
+      </div>
+      <p class="footnote" style="margin-top:.6rem">Hold on to <em>why</em> it was vertical: not because production was impossible, but because <strong>everyone got to reprice</strong>. Part 3 takes that freedom away from some of them.</p>
+    </div>
+  </section>
+
+  <!-- 13. Q5 DIAGNOSE -->
+  <section class="slide" data-section="Discussion 2 · LRAS">
+    <div class="eyebrow">Diagnose · silent poll</div>
+    <h2>One of these is right for the wrong reason</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start">
+      <p class="lede" style="max-width:70ch">Three sentences explaining why LRAS is vertical. Two are sound. One reaches a defensible conclusion through reasoning that will fail you later. <strong>Write down its number</strong> — don't say it out loud.</p>
+      <div class="diag" id="diagLRAS">
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">1</span><span class="s">Output can't rise because firms are already producing at full capacity.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">2</span><span class="s">In the long run every firm is free to reset its price, so no firm ends up stuck selling at the wrong relative price.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">3</span><span class="s">Input prices rise in step with output prices, so marginal cost climbs until each firm's old quantity is optimal again — and the demand increase lands entirely in P.</span></button>
+      </div>
+      <span class="poll-hint">Question 5 · commit a number on paper before the reveal</span>
+      <button class="btn" data-diag-reveal="diagLRAS" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem">
+        <span class="cue">Sentence 1 · the flaw</span>
+        <p><strong>Nothing in this model is at capacity.</strong> Watch what our firm actually did: it went from 3 to 5 units the instant demand rose — freely, with no constraint binding — and then walked back to 3 only once its costs caught up. Capacity never entered the argument.</p>
+        <p style="margin-top:.5rem">Why the bad reasoning is expensive: a "capacity ceiling" story predicts that output <em>can never</em> exceed Ȳ. But the entire rest of this discussion is about booms where Y &gt; Ȳ. If you hold the capacity version, Part 4 will look impossible. Ȳ is the level firms <em>choose</em> when all prices are right — not a wall.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 3 ══════════════ -->
+
+  <!-- 14. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 2 · Sticky &amp; Flexible">
+    <div class="eyebrow">Part 3 of 4</div>
+    <h1>Sticky and<br>Flexible Firms</h1>
+    <p class="lede">Now take the repricing freedom away from some firms — and watch which ones end up moving the real economy.</p>
+    <div class="sectrail">Firm ✓ → LRAS ✓ → Sticky/Flexible → SRAS</div>
+    <div class="through">Throughline: one parameter — the share of firms that cannot reprice, s — decides whether an AD shock becomes output or prices.</div>
+  </section>
+
+  <!-- 15. SETUP + Q6 + CONDITION CARDS -->
+  <section class="slide" data-section="Discussion 2 · Sticky &amp; Flexible">
+    <div class="eyebrow">The short run is a repricing problem</div>
+    <h2>Some prices move today. Most don't.</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:74ch">"Short run" in this model doesn't mean "a few months." It means <strong>the window before every price has been reset</strong>. Some prices in the economy change by the second; others are locked in by contract, print run, or plain inertia.</p>
+    <div class="prompt" style="margin-top:.9rem">
+      <span class="cue">Question 6 (write · 90 seconds)</span>
+      <p>Name <strong>one sticky price and one flexible price from your own life</strong> — something you personally pay or get paid. Then write the harder half: <em>what makes each one that way?</em></p>
+    </div>
+    <div class="condrow">
+      <div class="condcard">
+        <div class="ctitle">Sticky</div>
+        <button type="button" class="cbtn" data-cond="c_sticky">Reveal examples</button>
+        <div class="cbody" id="c_sticky">
+          <p class="cnote"><strong>Wages</strong> · <strong>printed menus and catalogs</strong> · <strong>streaming subscriptions</strong> · <strong>long-term supply contracts</strong> · rent under a lease · tuition.</p>
+          <div class="verdict severe">✗ cannot reprice this period</div>
+        </div>
+      </div>
+      <div class="condcard">
+        <div class="ctitle">Flexible</div>
+        <button type="button" class="cbtn" data-cond="c_flex">Reveal examples</button>
+        <div class="cbody" id="c_flex">
+          <p class="cnote"><strong>Gas station prices</strong> · <strong>airline seats</strong> · <strong>Amazon listings</strong> · <strong>interest rates</strong> · commodities · ride-share surge pricing.</p>
+          <div class="verdict mild">✓ reprices freely, continuously</div>
+        </div>
+      </div>
+      <div class="condcard">
+        <div class="ctitle">What decides it</div>
+        <button type="button" class="cbtn" data-cond="c_why">Reveal</button>
+        <div class="cbody" id="c_why">
+          <p class="cnote">The <strong>cost of changing the price</strong> relative to the cost of being wrong: physical menu costs, contracts you'd have to renegotiate, customers who punish visible price changes, and the sheer effort of re-forecasting. A gas station changes a two-digit sign; an employer reopens a wage negotiation.</p>
+          <div class="verdict mild">the share stuck this period = s</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16. Q7 PREDICT -->
+  <section class="slide" data-section="Discussion 2 · Sticky &amp; Flexible">
+    <div class="eyebrow">Commit before computing</div>
+    <h2>Predict</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:880px">
+      <p class="lede">Two firms, <strong>identical costs</strong> (MC = q), identical demand. The same shock hits both: <strong>A goes from 9 to 15</strong>.</p>
+      <div class="two" style="max-width:760px;margin:.3rem 0">
+        <div class="model hi" style="box-shadow:none">
+          <span class="tag">Firm F · flexible</span>
+          <div class="calc">free to set any price</div>
+        </div>
+        <div class="model hi" style="box-shadow:none;border-color:#C0392B">
+          <span class="tag" style="color:#C0392B">Firm S · sticky</span>
+          <div class="calc">locked at <strong>P = 6</strong></div>
+        </div>
+      </div>
+      <div class="predict">
+        <span class="cue">Question 7 (predict)</span>
+        <p>Which firm raises its <strong>output</strong> more? Commit to F or S on paper, and write one sentence of justification.</p>
+      </div>
+      <p class="footnote">Most rooms get this backwards. Write the answer you actually believe — it's more useful to you wrong than blank.</p>
+    </div>
+  </section>
+
+  <!-- 17. Q8 COMPUTE -->
+  <section class="slide" data-section="Discussion 2 · Sticky &amp; Flexible">
+    <div class="eyebrow">Now do the arithmetic</div>
+    <h2>Work both firms</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:960px">
+      <div class="model hi" style="box-shadow:none">
+        <span class="tag">Firm F · flexible</span>
+        <div class="calc">
+          new demand: P = 15 − q<br>
+          new marginal revenue: MR′ = 15 − 2q<br>
+          marginal cost: MC = q<br>
+          <strong>set MR′ = MC and solve</strong><br>
+          <span class="lbl">then read P off the demand curve</span>
+        </div>
+      </div>
+      <div class="model hi" style="box-shadow:none;border-color:#C0392B">
+        <span class="tag" style="color:#C0392B">Firm S · sticky</span>
+        <div class="calc">
+          price is locked at p̄ = 6<br>
+          every extra unit brings in exactly 6<br>
+          <span class="red"><strong>the stuck price IS its MR</strong></span><br>
+          <strong>set MR = MC and solve</strong><br>
+          <span class="lbl">the price needs no work — it's still 6</span>
+        </div>
+      </div>
+    </div>
+    <div class="prompt" style="margin-top:1.2rem">
+      <span class="cue">Question 8 (write)</span>
+      <p>Finish both columns. For each firm, report <strong>Δoutput</strong> and <strong>Δprice</strong> against the starting point of q = 3, P = 6. Then check your Q7 prediction against what you just computed.</p>
+    </div>
+    <p class="footnote" style="margin-top:.8rem">The one line worth pausing on is on the right: a firm that cannot change its price faces a <em>horizontal</em> demand curve at that price — so marginal revenue no longer falls as it sells more.</p>
+  </section>
+
+  <!-- 18. REVEAL + TWO-PANEL -->
+  <section class="slide" data-section="Discussion 2 · Sticky &amp; Flexible">
+    <div class="eyebrow">Question 8 · the answer</div>
+    <h2>Same shock, same costs, opposite responses</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="ptitle">Firm F · flexible ✓ can reprice</div>
+        <svg viewBox="0 0 420 340" role="img" aria-label="The flexible-price firm. Demand and marginal revenue shift out, and the firm moves to where the new marginal revenue meets marginal cost: price rises from 6 to 10 dollars while output rises only from 3 to 5 units.">
+          <line x1="55" y1="25" x2="55" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="55" y1="300" x2="405" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="46" y="32" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="405" y="322" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">q</text>
+          <line x1="55" y1="145.3" x2="400" y2="282.8" stroke="#1F4E79" stroke-width="2.2" opacity=".45"/>
+          <text x="368" y="274" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">D</text>
+          <line x1="55" y1="145.3" x2="249.1" y2="300" stroke="#1F4E79" stroke-width="1.8" stroke-dasharray="6 4" opacity=".45"/>
+          <line x1="55" y1="300" x2="400" y2="162.5" stroke="#C0392B" stroke-width="2.6"/>
+          <text x="146" y="258" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700">MC</text>
+          <line x1="184.4" y1="196.9" x2="184.4" y2="300" stroke="#5A5F66" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <line x1="55" y1="196.9" x2="184.4" y2="196.9" stroke="#5A5F66" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <circle cx="184.4" cy="196.9" r="4.5" fill="#14243A"/>
+          <text x="184.4" y="316" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">start q = 3</text>
+          <text x="49" y="201" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">6</text>
+          <line id="X_d2" x1="55" y1="42.2" x2="400" y2="179.7" stroke="#1F4E79" stroke-width="2.6" opacity="0"/>
+          <text id="X_d2t" x="318" y="140" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" opacity="0">D′</text>
+          <line id="X_mr2" x1="55" y1="42.2" x2="378.4" y2="300" stroke="#1F4E79" stroke-width="2" stroke-dasharray="6 4" opacity="0"/>
+          <text id="X_mr2t" x="230" y="176" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" opacity="0">MR′</text>
+          <line id="X_vg2" x1="270.6" y1="128.1" x2="270.6" y2="300" stroke="#8A5900" stroke-width="1.3" stroke-dasharray="4 3" opacity="0"/>
+          <line id="X_hg2" x1="55" y1="128.1" x2="270.6" y2="128.1" stroke="#8A5900" stroke-width="1.3" stroke-dasharray="4 3" opacity="0"/>
+          <circle id="X_dot2" cx="270.6" cy="128.1" r="5" fill="#8A5900" opacity="0"/>
+          <text id="X_qt" x="270.6" y="316" font-family="monospace" font-size="12" fill="#8A5900" text-anchor="middle" font-weight="700" opacity="0">q = 5</text>
+          <text id="X_pt" x="49" y="132" font-family="monospace" font-size="12" fill="#8A5900" text-anchor="end" font-weight="700" opacity="0">P = 10</text>
+          <text id="X_lab" x="120" y="60" font-family="monospace" font-size="11" fill="#8A5900" font-weight="700" opacity="0">price +$4 · output +2</text>
+        </svg>
+        <div class="reveal-hidden" id="hrFcalc">
+          <div class="calc" style="font-size:.92rem;line-height:1.6">
+            15 − 2q = q ⇒ <strong>q = 5</strong>, P = <strong>10</strong><br>
+            <span class="delta accent" style="font-size:1rem">Δq = +2 &nbsp; ΔP = +$4</span>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">Firm S · sticky ✗ cannot reprice</div>
+        <svg viewBox="0 0 420 340" role="img" aria-label="The sticky-price firm. Its price is locked at 6 dollars, so the horizontal line at 6 becomes its marginal revenue and it produces until marginal cost reaches 6: output rises from 3 to 6 units with no price change at all.">
+          <line x1="55" y1="25" x2="55" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="55" y1="300" x2="405" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="46" y="32" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="405" y="322" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">q</text>
+          <line x1="55" y1="145.3" x2="400" y2="282.8" stroke="#1F4E79" stroke-width="2.2" opacity=".45"/>
+          <text x="368" y="274" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">D</text>
+          <line x1="55" y1="300" x2="400" y2="162.5" stroke="#C0392B" stroke-width="2.6"/>
+          <text x="146" y="258" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700">MC</text>
+          <line x1="184.4" y1="196.9" x2="184.4" y2="300" stroke="#5A5F66" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <line x1="55" y1="196.9" x2="184.4" y2="196.9" stroke="#5A5F66" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <circle cx="184.4" cy="196.9" r="4.5" fill="#14243A"/>
+          <text x="184.4" y="316" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">start q = 3</text>
+          <text x="49" y="201" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">6</text>
+          <line id="S_d2" x1="55" y1="42.2" x2="400" y2="179.7" stroke="#1F4E79" stroke-width="2.2" stroke-dasharray="7 4" opacity="0"/>
+          <text id="S_d2t" x="318" y="140" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" opacity="0">D′</text>
+          <line id="S_pbar" x1="55" y1="196.9" x2="405" y2="196.9" stroke="#8A5900" stroke-width="3" opacity="0"/>
+          <text id="S_pbart" x="336" y="214" font-family="monospace" font-size="11" fill="#8A5900" font-weight="700" opacity="0">p̄ = 6 = MR</text>
+          <line id="S_vg2" x1="313.8" y1="196.9" x2="313.8" y2="300" stroke="#8A5900" stroke-width="1.3" stroke-dasharray="4 3" opacity="0"/>
+          <circle id="S_dot2" cx="313.8" cy="196.9" r="5" fill="#8A5900" opacity="0"/>
+          <text id="S_qt" x="313.8" y="316" font-family="monospace" font-size="12" fill="#8A5900" text-anchor="middle" font-weight="700" opacity="0">q = 6</text>
+          <text id="S_lab" x="120" y="60" font-family="monospace" font-size="11" fill="#8A5900" font-weight="700" opacity="0">price +$0 · output +3</text>
+        </svg>
+        <div class="reveal-hidden" id="hrScalc">
+          <div class="calc" style="font-size:.92rem;line-height:1.6">
+            6 = q ⇒ <strong>q = 6</strong>, P = <strong>6</strong><br>
+            <span class="delta red" style="font-size:1rem">Δq = +3 &nbsp; ΔP = $0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="btn" data-reveal-svg="stickyflex" data-reveal="hrFcalc,hrScalc" style="margin-top:1rem">Show the shift</button>
+  </section>
+
+  <!-- 19. PUNCHLINE: THE INVERSION -->
+  <section class="slide" data-section="Discussion 2 · Sticky &amp; Flexible">
+    <div class="eyebrow">The punchline · first inversion</div>
+    <h2>The firm that can't raise its price expands more</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:940px">
+      <div class="reveal">
+        <span class="cue">Why — the mechanism, not the result</span>
+        <p>When the sticky firm's price is frozen at $6, it stops facing a downward-sloping demand curve. Every extra unit it sells brings in exactly $6, so <strong>its fixed price becomes its marginal revenue</strong> — a flat line at 6 instead of a line falling twice as fast as demand.</p>
+        <p style="margin-top:.5rem">At its old quantity of 3, marginal cost is only 3 — so it is earning $6 a unit against $3 of cost, with demand now abundant at that bargain price. It keeps producing until MC finally reaches 6 at <strong>q = 6</strong>.</p>
+        <p style="margin-top:.5rem">The flexible firm never gets that far, because it does the thing the sticky firm can't: it raises its price to $10, choking off part of its own demand. It captures the shock as <em>margin</em>; the sticky firm has no choice but to capture it as <em>volume</em>.</p>
+      </div>
+      <div style="display:flex;gap:1.2rem;flex-wrap:wrap;margin-top:.5rem">
+        <div class="chain" style="background:#FBEEEC;border-color:#E3A9A1;color:#C0392B">sticky ✗ : &nbsp;AD↑ → p̄ = MR → q↑↑, p unchanged</div>
+        <div class="chain">flexible ✓ : &nbsp;AD↑ → MR′↑ → q↑, p↑↑</div>
+      </div>
+      <div class="predict" style="margin-top:.9rem">
+        <span class="cue">Hold on to this</span>
+        <p><strong>Stickiness makes the real economy MORE responsive, not less.</strong> The instinct that "stuck prices mean a stuck economy" is exactly backwards — stuck <em>prices</em> are precisely why <em>quantities</em> have to do the adjusting.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 20. Q9 QUICK CHECK -->
+  <section class="slide" data-section="Discussion 2 · Sticky &amp; Flexible">
+    <div class="eyebrow">Quick check</div>
+    <h2>Scale it up to the whole economy</h2>
+    <div class="titlerule"></div>
+    <p class="lede">An economy where a <strong>larger fraction</strong> of firms have sticky prices gets hit by an aggregate demand boom.</p>
+    <div class="poll" id="pollAgg">
+      <div class="poll-opts">
+        <button type="button" class="poll-opt" data-correct="false"><span class="num">a</span><span class="txt">A bigger <strong>price</strong> response — more firms are stuck, so the ones who can move must move further.</span></button>
+        <button type="button" class="poll-opt" data-correct="false"><span class="num">b</span><span class="txt">Neither — stickiness affects individual firms but averages out in the aggregate.</span></button>
+        <button type="button" class="poll-opt" data-correct="true"><span class="num">c</span><span class="txt">A bigger <strong>output</strong> response — more firms answer the boom with quantity instead of price.</span></button>
+      </div>
+      <p class="poll-hint">Question 9 · students commit on paper, then reveal</p>
+      <button class="btn" data-poll-reveal="pollAgg" data-reveal="hrAgg" style="margin-top:1rem">Reveal the answer</button>
+    </div>
+    <div class="reveal-hidden" id="hrAgg">
+      <div class="reveal">
+        <span class="cue">The aggregation logic</span>
+        <p>Add up the two firms we just computed. Each sticky firm contributes <strong>+3 output and +$0 price</strong>; each flexible firm contributes <strong>+2 output and +$4 price</strong>. Change the mix and you change the totals — mechanically, with no new economics. A room full of sticky firms delivers a boom that is almost all Y. Answer <strong>c</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 4 ══════════════ -->
+
+  <!-- 21. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 2 · SRAS">
+    <div class="eyebrow">Part 4 of 4</div>
+    <h1>Building the<br>SRAS Curve</h1>
+    <p class="lede">Take the mix of sticky and flexible firms, average their prices, and the aggregate supply curve falls out — slope and all.</p>
+    <div class="sectrail">Firm ✓ → LRAS ✓ → Sticky/Flexible ✓ → SRAS</div>
+    <div class="through">Throughline: one parameter — the share of firms that cannot reprice, s — decides whether an AD shock becomes output or prices.</div>
+  </section>
+
+  <!-- 22. READ THE EQUATIONS + Q10 -->
+  <section class="slide" data-section="Discussion 2 · SRAS">
+    <div class="eyebrow">Two kinds of price-setter</div>
+    <h2>Read the equations before you compute</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:74ch">Every firm has the same <strong>desired price</strong>. What differs is when they get to act on it.</p>
+    <div class="models" style="max-width:1000px">
+      <div class="model hi">
+        <span class="tag">Flexible firm · sets it today</span>
+        <div class="eq">p = P + a(Y − Ȳ)</div>
+      </div>
+      <div class="model hi" style="border-color:#C0392B;box-shadow:0 8px 30px rgba(192,57,43,.18)">
+        <span class="tag" style="color:#C0392B">Sticky firm · set it in advance</span>
+        <div class="eq">p = E<span style="font-size:.8em">P</span> + a(E<span style="font-size:.8em">Y</span> − Ȳ)</div>
+      </div>
+    </div>
+    <div class="two" style="max-width:1000px;margin-top:-.4rem">
+      <p class="footnote"><strong>P</strong> — costs and relative-price positioning. If everyone else's prices are 10% higher, so are your input costs, and charging the old price would make you 10% cheap.</p>
+      <p class="footnote"><strong>a(Y − Ȳ)</strong> — demand pressure. A booming economy bids up inputs and pushes you along your MC curve, so your desired markup rises with the output gap. Set <strong>a = 1</strong>, <strong>Ȳ = 1000</strong>, <strong>E<span style="font-size:.85em">P</span> = 100</strong>.</p>
+    </div>
+    <div class="prompt" style="margin-top:.8rem">
+      <span class="cue">Question 10 (write)</span>
+      <p>The textbook writes the sticky firm's rule simply as <strong>p = E<span style="font-size:.85em">P</span></strong>. Why does the second term drop out? What must a firm setting a price in advance believe about the output gap?</p>
+    </div>
+    <button class="btn" data-reveal="hrQ10" style="margin-top:.9rem">Reveal the answer</button>
+    <div class="reveal-hidden" id="hrQ10">
+      <div class="reveal">
+        <span class="cue">Reveal</span>
+        <p>Because a firm's best guess at the output gap is <strong>zero</strong>. It has no way to know today whether the shock coming next quarter will be a boom or a bust, so on average it expects the economy to sit at its natural level: <strong>E<span style="font-size:.85em">Y</span> = Ȳ</strong>, which kills the whole second term.</p>
+        <p style="margin-top:.5rem">That leaves <strong>p = E<span style="font-size:.85em">P</span></strong>. Note what this does <em>not</em> say: it doesn't say sticky firms are foolish or lazy. They're forecasting optimally. They're just forecasting — and the shock, by definition, is the part nobody forecast.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 23. DERIVATION -->
+  <section class="slide" data-section="Discussion 2 · SRAS">
+    <div class="eyebrow">Average the two groups</div>
+    <h2>The price level is a weighted average</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:940px">
+      <p class="lede">A share <strong>s</strong> of firms is stuck at E<span style="font-size:.85em">P</span>; the remaining <strong>(1 − s)</strong> set the desired price today. The aggregate price level is just the average of what everyone charges.</p>
+      <button class="btn" data-reveal="hrDeriv">Reveal the algebra</button>
+      <div class="reveal-hidden" id="hrDeriv">
+        <div class="model hi" style="box-shadow:none;max-width:760px">
+          <span class="tag">Line by line</span>
+          <div class="calc">
+            P = s·E<span style="font-size:.85em">P</span> + (1−s)[P + a(Y − Ȳ)]<br>
+            <span class="muted">expand the bracket</span><br>
+            P = s·E<span style="font-size:.85em">P</span> + (1−s)P + (1−s)a(Y − Ȳ)<br>
+            <span class="muted">collect the P terms on the left</span><br>
+            P − (1−s)P = s·E<span style="font-size:.85em">P</span> + (1−s)a(Y − Ȳ)<br>
+            <span class="muted">the left side is just sP</span><br>
+            sP = s·E<span style="font-size:.85em">P</span> + (1−s)a(Y − Ȳ)<br>
+            <span class="muted">divide everything by s</span><br>
+            <span class="lbl">P = E<span style="font-size:.85em">P</span> + a[(1−s)/<span class="red">s</span>](Y − Ȳ)</span>
+          </div>
+        </div>
+        <p class="footnote" style="margin-top:.5rem">That last division by <span class="red"><strong>s</strong></span> is the whole slide. The stickiness share ends up in the <strong>denominator</strong> of the slope.</p>
+      </div>
+      <button class="btn" data-reveal="hrDerivMean" style="margin-top:.9rem">What the two terms mean</button>
+      <div class="reveal-hidden" id="hrDerivMean">
+        <div class="reveal">
+          <span class="cue">Two implications</span>
+          <p><strong>1. Expected prices become actual prices.</strong> The E<span style="font-size:.85em">P</span> term says the price level inherits whatever firms expected it to be. Expectations aren't commentary on the economy — they are literally a component of it.</p>
+          <p style="margin-top:.5rem"><strong>2. How much flexible repricing moves the index depends on how many firms are doing it.</strong> Flexible firms want to raise price by a(Y − Ȳ). But they're only (1 − s) of the index, and they must move the <em>whole</em> average — so each has to move by 1/s times as much to shift P by a given amount. Few repricers, big individual moves; the slope is a(1−s)/s.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 24. Q11 PREDICT + LM CALLBACK -->
+  <section class="slide" data-section="Discussion 2 · SRAS">
+    <div class="eyebrow">Commit before computing · second inversion</div>
+    <h2>Predict</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:920px">
+      <div class="chain" style="font-size:1.15rem">SRAS: &nbsp;P = E<span style="font-size:.85em">P</span> + a[(1−s)/<span style="color:#C0392B">s</span>](Y − Ȳ)</div>
+      <div class="predict">
+        <span class="cue">Question 11 (predict)</span>
+        <p>Before touching a number: as <strong>s falls toward 0</strong> — fewer and fewer firms stuck, more and more free to reprice — does SRAS get <strong>flatter or steeper</strong>? Commit on paper.</p>
+      </div>
+      <p class="footnote">Answer Q11 from the algebra, not from a feeling about stickiness. Then check it against your Q7 answer — the two inversions are the same fact seen at two different scales.</p>
+      <button class="btn" data-reveal="hrLMcall">You have seen this shape before</button>
+      <div class="reveal-hidden" id="hrLMcall">
+        <div class="reveal">
+          <span class="cue">The callback</span>
+          <p>Last discussion we derived the LM curve and found its slope was <strong>e/d</strong>, with the interest-<em>sensitivity</em> d sitting in the <strong>denominator</strong>. The surprise there: the model where money demand responded <em>more</em> to r gave the <em>flatter</em> LM.</p>
+          <p style="margin-top:.5rem">Here the SRAS slope is <strong>a(1−s)/s</strong>, with the stickiness share <strong>s</strong> sitting in the <strong>denominator</strong>. <strong>Same shape, same surprise:</strong> as s falls, (1−s)/s <em>grows</em>, so <strong>fewer sticky firms give a steeper SRAS</strong>. A parameter in a denominator inverts the intuition you brought in — a habit worth building, because it will happen again.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 25. Q12 COMPUTE + THREE CURVES -->
+  <section class="slide" data-section="Discussion 2 · SRAS">
+    <div class="eyebrow">Question 12 · compute</div>
+    <h2>Four values of s, four curves</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:.85fr 1.15fr">
+      <div class="col" style="justify-content:flex-start;gap:.8rem">
+        <div class="prompt">
+          <span class="cue">Question 12 (write)</span>
+          <p>With a = 1, compute the SRAS slope <strong>(1−s)/s</strong> for s = <strong>1</strong>, <strong>2/3</strong>, <strong>1/3</strong>, and <strong>0</strong>. Then sketch all four through the point (Ȳ, E<span style="font-size:.85em">P</span>) = (1000, 100).</p>
+        </div>
+        <button class="btn" data-reveal-svg="three" data-reveal="hrThree">Reveal the slopes &amp; draw all four</button>
+        <div class="reveal-hidden" id="hrThree">
+          <div class="model hi" style="box-shadow:none">
+            <span class="tag">Slopes</span>
+            <div class="calc" style="font-size:.98rem;line-height:1.6">
+              s = 1 &nbsp;→ (1−1)/1 = <strong>0</strong><br>
+              s = 2/3 → (1/3)/(2/3) = <strong>0.5</strong><br>
+              s = 1/3 → (2/3)/(1/3) = <strong>2</strong><br>
+              s = 0 &nbsp;→ divide by zero = <strong>∞</strong>
+            </div>
+          </div>
+          <div class="reveal" style="margin-top:.8rem">
+            <span class="cue">The s = 0 curve is not a new curve</span>
+            <p style="font-size:1rem">When nobody is stuck, SRAS is <strong>vertical at Ȳ</strong> — precisely the LRAS we spent Part 2 building. <strong>The long run is not a different model; it is the case where everyone can reprice.</strong></p>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">SRAS curves through (Ȳ, E<span style="font-size:.85em">P</span>)</div>
+        <svg viewBox="0 0 460 350" style="max-height:52vh" role="img" aria-label="Four short-run aggregate supply curves, all passing through output 1000 and price level 100. As the sticky share s falls from 1 to 0 the curve rotates from horizontal, through gentle and steep, to fully vertical — and the vertical case coincides exactly with the long-run aggregate supply curve.">
+          <line x1="60" y1="25" x2="60" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="51" y="32" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="440" y="332" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">Y</text>
+          <text x="134" y="326" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">Ȳ = 1000</text>
+          <text x="54" y="258" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">100</text>
+          <circle cx="134" cy="254" r="5" fill="#14243A"/>
+          <line id="T_l1" x1="60" y1="254" x2="435" y2="254" stroke="#1F4E79" stroke-width="2.8" opacity="0"/>
+          <text id="T_t1" x="380" y="246" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700" opacity="0">s = 1 · slope 0</text>
+          <line id="T_l2" x1="60" y1="310" x2="430" y2="30" stroke="#1F4E79" stroke-width="2.8" stroke-dasharray="9 4" opacity="0"/>
+          <text id="T_t2" x="300" y="152" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700" opacity="0">s = 2/3 · slope 0.5</text>
+          <line id="T_l3" x1="115.5" y1="310" x2="208" y2="30" stroke="#C0392B" stroke-width="2.8" stroke-dasharray="4 4" opacity="0"/>
+          <text id="T_t3" x="216" y="46" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" opacity="0">s = 1/3 · slope 2</text>
+          <line id="T_l4" x1="134" y1="25" x2="134" y2="310" stroke="#14243A" stroke-width="3" opacity="0"/>
+          <text id="T_t4" x="140" y="20" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" opacity="0">s = 0 · vertical = LRAS</text>
+        </svg>
+        <p class="serif-note" style="font-size:.85rem;margin-top:.3rem">All four pivot around the same point, (Ȳ, E<span style="font-size:.85em">P</span>). Only the slope changes.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 26. ANIMATED SWEEP -->
+  <section class="slide" data-section="Discussion 2 · SRAS">
+    <div class="eyebrow">One shock, every possible economy</div>
+    <h2>Sweep s and watch the split move</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:none;font-size:1.05rem">Fix the shock — AD moves from <strong>Y = 1200 − 2P</strong> to <strong>Y = 1500 − 2P</strong> — then vary only <strong>s</strong>, from 1 (everyone stuck) to 0 (everyone free). The equilibrium slides along the <em>same</em> new AD curve.</p>
+    <div class="graphwrap" style="grid-template-columns:1.25fr .75fr;margin-top:.2rem">
+      <div class="panel">
+        <div class="ptitle">AD′ meets SRAS · the dot rides AD′ as s falls</div>
+        <svg viewBox="0 0 460 350" style="max-height:52vh" role="img" aria-label="One aggregate demand shock meeting a rotating short-run aggregate supply curve. As the sticky share s falls from 1 to 0, the SRAS curve pivots from horizontal to vertical around output 1000 and price 100, and the equilibrium slides up the new AD curve from output 1300 with prices unchanged at 100, to output 1000 with prices at 250. Each SRAS curve the sweep passes stays on screen in grey, with its own equilibrium marked and dashed guides to both axes: s equals 1 gives output 1300 and price 100, s equals two thirds gives 1150 and 175, s equals one third gives 1060 and 220. All of the shock becomes output when every firm is stuck, and all of it becomes prices when none are.">
+          <defs>
+            <clipPath id="plotclip"><rect x="60" y="25" width="378" height="285"/></clipPath>
+            <marker id="ah3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#8A5900"/></marker>
+          </defs>
+          <line x1="60" y1="25" x2="60" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="51" y="32" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="440" y="332" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">Y</text>
+          <line x1="134" y1="25" x2="134" y2="310" stroke="#9AA0A6" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <text x="134" y="326" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">Ȳ = 1000</text>
+          <line x1="60" y1="198" x2="208" y2="310" stroke="#8FAADC" stroke-width="2.2"/>
+          <text x="212" y="304" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">AD</text>
+          <line x1="60" y1="30" x2="430" y2="310" stroke="#1F4E79" stroke-width="2.8"/>
+          <text x="340" y="205" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">AD′</text>
+          <!-- Historical SRAS curves. Each is frozen in grey as the sweep passes
+               its value of s, with the equilibrium dot and dashed guides to both
+               axes, so the whole path of the split stays on screen. -->
+          <g id="gh1" opacity="0">
+            <line x1="60" y1="254" x2="435" y2="254" stroke="#9AA0A6" stroke-width="1.6" stroke-dasharray="7 4"/>
+            <line x1="60" y1="254" x2="356" y2="254" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="356" y1="254" x2="356" y2="310" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="3 3"/>
+            <circle cx="356" cy="254" r="4" fill="#9AA0A6"/>
+            <text x="404" y="247" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">s = 1</text>
+            <text x="54" y="258" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">100</text>
+            <text x="356" y="326" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">1300</text>
+          </g>
+          <g id="gh2" opacity="0">
+            <line x1="60" y1="310" x2="430" y2="30" stroke="#9AA0A6" stroke-width="1.6" stroke-dasharray="7 4"/>
+            <line x1="60" y1="170" x2="245" y2="170" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="245" y1="170" x2="245" y2="310" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="3 3"/>
+            <circle cx="245" cy="170" r="4" fill="#9AA0A6"/>
+            <text x="300" y="152" font-family="monospace" font-size="10" fill="#5A5F66">s = 2/3</text>
+            <text x="54" y="174" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">175</text>
+            <text x="245" y="326" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">1150</text>
+          </g>
+          <g id="gh3" opacity="0">
+            <line x1="115.5" y1="310" x2="208" y2="30" stroke="#9AA0A6" stroke-width="1.6" stroke-dasharray="7 4"/>
+            <line x1="60" y1="119.6" x2="178.4" y2="119.6" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="178.4" y1="119.6" x2="178.4" y2="310" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="3 3"/>
+            <circle cx="178.4" cy="119.6" r="4" fill="#9AA0A6"/>
+            <text x="214" y="42" font-family="monospace" font-size="10" fill="#5A5F66">s = 1/3</text>
+            <text x="54" y="123" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">220</text>
+            <text x="192" y="326" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">1060</text>
+          </g>
+          <g clip-path="url(#plotclip)">
+            <line id="A_sras" x1="60" y1="254" x2="435" y2="254" stroke="#C0392B" stroke-width="2.8"/>
+          </g>
+          <text id="A_srast" x="300" y="20" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="middle">SRAS (rotating)</text>
+          <circle cx="134" cy="254" r="4" fill="#5A5F66"/>
+          <text x="90" y="272" font-family="monospace" font-size="10" fill="#5A5F66">start</text>
+          <line id="A_hg" x1="60" y1="254" x2="356" y2="254" stroke="#8A5900" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <line id="A_vg" x1="356" y1="254" x2="356" y2="310" stroke="#8A5900" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <circle id="A_dot" cx="356" cy="254" r="6.5" fill="#8A5900"/>
+          <text id="A_pt" x="54" y="258" font-family="monospace" font-size="12" fill="#8A5900" text-anchor="end" font-weight="700">100</text>
+          <text id="A_yt" x="356" y="343" font-family="monospace" font-size="12" fill="#8A5900" text-anchor="middle" font-weight="700">1300</text>
+        </svg>
+      </div>
+      <div class="controls" style="gap:.9rem">
+        <button class="btn" id="playSweep">▶ Play the sweep</button>
+        <button class="btn ghost" id="resetSweep">Reset to s = 1</button>
+        <div class="readout" id="sweepread" aria-live="polite" aria-atomic="true">
+          s = <span class="big" id="sVal">1.00</span><br>
+          SRAS slope = <span class="accent" id="slopeVal">0.00</span> <span class="slope-word" id="slopeWord">(horizontal)</span><br>
+          Y = <span class="big" id="yVal">1300</span> &nbsp;·&nbsp; P = <span class="big" id="pVal">100</span><br>
+          <span class="muted" id="splitVal">all output, no inflation</span>
+        </div>
+        <p class="footnote">Waypoints to call out: s = 2/3 → (1150, 175); s = 1/3 → (1060, 220).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 27. SYNTHESIS -->
+  <section class="slide" data-section="Discussion 2 · SRAS">
+    <div class="eyebrow">Synthesis</div>
+    <h2>One shock, one parameter, every outcome</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:1000px">
+      <p class="lede">The same 300-unit demand shock produced four completely different economies. Nothing changed but <strong>s</strong>.</p>
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">s = 1 · all sticky</div>
+          <div class="cnote"><strong>Y: 1000 → 1300</strong><br>P: 100 → 100</div>
+          <div class="verdict mild">✓ all output, zero inflation</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">s = 1/3 · mostly flexible</div>
+          <div class="cnote"><strong>Y: 1000 → 1060</strong><br>P: 100 → 220</div>
+          <div class="verdict severe">✗ mostly inflation</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">s = 0 · all flexible</div>
+          <div class="cnote"><strong>Y: 1000 → 1000</strong><br>P: 100 → 250</div>
+          <div class="verdict severe">✗ all inflation, and SRAS <em>is</em> LRAS</div>
+        </div>
+      </div>
+      <button class="btn" data-reveal="hrSynth" style="margin-top:1rem">Check it against Part 3</button>
+      <div class="reveal-hidden" id="hrSynth">
+        <div class="reveal">
+          <span class="cue">The aggregate model reproduces the two firms exactly</span>
+          <p>Part 3's sticky firm raised output and left price alone — that is the <strong>s = 1</strong> column. Part 3's flexible firm raised price and moved output much less — push that to every firm and you get the <strong>s = 0</strong> column, where output doesn't move at all because there are no stuck relative prices left to exploit. The macro curve is nothing but those two firms, weighted.</p>
+          <p style="margin-top:.5rem"><strong>Throughline, restated:</strong> one parameter — the share of firms that cannot reprice, s — decides whether an AD shock becomes output or prices. The firm that <em>cannot</em> raise its price is the one that raises <em>output</em> more; stickiness makes the real economy <em>more</em> responsive, not less. And fewer sticky firms gives a <em>steeper</em> SRAS.</p>
+        </div>
+        <div class="chain" style="margin-top:.9rem;line-height:1.7">AD↑ → s high: Y↑↑, P→ &nbsp;|&nbsp; s low: Y→, P↑↑</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 28. Q13 DIAGNOSE -->
+  <section class="slide" data-section="Discussion 2 · SRAS">
+    <div class="eyebrow">Diagnose · silent poll</div>
+    <h2>Right conclusion, wrong machinery</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start">
+      <p class="lede" style="max-width:70ch">Three sentences about why SRAS slopes upward. All three end up pointing the curve the right way. One gets there through reasoning that isn't this model's. <strong>Write down its number.</strong></p>
+      <div class="diag" id="diagSRAS">
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">1</span><span class="s">When Y is above Ȳ, firms are producing more than normal, so they are further up their marginal cost curves.</span></button>
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">2</span><span class="s">SRAS slopes up because a higher price level makes production more profitable, so firms supply more.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">3</span><span class="s">The firms that are free to reprice pass those higher costs through, so the average price level rises along with Y.</span></button>
+      </div>
+      <span class="poll-hint">Question 13 · commit a number on paper before the reveal</span>
+      <button class="btn" data-diag-reveal="diagSRAS" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem">
+        <span class="cue">Sentence 2 · the flaw</span>
+        <p>That's the naive competitive supply curve, and it runs the <strong>causality backwards</strong>. It says P rises first and firms respond with output. In this model the arrow points the other way: <strong>Y↑ → marginal cost↑ → the flexible firms reprice → P↑</strong>. Higher output causes the higher price level, not the reverse.</p>
+        <p style="margin-top:.5rem">It also smuggles in price-<em>takers</em>. There is no "the price level makes it profitable" in a world of price-setters — each firm chooses its own price, and the price level is just the average of those choices.</p>
+        <p style="margin-top:.5rem"><strong>The test that exposes it:</strong> a student holding the naive version cannot explain why <strong>s</strong> matters at all. Their story has no place to put stickiness — so they can't tell you why the same shock is all output in one economy and all inflation in another. Sentence 2 gets the slope right and the entire discussion wrong.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 29. LONG-RUN EQUILIBRIUM + Q14 -->
+  <section class="slide" data-section="Discussion 2 · SRAS">
+    <div class="eyebrow">Where all three curves meet</div>
+    <h2>Long-run equilibrium</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:1fr 1fr">
+      <div class="panel">
+        <div class="ptitle">AD, SRAS and LRAS at a single point</div>
+        <svg viewBox="0 0 460 350" role="img" aria-label="Aggregate demand, an upward-sloping short-run aggregate supply curve, and the vertical long-run aggregate supply curve all intersecting at output 1000 and price level 100. Because the intersection sits on LRAS, the economy is at its natural level of output with no output gap.">
+          <line x1="60" y1="25" x2="60" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="51" y="32" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="440" y="332" font-family="monospace" font-size="13" fill="#5A5F66" text-anchor="end">Y</text>
+          <line x1="134" y1="25" x2="134" y2="310" stroke="#14243A" stroke-width="2.8"/>
+          <text x="140" y="20" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">LRAS</text>
+          <text x="134" y="326" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">Ȳ = 1000</text>
+          <line x1="60" y1="310" x2="430" y2="30" stroke="#C0392B" stroke-width="2.8"/>
+          <text x="356" y="60" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700">SRAS</text>
+          <line x1="60" y1="198" x2="208" y2="310" stroke="#1F4E79" stroke-width="2.8"/>
+          <text x="212" y="304" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">AD</text>
+          <line x1="60" y1="254" x2="134" y2="254" stroke="#5A5F66" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <circle cx="134" cy="254" r="6" fill="#8A5900"/>
+          <text x="54" y="258" font-family="monospace" font-size="12" fill="#14243A" text-anchor="end" font-weight="700">P₁ = 100</text>
+        </svg>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <p class="lede">Here the economy sits exactly on LRAS: <strong>Y = Ȳ</strong>, no output gap, and SRAS happens to pass through the same point.</p>
+        <div class="prompt">
+          <span class="cue">Question 14 (write)</span>
+          <p>SRAS is P = E<span style="font-size:.85em">P</span> + a[(1−s)/s](Y − Ȳ). At this intersection, <strong>what must be true of E<span style="font-size:.85em">P</span>?</strong> Show it from the equation, then say in words what it means about the people in this economy.</p>
+        </div>
+        <button class="btn" data-reveal="hrQ14">Reveal the answer</button>
+        <div class="reveal-hidden" id="hrQ14">
+          <div class="reveal">
+            <span class="cue">Reveal</span>
+            <p>Set Y = Ȳ. The whole second term is zero, so <strong>P = E<span style="font-size:.85em">P</span></strong>. SRAS crosses LRAS at exactly the price level firms <em>expected</em> — and nowhere else.</p>
+            <p style="margin-top:.5rem">In words: the sticky firms guessed right. Their locked-in price is the price they would have chosen anyway, so being stuck costs them nothing and creates no gap. <strong>Long-run equilibrium is not "enough time has passed" — it is "expectations turned out to be correct."</strong></p>
+            <p style="margin-top:.5rem">Which raises the obvious next question: when a shock proves those expectations <em>wrong</em>, what happens to E<span style="font-size:.85em">P</span>?</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 30. CLOSE -->
+  <section class="slide" data-section="Discussion 2 · SRAS">
+    <div class="eyebrow">Close · write two lines</div>
+    <h2>In your own words</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:880px">
+      <div class="prompt" style="font-size:1.18rem">
+        <span class="cue">Fill in the blanks</span>
+        <p>"SRAS is flatter when ________________________, because ________________________________."</p>
+        <p style="margin-top:.9rem">"An AD shock shows up as output rather than prices when ________________________________."</p>
+      </div>
+      <p class="footnote">If your two sentences don't both mention the same thing, one of them is wrong.</p>
+      <p class="serif-note" style="margin-top:1.2rem"><strong>Next time:</strong> we let E<span style="font-size:.85em">P</span> move. Once firms notice their forecast was wrong, they update it — SRAS shifts, and we watch the economy walk itself back to Ȳ one repricing round at a time.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="chrome">
+  <span class="course" id="sectionLabel">ECON 105B · Discussion 2</span>
+  <span class="navhint">
+    <button id="prevBtn" aria-label="Previous slide">← prev</button>
+    <span aria-live="polite" aria-atomic="true">Slide <span id="cur">1</span> of <span id="tot">30</span></span>
+    <button id="nextBtn" aria-label="Next slide">next →</button>
+  </span>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  const prog=document.getElementById('prog');
+  const cur=document.getElementById('cur');
+  document.getElementById('tot').textContent=slides.length;
+
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    prog.style.width=((i)/(slides.length-1)*100)+'%';
+    cur.textContent=i+1;
+    const sec=slides[i].getAttribute('data-section');
+    const lbl=document.getElementById('sectionLabel');
+    if(lbl) lbl.textContent = sec ? ('ECON 105B · '+sec) : 'ECON 105B · Discussion';
+  }
+  function next(){show(i+1)}
+  function prev(){show(i-1)}
+
+  document.getElementById('nextBtn').onclick=next;
+  document.getElementById('prevBtn').onclick=prev;
+  window.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();next()}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}
+    else if(e.key.toLowerCase()==='f'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  /* ---- generic click-to-reveal: button[data-reveal="targetId"] ----
+     Accepts a comma-separated list so one button can uncover several blocks
+     (e.g. the matching calculation under each panel of a two-panel slide). */
+  document.querySelectorAll('[data-reveal]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      btn.getAttribute('data-reveal').split(',').forEach(id=>{
+        const t=document.getElementById(id.trim());
+        if(t){t.classList.add('shown');}
+      });
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- graph shift reveals: button[data-reveal-svg="key"] ---- */
+  const svgShifts={
+    /* slide 10 — AD shift on the macro panel + the firm expanding */
+    lras:['L_ad2','L_ad2t','L_arrow','L_hg2','L_dot2','L_p2t','L_note',
+          'F_d2','F_d2t','F_mr2','F_mr2t','F_vg2','F_hg2','F_dot2','F_q2t','F_p2t'],
+    /* slide 12 — marginal cost catches up, firm returns to q = 3 */
+    factor:['G_mc2','G_mc2t','G_arrow','G_vg3','G_hg3','G_dot3','G_q3t','G_p3t'],
+    /* slide 19 — both firms at once */
+    stickyflex:['X_d2','X_d2t','X_mr2','X_mr2t','X_vg2','X_hg2','X_dot2','X_qt','X_pt','X_lab',
+                'S_d2','S_d2t','S_pbar','S_pbart','S_vg2','S_dot2','S_qt','S_lab'],
+    /* slide 26 — the four SRAS curves */
+    three:['T_l1','T_t1','T_l2','T_t2','T_l3','T_t3','T_l4','T_t4']
+  };
+  document.querySelectorAll('[data-reveal-svg]').forEach(btn=>{
+    const key=btn.getAttribute('data-reveal-svg');
+    btn.addEventListener('click',()=>{
+      (svgShifts[key]||[]).forEach(id=>{const el=document.getElementById(id); if(el) el.setAttribute('opacity',1);});
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- quick-check polls: button[data-poll-reveal="pollId"] ---- */
+  document.querySelectorAll('[data-poll-reveal]').forEach(btn=>{
+    const group=document.getElementById(btn.getAttribute('data-poll-reveal'));
+    if(!group) return;
+    const opts=[...group.querySelectorAll('.poll-opt')];
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    btn.addEventListener('click',()=>{
+      group.classList.add('revealed');
+      opts.forEach(o=>{ if(o.dataset.correct==='true') o.classList.add('correct'); });
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- diagnose (flawed-argument) groups: button[data-diag-reveal="groupId"] ---- */
+  document.querySelectorAll('.diag').forEach(group=>{
+    const opts=[...group.querySelectorAll('.diag-opt')];
+    const revealBtn=group.parentElement.querySelector('[data-diag-reveal]');
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    if(revealBtn){
+      revealBtn.addEventListener('click',()=>{
+        group.classList.add('revealed');
+        opts.forEach(o=>{if(o.dataset.bad==='true')o.classList.add('bad');});
+        revealBtn.style.display='none';
+        const note=group.parentElement.querySelector('[data-diag-note]');
+        if(note) note.style.display='block';
+      });
+    }
+  });
+
+  /* ---- condition cards: button[data-cond="bodyId"] ---- */
+  document.querySelectorAll('[data-cond]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const body=document.getElementById(btn.getAttribute('data-cond'));
+      if(body){body.classList.add('shown');}
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- Slide 27: sweep s from 1 to 0 along a fixed AD′ ----
+     Geometry is computed from the model, never hardcoded as pixels:
+       SRAS  P = 100 + [(1−s)/s](Y − 1000)      pivots on (1000, 100)
+       AD′   Y = 1500 − 2P   ⇒   P = 750 − 0.5Y
+     Solving the two together gives, in closed form,
+       Y(s) = (1000 − 350s)/(1 − 0.5s)   and   P(s) = 750 − 0.5·Y(s)
+     which is well behaved at both s = 1 (Y=1300, P=100) and s = 0 (Y=1000, P=250). */
+  const playSweep=document.getElementById('playSweep');
+  if(playSweep){
+    const sras=document.getElementById('A_sras'),dot=document.getElementById('A_dot'),
+      hg=document.getElementById('A_hg'),vg=document.getElementById('A_vg'),
+      pt=document.getElementById('A_pt'),yt=document.getElementById('A_yt'),
+      sVal=document.getElementById('sVal'),slopeVal=document.getElementById('slopeVal'),
+      slopeWord=document.getElementById('slopeWord'),yValEl=document.getElementById('yVal'),
+      pValEl=document.getElementById('pVal'),splitVal=document.getElementById('splitVal'),
+      resetSweep=document.getElementById('resetSweep'),
+      gh1=document.getElementById('gh1'),gh2=document.getElementById('gh2'),
+      gh3=document.getElementById('gh3');
+    // data → pixel maps for this plot (Y: 900–1400 over x 60–430, P: 50–300 over y 310–30)
+    const xOf=Y=>60+(Y-900)*0.74;
+    const yOf=P=>310-(P-50)*1.12;
+    const PIVX=xOf(1000), PIVY=yOf(100);   // (Ȳ, EP) — every SRAS passes through here
+
+    function place(s){
+      const Y=(1000-350*s)/(1-0.5*s);
+      const P=750-0.5*Y;
+      const x=xOf(Y), y=yOf(P);
+      // SRAS direction: data slope is (1−s)/s, so the direction vector (s, 1−s)
+      // stays finite at both ends — horizontal at s=1, vertical at s=0.
+      let dx=s*0.74, dy=-(1-s)*1.12;
+      const len=Math.hypot(dx,dy)||1;
+      dx=dx/len*600; dy=dy/len*600;
+      sras.setAttribute('x1',PIVX-dx); sras.setAttribute('y1',PIVY-dy);
+      sras.setAttribute('x2',PIVX+dx); sras.setAttribute('y2',PIVY+dy);
+      dot.setAttribute('cx',x); dot.setAttribute('cy',y);
+      hg.setAttribute('x2',x); hg.setAttribute('y1',y); hg.setAttribute('y2',y);
+      vg.setAttribute('x1',x); vg.setAttribute('x2',x); vg.setAttribute('y1',y);
+      pt.setAttribute('y',y+4); pt.textContent=Math.round(P);
+      yt.setAttribute('x',x);   yt.textContent=Math.round(Y);
+      // readout (aria-live) — always paired with a word, never colour alone
+      const slope=s>0?(1-s)/s:Infinity;
+      sVal.textContent=s.toFixed(2);
+      slopeVal.textContent=isFinite(slope)?slope.toFixed(2):'∞';
+      slopeWord.textContent = s>0.95?'(horizontal)' : s>0.5?'(gentle)' : s>0.08?'(steep)' : '(vertical)';
+      yValEl.textContent=Math.round(Y);
+      pValEl.textContent=Math.round(P);
+      // freeze each historical SRAS once the sweep has passed its value of s
+      gh1.setAttribute('opacity', s<0.95  ? 1 : 0);
+      gh2.setAttribute('opacity', s<2/3   ? 1 : 0);
+      gh3.setAttribute('opacity', s<1/3   ? 1 : 0);
+      const share=Math.round((Y-1000)/300*100);
+      splitVal.textContent = share>95 ? 'all output, no inflation'
+        : share<5 ? 'all inflation, no output — this is LRAS'
+        : share+'% of the shock is output, '+(100-share)+'% is prices';
+    }
+
+    let raf;
+    function reset(){cancelAnimationFrame(raf);place(1);}
+    function finish(){place(0);}
+    const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+    function play(){
+      cancelAnimationFrame(raf);
+      place(1);
+      if(reduced){finish();return;}   // skip the sweep for reduced-motion users
+      const dur=2600,t0=performance.now();
+      function step(now){
+        const p=Math.min(1,(now-t0)/dur);
+        const e=p<1?(0.5-0.5*Math.cos(Math.PI*p)):1;
+        place(1-e);
+        if(p<1) raf=requestAnimationFrame(step);
+      }
+      raf=requestAnimationFrame(step);
+    }
+    playSweep.onclick=play;
+    resetSweep.onclick=reset;
+    reset();
+  }
+
+  show(0);
+})();
+</script>
+</body>
+</html>

@@ -794,6 +794,129 @@ alone. Before making a formal compliance claim, also:
 
 ---
 
+# CLAUDE.md — ECON 105B Discussion Section Decks
+
+## What these are
+
+Self-contained HTML slide decks for the discussion section of ECON 105B
+(second-quarter intermediate macro theory). The lecture is separate; the
+discussion section is run by a TA and exists to reinforce **critical thinking
+and qualitative analysis**, not primarily problem-solving. Each deck drives one
+discussion (~50–75 min) and is a single `.html` file with inline CSS and JS —
+no build step, no external dependencies, no network calls. It must open by
+double-click and run offline, and it's hosted as a static page on GitHub Pages.
+
+## The pedagogical spine (do not deviate)
+
+Every deck is built around **write-first, reveal-second**. The student commits
+reasoning on their own paper before any answer appears. The TA drives; the slides
+never auto-advance an answer. This is the whole point — preserve it in every unit.
+
+The recurring slide *types*, which should reappear in each new deck:
+
+- **Section dividers** — dark navy full-bleed slide opening each part, with a
+  "Part N of M" eyebrow and a breadcrumb trail (`LM ✓ → IS → …`) showing progress.
+- **Predict slides** (`.predict`, red) — ask students to commit an intuition
+  *before* computing. Always phrased as a numbered Question.
+- **Prompt slides** (`.prompt`, blue) — a "write" task, numbered Question.
+- **Reveal blocks** (`.reveal`, gold) — the answer, uncovered by a button press
+  after students have committed. Never visible on load.
+- **Diagnose slides** — a silent poll: 2–3 numbered sentences, one subtly flawed.
+  Students pick a number on paper/hands, then the TA reveals which is wrong and
+  *why the reasoning* fails (not just that the conclusion is wrong). Prefer flaws
+  that are "right answer, wrong reasoning" — those build the most transferable skill.
+- **Quick-check polls** — multiple choice with a revealable correct option.
+- **Animated graph slides** — a "Play the shock / rate cut" button sweeps a
+  parameter and rides dots along fixed curves; a "Reset" returns to start.
+- **Static shift diagrams** — a "Show the shift" button reveals the second curve,
+  new equilibrium, guides, and axis arrows all at once.
+- **Close slide** — a fill-in-the-blank sentence (`"____ because ____"`) that
+  forces students to state the unit's core relationship in their own words.
+
+Number the Questions continuously through the deck (Q1, Q2, …). Keep a running
+"throughline" the TA can point back to — state it on the divider trail and restate
+it in a synthesis slide near the end.
+
+## TA-facing conventions
+
+- Include a "For the TA" slide near the front explaining how to run it: silent
+  writing time before each reveal, which buttons do what, that diagnose slides are
+  silent polls. (The recovered deck's TA slide is the reference template.)
+- Buttons are the TA's cue system. Everything consequential (answers, chains,
+  shifts, animations) sits behind a button so nothing is spoiled early.
+- Keep answer text pitched at *reasoning*, not just the result. Reveal blocks
+  should say why, name the mechanism, and connect back to the throughline.
+
+## Visual system — reuse verbatim
+
+Use these exact CSS custom properties. Do not introduce new colors without reason.
+
+    --ink:#14243A; --accent:#1F4E79; --accent-soft:#8FAADC;
+    --paper:#F6F4EE; --paper-line:#E4E0D5;
+    --gold:#8A5900; --gold-soft:#FBF1DC;
+    --red:#C0392B; --grey:#5A5F66; --chalk:#FbFaF7;
+    --mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+
+- Body type is Georgia/serif; labels, equations, chains, and code use the mono stack.
+- Color meaning is fixed: **blue = accent/prompts/"model A/flat"**, **red =
+  "model B/steep"/the flaw/danger**, **gold = reveals**, **navy = dividers**.
+- Reusable component classes already defined: `.slide`, `.divider`, `.eyebrow`,
+  `.titlerule`, `.lede`, `.model`/`.models` (equation cards), `.prompt` `.reveal`
+  `.predict` (colored callout boxes), `.cue` (the small uppercase label inside a
+  box), `.chain` (mono causal-chain pill), `.poll`/`.poll-opt`, `.diag`/`.diag-opt`,
+  `.condrow`/`.condcard` (the 3-across condition cards), `.readout`, `.btn`
+  (+`.btn.ghost`). Reuse these rather than inventing new ones.
+- Causal chains render as mono pills with arrows, e.g.
+  `G↑ → PE↑ → U.I.↓ → Y↑ → r↑ → I↓`. Keep this notation across units.
+
+## Graphs
+
+- Hand-authored inline SVG, `viewBox` coordinates, no plotting library.
+- Every graph needs a descriptive `role="img"` + `aria-label` that states what the
+  diagram *shows and concludes*, in plain language.
+- Animations: a `place(param)` function computes geometry from the actual
+  equations and moves dots/guides; a cosine ease (`0.5-0.5*cos(π·p)`) over ~2600ms;
+  elements that only make sense at the end start at `opacity:0` and fade in.
+- Always honor `prefers-reduced-motion`: skip the sweep and jump straight to the
+  finished state (there's a `reduced` branch in every animation — keep it).
+- Keep numbers pedagogically clean and consistent (the deck uses M/P=1000,
+  multiplier m=2.5, the 10×-sensitivity A vs B contrast). Reuse round, legible
+  values so the arithmetic stays doable in a student's head.
+
+## Navigation & structure (keep as-is)
+
+- One `<section class="slide">` per slide inside `<div class="deck">`.
+- Arrow keys / PageUp-Down / space advance; `F` toggles fullscreen; on-screen
+  prev/next and a slide counter in the fixed `.chrome` bar; a top progress fill.
+- Each slide carries `data-section="Discussion N · <Part>"`; the footer label reads
+  from it. **Update the slide counter denominator and `data-section` values for the
+  new unit** — the recovered file hardcodes "Discussion 1"; a new deck should say
+  "Discussion 2", etc.
+- The JS uses event delegation on data-attributes (`data-reveal`,
+  `data-reveal-svg`, `data-poll-reveal`, `data-diag-reveal`, `data-cond`). Add new
+  interactive elements by using these same hooks rather than writing bespoke handlers.
+
+## Accessibility (non-negotiable, WCAG 2.1 AA)
+
+- Visible keyboard focus on all interactive elements (`:focus-visible` outline).
+- Live regions (`aria-live="polite"`) on animation readouts and the slide counter.
+- Never encode meaning by color alone — pair it with a label, symbol, or line style
+  (the deck uses ✓/✗, solid/dashed, and text labels alongside color).
+- rem-based font sizing; content scrolls rather than clips if a slide overflows.
+
+## When building a new unit
+
+1. Copy the structural skeleton and CSS from the existing deck unchanged.
+2. Swap in the new unit's models, equations, chains, and graphs — keeping the
+    slide-type sequence (divider → read equations → predict → compute → animate →
+    punchline → quick-check → diagnose → close).
+3. Renumber Questions and update `data-section`, the "Part N of M" eyebrows, the
+    breadcrumb trail, and the slide-count denominator.
+4. Preserve the write-first/reveal-second discipline and the reasoning-focused
+    answer text. Content changes; the pedagogy and the look do not.
+
+
+
 ## Standard Header / Footer CSS
 
 ```css
