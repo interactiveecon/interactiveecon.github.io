@@ -1,0 +1,1935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECON 105B · Expectations, Credibility, and the Cost of Disinflation</title>
+<style>
+  :root{
+    --ink:#14243A;          /* near-navy ink */
+    --accent:#1F4E79;       /* deep blue (from worksheets) */
+    --accent-soft:#8FAADC;
+    --paper:#F6F4EE;        /* warm chalk-paper */
+    --paper-line:#E4E0D5;
+    --gold:#8A5900;
+    --gold-soft:#FBF1DC;
+    --red:#C0392B;
+    --grey:#5A5F66;
+    --chalk:#FbFaF7;
+    --shadow:0 8px 30px rgba(20,36,58,.10);
+    --mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Georgia','Iowan Old Style',serif;
+    color:var(--ink);
+    background:var(--paper);
+    overflow:hidden;
+  }
+  /* ---------- deck scaffold ---------- */
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;
+    padding:clamp(1.25rem,4vw,4.5rem) clamp(1.5rem,6vw,6rem);
+    /* extra bottom room so content never hides behind the fixed nav bar (~46px) */
+    padding-bottom:calc(46px + clamp(1rem,3vw,2rem));
+    /* if a slide is taller than the screen, scroll it instead of clipping/overlapping */
+    overflow-y:auto;overflow-x:hidden;
+    scroll-padding-bottom:46px;
+    opacity:0;
+    transition:opacity .38s ease;
+  }
+  .slide.active{display:flex;opacity:1;animation:rise .45s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide.active{animation:none}
+    .slide{transition:none}
+    *{transition-duration:.001ms !important;animation-duration:.001ms !important}
+  }
+  /* visible keyboard focus (WCAG 2.4.7) */
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+    outline:3px solid var(--accent);outline-offset:3px;border-radius:6px;
+  }
+  :focus:not(:focus-visible){outline:none}
+  /* ---------- typography ---------- */
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--grey);margin-bottom:1.1rem;font-weight:600;
+  }
+  h1{font-size:clamp(2.4rem,5.5vw,4.4rem);line-height:1.02;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3.2vw,2.4rem);line-height:1.1;font-weight:700;letter-spacing:-.01em;margin-bottom:.4rem}
+  .lede{font-size:clamp(1.05rem,1.7vw,1.35rem);line-height:1.5;color:var(--ink);max-width:52ch}
+  .muted{color:var(--grey)}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  .serif-note{font-style:italic;color:var(--grey);font-size:1rem;line-height:1.5}
+  strong{font-weight:700}
+  .accent{color:var(--accent)}
+  .red{color:var(--red)}
+  .gold{color:var(--gold)}
+  /* title rule */
+  h2 + .titlerule{height:2px;background:linear-gradient(90deg,var(--accent-soft),transparent);
+    width:min(100%,640px);margin:.2rem 0 1.4rem}
+  /* ---------- model cards ---------- */
+  .models{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin:1.4rem 0;max-width:900px}
+  @media (max-width:900px){.models{grid-template-columns:1fr}}
+  .model{
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;
+    padding:1.4rem 1.6rem;box-shadow:var(--shadow);position:relative;
+  }
+  .model .tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:.6rem;display:block}
+  .model .eq{font-family:var(--mono);font-size:1.35rem;color:var(--ink)}
+  .model .eq .coef{color:var(--red);font-weight:700}
+  .model.dim{opacity:.4;filter:saturate(.4)}
+  .model.hi{border-color:var(--accent);box-shadow:0 8px 30px rgba(31,78,121,.22)}
+  /* ---------- boxes ---------- */
+  .prompt,.reveal,.predict{
+    border-radius:10px;padding:1.05rem 1.3rem;max-width:820px;line-height:1.5;
+    font-family:'Georgia',serif;font-size:1.08rem;overflow-wrap:break-word;
+  }
+  .prompt{background:#EEF3FA;border-left:4px solid var(--accent)}
+  .reveal{background:var(--gold-soft);border-left:4px solid var(--gold)}
+  .cue{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;display:block;margin-bottom:.4rem}
+  .prompt .cue{color:var(--accent)}
+  .reveal .cue{color:var(--gold)}
+  .predict .cue{color:var(--red)}
+  .predict{background:#FBEEEC;border-left:4px solid var(--red)}
+  .prompt p,.reveal p,.predict p{margin:0;line-height:1.5}
+  .prompt .cue + p,.reveal .cue + p,.predict .cue + p{margin-top:.15rem}
+  /* chain / mono line */
+  .chain{
+    font-family:var(--mono);background:#EDF1F8;border:1px solid var(--accent-soft);
+    border-radius:8px;padding:.7rem 1rem;font-size:1.05rem;color:var(--accent);
+    display:inline-block;margin-top:.4rem
+  }
+  /* ---------- reveal-on-click ---------- */
+  .hidden-reveal{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .hidden-reveal.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* ---------- interactive graph panel ---------- */
+  .graphwrap{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start;margin-top:.6rem;flex:1 0 auto}
+  /* Inline per-slide column ratios must still collapse on narrow screens
+     and on 320px reflow (WCAG 1.4.10), hence !important. */
+  @media (max-width:900px){.graphwrap{grid-template-columns:1fr!important}}
+  .panel{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;padding:1.2rem;box-shadow:var(--shadow)}
+  .panel .ptitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-bottom:.3rem;font-weight:700}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  /* On short displays (720p projectors) cap graph height so the graph-heavy
+     slides still fit on one screen. preserveAspectRatio keeps the drawing
+     undistorted — it just scales down and centres inside the panel. */
+  @media (max-height:820px){ .panel svg{max-height:44vh} }
+  @media (min-height:821px){ .panel svg{max-height:52vh} }
+  .controls{display:flex;flex-direction:column;gap:1.3rem}
+  .readout{font-family:var(--mono);font-size:.92rem;line-height:1.7;color:var(--ink);background:#EDF1F8;border-radius:8px;padding:.8rem 1rem}
+  .readout .big{font-size:1.25rem;color:var(--accent);font-weight:700}
+  .btn{
+    font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.7rem 1.2rem;cursor:pointer;
+    box-shadow:0 3px 10px rgba(31,78,121,.3);transition:transform .1s,background .2s;align-self:flex-start
+  }
+  .btn:hover{background:#173a5c;transform:translateY(-1px)}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
+  .btn.ghost:hover{background:#EEF3FA}
+  /* ---------- poll ---------- */
+  .poll-opts{display:flex;flex-direction:column;gap:.8rem;max-width:760px;margin-top:1.1rem}
+  .poll-opt{
+    display:flex;align-items:stretch;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;
+    cursor:pointer;background:var(--chalk);transition:border-color .2s,transform .08s;position:relative;
+    width:100%;text-align:left;font:inherit;color:inherit;padding:0
+  }
+  .poll-opt:hover{border-color:var(--accent-soft)}
+  .poll-opt:active{transform:scale(.995)}
+  .poll-opt .num{background:var(--accent);color:#fff;font-family:var(--mono);font-weight:700;
+    display:flex;align-items:center;justify-content:center;padding:0 1.1rem;font-size:1.1rem;z-index:2}
+  .poll-opt .txt{padding:.9rem 1.1rem;line-height:1.4;z-index:2;font-size:1.02rem;font-family:'Georgia',serif}
+  .poll.revealed .poll-opt{opacity:.5;transition:opacity .4s}
+  .poll.revealed .poll-opt.correct{opacity:1;border-color:var(--gold);background:var(--gold-soft)}
+  .poll-opt.correct .num{background:var(--gold)}
+  .poll-opt.correct .txt::after{content:" ✓ correct";color:var(--gold);font-family:var(--mono);font-weight:700;font-size:.82rem}
+  .poll-hint{font-family:var(--mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-top:.9rem;font-weight:600}
+  /* ---------- footer / nav ---------- */
+  .chrome{position:fixed;bottom:0;left:0;right:0;height:46px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 1.4rem;font-family:var(--mono);font-size:.72rem;
+    letter-spacing:.08em;color:var(--grey);pointer-events:none;z-index:50}
+  .chrome .course{text-transform:uppercase}
+  .progress-track{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:60}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-soft));width:0;transition:width .35s ease}
+  .navhint{display:flex;gap:1.2rem;align-items:center;pointer-events:auto}
+  .navhint button{pointer-events:auto;background:none;border:none;color:var(--grey);cursor:pointer;font-family:var(--mono);font-size:.9rem;padding:.2rem .5rem;border-radius:5px}
+  .navhint button:hover{color:var(--accent);background:rgba(31,78,121,.08)}
+  .kbd{font-family:var(--mono);font-size:.66rem;border:1px solid var(--paper-line);border-radius:4px;padding:.1rem .35rem;color:var(--grey)}
+  /* content column helper */
+  .col{display:flex;flex-direction:column;gap:1.1rem;flex:1 0 auto;justify-content:center}
+  .grow{flex:1 0 auto}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+  @media (max-width:900px){.two{grid-template-columns:1fr!important}}
+  .calc{font-family:var(--mono);font-size:1.05rem;line-height:1.8}
+  .calc .lbl{color:var(--accent);font-weight:700}
+  .delta{font-size:1.15rem;font-weight:700}
+  .footnote{font-size:.92rem;color:var(--grey);font-style:italic}
+  /* title slide special */
+  .title-slide{justify-content:safe center}
+  .title-slide h1{margin:.6rem 0}
+  .signature{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:2rem}
+  /* ---------- section divider ---------- */
+  .divider{justify-content:safe center;background:linear-gradient(135deg,#1B3B5C,#14243A)}
+  .divider *{color:#F6F4EE}
+  .divider .eyebrow{color:#8FAADC}
+  .divider h1{font-size:clamp(2.2rem,5vw,4rem);color:#fff}
+  .divider .lede{color:#D6DEE9;max-width:46ch}
+  .divider .sectrail{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#8FAADC;margin-top:1.6rem}
+  .divider .through{font-family:var(--mono);font-size:.8rem;line-height:1.6;color:#D6DEE9;
+    border-left:3px solid #8FAADC;padding-left:.9rem;margin-top:1.4rem;max-width:56ch}
+  /* ---------- generic click-reveal ---------- */
+  .reveal-hidden{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .reveal-hidden.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* condition cards (3-across) */
+  .condrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem}
+  @media (max-width:900px){.condrow{grid-template-columns:1fr}}
+  .condcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.5rem}
+  .condcard .ctitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .condcard .cbtn{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:.55rem .8rem;cursor:pointer}
+  .condcard .cbtn:hover{background:#173a5c}
+  .condcard .cbody{opacity:0;max-height:0;overflow:hidden;transition:opacity .35s,max-height .45s}
+  .condcard .cbody.shown{opacity:1;max-height:none;overflow:visible;margin-top:.3rem}
+  .condcard .cnote{font-size:.9rem;line-height:1.45;color:var(--ink)}
+  .condcard .verdict{font-family:var(--mono);font-size:.78rem;font-weight:700;padding:.2rem 0}
+  .verdict.severe{color:var(--red)}
+  .verdict.mild{color:var(--accent)}
+  /* diagnose (numbered flawed-argument) list */
+  .diag{display:flex;flex-direction:column;gap:.7rem;max-width:860px;margin:1rem 0}
+  .diag-opt{display:flex;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;background:var(--chalk);width:100%;text-align:left;font:inherit;color:inherit;padding:0;cursor:pointer;transition:border-color .2s}
+  .diag-opt:hover{border-color:var(--accent-soft)}
+  .diag-opt .n{background:var(--grey);color:#fff;font-family:var(--mono);font-weight:700;display:flex;align-items:center;padding:0 1rem;font-size:1.05rem}
+  .diag-opt .s{padding:.85rem 1.1rem;line-height:1.45;font-family:'Georgia',serif;font-size:1.02rem}
+  .diag.revealed .diag-opt{opacity:.5}
+  .diag.revealed .diag-opt.bad{opacity:1;border-color:var(--red);background:#FBEEEC}
+  .diag-opt.bad .n{background:var(--red)}
+  .diag.revealed .diag-opt.bad .s::after{content:" ✗ the flaw";color:var(--red);font-family:var(--mono);font-weight:700;font-size:.8rem}
+  /* TA run-sheet table */
+  .runsheet{display:grid;grid-template-columns:auto 1fr;gap:.35rem 1.1rem;font-family:var(--mono);font-size:.86rem;line-height:1.5;margin-top:.4rem}
+  .runsheet .rk{color:var(--accent);font-weight:700;white-space:nowrap}
+  /* three-case comparison table */
+  .tablewrap{width:100%;max-width:1000px;overflow-x:auto}
+  .cases{width:100%;min-width:760px;border-collapse:collapse;font-family:var(--mono);font-size:1rem;margin-top:.6rem}
+  .cases th,.cases td{border:1px solid var(--paper-line);padding:.6rem .8rem;text-align:left}
+  .cases th{background:#EDF1F8;color:var(--accent);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase}
+  .cases td.hi{background:var(--gold-soft);font-weight:700}
+</style>
+</head>
+<body>
+<div class="progress-track"><div class="progress-fill" id="prog"></div></div>
+<div class="deck" id="deck">
+
+  <!-- ══════════════ FRONT MATTER ══════════════ -->
+
+  <!-- 1. TITLE -->
+  <section class="slide active title-slide" data-section="Discussion 5 · Opening">
+    <div class="eyebrow">ECON 105B · Intermediate Macro · Discussion 5</div>
+    <h1>Expectations, Credibility,<br><span class="accent">and the Cost of Disinflation</span></h1>
+    <p class="lede" style="margin-top:1rem">The Fed wants inflation down from 5% to 2%. Every model in this discussion gets it there. What changes is the bill — and who decides what the bill is.</p>
+    <p class="serif-note" style="margin-top:1.6rem">Work on your own paper. Write before each reveal — the point is your reasoning, not a clean final answer.</p>
+    <div class="signature">SRPC → Adaptive → Rational → Credibility → Anchoring</div>
+  </section>
+
+  <!-- 2. FOR THE TA -->
+  <section class="slide" data-section="Discussion 5 · Opening">
+    <div class="eyebrow">For the TA</div>
+    <h2>How to run this deck</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1100px">
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <p class="lede" style="max-width:56ch"><strong>Write first, reveal second.</strong> Every question gets <strong>2–3 minutes of silent writing</strong> before you press a button. Nothing on this deck reveals itself — the buttons are your cue system, and no answer is on screen when a slide loads.</p>
+        <p class="lede" style="max-width:56ch"><strong>Do not fill the silence.</strong> The pause is the lesson. If nobody writes for thirty seconds, wait anyway.</p>
+        <p class="lede" style="max-width:56ch"><strong>Diagnose slides are anonymous polls.</strong> Three numbered statements, one subtly flawed. Fingers on the chest, not hands in the air — then reveal. The point is always <em>why the reasoning fails</em>, not that the sentence is wrong.</p>
+        <div class="prompt">
+          <span class="cue">The throughline · say it out loud at each divider</span>
+          <p>Nothing in this unit changes <em>where</em> the economy ends up. Expectations decide only <strong>how much unemployment you pay to get there</strong> — and credibility is the dial.</p>
+        </div>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="predict">
+          <span class="cue">Protect this payoff</span>
+          <p>Part 4 is the one to guard. Students meet adaptive expectations (Part 2) and rational expectations (Part 3) as if they were <em>rival theories</em>. In Part 4 the credibility sweep shows they are the two endpoints of a single dial — e = 1 and e = 0. <strong>Do not preview that.</strong> Let it land when the animation runs.</p>
+        </div>
+        <div>
+          <div class="ptitle" style="font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);font-weight:700;margin-bottom:.2rem">Timing budget · 50 minutes</div>
+          <div class="runsheet">
+            <span class="rk">Part 1</span><span>From AS–AD to the Phillips Curve — <strong>8 min</strong></span>
+            <span class="rk">Part 2</span><span>Adaptive expectations — <strong>10 min</strong></span>
+            <span class="rk">Part 3</span><span>Rational expectations — <strong>7 min</strong></span>
+            <span class="rk">Part 4</span><span>Credibility as a dial — <strong>12 min</strong></span>
+            <span class="rk">Part 5</span><span>Breakdown and anchoring — <strong>8 min</strong></span>
+            <span class="rk">Close</span><span>Synthesis + one written line — <strong>3 min</strong></span>
+          </div>
+        </div>
+        <p class="footnote">Navigation: <span class="kbd">→</span> <span class="kbd">space</span> next · <span class="kbd">←</span> back · <span class="kbd">F</span> fullscreen. Questions run Q1–Q13 continuously; students number them on their own paper.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 1 ══════════════ -->
+
+  <!-- 3. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 5 · SRPC">
+    <div class="eyebrow">Part 1 of 5</div>
+    <h1>From AS–AD to the<br>Phillips Curve</h1>
+    <p class="lede">You already own the machinery. The Phillips curve is the short-run aggregate supply curve with last period's prices subtracted from both sides — nothing more.</p>
+    <div class="sectrail">SRPC → Adaptive → Rational → Credibility → Anchoring</div>
+    <div class="through">Throughline: nothing here changes where the economy ends up. Expectations decide only how much unemployment you pay to get there — and credibility is the dial.</div>
+  </section>
+
+  <!-- 4. MODEL CARD + Q1 -->
+  <section class="slide" data-section="Discussion 5 · SRPC">
+    <div class="eyebrow">Start from what you already have</div>
+    <h2>Read the equation before you predict</h2>
+    <div class="titlerule"></div>
+    <div class="model hi" style="max-width:760px;margin:1.2rem 0">
+      <span class="tag">Short-run aggregate supply</span>
+      <div class="eq">P<sub>t</sub> = EP<sub>t</sub> + α(Y<sub>t</sub> − Ȳ) + v<sub>t</sub></div>
+      <div class="calc" style="font-size:.92rem;margin-top:.7rem;color:var(--grey)">
+        P<sub>t</sub> today's prices &nbsp;·&nbsp; EP<sub>t</sub> today's <em>expected</em> prices, set last period<br>
+        Y<sub>t</sub> today's output &nbsp;·&nbsp; Ȳ the natural level of output &nbsp;·&nbsp; v<sub>t</sub> supply shock
+      </div>
+    </div>
+    <div class="prompt">
+      <span class="cue">Question 1 (write · 2 min)</span>
+      <p>Successive <strong>positive demand shocks</strong> hit this economy — one after another, each one shifting AD further right along a fixed SRAS. What happens to the <strong>price level</strong>? To <strong>output</strong>? And therefore to <strong>unemployment</strong>? Finish with the payoff: what <em>sign</em> of relationship between inflation and unemployment does that imply?</p>
+    </div>
+    <p class="footnote" style="margin-top:.9rem">Three links and a conclusion. Write the chain, not just the last word.</p>
+  </section>
+
+  <!-- 5. REVEAL Q1 + SHIFT DIAGRAM + 1960s SCATTER -->
+  <section class="slide" data-section="Discussion 5 · SRPC">
+    <div class="eyebrow">Reveal · Question 1</div>
+    <h2>Four demand shocks, one supply curve</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="ptitle">Successive positive demand shocks</div>
+        <svg viewBox="0 0 440 340" role="img" aria-label="Aggregate supply and demand. A fixed upward-sloping short-run aggregate supply curve and a vertical long-run curve at the natural level of output. Three successive rightward shifts of aggregate demand walk the economy up the supply curve from point A to points B, C and D: each shock raises the price level from P1 to P4 and raises output from the natural level to Y3. Because higher output means lower unemployment, rising inflation goes with falling unemployment — a negative relationship.">
+          <line x1="60" y1="30" x2="60" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="300" x2="420" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="48" y="36" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="420" y="322" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Y</text>
+          <!-- LRAS at Ybar = x 170 -->
+          <line x1="170" y1="36" x2="170" y2="300" stroke="#1F4E79" stroke-width="2.2"/>
+          <text x="176" y="44" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">LRAS</text>
+          <!-- fixed SRAS : y = 230 - 0.708(x-170) -->
+          <line x1="100" y1="279.6" x2="330" y2="116.7" stroke="#1F4E79" stroke-width="2.6"/>
+          <text x="336" y="118" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">SRAS</text>
+          <!-- AD (k=0) -->
+          <line x1="70" y1="155" x2="240" y2="282.5" stroke="#1F4E79" stroke-width="2.4" opacity=".85"/>
+          <text x="246" y="288" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">AD</text>
+          <!-- point A -->
+          <circle cx="170" cy="230" r="4.6" fill="#14243A"/>
+          <text x="181" y="224" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">A</text>
+          <line x1="60" y1="230" x2="170" y2="230" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="54" y="234" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">P₁</text>
+          <text x="170" y="316" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">Ȳ</text>
+          <!-- ===== revealed: three further AD shifts ===== -->
+          <g id="pc_ad" opacity="0">
+            <line x1="130" y1="155" x2="300" y2="282.5" stroke="#1F4E79" stroke-width="2.4" opacity=".85"/>
+            <text x="306" y="288" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">AD′</text>
+            <line x1="190" y1="155" x2="360" y2="282.5" stroke="#1F4E79" stroke-width="2.4" opacity=".85"/>
+            <text x="366" y="288" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">AD″</text>
+            <line x1="250" y1="155" x2="420" y2="282.5" stroke="#1F4E79" stroke-width="2.4" opacity=".85"/>
+            <text x="416" y="150" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700" text-anchor="end">AD‴</text>
+            <path d="M 92 112 L 168 112" stroke="#8A5900" stroke-width="2" marker-end="url(#arrGold)"/>
+            <text x="92" y="104" font-family="monospace" font-size="10" fill="#8A5900" font-weight="700">successive demand shocks</text>
+            <!-- B, C, D -->
+            <circle cx="200.9" cy="208.2" r="4.6" fill="#14243A"/>
+            <text x="212" y="202" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">B</text>
+            <line x1="60" y1="208.2" x2="200.9" y2="208.2" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="54" y="212" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">P₂</text>
+            <text x="200.9" y="316" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">Y₁</text>
+            <circle cx="231.7" cy="186.3" r="4.6" fill="#14243A"/>
+            <text x="243" y="180" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">C</text>
+            <line x1="60" y1="186.3" x2="231.7" y2="186.3" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="54" y="190" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">P₃</text>
+            <text x="231.7" y="316" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">Y₂</text>
+            <circle cx="262.6" cy="164.4" r="4.6" fill="#14243A"/>
+            <text x="274" y="158" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">D</text>
+            <line x1="60" y1="164.4" x2="262.6" y2="164.4" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="54" y="168" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">P₄</text>
+            <text x="262.6" y="316" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">Y₃</text>
+          </g>
+          <defs>
+            <marker id="arrGold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#8A5900"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="ptitle">And in the data — U.S., 1960–1969</div>
+        <svg viewBox="0 0 400 305" role="img" aria-label="Scatter of U.S. inflation against unemployment, annual averages 1960 to 1969, with the years joined in order. The points trace a clear downward path: 1961 sits at 6.7 percent unemployment with 1.1 percent inflation, and by 1969 unemployment has fallen to 3.5 percent while inflation has risen to 5.5 percent. Lower unemployment goes with higher inflation.">
+          <g id="pc_scatter" opacity="0">
+            <line x1="52.0" y1="38" x2="52.0" y2="268" stroke="#E4E0D5" stroke-width="1"/>
+            <text x="52.0" y="284" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">2%</text>
+            <line x1="106.7" y1="38" x2="106.7" y2="268" stroke="#E4E0D5" stroke-width="1"/>
+            <text x="106.7" y="284" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">4%</text>
+            <line x1="161.3" y1="38" x2="161.3" y2="268" stroke="#E4E0D5" stroke-width="1"/>
+            <text x="161.3" y="284" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">6%</text>
+            <line x1="216.0" y1="38" x2="216.0" y2="268" stroke="#E4E0D5" stroke-width="1"/>
+            <text x="216.0" y="284" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">8%</text>
+            <line x1="270.7" y1="38" x2="270.7" y2="268" stroke="#E4E0D5" stroke-width="1"/>
+            <text x="270.7" y="284" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">10%</text>
+            <line x1="325.3" y1="38" x2="325.3" y2="268" stroke="#E4E0D5" stroke-width="1"/>
+            <text x="325.3" y="284" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">12%</text>
+            <line x1="380.0" y1="38" x2="380.0" y2="268" stroke="#E4E0D5" stroke-width="1"/>
+            <text x="380.0" y="284" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">14%</text>
+            <line x1="52" y1="268.0" x2="380" y2="268.0" stroke="#E4E0D5" stroke-width="1"/>
+            <text x="46" y="271.5" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">-2%</text>
+            <line x1="52" y1="241.0" x2="380" y2="241.0" stroke="#E4E0D5" stroke-width="1"/>
+            <text x="46" y="244.5" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">0%</text>
+            <line x1="52" y1="214.0" x2="380" y2="214.0" stroke="#E4E0D5" stroke-width="1"/>
+            <text x="46" y="217.5" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">2%</text>
+            <line x1="52" y1="173.5" x2="380" y2="173.5" stroke="#E4E0D5" stroke-width="1"/>
+            <text x="46" y="177.0" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">5%</text>
+            <line x1="52" y1="133.0" x2="380" y2="133.0" stroke="#E4E0D5" stroke-width="1"/>
+            <text x="46" y="136.5" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">8%</text>
+            <line x1="52" y1="106.0" x2="380" y2="106.0" stroke="#E4E0D5" stroke-width="1"/>
+            <text x="46" y="109.5" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">10%</text>
+            <line x1="52" y1="79.0" x2="380" y2="79.0" stroke="#E4E0D5" stroke-width="1"/>
+            <text x="46" y="82.5" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">12%</text>
+            <line x1="52" y1="38.5" x2="380" y2="38.5" stroke="#E4E0D5" stroke-width="1"/>
+            <text x="46" y="42.0" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">15%</text>
+            <line x1="52" y1="38" x2="52" y2="268" stroke="#8A8F96" stroke-width="1.6"/>
+            <line x1="52" y1="268" x2="380" y2="268" stroke="#8A8F96" stroke-width="1.6"/>
+            <polyline points="147.7,220.8 180.5,226.2 147.7,224.8 153.1,224.8 139.5,223.4 120.3,219.4 101.2,201.8 101.2,199.2 95.7,184.3 93.0,166.8" fill="none" stroke="#8FAADC" stroke-width="1.4"/>
+            <circle cx="147.7" cy="220.8" r="4" fill="#1F4E79"/>
+            <circle cx="180.5" cy="226.2" r="4" fill="#1F4E79"/>
+            <circle cx="147.7" cy="224.8" r="4" fill="#1F4E79"/>
+            <circle cx="153.1" cy="224.8" r="4" fill="#1F4E79"/>
+            <circle cx="139.5" cy="223.4" r="4" fill="#1F4E79"/>
+            <circle cx="120.3" cy="219.4" r="4" fill="#1F4E79"/>
+            <circle cx="101.2" cy="201.8" r="4" fill="#1F4E79"/>
+            <circle cx="101.2" cy="199.2" r="4" fill="#1F4E79"/>
+            <circle cx="95.7" cy="184.3" r="4" fill="#1F4E79"/>
+            <circle cx="93.0" cy="166.8" r="4" fill="#1F4E79"/>
+            <text x="163.7" y="224.8" font-family="monospace" font-size="10" fill="#5A5F66" font-weight="700" text-anchor="middle">1960</text>
+            <text x="109.0" y="170.8" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700" text-anchor="middle">1969</text>
+            <text x="216" y="298" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">Unemployment rate (u)</text>
+            <text x="14" y="153" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle" transform="rotate(-90 14 153)">Inflation (π)</text>
+          </g>
+        </svg>
+        <p class="footnote" style="margin-top:.3rem;font-size:.8rem">Annual averages · CPI-U year-over-year and the civilian unemployment rate (BLS).</p>
+      </div>
+    </div>
+    <button class="btn" data-reveal-svg="pc1" style="margin-top:1rem">Show the shift and the data</button>
+    <div class="reveal-hidden" id="hrPC1">
+      <div class="reveal">
+        <span class="cue">Reveal · Question 1</span>
+        <p>Each shock pushes AD right along a <strong>fixed</strong> SRAS. The price level climbs P₁ → P₄ — that is <strong>inflation</strong>. Output climbs Ȳ → Y₃, and producing more output takes more workers, so <strong>unemployment falls below its natural rate</strong>. Inflation up, unemployment down, over and over: a <strong>negative relationship</strong>.</p>
+        <p style="margin-top:.5rem">That relationship is the <strong>Phillips curve</strong>, named for the economist who first wrote it up. When the paper was published in <strong>1958</strong>, the relationship looked remarkably stable in the data going back to <strong>1861</strong> — and the 1960s U.S. data on the right kept obeying it.</p>
+      </div>
+      <p class="footnote" style="margin-top:.6rem">Notice what did the work: <em>demand</em> shocks against a <em>fixed</em> supply curve. Hold on to both conditions — Part 5 is about what happens when either one fails.</p>
+    </div>
+  </section>
+
+  <!-- 6. Q2 PROMPT + OKUN CARD -->
+  <section class="slide" data-section="Discussion 5 · SRPC">
+    <div class="eyebrow">Derive it yourself</div>
+    <h2>Two lines of algebra, and you have the curve</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1080px">
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="model hi" style="box-shadow:none">
+          <span class="tag">Okun's Law · the output–unemployment link</span>
+          <div class="eq">%ΔGDP = 3% − 2Δu</div>
+          <div class="calc" style="font-size:.95rem;margin-top:.6rem">
+            unemployment 5% → 7%:<br>
+            %ΔGDP = 3% − 2(7% − 5%) = 3% − 4% = <strong class="red">−1%</strong>
+          </div>
+          <p class="footnote" style="margin-top:.5rem">These coefficients are <strong>empirically estimated, not theoretically derived</strong> — they are not universal constants like gravity, and they could change.</p>
+        </div>
+        <p class="lede" style="font-size:1rem">In the short run technology and capital are fixed, so output is determined by <strong>unemployment</strong>. That is what lets us trade one variable for the other.</p>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="prompt">
+          <span class="cue">Question 2 (write · 2 min)</span>
+          <p>Take the SRAS equation and <strong>subtract P<sub>t−1</sub> from both sides</strong>:</p>
+          <div class="chain" style="margin-top:.6rem;font-size:1rem">P<sub>t</sub> − P<sub>t−1</sub> = EP<sub>t</sub> − P<sub>t−1</sub> + α(Y<sub>t</sub> − Ȳ) + v<sub>t</sub></div>
+          <p style="margin-top:.7rem"><strong>(a)</strong> What does each of the first two terms <em>become</em>? Name them.</p>
+          <p style="margin-top:.3rem"><strong>(b)</strong> Now substitute the output gap for the unemployment gap, using α(Y<sub>t</sub> − Ȳ) = −β(u<sub>t</sub> − ū). Write the result.</p>
+        </div>
+        <p class="footnote">Short write — two minutes. The substitution in (b) is the whole trick: it swaps the axis from output to unemployment, and the minus sign is where the negative slope comes from.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. REVEAL SRPC + GRAPH + Q3 POLL -->
+  <section class="slide" data-section="Discussion 5 · SRPC">
+    <div class="eyebrow">Reveal · Question 2, then Question 3</div>
+    <h2>The short-run Phillips curve</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:1.05fr .95fr;flex:0 1 auto">
+      <div class="col" style="justify-content:flex-start;gap:.8rem;flex:0 1 auto">
+        <button class="btn" data-reveal-svg="srpc">Reveal the derivation</button>
+        <div class="reveal-hidden" id="hrSRPC">
+          <div class="reveal">
+            <span class="cue">Reveal · Question 2</span>
+            <p><strong>(a)</strong> P<sub>t</sub> − P<sub>t−1</sub> is <strong>inflation</strong>, π<sub>t</sub>. And EP<sub>t</sub> − P<sub>t−1</sub> is <strong>expected inflation</strong>, Eπ<sub>t</sub> — expected prices measured against the prices people actually last saw.</p>
+            <div class="chain" style="font-size:1rem">π<sub>t</sub> = Eπ<sub>t</sub> + α(Y<sub>t</sub> − Ȳ) + v<sub>t</sub></div>
+            <p style="margin-top:.6rem"><strong>(b)</strong> Substituting α(Y<sub>t</sub> − Ȳ) = −β(u<sub>t</sub> − ū) gives the <strong>short-run Phillips curve</strong>:</p>
+            <div class="chain" style="font-size:1.15rem;background:var(--gold-soft);border-color:#D9BE7E;color:#8A5900">π<sub>t</sub> = Eπ<sub>t</sub> − β(u<sub>t</sub> − ū) + v<sub>t</sub></div>
+            <p style="margin-top:.6rem">Read the special case off it: if the economy sits at the natural rate, <strong>u = ū</strong>, and there are no supply shocks, both extra terms vanish and <strong>inflation is simply equal to expected inflation</strong>. That single line is the engine of the entire rest of this discussion.</p>
+          </div>
+        </div>
+        <div class="poll" id="pollLRPC" style="margin-top:.4rem">
+          <p class="lede" style="font-size:1rem">In the <strong>long run</strong>, unemployment is always at ū and there are no supply shocks. Which inflation rates is ū consistent with?</p>
+          <div class="poll-opts" style="margin-top:.7rem">
+            <button type="button" class="poll-opt" data-correct="false"><span class="num">1</span><span class="txt">Only one — whatever rate the Fed happens to be targeting.</span></button>
+            <button type="button" class="poll-opt" data-correct="false"><span class="num">2</span><span class="txt">Only low ones — high inflation always pushes unemployment above ū.</span></button>
+            <button type="button" class="poll-opt" data-correct="true"><span class="num">3</span><span class="txt">All of them — the natural rate can support any rate of inflation.</span></button>
+          </div>
+          <span class="poll-hint">Question 3 · commit a number before the reveal</span>
+          <button class="btn" data-poll-reveal="pollLRPC" data-reveal-svg="lrpc" style="margin-top:.8rem">Reveal · and draw the long-run curve</button>
+          <div class="reveal-hidden" id="hrLRPC">
+            <div class="reveal">
+              <span class="cue">Reveal · Question 3</span>
+              <p><strong>All of them.</strong> Set u = ū and v = 0 in the SRPC and you get π = Eπ — with <em>no restriction whatever</em> on what that number is. 2%, 5%, 12%: each is a perfectly good long-run equilibrium, as long as expectations have caught up to it. Plot every such point and you get a <strong>vertical</strong> long-run Phillips curve at ū.</p>
+              <p style="margin-top:.5rem">This is the throughline in graphical form. The <em>destination</em> — unemployment at ū — never changes. Only the <em>height</em> at which you arrive does.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">The short-run Phillips curve</div>
+        <svg viewBox="0 0 460 360" role="img" aria-label="The short-run Phillips curve: a downward-sloping line in inflation–unemployment space passing through the point where unemployment equals its natural rate and inflation equals expected inflation. Lower unemployment buys higher inflation and vice versa. When the long-run curve is added it is a vertical line at the natural rate, showing that the natural rate is consistent with any inflation rate at all.">
+          <line x1="60" y1="30" x2="60" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="320" x2="430" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="48" y="36" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">π</text>
+          <text x="430" y="342" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">u</text>
+          <g id="srpc_g" opacity="0">
+            <!-- SRPC with Epi = 5 : pi = 5 - (u-5) ; u 1..9 -->
+            <line x1="96" y1="68" x2="384" y2="292" stroke="#1F4E79" stroke-width="3"/>
+            <text x="390" y="296" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">SRPC</text>
+            <circle cx="240" cy="180" r="5" fill="#14243A"/>
+            <line x1="60" y1="180" x2="240" y2="180" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="54" y="184" font-family="monospace" font-size="12" fill="#14243A" text-anchor="end" font-weight="700">Eπₜ</text>
+            <line x1="240" y1="180" x2="240" y2="320" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="240" y="338" font-family="monospace" font-size="12" fill="#14243A" text-anchor="middle" font-weight="700">ū</text>
+            <text x="252" y="172" font-family="monospace" font-size="10" fill="#5A5F66">u = ū, v = 0 ⇒ π = Eπ</text>
+          </g>
+          <!-- revealed with Q3 -->
+          <g id="lrpc_g" opacity="0">
+            <line x1="240" y1="40" x2="240" y2="320" stroke="#C0392B" stroke-width="3"/>
+            <text x="248" y="50" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700">LRPC</text>
+            <circle cx="240" cy="80" r="4" fill="#C0392B"/>
+            <circle cx="240" cy="130" r="4" fill="#C0392B"/>
+            <circle cx="240" cy="240" r="4" fill="#C0392B"/>
+            <circle cx="240" cy="290" r="4" fill="#C0392B"/>
+            <text x="252" y="292" font-family="monospace" font-size="10" fill="#C0392B">any π works at ū</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════ PART 2 ══════════════ -->
+
+  <!-- 8. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 5 · Adaptive">
+    <div class="eyebrow">Part 2 of 5</div>
+    <h1>Adaptive<br>Expectations</h1>
+    <p class="lede">Suppose people forecast inflation the laziest way possible: whatever it was last year, that's what it'll be this year. Then find out what that assumption costs.</p>
+    <div class="sectrail">SRPC ✓ → Adaptive → Rational → Credibility → Anchoring</div>
+    <div class="through">Throughline: nothing here changes where the economy ends up. Expectations decide only how much unemployment you pay to get there — and credibility is the dial.</div>
+  </section>
+
+  <!-- 9. MODEL CARD + Q4 PREDICT -->
+  <section class="slide" data-section="Discussion 5 · Adaptive">
+    <div class="eyebrow">Commit before computing</div>
+    <h2>Look backward, and only backward</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1080px">
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="model hi">
+          <span class="tag">Adaptive expectations</span>
+          <div class="eq">Eπ<sub>t</sub> = π<sub>t−1</sub></div>
+          <p class="footnote" style="margin-top:.6rem">Your forecast for this year <em>is</em> last year's realized inflation. Nothing else enters.</p>
+        </div>
+        <div class="model" style="box-shadow:none">
+          <span class="tag">The setup — carry these numbers all discussion</span>
+          <div class="calc" style="font-size:1rem">
+            natural rate&nbsp;&nbsp; <span class="lbl">ū = 5%</span><br>
+            current inflation&nbsp;&nbsp; <span class="lbl">π = 5%</span> &nbsp;<span class="muted">(long-run equilibrium)</span><br>
+            Fed's target&nbsp;&nbsp; <span class="lbl">2%</span><br>
+            supply shocks&nbsp;&nbsp; <span class="lbl">v = 0</span> &nbsp;·&nbsp; slope&nbsp; <span class="lbl">β = 1</span>
+          </div>
+          <div class="chain" style="margin-top:.7rem;font-size:1rem">π<sub>t</sub> = Eπ<sub>t</sub> − (u<sub>t</sub> − ū) + v<sub>t</sub></div>
+        </div>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="predict">
+          <span class="cue">Question 4 (predict · no algebra)</span>
+          <p>The Fed wants inflation down from 5% to 2%. Before you compute anything: <strong>how far does unemployment have to rise?</strong></p>
+          <p style="margin-top:.5rem">Don't hedge and don't say "it depends." <strong>Commit to a number</strong> on your paper — a percentage-point figure, and the unemployment rate it implies.</p>
+        </div>
+        <p class="footnote">A wrong committed number teaches more than a right vague one. You'll check it against the algebra on the next slide, and against a very different answer in Part 3.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. Q5 PROMPT -->
+  <section class="slide" data-section="Discussion 5 · Adaptive">
+    <div class="eyebrow">Now do the algebra</div>
+    <h2>Solve for the unemployment it takes</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:920px;gap:1rem">
+      <p class="lede">People have adaptive expectations, so their forecast for this year is last year's inflation: <strong>Eπ<sub>t</sub> = π<sub>t−1</sub> = 5%</strong>. That number is now <em>fixed</em>, no matter what the Fed says.</p>
+      <div class="prompt">
+        <span class="cue">Question 5 (write · 3 min)</span>
+        <p><strong>(a)</strong> Solve <span style="font-family:var(--mono)">π<sub>t</sub> = Eπ<sub>t</sub> − (u<sub>t</sub> − ū) + v<sub>t</sub></span> for the unemployment rate u<sub>t</sub> that delivers <strong>2% inflation</strong>. Show the substitution line.</p>
+        <p style="margin-top:.5rem"><strong>(b)</strong> Convert that into lost output with <span style="font-family:var(--mono)">%ΔY = 3% − 2Δu</span>. How much GDP growth does the disinflation cost?</p>
+        <p style="margin-top:.5rem"><strong>(c)</strong> One sentence: <em>how</em> would the Fed actually engineer this?</p>
+      </div>
+      <p class="footnote">Δu in Okun's Law is the <em>change</em> in the unemployment rate in percentage points — not the level.</p>
+    </div>
+  </section>
+
+  <!-- 11. REVEAL Q5 + PHILLIPS DIAGRAM -->
+  <section class="slide" data-section="Discussion 5 · Adaptive">
+    <div class="eyebrow">Reveal · Question 5</div>
+    <h2>Three points of unemployment, bought with a recession</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:.95fr 1.05fr">
+      <div class="panel">
+        <div class="ptitle">Disinflation under adaptive expectations</div>
+        <svg viewBox="0 0 460 360" role="img" aria-label="Phillips curve diagram for a disinflation under adaptive expectations. The economy starts at point A, where unemployment is at its 5 percent natural rate and inflation is 5 percent. To reach 2 percent inflation the economy must move down along the short-run curve to point B at 8 percent unemployment. Next period expectations fall to 2 percent, the short-run curve shifts down, and the economy reaches point C at 2 percent inflation with unemployment back at the natural rate.">
+          <line x1="60" y1="30" x2="60" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="320" x2="430" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="48" y="36" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">π</text>
+          <text x="430" y="342" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">u</text>
+          <!-- gridlines / ticks -->
+          <line x1="240" y1="40" x2="240" y2="320" stroke="#C0392B" stroke-width="2.4"/>
+          <text x="248" y="50" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700">LRPC</text>
+          <line x1="60" y1="180" x2="430" y2="180" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="54" y="184" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">5%</text>
+          <line x1="60" y1="264" x2="430" y2="264" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="54" y="268" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">2%</text>
+          <text x="240" y="338" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle" font-weight="700">ū = 5%</text>
+          <text x="348" y="338" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">8%</text>
+          <!-- SRPC (Epi = 5) -->
+          <line x1="96" y1="68" x2="384" y2="292" stroke="#1F4E79" stroke-width="3"/>
+          <text x="390" y="296" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">SRPC</text>
+          <circle cx="240" cy="180" r="5.2" fill="#14243A"/>
+          <text x="251" y="174" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">A</text>
+          <!-- step 1: move along SRPC to B -->
+          <g id="ad_step1" opacity="0">
+            <path d="M 250 190 Q 300 232 340 258" stroke="#8A5900" stroke-width="2" fill="none" marker-end="url(#arrGold2)"/>
+            <circle cx="348" cy="264" r="5.2" fill="#14243A"/>
+            <text x="356" y="258" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">B</text>
+            <line x1="348" y1="264" x2="348" y2="320" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="300" y="212" font-family="monospace" font-size="10" fill="#8A5900" font-weight="700">movement ALONG</text>
+          </g>
+          <!-- step 2: SRPC shifts down to SRPC' ; C at ubar -->
+          <g id="ad_step2" opacity="0">
+            <line x1="96" y1="152" x2="294" y2="306" stroke="#1F4E79" stroke-width="3" stroke-dasharray="7 4"/>
+            <text x="300" y="310" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">SRPC′</text>
+            <path d="M 150 122 L 150 176" stroke="#8A5900" stroke-width="2" marker-end="url(#arrGold2)"/>
+            <text x="158" y="152" font-family="monospace" font-size="11" fill="#8A5900" font-weight="700">Eπ ↓</text>
+            <circle cx="240" cy="264" r="5.2" fill="#C0392B"/>
+            <text x="251" y="258" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700">C</text>
+          </g>
+          <defs>
+            <marker id="arrGold2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#8A5900"/>
+            </marker>
+          </defs>
+        </svg>
+        <div style="display:flex;gap:.7rem;flex-wrap:wrap;margin-top:.6rem">
+          <button class="btn" data-reveal-svg="adaptA">1 · Move along the curve</button>
+          <button class="btn ghost" data-reveal-svg="adaptB">2 · Then expectations fall</button>
+        </div>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.8rem">
+        <div class="reveal-hidden" id="hrAdaptA">
+          <div class="reveal">
+            <span class="cue">Reveal · Question 5 (a) and (b)</span>
+            <div class="calc" style="font-size:1.02rem">
+              2% = 5% − (u<sub>t</sub> − 5%) + 0<br>
+              u<sub>t</sub> = 5% − 2% + 5%<br>
+              <span class="lbl">u<sub>t</sub> = 8%</span> &nbsp;<span class="muted">— a rise of 3 points</span>
+            </div>
+            <div class="calc" style="font-size:1.02rem;margin-top:.6rem">
+              %ΔY = 3% − 2(3) = 3 − 6 = <span class="red" style="font-weight:700">−3%</span>
+            </div>
+            <p style="margin-top:.6rem">On 2022 U.S. GDP of <strong>$25.44 trillion</strong>, a 3% fall is roughly <strong>$763.2 billion</strong> of output — given up to buy three points off the inflation rate. <strong>(c)</strong> The Fed engineers it by <strong>reducing the money supply</strong>.</p>
+          </div>
+        </div>
+        <div class="reveal-hidden" id="hrAdaptB">
+          <div class="reveal">
+            <span class="cue">Reveal · what happens next period</span>
+            <p>Once inflation is actually down at 2%, adaptive expectations do their one trick: next period's forecast becomes <strong>Eπ = π<sub>t−1</sub> = 2%</strong>. The whole short-run curve <strong>shifts down</strong> to SRPC′, and the economy returns to <strong>ū = 5%</strong> at the new, lower inflation rate — point C.</p>
+            <div class="chain" style="margin-top:.6rem">π↓ → Eπ↓ (next period) → SRPC shifts down</div>
+          </div>
+          <div class="predict" style="margin-top:.9rem">
+            <span class="cue">The sacrifice ratio — and a warning</span>
+            <p>The percentage of GDP given up per percentage point of inflation removed is the <strong>sacrifice ratio</strong>. Here: 3% of output for 3 points of inflation, so the ratio is <strong>1</strong>.</p>
+            <p style="margin-top:.4rem">Treat that as a floor, not an estimate. <strong>Empirical estimates vary substantially, but a typical one is around 5</strong> — five times the pain this tidy example implies.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12. Q6 DIAGNOSE -->
+  <section class="slide" data-section="Discussion 5 · Adaptive">
+    <div class="eyebrow">Diagnose · silent poll</div>
+    <h2>One of these is right for the wrong reason</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start">
+      <p class="lede" style="max-width:74ch">Three sentences explaining <strong>why the SRPC shifted down</strong> to SRPC′. Two are sound. One reaches a defensible-sounding conclusion through reasoning that will fail you the moment the numbers change. <strong>Write down its number</strong> — don't say it out loud.</p>
+      <div class="diag" id="diagShift">
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">1</span><span class="s">Realized inflation came in at 2%, and under adaptive expectations that realized number <em>becomes</em> next period's forecast — so the curve's intercept, Eπ, drops from 5% to 2%.</span></button>
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">2</span><span class="s">Unemployment rose to 8%, and higher unemployment pushes the short-run Phillips curve down — that's what shifted it.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">3</span><span class="s">The curve is drawn holding Eπ fixed, so nothing that leaves Eπ unchanged can shift it — only a revision of expectations can, and that revision took a full period to arrive.</span></button>
+      </div>
+      <span class="poll-hint">Question 6 · fingers on the chest, then reveal</span>
+      <button class="btn" data-diag-reveal="diagShift" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem">
+        <span class="cue">Sentence 2 · the flaw</span>
+        <p><strong>Unemployment rising to 8% is a movement <em>along</em> the curve, not a shift <em>of</em> it.</strong> u is the variable on the horizontal axis. Changing an axis variable slides you from A to B on the same curve — by construction it cannot move the curve, any more than walking east moves the road.</p>
+        <p style="margin-top:.5rem">What actually shifted it is the one thing held fixed when we drew it: <strong>Eπ</strong>. Last period's <em>realized</em> inflation of 2% became this period's forecast, the intercept fell from 5% to 2%, and the whole line dropped.</p>
+        <p style="margin-top:.5rem">Why this bad reasoning is expensive: it makes high unemployment look like the <em>cause</em> of the improvement, so you would predict that keeping unemployment at 8% keeps pushing the curve down forever. It doesn't. Unemployment was the <strong>price</strong> paid to change expectations — and in Part 3 the Fed gets the same shift without paying it at all.</p>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════ PART 3 ══════════════ -->
+
+  <!-- 13. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 5 · Rational">
+    <div class="eyebrow">Part 3 of 5</div>
+    <h1>Rational<br>Expectations</h1>
+    <p class="lede">Now assume the opposite: people use every scrap of information available to them — including what the Fed just announced. Same target, same economy. Watch the bill.</p>
+    <div class="sectrail">SRPC ✓ → Adaptive ✓ → Rational → Credibility → Anchoring</div>
+    <div class="through">Throughline: nothing here changes where the economy ends up. Expectations decide only how much unemployment you pay to get there — and credibility is the dial.</div>
+  </section>
+
+  <!-- 14. MODEL CARD + Q7 -->
+  <section class="slide" data-section="Discussion 5 · Rational">
+    <div class="eyebrow">Same economy, different forecasters</div>
+    <h2>What if people actually listen?</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1080px">
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="model hi">
+          <span class="tag">Rational expectations</span>
+          <div class="eq" style="font-size:1.1rem">Eπ<sub>t</sub> = f(<em>every</em> available piece of information)</div>
+          <p class="footnote" style="margin-top:.6rem">Not just last year's number — announcements, policy, everything that bears on next year's price level.</p>
+        </div>
+        <div class="model" style="box-shadow:none">
+          <span class="tag">Unchanged from Part 2</span>
+          <div class="calc" style="font-size:1rem">
+            ū = 5% &nbsp;·&nbsp; π = 5% &nbsp;·&nbsp; v = 0<br>
+            <span class="lbl">π<sub>t</sub> = Eπ<sub>t</sub> − (u<sub>t</sub> − ū) + v<sub>t</sub></span>
+          </div>
+          <p class="footnote" style="margin-top:.5rem">Nothing about the economy has changed. Only the forecasting rule has.</p>
+        </div>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="prompt">
+          <span class="cue">Question 7 (write · 3 min)</span>
+          <p>The Fed announces it will bring inflation down to <strong>2% next year</strong>, and it is <strong>fully believed</strong>.</p>
+          <p style="margin-top:.5rem"><strong>(a)</strong> What is Eπ<sub>t</sub> now?</p>
+          <p style="margin-top:.3rem"><strong>(b)</strong> Put that into the Phillips curve. What unemployment rate is required to hit 2% inflation?</p>
+          <p style="margin-top:.3rem"><strong>(c)</strong> The important half: <strong>why?</strong> Trace what firms do and what consumers do once they believe the announcement.</p>
+        </div>
+        <p class="footnote">If your answer to (b) surprises you, that's the right reaction. Write (c) before you look up.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15. REVEAL Q7 + GRAPH -->
+  <section class="slide" data-section="Discussion 5 · Rational">
+    <div class="eyebrow">Reveal · Question 7</div>
+    <h2>Straight down the long-run curve</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:.95fr 1.05fr">
+      <div class="panel">
+        <div class="ptitle">Disinflation under rational expectations</div>
+        <svg viewBox="0 0 460 360" role="img" aria-label="Phillips curve diagram for a fully credible disinflation. The economy starts at point A with 5 percent unemployment and 5 percent inflation. Because expectations drop immediately to the announced 2 percent target, the short-run curve shifts down at once and the economy moves straight down the vertical long-run curve to point B: inflation is 2 percent and unemployment never leaves its natural rate. The disinflation is costless.">
+          <line x1="60" y1="30" x2="60" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="320" x2="430" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="48" y="36" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">π</text>
+          <text x="430" y="342" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">u</text>
+          <line x1="240" y1="40" x2="240" y2="320" stroke="#C0392B" stroke-width="2.4"/>
+          <text x="248" y="50" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700">LRPC</text>
+          <line x1="60" y1="180" x2="430" y2="180" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="54" y="184" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">5%</text>
+          <line x1="60" y1="264" x2="430" y2="264" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="54" y="268" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">2%</text>
+          <text x="240" y="338" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle" font-weight="700">ū = 5%</text>
+          <line x1="96" y1="68" x2="384" y2="292" stroke="#1F4E79" stroke-width="3"/>
+          <text x="390" y="296" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">SRPC</text>
+          <circle cx="240" cy="180" r="5.2" fill="#14243A"/>
+          <text x="251" y="174" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">A</text>
+          <g id="rat_g" opacity="0">
+            <line x1="96" y1="152" x2="294" y2="306" stroke="#1F4E79" stroke-width="3" stroke-dasharray="7 4"/>
+            <text x="300" y="310" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">SRPC′</text>
+            <path d="M 150 122 L 150 176" stroke="#8A5900" stroke-width="2" marker-end="url(#arrGold3)"/>
+            <text x="158" y="152" font-family="monospace" font-size="11" fill="#8A5900" font-weight="700">Eπ ↓</text>
+            <path d="M 240 192 L 240 252" stroke="#C0392B" stroke-width="2.4" marker-end="url(#arrRed3)"/>
+            <circle cx="240" cy="264" r="5.2" fill="#C0392B"/>
+            <text x="251" y="258" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700">B</text>
+          </g>
+          <defs>
+            <marker id="arrGold3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#8A5900"/>
+            </marker>
+            <marker id="arrRed3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#C0392B"/>
+            </marker>
+          </defs>
+        </svg>
+        <button class="btn" data-reveal-svg="rat" style="margin-top:.7rem">Show the shift</button>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.8rem">
+        <div class="reveal-hidden" id="hrRat">
+          <div class="reveal">
+            <span class="cue">Reveal · Question 7</span>
+            <p><strong>(a)</strong> If you believe the Fed, your expectation is <strong>2%</strong> — immediately, this period, with no waiting.</p>
+            <div class="calc" style="font-size:1.02rem;margin-top:.5rem">
+              2% = 2% − (u<sub>t</sub> − 5%) + 0<br>
+              <span class="lbl">u<sub>t</sub> = 5% = ū</span>
+            </div>
+            <p style="margin-top:.5rem"><strong>(b)</strong> Unemployment <strong>never leaves the natural rate</strong>. The disinflation is <strong>costless</strong>.</p>
+            <p style="margin-top:.5rem"><strong>(c) Why:</strong> if everyone believes inflation will be 2%, <strong>firms only raise prices by 2%</strong>, and consumers, firms and government only raise their demand in expectation of 2%. Both sides of the market act on the new number, so prices in fact rise by 2%. The belief is self-fulfilling.</p>
+          </div>
+          <div class="chain" style="margin-top:.9rem;font-size:1.02rem">announce 2% → Eπ↓ → SRPC↓ → π↓ at u = ū</div>
+          <div class="predict" style="margin-top:.9rem">
+            <span class="cue">The point to carry forward</span>
+            <p>There is <strong>no need for the Fed to increase unemployment, because it changed inflation by changing expectations</strong> instead. Compare the two routes: adaptive expectations cost 3 points of unemployment and $763bn of output to move Eπ from 5% to 2%. Rational expectations moved the same Eπ with a press release.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16. Q8 + AS–AD ANTICIPATED MONEY -->
+  <section class="slide" data-section="Discussion 5 · Rational">
+    <div class="eyebrow">The implication for policy</div>
+    <h2>What happens to policy nobody is surprised by?</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:1.05fr .95fr">
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="prompt">
+          <span class="cue">Question 8 (write · 2 min)</span>
+          <p>An increase in the money supply is <strong>anticipated</strong> — everyone sees it coming. What happens to <strong>output</strong>?</p>
+          <p style="margin-top:.4rem">Write the <strong>chain</strong>, link by link. Start at M↑ and don't stop until you've said what firms do about it.</p>
+        </div>
+        <button class="btn" data-reveal-svg="antic">Reveal the chain and the shift</button>
+        <div class="reveal-hidden" id="hrAntic">
+          <div class="reveal">
+            <span class="cue">Reveal · Question 8</span>
+            <p>M↑ shifts aggregate demand right, as always. But <strong>firms know the increase is coming</strong>, so they raise their prices in advance — which shifts <strong>SRAS upward</strong> and offsets the demand increase. The economy lands at C: the price level is higher, and <strong>output is back at Ȳ</strong>.</p>
+            <div class="chain" style="margin-top:.6rem">M↑ anticipated → EP↑ → SRAS↑ → P↑, Y unchanged</div>
+            <p style="margin-top:.6rem"><strong>Expected monetary policy has no effect on output.</strong> Only the <em>unexpected</em> part of a policy can move real quantities.</p>
+          </div>
+          <div class="predict" style="margin-top:.9rem">
+            <span class="cue">Close the part · the honest verdict</span>
+            <p>Both models are caricatures, in opposite directions. <strong>Purely adaptive expectations assume people are unintelligent</strong> — capable only of repeating their most recent observation. <strong>Rational expectations assume people are incredibly smart.</strong> And in practice, <strong>it is unlikely the Fed hits its target by announcement alone.</strong></p>
+            <p style="margin-top:.4rem">So the real economy is somewhere between them. Part 4 asks the obvious next question: <em>where?</em></p>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">Anticipated M↑ in AS–AD</div>
+        <svg viewBox="0 0 440 340" role="img" aria-label="Aggregate supply and demand under an anticipated increase in the money supply. Aggregate demand shifts right, but because firms expect the price rise they raise prices in advance and short-run aggregate supply shifts up by the same amount. The new equilibrium at point C sits directly above point A on the vertical long-run supply curve: the price level is higher and output is unchanged at its natural level.">
+          <line x1="60" y1="30" x2="60" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="300" x2="420" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="48" y="36" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="420" y="322" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Y</text>
+          <line x1="170" y1="36" x2="170" y2="300" stroke="#1F4E79" stroke-width="2.2"/>
+          <text x="176" y="44" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">LRAS</text>
+          <line x1="100" y1="279.6" x2="330" y2="116.7" stroke="#1F4E79" stroke-width="2.6"/>
+          <text x="336" y="118" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">SRAS</text>
+          <line x1="90" y1="170" x2="240" y2="282.5" stroke="#1F4E79" stroke-width="2.4"/>
+          <text x="246" y="288" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">AD</text>
+          <circle cx="170" cy="230" r="4.6" fill="#14243A"/>
+          <text x="181" y="224" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">A</text>
+          <line x1="60" y1="230" x2="170" y2="230" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="54" y="234" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">P₁</text>
+          <text x="170" y="316" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle" font-weight="700">Ȳ</text>
+          <g id="ant_g" opacity="0">
+            <line x1="160" y1="170" x2="310" y2="282.5" stroke="#C0392B" stroke-width="2.4"/>
+            <text x="316" y="288" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700">AD′</text>
+            <path d="M 210 254 L 258 254" stroke="#C0392B" stroke-width="2" marker-end="url(#arrRed4)"/>
+            <text x="234" y="248" font-family="monospace" font-size="10" fill="#C0392B" text-anchor="middle" font-weight="700">M ↑</text>
+            <line x1="100" y1="227.1" x2="330" y2="64.2" stroke="#C0392B" stroke-width="2.6"/>
+            <text x="336" y="66" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700">SRAS′</text>
+            <path d="M 130 250 L 130 202" stroke="#C0392B" stroke-width="2" marker-end="url(#arrRed4)"/>
+            <text x="138" y="228" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700">EP ↑</text>
+            <circle cx="170" cy="177.5" r="4.6" fill="#C0392B"/>
+            <text x="181" y="171" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700">C</text>
+            <line x1="60" y1="177.5" x2="170" y2="177.5" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="54" y="181" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="end">P₂</text>
+          </g>
+          <defs>
+            <marker id="arrRed4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#C0392B"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ══════════════ PART 4 ══════════════ -->
+
+  <!-- 17. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 5 · Credibility">
+    <div class="eyebrow">Part 4 of 5</div>
+    <h1>Credibility<br>as a Dial</h1>
+    <p class="lede">Real people are neither goldfish nor oracles. Let them use both last year's inflation <em>and</em> the Fed's announcement — and put a weight on each.</p>
+    <div class="sectrail">SRPC ✓ → Adaptive ✓ → Rational ✓ → Credibility → Anchoring</div>
+    <div class="through">Throughline: nothing here changes where the economy ends up. Expectations decide only how much unemployment you pay to get there — and credibility is the dial.</div>
+  </section>
+
+  <!-- 18. MODEL CARD + Q9 PREDICT -->
+  <section class="slide" data-section="Discussion 5 · Credibility">
+    <div class="eyebrow">Commit before computing</div>
+    <h2>Put a weight on each source</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1080px">
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="model hi">
+          <span class="tag">More realistic expectations</span>
+          <div class="eq" style="font-size:1.15rem">Eπ<sub>t</sub> = <span class="coef">e</span>·π<sub>t−1</sub> + (1 − <span class="coef">e</span>)·π<sup>T</sup><sub>t</sub></div>
+          <div class="calc" style="font-size:.95rem;margin-top:.7rem;color:var(--grey)">
+            π<sub>t−1</sub> last period's inflation &nbsp;·&nbsp; π<sup>T</sup><sub>t</sub> the Fed's announced target<br>
+            <span class="red" style="font-weight:700">e</span> = the weight people put on the <strong>past</strong>
+          </div>
+          <p class="footnote" style="margin-top:.6rem"><strong>e is the inverse of Fed credibility.</strong> High e means nobody is listening to the announcement. Low e means they are.</p>
+        </div>
+        <div class="model" style="box-shadow:none">
+          <span class="tag">Same setup as before</span>
+          <div class="calc" style="font-size:1rem">
+            ū = 5% &nbsp;·&nbsp; π<sub>t−1</sub> = 5% &nbsp;·&nbsp; π<sup>T</sup> = 2% &nbsp;·&nbsp; v = 0<br>
+            <span class="lbl">π<sub>t</sub> = Eπ<sub>t</sub> − (u<sub>t</sub> − ū) + v<sub>t</sub></span>
+          </div>
+        </div>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="predict">
+          <span class="cue">Question 9 (predict · no algebra)</span>
+          <p>Set <strong>e = 0.5</strong> — people split the difference evenly between last year's inflation and the Fed's target.</p>
+          <p style="margin-top:.5rem">The adaptive case cost <strong>3 points</strong> of unemployment and <strong>−3%</strong> output. Will halving the weight on the past cost <strong>more or less than half</strong> of that? <strong>Commit to a number</strong> before you compute: the unemployment rate, and the output change.</p>
+        </div>
+        <p class="footnote">Most people guess the output cost lands somewhere near −1.5%. Write down whatever you actually think — the gap between your guess and the answer is the lesson.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 19. Q10 PROMPT -->
+  <section class="slide" data-section="Discussion 5 · Credibility">
+    <div class="eyebrow">Now do the algebra</div>
+    <h2>Three steps, same as Part 2</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:920px;gap:1rem">
+      <div class="prompt">
+        <span class="cue">Question 10 (write · 3 min)</span>
+        <p><strong>(a)</strong> Compute Eπ<sub>t</sub> at e = 0.5 from <span style="font-family:var(--mono)">Eπ<sub>t</sub> = e·π<sub>t−1</sub> + (1 − e)·π<sup>T</sup><sub>t</sub></span>.</p>
+        <p style="margin-top:.5rem"><strong>(b)</strong> Put it into the Phillips curve and solve for the <strong>unemployment rate</strong> that delivers 2% inflation.</p>
+        <p style="margin-top:.5rem"><strong>(c)</strong> Convert with Okun's Law, <span style="font-family:var(--mono)">%ΔY = 3% − 2Δu</span>.</p>
+      </div>
+      <div class="chain" style="font-size:1rem">Eπ<sub>t</sub> = 0.5 × 5% + 0.5 × 2% = ?&nbsp;&nbsp;→&nbsp;&nbsp;2% = Eπ<sub>t</sub> − (u<sub>t</sub> − 5%) + 0&nbsp;&nbsp;→&nbsp;&nbsp;%ΔY = 3 − 2Δu</div>
+      <p class="footnote">Exactly the same three moves as Question 5. The only thing that changed is one number in step (a) — which is the whole point.</p>
+    </div>
+  </section>
+
+  <!-- 20. REVEAL Q10 -->
+  <section class="slide" data-section="Discussion 5 · Credibility">
+    <div class="eyebrow">Reveal · Question 10</div>
+    <h2>Half the weight, none of the output loss</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:1000px;gap:1rem">
+      <button class="btn" data-reveal="hrCred">Reveal the computation</button>
+      <div class="reveal-hidden" id="hrCred">
+        <div class="two" style="max-width:960px">
+          <div class="reveal">
+            <span class="cue">Reveal · (a) and (b)</span>
+            <div class="calc" style="font-size:1.02rem">
+              Eπ<sub>t</sub> = 0.5 × 5% + 0.5 × 2%<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = 2.5% + 1% = <span class="lbl">3.5%</span>
+            </div>
+            <div class="calc" style="font-size:1.02rem;margin-top:.7rem">
+              2% = 3.5% − (u<sub>t</sub> − 5%) + 0<br>
+              u<sub>t</sub> = 3.5% − 2% + 5%<br>
+              <span class="lbl">u<sub>t</sub> = 6.5%</span> &nbsp;<span class="muted">— a rise of 1.5 points</span>
+            </div>
+          </div>
+          <div class="reveal">
+            <span class="cue">Reveal · (c)</span>
+            <div class="calc" style="font-size:1.02rem">
+              %ΔY = 3% − 2(1.5)<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; = 3 − 3 = <span class="lbl" style="font-size:1.15rem">0%</span>
+            </div>
+            <p style="margin-top:.6rem">The Fed still reduces the money supply and still pushes unemployment up 1.5 points — but the growth rate lands at <strong>zero</strong> rather than −3%. And in the <strong>next period, expected inflation falls to 2%</strong>, so the curve completes its move on its own.</p>
+          </div>
+        </div>
+        <div class="predict" style="margin-top:1rem;max-width:960px">
+          <span class="cue">Read the 0% honestly</span>
+          <p><strong>0% growth is not free.</strong> Trend growth in this economy is <strong>3%</strong> — that is what the first term of Okun's Law means. A year of zero growth is a year in which the economy produced <em>three percentage points less</em> than it otherwise would have. Nobody was laid off relative to last year's level of output; a full year of gains was simply never collected.</p>
+          <p style="margin-top:.4rem">Halving the weight on the past cut the unemployment cost exactly in half (3 points → 1.5). The <em>output</em> figure improved by more than half only because Okun's constant 3% absorbs the first 1.5 points of it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 21. ANIMATED CREDIBILITY SWEEP -->
+  <section class="slide" data-section="Discussion 5 · Credibility">
+    <div class="eyebrow">Turn the dial</div>
+    <h2>Sweep credibility from none to total</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:1.1fr .9fr">
+      <div class="panel">
+        <div class="ptitle">Required unemployment as credibility rises</div>
+        <svg id="credsvg" viewBox="0 0 460 360" role="img" aria-label="An animated Phillips curve diagram. As the weight people put on past inflation falls from one to zero — that is, as the Fed becomes more credible — expected inflation falls from 5 percent to 2 percent and the short-run Phillips curve slides downward. The point on the 2 percent inflation target line slides left from 8 percent unemployment to 6.5 percent and finally to 5 percent, where it meets the vertical long-run curve. The lower the weight on the past, the smaller the unemployment cost of the disinflation; at full credibility the cost is zero.">
+          <line x1="60" y1="30" x2="60" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="320" x2="430" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="48" y="36" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">π</text>
+          <text x="430" y="342" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">u</text>
+          <!-- horizontal reference lines -->
+          <line x1="60" y1="180" x2="430" y2="180" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="54" y="184" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">5%</text>
+          <line x1="60" y1="222" x2="430" y2="222" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="54" y="226" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">3.5%</text>
+          <!-- the 2% target line: dashed, labelled -->
+          <line x1="60" y1="264" x2="430" y2="264" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="6 4"/>
+          <text x="54" y="268" font-family="monospace" font-size="11" fill="#8A5900" text-anchor="end" font-weight="700">2%</text>
+          <text x="62" y="256" font-family="monospace" font-size="10" fill="#8A5900" font-weight="700">Fed target πᵀ = 2%</text>
+          <!-- LRPC -->
+          <line x1="240" y1="40" x2="240" y2="320" stroke="#C0392B" stroke-width="2.4"/>
+          <text x="248" y="50" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700">LRPC</text>
+          <text x="240" y="338" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle" font-weight="700">ū = 5%</text>
+          <!-- u ticks -->
+          <text x="294" y="338" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">6.5%</text>
+          <text x="348" y="338" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">8%</text>
+          <!-- starting point A: ubar, 5% -->
+          <circle cx="240" cy="180" r="5" fill="#14243A"/>
+          <text x="251" y="174" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">A</text>
+          <!-- waypoint rings on the target line -->
+          <g id="cw1" opacity="0">
+            <line x1="96" y1="68" x2="384" y2="292" stroke="#8FAADC" stroke-width="1.6" stroke-dasharray="5 4"/>
+            <line x1="348" y1="264" x2="348" y2="320" stroke="#8FAADC" stroke-width="1.4" stroke-dasharray="4 3"/>
+            <circle cx="348" cy="264" r="7" fill="none" stroke="#5A5F66" stroke-width="1.6"/>
+            <text x="348" y="352" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle" font-weight="700">e = 1</text>
+          </g>
+          <g id="cw2" opacity="0">
+            <line x1="96" y1="110" x2="348" y2="306" stroke="#8FAADC" stroke-width="1.6" stroke-dasharray="5 4"/>
+            <line x1="294" y1="264" x2="294" y2="320" stroke="#8FAADC" stroke-width="1.4" stroke-dasharray="4 3"/>
+            <circle cx="294" cy="264" r="7" fill="none" stroke="#5A5F66" stroke-width="1.6"/>
+            <text x="294" y="352" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle" font-weight="700">e = 0.5</text>
+          </g>
+          <g id="cw3" opacity="0">
+            <circle cx="240" cy="264" r="7" fill="none" stroke="#C0392B" stroke-width="1.6"/>
+            <text x="240" y="352" font-family="monospace" font-size="10" fill="#C0392B" text-anchor="middle" font-weight="700">e = 0</text>
+          </g>
+          <!-- the moving SRPC -->
+          <line id="cSRPC" x1="96" y1="68" x2="384" y2="292" stroke="#1F4E79" stroke-width="3"/>
+          <text id="cSRPCt" x="390" y="296" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">SRPC</text>
+          <!-- cost bracket from ubar to required u, on the target line -->
+          <line id="cBrk" x1="240" y1="248" x2="348" y2="248" stroke="#C0392B" stroke-width="2"/>
+          <line id="cBrkA" x1="240" y1="243" x2="240" y2="253" stroke="#C0392B" stroke-width="2"/>
+          <line id="cBrkB" x1="348" y1="243" x2="348" y2="253" stroke="#C0392B" stroke-width="2"/>
+          <text id="cBrkT" x="245" y="240" font-family="monospace" font-size="10.5" fill="#C0392B" font-weight="700">Δu = 3.0 pts</text>
+          <!-- the moving dot -->
+          <line id="cGuide" x1="348" y1="264" x2="348" y2="320" stroke="#9AA0A6" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <circle id="cDot" cx="348" cy="264" r="6" fill="#1F4E79"/>
+          <!-- end-state note -->
+          <text id="cEnd" x="252" y="212" font-family="monospace" font-size="10.5" fill="#C0392B" font-weight="700" opacity="0">cost = 0 at full credibility</text>
+        </svg>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <div class="readout" id="credread" aria-live="polite" aria-atomic="true">
+          weight on the past &nbsp;<span class="big" id="cE">1.00</span><br>
+          expected inflation &nbsp;Eπ = <span class="big" id="cEpi">5.00%</span><br>
+          required unemployment &nbsp;u = <span class="big" id="cU">8.0%</span><br>
+          output growth &nbsp;%ΔY = <span class="big" id="cY">−3.0%</span>
+        </div>
+        <div style="display:flex;gap:.8rem;flex-wrap:wrap">
+          <button class="btn" id="credPlay">▶ Play credibility</button>
+          <button class="btn ghost" id="credReset">Reset</button>
+        </div>
+        <p class="lede" style="font-size:1rem;max-width:44ch">The dial runs from <strong>e = 1</strong> (nobody believes the announcement — pure Part 2) to <strong>e = 0</strong> (everybody does — pure Part 3). Watch where the dot stops at 0.5, and check it against your Question 9 prediction.</p>
+        <p class="footnote">The Fed does the same thing in every frame: announce 2% and contract the money supply. The only thing changing is how much weight the public puts on the announcement.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 22. PUNCHLINE -->
+  <section class="slide" data-section="Discussion 5 · Credibility">
+    <div class="eyebrow">The punchline</div>
+    <h2>They were never two theories</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:1000px;gap:1rem">
+      <p class="lede" style="max-width:70ch">Part 2 and Part 3 looked like rival accounts of how people think — the goldfish and the oracle. Put them on the same equation and they stop being rivals:</p>
+      <div class="chain" style="font-size:1.15rem">Eπ<sub>t</sub> = e·π<sub>t−1</sub> + (1 − e)·π<sup>T</sup><sub>t</sub></div>
+      <div class="two" style="max-width:900px;margin-top:.2rem">
+        <div class="chain" style="background:#FBEEEC;border-color:#E3A9A1;color:#C0392B;display:block">
+          <strong>e = 1</strong> &nbsp;→&nbsp; Eπ = π<sub>t−1</sub><br>
+          <span style="font-size:.92rem">that <em>is</em> adaptive expectations</span>
+        </div>
+        <div class="chain" style="display:block">
+          <strong>e = 0</strong> &nbsp;→&nbsp; Eπ = π<sup>T</sup><br>
+          <span style="font-size:.92rem">that <em>is</em> rational expectations (fully credible)</span>
+        </div>
+      </div>
+      <div class="reveal">
+        <span class="cue">What this buys you</span>
+        <p>Adaptive and rational are not two competing theories of the world. They are <strong>e = 1 and e = 0 on one dial</strong> — the two endpoints of a single equation, with every real economy somewhere in between. And the position of that dial is <strong>not a fact about psychology. It is a fact about the Fed.</strong></p>
+        <p style="margin-top:.5rem">The unemployment cost of disinflation is set by <strong>credibility</strong>: the more credible the Fed, the smaller e, the more weight people put on the announcement, and the closer we sit to the costless case. That is precisely what the Fed is buying when it protects its target — not a number on a page, but the price of the <em>next</em> disinflation.</p>
+      </div>
+      <p class="footnote">Note what never moved across all three cases: unemployment ends at ū = 5% and inflation ends at 2% every single time. The destination was never in question. Only the fare.</p>
+    </div>
+  </section>
+
+
+  <!-- ══════════════ PART 5 ══════════════ -->
+
+  <!-- 23. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 5 · Anchoring">
+    <div class="eyebrow">Part 5 of 5</div>
+    <h1>Why the Curve Broke,<br>and What Anchoring Is</h1>
+    <p class="lede">The 1960s data traced the Phillips curve beautifully. Then it stopped. Finding out why tells you what the Fed is actually protecting.</p>
+    <div class="sectrail">SRPC ✓ → Adaptive ✓ → Rational ✓ → Credibility ✓ → Anchoring</div>
+    <div class="through">Throughline: nothing here changes where the economy ends up. Expectations decide only how much unemployment you pay to get there — and credibility is the dial.</div>
+  </section>
+
+  <!-- 24. DECADE SCATTERS + Q11 -->
+  <section class="slide" data-section="Discussion 5 · Anchoring">
+    <div class="eyebrow">The data, decade by decade</div>
+    <h2>The relationship that stopped showing up</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:.85fr 1.15fr">
+      <div class="panel">
+        <div class="ptitle">1960s — the textbook case</div>
+        <svg viewBox="0 0 400 305" role="img" aria-label="Scatter of U.S. inflation against unemployment, annual averages 1960 to 1969, joined in year order. The points trace a clean downward path from 6.7 percent unemployment with 1.1 percent inflation in 1961 to 3.5 percent unemployment with 5.5 percent inflation in 1969 — the negative relationship the Phillips curve predicts.">
+          <line x1="52.0" y1="38" x2="52.0" y2="268" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="52.0" y="284" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">2%</text>
+          <line x1="106.7" y1="38" x2="106.7" y2="268" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="106.7" y="284" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">4%</text>
+          <line x1="161.3" y1="38" x2="161.3" y2="268" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="161.3" y="284" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">6%</text>
+          <line x1="216.0" y1="38" x2="216.0" y2="268" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="216.0" y="284" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">8%</text>
+          <line x1="270.7" y1="38" x2="270.7" y2="268" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="270.7" y="284" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">10%</text>
+          <line x1="325.3" y1="38" x2="325.3" y2="268" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="325.3" y="284" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">12%</text>
+          <line x1="380.0" y1="38" x2="380.0" y2="268" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="380.0" y="284" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">14%</text>
+          <line x1="52" y1="268.0" x2="380" y2="268.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="46" y="271.5" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">-2%</text>
+          <line x1="52" y1="241.0" x2="380" y2="241.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="46" y="244.5" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">0%</text>
+          <line x1="52" y1="214.0" x2="380" y2="214.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="46" y="217.5" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">2%</text>
+          <line x1="52" y1="173.5" x2="380" y2="173.5" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="46" y="177.0" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">5%</text>
+          <line x1="52" y1="133.0" x2="380" y2="133.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="46" y="136.5" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">8%</text>
+          <line x1="52" y1="106.0" x2="380" y2="106.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="46" y="109.5" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">10%</text>
+          <line x1="52" y1="79.0" x2="380" y2="79.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="46" y="82.5" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">12%</text>
+          <line x1="52" y1="38.5" x2="380" y2="38.5" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="46" y="42.0" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">15%</text>
+          <line x1="52" y1="38" x2="52" y2="268" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="52" y1="268" x2="380" y2="268" stroke="#8A8F96" stroke-width="1.6"/>
+          <polyline points="147.7,220.8 180.5,226.2 147.7,224.8 153.1,224.8 139.5,223.4 120.3,219.4 101.2,201.8 101.2,199.2 95.7,184.3 93.0,166.8" fill="none" stroke="#8FAADC" stroke-width="1.4"/>
+          <circle cx="147.7" cy="220.8" r="4" fill="#1F4E79"/>
+          <circle cx="180.5" cy="226.2" r="4" fill="#1F4E79"/>
+          <circle cx="147.7" cy="224.8" r="4" fill="#1F4E79"/>
+          <circle cx="153.1" cy="224.8" r="4" fill="#1F4E79"/>
+          <circle cx="139.5" cy="223.4" r="4" fill="#1F4E79"/>
+          <circle cx="120.3" cy="219.4" r="4" fill="#1F4E79"/>
+          <circle cx="101.2" cy="201.8" r="4" fill="#1F4E79"/>
+          <circle cx="101.2" cy="199.2" r="4" fill="#1F4E79"/>
+          <circle cx="95.7" cy="184.3" r="4" fill="#1F4E79"/>
+          <circle cx="93.0" cy="166.8" r="4" fill="#1F4E79"/>
+          <text x="163.7" y="224.8" font-family="monospace" font-size="10" fill="#5A5F66" font-weight="700" text-anchor="middle">1960</text>
+          <text x="109.0" y="170.8" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700" text-anchor="middle">1969</text>
+          <text x="216" y="298" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">Unemployment rate (u)</text>
+          <text x="14" y="153" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle" transform="rotate(-90 14 153)">Inflation (π)</text>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="ptitle">1970s – 2020s — the same axes, six more decades</div>
+        <svg viewBox="0 0 660 320" role="img" aria-label="Six small scatter plots of U.S. inflation against unemployment, one per decade from the 1970s to the 2020s, on identical axes with the years joined in order. None of them traces a clean downward line. The 1970s and 1980s show inflation and unemployment rising together and then falling together in large loops; the 1990s, 2000s and 2010s cluster in a narrow band of low inflation across a wide range of unemployment rates; the 2020s trace a near-vertical rise in inflation while unemployment barely moves. The simple negative relationship visible in the 1960s does not reappear.">
+          <!-- 1970s -->
+          <text x="30.0" y="10.0" font-family="monospace" font-size="11" fill="#14243A" font-weight="700">1970s</text>
+          <line x1="30.0" y1="17.5" x2="30.0" y2="128.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="30.0" y="141.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">2%</text>
+          <line x1="82.0" y1="17.5" x2="82.0" y2="128.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="82.0" y="141.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">6%</text>
+          <line x1="134.0" y1="17.5" x2="134.0" y2="128.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="134.0" y="141.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">10%</text>
+          <line x1="186.0" y1="17.5" x2="186.0" y2="128.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="186.0" y="141.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">14%</text>
+          <line x1="30.0" y1="115.0" x2="186.0" y2="115.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="26.0" y="118.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">0%</text>
+          <line x1="30.0" y1="82.5" x2="186.0" y2="82.5" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="26.0" y="85.5" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">5%</text>
+          <line x1="30.0" y1="50.0" x2="186.0" y2="50.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="26.0" y="53.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">10%</text>
+          <line x1="30.0" y1="17.5" x2="186.0" y2="17.5" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="26.0" y="20.5" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">15%</text>
+          <line x1="30.0" y1="17.5" x2="30.0" y2="128.0" stroke="#8A8F96" stroke-width="1.4"/>
+          <line x1="30.0" y1="128.0" x2="186.0" y2="128.0" stroke="#8A8F96" stroke-width="1.4"/>
+          <polyline points="67.7,77.9 80.7,86.4 76.8,94.2 67.7,74.7 76.8,43.5 114.5,55.9 104.1,77.3 96.3,72.8 83.3,65.6 79.4,41.5" fill="none" stroke="#8FAADC" stroke-width="1.2"/>
+          <circle cx="67.7" cy="77.9" r="3.1" fill="#1F4E79"/>
+          <circle cx="80.7" cy="86.4" r="3.1" fill="#1F4E79"/>
+          <circle cx="76.8" cy="94.2" r="3.1" fill="#1F4E79"/>
+          <circle cx="67.7" cy="74.7" r="3.1" fill="#1F4E79"/>
+          <circle cx="76.8" cy="43.5" r="3.1" fill="#1F4E79"/>
+          <circle cx="114.5" cy="55.9" r="3.1" fill="#1F4E79"/>
+          <circle cx="104.1" cy="77.3" r="3.1" fill="#1F4E79"/>
+          <circle cx="96.3" cy="72.8" r="3.1" fill="#1F4E79"/>
+          <circle cx="83.3" cy="65.6" r="3.1" fill="#1F4E79"/>
+          <circle cx="79.4" cy="41.5" r="3.1" fill="#1F4E79"/>
+          <!-- 1980s -->
+          <text x="255.0" y="10.0" font-family="monospace" font-size="11" fill="#14243A" font-weight="700">1980s</text>
+          <line x1="255.0" y1="17.5" x2="255.0" y2="128.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="255.0" y="141.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">2%</text>
+          <line x1="307.0" y1="17.5" x2="307.0" y2="128.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="307.0" y="141.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">6%</text>
+          <line x1="359.0" y1="17.5" x2="359.0" y2="128.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="359.0" y="141.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">10%</text>
+          <line x1="411.0" y1="17.5" x2="411.0" y2="128.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="411.0" y="141.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">14%</text>
+          <line x1="255.0" y1="115.0" x2="411.0" y2="115.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="251.0" y="118.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">0%</text>
+          <line x1="255.0" y1="82.5" x2="411.0" y2="82.5" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="251.0" y="85.5" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">5%</text>
+          <line x1="255.0" y1="50.0" x2="411.0" y2="50.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="251.0" y="53.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">10%</text>
+          <line x1="255.0" y1="17.5" x2="411.0" y2="17.5" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="251.0" y="20.5" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">15%</text>
+          <line x1="255.0" y1="17.5" x2="255.0" y2="128.0" stroke="#8A8F96" stroke-width="1.4"/>
+          <line x1="255.0" y1="128.0" x2="411.0" y2="128.0" stroke="#8A8F96" stroke-width="1.4"/>
+          <polyline points="321.3,27.2 327.8,48.0 355.1,74.7 353.8,94.2 326.5,87.1 322.6,91.6 320.0,102.7 309.6,91.6 300.5,88.3 297.9,83.8" fill="none" stroke="#8FAADC" stroke-width="1.2"/>
+          <circle cx="321.3" cy="27.2" r="3.1" fill="#1F4E79"/>
+          <circle cx="327.8" cy="48.0" r="3.1" fill="#1F4E79"/>
+          <circle cx="355.1" cy="74.7" r="3.1" fill="#1F4E79"/>
+          <circle cx="353.8" cy="94.2" r="3.1" fill="#1F4E79"/>
+          <circle cx="326.5" cy="87.1" r="3.1" fill="#1F4E79"/>
+          <circle cx="322.6" cy="91.6" r="3.1" fill="#1F4E79"/>
+          <circle cx="320.0" cy="102.7" r="3.1" fill="#1F4E79"/>
+          <circle cx="309.6" cy="91.6" r="3.1" fill="#1F4E79"/>
+          <circle cx="300.5" cy="88.3" r="3.1" fill="#1F4E79"/>
+          <circle cx="297.9" cy="83.8" r="3.1" fill="#1F4E79"/>
+          <!-- 1990s -->
+          <text x="480.0" y="10.0" font-family="monospace" font-size="11" fill="#14243A" font-weight="700">1990s</text>
+          <line x1="480.0" y1="17.5" x2="480.0" y2="128.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="480.0" y="141.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">2%</text>
+          <line x1="532.0" y1="17.5" x2="532.0" y2="128.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="532.0" y="141.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">6%</text>
+          <line x1="584.0" y1="17.5" x2="584.0" y2="128.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="584.0" y="141.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">10%</text>
+          <line x1="636.0" y1="17.5" x2="636.0" y2="128.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="636.0" y="141.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">14%</text>
+          <line x1="480.0" y1="115.0" x2="636.0" y2="115.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="476.0" y="118.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">0%</text>
+          <line x1="480.0" y1="82.5" x2="636.0" y2="82.5" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="476.0" y="85.5" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">5%</text>
+          <line x1="480.0" y1="50.0" x2="636.0" y2="50.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="476.0" y="53.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">10%</text>
+          <line x1="480.0" y1="17.5" x2="636.0" y2="17.5" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="476.0" y="20.5" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">15%</text>
+          <line x1="480.0" y1="17.5" x2="480.0" y2="128.0" stroke="#8A8F96" stroke-width="1.4"/>
+          <line x1="480.0" y1="128.0" x2="636.0" y2="128.0" stroke="#8A8F96" stroke-width="1.4"/>
+          <polyline points="526.8,79.9 542.4,87.7 551.5,95.5 543.7,95.5 533.3,98.1 526.8,96.8 524.2,96.2 517.7,100.0 512.5,104.6 508.6,100.7" fill="none" stroke="#8FAADC" stroke-width="1.2"/>
+          <circle cx="526.8" cy="79.9" r="3.1" fill="#1F4E79"/>
+          <circle cx="542.4" cy="87.7" r="3.1" fill="#1F4E79"/>
+          <circle cx="551.5" cy="95.5" r="3.1" fill="#1F4E79"/>
+          <circle cx="543.7" cy="95.5" r="3.1" fill="#1F4E79"/>
+          <circle cx="533.3" cy="98.1" r="3.1" fill="#1F4E79"/>
+          <circle cx="526.8" cy="96.8" r="3.1" fill="#1F4E79"/>
+          <circle cx="524.2" cy="96.2" r="3.1" fill="#1F4E79"/>
+          <circle cx="517.7" cy="100.0" r="3.1" fill="#1F4E79"/>
+          <circle cx="512.5" cy="104.6" r="3.1" fill="#1F4E79"/>
+          <circle cx="508.6" cy="100.7" r="3.1" fill="#1F4E79"/>
+          <!-- 2000s -->
+          <text x="30.0" y="170.0" font-family="monospace" font-size="11" fill="#14243A" font-weight="700">2000s</text>
+          <line x1="30.0" y1="177.5" x2="30.0" y2="288.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="30.0" y="301.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">2%</text>
+          <line x1="82.0" y1="177.5" x2="82.0" y2="288.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="82.0" y="301.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">6%</text>
+          <line x1="134.0" y1="177.5" x2="134.0" y2="288.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="134.0" y="301.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">10%</text>
+          <line x1="186.0" y1="177.5" x2="186.0" y2="288.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="186.0" y="301.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">14%</text>
+          <line x1="30.0" y1="275.0" x2="186.0" y2="275.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="26.0" y="278.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">0%</text>
+          <line x1="30.0" y1="242.5" x2="186.0" y2="242.5" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="26.0" y="245.5" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">5%</text>
+          <line x1="30.0" y1="210.0" x2="186.0" y2="210.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="26.0" y="213.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">10%</text>
+          <line x1="30.0" y1="177.5" x2="186.0" y2="177.5" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="26.0" y="180.5" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">15%</text>
+          <line x1="30.0" y1="177.5" x2="30.0" y2="288.0" stroke="#8A8F96" stroke-width="1.4"/>
+          <line x1="30.0" y1="288.0" x2="186.0" y2="288.0" stroke="#8A8F96" stroke-width="1.4"/>
+          <polyline points="56.0,252.9 65.1,256.8 79.4,264.6 82.0,260.1 75.5,257.4 70.3,252.9 63.8,254.2 63.8,256.1 79.4,250.3 124.9,277.6" fill="none" stroke="#8FAADC" stroke-width="1.2"/>
+          <circle cx="56.0" cy="252.9" r="3.1" fill="#1F4E79"/>
+          <circle cx="65.1" cy="256.8" r="3.1" fill="#1F4E79"/>
+          <circle cx="79.4" cy="264.6" r="3.1" fill="#1F4E79"/>
+          <circle cx="82.0" cy="260.1" r="3.1" fill="#1F4E79"/>
+          <circle cx="75.5" cy="257.4" r="3.1" fill="#1F4E79"/>
+          <circle cx="70.3" cy="252.9" r="3.1" fill="#1F4E79"/>
+          <circle cx="63.8" cy="254.2" r="3.1" fill="#1F4E79"/>
+          <circle cx="63.8" cy="256.1" r="3.1" fill="#1F4E79"/>
+          <circle cx="79.4" cy="250.3" r="3.1" fill="#1F4E79"/>
+          <circle cx="124.9" cy="277.6" r="3.1" fill="#1F4E79"/>
+          <!-- 2010s -->
+          <text x="255.0" y="170.0" font-family="monospace" font-size="11" fill="#14243A" font-weight="700">2010s</text>
+          <line x1="255.0" y1="177.5" x2="255.0" y2="288.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="255.0" y="301.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">2%</text>
+          <line x1="307.0" y1="177.5" x2="307.0" y2="288.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="307.0" y="301.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">6%</text>
+          <line x1="359.0" y1="177.5" x2="359.0" y2="288.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="359.0" y="301.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">10%</text>
+          <line x1="411.0" y1="177.5" x2="411.0" y2="288.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="411.0" y="301.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">14%</text>
+          <line x1="255.0" y1="275.0" x2="411.0" y2="275.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="251.0" y="278.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">0%</text>
+          <line x1="255.0" y1="242.5" x2="411.0" y2="242.5" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="251.0" y="245.5" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">5%</text>
+          <line x1="255.0" y1="210.0" x2="411.0" y2="210.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="251.0" y="213.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">10%</text>
+          <line x1="255.0" y1="177.5" x2="411.0" y2="177.5" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="251.0" y="180.5" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">15%</text>
+          <line x1="255.0" y1="177.5" x2="255.0" y2="288.0" stroke="#8A8F96" stroke-width="1.4"/>
+          <line x1="255.0" y1="288.0" x2="411.0" y2="288.0" stroke="#8A8F96" stroke-width="1.4"/>
+          <polyline points="353.8,264.6 344.7,254.2 334.3,261.4 325.2,265.2 309.6,264.6 297.9,274.4 292.7,266.6 286.2,261.4 279.7,259.4 277.1,263.3" fill="none" stroke="#8FAADC" stroke-width="1.2"/>
+          <circle cx="353.8" cy="264.6" r="3.1" fill="#1F4E79"/>
+          <circle cx="344.7" cy="254.2" r="3.1" fill="#1F4E79"/>
+          <circle cx="334.3" cy="261.4" r="3.1" fill="#1F4E79"/>
+          <circle cx="325.2" cy="265.2" r="3.1" fill="#1F4E79"/>
+          <circle cx="309.6" cy="264.6" r="3.1" fill="#1F4E79"/>
+          <circle cx="297.9" cy="274.4" r="3.1" fill="#1F4E79"/>
+          <circle cx="292.7" cy="266.6" r="3.1" fill="#1F4E79"/>
+          <circle cx="286.2" cy="261.4" r="3.1" fill="#1F4E79"/>
+          <circle cx="279.7" cy="259.4" r="3.1" fill="#1F4E79"/>
+          <circle cx="277.1" cy="263.3" r="3.1" fill="#1F4E79"/>
+          <!-- 2020s -->
+          <text x="480.0" y="170.0" font-family="monospace" font-size="11" fill="#14243A" font-weight="700">2020s</text>
+          <line x1="480.0" y1="177.5" x2="480.0" y2="288.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="480.0" y="301.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">2%</text>
+          <line x1="532.0" y1="177.5" x2="532.0" y2="288.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="532.0" y="301.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">6%</text>
+          <line x1="584.0" y1="177.5" x2="584.0" y2="288.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="584.0" y="301.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">10%</text>
+          <line x1="636.0" y1="177.5" x2="636.0" y2="288.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="636.0" y="301.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">14%</text>
+          <line x1="480.0" y1="275.0" x2="636.0" y2="275.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="476.0" y="278.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">0%</text>
+          <line x1="480.0" y1="242.5" x2="636.0" y2="242.5" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="476.0" y="245.5" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">5%</text>
+          <line x1="480.0" y1="210.0" x2="636.0" y2="210.0" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="476.0" y="213.0" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">10%</text>
+          <line x1="480.0" y1="177.5" x2="636.0" y2="177.5" stroke="#E4E0D5" stroke-width="1"/>
+          <text x="476.0" y="180.5" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">15%</text>
+          <line x1="480.0" y1="177.5" x2="480.0" y2="288.0" stroke="#8A8F96" stroke-width="1.4"/>
+          <line x1="480.0" y1="288.0" x2="636.0" y2="288.0" stroke="#8A8F96" stroke-width="1.4"/>
+          <polyline points="559.3,267.2 524.2,244.4 500.8,223.0 500.8,248.3 506.0,256.1" fill="none" stroke="#8FAADC" stroke-width="1.2"/>
+          <circle cx="559.3" cy="267.2" r="3.1" fill="#1F4E79"/>
+          <circle cx="524.2" cy="244.4" r="3.1" fill="#1F4E79"/>
+          <circle cx="500.8" cy="223.0" r="3.1" fill="#1F4E79"/>
+          <circle cx="500.8" cy="248.3" r="3.1" fill="#1F4E79"/>
+          <circle cx="506.0" cy="256.1" r="3.1" fill="#1F4E79"/>
+        </svg>
+        <p class="footnote" style="margin-top:.3rem;font-size:.8rem">Annual averages · CPI-U year-over-year and the civilian unemployment rate (BLS). Each panel joins the years in order.</p>
+      </div>
+    </div>
+    <div class="prompt" style="margin-top:1rem;max-width:960px">
+      <span class="cue">Question 11 (write · 2 min)</span>
+      <p>We derived the SRPC and it is still correct. So <strong>what has to be true</strong> of the world for a decade of data to trace it out? Name the conditions — and then name what broke each one.</p>
+    </div>
+    <button class="btn" data-reveal-svg="broke" style="margin-top:.9rem">Reveal · Question 11</button>
+    <div class="reveal-hidden" id="hrBroke">
+      <div class="two" style="max-width:1060px">
+        <div class="col" style="gap:.8rem">
+          <div class="reveal">
+            <span class="cue">Reveal · the two conditions</span>
+            <p>The SRPC shows a negative relationship between inflation and unemployment only if <strong>(i) inflation expectations are constant</strong> and <strong>(ii) supply shocks are absent</strong>. Every point on one curve shares the same Eπ and the same v. Let either drift and the data are sampling <em>different curves</em> — and a cloud of points off different curves has no reason to look like any one of them.</p>
+          </div>
+          <div class="reveal">
+            <span class="cue">Reason 1 · supply shocks broke condition (ii)</span>
+            <p>A <strong>negative supply shock raises inflation and unemployment together</strong> — the opposite co-movement. Business cycles before the 1970s are generally thought to have been <strong>demand</strong>-driven, which is why the 1960s behaved. The two recessions of the <strong>1970s were primarily supply-driven</strong>, which is why that decade loops instead of sloping.</p>
+            <div class="chain" style="background:#FBEEEC;border-color:#E3A9A1;color:#C0392B">v↑ → π↑ <em>and</em> u↑</div>
+          </div>
+          <div class="reveal">
+            <span class="cue">Reason 2 · an active Fed broke condition (i)</span>
+            <p>The Fed has taken a <strong>more active role since the late 1970s</strong>. If it can move expectations at all — even imperfectly — then Eπ is no longer a constant sitting in the background. It is a policy variable. The curve is still there; the economy simply stops staying on any one of them long enough to draw it.</p>
+          </div>
+          <p class="footnote"><strong>The SRPC did not stop existing. The scatter just stopped tracing it.</strong> Everything you computed in Parts 2–4 still holds — those exercises held Eπ and v fixed on purpose.</p>
+        </div>
+        <div class="panel">
+          <div class="ptitle">A negative supply shock</div>
+          <svg viewBox="0 0 440 340" role="img" aria-label="Aggregate supply and demand with a negative supply shock. Short-run aggregate supply shifts up and to the left while aggregate demand is unchanged, so the new equilibrium at point B has a higher price level and lower output than point A. Lower output means higher unemployment, so inflation and unemployment rise together — the opposite of the Phillips curve relationship.">
+            <line x1="60" y1="30" x2="60" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+            <line x1="60" y1="300" x2="420" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+            <text x="48" y="36" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">P</text>
+            <text x="420" y="322" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Y</text>
+            <line x1="170" y1="36" x2="170" y2="300" stroke="#1F4E79" stroke-width="2.2"/>
+            <text x="176" y="44" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">LRAS</text>
+            <line x1="100" y1="279.6" x2="330" y2="116.7" stroke="#1F4E79" stroke-width="2.6"/>
+            <text x="336" y="118" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">SRAS</text>
+            <line x1="90" y1="170" x2="240" y2="282.5" stroke="#1F4E79" stroke-width="2.4"/>
+            <text x="246" y="288" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">AD</text>
+            <circle cx="170" cy="230" r="4.6" fill="#14243A"/>
+            <text x="176" y="242" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">A</text>
+            <line x1="60" y1="230" x2="170" y2="230" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="54" y="234" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">P₁</text>
+            <text x="170" y="316" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle" font-weight="700">Ȳ</text>
+            <g id="oil_g" opacity="0">
+              <line x1="100" y1="229.6" x2="300" y2="87.9" stroke="#C0392B" stroke-width="2.6"/>
+              <text x="306" y="90" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700">SRAS′</text>
+              <path d="M 118 262 L 118 214" stroke="#C0392B" stroke-width="2" marker-end="url(#arrRed5)"/>
+              <text x="126" y="240" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700">v ↑</text>
+              <circle cx="135.7" cy="204.3" r="4.6" fill="#C0392B"/>
+              <text x="120" y="199" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700">B</text>
+              <line x1="60" y1="204.3" x2="135.7" y2="204.3" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3"/>
+              <text x="54" y="208" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="end">P₂</text>
+              <line x1="135.7" y1="204.3" x2="135.7" y2="300" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3"/>
+              <text x="135.7" y="316" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="middle" font-weight="700">Y₁</text>
+              <text x="196" y="180" font-family="monospace" font-size="10.5" fill="#C0392B" font-weight="700">P↑ and Y↓ ⇒ π↑ and u↑</text>
+            </g>
+            <defs>
+              <marker id="arrRed5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#C0392B"/>
+              </marker>
+            </defs>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 25. EXPECTATIONS ENTER DEMAND TOO -->
+  <section class="slide" data-section="Discussion 5 · Anchoring">
+    <div class="eyebrow">The other half of the model</div>
+    <h2>Expectations don't only sit on the supply side</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:1.05fr .95fr">
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <p class="lede">So far EP has done all its work inside SRAS — it is what firms think when they set prices. But consumption plausibly depends on more than disposable income, and one of those things is <strong>what you expect prices to do</strong>:</p>
+        <div class="model hi" style="max-width:520px">
+          <span class="tag">Consumption with price expectations</span>
+          <div class="eq">C = C(Y − T, <span class="coef">EP</span>)</div>
+          <p class="footnote" style="margin-top:.6rem">If you expect higher prices in the future, you buy <strong>today</strong>. EP↑ → C↑.</p>
+        </div>
+        <button class="btn" data-reveal-svg="epad">Follow it through to AD</button>
+        <div class="reveal-hidden" id="hrEPAD">
+          <div class="reveal">
+            <span class="cue">The chain</span>
+            <p>Higher expected prices raise consumption. Planned expenditure now exceeds output, so inventories fall unexpectedly and firms respond by <strong>increasing output</strong>. That shifts the <strong>IS curve right</strong>, raising short-run equilibrium output <em>at any given price level</em> — which is exactly what it means for <strong>aggregate demand to shift right</strong>.</p>
+            <div class="chain" style="margin-top:.6rem;font-size:.98rem">EP↑ → C↑ → PE↑ → U.I.↓ → Y↑ → IS→right → AD→right</div>
+          </div>
+          <div class="predict" style="margin-top:.9rem">
+            <span class="cue">Why this matters for the last slides</span>
+            <p>Expectations now move <strong>both curves</strong>: firms' expectations move SRAS <em>up</em>, consumers' expectations move AD <em>right</em>. If the two groups expect the same thing, those movements offset. If they don't, they can't. That is the whole of anchoring.</p>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">Higher expected prices shift AD right</div>
+        <svg viewBox="0 0 440 320" role="img" aria-label="An aggregate demand diagram. Higher expected future prices raise consumption today, so the aggregate demand curve shifts to the right at every price level.">
+          <line x1="60" y1="30" x2="60" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="290" x2="420" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="48" y="36" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="420" y="312" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Y</text>
+          <line x1="90" y1="160" x2="240" y2="272.5" stroke="#1F4E79" stroke-width="2.6"/>
+          <text x="246" y="278" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">AD</text>
+          <g id="epad_g" opacity="0">
+            <line x1="160" y1="160" x2="310" y2="272.5" stroke="#C0392B" stroke-width="2.6"/>
+            <text x="316" y="278" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700">AD′</text>
+            <path d="M 150 205 L 220 205" stroke="#C0392B" stroke-width="2.2" marker-end="url(#arrRed6)"/>
+            <text x="185" y="197" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="middle" font-weight="700">EP ↑</text>
+          </g>
+          <defs>
+            <marker id="arrRed6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#C0392B"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- 26. ANCHORED vs UNANCHORED + Q12 -->
+  <section class="slide" data-section="Discussion 5 · Anchoring">
+    <div class="eyebrow">Anchored expectations</div>
+    <h2>Inflation without fluctuations — then without that</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1120px;grid-template-columns:1.15fr .85fr">
+      <div class="panel">
+        <div class="ptitle">Anchored · firms and consumers expect the same inflation</div>
+        <svg viewBox="0 0 620 370" role="img" aria-label="Aggregate supply and demand over three successive periods with anchored expectations. Because firms and consumers expect the same inflation, the short-run supply curve shifts up by exactly as much as aggregate demand shifts right in each period. The equilibrium points A, B, C and D therefore stack vertically on the long-run supply curve: the price level rises from P1 to P4 while output stays at its natural level throughout. Inflation proceeds with no fluctuations in output.">
+          <line x1="60" y1="25" x2="60" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="300" x2="600" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="48" y="32" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">P</text>
+          <text x="600" y="322" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Y</text>
+          <line x1="280" y1="25" x2="280" y2="300" stroke="#1F4E79" stroke-width="2.2"/>
+          <text x="286" y="34" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">LRAS</text>
+          <line x1="210" y1="279.6" x2="360" y2="173.4" stroke="#1F4E79" stroke-width="2.4"/>
+          <text x="366" y="175" font-family="monospace" font-size="10.5" fill="#1F4E79" font-weight="700">SRAS</text>
+          <line x1="85" y1="83.75" x2="362.7" y2="292" stroke="#1F4E79" stroke-width="2.4"/>
+          <text x="368" y="290" font-family="monospace" font-size="10.5" fill="#1F4E79" font-weight="700">AD</text>
+          <circle cx="280" cy="230" r="4.4" fill="#14243A"/>
+          <text x="293" y="234" font-family="monospace" font-size="11" fill="#14243A" font-weight="700">A</text>
+          <line x1="60" y1="230" x2="280" y2="230" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="54" y="234" font-family="monospace" font-size="10.5" fill="#5A5F66" text-anchor="end">P₁</text>
+          <text x="280" y="316" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle" font-weight="700">Ȳ</text>
+          <g id="anch_g" opacity="0">
+            <!-- period 1 -->
+            <line x1="210" y1="234.6" x2="360" y2="128.4" stroke="#C0392B" stroke-width="2.2"/>
+            <text x="366" y="130" font-family="monospace" font-size="10.5" fill="#C0392B" font-weight="700">SRAS′</text>
+            <line x1="145" y1="83.75" x2="422.7" y2="292" stroke="#C0392B" stroke-width="2.2"/>
+            <text x="428" y="290" font-family="monospace" font-size="10.5" fill="#C0392B" font-weight="700">AD′</text>
+            <circle cx="280" cy="185" r="4.4" fill="#14243A"/>
+            <text x="293" y="189" font-family="monospace" font-size="11" fill="#14243A" font-weight="700">B</text>
+            <line x1="60" y1="185" x2="280" y2="185" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="54" y="189" font-family="monospace" font-size="10.5" fill="#5A5F66" text-anchor="end">P₂</text>
+            <!-- period 2 -->
+            <line x1="210" y1="189.6" x2="360" y2="83.4" stroke="#C0392B" stroke-width="2.2"/>
+            <text x="366" y="85" font-family="monospace" font-size="10.5" fill="#C0392B" font-weight="700">SRAS″</text>
+            <line x1="205" y1="83.75" x2="482.7" y2="292" stroke="#C0392B" stroke-width="2.2"/>
+            <text x="488" y="290" font-family="monospace" font-size="10.5" fill="#C0392B" font-weight="700">AD″</text>
+            <circle cx="280" cy="140" r="4.4" fill="#14243A"/>
+            <text x="293" y="144" font-family="monospace" font-size="11" fill="#14243A" font-weight="700">C</text>
+            <line x1="60" y1="140" x2="280" y2="140" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="54" y="144" font-family="monospace" font-size="10.5" fill="#5A5F66" text-anchor="end">P₃</text>
+            <!-- period 3 -->
+            <line x1="210" y1="144.6" x2="360" y2="38.4" stroke="#C0392B" stroke-width="2.2"/>
+            <text x="366" y="40" font-family="monospace" font-size="10.5" fill="#C0392B" font-weight="700">SRAS‴</text>
+            <line x1="265" y1="83.75" x2="542.7" y2="292" stroke="#C0392B" stroke-width="2.2"/>
+            <text x="548" y="290" font-family="monospace" font-size="10.5" fill="#C0392B" font-weight="700">AD‴</text>
+            <circle cx="280" cy="95" r="4.4" fill="#14243A"/>
+            <text x="293" y="99" font-family="monospace" font-size="11" fill="#14243A" font-weight="700">D</text>
+            <line x1="60" y1="95" x2="280" y2="95" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="54" y="99" font-family="monospace" font-size="10.5" fill="#5A5F66" text-anchor="end">P₄</text>
+            <!-- matched-shift annotation: each arrow spans exactly one shift -->
+            <path d="M 245 254.8 L 245 209.8" stroke="#8A5900" stroke-width="2" marker-end="url(#arrGold7)"/>
+            <text x="238" y="246" font-family="monospace" font-size="10" fill="#8A5900" text-anchor="end" font-weight="700">EP ↑ (firms)</text>
+            <path d="M 333.3 270 L 393.3 270" stroke="#8A5900" stroke-width="2" marker-end="url(#arrGold7)"/>
+            <text x="363" y="264" font-family="monospace" font-size="10" fill="#8A5900" text-anchor="middle" font-weight="700">EP ↑ (consumers)</text>
+            <text x="90" y="60" font-family="monospace" font-size="10.5" fill="#8A5900" font-weight="700">equal shifts ⇒ Y stays at Ȳ</text>
+          </g>
+          <defs>
+            <marker id="arrGold7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#8A5900"/>
+            </marker>
+          </defs>
+        </svg>
+        <button class="btn" data-reveal-svg="anch" style="margin-top:.7rem">Run three periods · anchored</button>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="reveal-hidden" id="hrAnch">
+          <div class="reveal">
+            <span class="cue">The anchored case</span>
+            <p>Suppose inflation has been stable for years — roughly March 2010 to March 2020. Expectations settle close to actual inflation, so it becomes <strong>predictable</strong>, and firms and consumers end up with <strong>relatively close expectations of future prices</strong>. SRAS and AD then shift by <strong>similar amounts</strong>, period after period.</p>
+            <p style="margin-top:.5rem">Result: the price level marches P₁ → P₄ — there <em>is</em> inflation — while output never leaves Ȳ. <strong>Anchored inflation causes no short-run fluctuations at all.</strong></p>
+          </div>
+        </div>
+        <div class="prompt">
+          <span class="cue">Question 12 (write · 2 min)</span>
+          <p>Now break the match. <strong>What happens if the two groups' expectations differ?</strong> Take both cases: consumers expecting more inflation than firms, and firms expecting more than consumers. Which way does output move in each — and why?</p>
+        </div>
+        <p class="footnote">One curve shifts further than the other. Everything follows from that.</p>
+      </div>
+    </div>
+    <button class="btn" data-reveal-svg="mismatch" style="margin-top:1rem">Reveal · Question 12 · both mismatch cases</button>
+    <div class="reveal-hidden" id="hrMismatch">
+      <div class="two" style="max-width:1120px">
+        <div class="panel">
+          <div class="ptitle">Consumers expect more inflation than firms</div>
+          <svg viewBox="0 0 440 340" role="img" aria-label="Aggregate supply and demand when consumers expect more inflation than firms. Aggregate demand shifts right by more than short-run aggregate supply shifts up, so the new equilibrium B lies to the right of the long-run supply curve: output is above its natural level. The price level that actually results lies between what consumers expected and what firms expected, so neither group's forecast was correct.">
+            <line x1="60" y1="30" x2="60" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+            <line x1="60" y1="300" x2="420" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+            <text x="48" y="36" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">P</text>
+            <text x="420" y="322" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Y</text>
+            <line x1="170" y1="36" x2="170" y2="300" stroke="#1F4E79" stroke-width="2.2"/>
+            <text x="176" y="44" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">LRAS</text>
+            <line x1="100" y1="279.6" x2="330" y2="116.7" stroke="#1F4E79" stroke-width="2.4"/>
+            <text x="336" y="118" font-family="monospace" font-size="10.5" fill="#1F4E79" font-weight="700">SRAS</text>
+            <line x1="90" y1="170" x2="240" y2="282.5" stroke="#1F4E79" stroke-width="2.4"/>
+            <text x="246" y="288" font-family="monospace" font-size="10.5" fill="#1F4E79" font-weight="700">AD</text>
+            <line x1="100" y1="254.6" x2="330" y2="91.7" stroke="#C0392B" stroke-width="2.4"/>
+            <text x="336" y="93" font-family="monospace" font-size="10.5" fill="#C0392B" font-weight="700">SRAS′</text>
+            <line x1="160" y1="170" x2="310" y2="282.5" stroke="#C0392B" stroke-width="2.4"/>
+            <text x="316" y="288" font-family="monospace" font-size="10.5" fill="#C0392B" font-weight="700">AD′</text>
+            <path d="M 118 266.8 L 118 241.8" stroke="#C0392B" stroke-width="2" marker-end="url(#arrRed8L)"/>
+            <text x="112" y="256" font-family="monospace" font-size="9" fill="#C0392B" text-anchor="end" font-weight="700">EP↑ small</text>
+            <path d="M 212.7 262 L 282.7 262" stroke="#C0392B" stroke-width="2" marker-end="url(#arrRed8L)"/>
+            <text x="247" y="256" font-family="monospace" font-size="9" fill="#C0392B" text-anchor="middle" font-weight="700">EP↑ large</text>
+            <circle cx="170" cy="230" r="4.4" fill="#14243A"/>
+            <text x="180" y="234" font-family="monospace" font-size="11" fill="#14243A" font-weight="700">A</text>
+            <line x1="60" y1="230" x2="170" y2="230" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="54" y="234" font-family="monospace" font-size="10.5" fill="#5A5F66" text-anchor="end">P₁</text>
+            <circle cx="188.9" cy="191.65" r="4.4" fill="#C0392B"/>
+            <text x="188.9" y="181" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="middle" font-weight="700">B</text>
+            <line x1="60" y1="191.65" x2="188.9" y2="191.65" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="54" y="195" font-family="monospace" font-size="10.5" fill="#C0392B" text-anchor="end">P₂</text>
+            <line x1="188.9" y1="191.65" x2="188.9" y2="300" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="170" y="316" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle" font-weight="700">Ȳ</text>
+            <text x="200" y="330" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="middle" font-weight="700">Y₁</text>
+            <text x="70" y="58" font-family="monospace" font-size="10.5" fill="#C0392B" font-weight="700">Y₁ &gt; Ȳ · a boom</text>
+            <!-- what each group expected, read off the LRAS crossings -->
+            <circle cx="170" cy="177.5" r="3.4" fill="none" stroke="#5A5F66" stroke-width="1.5"/>
+            <circle cx="170" cy="205" r="3.4" fill="none" stroke="#5A5F66" stroke-width="1.5"/>
+          <defs>
+            <marker id="arrRed8L" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#C0392B"/>
+            </marker>
+          </defs>
+          </svg>
+          <p class="cnote" style="margin-top:.5rem;font-size:.84rem;line-height:1.5">
+            <span style="font-family:var(--mono)">○</span> <strong>upper ring</strong> — AD′ ∩ LRAS: the price level <em>consumers</em> expected.<br>
+            <span style="font-family:var(--mono)">○</span> <strong>lower ring</strong> — SRAS′ ∩ LRAS: the price level <em>firms</em> expected.<br>
+            P₂ lands <strong>between</strong> them — neither group was right.
+          </p>
+        </div>
+        <div class="panel">
+          <div class="ptitle">Firms expect more inflation than consumers</div>
+          <svg viewBox="0 0 440 340" role="img" aria-label="Aggregate supply and demand when firms expect more inflation than consumers. Short-run aggregate supply shifts up by more than aggregate demand shifts right, so the new equilibrium B lies to the left of the long-run supply curve: output is below its natural level. Again the realized price level lies between the two groups' expectations, matching neither.">
+            <line x1="60" y1="30" x2="60" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+            <line x1="60" y1="300" x2="420" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+            <text x="48" y="36" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">P</text>
+            <text x="420" y="322" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Y</text>
+            <line x1="170" y1="36" x2="170" y2="300" stroke="#1F4E79" stroke-width="2.2"/>
+            <text x="176" y="44" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">LRAS</text>
+            <line x1="100" y1="279.6" x2="330" y2="116.7" stroke="#1F4E79" stroke-width="2.4"/>
+            <text x="336" y="118" font-family="monospace" font-size="10.5" fill="#1F4E79" font-weight="700">SRAS</text>
+            <line x1="90" y1="170" x2="240" y2="282.5" stroke="#1F4E79" stroke-width="2.4"/>
+            <text x="246" y="288" font-family="monospace" font-size="10.5" fill="#1F4E79" font-weight="700">AD</text>
+            <line x1="100" y1="209.6" x2="300" y2="68" stroke="#C0392B" stroke-width="2.4"/>
+            <text x="306" y="70" font-family="monospace" font-size="10.5" fill="#C0392B" font-weight="700">SRAS′</text>
+            <line x1="115" y1="170" x2="265" y2="282.5" stroke="#C0392B" stroke-width="2.4"/>
+            <text x="271" y="288" font-family="monospace" font-size="10.5" fill="#C0392B" font-weight="700">AD′</text>
+            <path d="M 112 271.1 L 112 201.1" stroke="#C0392B" stroke-width="2" marker-end="url(#arrRed8R)"/>
+            <text x="106" y="240" font-family="monospace" font-size="9" fill="#C0392B" text-anchor="end" font-weight="700">EP↑ large</text>
+            <path d="M 220.7 268 L 245.7 268" stroke="#C0392B" stroke-width="2" marker-end="url(#arrRed8R)"/>
+            <text x="233" y="262" font-family="monospace" font-size="9" fill="#C0392B" text-anchor="middle" font-weight="700">EP↑ small</text>
+            <circle cx="170" cy="230" r="4.4" fill="#14243A"/>
+            <text x="180" y="234" font-family="monospace" font-size="11" fill="#14243A" font-weight="700">A</text>
+            <line x1="60" y1="230" x2="170" y2="230" stroke="#9AA0A6" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="54" y="234" font-family="monospace" font-size="10.5" fill="#5A5F66" text-anchor="end">P₁</text>
+            <circle cx="134.9" cy="184.9" r="4.4" fill="#C0392B"/>
+            <text x="134.9" y="174" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="middle" font-weight="700">B</text>
+            <line x1="60" y1="184.9" x2="134.9" y2="184.9" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="54" y="188" font-family="monospace" font-size="10.5" fill="#C0392B" text-anchor="end">P₂</text>
+            <line x1="134.9" y1="184.9" x2="134.9" y2="300" stroke="#C0392B" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="134.9" y="316" font-family="monospace" font-size="11" fill="#C0392B" text-anchor="middle" font-weight="700">Y₁</text>
+            <text x="178" y="330" font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle" font-weight="700">Ȳ</text>
+            <text x="70" y="58" font-family="monospace" font-size="10.5" fill="#C0392B" font-weight="700">Y₁ &lt; Ȳ · a slump</text>
+            <circle cx="170" cy="160" r="3.4" fill="none" stroke="#5A5F66" stroke-width="1.5"/>
+            <circle cx="170" cy="211.25" r="3.4" fill="none" stroke="#5A5F66" stroke-width="1.5"/>
+          <defs>
+            <marker id="arrRed8R" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#C0392B"/>
+            </marker>
+          </defs>
+          </svg>
+          <p class="cnote" style="margin-top:.5rem;font-size:.84rem;line-height:1.5">
+            <span style="font-family:var(--mono)">○</span> <strong>upper ring</strong> — SRAS′ ∩ LRAS: the price level <em>firms</em> expected.<br>
+            <span style="font-family:var(--mono)">○</span> <strong>lower ring</strong> — AD′ ∩ LRAS: the price level <em>consumers</em> expected.<br>
+            P₂ lands <strong>between</strong> them — neither group was right.
+          </p>
+        </div>
+      </div>
+      <div class="reveal" style="margin-top:1rem;max-width:1120px">
+        <span class="cue">Reveal · Question 12</span>
+        <p><strong>Either mismatch produces economic fluctuations.</strong> When <strong>consumers expect more</strong> inflation than firms, AD shifts further than SRAS and output comes in <strong>above</strong> Ȳ. When <strong>firms expect more</strong>, SRAS shifts further and output comes in <strong>below</strong> Ȳ. Same mechanism, opposite sign.</p>
+      </div>
+      <div class="predict" style="margin-top:.9rem;max-width:1120px">
+        <span class="cue">The genuinely destabilizing part</span>
+        <p>Read the hollow rings on each diagram — the legend under each one says which is which. Where <strong>AD′ crosses LRAS</strong> is the price level <em>consumers</em> expected. Where <strong>SRAS′ crosses LRAS</strong> is the price level <em>firms</em> expected. The realized price level P₂ sits between them — it matches <strong>neither group</strong>.</p>
+        <p style="margin-top:.5rem">So both groups are now wrong, and — worse — <strong>neither learns whether its way of forming expectations works</strong>. Each was wrong partly because the other was. Forming next year's expectation gets harder, not easier, and if expectations come unanchored the economy can be destabilized as they <strong>spiral out of control</strong>. The hope is that the Fed re-anchors them by announcing a target — and whether that works is, once again, entirely a question of <strong>credibility</strong>. If people do not believe the Fed is willing or able to pursue the recessionary policy required, the announcement changes nothing.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 27. Q13 DIAGNOSE -->
+  <section class="slide" data-section="Discussion 5 · Anchoring">
+    <div class="eyebrow">Diagnose · silent poll</div>
+    <h2>One of these is right for the wrong reason</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start">
+      <p class="lede" style="max-width:76ch">Three sentences about the Fed's 2% target, given that inflation now appears to have settled around <strong>3.5%</strong>. Two are sound. One builds on a <em>correct premise</em> and still reaches the wrong conclusion — which is what makes it hard. <strong>Write down its number</strong> — don't say it out loud.</p>
+      <div class="diag" id="diagTarget">
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">1</span><span class="s">Announcing a target only helps if people believe the Fed is willing to accept a recession to hit it; an announcement nobody believes leaves Eπ exactly where it was.</span></button>
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">2</span><span class="s">Inflation has settled near 3.5%, and what prevents fluctuations is <em>shared, stable</em> expectations rather than any particular number — so the Fed should simply retarget to 3.5% and let expectations anchor there.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">3</span><span class="s">Whether 3.5% inflation is costly to live with and whether it is costly to remove are separate questions; the second depends on e, not on the level of inflation.</span></button>
+      </div>
+      <span class="poll-hint">Question 13 · fingers on the chest, then reveal</span>
+      <button class="btn" data-diag-reveal="diagTarget" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem">
+        <span class="cue">Sentence 2 · the flaw</span>
+        <p><strong>The premise is right, which is exactly why this one is dangerous.</strong> Slide 26 did establish that as long as inflationary expectations are shared by all economic actors, expected inflation does not cause economic fluctuations. Taken alone, 3.5% really is as workable a resting point as 2%.</p>
+        <p style="margin-top:.5rem"><strong>The inference is what fails.</strong> Retargeting is not a free relabelling — it <strong>spends the credibility that keeps e low</strong>. The Fed would be demonstrating that when the target becomes inconvenient, the target moves. In the <em>next</em> inflationary episode people would reasonably think it might move again, so they would weight the announcement less and weight the past more: e rises.</p>
+        <p style="margin-top:.5rem">And by Part 4 that is not a rhetorical loss, it is a priced one. A higher e means the next disinflation costs more unemployment and more output — that is what the credibility dial <em>is</em>. The 2% target is not valuable because 2 is the right number. It is valuable because it has been <strong>kept</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ CLOSE ══════════════ -->
+
+  <!-- 28. SYNTHESIS -->
+  <section class="slide" data-section="Discussion 5 · Close">
+    <div class="eyebrow">Synthesis</div>
+    <h2>Same destination, three different fares</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:1000px;gap:1rem">
+      <p class="lede" style="max-width:72ch">Every case started at ū = 5% with inflation at 5%, and every case ended at ū = 5% with inflation at 2%. Here is the whole discussion in one table:</p>
+      <div class="tablewrap">
+      <table class="cases">
+        <caption class="sr-only">Cost of the same disinflation under three values of the weight on past inflation</caption>
+        <thead>
+          <tr><th scope="col">weight e</th><th scope="col">expectations</th><th scope="col">Eπ</th><th scope="col">required u</th><th scope="col">%ΔY</th><th scope="col">vs. 3% trend</th><th scope="col">sacrifice ratio</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">e = 1</th><td>purely adaptive</td><td>5%</td><td class="hi">8%</td><td>−3%</td><td class="hi">−6 pts</td><td>1</td></tr>
+          <tr><th scope="row">e = 0.5</th><td>partial credibility</td><td>3.5%</td><td class="hi">6.5%</td><td>0%</td><td class="hi">−3 pts</td><td>0</td></tr>
+          <tr><th scope="row">e = 0</th><td>fully rational</td><td>2%</td><td class="hi">5% = ū</td><td>+3%</td><td class="hi">0</td><td>0</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p class="footnote">Read the <strong>cost</strong> off the last highlighted column, not off %ΔY. Trend growth is 3%, so the real cost is the shortfall <em>from trend</em>: the e = 0.5 case shows 0% growth, but that is still three points of growth surrendered. Only at e = 0 is the shortfall genuinely zero. And the e = 1 sacrifice ratio of 1 is the tidy-textbook figure; typical empirical estimates run nearer <strong>5</strong>.</p>
+      <div class="reveal">
+        <span class="cue">The throughline, stated once more</span>
+        <p style="font-size:1.14rem"><strong>Nothing in this unit changes where the economy ends up. Expectations decide only how much unemployment you pay to get there — and credibility is the dial.</strong></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 29. CLOSE · FILL IN THE BLANK -->
+  <section class="slide" data-section="Discussion 5 · Close">
+    <div class="eyebrow">Close · write one line</div>
+    <h2>In your own words</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:860px">
+      <div class="prompt" style="font-size:1.25rem">
+        <span class="cue">Finish this in your notes</span>
+        “Disinflation is cheap when ____________________, because ____________________________________.”
+      </div>
+      <p class="footnote" style="margin-top:.8rem">If your second blank contains the word <em>unemployment</em> as a cause rather than a cost, go back to Question 6.</p>
+      <p class="serif-note" style="margin-top:1.4rem">Next: we leave the short run entirely and ask what sets Ȳ itself — <strong>economic growth</strong>, where capital, population and technology decide the destination that expectations have only been quarrelling about the route to.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="chrome">
+  <span class="course" id="sectionLabel">ECON 105B · Discussion 5</span>
+  <span class="navhint">
+    <button id="prevBtn" aria-label="Previous slide">← prev</button>
+    <span aria-live="polite" aria-atomic="true">Slide <span id="cur">1</span> of <span id="tot">29</span></span>
+    <button id="nextBtn" aria-label="Next slide">next →</button>
+  </span>
+</div>
+
+
+<script>
+(function(){
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  const prog=document.getElementById('prog');
+  const cur=document.getElementById('cur');
+  document.getElementById('tot').textContent=slides.length;
+
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    prog.style.width=((i)/(slides.length-1)*100)+'%';
+    cur.textContent=i+1;
+    const sec=slides[i].getAttribute('data-section');
+    const lbl=document.getElementById('sectionLabel');
+    if(lbl) lbl.textContent = sec ? ('ECON 105B · '+sec) : 'ECON 105B · Discussion 5';
+  }
+  function next(){show(i+1)}
+  function prev(){show(i-1)}
+
+  document.getElementById('nextBtn').onclick=next;
+  document.getElementById('prevBtn').onclick=prev;
+  window.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();next()}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}
+    else if(e.key.toLowerCase()==='f'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  /* ---- generic click-to-reveal: button[data-reveal="targetId"] ---- */
+  document.querySelectorAll('[data-reveal]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const t=document.getElementById(btn.getAttribute('data-reveal'));
+      if(t){t.classList.add('shown');}
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- generic diagnose (flawed-argument) groups ---- */
+  document.querySelectorAll('.diag').forEach(group=>{
+    const opts=[...group.querySelectorAll('.diag-opt')];
+    const revealBtn=group.parentElement.querySelector('[data-diag-reveal]');
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    if(revealBtn){
+      revealBtn.addEventListener('click',()=>{
+        group.classList.add('revealed');
+        opts.forEach(o=>{if(o.dataset.bad==='true')o.classList.add('bad');});
+        revealBtn.style.display='none';
+        const note=group.parentElement.querySelector('[data-diag-note]');
+        if(note) note.style.display='block';
+      });
+    }
+  });
+
+  /* ---- generic quick-check polls: button[data-poll-reveal="pollId"] ---- */
+  document.querySelectorAll('[data-poll-reveal]').forEach(btn=>{
+    const group=document.getElementById(btn.getAttribute('data-poll-reveal'));
+    if(!group) return;
+    const opts=[...group.querySelectorAll('.poll-opt')];
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    btn.addEventListener('click',()=>{
+      group.classList.add('revealed');
+      opts.forEach(o=>{ if(o.dataset.correct==='true') o.classList.add('correct'); });
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- graph shift reveals: button[data-reveal-svg="key"] ----
+     Each key lists the SVG element ids that fade in together, plus an
+     optional text block id to un-hide at the same time.               */
+  const svgShifts={
+    pc1:     {ids:['pc_ad','pc_scatter'], text:'hrPC1'},
+    srpc:    {ids:['srpc_g'],             text:'hrSRPC'},
+    lrpc:    {ids:['lrpc_g'],             text:'hrLRPC'},
+    adaptA:  {ids:['ad_step1'],           text:'hrAdaptA'},
+    adaptB:  {ids:['ad_step2'],           text:'hrAdaptB'},
+    rat:     {ids:['rat_g'],              text:'hrRat'},
+    antic:   {ids:['ant_g'],              text:'hrAntic'},
+    broke:   {ids:['oil_g'],              text:'hrBroke'},
+    epad:    {ids:['epad_g'],             text:'hrEPAD'},
+    anch:    {ids:['anch_g'],             text:'hrAnch'},
+    mismatch:{ids:[],                     text:'hrMismatch'}
+  };
+  document.querySelectorAll('[data-reveal-svg]').forEach(btn=>{
+    const cfg=svgShifts[btn.getAttribute('data-reveal-svg')]||{};
+    btn.addEventListener('click',()=>{
+      (cfg.ids||[]).forEach(id=>{const el=document.getElementById(id); if(el) el.setAttribute('opacity',1);});
+      if(cfg.text){const t=document.getElementById(cfg.text); if(t) t.classList.add('shown');}
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- condition cards: button[data-cond="bodyId"] ---- */
+  document.querySelectorAll('[data-cond]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const body=document.getElementById(btn.getAttribute('data-cond'));
+      if(body){body.classList.add('shown');}
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- Slide 21: sweep credibility, e = 1 → 0 -------------------------
+     Everything on the diagram is computed from the actual equations:
+       Eπ(e) = e·5% + (1−e)·2%      = 2 + 3e
+       2% = Eπ − (u − 5)  ⇒  u(e)   = 5 + 3e
+       %ΔY = 3 − 2(u − 5)           = 3 − 6e
+     Waypoints therefore land exactly on u = 8 / 6.5 / 5 at e = 1 / .5 / 0. */
+  const credPlay=document.getElementById('credPlay');
+  if(credPlay){
+    const g=id=>document.getElementById(id);
+    const cSRPC=g('cSRPC'), cSRPCt=g('cSRPCt'), cDot=g('cDot'), cGuide=g('cGuide'),
+          cBrk=g('cBrk'), cBrkA=g('cBrkA'), cBrkB=g('cBrkB'), cBrkT=g('cBrkT'),
+          cw1=g('cw1'), cw2=g('cw2'), cw3=g('cw3'), cEnd=g('cEnd'),
+          read=g('credread'), credReset=g('credReset');
+    const xU=u=>60+u*36, yP=p=>320-p*28;      // plot mapping, viewBox units
+    const clamp=v=>Math.max(0,Math.min(1,v));
+    function place(e){
+      const Epi=2+3*e, u=5+3*e, dY=3-6*e, du=u-5;
+      // the short-run Phillips curve, clipped to the drawn window
+      const uLo=Math.max(1,Epi-4.5), uHi=Math.min(9,Epi+4.5);
+      cSRPC.setAttribute('x1',xU(uLo)); cSRPC.setAttribute('y1',yP(Epi-(uLo-5)));
+      cSRPC.setAttribute('x2',xU(uHi)); cSRPC.setAttribute('y2',yP(Epi-(uHi-5)));
+      cSRPCt.setAttribute('x',xU(uHi)+6); cSRPCt.setAttribute('y',yP(Epi-(uHi-5))+4);
+      // the dot: where the current SRPC meets the 2% target line
+      const x=xU(u), y=yP(2);
+      cDot.setAttribute('cx',x); cDot.setAttribute('cy',y);
+      cGuide.setAttribute('x1',x); cGuide.setAttribute('x2',x);
+      // the cost bracket, from ū across to the required u
+      cBrk.setAttribute('x2',x); cBrkB.setAttribute('x1',x); cBrkB.setAttribute('x2',x);
+      cBrkT.textContent='Δu = '+du.toFixed(1)+' pts';   // x is fixed at the LRPC
+      // way-points appear as the dot reaches them
+      cw1.setAttribute('opacity',clamp((0.98-e)*20));
+      cw2.setAttribute('opacity',clamp((0.52-e)*20));
+      cw3.setAttribute('opacity',clamp((0.03-e)*40));
+      cEnd.setAttribute('opacity',clamp((0.05-e)*40));
+      // read-out
+      g('cE').textContent=e.toFixed(2);
+      g('cEpi').textContent=Epi.toFixed(2)+'%';
+      g('cU').textContent=u.toFixed(1)+'%';
+      const sign=dY>0.05?'+':(dY<-0.05?'−':'');
+      g('cY').textContent=sign+Math.abs(dY).toFixed(1)+'%';
+    }
+    let raf;
+    function reset(){
+      cancelAnimationFrame(raf);
+      read.setAttribute('aria-busy','false');
+      place(1);
+    }
+    function finish(){
+      place(0);
+      read.setAttribute('aria-busy','false');
+    }
+    const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+    function play(){
+      reset();
+      if(reduced){                       // skip the sweep for reduced-motion users
+        finish();
+        return;
+      }
+      read.setAttribute('aria-busy','true');   // don't announce every frame
+      const dur=2600,t0=performance.now();
+      function step(now){
+        const p=Math.min(1,(now-t0)/dur);
+        const ease=p<1?(0.5-0.5*Math.cos(Math.PI*p)):1;
+        place(1-ease);
+        if(p>=1){finish();}
+        else raf=requestAnimationFrame(step);
+      }
+      raf=requestAnimationFrame(step);
+    }
+    credPlay.onclick=play;
+    credReset.onclick=reset;
+    reset();
+  }
+
+  show(0);
+})();
+</script>
+</body>
+</html>
