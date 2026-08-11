@@ -1,0 +1,1785 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Solow Model: Diagram Explorer — ECON 105B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <!--
+    ═══════════════════════════════════════════════════════════════════════
+    DISCUSSION WEEK TEMPLATE ENTRY — copy/paste into a week page LABS array
+    ═══════════════════════════════════════════════════════════════════════
+      { id:   'solow-diagram',
+        name: 'Solow Model: Diagram Explorer',
+        icon: '📈',
+        desc: 'Move the five Solow parameters and watch the diagram, the transition path, the growth of log output, and the golden-rule trade-off respond together.',
+        url:  '/classes/econ105b/labs/solow-diagram/?disc=1' }
+
+      LAB_ID    = 'solow-diagram'
+      LAB_LABEL = 'Solow Model: Diagram Explorer'
+      URL       = /classes/econ105b/labs/solow-diagram/
+
+    Source: Economic Growth (Chapters 8–9) lecture notes.
+      p. 7   ŷ / î / ĉ decomposition          → Panel A shaded bands
+      p. 8   Δk̂ > 0 and Δk̂ < 0 regions        → Panel A axis arrows
+      p. 10  Figure 3, convergence from k₀=9 and k₀=1 → Panel B defaults
+      p. 12  sf(k) → s′f(k) savings shift     → pin/compare + scenario 1
+      p. 14  golden rule, MPK = δ+n+g         → tangent line toggle
+      p. 18  (δ+n₁)k → (δ+n₂)k pivot          → pin/compare + scenario 2
+      p. 23  the (δ+n+g)k diagram             → Panel A (correctly labelled
+             per *effective* worker; the notes' axis label on that page says
+             "per worker", which this lab deliberately does not reproduce)
+
+    Replaces Solow Model Graph.nb. Shares its mathematics with the solver lab
+    at ../solow-steady-state/ through assets/solow-core.js, and its drawing
+    primitives through assets/solow-plot.js.
+
+    OFFLINE: this file runs by double-click, with no server. All script srcs
+    are relative (see the comment above the <script> tags at the bottom).
+    The only thing that degrades is the Google Fonts <link>, which fails
+    silently with no network and falls back to the system stack named in the
+    --font-sans / --font-serif tokens.
+    ═══════════════════════════════════════════════════════════════════════
+  -->
+
+  <style>
+    /* ── Design tokens (CLAUDE.md) ───────────────────────────── */
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --font-mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+      --paper:#f6f2ea;
+      --panel:#ffffff;
+      --ink:#1f2937;
+      --ink-2:#374151;
+      --muted:#596878;       /* 5.85:1 on white — WCAG AA ✓ */
+      --line:#e7dfd2;
+      --line-2:#d9cfbf;
+      --accent:#2f5d7c;      /* 6.4:1  on white — WCAG AA ✓ */
+      --good:#155c38;        /* 7.7:1  on white — WCAG AA ✓ */
+      --bad:#b42318;         /* 6.2:1  on white — WCAG AA ✓ */
+      --amber:#8c4800;       /* 6.3:1  on white — WCAG AA ✓ */
+      --shadow:0 1px 2px rgba(17,24,39,.06),
+               0 10px 24px rgba(17,24,39,.06);
+    }
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3 / good practice) ────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    *{box-sizing:border-box;}
+    body{margin:0;background:var(--paper);color:var(--ink);
+      font-family:var(--font-sans);}
+
+    /* ── Header / footer (CLAUDE.md standard) ───────────────── */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),
+      rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;
+      font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;
+      line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;
+      max-width:80ch;font-size:0.9375rem;}
+    .lab-wrap{max-width:1160px;margin:0 auto;padding:18px;}
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+    .hidden{display:none!important;}
+
+    /* ── Instructions dropdown (CLAUDE.md standard) ─────────── */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol,.instructions-body ul{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* ── Buttons (CLAUDE.md standard) ───────────────────────── */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+    .option-btn[aria-pressed="true"]{background:var(--accent);color:#fff;
+      border-color:var(--accent);}
+    .option-btn.ran{border-color:var(--good);color:var(--good);}
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover{background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* ── Cards ──────────────────────────────────────────────── */
+    .card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px 18px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .card h2{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin:0 0 12px;}
+    .card h3{font-size:0.75rem;font-weight:800;color:var(--muted);
+      text-transform:uppercase;letter-spacing:.06em;margin:16px 0 8px;}
+
+    /* ── Sliders ────────────────────────────────────────────── */
+    /* min(280px,100%) rather than a bare 280px: at a 320px viewport the card's
+       content box is narrower than the track minimum, and a bare min would
+       push the sliders past the right edge (WCAG 1.4.10 Reflow). */
+    .slider-grid{display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr));
+      gap:10px 22px;}
+    .slider-row{display:grid;grid-template-columns:1fr;gap:4px;}
+    .slider-row .slabel{display:flex;justify-content:space-between;
+      align-items:baseline;gap:10px;font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);}
+    .slider-row .sval{font-family:var(--font-mono);font-size:0.8125rem;
+      font-weight:700;color:var(--accent);
+      font-variant-numeric:tabular-nums;}
+    .slider-row input[type=range]{width:100%;accent-color:var(--accent);
+      height:22px;cursor:pointer;}
+    .slider-note{font-size:0.6875rem;color:var(--muted);margin-top:2px;}
+
+    /* ── Button rows ────────────────────────────────────────── */
+    .btn-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+    .btn-row + .btn-row{margin-top:10px;}
+    .progress-note{font-size:0.75rem;color:var(--muted);margin-top:10px;
+      line-height:1.5;}
+    .progress-note strong{color:var(--ink-2);}
+
+    /* ── Mechanism readout after a scenario ─────────────────── */
+    .mech{margin-top:12px;padding:10px 14px;border-radius:12px;
+      border:1px solid var(--line-2);background:rgba(47,93,124,.06);
+      font-size:0.8125rem;line-height:1.55;color:var(--ink-2);}
+    .mech strong{color:var(--accent);}
+    .warn{margin-bottom:14px;padding:12px 16px;border-radius:12px;
+      border:1.5px solid var(--bad);background:rgba(180,35,24,.06);
+      color:var(--ink);font-size:0.875rem;line-height:1.55;}
+    .warn strong{color:var(--bad);}
+
+    /* ── Readout stats ──────────────────────────────────────── */
+    .stat-grid{display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(min(148px,100%),1fr));gap:10px;}
+    .stat{border:1px solid var(--line);border-radius:12px;padding:9px 11px;
+      background:rgba(246,242,234,.5);}
+    /* NOT uppercased: these labels carry k̂*, ŷ*, ĉ*, î*, δ. In this course
+       case is meaningful — K, Y, C are aggregates while k, y, c are per
+       worker — so text-transform would silently rewrite the economics. */
+    .stat .sk{font-size:0.6875rem;font-weight:700;color:var(--muted);
+      letter-spacing:.02em;line-height:1.35;}
+    .stat .sv{font-family:var(--font-mono);font-size:1.125rem;font-weight:700;
+      color:var(--ink);font-variant-numeric:tabular-nums;margin-top:3px;}
+    .stat.hl{background:rgba(47,93,124,.08);border-color:var(--accent);}
+    .stat.hl .sv{color:var(--accent);}
+    .verdict{margin-top:12px;font-size:0.875rem;line-height:1.6;
+      color:var(--ink-2);}
+    .verdict strong{color:var(--ink);}
+    .tagline{display:inline-block;font-size:0.75rem;font-weight:800;
+      padding:2px 9px;border-radius:999px;border:1.5px solid currentColor;
+      margin-right:6px;}
+    .t-above{color:var(--bad);}
+    .t-below{color:var(--amber);}
+    .t-at{color:var(--good);}
+
+    /* ── Graph panels ───────────────────────────────────────── */
+    .panel-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    .panel-grid .span2{grid-column:1 / -1;}
+    /* CLAUDE.md requires single-column reflow at ≤700px; these panels are
+       dense enough that two columns stop being readable well before that. */
+    @media(max-width:900px){
+      .panel-grid{grid-template-columns:1fr;}
+      .panel-grid .span2{grid-column:auto;}
+    }
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
+    .graph-sub{font-size:0.75rem;color:var(--muted);line-height:1.45;
+      margin-bottom:8px;}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;
+      overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+    #canvasA{touch-action:none;cursor:ew-resize;}
+
+    /* Aspect ratios live here rather than inline so they can respond to the
+       viewport. A 16:8 panel is right when it is 1090px wide and unreadable
+       when it is 284px wide, so the wide panels get taller as the grid
+       collapses to one column. */
+    .ar-wide{aspect-ratio:16/8;}
+    .ar-tall{aspect-ratio:4/3;}
+    .ar-band{aspect-ratio:16/6;}
+    @media(max-width:900px){
+      .ar-wide{aspect-ratio:4/3;}
+      .ar-band{aspect-ratio:16/9;}
+    }
+    @media(max-width:520px){
+      .ar-wide{aspect-ratio:1/1;}
+      .ar-tall{aspect-ratio:1/1;}
+      .ar-band{aspect-ratio:4/3;}
+    }
+
+    /* ── Legends: colour ALWAYS paired with line style + text ── */
+    .legend{list-style:none;margin:10px 0 0;padding:0;display:flex;
+      flex-wrap:wrap;gap:6px 16px;font-size:0.75rem;color:var(--ink-2);
+      line-height:1.5;}
+    .legend li{display:flex;align-items:center;gap:7px;}
+    .legend svg{flex:none;display:block;}
+    .legend .lgt{font-family:var(--font-mono);font-weight:700;}
+    .panel-note{font-size:0.6875rem;color:var(--muted);margin-top:8px;
+      line-height:1.5;}
+
+    /* ── Cross-link card ────────────────────────────────────── */
+    .crosslink{display:flex;flex-wrap:wrap;align-items:center;gap:12px;
+      justify-content:space-between;}
+    .crosslink p{margin:0;font-size:0.875rem;color:var(--ink-2);
+      line-height:1.55;max-width:70ch;}
+    .crosslink a{display:inline-flex;align-items:center;gap:8px;
+      text-decoration:none;border:1.5px solid #8c7f72;
+      background:rgba(47,93,124,.10);color:var(--accent);padding:10px 14px;
+      border-radius:12px;font-weight:800;font-size:0.8125rem;
+      white-space:nowrap;}
+    .crosslink a:hover{background:rgba(47,93,124,.16);}
+
+    .ada-notice{margin-top:16px;padding:14px 16px;border:1px solid var(--line);
+      border-radius:12px;background:var(--panel);font-size:0.8125rem;
+      color:var(--ink-2);line-height:1.55;}
+  </style>
+</head>
+<body>
+
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <!-- Relative, for the same reason as the script tags below: an absolute
+           /classes/… href points at the filesystem root under file://. -->
+      <a class="crumb-link" href="../">← ECON 105B Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105B — Economic Growth</div>
+      <h1>Solow Model: Diagram Explorer</h1>
+      <p class="sub">
+        Move the five parameters of the Solow model and watch the diagram, the
+        path the economy actually takes, the growth of log output, and the
+        golden-rule trade-off all respond together.
+      </p>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>
+            This lab is an exploration, not a problem set — there is nothing to
+            submit and no answer to get wrong. The point is to build an
+            intuition for which parameter does what, and for the difference
+            between where the economy ends up and how it gets there.
+          </p>
+          <p>The four panels show:</p>
+          <ol>
+            <li><strong>The Solow diagram.</strong> Output per effective worker
+              <em>f</em>(k̂), saving <em>s·f</em>(k̂), and break-even investment
+              (δ+n+g)k̂. They cross at the steady state k̂*. The shaded bands at
+              k̂* split output into investment and consumption.</li>
+            <li><strong>Transition path.</strong> Capital per effective worker
+              against time, starting from two points you choose — one below the
+              steady state and one above it.</li>
+            <li><strong>Growth in log output.</strong> Log output per effective
+              worker and log output per worker against time. The gap between
+              their slopes is the whole point of Chapter 9.</li>
+            <li><strong>The golden-rule trade-off.</strong> Steady-state
+              consumption plotted against every possible savings rate.</li>
+          </ol>
+          <p>What to try first:</p>
+          <ul>
+            <li>Press <strong>Increase the savings rate</strong> and watch
+              Panel B: growth restarts, then stops. Capital accumulation buys
+              short-run growth, not long-run growth.</li>
+            <li>Turn on <strong>Show golden rule</strong> and check that the
+              tangent to <em>f</em>(k̂) at k̂<sub>gr</sub> is parallel to the
+              break-even ray. That parallel <em>is</em> the condition
+              MPK = δ+n+g.</li>
+            <li>Press <strong>Remove technology (g = 0)</strong> and watch the
+              hats disappear from every label. Chapter 8 is Chapter 9 with
+              g set to zero.</li>
+            <li>Drag the two small triangles on Panel A's horizontal axis (or
+              use the two <strong>Starting capital</strong> sliders) to change
+              where the economy starts.</li>
+            <li>Use <strong>Pin current equilibrium</strong> before moving a
+              slider, so the old curves stay on screen underneath the new
+              ones — that is how the shift diagrams in the notes are drawn.</li>
+          </ul>
+          <p>
+            Watch the three growth rates in the readout while the diagram sits
+            perfectly still. A steady state does not mean nothing grows.
+          </p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- No-steady-state guard. Unreachable through the sliders (δ ≥ 0.02
+       guarantees δ+n+g > 0) but shown if the model is ever driven there. -->
+  <div class="warn hidden" id="warnBox" role="alert"></div>
+
+  <!-- ── Controls ──────────────────────────────────────────── -->
+  <section class="card" aria-labelledby="ctlHead">
+    <h2 id="ctlHead">Parameters</h2>
+
+    <div class="slider-grid" id="sliderGrid"></div>
+
+    <h3>Starting capital for the transition path</h3>
+    <div class="slider-grid" id="k0Grid"></div>
+    <div class="slider-note">
+      Both are set as a multiple of the current steady state, so they stay
+      meaningful at every parameter setting. You can also drag the two
+      triangles on the horizontal axis of Panel A.
+    </div>
+
+    <h3>Scenarios</h3>
+    <div class="btn-row" role="group" aria-label="Preset shocks" id="scenRow"></div>
+
+    <h3>Compare and reset</h3>
+    <div class="btn-row">
+      <button class="option-btn" id="btnPin" aria-pressed="false">
+        Pin current equilibrium
+      </button>
+      <button class="option-btn" id="btnGolden" aria-pressed="false">
+        Show golden rule
+      </button>
+      <button class="option-btn" id="btnReplay">Replay transition</button>
+      <button class="primary-btn" id="btnReset">Reset</button>
+    </div>
+
+    <p class="progress-note" id="progressNote"></p>
+    <div class="mech" id="mechBox">
+      <strong>Start here.</strong> Press a scenario button above, or move any
+      slider, and every panel updates together.
+    </div>
+  </section>
+
+  <!-- ── Readout ───────────────────────────────────────────── -->
+  <section class="card" aria-labelledby="roHead">
+    <h2 id="roHead">Steady state, golden rule, and growth</h2>
+    <div class="stat-grid" id="statGrid"></div>
+    <p class="verdict" id="verdictBox"></p>
+  </section>
+
+  <!-- ── Panels ────────────────────────────────────────────── -->
+  <div class="panel-grid">
+
+    <!-- Panel A -->
+    <section class="graph-card span2" aria-labelledby="titleA">
+      <div class="graph-title" id="titleA">Panel A — The Solow diagram</div>
+      <div class="graph-sub" id="subA">
+        Saving crosses break-even investment at the steady state.
+      </div>
+      <div class="canvas-wrap ar-wide">
+        <canvas id="canvasA" role="img"
+                aria-labelledby="titleA" aria-describedby="descA"></canvas>
+      </div>
+      <ul class="legend">
+        <li><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="#2f5d7c" stroke-width="2.6" stroke-linecap="round"/></svg>
+            <span><span class="lgt" id="lgF">f(k̂) = k̂<sup>α</sup></span> — output, solid</span></li>
+        <li><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="#b42318" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="8 5"/></svg>
+            <span><span class="lgt" id="lgSF">s·f(k̂)</span> — saving = investment, dashed</span></li>
+        <li><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="#155c38" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="1.6 4.2"/></svg>
+            <span><span class="lgt" id="lgBE">(δ+n+g)k̂</span> — break-even, dotted</span></li>
+        <li><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="#8c4800" stroke-width="2.6" stroke-linecap="round"/></svg>
+            <span>golden rule — tangent, when shown</span></li>
+      </ul>
+      <p class="panel-note">
+        Curves are told apart by line style and by the label drawn at the right
+        end of each one, not by colour alone. Labels are always visible — there
+        is nothing to hover over.
+      </p>
+    </section>
+
+    <!-- Panel B -->
+    <section class="graph-card" aria-labelledby="titleB">
+      <div class="graph-title" id="titleB">Panel B — Transition path</div>
+      <div class="graph-sub" id="subB">
+        Capital per effective worker over 100 periods, from two starting points.
+      </div>
+      <div class="canvas-wrap ar-tall">
+        <canvas id="canvasB" role="img"
+                aria-labelledby="titleB" aria-describedby="descB"></canvas>
+      </div>
+      <ul class="legend">
+        <li><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="#2f5d7c" stroke-width="2.6" stroke-linecap="round"/></svg>
+            <span>Start A (below k̂*), solid</span></li>
+        <li><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="#b42318" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="8 5"/></svg>
+            <span>Start B (above k̂*), dashed</span></li>
+        <li><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="#596878" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="1.6 4.2"/></svg>
+            <span>steady state, dotted</span></li>
+      </ul>
+      <p class="panel-note">
+        Both starts converge to the same k̂*, from opposite directions — the
+        steady state is a sink.
+      </p>
+    </section>
+
+    <!-- Panel C -->
+    <section class="graph-card" aria-labelledby="titleC">
+      <div class="graph-title" id="titleC">Panel C — Growth in log output</div>
+      <div class="graph-sub" id="subC">
+        Log output over time, along the Start A path.
+      </div>
+      <div class="canvas-wrap ar-tall">
+        <canvas id="canvasC" role="img"
+                aria-labelledby="titleC" aria-describedby="descC"></canvas>
+      </div>
+      <ul class="legend">
+        <li><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="#2f5d7c" stroke-width="2.6" stroke-linecap="round"/></svg>
+            <span><span class="lgt" id="lgLY">log ŷ</span> — per effective worker, solid</span></li>
+        <li><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="#b42318" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="8 5"/></svg>
+            <span><span class="lgt">log y</span> — per worker, dashed</span></li>
+      </ul>
+      <p class="panel-note" id="noteC">
+        During the transition both slopes are steep. Afterwards log ŷ is flat
+        while log y keeps rising at rate g.
+      </p>
+    </section>
+
+    <!-- Panel D -->
+    <section class="graph-card span2" aria-labelledby="titleD">
+      <div class="graph-title" id="titleD">Panel D — The golden-rule trade-off</div>
+      <div class="graph-sub" id="subD">
+        Steady-state consumption at every possible savings rate.
+      </div>
+      <div class="canvas-wrap ar-band">
+        <canvas id="canvasD" role="img"
+                aria-labelledby="titleD" aria-describedby="descD"></canvas>
+      </div>
+      <ul class="legend">
+        <li><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="#2f5d7c" stroke-width="2.6" stroke-linecap="round"/></svg>
+            <span><span class="lgt">ĉ*(s)</span> — steady-state consumption, solid</span></li>
+        <li><svg width="26" height="10" aria-hidden="true"><line x1="1" y1="5" x2="25" y2="5" stroke="#8c4800" stroke-width="2.6" stroke-linecap="round" stroke-dasharray="1.6 4.2"/></svg>
+            <span>peak at s = α, dotted</span></li>
+      </ul>
+      <p class="panel-note" id="noteD"></p>
+    </section>
+
+  </div>
+
+  <!-- Canvas descriptions — one live region for all four panels, updated in
+       redraw() and debounced so dragging a slider does not flood a screen
+       reader (WCAG 1.1.1, 4.1.3). -->
+  <section class="sr-only" id="graphsDesc" aria-live="polite" aria-atomic="true">
+    <p id="descSummary">Loading the Solow model.</p>
+    <p id="descA">Panel A: the Solow diagram.</p>
+    <p id="descB">Panel B: transition path.</p>
+    <p id="descC">Panel C: growth in log output.</p>
+    <p id="descD">Panel D: the golden-rule trade-off.</p>
+  </section>
+
+  <!-- Immediate, short announcements for button presses (WCAG 4.1.3) -->
+  <div class="sr-only" id="actionStatus" role="status" aria-live="polite"></div>
+
+  <section class="card crosslink">
+    <p>
+      <strong>Ready to solve one yourself?</strong> The companion lab hands you
+      a randomized Solow economy and asks you to derive the per-effective-worker
+      production function, solve for the steady state, find the golden-rule
+      savings rate, and say what actually grows in the long run.
+    </p>
+    <a href="../solow-steady-state/">Solve a Solow economy &rarr;</a>
+  </section>
+
+  <div class="ada-notice">
+    <strong>Accessibility:</strong> every control here is keyboard-operable,
+    every panel has a text description that updates as you change parameters,
+    and no information is carried by colour alone. If you encounter a barrier,
+    please contact the instructor so we can address it promptly.
+  </div>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 105B — Intermediate Macroeconomic Theory II</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<!--
+  Asset paths are RELATIVE, not the site-absolute /assets/… that CLAUDE.md's
+  template shows. Absolute paths resolve to the filesystem root under file://,
+  so a lab loaded by double-clicking index.html gets a 404 for every one of
+  them. Existing labs tolerate that because session.js and the discussion
+  scripts are all optional — but this lab cannot draw anything at all without
+  solow-core.js and solow-plot.js, so it would come up blank offline.
+
+  Relative paths resolve correctly in BOTH cases: served from the site and
+  opened straight off disk. The four ../ segments walk out of
+  classes/econ105b/labs/solow-diagram/ to the repo root — if this lab ever
+  moves to a different depth, that count has to change with it.
+-->
+<script src="../../../../assets/solow-core.js"></script>
+<script src="../../../../assets/solow-plot.js"></script>
+<script src="../../../../assets/session.js"></script>
+<script src="../../../../assets/discussion-modal.js"></script>
+<script src="../../../../assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Solow Model: Diagram Explorer
+   Replaces Solow Model Graph.nb.
+
+   All model mathematics lives in assets/solow-core.js and all canvas
+   primitives in assets/solow-plot.js, both shared with the solver lab at
+   ../solow-steady-state/. Nothing in this file recomputes a steady state or
+   hardcodes a colour.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const LAB_ID    = 'solow-diagram';
+const LAB_LABEL = 'Solow Model: Diagram Explorer';
+const WEEK_LABEL = 'Economic Growth — The Solow Model';
+
+const Core = window.SolowCore, Plot = window.SolowPlot;
+
+/* ── Theme: resolved token values, read once, passed into every draw ─────
+   solow-plot.js never names a colour; it only ever uses what it is handed. */
+let TH = {};
+function readTheme(){
+  const cs = getComputedStyle(document.documentElement);
+  const v = k => cs.getPropertyValue(k).trim();
+  TH = {
+    ink:v('--ink'), ink2:v('--ink-2'), muted:v('--muted'),
+    line:v('--line'), line2:v('--line-2'), accent:v('--accent'),
+    good:v('--good'), bad:v('--bad'), amber:v('--amber'),
+    panel:v('--panel'), paper:v('--paper'),
+    /* translucent fills for the ŷ / î / ĉ bands */
+    fillC:'rgba(47,93,124,.20)', fillI:'rgba(180,35,24,.18)'
+  };
+}
+
+/* ── Model state ────────────────────────────────────────────────────────
+   α defaults to exactly 1/3, the value the Mathematica notebook and the
+   lecture-note worked examples use. The slider's 0.01 lattice cannot
+   represent 1/3, so the thumb sits at 0.33 until the student moves it; the
+   readout always reports the model's value, not the slider's.             */
+const DEFAULTS = { s:0.30, delta:0.10, n:0.03, g:0.03, alpha:1/3 };
+const P = Object.assign({}, DEFAULTS);
+
+/* Starting points for the transition path, held as multiples of the current
+   steady state so they stay on-frame at every parameter setting. The
+   defaults reproduce Figure 3 of the lecture notes (k₀ = 1 and k₀ = 9 around
+   a steady state of 6.25) whenever k̂* happens to equal 6.25, and behave the
+   same way everywhere else. */
+const K0_DEFAULTS = { a:0.16, b:1.44 };
+const K0 = Object.assign({}, K0_DEFAULTS);
+const PERIODS = 100;
+
+let showGolden = false;
+let pinned = null;            // { P, ss, gr, label }
+let _fs = 1;                  // canvas font scale (CLAUDE.md)
+const scenariosRun = new Set();
+
+function reduced(){
+  return window.matchMedia &&
+         window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/* ── Elements ─────────────────────────────────────────────────────────── */
+const $ = id => document.getElementById(id);
+const $sliderGrid = $('sliderGrid'), $k0Grid = $('k0Grid'), $scenRow = $('scenRow');
+const $statGrid = $('statGrid'), $verdict = $('verdictBox');
+const $mech = $('mechBox'), $warn = $('warnBox'), $progress = $('progressNote');
+const $status = $('actionStatus');
+const $btnPin = $('btnPin'), $btnGolden = $('btnGolden');
+const $btnReset = $('btnReset'), $btnReplay = $('btnReplay');
+const $descSummary = $('descSummary');
+const $descA = $('descA'), $descB = $('descB'), $descC = $('descC'), $descD = $('descD');
+const $subA = $('subA'), $subB = $('subB'), $subC = $('subC'), $subD = $('subD');
+const $noteC = $('noteC'), $noteD = $('noteD');
+const $lgF = $('lgF'), $lgSF = $('lgSF'), $lgBE = $('lgBE'), $lgLY = $('lgLY');
+
+const CANVAS = {
+  A:{ el:$('canvasA'), wrap:$('canvasA').parentElement },
+  B:{ el:$('canvasB'), wrap:$('canvasB').parentElement },
+  C:{ el:$('canvasC'), wrap:$('canvasC').parentElement },
+  D:{ el:$('canvasD'), wrap:$('canvasD').parentElement }
+};
+
+/* ── Formatting ───────────────────────────────────────────────────────── */
+function nf(v, d){
+  if(!isFinite(v)) return '—';
+  if(d !== undefined) return v.toFixed(d);
+  const a = Math.abs(v);
+  if(a >= 1000) return v.toFixed(0);
+  if(a >= 100)  return v.toFixed(1);
+  if(a >= 10)   return v.toFixed(2);
+  return v.toFixed(3);
+}
+function pctf(v){ return (v*100).toFixed(1).replace(/\.0$/,'') + '%'; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   AUTO-SCALING
+   The Mathematica original hardcoded PlotRange → {{0,20},{0,4}} over
+   k ∈ [0,15]. At its own defaults that put k̂* = 2.57 in the leftmost 13%
+   of the frame with five-sixths of the plot empty; at other settings the
+   steady state left the frame entirely or the break-even ray read as a
+   vertical wall.
+
+   SolowCore.domain() derives the window from the model instead:
+       kMax = snapUp( 1.4 · max(k̂*, k̂_gr) )
+       yMax = snapUp( 1.15 · max( f(kMax), (δ+n+g)·kMax ) )
+   so k̂* lands around 50–70% of the way across the frame at every setting,
+   and k̂_gr — and therefore the golden-rule tangent — is never off-screen.
+
+   Each panel's window is tweened rather than snapped, so the student sees
+   the frame adjust instead of watching the curves teleport. Under
+   prefers-reduced-motion the tween resolves instantly.
+   ══════════════════════════════════════════════════════════════════════ */
+
+function Tween(keys, dur){
+  return { keys, dur:dur||400, cur:null, from:null, to:null, t0:0 };
+}
+function tweenTo(tw, target, now){
+  if(!tw.cur){ tw.cur = Object.assign({}, target); tw.to = Object.assign({}, target); return; }
+  const changed = tw.keys.some(k => Math.abs(tw.to[k] - target[k]) > 1e-9);
+  if(changed){
+    tw.from = Object.assign({}, tw.cur);
+    tw.to   = Object.assign({}, target);
+    tw.t0   = now;
+    if(reduced()){ tw.cur = Object.assign({}, target); tw.from = null; }
+  }
+}
+function tweenNow(tw, now){
+  if(tw.from){
+    const p = Math.min(1, (now - tw.t0) / tw.dur);
+    const e = 0.5 - 0.5*Math.cos(Math.PI*p);
+    tw.keys.forEach(k => { tw.cur[k] = tw.from[k] + (tw.to[k]-tw.from[k])*e; });
+    if(p >= 1) tw.from = null;
+  }
+  return tw.cur;
+}
+function tweenBusy(tw){ return !!tw.from; }
+
+const VA = Tween(['kMax','yMax']);
+const VB = Tween(['yMax']);
+const VC = Tween(['lo','hi']);
+const VD = Tween(['yMax']);
+
+/* ── Transition animation ────────────────────────────────────────────────
+   A cosine ease over 2600 ms. Panel B draws its paths progressively while
+   dots ride the same k̂ values along Panel A's curves, so the student can see
+   that the two panels are showing the same motion.                        */
+const TR = { active:false, t0:0, dur:2600, p:1 };
+function easeP(){ return 0.5 - 0.5*Math.cos(Math.PI*TR.p); }
+
+function startTransition(){
+  if(reduced()){ TR.active = false; TR.p = 1; requestDraw(); return; }
+  TR.active = true; TR.t0 = performance.now(); TR.p = 0;
+  ensureLoop();
+}
+
+let _raf = null;
+function ensureLoop(){ if(_raf === null) _raf = requestAnimationFrame(frame); }
+function requestDraw(){ ensureLoop(); }
+
+function frame(now){
+  _raf = null;
+  if(TR.active){
+    TR.p = Math.min(1, (now - TR.t0) / TR.dur);
+    if(TR.p >= 1) TR.active = false;
+  }
+  redraw(now);
+  if(TR.active || tweenBusy(VA) || tweenBusy(VB) || tweenBusy(VC) || tweenBusy(VD)){
+    ensureLoop();
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   CONTROLS
+   ══════════════════════════════════════════════════════════════════════ */
+
+const SLIDERS = [
+  { key:'s',     id:'sldS', min:0.05, max:0.90, step:0.01,
+    label:'Savings rate', sym:'s', dec:2,
+    note:'The one parameter the notes treat as a policy choice.' },
+  { key:'delta', id:'sldD', min:0.02, max:0.20, step:0.01,
+    label:'Depreciation rate', sym:'δ', dec:2,
+    note:'Capped at 0.20 — a 50% depreciation rate is not a thing.' },
+  { key:'n',     id:'sldN', min:0.00, max:0.10, step:0.005,
+    label:'Labor-force growth', sym:'n', dec:3,
+    note:'Set n = 0 to remove population growth.' },
+  { key:'g',     id:'sldG', min:0.00, max:0.10, step:0.005,
+    label:'Technology growth', sym:'g', dec:3,
+    note:'Set g = 0 and the hats come off: Chapter 8 as a special case.' },
+  { key:'alpha', id:'sldA', min:0.20, max:0.60, step:0.01,
+    label:'Capital share', sym:'α', dec:3,
+    note:'Below about 0.2 the production function is nearly flat and the diagram degenerates.' }
+];
+
+const K0_SLIDERS = [
+  { key:'a', id:'sldK0a', label:'Start A (below k̂*)', dflt:0.16 },
+  { key:'b', id:'sldK0b', label:'Start B (above k̂*)', dflt:1.44 }
+];
+
+function buildSliders(){
+  $sliderGrid.innerHTML = SLIDERS.map(sp => `
+    <div class="slider-row">
+      <label class="slabel" for="${sp.id}">
+        <span>${sp.label} (${sp.sym})</span>
+        <span class="sval" id="${sp.id}Val"></span>
+      </label>
+      <input type="range" id="${sp.id}"
+             min="${sp.min}" max="${sp.max}" step="${sp.step}"
+             value="${P[sp.key]}">
+      <div class="slider-note">${sp.note}</div>
+    </div>`).join('');
+
+  $k0Grid.innerHTML = K0_SLIDERS.map(sp => `
+    <div class="slider-row">
+      <label class="slabel" for="${sp.id}">
+        <span>${sp.label}</span>
+        <span class="sval" id="${sp.id}Val"></span>
+      </label>
+      <input type="range" id="${sp.id}"
+             min="0.05" max="2.50" step="0.01" value="${sp.dflt}">
+    </div>`).join('');
+
+  SLIDERS.forEach(sp => {
+    const el = $(sp.id);
+    el.addEventListener('input', () => {
+      P[sp.key] = parseFloat(el.value);
+      onParamsChanged(false);
+    });
+    el.addEventListener('change', () => scheduleTransition());
+  });
+  K0_SLIDERS.forEach(sp => {
+    const el = $(sp.id);
+    el.addEventListener('input', () => {
+      K0[sp.key] = parseFloat(el.value);
+      onParamsChanged(false);
+    });
+    el.addEventListener('change', () => scheduleTransition());
+  });
+}
+
+/* Slider positions are the source of truth only while the student is
+   dragging; everything else (scenarios, reset) writes to P and syncs back. */
+function syncSliders(){
+  SLIDERS.forEach(sp => {
+    const el = $(sp.id);
+    if(Math.abs(parseFloat(el.value) - P[sp.key]) > 1e-9) el.value = P[sp.key];
+  });
+  K0_SLIDERS.forEach(sp => {
+    const el = $(sp.id);
+    if(Math.abs(parseFloat(el.value) - K0[sp.key]) > 1e-9) el.value = K0[sp.key];
+  });
+}
+
+/* A range input fires `change` on every arrow-key press, so running the full
+   2600 ms transition on each one would be unusable. Wait for 350 ms of quiet
+   first; any new interaction restarts the clock. */
+let _transTimer = null;
+function scheduleTransition(){
+  clearTimeout(_transTimer);
+  _transTimer = setTimeout(startTransition, 350);
+}
+
+/* ── Scenarios ──────────────────────────────────────────────────────────
+   Five free sliders give a student no reason to move any particular one.
+   Each scenario pins the current equilibrium, applies one change, animates
+   the transition, and names the mechanism in a sentence.                  */
+
+const SCENARIOS = [
+  { id:'saving', label:'Increase the savings rate',
+    apply(){ P.s = Math.min(0.90, round2(P.s + 0.15)); },
+    can(){ return P.s < 0.90 - 1e-9; },
+    blocked:'The savings rate is already at its maximum of 0.90.',
+    mech(before, after){
+      return `<strong>§1.4 — saving.</strong> s rose from ${nf(before.P.s,2)} to
+        ${nf(after.P.s,2)}, so <em>s·f</em>(k̂) shifted up. At the old steady state
+        saving now exceeds break-even investment, so k̂ grows — from
+        ${nf(before.ss.kStar)} to ${nf(after.ss.kStar)} — and output per effective
+        worker rises from ${nf(before.ss.yStar)} to ${nf(after.ss.yStar)}. Watch
+        Panel C: growth restarts and then stops. Capital accumulation drives
+        growth in the short run but not the long run.`; } },
+
+  { id:'population', label:'Increase population growth',
+    apply(){ P.n = Math.min(0.10, round3(P.n + 0.03)); },
+    can(){ return P.n < 0.10 - 1e-9; },
+    blocked:'Labor-force growth is already at its maximum of 0.10.',
+    mech(before, after){
+      return `<strong>§3.2 — population.</strong> n rose from ${nf(before.P.n,3)} to
+        ${nf(after.P.n,3)}, pivoting the break-even ray up: every period there are
+        more workers to equip, so more investment is needed just to hold k̂ still.
+        The steady state falls from ${nf(before.ss.kStar)} to ${nf(after.ss.kStar)}
+        and consumption from ${nf(before.ss.cStar)} to ${nf(after.ss.cStar)}. But
+        aggregate output now grows at n+g = ${pctf(after.P.n + after.P.g)} instead of
+        ${pctf(before.P.n + before.P.g)}.`; } },
+
+  { id:'tech', label:'Increase technological progress',
+    apply(){ P.g = Math.min(0.10, round3(P.g + 0.03)); },
+    can(){ return P.g < 0.10 - 1e-9; },
+    blocked:'Technology growth is already at its maximum of 0.10.',
+    mech(before, after){
+      return `<strong>§4.3 — technology.</strong> g rose from ${nf(before.P.g,3)} to
+        ${nf(after.P.g,3)}. Break-even pivots up, so k̂* falls from
+        ${nf(before.ss.kStar)} to ${nf(after.ss.kStar)} — but that is capital per
+        <em>effective</em> worker, and effective workers are multiplying faster.
+        Panel C is the payoff: output per worker now grows forever at
+        %Δy = g = ${pctf(after.P.g)}, up from ${pctf(before.P.g)}. This is the only
+        parameter in the model that raises long-run growth in living standards.`; } },
+
+  { id:'golden', label:'Move to the golden rule',
+    apply(){ P.s = P.alpha; },
+    can(){ return Math.abs(P.s - P.alpha) > 5e-4; },
+    blocked:'The economy is already at the golden-rule savings rate, s = α.',
+    mech(before, after){
+      const dir = before.P.s < before.P.alpha ? 'raised' : 'lowered';
+      return `<strong>§4.2 — the golden rule.</strong> The savings rate was
+        ${dir === 'raised' ? 'below' : 'above'} α, so consumption was not being
+        maximised. Setting s = α = ${nf(after.P.alpha,3)} ${dir} steady-state
+        consumption from ${nf(before.ss.cStar)} to ${nf(after.ss.cStar)}, and
+        Panel D's marker slid to the peak. Note how little was gained: the
+        trade-off curve is nearly flat near its peak, which is why being
+        modestly off the golden rule costs almost nothing.`; } },
+
+  { id:'nog', label:'Remove technology (g = 0)',
+    apply(){ P.g = 0; },
+    can(){ return P.g > 1e-9; },
+    blocked:'Technology growth is already zero.',
+    mech(before, after){
+      return `<strong>Chapter 8 as a special case.</strong> With g = 0 technology
+        stops growing, effective workers and workers become the same thing, and
+        every hat drops off the notation — the axis labels now read "per worker".
+        Long-run growth in output per worker falls from ${pctf(before.P.g)} to zero,
+        and in Panel C the two log-output lines collapse onto each other. Chapter 8
+        is not a different model; it is this model with g set to zero.`; } }
+];
+
+function round2(v){ return Math.round(v*100)/100; }
+function round3(v){ return Math.round(v*1000)/1000; }
+
+function buildScenarios(){
+  $scenRow.innerHTML = SCENARIOS.map(sc =>
+    `<button class="option-btn" id="scen-${sc.id}" data-scen="${sc.id}">${sc.label}</button>`
+  ).join('');
+  SCENARIOS.forEach(sc => {
+    $('scen-' + sc.id).addEventListener('click', () => runScenario(sc));
+  });
+}
+
+function snapshot(){
+  return { P: Object.assign({}, P),
+           ss: Core.steadyState(P),
+           gr: Core.goldenRule(P) };
+}
+
+function runScenario(sc){
+  if(!sc.can()){
+    $mech.innerHTML = `<strong>Nothing to do.</strong> ${sc.blocked}`;
+    announce(sc.blocked);
+    return;
+  }
+  const before = snapshot();
+  setPinned(before, sc.label);
+  sc.apply();
+  syncSliders();
+  const after = snapshot();
+
+  scenariosRun.add(sc.id);
+  $('scen-' + sc.id).classList.add('ran');
+  updateProgress();
+  recordCompletion();
+
+  $mech.innerHTML = sc.mech(before, after);
+  announce(sc.label + ' applied. ' + $mech.textContent.trim());
+
+  onParamsChanged(true);
+}
+
+function updateProgress(){
+  const n = scenariosRun.size;
+  const marks = SCENARIOS.map(sc =>
+    (scenariosRun.has(sc.id) ? '✓ ' : '· ') + sc.label).join(' &nbsp; ');
+  const done = n >= 3;
+  $progress.innerHTML =
+    `<strong>Scenarios run: ${n} of ${SCENARIOS.length}.</strong> ` +
+    (done
+      ? 'Completion recorded — running the remaining scenarios still updates it.'
+      : `Run ${3-n} more to record completion for this lab.`) +
+    `<br>${marks}`;
+}
+
+/* ── Pin / compare ──────────────────────────────────────────────────────
+   The lecture notes teach savings and population shocks as shift diagrams
+   (p. 12: sf(k) beside s′f(k); p. 18: (δ+n₁)k beside (δ+n₂)k). Moving a
+   slider erases the old curve, so a pin keeps a ghosted copy underneath. */
+
+function setPinned(snap, label){
+  pinned = { P:snap.P, ss:snap.ss, gr:snap.gr, label:label || 'pinned' };
+  $btnPin.setAttribute('aria-pressed','true');
+  $btnPin.textContent = 'Clear pinned equilibrium';
+}
+function clearPinned(){
+  pinned = null;
+  $btnPin.setAttribute('aria-pressed','false');
+  $btnPin.textContent = 'Pin current equilibrium';
+}
+function announce(msg){ $status.textContent = msg; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   READOUT
+   ══════════════════════════════════════════════════════════════════════ */
+
+function updateReadout(ss, gr, N){
+  const rates = Core.growthRates(P);
+  const gap = (isFinite(gr.cGr) && isFinite(ss.cStar)) ? gr.cGr - ss.cStar : NaN;
+
+  const cells = [
+    { k:`Break-even rate δ+n+g`, v:nf(ss.breakEven,3), hl:false },
+    { k:`Steady-state capital ${N.kStar}`, v:nf(ss.kStar), hl:true },
+    { k:`Steady-state output ${N.yStar}`, v:nf(ss.yStar), hl:true },
+    { k:`Consumption ${N.c}*`, v:nf(ss.cStar), hl:true },
+    { k:`Investment ${N.i}*`, v:nf(ss.iStar), hl:false },
+    { k:`Golden-rule capital ${N.k}<sub>gr</sub>`, v:nf(gr.kGr), hl:false },
+    { k:`Golden-rule consumption ${N.c}<sub>gr</sub>`, v:nf(gr.cGr), hl:false },
+    { k:`Consumption gap ${N.c}<sub>gr</sub> − ${N.c}*`, v:nf(gap), hl:false },
+    { k:`Growth: %Δ${N.y}* (per ${N.hat ? 'eff. worker' : 'worker'})`,
+      v:pctf(rates.yHat), hl:true },
+    { k:'Growth: %Δy (per worker)', v:pctf(rates.yPerWorker), hl:true },
+    { k:'Growth: %ΔY (aggregate)', v:pctf(rates.aggregate), hl:true }
+  ];
+  $statGrid.innerHTML = cells.map(c =>
+    `<div class="stat${c.hl ? ' hl' : ''}">
+       <div class="sk">${c.k}</div><div class="sv">${c.v}</div>
+     </div>`).join('');
+
+  const pos = Core.position(P);
+  const tag = pos === 'above'
+    ? '<span class="tagline t-above">↑ ABOVE</span>'
+    : pos === 'below'
+      ? '<span class="tagline t-below">↓ BELOW</span>'
+      : '<span class="tagline t-at">= AT</span>';
+
+  const posText = pos === 'above'
+    ? `The economy saves <strong>more</strong> than the golden-rule rate
+       (s = ${nf(P.s,2)} &gt; α = ${nf(P.alpha,3)}). It has <strong>too much
+       capital</strong>: MPK − δ &lt; n + g, so cutting saving would raise
+       consumption both now and in the long run.`
+    : pos === 'below'
+      ? `The economy saves <strong>less</strong> than the golden-rule rate
+         (s = ${nf(P.s,2)} &lt; α = ${nf(P.alpha,3)}). It has <strong>too little
+         capital</strong>: MPK − δ &gt; n + g, so raising saving would raise
+         long-run consumption — at the cost of consuming less on the way there.`
+      : `The economy is <strong>at</strong> the golden rule (s = α = ${nf(P.alpha,3)}).
+         Steady-state consumption is at its maximum; no other savings rate does
+         better in the long run.`;
+
+  const notationNote = N.hat
+    ? `Because g &gt; 0 this is a per-<em>effective</em>-worker model, so every
+       variable wears a hat.`
+    : `Because g = 0, technology is constant, effective workers and workers are
+       the same thing, and the hats come off. This is the Chapter 8 model.`;
+
+  $verdict.innerHTML = `${tag} ${posText}
+    <br><br>${notationNote}
+    In steady state ${N.y}* does not grow at all, output per worker grows at
+    g = ${pctf(P.g)}, and aggregate output grows at n+g = ${pctf(P.n + P.g)} —
+    all while Panel A sits perfectly still.`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   NOTATION
+   Axis labels, legend text, panel subtitles, and the readout all read their
+   symbols from SolowCore.notation(), so the hats can never drift apart
+   between the two labs or between panels.
+   ══════════════════════════════════════════════════════════════════════ */
+
+function applyNotation(N){
+  $lgF.innerHTML  = `f(${N.k}) = ${N.k}<sup>α</sup>`;
+  $lgSF.textContent = `s·f(${N.k})`;
+  $lgBE.textContent = `(δ+n+g)${N.k}`;
+  $lgLY.textContent = `log ${N.y}`;
+  $subA.textContent = `Saving crosses break-even investment at the steady state ${N.kStar}.`;
+  $subB.textContent = `Capital per ${N.unit} over ${PERIODS} periods, from two starting points.`;
+  $subC.textContent = `Log output over time, along the Start A path.`;
+  $subD.textContent = `Steady-state consumption per ${N.unit} at every possible savings rate.`;
+  $noteC.innerHTML = N.hat
+    ? `During the transition both slopes are steep. Afterwards log ${N.y} is flat
+       while log y keeps rising at rate g = ${pctf(P.g)}.`
+    : `With g = 0 the two lines coincide exactly and both flatten out. There is
+       no long-run growth in output per worker — the Chapter 8 result.`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DRAWING
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Tick steps sized from the space actually available, not from the axis
+   maximum alone, so the same panel stays readable at 1090 px and at 284 px
+   and at 200% browser text size. Minimum gaps are in device px and scale
+   with _fs (WCAG 1.4.4). */
+function xStepFor(C, span){
+  return Plot.niceStep(span, C.PW, 58 * C.dpr * _fs);
+}
+function yStepFor(C, span){
+  return Plot.niceStep(span, C.PH, 32 * C.dpr * _fs);
+}
+
+function ctxFor(key){
+  const c = CANVAS[key];
+  const setup = Plot.setupCanvas(c.el, c.wrap);
+  if(!setup) return null;
+  setup.ctx.clearRect(0, 0, setup.W, setup.H);
+  return setup;
+}
+
+let COORD_A = null;   // kept for pointer hit-testing on Panel A
+
+/* ── Panel A — the Solow diagram ─────────────────────────────────────── */
+function drawA(now, ss, gr, N, cv){
+  const { ctx, dpr, W, H } = cv;
+  const dom = Core.domain(P);
+  tweenTo(VA, { kMax:dom.kMax, yMax:dom.yMax }, now);
+  const view = tweenNow(VA, now);
+
+  const C = Plot.makeCoords(W, H, dpr, view.kMax, view.yMax, { l:56, b:70, t:20, r:20 });
+  COORD_A = C;
+
+  Plot.axes(ctx, C, {
+    fs:_fs, theme:TH,
+    xStep:xStepFor(C, view.kMax), yStep:yStepFor(C, view.yMax),
+    xLabel:N.xAxis, yLabel:N.yAxis
+  });
+
+  const cur = Core.curves(P);
+
+  /* Ghosted pinned curves first, so the live ones draw over them. */
+  if(pinned && pinned.ss.ok){
+    const pc = Core.curves(pinned.P);
+    const same = (a,b) => Math.abs(a-b) < 1e-9;
+    /* Only label the curves that actually moved — labelling an identical
+       overlapping ghost would just add clutter. The label is what identifies
+       the ghost as "before"; the reduced opacity alone is not meaning. */
+    Plot.ghostCurves(ctx, C, [
+      { fn:pc.f,  color:TH.accent, style:'solid',
+        label: same(pinned.P.alpha, P.alpha) ? null : 'f before' },
+      { fn:pc.sf, color:TH.bad,    style:'dashed',
+        label: (same(pinned.P.s, P.s) && same(pinned.P.alpha, P.alpha))
+                 ? null : 's·f before' },
+      { fn:pc.breakEven, color:TH.good, style:'dotted',
+        label: same(pinned.ss.breakEven, ss.breakEven) ? null : 'break-even before' }
+    ], { fs:_fs, taken:[] });
+    Plot.dropLine(ctx, C, pinned.ss.kStar, pinned.ss.yStar, {
+      color:TH.muted, style:'dotted', ghost:true, fs:_fs, labelDy:24,
+      label:N.kStar + '₁', labelColor:TH.muted
+    });
+    /* Which way did the steady state move? An arrow says it without colour. */
+    if(ss.ok && Math.abs(ss.kStar - pinned.ss.kStar) > view.kMax*0.012){
+      const rose = ss.kStar > pinned.ss.kStar;
+      Plot.axisArrow(ctx, C, pinned.ss.kStar, ss.kStar, {
+        color:TH.ink2, fs:_fs, y:view.yMax*0.13,
+        label:`${N.kStar} ${rose ? 'rose' : 'fell'}`
+      });
+    }
+  }
+
+  if(!ss.ok){
+    Plot.message(ctx, C, [
+      'No steady state exists',
+      'With δ + n + g = 0 there is no break-even investment to cover,',
+      'so capital per effective worker grows without bound.'
+    ], { fs:_fs, color:TH.bad });
+    return;
+  }
+
+  /* p. 7 decomposition: î is the distance from the axis to s·f(k̂), and ĉ is
+     the gap between s·f(k̂) and f(k̂). Drawing them as bands makes consumption
+     a visible quantity on the diagram rather than a number in the readout. */
+  Plot.band(ctx, C, ss.kStar, ss.iStar, ss.yStar, {
+    fill:TH.fillC, edge:null, halfWidth:11,
+    label:N.c + '*', labelColor:TH.accent, fs:_fs
+  });
+  Plot.band(ctx, C, ss.kStar, 0, ss.iStar, {
+    fill:TH.fillI, edge:null, halfWidth:11,
+    label:N.i + '*', labelColor:TH.bad, fs:_fs
+  });
+
+  /* p. 8: which side of k̂* capital is growing on. */
+  const ay = view.yMax * 0.055;
+  Plot.axisArrow(ctx, C, ss.kStar*0.22, ss.kStar*0.78, {
+    color:TH.good, fs:_fs, y:ay, label:'Δ' + N.k + ' > 0'
+  });
+  const rightEnd = Math.min(view.kMax*0.97, ss.kStar*2.1);
+  if(rightEnd > ss.kStar*1.25){
+    Plot.axisArrow(ctx, C, rightEnd, ss.kStar*1.22, {
+      color:TH.bad, fs:_fs, y:ay, label:'Δ' + N.k + ' < 0'
+    });
+  }
+
+  /* The three curves. */
+  Plot.curve(ctx, C, cur.f,         { color:TH.accent, style:'solid',  width:2.6 });
+  Plot.curve(ctx, C, cur.sf,        { color:TH.bad,    style:'dashed', width:2.6 });
+  Plot.curve(ctx, C, cur.breakEven, { color:TH.good,   style:'dotted', width:2.8 });
+
+  /* Guides to the steady state. */
+  Plot.hGuide(ctx, C, ss.yStar, ss.kStar, {
+    color:TH.accent, style:'dashed', fs:_fs, label:N.yStar, labelColor:TH.accent
+  });
+  Plot.dropLine(ctx, C, ss.kStar, ss.yStar, {
+    color:TH.accent, style:'dashed', fs:_fs, labelDy:24,
+    label:N.kStar, labelColor:TH.accent
+  });
+  Plot.marker(ctx, C, ss.kStar, ss.iStar, { color:TH.good, r:5.5, fs:_fs });
+  Plot.marker(ctx, C, ss.kStar, ss.yStar, { color:TH.accent, r:5.5, fs:_fs });
+
+  /* Golden rule: the tangent to f(k̂) at k̂_gr is parallel to the break-even
+     ray. That parallel IS the condition MPK = δ+n+g — seeing the two slopes
+     match is what stops it being a formula to memorise. */
+  if(showGolden && gr.ok){
+    Plot.dropLine(ctx, C, gr.kGr, gr.yGr, {
+      color:TH.amber, style:'dotted', fs:_fs, labelDy:24,
+      label:N.k + ' (gr)', labelColor:TH.amber
+    });
+    Plot.tangent(ctx, C, gr.kGr, gr.yGr, ss.breakEven, {
+      color:TH.amber, style:'solid', width:2.2, fs:_fs,
+      span:Math.min(0.30, view.kMax ? gr.kGr*0.8/view.kMax : 0.25),
+      label:'slope = MPK = δ+n+g'
+    });
+    Plot.marker(ctx, C, gr.kGr, gr.yGr, {
+      color:TH.amber, r:5, shape:'diamond', fs:_fs
+    });
+  }
+
+  /* Persistent curve labels at the right edge. These replace the notebook's
+     hover-only Tooltips and its Epilog text pinned to k = 15. */
+  const taken = [];
+  Plot.curveLabel(ctx, C, cur.f, {
+    text:`f(${N.k}) = ${N.k}^α`, color:TH.accent, fs:_fs, taken });
+  Plot.curveLabel(ctx, C, cur.breakEven, {
+    text:`(δ+n+g)${N.k}`, color:TH.good, fs:_fs, taken });
+  Plot.curveLabel(ctx, C, cur.sf, {
+    text:`s·f(${N.k})`, color:TH.bad, fs:_fs, taken });
+
+  /* Starting-point handles on the axis, draggable. */
+  const kA = K0.a * ss.kStar, kB = K0.b * ss.kStar;
+  drawHandle(ctx, C, kA, 'A', TH.accent);
+  drawHandle(ctx, C, kB, 'B', TH.bad);
+
+  /* Dots riding the curves during the transition, in sync with Panel B. */
+  if(TR.active){
+    const e = easeP();
+    const idx = Math.round(e * PERIODS);
+    const pa = pathFrom(kA), pb = pathFrom(kB);
+    if(pa[idx]){
+      Plot.marker(ctx, C, pa[idx].k, pa[idx].y, { color:TH.accent, r:6, fs:_fs });
+      Plot.marker(ctx, C, pa[idx].k, pa[idx].i, { color:TH.bad, r:4.5, shape:'square', fs:_fs });
+    }
+    if(pb[idx]){
+      Plot.marker(ctx, C, pb[idx].k, pb[idx].y, { color:TH.bad, r:6, shape:'diamond', fs:_fs });
+    }
+  }
+}
+
+/* Draggable start-point handle sitting on the x axis. Drawn as a solid
+   triangle with a dark outline and a letter, so it reads as a grab handle
+   rather than as part of a curve, and so A and B are distinguishable without
+   relying on their colours. */
+function drawHandle(ctx, C, k, letter, color){
+  const dpr = C.dpr;
+  const y = C.yC(C.yMin);
+  const s = 10 * dpr;
+  /* A start point can sit just outside the frame — the window is sized from
+     max(k̂*, k̂_gr), and a start at 1.44× the steady state exceeds that whenever
+     k̂* is the binding anchor. Clamp the handle to the plot edge rather than
+     dropping it, so it stays visible and grabbable; the slider next to the
+     canvas always reports its true value. */
+  const x = Math.max(C.p.l + s, Math.min(C.p.l + C.PW - s, C.xC(k)));
+  ctx.save();
+  Plot.clearStyle(ctx);
+  ctx.beginPath();
+  ctx.moveTo(x, y - s*1.25);
+  ctx.lineTo(x + s, y + s*0.7);
+  ctx.lineTo(x - s, y + s*0.7);
+  ctx.closePath();
+  ctx.fillStyle = color; ctx.fill();
+  ctx.strokeStyle = TH.ink; ctx.lineWidth = 1.6*dpr; ctx.stroke();
+  ctx.fillStyle = '#fff';
+  ctx.font = `700 ${Math.round(9*dpr*_fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(letter, x, y + s*0.15);
+  ctx.restore();
+}
+
+/* ── Panel B — transition path ──────────────────────────────────────────
+   The panel the original app lacks entirely. Without it the chapter's central
+   claim — capital accumulation drives growth in the short run but not the long
+   run — cannot be shown, because it is a claim about the path, not the
+   destination.                                                             */
+function pathFrom(k0){
+  return Core.path({ alpha:P.alpha, delta:P.delta, n:P.n, g:P.g, s:P.s,
+                     k0:k0, periods:PERIODS });
+}
+
+function drawB(now, ss, N, cv){
+  const { ctx, dpr, W, H } = cv;
+  if(!ss.ok){ return; }
+  const kA = K0.a * ss.kStar, kB = K0.b * ss.kStar;
+  const pa = pathFrom(kA), pb = pathFrom(kB);
+
+  const top = Math.max(ss.kStar, kA, kB) * 1.15;
+  tweenTo(VB, { yMax:Core.snapUpSmall(top) }, now);
+  const view = tweenNow(VB, now);
+
+  const C = Plot.makeCoordsRange(W, H, dpr,
+    { xMin:0, xMax:PERIODS, yMin:0, yMax:view.yMax }, { l:52, b:46, t:16, r:18 });
+
+  Plot.axes(ctx, C, {
+    fs:_fs, theme:TH,
+    xStep:xStepFor(C, PERIODS), yStep:yStepFor(C, view.yMax),
+    xLabel:'Period', yLabel:N.xAxis
+  });
+
+  if(pinned && pinned.ss.ok){
+    Plot.hLine(ctx, C, pinned.ss.kStar, { color:TH.muted, style:'dotted', ghost:true });
+  }
+  Plot.hLine(ctx, C, ss.kStar, { color:TH.muted, style:'dotted', width:2 });
+
+  const upto = TR.active ? Math.max(1, Math.round(easeP()*PERIODS)) : PERIODS;
+  const cut = p => p.slice(0, upto+1).map(q => ({ x:q.t, y:q.k }));
+
+  Plot.series(ctx, C, cut(pa), { color:TH.accent, style:'solid',  width:2.6 });
+  Plot.series(ctx, C, cut(pb), { color:TH.bad,    style:'dashed', width:2.6 });
+
+  Plot.marker(ctx, C, 0, kA, { color:TH.accent, r:5, fs:_fs });
+  Plot.marker(ctx, C, 0, kB, { color:TH.bad, r:5, shape:'diamond', fs:_fs });
+
+  Plot.tag(ctx, {
+    ctx, x:C.p.l + C.PW - 6*dpr, y:C.yC(ss.kStar) - 11*dpr,
+    text:`${N.kStar} = ${nf(ss.kStar)}`, color:TH.ink2, align:'right',
+    dpr, fs:_fs, size:10.5
+  });
+  /* Plain "(A)" / "(B)" rather than Unicode superscript letters — the
+     modifier-letter capitals are missing from Inter and fall back to a glyph
+     that reads as a caret. */
+  Plot.tag(ctx, {
+    ctx, x:C.xC(0) + 10*dpr, y:C.yC(kA), text:`A: ${N.k}₀ = ${nf(kA)}`,
+    color:TH.accent, align:'left', dpr, fs:_fs, size:10
+  });
+  Plot.tag(ctx, {
+    ctx, x:C.xC(0) + 10*dpr, y:C.yC(kB), text:`B: ${N.k}₀ = ${nf(kB)}`,
+    color:TH.bad, align:'left', dpr, fs:_fs, size:10
+  });
+}
+
+/* ── Panel C — growth in log output ─────────────────────────────────────
+   During the transition the slope is steep; afterwards log ŷ is flat while
+   log y keeps rising at rate g. That is the cleanest possible statement of
+   "capital accumulation gives short-run growth, technology gives long-run
+   growth", and it takes one panel.
+
+   log y_t = log A_t + log ŷ_t with A_t = (1+g)^t, so the per-worker line is
+   the per-effective-worker line plus a straight ramp of slope log(1+g). When
+   g = 0 the ramp vanishes and the two lines coincide exactly — the Chapter 8
+   result, visible as a special case.                                       */
+function drawC(now, ss, N, cv){
+  const { ctx, dpr, W, H } = cv;
+  if(!ss.ok) return;
+  const kA = K0.a * ss.kStar;
+  const pa = pathFrom(kA);
+  const lg = Math.log(1 + P.g);
+
+  const lyHat = pa.map(q => ({ x:q.t, y:Math.log(Math.max(q.y, 1e-12)) }));
+  const ly    = pa.map(q => ({ x:q.t, y:Math.log(Math.max(q.y, 1e-12)) + lg*q.t }));
+
+  let lo = Infinity, hi = -Infinity;
+  lyHat.concat(ly).forEach(q => { if(isFinite(q.y)){ lo = Math.min(lo,q.y); hi = Math.max(hi,q.y); } });
+  if(!isFinite(lo)){ lo = 0; hi = 1; }
+  const padv = Math.max((hi-lo)*0.12, 0.05);
+  tweenTo(VC, { lo:lo-padv, hi:hi+padv }, now);
+  const view = tweenNow(VC, now);
+
+  const C = Plot.makeCoordsRange(W, H, dpr,
+    { xMin:0, xMax:PERIODS, yMin:view.lo, yMax:view.hi }, { l:56, b:46, t:16, r:18 });
+
+  Plot.axes(ctx, C, {
+    fs:_fs, theme:TH,
+    xStep:xStepFor(C, PERIODS), yStep:yStepFor(C, view.hi - view.lo),
+    xLabel:'Period', yLabel:'Log output (natural log)'
+  });
+
+  const upto = TR.active ? Math.max(1, Math.round(easeP()*PERIODS)) : PERIODS;
+  Plot.series(ctx, C, ly.slice(0, upto+1),    { color:TH.bad,    style:'dashed', width:2.6 });
+  Plot.series(ctx, C, lyHat.slice(0, upto+1), { color:TH.accent, style:'solid',  width:2.6 });
+
+  /* With g = 0 the two series are the same numbers and lie exactly on top of
+     each other. Two identical "log y (per worker)" labels would read as a
+     rendering fault rather than as the result it is, so say it once. */
+  const taken = [];
+  const at = arr => x => {
+    const i = Math.min(PERIODS, Math.max(0, Math.round(x)));
+    return arr[i] ? arr[i].y : NaN;
+  };
+  if(N.hat){
+    Plot.curveLabel(ctx, C, at(ly), {
+      text:'log y (per worker)', color:TH.bad, fs:_fs, taken, size:10 });
+    Plot.curveLabel(ctx, C, at(lyHat), {
+      text:'log ŷ (per eff. worker)', color:TH.accent, fs:_fs, taken, size:10 });
+  } else {
+    Plot.curveLabel(ctx, C, at(lyHat), {
+      text:'log y — both lines coincide', color:TH.accent, fs:_fs, taken, size:10 });
+  }
+}
+
+/* ── Panel D — the golden-rule trade-off ────────────────────────────────
+   ĉ*(s) over the whole range of savings rates, with the peak at s = α. Two
+   readings the notes ask for: the peak sits at s = α regardless of δ, n, g;
+   and the curve is flat near its peak, so being modestly off the golden rule
+   costs very little.                                                       */
+function drawD(now, ss, gr, N, cv){
+  const { ctx, dpr, W, H } = cv;
+  if(!ss.ok || !gr.ok) return;
+  const cOf = Core.consumptionBySavings(P);
+
+  tweenTo(VD, { yMax:Core.snapUpSmall(gr.cGr*1.18) }, now);
+  const view = tweenNow(VD, now);
+
+  const C = Plot.makeCoordsRange(W, H, dpr,
+    { xMin:0, xMax:1, yMin:0, yMax:view.yMax }, { l:56, b:66, t:18, r:20 });
+
+  Plot.axes(ctx, C, {
+    fs:_fs, theme:TH, xStep:xStepFor(C, 1), yStep:yStepFor(C, view.yMax),
+    xLabel:'Savings rate (s)',
+    yLabel:`Steady-state consumption ${N.c}*`,
+    xTickFmt:v => v.toFixed(1)
+  });
+
+  if(pinned && pinned.gr.ok){
+    const pOf = Core.consumptionBySavings(pinned.P);
+    Plot.curve(ctx, C, pOf, { color:TH.accent, style:'solid', width:2, ghost:true });
+    Plot.marker(ctx, C, pinned.P.s, pOf(pinned.P.s),
+      { color:TH.muted, r:4.5, ghost:true, fs:_fs });
+  }
+
+  Plot.curve(ctx, C, cOf, { color:TH.accent, style:'solid', width:2.6 });
+
+  /* Peak at s = α — same place for every δ, n, g. */
+  Plot.dropLine(ctx, C, P.alpha, gr.cGr, {
+    color:TH.amber, style:'dotted', fs:_fs, labelDy:23,
+    label:`s = α = ${nf(P.alpha,3)}`, labelColor:TH.amber
+  });
+  Plot.marker(ctx, C, P.alpha, gr.cGr, {
+    color:TH.amber, r:5.5, shape:'diamond', fs:_fs,
+    label:'golden rule', labelDy:-14
+  });
+
+  /* Where this economy actually is. */
+  Plot.marker(ctx, C, P.s, ss.cStar, {
+    color:TH.bad, r:6, fs:_fs, label:`your s = ${nf(P.s,2)}`,
+    labelDy:16, labelDx:-8, labelAlign:'right'
+  });
+
+}
+
+/* How flat is "flat near the peak"? State it, don't just draw it. */
+function flatnessNote(gr){
+  if(!gr.ok || !(gr.cGr > 0)) return '';
+  const cOf = Core.consumptionBySavings(P);
+  const off = cOf(Math.min(0.95, Math.max(0.02, P.alpha + 0.10)));
+  const lossPct = (1 - off/gr.cGr)*100;
+  return `The peak sits at <strong>s = α = ${nf(P.alpha,3)}</strong> no matter what
+     δ, n, and g are — change them and the whole curve moves, but the peak does
+     not slide. The curve is also very flat near that peak: saving ten
+     percentage points more than the golden rule costs only about
+     <strong>${lossPct.toFixed(1)}%</strong> of steady-state consumption. Being
+     modestly off the golden rule is cheap; being far off is not.`;
+}
+
+/* ── Descriptions for the live region (WCAG 1.1.1) ──────────────────── */
+
+function buildDescriptions(ss, gr, N){
+  if(!ss.ok){
+    const msg = 'No steady state exists at these parameters: ' + ss.message;
+    $descSummary.textContent = msg;
+    $descA.textContent = 'Panel A: ' + msg;
+    $descB.textContent = 'Panel B: no path to draw.';
+    $descC.textContent = 'Panel C: no path to draw.';
+    $descD.textContent = 'Panel D: no trade-off curve to draw.';
+    return;
+  }
+  const pos = Core.position(P);
+  const rates = Core.growthRates(P);
+  const posWords = pos === 'above'
+    ? `above the golden rule (s = ${nf(P.s,2)} is greater than α = ${nf(P.alpha,3)}), so it has too much capital`
+    : pos === 'below'
+      ? `below the golden rule (s = ${nf(P.s,2)} is less than α = ${nf(P.alpha,3)}), so it has too little capital`
+      : `exactly at the golden rule, s equals α equals ${nf(P.alpha,3)}`;
+
+  $descSummary.textContent =
+    `Parameters: savings rate ${nf(P.s,2)}, depreciation ${nf(P.delta,2)}, ` +
+    `labor-force growth ${nf(P.n,3)}, technology growth ${nf(P.g,3)}, ` +
+    `capital share ${nf(P.alpha,3)}. Break-even rate δ+n+g is ${nf(ss.breakEven,3)}. ` +
+    `Steady state: capital per ${N.unit} ${nf(ss.kStar)}, output ${nf(ss.yStar)}, ` +
+    `investment ${nf(ss.iStar)}, consumption ${nf(ss.cStar)}. ` +
+    `The economy is ${posWords}. ` +
+    `Golden-rule capital is ${nf(gr.kGr)} and golden-rule consumption ${nf(gr.cGr)}, ` +
+    `a gap of ${nf(gr.cGr - ss.cStar)}. ` +
+    `Long-run growth rates: output per ${N.unit} 0 percent, output per worker ` +
+    `${pctf(rates.yPerWorker)}, aggregate output ${pctf(rates.aggregate)}.`;
+
+  $descA.textContent =
+    `Panel A, the Solow diagram. Three curves are plotted against capital per ` +
+    `${N.unit}, which runs from 0 to about ${nf(Core.domain(P).kMax)}. ` +
+    `The solid curve is the production function f, rising and concave. ` +
+    `The dashed curve is saving, s times f, the same shape scaled down by ${nf(P.s,2)}. ` +
+    `The dotted straight line through the origin is break-even investment, ` +
+    `slope ${nf(ss.breakEven,3)}. Saving crosses break-even at capital ` +
+    `${nf(ss.kStar)}, where output is ${nf(ss.yStar)}. Shaded bands at that point ` +
+    `split output into investment ${nf(ss.iStar)} below and consumption ` +
+    `${nf(ss.cStar)} above. Left of the crossing saving exceeds break-even so ` +
+    `capital grows; right of it capital shrinks. ` +
+    (showGolden
+      ? `The golden-rule capital stock ${nf(gr.kGr)} is marked, with a tangent to ` +
+        `the production function there whose slope, ${nf(ss.breakEven,3)}, equals ` +
+        `the slope of the break-even line — the two are parallel. `
+      : `The golden rule is not currently shown. `) +
+    `The economy is ${posWords}.`;
+
+  const kA = K0.a*ss.kStar, kB = K0.b*ss.kStar;
+  const pa = pathFrom(kA), pb = pathFrom(kB);
+  const half = pa.findIndex(q => Math.abs(q.k - ss.kStar) < Math.abs(kA - ss.kStar)*0.5);
+  $descB.textContent =
+    `Panel B, transition path. Capital per ${N.unit} against ${PERIODS} periods. ` +
+    `One path starts below the steady state at ${nf(kA)} and rises toward it; ` +
+    `the other starts above at ${nf(kB)} and falls toward it. Both approach the ` +
+    `same horizontal steady-state line at ${nf(ss.kStar)} without crossing it. ` +
+    (half > 0 ? `The path from below covers half its distance in about ${half} periods. ` : '') +
+    `After ${PERIODS} periods they reach ${nf(pa[PERIODS].k)} and ${nf(pb[PERIODS].k)}. ` +
+    `Growth is fast at first and slows as the economy approaches the steady state.`;
+
+  const lg = Math.log(1+P.g);
+  $descC.textContent =
+    `Panel C, growth in log output along the path that starts below the steady ` +
+    `state. The solid line is log output per ${N.unit}: it rises steeply during ` +
+    `the transition and then flattens to a slope of zero. The dashed line is log ` +
+    `output per worker: it has the same steep start but then settles into a ` +
+    `constant upward slope of ${nf(lg,4)} per period, that is ${pctf(P.g)} growth. ` +
+    (P.g > 0
+      ? `The permanent gap between the two slopes is the whole point: capital ` +
+        `accumulation gives growth only during the transition, technology gives ` +
+        `growth forever.`
+      : `Because g is zero the two lines lie exactly on top of each other and both ` +
+        `go flat. With no technological progress there is no long-run growth in ` +
+        `output per worker at all — the Chapter 8 result.`);
+
+  const cOf = Core.consumptionBySavings(P);
+  const off = cOf(Math.min(0.95, Math.max(0.02, P.alpha + 0.10)));
+  $descD.textContent =
+    `Panel D, the golden-rule trade-off. Steady-state consumption per ${N.unit} ` +
+    `is plotted against every savings rate from 0 to 1. The curve rises from zero, ` +
+    `peaks at ${nf(gr.cGr)} when the savings rate equals the capital share ` +
+    `${nf(P.alpha,3)}, and falls back to zero as the savings rate approaches 1. ` +
+    `This economy's savings rate of ${nf(P.s,2)} gives consumption ${nf(ss.cStar)}, ` +
+    `which is ${nf(gr.cGr - ss.cStar)} below the peak. The curve is flat near its ` +
+    `peak: saving ten percentage points above the golden rule would cost only ` +
+    `about ${(gr.cGr > 0 ? (1-off/gr.cGr)*100 : 0).toFixed(1)} percent of consumption.`;
+}
+
+/* Screen readers should not be flooded while a slider is being dragged, so
+   the descriptions are written on a 300 ms trailing debounce (WCAG 4.1.3
+   is about announcing changes, not about announcing every frame). */
+let _descTimer = null;
+function scheduleDescriptions(ss, gr, N){
+  clearTimeout(_descTimer);
+  _descTimer = setTimeout(() => buildDescriptions(ss, gr, N), 300);
+}
+
+/* ── Master redraw ──────────────────────────────────────────────────────
+   redraw() touches canvases only. It runs at 60 fps during animations, so
+   rebuilding the readout markup here would thrash the DOM and disturb screen
+   readers; everything outside the canvases is updated by updateUI(), which
+   runs once per actual parameter change.                                    */
+
+function redraw(now){
+  now = now || performance.now();
+  /* CLAUDE.md: recompute the canvas font scale at the start of every redraw
+     so canvas text tracks the reader's browser font-size setting. */
+  _fs = Plot.fontScale();
+
+  const ss = Core.steadyState(P);
+  const gr = Core.goldenRule(P);
+  const N  = Core.notation(P);
+
+  const a = ctxFor('A'); if(a) drawA(now, ss, gr, N, a);
+  const b = ctxFor('B'); if(b) drawB(now, ss, N, b);
+  const c = ctxFor('C'); if(c) drawC(now, ss, N, c);
+  const d = ctxFor('D'); if(d) drawD(now, ss, gr, N, d);
+}
+
+/* Everything outside the canvases: labels, readout, warnings, descriptions. */
+function updateUI(){
+  const ss = Core.steadyState(P);
+  const gr = Core.goldenRule(P);
+  const N  = Core.notation(P);
+
+  applyNotation(N);
+  updateReadout(ss, gr, N);
+  updateSliderLabels(ss, N);
+  $noteD.innerHTML = flatnessNote(gr);
+
+  if(!ss.ok){
+    $warn.classList.remove('hidden');
+    $warn.innerHTML = `<strong>No steady state.</strong> ${ss.message}`;
+  } else {
+    $warn.classList.add('hidden');
+  }
+
+  scheduleDescriptions(ss, gr, N);
+}
+
+/* Slider value text, plus an aria-valuetext that says what the number means
+   rather than repeating the bare number the browser already announces. */
+function updateSliderLabels(ss, N){
+  SLIDERS.forEach(sp => {
+    const el = $(sp.id), out = $(sp.id + 'Val');
+    if(!el || !out) return;
+    out.textContent = nf(P[sp.key], sp.dec);
+    el.setAttribute('aria-valuetext',
+      `${sp.label} ${nf(P[sp.key], sp.dec)}; ` +
+      (ss.ok
+        ? `steady-state capital per ${N.unit} ${nf(ss.kStar)}, consumption ${nf(ss.cStar)}`
+        : 'no steady state at these parameters'));
+  });
+  K0_SLIDERS.forEach(sp => {
+    const el = $(sp.id), out = $(sp.id + 'Val');
+    if(!el || !out) return;
+    const abs = ss.ok ? K0[sp.key]*ss.kStar : NaN;
+    out.textContent = `${nf(K0[sp.key],2)}× = ${nf(abs)}`;
+    el.setAttribute('aria-valuetext',
+      `${sp.label}, ${nf(K0[sp.key],2)} times the steady state, ` +
+      `capital per ${N.unit} ${nf(abs)}`);
+  });
+}
+
+function onParamsChanged(animate){
+  updateUI();
+  requestDraw();
+  if(animate) startTransition();
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   POINTER INTERACTION — dragging the two starting points on Panel A
+   Keyboard users have the two Starting-capital sliders, which are the
+   authoritative control; this is a convenience for mouse and touch.
+   ══════════════════════════════════════════════════════════════════════ */
+
+let _dragKey = null;
+
+/* Client coordinates are CSS px; the coordinate system is device px on the
+   backing store, so scale by width ratio rather than assuming dpr. */
+function pointerToK(e){
+  if(!COORD_A) return null;
+  const el = CANVAS.A.el;
+  const r = el.getBoundingClientRect();
+  if(!r.width) return null;
+  return COORD_A.xInv((e.clientX - r.left) * (el.width / r.width));
+}
+
+CANVAS.A.el.addEventListener('pointerdown', e => {
+  const ss = Core.steadyState(P);
+  if(!ss.ok || !(ss.kStar > 0)) return;
+  const k = pointerToK(e);
+  if(k === null || !isFinite(k)) return;
+  const dA = Math.abs(k - K0.a*ss.kStar), dB = Math.abs(k - K0.b*ss.kStar);
+  _dragKey = dA <= dB ? 'a' : 'b';
+  CANVAS.A.el.setPointerCapture(e.pointerId);
+  applyDrag(k, ss);
+  e.preventDefault();
+});
+CANVAS.A.el.addEventListener('pointermove', e => {
+  if(!_dragKey) return;
+  const ss = Core.steadyState(P);
+  if(!ss.ok) return;
+  const k = pointerToK(e);
+  if(k === null || !isFinite(k)) return;
+  applyDrag(k, ss);
+  e.preventDefault();
+});
+function endDrag(){
+  if(!_dragKey) return;
+  _dragKey = null;
+  startTransition();
+}
+CANVAS.A.el.addEventListener('pointerup', endDrag);
+CANVAS.A.el.addEventListener('pointercancel', endDrag);
+
+function applyDrag(k, ss){
+  const ratio = Math.max(0.05, Math.min(2.50, k / ss.kStar));
+  K0[_dragKey] = Math.round(ratio*100)/100;
+  syncSliders();
+  updateUI();
+  requestDraw();
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   SESSION INTEGRATION
+   Exploration lab: single-phase, no graded questions. Completion is gated on
+   having run at least three of the five scenarios, and the number run is
+   recorded as both the first and the final score (CLAUDE.md's single-phase
+   rule).
+   ══════════════════════════════════════════════════════════════════════ */
+
+function recordCompletion(){
+  if(scenariosRun.size < 3) return;
+  if(window.Session && Session.recordLabDone){
+    Session.recordLabDone(LAB_ID, LAB_LABEL,
+      scenariosRun.size, scenariosRun.size, SCENARIOS.length);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   WIRING
+   ══════════════════════════════════════════════════════════════════════ */
+
+$btnPin.addEventListener('click', () => {
+  if(pinned){ clearPinned(); announce('Pinned equilibrium cleared.'); }
+  else {
+    setPinned(snapshot(), 'manual pin');
+    announce('Current equilibrium pinned. Move a slider and the old curves stay ' +
+             'on screen underneath the new ones.');
+  }
+  requestDraw();
+});
+
+$btnGolden.addEventListener('click', () => {
+  showGolden = !showGolden;
+  $btnGolden.setAttribute('aria-pressed', String(showGolden));
+  $btnGolden.textContent = showGolden ? 'Hide golden rule' : 'Show golden rule';
+  announce(showGolden
+    ? 'Golden rule shown. The tangent to the production function at the ' +
+      'golden-rule capital stock is parallel to the break-even line — that ' +
+      'parallel is the condition MPK equals delta plus n plus g.'
+    : 'Golden rule hidden.');
+  requestDraw();
+});
+
+$btnReplay.addEventListener('click', () => {
+  announce('Replaying the transition.');
+  startTransition();
+});
+
+$btnReset.addEventListener('click', () => {
+  Object.assign(P, DEFAULTS);
+  Object.assign(K0, K0_DEFAULTS);
+  clearPinned();
+  showGolden = false;
+  $btnGolden.setAttribute('aria-pressed','false');
+  $btnGolden.textContent = 'Show golden rule';
+  syncSliders();
+  $mech.innerHTML = '<strong>Reset.</strong> All five parameters are back at ' +
+    'their defaults (s = 0.30, δ = 0.10, n = 0.03, g = 0.03, α = 1/3) and the ' +
+    'pinned comparison is cleared.';
+  announce('Reset to default parameters.');
+  updateUI();
+  requestDraw();
+});
+
+/* Resize handler (CLAUDE.md pattern) */
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => requestDraw(), 80);
+});
+
+/* ══════════════════════════════════════════════════════════════════════
+   BOOT
+   The lab must render whether or not /assets/*.js resolve over the network,
+   so nothing below assumes Session or DiscussionModal exists.
+   ══════════════════════════════════════════════════════════════════════ */
+
+function boot(){
+  if(!Core || !Plot){
+    $warn.classList.remove('hidden');
+    $warn.innerHTML = '<strong>Could not load the model.</strong> ' +
+      'solow-core.js and solow-plot.js did not load. This page expects to sit ' +
+      'four directories below the repository root, alongside the rest of ' +
+      'classes/econ105b/labs/ — if you copied index.html somewhere else, copy ' +
+      'the assets folder with it or fix the ../../../../assets/ paths in the ' +
+      'script tags.';
+    return;
+  }
+  readTheme();
+  buildSliders();
+  buildScenarios();
+  updateProgress();
+  syncSliders();
+
+  /* There is no randomised content in this lab, but seeding the RNG stream
+     for this lab id keeps it isolated from whatever ran before it, per the
+     CLAUDE.md session convention. */
+  if(window.Session && Session.rngForLab) Session.rngForLab(LAB_ID);
+
+  updateUI();
+  requestDraw();
+
+  const isDiscussion = new URLSearchParams(location.search).get('disc') === '1';
+  if(isDiscussion && window.DiscussionModal && window.Session && !Session.isActive()){
+    DiscussionModal.init({
+      weekLabel: WEEK_LABEL,
+      onReady: function(){ requestDraw(); }
+    });
+  }
+}
+
+if(document.readyState === 'loading')
+  document.addEventListener('DOMContentLoaded', boot);
+else
+  boot();
+
+})();
+</script>
+</body>
+</html>

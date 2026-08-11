@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECON 105B · Why Are Some Countries Rich? The Solow Model</title>
+<style>
+  :root{
+    --ink:#14243A;          /* near-navy ink */
+    --accent:#1F4E79;       /* deep blue (from worksheets) */
+    --accent-soft:#8FAADC;
+    --paper:#F6F4EE;        /* warm chalk-paper */
+    --paper-line:#E4E0D5;
+    --gold:#8A5900;
+    --gold-soft:#FBF1DC;
+    --red:#C0392B;
+    --grey:#5A5F66;
+    --chalk:#FbFaF7;
+    --shadow:0 8px 30px rgba(20,36,58,.10);
+    --mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Georgia','Iowan Old Style',serif;
+    color:var(--ink);
+    background:var(--paper);
+    overflow:hidden;
+  }
+  /* ---------- deck scaffold ---------- */
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;
+    padding:clamp(1.25rem,4vw,4.5rem) clamp(1.5rem,6vw,6rem);
+    /* extra bottom room so content never hides behind the fixed nav bar (~46px) */
+    padding-bottom:calc(46px + clamp(1rem,3vw,2rem));
+    /* if a slide is taller than the screen, scroll it instead of clipping/overlapping */
+    overflow-y:auto;overflow-x:hidden;
+    scroll-padding-bottom:46px;
+    opacity:0;
+    transition:opacity .38s ease;
+    /* a visible track, since macOS overlay scrollbars hide on a static page */
+    scrollbar-width:thin;scrollbar-color:var(--paper-line) transparent;
+  }
+  .slide::-webkit-scrollbar{width:10px}
+  .slide::-webkit-scrollbar-track{background:transparent}
+  .slide::-webkit-scrollbar-thumb{background:var(--paper-line);border-radius:5px}
+  /* Direct children must not be squeezed by the column flexbox: without this
+     they shrink to fit the viewport instead of overflowing, so tall slides
+     never become scrollable on a short screen. */
+  .slide > *{flex-shrink:0}
+  .slide.active{display:flex;opacity:1;animation:rise .45s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide.active{animation:none}
+    .slide{transition:none}
+    *{transition-duration:.001ms !important;animation-duration:.001ms !important}
+  }
+  /* visible keyboard focus (WCAG 2.4.7) */
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+    outline:3px solid var(--accent);outline-offset:3px;border-radius:6px;
+  }
+  :focus:not(:focus-visible){outline:none}
+  /* ---------- typography ---------- */
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--grey);margin-bottom:1.1rem;font-weight:600;
+  }
+  h1{font-size:clamp(2.4rem,5.5vw,4.4rem);line-height:1.02;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3.2vw,2.4rem);line-height:1.1;font-weight:700;letter-spacing:-.01em;margin-bottom:.4rem}
+  .lede{font-size:clamp(1.05rem,1.7vw,1.35rem);line-height:1.5;color:var(--ink);max-width:52ch}
+  .muted{color:var(--grey)}
+  .serif-note{font-style:italic;color:var(--grey);font-size:1rem;line-height:1.5}
+  strong{font-weight:700}
+  .accent{color:var(--accent)}
+  .red{color:var(--red)}
+  .gold{color:var(--gold)}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+    clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  /* title rule */
+  h2 + .titlerule{height:2px;background:linear-gradient(90deg,var(--accent-soft),transparent);
+    width:min(100%,640px);margin:.2rem 0 1.4rem}
+  /* ---------- model cards ---------- */
+  .models{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin:1.4rem 0;max-width:900px}
+  @media (max-width:900px){.models{grid-template-columns:1fr}}
+  .model{
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;
+    padding:1.4rem 1.6rem;box-shadow:var(--shadow);position:relative;
+  }
+  .model .tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:.6rem;display:block}
+  .model .eq{font-family:var(--mono);font-size:1.35rem;color:var(--ink)}
+  .model .eq .coef{color:var(--red);font-weight:700}
+  .model.dim{opacity:.4;filter:saturate(.4)}
+  .model.hi{border-color:var(--accent);box-shadow:0 8px 30px rgba(31,78,121,.22)}
+  /* ---------- boxes ---------- */
+  .prompt,.reveal,.predict{
+    border-radius:10px;padding:1.05rem 1.3rem;max-width:820px;line-height:1.5;
+    font-family:'Georgia',serif;font-size:1.08rem;overflow-wrap:break-word;
+  }
+  .prompt{background:#EEF3FA;border-left:4px solid var(--accent)}
+  .reveal{background:var(--gold-soft);border-left:4px solid var(--gold)}
+  .cue{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;display:block;margin-bottom:.4rem}
+  .prompt .cue{color:var(--accent)}
+  .reveal .cue{color:var(--gold)}
+  .predict .cue{color:var(--red)}
+  .predict{background:#FBEEEC;border-left:4px solid var(--red)}
+  .prompt p,.reveal p,.predict p{margin:0;line-height:1.5}
+  .prompt .cue + p,.reveal .cue + p,.predict .cue + p{margin-top:.15rem}
+  /* chain / mono line */
+  .chain{
+    font-family:var(--mono);background:#EDF1F8;border:1px solid var(--accent-soft);
+    border-radius:8px;padding:.7rem 1rem;font-size:1.05rem;color:var(--accent);
+    display:inline-block;margin-top:.4rem
+  }
+  /* ---------- reveal-on-click ---------- */
+  .hidden-reveal{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .hidden-reveal.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* ---------- interactive graph panel ---------- */
+  .graphwrap{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start;margin-top:.6rem;flex:1 0 auto}
+  /* Inline per-slide column ratios must still collapse on narrow screens
+     and on 320px reflow (WCAG 1.4.10), hence !important. */
+  @media (max-width:900px){.graphwrap{grid-template-columns:1fr!important}}
+  .panel{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;padding:1.2rem;box-shadow:var(--shadow)}
+  .panel .ptitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-bottom:.3rem;font-weight:700}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  /* On short displays (720p projectors) cap graph height so the graph-heavy
+     slides still fit on one screen. preserveAspectRatio keeps the drawing
+     undistorted — it just scales down and centers inside the panel. */
+  @media (max-height:820px){ .panel svg{max-height:44vh} }
+  @media (min-height:821px){ .panel svg{max-height:52vh} }
+  .controls{display:flex;flex-direction:column;gap:1.3rem}
+  .readout{font-family:var(--mono);font-size:.92rem;line-height:1.7;color:var(--ink);background:#EDF1F8;border-radius:8px;padding:.8rem 1rem}
+  .readout .big{font-size:1.25rem;color:var(--accent);font-weight:700}
+  .btn{
+    font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.7rem 1.2rem;cursor:pointer;
+    box-shadow:0 3px 10px rgba(31,78,121,.3);transition:transform .1s,background .2s;align-self:flex-start
+  }
+  .btn:hover{background:#173a5c;transform:translateY(-1px)}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
+  .btn.ghost:hover{background:#EEF3FA}
+  /* ---------- poll ---------- */
+  .poll-opts{display:flex;flex-direction:column;gap:.8rem;max-width:760px;margin-top:1.1rem}
+  .poll-opt{
+    display:flex;align-items:stretch;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;
+    cursor:pointer;background:var(--chalk);transition:border-color .2s,transform .08s;position:relative;
+    width:100%;text-align:left;font:inherit;color:inherit;padding:0
+  }
+  .poll-opt:hover{border-color:var(--accent-soft)}
+  .poll-opt:active{transform:scale(.995)}
+  .poll-opt .num{background:var(--accent);color:#fff;font-family:var(--mono);font-weight:700;
+    display:flex;align-items:center;justify-content:center;padding:0 1.1rem;font-size:1.1rem;z-index:2}
+  .poll-opt .txt{padding:.9rem 1.1rem;line-height:1.4;z-index:2;font-size:1.02rem;font-family:'Georgia',serif}
+  .poll.revealed .poll-opt{opacity:.5;transition:opacity .4s}
+  .poll.revealed .poll-opt.correct{opacity:1;border-color:var(--gold);background:var(--gold-soft)}
+  .poll-opt.correct .num{background:var(--gold)}
+  .poll-opt.correct .txt::after{content:" ✓ correct";color:var(--gold);font-family:var(--mono);font-weight:700;font-size:.82rem}
+  .poll-hint{font-family:var(--mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-top:.9rem;font-weight:600}
+  /* ---------- footer / nav ---------- */
+  .chrome{position:fixed;bottom:0;left:0;right:0;height:46px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 1.4rem;font-family:var(--mono);font-size:.72rem;
+    letter-spacing:.08em;color:var(--grey);pointer-events:none;z-index:50}
+  .chrome .course{text-transform:uppercase}
+  .progress-track{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:60}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-soft));width:0;transition:width .35s ease}
+  .navhint{display:flex;gap:1.2rem;align-items:center;pointer-events:auto}
+  .navhint button{pointer-events:auto;background:none;border:none;color:var(--grey);cursor:pointer;font-family:var(--mono);font-size:.9rem;padding:.2rem .5rem;border-radius:5px}
+  .navhint button:hover{color:var(--accent);background:rgba(31,78,121,.08)}
+  .kbd{font-family:var(--mono);font-size:.66rem;border:1px solid var(--paper-line);border-radius:4px;padding:.1rem .35rem;color:var(--grey)}
+  /* Shown only while the current slide has more content below the fold. */
+  .scrollcue{position:fixed;right:1.4rem;bottom:52px;z-index:55;font-family:var(--mono);
+    font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);
+    background:rgba(246,244,238,.94);border:1px solid var(--paper-line);border-radius:999px;
+    padding:.3rem .75rem;opacity:0;transition:opacity .25s;pointer-events:none}
+  .scrollcue.on{opacity:1}
+  /* content column helper */
+  .col{display:flex;flex-direction:column;gap:1.1rem;flex:1 0 auto;justify-content:center}
+  .grow{flex:1 0 auto}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+  @media (max-width:900px){.two{grid-template-columns:1fr!important}}
+  /* Grid children default to min-width:auto, which lets a wide table or SVG
+     push the whole slide sideways at 320px. Let them shrink instead so the
+     .tablewrap can do its own horizontal scrolling (WCAG 1.4.10). */
+  .two>*,.graphwrap>*,.condrow>*,.models>*{min-width:0}
+  .calc{font-family:var(--mono);font-size:1.05rem;line-height:1.8}
+  .calc .lbl{color:var(--accent);font-weight:700}
+  .delta{font-size:1.15rem;font-weight:700}
+  .footnote{font-size:.92rem;color:var(--grey);font-style:italic}
+  /* title slide special */
+  .title-slide{justify-content:safe center}
+  .title-slide h1{margin:.6rem 0}
+  .signature{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;color:var(--accent);margin-top:2rem}
+  /* ---------- section divider ---------- */
+  .divider{justify-content:safe center;background:linear-gradient(135deg,#1B3B5C,#14243A)}
+  .divider *{color:#F6F4EE}
+  .divider .eyebrow{color:#8FAADC}
+  .divider h1{font-size:clamp(2.2rem,5vw,4rem);color:#fff}
+  .divider .lede{color:#D6DEE9;max-width:46ch}
+    /* No uppercase: the trail carries Δk, n and g, which must stay lower case. */
+  .divider .sectrail{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;color:#8FAADC;margin-top:1.6rem}
+  .divider .through{font-family:var(--mono);font-size:.8rem;line-height:1.6;color:#D6DEE9;
+    border-left:3px solid #8FAADC;padding-left:.9rem;margin-top:1.4rem;max-width:56ch}
+  /* ---------- generic click-reveal ---------- */
+  .reveal-hidden{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .reveal-hidden.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* condition cards (3-across) */
+  .condrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem}
+  @media (max-width:900px){.condrow{grid-template-columns:1fr}}
+  .condcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.5rem}
+  .condcard .ctitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .condcard .cbtn{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:.55rem .8rem;cursor:pointer}
+  .condcard .cbtn:hover{background:#173a5c}
+  .condcard .cbody{opacity:0;max-height:0;overflow:hidden;transition:opacity .35s,max-height .45s}
+  .condcard .cbody.shown{opacity:1;max-height:none;overflow:visible;margin-top:.3rem}
+  .condcard .cnote{font-size:.9rem;line-height:1.45;color:var(--ink)}
+  .condcard .verdict{font-family:var(--mono);font-size:.78rem;font-weight:700;padding:.2rem 0}
+  .verdict.severe{color:var(--red)}
+  .verdict.mild{color:var(--accent)}
+  /* diagnose (numbered flawed-argument) list */
+  .diag{display:flex;flex-direction:column;gap:.7rem;max-width:860px;margin:1rem 0}
+  .diag-opt{display:flex;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;background:var(--chalk);width:100%;text-align:left;font:inherit;color:inherit;padding:0;cursor:pointer;transition:border-color .2s}
+  .diag-opt:hover{border-color:var(--accent-soft)}
+  .diag-opt .n{background:var(--grey);color:#fff;font-family:var(--mono);font-weight:700;display:flex;align-items:center;padding:0 1rem;font-size:1.05rem}
+  .diag-opt .s{padding:.85rem 1.1rem;line-height:1.45;font-family:'Georgia',serif;font-size:1.02rem}
+  .diag.revealed .diag-opt{opacity:.5}
+  .diag.revealed .diag-opt.bad{opacity:1;border-color:var(--red);background:#FBEEEC}
+  .diag-opt.bad .n{background:var(--red)}
+  .diag.revealed .diag-opt.bad .s::after{content:" ✗ the flaw";color:var(--red);font-family:var(--mono);font-weight:700;font-size:.8rem}
+  /* TA run-sheet table */
+  .runsheet{display:grid;grid-template-columns:auto 1fr;gap:.35rem 1.1rem;font-family:var(--mono);font-size:.86rem;line-height:1.5;margin-top:.4rem}
+  .runsheet .rk{color:var(--accent);font-weight:700;white-space:nowrap}
+  /* comparison / scoreboard tables */
+  .tablewrap{width:100%;max-width:1040px;overflow-x:auto}
+  .cases{width:100%;min-width:720px;border-collapse:collapse;font-family:var(--mono);font-size:1rem;margin-top:.6rem}
+  .cases th,.cases td{border:1px solid var(--paper-line);padding:.6rem .8rem;text-align:left}
+    /* No text-transform here: these headers carry math (i = δk, + n, k<span class="kh">ˆ</span>),
+     and uppercasing turns δ into Δ and n into N. */
+  .cases th{background:#EDF1F8;color:var(--accent);font-size:.82rem;letter-spacing:.04em;font-weight:700}
+  .cases td.hi{background:var(--gold-soft);font-weight:700}
+  .cases td.yes{color:var(--accent);font-weight:700}
+  .cases td.no{color:var(--red);font-weight:700}
+  .cases td.pend{color:var(--grey)}
+  .cases .fact{font-family:'Georgia',serif;font-size:.96rem;font-weight:400}
+  /* Unicode has no precomposed "k with circumflex", so every font places the
+     combining accent over the letter's origin — i.e. over the left stem of the
+     k rather than centered on it. ŷ, ĉ and î are precomposed and render fine;
+     only k<span class="kh">ˆ</span> needs help. This draws the caret as a zero-advance glyph pulled back
+     over the k, with the margin restored so following characters are unmoved.
+     SVG labels can't use this, so they nudge a <tspan> by the same amount. */
+  .kh{display:inline-block;width:0;margin-left:-.56em;margin-right:.56em;
+    position:relative;top:-.40em;font-style:normal}
+</style>
+</head>
+<body>
+<div class="progress-track"><div class="progress-fill" id="prog"></div></div>
+<div class="deck" id="deck">
+  <!-- ══════════════ FRONT MATTER ══════════════ -->
+
+  <!-- 1. TITLE -->
+  <section class="slide active title-slide" data-section="Discussion 6 · Opening">
+    <div class="eyebrow">ECON 105B · Intermediate Macro · Discussion 6 · Chapters 8–9</div>
+    <h1>Why Are Some Countries Rich?<br><span class="accent">The Solow Model</span></h1>
+    <p class="lede" style="margin-top:1rem">Five discussions on the short run asked how fast the economy returns to Ȳ. Today we ask what sets Ȳ in the first place — and why the answer is not the one most people guess.</p>
+    <p class="serif-note" style="margin-top:1.6rem">Work on your own paper. Write before each reveal — the point is your reasoning, not a clean final answer.</p>
+    <div class="signature">Δk engine → Saving → Golden rule → n → g → Empirics</div>
+  </section>
+
+
+  <!-- 3. THE KALDOR SCOREBOARD -->
+  <section class="slide" data-section="Discussion 6 · Opening">
+    <div class="eyebrow">The scoreboard we are trying to match</div>
+    <h2>Six facts about growth, and one model that has to explain them</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:80ch">Before any model, here is what the data say about rich economies over the past century. Nicholas Kaldor collected these; they are the target. We will build the Solow model in three stages and score each stage against all six.</p>
+    <div class="tablewrap">
+      <table class="cases">
+        <caption class="sr-only">The six Kaldor facts, with three empty scoring columns for the three versions of the Solow model built in this discussion</caption>
+        <thead>
+          <tr>
+            <th scope="col" style="width:44%">The Kaldor fact</th>
+            <th scope="col">Basic Solow<br>Parts 1–3</th>
+            <th scope="col">+ population<br>Part 4</th>
+            <th scope="col">+ technology<br>Part 5</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row" class="fact">1 · Output per worker grows at a roughly constant rate that does not die out</th><td class="pend">—</td><td class="pend">—</td><td class="pend">—</td></tr>
+          <tr><th scope="row" class="fact">2 · Capital per worker grows over time</th><td class="pend">—</td><td class="pend">—</td><td class="pend">—</td></tr>
+          <tr><th scope="row" class="fact">3 · The capital/output ratio is roughly constant</th><td class="pend">—</td><td class="pend">—</td><td class="pend">—</td></tr>
+          <tr><th scope="row" class="fact">4 · The rate of return on capital is constant</th><td class="pend">—</td><td class="pend">—</td><td class="pend">—</td></tr>
+          <tr><th scope="row" class="fact">5 · Capital's and labor's shares of income are nearly constant</th><td class="pend">—</td><td class="pend">—</td><td class="pend">—</td></tr>
+          <tr><th scope="row" class="fact">6 · The wage grows over time</th><td class="pend">—</td><td class="pend">—</td><td class="pend">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="footnote" style="margin-top:.8rem">Copy this table onto your paper now, with the three empty columns. You will fill one column at slide 16, one at slide 26, and one at slide 32. <strong>Fact 1 is the hard one</strong> — hold onto it.</p>
+  </section>
+
+  <!-- 4. NOTATION -->
+  <section class="slide" data-section="Discussion 6 · Opening">
+    <div class="eyebrow">Notation · read this before Part 5 bites you</div>
+    <h2>Per worker is not per <em>effective</em> worker</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:78ch">Three families of variables. The hat is the one that causes trouble — it appears only in Part 5, and by then a lot of people have stopped reading it.</p>
+    <div class="condrow" style="margin-top:1.1rem">
+      <div class="condcard">
+        <span class="ctitle">Aggregate · no marks</span>
+        <div class="calc" style="font-size:1rem">Y &nbsp;K &nbsp;L &nbsp;C &nbsp;I &nbsp;A</div>
+        <p class="cnote">Whole-economy totals. <strong>A</strong> is technology — the level of labor-augmenting productivity.</p>
+      </div>
+      <div class="condcard">
+        <span class="ctitle">Per worker · lower case</span>
+        <div class="calc" style="font-size:1rem">y = Y/L&nbsp;&nbsp;k = K/L<br>c = C/L&nbsp;&nbsp;i = I/L</div>
+        <p class="cnote">Divide by the number of <em>bodies</em>. This is what living standards mean and what the data measure.</p>
+      </div>
+      <div class="condcard">
+        <span class="ctitle">Per effective worker · hat</span>
+        <div class="calc" style="font-size:1rem">ŷ = Y/(AL)&nbsp;&nbsp;k<span class="kh">ˆ</span> = K/(AL)<br>ĉ = C/(AL)&nbsp;&nbsp;î = I/(AL)</div>
+        <p class="cnote">Divide by <em>AL</em>, bodies weighted by how productive each one is. Nobody's living standard is measured this way — it is a change of units that makes the algebra work.</p>
+      </div>
+    </div>
+    <div class="prompt" style="margin-top:1.2rem;max-width:900px">
+      <span class="cue">The one sentence to keep</span>
+      <p>The two are linked by <strong>y = A·ŷ</strong>. In Part 5, ŷ will be <em>constant</em> in the long run while y <em>grows</em> — and both statements will be true at the same time, about the same economy. That is not a contradiction; it is the whole point of the chapter.</p>
+    </div>
+    <p class="footnote" style="margin-top:.9rem">Also: <strong>x′</strong> means next period's value of x, and <strong>x*</strong> means the steady-state value. Parameters: α (capital share), s (savings rate), δ (depreciation), n (population growth), g (technology growth).</p>
+  </section>
+
+  <!-- ══════════════ PART 1 ══════════════ -->
+
+  <!-- 5. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 6 · Capital Accumulation">
+    <div class="eyebrow">Part 1 of 6</div>
+    <h1>The Engine:<br>Δk = sf(k) − δk</h1>
+    <p class="lede">Every result in this discussion comes out of one equation. New capital is built by saving; old capital breaks. The difference is the whole model.</p>
+    <div class="sectrail">Δk engine → Saving → Golden rule → n → g → Empirics</div>
+    <div class="through">Throughline: diminishing returns to capital means saving changes the LEVEL of income; only technology changes its GROWTH RATE.</div>
+  </section>
+
+  <!-- 6. READ THE EQUATIONS -->
+  <section class="slide" data-section="Discussion 6 · Capital Accumulation">
+    <div class="eyebrow">Start from what you already have</div>
+    <h2>Read the equations before you compute</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:78ch">Two equations, both recycled from earlier courses. Nothing here is new machinery.</p>
+    <div class="models">
+      <div class="model hi">
+        <span class="tag">Supply · the production function</span>
+        <div class="eq">y = f(k) = k<sup>α</sup> = <span class="coef">√k</span></div>
+        <p class="cnote" style="margin-top:.7rem;font-size:.95rem;line-height:1.5;font-family:'Georgia',serif">Constant returns to scale let us write output per worker as a function of capital per worker alone. We calibrate α = ½, so f(k) = √k. Its slope is the <strong>MPK</strong>, and it <em>falls</em> as k rises.</p>
+      </div>
+      <div class="model hi">
+        <span class="tag">Demand · saving is investment</span>
+        <div class="eq">i = s·y = <span class="coef">0.3</span>·f(k)</div>
+        <p class="cnote" style="margin-top:.7rem;font-size:.95rem;line-height:1.5;font-family:'Georgia',serif">In a closed economy with no government, y = c + i and c = (1−s)y, so <strong>i = sy</strong>. This is the same saving-equals-investment condition you closed the goods market with in ECON 105A.</p>
+      </div>
+    </div>
+    <div class="prompt" style="margin-top:.2rem">
+      <span class="cue">A change of habit, not of substance</span>
+      <p>In 105A households were described by the <strong>MPC</strong>. Here they are described by <strong>s</strong>, the savings rate — and MPC = 1 − s. Same household, different half of the sentence. We use s because the model is about accumulation, and what accumulates is the part that is <em>not</em> consumed.</p>
+    </div>
+  </section>
+
+  <!-- 7. Q1 -->
+  <section class="slide" data-section="Discussion 6 · Capital Accumulation">
+    <div class="eyebrow">Write · then reveal</div>
+    <h2>Where did the labor force go?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:920px">
+      <p class="lede" style="max-width:76ch">The aggregate production function is Y = F(K, L). Constant returns to scale says that scaling both inputs scales output by the same factor: <strong>zY = F(zK, zL)</strong> for any z. Set z = 1/L and the whole thing collapses to y = f(k), with L gone.</p>
+      <div class="prompt">
+        <span class="cue">Question 1 (write)</span>
+        <p>Why does constant returns to scale let us drop L entirely? And — harder — <strong>what is being assumed away</strong> when we do? Name one thing about the real world that this step rules out.</p>
+      </div>
+      <button class="btn" data-reveal="hrQ1" style="margin-top:.4rem">Reveal the answer</button>
+      <div class="reveal-hidden" id="hrQ1">
+        <div class="reveal">
+          <span class="cue">Reveal · Question 1</span>
+          <p><strong>Why it works.</strong> With constant returns, output depends only on the <em>ratio</em> of the inputs, not on their absolute size. Setting z = 1/L gives Y/L = F(K/L, 1) = f(k). So the size of the workforce has no effect on the relationship between output per worker and capital per worker. A country of 3 million and a country of 300 million with the same k have exactly the same y.</p>
+          <p style="margin-top:.55rem"><strong>What it assumes away — this is the part worth writing down.</strong> Every source of <em>scale</em> disappears. No gains from a larger market. No agglomeration, no thicker supply chains, no ideas being cheaper to spread over more people. And in the other direction, no fixed factors: no land, no oil, no coastline that a bigger population has to divide up. Doubling the country simply doubles everything.</p>
+          <p style="margin-top:.55rem">That is an <em>assumption</em>, not a fact — and it is doing real work. It is what makes “why is this country rich?” a question about <strong>k alone</strong> rather than about how big the country is. Hold onto it: in Part 4 we add population growth, and it will matter that extra workers dilute capital without adding anything but hands.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. Q2 PREDICT -->
+  <section class="slide" data-section="Discussion 6 · Capital Accumulation">
+    <div class="eyebrow">Commit before computing</div>
+    <h2>Predict</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:860px">
+      <p class="lede">Two countries are identical in every parameter — same production function, same s, same δ. The only difference is where they start: one was left with far less capital per worker than the other.</p>
+      <div class="predict">
+        <span class="cue">Question 2 (predict)</span>
+        <p>Does the capital-poor country stay poorer <strong>forever</strong>? Commit to <strong>yes</strong> or <strong>no</strong> on your paper, plus <strong>one sentence</strong> saying what would have to be true for your answer to hold.</p>
+      </div>
+      <p class="footnote">No arithmetic. Just the commitment — the next slide runs it, and you want to have written something down before it does.</p>
+    </div>
+  </section>
+
+  <!-- 9. ANIMATED CONVERGENCE -->
+  <section class="slide" data-section="Discussion 6 · Capital Accumulation">
+    <div class="eyebrow">Question 2 · the answer, run forward</div>
+    <h2>Two starting points, one destination</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:1.35fr .65fr">
+      <div class="panel">
+        <div class="ptitle">The Solow diagram · both countries at once</div>
+        <svg id="cvsvg" viewBox="0 0 500 360" role="img" aria-label="The Solow diagram with the production function, the saving curve, and the depreciation line. A country starting with capital per worker of 1 saves more than it depreciates and grows; a country starting at 16 depreciates more than it saves and shrinks. Both converge on the same steady state at capital per worker of 9 and output per worker of 3, so the poorer country does not stay poorer forever.">
+          <line x1="60" y1="20" x2="60" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="320" x2="440" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="52" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">y</text>
+          <text x="440" y="356" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">capital per worker (k)</text>
+          <g font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">
+            <text x="150" y="335">5</text><text x="240" y="335">10</text>
+            <text x="330" y="335">15</text><text x="420" y="335">20</text>
+          </g>
+          <!-- f(k) = sqrt(k) -->
+          <polyline fill="none" stroke="#14243A" stroke-width="2.6" stroke-linejoin="round" points="60.0,320.0 64.5,292.0 69.0,280.4 73.5,271.5 78.0,264.0 87.0,251.4 96.0,240.8 105.0,231.5 114.0,223.0 123.0,215.2 132.0,208.0 141.0,201.2 150.0,194.8 159.0,188.7 168.0,182.8 177.0,177.2 186.0,171.8 195.0,166.6 204.0,161.6 213.0,156.7 222.0,152.0 231.0,147.4 240.0,142.9 249.0,138.5 258.0,134.3 267.0,130.1 276.0,126.0 285.0,122.0 294.0,118.1 303.0,114.2 312.0,110.5 321.0,106.8 330.0,103.1 339.0,99.5 348.0,96.0 357.0,92.5 366.0,89.1 375.0,85.7 384.0,82.4 393.0,79.1 402.0,75.9 411.0,72.7 420.0,69.6"/>
+          <text x="426" y="66" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">f(k)</text>
+          <!-- s f(k) = 0.3 sqrt(k) -->
+          <polyline fill="none" stroke="#1F4E79" stroke-width="2.6" stroke-linejoin="round" points="60.0,320.0 64.5,311.6 69.0,308.1 73.5,305.5 78.0,303.2 87.0,299.4 96.0,296.2 105.0,293.4 114.0,290.9 123.0,288.6 132.0,286.4 141.0,284.4 150.0,282.4 159.0,280.6 168.0,278.8 177.0,277.2 186.0,275.6 195.0,274.0 204.0,272.5 213.0,271.0 222.0,269.6 231.0,268.2 240.0,266.9 249.0,265.6 258.0,264.3 267.0,263.0 276.0,261.8 285.0,260.6 294.0,259.4 303.0,258.3 312.0,257.1 321.0,256.0 330.0,254.9 339.0,253.9 348.0,252.8 357.0,251.8 366.0,250.7 375.0,249.7 384.0,248.7 393.0,247.7 402.0,246.8 411.0,245.8 420.0,244.9"/>
+          <text x="426" y="248" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">sf(k)</text>
+          <!-- delta k -->
+          <line x1="60" y1="320" x2="420" y2="208" stroke="#8A5900" stroke-width="2.6" stroke-dasharray="7 4"/>
+          <text x="426" y="205" font-family="monospace" font-size="12" fill="#8A5900" font-weight="700">δk</text>
+          <!-- steady state marker: hidden until the sweep finishes -->
+          <line id="cvKstar" x1="222" y1="20" x2="222" y2="320" stroke="#5A5F66" stroke-width="1.2" stroke-dasharray="4 4" opacity="0"/>
+          <text id="cvKstarT" x="222" y="16" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="middle" opacity="0">k* = 9</text>
+          <circle id="cvKstarD" cx="222" cy="152" r="5" fill="#14243A" opacity="0"/>
+          <line id="cvKstarG" x1="60" y1="152" x2="222" y2="152" stroke="#5A5F66" stroke-width="1" stroke-dasharray="4 3" opacity="0"/>
+          <text id="cvKstarY" x="54" y="156" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end" opacity="0">y* = 3</text>
+          <!-- Country A: starts at k0 = 1 -->
+          <line id="cvAv" x1="78" y1="264" x2="78" y2="320" stroke="#1F4E79" stroke-width="1.2" stroke-dasharray="4 3" opacity="0"/>
+          <line id="cvAgap" x1="78" y1="303.2" x2="78" y2="314.4" stroke="#1F4E79" stroke-width="4" stroke-linecap="round"/>
+          <circle id="cvAdot" cx="78" cy="264" r="6" fill="#1F4E79"/>
+          <text id="cvAlab" x="70" y="256" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700" text-anchor="end">A ▲ Δk &gt; 0</text>
+          <!-- Country B: starts at k0 = 16 -->
+          <line id="cvBv" x1="348" y1="96" x2="348" y2="320" stroke="#C0392B" stroke-width="1.2" stroke-dasharray="4 3" opacity="0"/>
+          <line id="cvBgap" x1="348" y1="252.8" x2="348" y2="230.4" stroke="#C0392B" stroke-width="4" stroke-linecap="round"/>
+          <circle id="cvBdot" cx="348" cy="96" r="6" fill="#C0392B"/>
+          <text id="cvBlab" x="356" y="90" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700">B ▼ Δk &lt; 0</text>
+        </svg>
+        <p class="serif-note" style="font-size:.85rem;margin-top:.4rem">The thick colored bar under each dot is the gap between sf(k) and δk — the whole of Δk. Watch both bars shrink to nothing.</p>
+      </div>
+      <div class="controls">
+        <button class="btn" id="cvPlay">▶ Play convergence</button>
+        <button class="btn ghost" id="cvReset">Reset</button>
+        <div class="readout" id="cvRead" aria-live="polite" aria-atomic="true">
+          <strong>Year <span id="cvT">0</span></strong><br>
+          <span class="accent">Country A</span> · k = <span id="cvAk">1.00</span><span id="cvAlim"></span><br>
+          &nbsp;&nbsp;sf(k) = <span id="cvAs">0.30</span> vs δk = <span id="cvAd">0.10</span><br>
+          &nbsp;&nbsp;Δk = <span id="cvAg">+0.20</span><span id="cvAglim"></span> <span id="cvAw">rising</span><br><br>
+          <span class="red">Country B</span> · k = <span id="cvBk">16.00</span><span id="cvBlim"></span><br>
+          &nbsp;&nbsp;sf(k) = <span id="cvBs">1.20</span> vs δk = <span id="cvBd">1.60</span><br>
+          &nbsp;&nbsp;Δk = <span id="cvBg">−0.40</span><span id="cvBglim"></span> <span id="cvBw">falling</span>
+        </div>
+        <p class="footnote" style="margin:0">Country A starts at k₀ = 1, Country B at k₀ = 16. Identical s, δ, and f(k).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. PUNCHLINE -->
+  <section class="slide" data-section="Discussion 6 · Capital Accumulation">
+    <div class="eyebrow">The punchline</div>
+    <h2>Why the destination is a destination</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:960px">
+      <p class="lede" style="max-width:76ch">Nothing pushed those two economies to the same point. Nobody chose k* = 9. It is where the two curves happen to cross, and the crossing is forced by the <em>shapes</em>: sf(k) bends over, δk does not.</p>
+      <div class="chain" style="font-size:1.02rem">k &lt; k* → sf(k) &gt; δk → Δk &gt; 0 → k↑ → MPK↓ → sf(k) flattens toward δk</div>
+      <div class="chain" style="background:#FBEEEC;border-color:#E3A9A1;color:#C0392B;font-size:1.02rem">k &gt; k* → sf(k) &lt; δk → Δk &lt; 0 → k↓ → MPK↑ → sf(k) rises back toward δk</div>
+      <div class="reveal" style="max-width:900px">
+        <span class="cue">Name the property · this is what a steady state is</span>
+        <p><strong>k* is a sink.</strong> Knock the economy off it in either direction and it comes back. That is a much stronger claim than “k* is where Δk = 0” — a pencil balanced on its tip also has Δ = 0, and it does not come back.</p>
+        <p style="margin-top:.55rem">The return happens because <strong>saving is concave and depreciation is linear</strong>. Every extra unit of capital adds less output than the last (MPK falls), so saving per worker grows more and more slowly — while the replacement bill δk keeps climbing at a constant rate. Below the crossing, saving is still winning. Above it, replacement has overtaken. They can only cross once.</p>
+        <p style="margin-top:.55rem">So the answer to Question 2 is <strong>no</strong> — the capital-poor country does not stay poorer forever, <em>provided it shares the same s, δ and f(k)</em>. That proviso is doing a lot of work, and Part 6 is where we cash it in.</p>
+      </div>
+      <p class="footnote">Notice what has <em>not</em> been explained yet: the model has just told us that growth <strong>stops</strong>. Fact 1 on the scoreboard says it doesn't. Keep going.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 2 ══════════════ -->
+
+  <!-- 11. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 6 · Saving">
+    <div class="eyebrow">Part 2 of 6</div>
+    <h1>Saving:<br>Levels vs. Growth Rates</h1>
+    <p class="lede">Saving is the one thing in this model a country can plausibly choose. So: does a thriftier country grow faster — or just end up richer? They are not the same claim.</p>
+    <div class="sectrail">Δk engine ✓ → Saving → Golden rule → n → g → Empirics</div>
+    <div class="through">Throughline: diminishing returns to capital means saving changes the LEVEL of income; only technology changes its GROWTH RATE.</div>
+  </section>
+
+  <!-- 12. Q3 PREDICT -->
+  <section class="slide" data-section="Discussion 6 · Saving">
+    <div class="eyebrow">Commit before computing</div>
+    <h2>Predict — and draw it</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:900px">
+      <p class="lede" style="max-width:76ch">The economy is sitting at its steady state, k* = 9. At year 0 the savings rate rises permanently from <strong>s = 0.3</strong> to <strong>s′ = 0.4</strong> — and stays there forever.</p>
+      <div class="predict">
+        <span class="cue">Question 3 (predict · draw it)</span>
+        <p>On your paper, draw a pair of axes with <strong>time</strong> across the bottom and the <strong>growth rate of output per worker</strong> up the side. Mark year 0. Then <strong>sketch the path</strong> of that growth rate from before the change to far into the future.</p>
+      </div>
+      <p class="footnote" style="margin-top:.2rem">Draw the growth <em>rate</em>, not the level of y. They are different pictures, and which one you drew is the whole question. Take three minutes — nobody has to show anyone.</p>
+      <div class="chain">before year 0 the growth rate of y was: <strong>zero</strong> — the economy was at k*</div>
+    </div>
+  </section>
+
+  <!-- 13. TWO-PANEL ANIMATION -->
+  <section class="slide" data-section="Discussion 6 · Saving">
+    <div class="eyebrow">Question 3 · the answer, in two panels</div>
+    <h2>The level moves. The growth rate comes back.</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="ptitle">Panel 1 · the Solow diagram</div>
+        <svg id="svsvg" viewBox="0 0 500 360" role="img" aria-label="The Solow diagram before and after a permanent rise in the savings rate from 0.3 to 0.4. The saving curve shifts up, so at the old steady state saving now exceeds depreciation and capital per worker rises from 9 to 16, lifting output per worker from 3 to 4. The economy settles at a permanently higher level of income.">
+          <line x1="60" y1="20" x2="60" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="320" x2="440" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="52" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">y</text>
+          <text x="440" y="356" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">capital per worker (k)</text>
+          <g font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">
+            <text x="150" y="335">5</text><text x="240" y="335">10</text>
+            <text x="330" y="335">15</text><text x="420" y="335">20</text>
+          </g>
+          <polyline fill="none" stroke="#14243A" stroke-width="2.6" stroke-linejoin="round" points="60.0,320.0 64.5,292.0 69.0,280.4 73.5,271.5 78.0,264.0 87.0,251.4 96.0,240.8 105.0,231.5 114.0,223.0 123.0,215.2 132.0,208.0 141.0,201.2 150.0,194.8 159.0,188.7 168.0,182.8 177.0,177.2 186.0,171.8 195.0,166.6 204.0,161.6 213.0,156.7 222.0,152.0 231.0,147.4 240.0,142.9 249.0,138.5 258.0,134.3 267.0,130.1 276.0,126.0 285.0,122.0 294.0,118.1 303.0,114.2 312.0,110.5 321.0,106.8 330.0,103.1 339.0,99.5 348.0,96.0 357.0,92.5 366.0,89.1 375.0,85.7 384.0,82.4 393.0,79.1 402.0,75.9 411.0,72.7 420.0,69.6"/>
+          <text x="426" y="66" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">f(k)</text>
+          <polyline fill="none" stroke="#1F4E79" stroke-width="2.6" stroke-linejoin="round" points="60.0,320.0 64.5,311.6 69.0,308.1 73.5,305.5 78.0,303.2 87.0,299.4 96.0,296.2 105.0,293.4 114.0,290.9 123.0,288.6 132.0,286.4 141.0,284.4 150.0,282.4 159.0,280.6 168.0,278.8 177.0,277.2 186.0,275.6 195.0,274.0 204.0,272.5 213.0,271.0 222.0,269.6 231.0,268.2 240.0,266.9 249.0,265.6 258.0,264.3 267.0,263.0 276.0,261.8 285.0,260.6 294.0,259.4 303.0,258.3 312.0,257.1 321.0,256.0 330.0,254.9 339.0,253.9 348.0,252.8 357.0,251.8 366.0,250.7 375.0,249.7 384.0,248.7 393.0,247.7 402.0,246.8 411.0,245.8 420.0,244.9"/>
+          <text x="426" y="250" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">sf(k)</text>
+          <!-- the new, higher saving curve: hidden until played -->
+          <polyline id="svNew" fill="none" stroke="#C0392B" stroke-width="2.8" stroke-linejoin="round" opacity="0" points="60.0,320.0 64.5,308.8 69.0,304.2 73.5,300.6 78.0,297.6 87.0,292.6 96.0,288.3 105.0,284.6 114.0,281.2 123.0,278.1 132.0,275.2 141.0,272.5 150.0,269.9 159.0,267.5 168.0,265.1 177.0,262.9 186.0,260.7 195.0,258.7 204.0,256.6 213.0,254.7 222.0,252.8 231.0,251.0 240.0,249.2 249.0,247.4 258.0,245.7 267.0,244.0 276.0,242.4 285.0,240.8 294.0,239.2 303.0,237.7 312.0,236.2 321.0,234.7 330.0,233.2 339.0,231.8 348.0,230.4 357.0,229.0 366.0,227.6 375.0,226.3 384.0,225.0 393.0,223.7 402.0,222.4 411.0,221.1 420.0,219.8"/>
+          <text id="svNewT" x="426" y="222" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" opacity="0">s′f(k)</text>
+          <line x1="60" y1="320" x2="420" y2="208" stroke="#8A5900" stroke-width="2.6" stroke-dasharray="7 4"/>
+          <text x="426" y="205" font-family="monospace" font-size="12" fill="#8A5900" font-weight="700">δk</text>
+          <!-- old steady state, always visible -->
+          <line x1="222" y1="140" x2="222" y2="320" stroke="#5A5F66" stroke-width="1.1" stroke-dasharray="4 4"/>
+          <text x="222" y="134" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700" text-anchor="middle">k*₁ = 9</text>
+          <!-- new steady state, revealed at the end -->
+          <line id="svK2" x1="348" y1="84" x2="348" y2="320" stroke="#C0392B" stroke-width="1.2" stroke-dasharray="4 4" opacity="0"/>
+          <text id="svK2t" x="348" y="78" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="middle" opacity="0">k*₂ = 16</text>
+          <line id="svYg" x1="60" y1="96" x2="348" y2="96" stroke="#C0392B" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/>
+          <text id="svYt" x="54" y="100" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="end" opacity="0">4</text>
+          <text id="svY1" x="54" y="156" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700" text-anchor="end">3</text>
+          <line x1="60" y1="152" x2="222" y2="152" stroke="#5A5F66" stroke-width="1" stroke-dasharray="4 3"/>
+          <!-- live guides that track the dot to both axes for the whole sweep -->
+          <line id="svVg" x1="222" y1="152" x2="222" y2="320" stroke="#9AA0A6" stroke-width="1.2" stroke-dasharray="4 3" opacity="0"/>
+          <line id="svHg" x1="60" y1="152" x2="222" y2="152" stroke="#9AA0A6" stroke-width="1.2" stroke-dasharray="4 3" opacity="0"/>
+          <circle id="svDot" cx="222" cy="152" r="6" fill="#C0392B"/>
+        </svg>
+        <p class="serif-note" style="font-size:.85rem;margin-top:.4rem">Output per worker climbs from 3 to 4 and <strong>stops</strong>. The level is permanently higher.</p>
+      </div>
+      <div class="panel">
+        <div class="ptitle">Panel 2 · the growth rate of output per worker</div>
+        <svg id="sgsvg" viewBox="0 0 460 360" role="img" aria-label="The growth rate of output per worker over time after a permanent rise in the savings rate. Growth is zero before the change, jumps to about 1.7 percent in the year of the change, then decays steadily back to zero as capital accumulates. A permanently higher savings rate produces only a temporary burst of growth.">
+          <line x1="60" y1="40" x2="60" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="300" x2="430" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="52" y="46" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">%Δy</text>
+          <text x="430" y="336" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">years after the change</text>
+          <line x1="60" y1="180" x2="430" y2="180" stroke="#D9D4C8" stroke-width="1" stroke-dasharray="3 4"/>
+          <text x="54" y="184" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">1%</text>
+          <text x="54" y="64" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">2%</text>
+          <text x="54" y="304" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">0</text>
+          <g font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">
+            <text x="96" y="315">0</text><text x="186" y="315">25</text>
+            <text x="276" y="315">50</text><text x="366" y="315">75</text>
+          </g>
+          <!-- pre-shock: growth was exactly zero -->
+          <line x1="60" y1="300" x2="96" y2="300" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="62" y="292" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700">at k*</text>
+          <line x1="96" y1="40" x2="96" y2="300" stroke="#C0392B" stroke-width="1.1" stroke-dasharray="3 3"/>
+          <text x="99" y="48" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700">s: 0.3 → 0.4</text>
+          <!-- the growth path, drawn on as the sweep runs -->
+          <path id="sgPath" fill="none" stroke="#C0392B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"
+            d="M96.0,100.0 L98.7,109.7 101.4,118.8 104.1,127.4 106.8,135.5 109.5,143.1 112.2,150.3 114.9,157.2 117.6,163.6 120.3,169.7 123.0,175.5 125.7,181.0 128.4,186.2 131.1,191.2 133.8,195.9 136.5,200.3 139.2,204.6 141.9,208.6 144.6,212.5 147.3,216.2 150.0,219.7 152.7,223.0 155.4,226.2 158.1,229.2 160.8,232.1 163.5,234.9 166.2,237.5 168.9,240.1 171.6,242.5 174.3,244.8 177.0,247.0 179.7,249.1 182.4,251.1 185.1,253.1 187.8,254.9 190.5,256.7 193.2,258.4 195.9,260.1 198.6,261.6 201.3,263.1 204.0,264.6 206.7,265.9 209.4,267.3 212.1,268.5 214.8,269.7 217.5,270.9 220.2,272.0 222.9,273.1 225.6,274.1 228.3,275.1 231.0,276.1 233.7,277.0 236.4,277.9 239.1,278.7 241.8,279.5 244.5,280.3 247.2,281.1 249.9,281.8 252.6,282.5 255.3,283.1 258.0,283.8 260.7,284.4 263.4,285.0 266.1,285.5 268.8,286.1 271.5,286.6 274.2,287.1 276.9,287.6 279.6,288.1 282.3,288.5 285.0,288.9 287.7,289.3 290.4,289.7 293.1,290.1 295.8,290.5 298.5,290.9 301.2,291.2 303.9,291.5 306.6,291.8 309.3,292.1 312.0,292.4 314.7,292.7 317.4,293.0 320.1,293.3 322.8,293.5 325.5,293.7 328.2,294.0 330.9,294.2 333.6,294.4 336.3,294.6 339.0,294.8 341.7,295.0 344.4,295.2 347.1,295.4 349.8,295.5 352.5,295.7 355.2,295.9 357.9,296.0 360.6,296.2 363.3,296.3 366.0,296.5 368.7,296.6 371.4,296.7 374.1,296.8 376.8,296.9 379.5,297.1 382.2,297.2 384.9,297.3 387.6,297.4 390.3,297.5 393.0,297.6 395.7,297.7 398.4,297.7 401.1,297.8 403.8,297.9 406.5,298.0 409.2,298.1 411.9,298.1 414.6,298.2 417.3,298.3 420.0,298.3"/>
+          <circle id="sgDot" cx="96" cy="300" r="6" fill="#C0392B" opacity="0"/>
+          <text id="sgEnd" x="300" y="288" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" opacity="0">…back to zero, and it stays there</text>
+        </svg>
+        <p class="serif-note" style="font-size:.85rem;margin-top:.4rem">The growth rate spikes — then dies. It does not settle at a new, higher constant.</p>
+      </div>
+    </div>
+    <div class="controls" style="flex-direction:row;gap:1rem;align-items:center;margin-top:1rem;flex-wrap:wrap">
+      <button class="btn" id="svPlay">▶ Play the saving increase</button>
+      <button class="btn ghost" id="svReset">Reset</button>
+      <div class="readout" id="svRead" aria-live="polite" aria-atomic="true" style="flex:1;min-width:min(300px,100%)">
+        year <span id="svT">0</span> &nbsp;·&nbsp; k = <span class="accent" id="svK">9.00</span> &nbsp;·&nbsp; y = <span class="accent" id="svY">3.00</span> &nbsp;·&nbsp; growth rate of y = <span class="red" id="svG">0.00</span>%
+      </div>
+    </div>
+  </section>
+
+  <!-- 14. Q4 -->
+  <section class="slide" data-section="Discussion 6 · Saving">
+    <div class="eyebrow">Write · then reveal</div>
+    <h2>Prove the flat line</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:940px">
+      <p class="lede" style="max-width:76ch">The animation asserted that growth returns to zero. Now show it, using the trick that turns any multiplicative relationship into a statement about growth rates: <strong>take logs, then take the total derivative</strong>.</p>
+      <div class="prompt">
+        <span class="cue">Question 4 (write)</span>
+        <p>Starting from y* = (k*)<sup>α</sup>, show that <strong>%Δy* = α·%Δk*</strong>, and hence that %Δy* = 0 in any steady state. Then say in one sentence what the <em>same</em> equation tells you about the years <em>during</em> the transition.</p>
+      </div>
+      <button class="btn" data-reveal="hrQ4" style="margin-top:.4rem">Reveal the derivation</button>
+      <div class="reveal-hidden" id="hrQ4">
+        <div class="two" style="max-width:940px">
+          <div class="model hi" style="box-shadow:none">
+            <span class="tag">The three lines</span>
+            <div class="calc">
+              y* = (k*)<sup>α</sup><br>
+              log y* = α · log k*<br>
+              <span class="lbl">%Δy* = α · %Δk*</span>
+            </div>
+            <p class="cnote" style="margin-top:.6rem;font-family:'Georgia',serif;font-size:.95rem;line-height:1.5">In a steady state %Δk* = 0 by definition, so %Δy* = α·0 = <strong>0</strong>. With α = ½, output per worker grows at half the rate capital per worker does.</p>
+          </div>
+          <div class="model hi" style="box-shadow:none">
+            <span class="tag">And aggregate output</span>
+            <div class="calc">
+              Y = L · y*<br>
+              log Y = log L + log y*<br>
+              <span class="lbl">%ΔY = %ΔL + %Δy*</span>
+            </div>
+            <p class="cnote" style="margin-top:.6rem;font-family:'Georgia',serif;font-size:.95rem;line-height:1.5">With L fixed (%ΔL = 0) and %Δy* = 0, aggregate output growth is <strong>0 too</strong>. In this version of the model there is no long-run growth of any kind. Part 4 changes the first term; Part 5 changes the second.</p>
+          </div>
+        </div>
+        <div class="reveal" style="margin-top:1rem">
+          <span class="cue">The sentence about the transition — this is the half people miss</span>
+          <p>The equation %Δy = α·%Δk is <strong>not</strong> a steady-state result. It holds every year. While the economy is climbing from k = 9 to k = 16, %Δk &gt; 0, so %Δy &gt; 0 — the growth is real, and a country living through it genuinely gets richer year on year.</p>
+          <p style="margin-top:.55rem">What the equation also says is that this growth is <strong>borrowed from the transition, not owned</strong>. It lasts exactly as long as k is still moving, and k stops moving because sf(k) is concave. So the same one line explains both why saving more <em>does</em> raise growth for a while and why it <em>cannot</em> raise growth forever. That is the throughline, in three lines of algebra.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 15. Q5 DIAGNOSE -->
+  <section class="slide" data-section="Discussion 6 · Saving">
+    <div class="eyebrow">Diagnose · silent poll</div>
+    <h2>One of these is right for the wrong reason</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start">
+      <p class="lede" style="max-width:78ch">Three sentences that arrive as a chain of reasoning about a country that permanently raises its savings rate. Two are sound. One is not — even though the sentence <em>after</em> it is perfectly correct. <strong>Write down its number</strong>; don't say it out loud.</p>
+      <div class="diag" id="diagSave">
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">1</span><span class="s">A higher savings rate raises steady-state capital per worker.</span></button>
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">2</span><span class="s">Since capital per worker is higher, output per worker grows faster from then on.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">3</span><span class="s">So a higher savings rate makes a country permanently richer.</span></button>
+      </div>
+      <span class="poll-hint">Question 5 · fingers on the chest, then reveal</span>
+      <button class="btn" data-diag-reveal="diagSave" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem;max-width:940px">
+        <span class="cue">Sentence 2 · the flaw</span>
+        <p><strong>Sentence 3 is true.</strong> That is what makes this hard. The country really is permanently richer, and if you only checked the conclusion you would sign off on the whole chain. But 3 is true in <em>levels</em>, and sentence 2 got there by claiming something about <em>growth rates</em>.</p>
+        <p style="margin-top:.55rem"><strong>Why the mechanism in 2 fails.</strong> Growth in y comes from Δk, and Δk = sf(k) − δk. Raising s lifts sf(k) at every k, so at the old k* saving now exceeds depreciation and capital does start rising — sentence 2 gets that much right. What it misses is what happens <em>next</em>: as k rises, the MPK falls, so each new unit of capital adds less output and sf(k) flattens, while the replacement bill δk keeps rising in a straight line. The gap closes. Growth is not a new state the economy enters; it is the <strong>journey between two states</strong>, and journeys end.</p>
+        <p style="margin-top:.55rem"><strong>What believing 2 would commit you to.</strong> If a higher s really did buy a permanently faster growth rate, then a country saving 40% would pull further ahead of an otherwise identical country saving 30% <em>every single year, without limit</em> — the income gap would widen forever. It doesn't. The gap widens for a few decades and then stops at a fixed ratio. That is the observable difference between “richer” and “growing faster,” and it is the difference the scoreboard is about to punish us for.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16. SCOREBOARD CHECK 1 -->
+  <section class="slide" data-section="Discussion 6 · Saving">
+    <div class="eyebrow">Scoreboard · first check</div>
+    <h2>How does the model we have score?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start">
+      <p class="lede" style="max-width:80ch">We now have a complete model: y = f(k), i = sy, Δk = sf(k) − δk, converging to a steady state where everything per worker is constant. Before you press the button — <strong>score it yourself</strong>. Go down the six facts on your paper and mark ✓ or ✗.</p>
+      <button class="btn" data-reveal="hrScore1">Score the basic Solow model</button>
+      <div class="reveal-hidden" id="hrScore1">
+        <div class="tablewrap">
+          <table class="cases">
+            <caption class="sr-only">The six Kaldor facts scored against the basic Solow model, which fails facts 1, 2 and 6</caption>
+            <thead><tr><th scope="col" style="width:48%">The Kaldor fact</th><th scope="col">Basic Solow</th><th scope="col" style="width:32%">Why</th></tr></thead>
+            <tbody>
+              <tr><th scope="row" class="fact">1 · Output per worker keeps growing</th><td class="no">✗ fails</td><td class="fact">y* = f(k*) is constant</td></tr>
+              <tr><th scope="row" class="fact">2 · Capital per worker grows</th><td class="no">✗ fails</td><td class="fact">k* is constant — that's what a steady state is</td></tr>
+              <tr><th scope="row" class="fact">3 · K/Y roughly constant</th><td class="yes">✓ trivially</td><td class="fact">both are frozen, so their ratio is too</td></tr>
+              <tr><th scope="row" class="fact">4 · Return on capital constant</th><td class="yes">✓ trivially</td><td class="fact">MPK = αk*<sup>α−1</sup>, and k* never moves</td></tr>
+              <tr><th scope="row" class="fact">5 · Factor shares constant</th><td class="yes">✓ genuinely</td><td class="fact">Cobb–Douglas gives shares α and 1−α always</td></tr>
+              <tr><th scope="row" class="fact">6 · The wage grows</th><td class="no">✗ fails</td><td class="fact">w = (1−α)f(k*) is constant</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="reveal" style="margin-top:1rem;max-width:960px">
+          <span class="cue">Read the two ✓ trivially rows carefully</span>
+          <p>Facts 3 and 4 pass, but not for any reason to be proud of: <strong>everything</strong> in this model is constant, so of course the ratios are. A model that predicted the entire economy stops moving would also “match” them. That is not evidence the model is right; it is evidence those two facts are not discriminating between models yet. In Part 5 they will become the sharpest facts on the board, because there they will hold while things <em>are</em> moving.</p>
+          <p style="margin-top:.55rem"><strong>Fact 1 is the real failure.</strong> Output per worker in rich countries has grown at roughly 2% a year for a century and shows no sign of dying out. Our model says it must die out. Something in the assumptions is wrong — and the two obvious suspects are the two things we froze on slide 6: the <strong>labor force</strong> and <strong>technology</strong>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 3 ══════════════ -->
+
+  <!-- 17. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 6 · Golden Rule">
+    <div class="eyebrow">Part 3 of 6</div>
+    <h1>The Golden Rule</h1>
+    <p class="lede">Every savings rate gives a different steady state, so there are infinitely many of them. If growth can't be the tie-breaker — there isn't any — then what is?</p>
+    <div class="sectrail">Δk engine ✓ → Saving ✓ → Golden rule → n → g → Empirics</div>
+    <div class="through">Throughline: diminishing returns to capital means saving changes the LEVEL of income; only technology changes its GROWTH RATE.</div>
+  </section>
+
+  <!-- 18. Q6 PREDICT -->
+  <section class="slide" data-section="Discussion 6 · Golden Rule">
+    <div class="eyebrow">Commit before computing</div>
+    <h2>Predict</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:880px">
+      <p class="lede" style="max-width:74ch">Part 2 established that raising s raises k* and y* — permanently. Push that as far as it goes: s = 0.9 would give an enormous capital stock and an enormous output per worker.</p>
+      <div class="predict">
+        <span class="cue">Question 6 (predict)</span>
+        <p>Is <strong>more capital always better</strong>? Commit to <strong>yes</strong> or <strong>no</strong>, plus <strong>one sentence</strong> naming what you are using as the measure of “better.”</p>
+      </div>
+      <p class="footnote">The second half of the question is the whole question. Two people can both answer honestly and disagree only because they are maximizing different things.</p>
+      <button class="btn" data-reveal="hrQ6" style="margin-top:.2rem">Reveal what the model maximizes</button>
+      <div class="reveal-hidden" id="hrQ6">
+        <div class="chain">the model's answer: the best steady state is the one with the highest <strong>c*</strong> — consumption per worker</div>
+        <p class="serif-note" style="max-width:74ch;margin-top:.7rem">Not output. Output that goes straight back into replacing machines never reaches anybody. What a country gets to <em>use</em> is c = y − i, and in a steady state i = δk, so c* = f(k*) − δk*.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 19. GOLDEN RULE DIAGRAM + STEPPER -->
+  <section class="slide" data-section="Discussion 6 · Golden Rule">
+    <div class="eyebrow">Question 6 · the answer, one savings rate at a time</div>
+    <h2>Consumption is a gap, and gaps can shrink</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:1.25fr .75fr">
+      <div class="panel">
+        <div class="ptitle">Consumption is the vertical gap between the two curves</div>
+        <svg id="grsvg" viewBox="0 0 500 360" role="img" aria-label="The production function and the depreciation line, with consumption per worker shown as the vertical gap between them at the steady state. As the savings rate rises the steady state moves right, and the gap widens then narrows again, peaking when the savings rate equals the capital share of one half. More capital is not always better.">
+          <line x1="60" y1="20" x2="60" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="320" x2="440" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="52" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">y</text>
+          <text x="440" y="356" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">capital per worker (k)</text>
+          <g font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">
+            <text x="160" y="335">10</text><text x="260" y="335">20</text><text x="360" y="335">30</text>
+          </g>
+          <polyline fill="none" stroke="#14243A" stroke-width="2.6" stroke-linejoin="round" points="60.0,320.0 62.5,297.0 65.0,287.5 67.5,280.2 70.0,274.0 80.0,254.9 90.0,240.3 100.0,228.0 110.0,217.1 120.0,207.3 130.0,198.3 140.0,189.9 150.0,182.0 160.0,174.5 170.0,167.4 180.0,160.7 190.0,154.1 200.0,147.9 210.0,141.8 220.0,136.0 230.0,130.3 240.0,124.8 250.0,119.5 260.0,114.3 270.0,109.2 280.0,104.2 290.0,99.4 300.0,94.6 310.0,90.0 320.0,85.4 330.0,81.0 340.0,76.6 350.0,72.3 360.0,68.0 370.0,63.9 380.0,59.8 390.0,55.8 400.0,51.8 410.0,47.9 420.0,44.0"/>
+          <text x="426" y="41" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">f(k)</text>
+          <line x1="60" y1="320" x2="420" y2="154.4" stroke="#8A5900" stroke-width="2.6" stroke-dasharray="7 4"/>
+          <text x="426" y="152" font-family="monospace" font-size="12" fill="#8A5900" font-weight="700">δk</text>
+          <!-- c* as a measured band: a translucent column between the two
+               curves, a double-headed arrow across it, end ticks on both
+               curves, and the value. Everything is resized from c* on each
+               step, so a shrinking gap is visible three ways at once. -->
+          <rect id="gr_cband" x="138" y="182" width="24" height="96.6" fill="#1F4E79" fill-opacity=".18" opacity="0"/>
+          <line id="gr_cbar" x1="150" y1="182" x2="150" y2="278.6" stroke="#1F4E79" stroke-width="3.4" opacity="0"/>
+          <polygon id="gr_cah1" points="150,182 144.5,194 155.5,194" fill="#1F4E79" opacity="0"/>
+          <polygon id="gr_cah2" points="150,278.6 144.5,266.6 155.5,266.6" fill="#1F4E79" opacity="0"/>
+          <line id="gr_ctop" x1="134" y1="182" x2="166" y2="182" stroke="#14243A" stroke-width="2.2" opacity="0"/>
+          <line id="gr_cbot" x1="134" y1="278.6" x2="166" y2="278.6" stroke="#8A5900" stroke-width="2.2" opacity="0"/>
+          <rect id="gr_clabbg" x="0" y="0" width="0" height="0" rx="5" fill="#FbFaF7" fill-opacity=".93" opacity="0"/>
+          <g id="gr_clab" opacity="0">
+            <text id="gr_cbart" x="172" y="230" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700">c* = 2.10</text>
+            <text id="gr_cbarh" x="172" y="245" font-family="monospace" font-size="10" fill="#5A5F66">84% of the maximum</text>
+          </g>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="ptitle">Consumption per worker at each savings rate</div>
+        <svg id="gbsvg" viewBox="0 0 460 300" role="img" aria-label="A bar chart of steady-state consumption per worker against the savings rate. Consumption rises from 1.6 at a savings rate of 0.2 to a maximum of 2.5 at a savings rate of 0.5, then falls back to 2.4 at 0.6. The peak is at the capital share.">
+          <line x1="50" y1="30" x2="50" y2="250" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="50" y1="250" x2="450" y2="250" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="44" y="36" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">c*</text>
+          <text x="450" y="292" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">savings rate s</text>
+          <g font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">
+            <text x="88" y="268">0.2</text><text x="168" y="268">0.3</text><text x="248" y="268">0.4</text>
+            <text x="328" y="268">0.5</text><text x="408" y="268">0.6</text>
+          </g>
+          <rect id="gb0" x="60" y="126.9" width="56" height="123.1" fill="#1F4E79" opacity="0"/>
+          <rect id="gb1" x="140" y="88.5" width="56" height="161.5" fill="#1F4E79" opacity="0"/>
+          <rect id="gb2" x="220" y="65.4" width="56" height="184.6" fill="#1F4E79" opacity="0"/>
+          <rect id="gb3" x="300" y="57.7" width="56" height="192.3" fill="#8A5900" opacity="0"/>
+          <rect id="gb4" x="380" y="65.4" width="56" height="184.6" fill="#1F4E79" opacity="0"/>
+          <g font-family="monospace" font-size="12" font-weight="700" text-anchor="middle">
+            <text id="gbl0" x="88" y="119" fill="#1F4E79" opacity="0">1.60</text>
+            <text id="gbl1" x="168" y="81" fill="#1F4E79" opacity="0">2.10</text>
+            <text id="gbl2" x="248" y="58" fill="#1F4E79" opacity="0">2.40</text>
+            <text id="gbl3" x="328" y="50" fill="#8A5900" opacity="0">2.50 ★</text>
+            <text id="gbl4" x="408" y="58" fill="#1F4E79" opacity="0">2.40</text>
+          </g>
+        </svg>
+        <div class="readout" id="grRead" aria-live="polite" aria-atomic="true" style="margin-top:.7rem">
+          s = <span class="accent" id="grS">0.30</span> &nbsp;·&nbsp; k* = <span id="grK">9.0</span> &nbsp;·&nbsp; y* = <span id="grY">3.00</span><br>
+          i* = δk* = <span id="grI">0.90</span> &nbsp;·&nbsp; <strong>c* = <span class="big" id="grC">2.10</span></strong>
+        </div>
+      </div>
+    </div>
+    <div class="controls" style="flex-direction:row;gap:1rem;align-items:center;margin-top:1rem;flex-wrap:wrap">
+      <button class="btn" data-reveal-svg="cstar">Show consumption</button>
+      <button class="btn" id="grStep">Step the savings rate →</button>
+      <button class="btn ghost" id="grReset">Reset</button>
+    </div>
+    <div class="reveal-hidden" id="hrCstar">
+      <p class="serif-note" style="max-width:90ch">Step through all five. Watch the bar in the left panel: it gets taller, then <em>shorter</em>. Both f(k) and δk rise as you move right, but f(k) bends over while δk climbs in a straight line — so eventually the line catches the curve, and every further unit of capital costs more to replace than it produces.</p>
+    </div>
+  </section>
+
+  <!-- 20. Q7 -->
+  <section class="slide" data-section="Discussion 6 · Golden Rule">
+    <div class="eyebrow">Write · then reveal</div>
+    <h2>Find the peak</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:940px">
+      <p class="lede" style="max-width:76ch">The bar chart located the maximum by brute force. Now locate it properly. In any steady state Δk = 0, so sf(k*) = δk*, which means i* = δk* — and therefore c* = f(k*) − δk*.</p>
+      <div class="prompt">
+        <span class="cue">Question 7 (write)</span>
+        <p>Differentiate c* = f(k*) − δk* with respect to k* and set it to zero. What condition do you get? Then — the part that matters — <strong>say what that condition means in words</strong>, without using the word “derivative.”</p>
+      </div>
+      <button class="btn" data-reveal="hrQ7" style="margin-top:.4rem">Reveal the answer</button>
+      <div class="reveal-hidden" id="hrQ7">
+        <div class="two" style="max-width:940px">
+          <div class="model hi" style="box-shadow:none">
+            <span class="tag">The algebra · three lines</span>
+            <div class="calc">
+              c* = f(k*) − δk*<br>
+              ∂c*/∂k* = f′(k*) − δ = 0<br>
+              <span class="lbl">MPK = δ</span>
+            </div>
+            <p class="cnote" style="margin-top:.6rem;font-family:'Georgia',serif;font-size:.95rem;line-height:1.5">Check it against our numbers: MPK = αk<sup>α−1</sup> = 0.5/√k. At the golden-rule k* = 25 that is 0.5/5 = <strong>0.1 = δ</strong> ✓. At our actual k* = 9 it is 0.5/3 = <strong>0.167 &gt; δ</strong> — we are below the golden rule, so more capital would still help.</p>
+          </div>
+          <div class="model hi" style="box-shadow:none">
+            <span class="tag">The words · marginal benefit vs marginal cost</span>
+            <p style="font-family:'Georgia',serif;font-size:1rem;line-height:1.55">Add one more unit of capital per worker.<br><br>
+            <strong>The benefit</strong> is the extra output it produces — that is exactly what MPK means.<br><br>
+            <strong>The cost</strong> is that this unit will break, every year, forever, and has to be replaced — that is exactly what δ means.<br><br>
+            Keep adding while the benefit exceeds the cost. Stop when they are equal.</p>
+          </div>
+        </div>
+        <div class="reveal" style="margin-top:1rem">
+          <span class="cue">Why this framing is worth more than the algebra</span>
+          <p>Read as calculus, MPK = δ is a first-order condition and nothing more. Read as economics, it is a <strong>rule you already know</strong> — buy until marginal benefit equals marginal cost — applied to a good whose cost is not a price but a maintenance obligation.</p>
+          <p style="margin-top:.55rem">That reading is what will get you through Parts 4 and 5 without memorizing anything. When we add population growth, the marginal cost of a unit of capital gains a second component (new workers also need equipping) and the condition becomes MPK = δ + n. Add technology and it gains a third: MPK = δ + n + g. <strong>The rule never changes. Only the bill does.</strong></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 21. QUICK CHECK -->
+  <section class="slide" data-section="Discussion 6 · Golden Rule">
+    <div class="eyebrow">Quick check</div>
+    <h2>One more, to lock it in</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:76ch">The golden rule picks out a level of capital, k<sub>gr</sub> — but a country cannot choose k directly. It chooses <strong>s</strong>, and s determines k*. With the Cobb–Douglas production function Y = K<sup>α</sup>L<sup>1−α</sup>, the golden-rule <em>savings rate</em> is:</p>
+    <div class="poll" id="pollGR">
+      <div class="poll-opts">
+        <button type="button" class="poll-opt" data-correct="false"><span class="num">a</span><span class="txt">1 − α — the labor share, because labor is what consumes.</span></button>
+        <button type="button" class="poll-opt" data-correct="true"><span class="num">b</span><span class="txt">α — the capital share.</span></button>
+        <button type="button" class="poll-opt" data-correct="false"><span class="num">c</span><span class="txt">δ — you should save exactly enough to cover depreciation.</span></button>
+        <button type="button" class="poll-opt" data-correct="false"><span class="num">d</span><span class="txt">It depends on δ — a faster-depreciating economy needs a higher savings rate.</span></button>
+      </div>
+      <p class="poll-hint">Question 8 will be next; this one is a check, not a numbered question. Commit on paper, then reveal.</p>
+      <button class="btn" data-poll-reveal="pollGR" style="margin-top:1rem">Reveal the answer</button>
+    </div>
+    <button class="btn ghost" data-reveal="hrGR" style="margin-top:1rem">Why, and why it matters later</button>
+    <div class="reveal-hidden" id="hrGR">
+      <div class="reveal" style="max-width:960px">
+        <span class="cue">The golden-rule savings rate, and why it never moves</span>
+        <p>Substitute k* = (s/δ)<sup>1/(1−α)</sup> into MPK = αk<sup>α−1</sup> = δ and the δ's cancel completely, leaving <strong>s = α</strong>. With our α = ½ the golden-rule savings rate is 0.5, which is exactly where the bar chart peaked. Option (d) is the tempting wrong answer: a higher δ <em>does</em> lower k<sub>gr</sub>, but it lowers the steady-state k for any given s by precisely the same factor, so the savings rate that hits the peak is unchanged.</p>
+        <p style="margin-top:.55rem"><strong>Now notice what that argument did not depend on.</strong> The δ canceled because it appears in the same place in both expressions — in the break-even term. Anything else that lands in that term will cancel the same way. In Part 4 the break-even term becomes (δ+n) and the golden-rule savings rate is still α; in Part 5 it becomes (δ+n+g) and it is <em>still</em> α. Three chapters of algebra, one answer. If you see s = α come out again in twenty minutes, that is not a coincidence — it is this cancellation.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 4 ══════════════ -->
+
+  <!-- 22. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 6 · Population">
+    <div class="eyebrow">Part 4 of 6</div>
+    <h1>Population Growth</h1>
+    <p class="lede">The first frozen assumption thaws. The labor force now grows at rate n — and the first thing that breaks is the definition of “break even.”</p>
+    <div class="sectrail">Δk engine ✓ → Saving ✓ → Golden rule ✓ → n → g → Empirics</div>
+    <div class="through">Throughline: diminishing returns to capital means saving changes the LEVEL of income; only technology changes its GROWTH RATE.</div>
+  </section>
+
+  <!-- 23. Q8 PREDICT -->
+  <section class="slide" data-section="Discussion 6 · Population">
+    <div class="eyebrow">Commit before computing</div>
+    <h2>Predict</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:900px">
+      <p class="lede" style="max-width:74ch">The labor force now grows at a constant rate: <strong>L′ = (1 + n)L</strong>. Everything else — s, δ, f(k) — is unchanged. Our calibration sets n = 0.05.</p>
+      <div class="predict">
+        <span class="cue">Question 8 (predict · two parts)</span>
+        <p><strong>(a)</strong> Does faster population growth make a country <strong>richer or poorer</strong>?<br>
+        <strong>(b)</strong> Does it change the growth rate of <strong>aggregate</strong> output, Y?</p>
+        <p style="margin-top:.5rem">Answer both separately. If your two answers point in opposite directions, that is not a mistake — write down why they can.</p>
+      </div>
+      <p class="footnote">Part (b) is the one people skip. The Kaldor facts are all about per-worker quantities, but a government worried about the size of its economy is asking about Y.</p>
+    </div>
+  </section>
+
+  <!-- 24. BREAK-EVEN TABLE -->
+  <section class="slide" data-section="Discussion 6 · Population">
+    <div class="eyebrow">Why replacement alone is no longer enough</div>
+    <h2>Replace the machines, and it still isn't a steady state</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start">
+      <p class="lede" style="max-width:82ch">Take the old rule at its word: invest just enough to cover depreciation, i = δk. Here is a two-year economy with δ = 0.1 and n = 0.1, starting with K = 10, L = 10, so k = 1. Depreciation is δK = 1, so we invest <strong>I = 1</strong>.</p>
+      <div class="tablewrap">
+        <table class="cases" style="min-width:640px">
+          <caption class="sr-only">A numerical example showing that investing only enough to cover depreciation lets capital per worker fall when the labor force is growing</caption>
+          <thead><tr><th scope="col">Year</th><th scope="col">K</th><th scope="col">L</th><th scope="col">k = K/L</th><th scope="col">i = δk</th><th scope="col">I = δK</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">1</th><td>10</td><td>10</td><td>1</td><td>0.1</td><td>1</td></tr>
+            <tr><th scope="row">2</th><td>10</td><td>11</td><td class="no">0.91</td><td></td><td></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="lede" style="max-width:82ch;margin-top:.4rem">The capital stock held steady at 10 — we replaced everything that broke. But there are now <strong>eleven</strong> workers sharing it, so capital per worker <em>fell</em>. This is not a steady state.</p>
+      <button class="btn" data-reveal="hrBE">What does it take instead?</button>
+      <div class="reveal-hidden" id="hrBE">
+        <div class="tablewrap">
+          <table class="cases" style="min-width:640px">
+            <caption class="sr-only">The same economy investing enough to cover both depreciation and the new worker, which holds capital per worker constant</caption>
+            <thead><tr><th scope="col">Year</th><th scope="col">K</th><th scope="col">L</th><th scope="col">k = K/L</th><th scope="col">i = (δ+n)k</th><th scope="col">I = (δ+n)K</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">1</th><td>10</td><td>10</td><td>1</td><td class="hi">0.2</td><td class="hi">2</td></tr>
+              <tr><th scope="row">2</th><td>11</td><td>11</td><td class="yes">1</td><td></td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="reveal" style="margin-top:1rem;max-width:960px">
+          <span class="cue">Two units, two jobs</span>
+          <p>Of the two units of capital we now build, <strong>one replaces the machine that broke</strong> and <strong>one equips the new worker</strong>. Only then does k stay at 1. The transition equation becomes</p>
+          <div class="chain" style="margin-top:.6rem;font-size:1.1rem">Δk = sf(k) − (δ + n)k</div>
+          <p style="margin-top:.6rem">Nothing has happened to saving. The <strong>sf(k) curve does not move.</strong> What moved is the line it has to clear — the break-even line rotates <em>up</em>, from δk to (δ+n)k. Population growth is not a drain on output; it is an increase in the standing bill.</p>
+          <p style="margin-top:.55rem"><em>Note on numbers:</em> this table uses n = 0.1 so every entry is a whole number. Our running calibration uses n = 0.05, giving a break-even line of (δ+n)k = 0.15k and a steady state at <strong>k* = 4, y* = 2</strong> — down from k* = 9, y* = 3 with no population growth at all.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 25. ANIMATED BABY BOOM -->
+  <section class="slide" data-section="Discussion 6 · Population">
+    <div class="eyebrow">Question 8(a) · the answer, run forward</div>
+    <h2>A baby boom, and where it leaves you</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:1.35fr .65fr">
+      <div class="panel">
+        <div class="ptitle">Break-even rotates up · the economy slides down the curve</div>
+        <svg id="bbsvg" viewBox="0 0 500 360" role="img" aria-label="The Solow diagram with population growth. When the population growth rate rises, the break-even line rotates upward while the saving curve stays exactly where it is. The economy slides down the production function from a steady state of capital per worker 4 and output per worker 2 to capital per worker 1 and output per worker 1. Faster population growth makes a country poorer per person.">
+          <line x1="60" y1="20" x2="60" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="320" x2="440" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="52" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">y</text>
+          <text x="440" y="356" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">capital per worker (k)</text>
+          <g font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">
+            <text x="140" y="335">2</text><text x="220" y="335">4</text>
+            <text x="300" y="335">6</text><text x="380" y="335">8</text>
+          </g>
+          <polyline fill="none" stroke="#14243A" stroke-width="2.6" stroke-linejoin="round" points="60.0,320.0 64.0,302.3 68.0,295.0 74.0,286.9 80.0,280.4 90.0,271.5 100.0,264.0 110.0,257.4 120.0,251.4 130.0,245.9 140.0,240.8 150.0,236.0 160.0,231.5 170.0,227.1 180.0,223.0 190.0,219.0 200.0,215.2 210.0,211.6 220.0,208.0 230.0,204.6 240.0,201.2 250.0,198.0 260.0,194.8 270.0,191.7 280.0,188.7 290.0,185.7 300.0,182.8 310.0,180.0 320.0,177.2 330.0,174.5 340.0,171.8 350.0,169.2 360.0,166.6 370.0,164.1 380.0,161.6 390.0,159.2 400.0,156.7 410.0,154.3 420.0,152.0"/>
+          <text x="426" y="149" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">f(k)</text>
+          <polyline fill="none" stroke="#1F4E79" stroke-width="2.6" stroke-linejoin="round" points="60.0,320.0 64.0,314.7 68.0,312.5 74.0,310.1 80.0,308.1 90.0,305.5 100.0,303.2 110.0,301.2 120.0,299.4 130.0,297.8 140.0,296.2 150.0,294.8 160.0,293.4 170.0,292.1 180.0,290.9 190.0,289.7 200.0,288.6 210.0,287.5 220.0,286.4 230.0,285.4 240.0,284.4 250.0,283.4 260.0,282.4 270.0,281.5 280.0,280.6 290.0,279.7 300.0,278.8 310.0,278.0 320.0,277.2 330.0,276.4 340.0,275.6 350.0,274.8 360.0,274.0 370.0,273.2 380.0,272.5 390.0,271.7 400.0,271.0 410.0,270.3 420.0,269.6"/>
+          <text x="426" y="272" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">sf(k)</text>
+          <text x="426" y="288" font-family="monospace" font-size="10" fill="#1F4E79">unchanged</text>
+          <!-- old break-even, stays for reference -->
+          <line x1="60" y1="320" x2="420" y2="244.4" stroke="#8A5900" stroke-width="2.2" stroke-dasharray="7 4" opacity=".55"/>
+          <text x="426" y="247" font-family="monospace" font-size="10" fill="#8A5900" font-weight="700">(δ+n₁)k</text>
+          <!-- the rotating break-even line -->
+          <line id="bbLine" x1="60" y1="320" x2="420" y2="244.4" stroke="#C0392B" stroke-width="2.8" stroke-dasharray="7 4" opacity="0"/>
+          <text id="bbLineT" x="426" y="166" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" opacity="0">(δ+n₂)k</text>
+          <!-- old steady state, visible -->
+          <line x1="220" y1="196" x2="220" y2="320" stroke="#5A5F66" stroke-width="1.1" stroke-dasharray="4 4"/>
+          <text x="220" y="190" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700" text-anchor="middle">k*₁ = 4</text>
+          <line x1="60" y1="208" x2="220" y2="208" stroke="#5A5F66" stroke-width="1" stroke-dasharray="4 3"/>
+          <text x="54" y="212" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700" text-anchor="end">2</text>
+          <!-- new steady state, revealed at the end -->
+          <line id="bbK2" x1="100" y1="252" x2="100" y2="320" stroke="#C0392B" stroke-width="1.2" stroke-dasharray="4 4" opacity="0"/>
+          <text id="bbK2t" x="100" y="246" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="middle" opacity="0">k*₂ = 1</text>
+          <line id="bbYg" x1="60" y1="264" x2="100" y2="264" stroke="#C0392B" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/>
+          <text id="bbYt" x="54" y="268" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="end" opacity="0">1</text>
+          <!-- live guides that track the dot to both axes for the whole sweep -->
+          <line id="bbVg" x1="220" y1="208" x2="220" y2="320" stroke="#9AA0A6" stroke-width="1.2" stroke-dasharray="4 3" opacity="0"/>
+          <line id="bbHg" x1="60" y1="208" x2="220" y2="208" stroke="#9AA0A6" stroke-width="1.2" stroke-dasharray="4 3" opacity="0"/>
+          <circle id="bbDot" cx="220" cy="208" r="6" fill="#C0392B"/>
+        </svg>
+      </div>
+      <div class="controls">
+        <button class="btn" id="bbPlay">▶ Play the baby boom</button>
+        <button class="btn ghost" id="bbReset">Reset</button>
+        <div class="readout" id="bbRead" aria-live="polite" aria-atomic="true">
+          n = <span class="red" id="bbN">0.05</span> &nbsp;·&nbsp; break-even = <span id="bbB">0.15</span>k<br>
+          year <span id="bbT">0</span><br>
+          k = <span class="accent" id="bbK">4.00</span> &nbsp;·&nbsp; y = <span class="accent" id="bbY">2.00</span><br>
+          <span id="bbPhase">at the old steady state</span>
+        </div>
+        <p class="footnote" style="margin:0">n quadruples from 0.05 to 0.20. Absurdly large for a real country — chosen so the new steady state lands exactly on k* = 1.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 26. Q9 DIAGNOSE + AGGREGATE GROWTH + SCOREBOARD -->
+  <section class="slide" data-section="Discussion 6 · Population">
+    <div class="eyebrow">Diagnose · silent poll</div>
+    <h2>Right conclusion, wrong machinery</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start">
+      <p class="lede" style="max-width:78ch">Three sentences about the baby boom you just watched. The conclusion is correct. One of the steps that gets there is not. <strong>Write down its number</strong>; don't say it out loud.</p>
+      <div class="diag" id="diagPop">
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">1</span><span class="s">A rise in n rotates the break-even line up.</span></button>
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">2</span><span class="s">At the old k*, saving per worker falls because output is now split among more workers, so k falls.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">3</span><span class="s">Capital per worker and output per worker both end up lower.</span></button>
+      </div>
+      <span class="poll-hint">Question 9 · fingers on the chest, then reveal</span>
+      <button class="btn" data-diag-reveal="diagPop" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem;max-width:960px">
+        <span class="cue">Sentence 2 · the flaw</span>
+        <p><strong>The sf(k) curve never moves.</strong> Look at the animation again: the blue curve is labeled “unchanged” for a reason. Saving per worker at a capital stock of k is s·f(k) — it depends on k and on nothing else. At k = 4 the economy saves 0.6 per worker whether n is 0.05 or 0.20. Sentence 2 invents a fall in saving that does not happen.</p>
+        <p style="margin-top:.55rem"><strong>What actually changed is the requirement.</strong> The <em>same</em> 0.6 of investment per worker now has to do a bigger job: replace broken machines <em>and</em> equip a much larger cohort of new workers. It is no longer enough, so k falls. Saving didn't drop — the bar rose. The distinction is not pedantic: it tells you that a policy which raised s could offset a baby boom, whereas if sentence 2 were true you would be looking for the mechanism that damaged saving, and there isn't one.</p>
+        <p style="margin-top:.55rem">Sentence 3 is <strong>correct</strong>: k* falls from 4 to 1 and y* from 2 to 1. Getting the right destination from the wrong map is the hazard this deck keeps returning to.</p>
+      </div>
+      <button class="btn" data-reveal="hrAgg" style="margin-top:1rem">Now Question 8(b) — aggregate output</button>
+      <div class="reveal-hidden" id="hrAgg">
+        <div class="two" style="max-width:1000px">
+          <div class="model hi" style="box-shadow:none">
+            <span class="tag">Aggregate output · the same log trick</span>
+            <div class="calc">
+              Y = L · y*<br>
+              log Y = log L + log y*<br>
+              %ΔY = %ΔL + %Δy*<br>
+              <span class="lbl">%ΔY = n + 0 = n</span>
+            </div>
+          </div>
+          <div class="reveal" style="margin:0">
+            <span class="cue">Both answers, and why they don't conflict</span>
+            <p><strong>Aggregate output does grow</strong>, at exactly the rate the population grows. We have finally produced long-run growth in <em>something</em>. And it is worth nothing to anybody: a country twice the size with the same output per person is not a richer country. The economy got bigger without anyone getting better off.</p>
+            <p style="margin-top:.5rem">This is the second time the model has produced growth that dies on inspection. Capital accumulation gave growth that <em>stopped</em>; population gives growth that <strong>doesn't reach individuals</strong>. Both failures come from the same source — constant returns to scale, which says more of the same inputs buys proportionally more output and never more than that.</p>
+          </div>
+        </div>
+        <div class="tablewrap" style="margin-top:1rem">
+          <table class="cases">
+            <caption class="sr-only">The six Kaldor facts scored against the Solow model with population growth, which still fails facts 1, 2 and 6</caption>
+            <thead><tr><th scope="col" style="width:44%">The Kaldor fact</th><th scope="col">Basic Solow</th><th scope="col">+ population growth</th><th scope="col">+ technology</th></tr></thead>
+            <tbody>
+              <tr><th scope="row" class="fact">1 · Output per worker keeps growing</th><td class="no">✗</td><td class="no">✗ still</td><td class="pend">—</td></tr>
+              <tr><th scope="row" class="fact">2 · Capital per worker grows</th><td class="no">✗</td><td class="no">✗ still</td><td class="pend">—</td></tr>
+              <tr><th scope="row" class="fact">3 · K/Y roughly constant</th><td class="yes">✓ trivially</td><td class="yes">✓ trivially</td><td class="pend">—</td></tr>
+              <tr><th scope="row" class="fact">4 · Return on capital constant</th><td class="yes">✓ trivially</td><td class="yes">✓ trivially</td><td class="pend">—</td></tr>
+              <tr><th scope="row" class="fact">5 · Factor shares constant</th><td class="yes">✓</td><td class="yes">✓</td><td class="pend">—</td></tr>
+              <tr><th scope="row" class="fact">6 · The wage grows</th><td class="no">✗</td><td class="no">✗ still</td><td class="pend">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="footnote" style="margin-top:.6rem">Not one box changed. Population growth altered the <em>level</em> of the steady state and gave us aggregate growth, but every per-worker quantity is still frozen — and the Kaldor facts are all about per-worker quantities. One frozen assumption left.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 5 ══════════════ -->
+
+  <!-- 27. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 6 · Technology">
+    <div class="eyebrow">Part 5 of 6</div>
+    <h1>Technological Progress</h1>
+    <p class="lede">The last frozen assumption. Capital accumulation gave growth that stopped; population gave growth that never reached anyone. This is the one that works — and it works by changing the units.</p>
+    <div class="sectrail">Δk engine ✓ → Saving ✓ → Golden rule ✓ → n ✓ → g → Empirics</div>
+    <div class="through">Throughline: diminishing returns to capital means saving changes the LEVEL of income; only technology changes its GROWTH RATE.</div>
+  </section>
+
+  <!-- 28. READ THE EQUATIONS -->
+  <section class="slide" data-section="Discussion 6 · Technology">
+    <div class="eyebrow">Read the equations before you compute</div>
+    <h2>What A actually does to the production function</h2>
+    <div class="titlerule"></div>
+    <div class="models" style="max-width:960px">
+      <div class="model hi">
+        <span class="tag">Labor-augmenting technology</span>
+        <div class="eq">Y = F(K, <span class="coef">A</span>L)</div>
+        <p class="cnote" style="margin-top:.7rem;font-family:'Georgia',serif;font-size:.98rem;line-height:1.55">A does not sit beside L in the function — it <strong>multiplies</strong> it. So the input that matters is not the number of workers but <strong>AL</strong>, the number of <em>effective</em> workers.</p>
+      </div>
+      <div class="model hi">
+        <span class="tag">And it grows, exogenously</span>
+        <div class="eq">A′ = (1 + <span class="coef">g</span>)A</div>
+        <p class="cnote" style="margin-top:.7rem;font-family:'Georgia',serif;font-size:.98rem;line-height:1.55">Technology improves at rate g every period, for reasons the model does not explain. Our calibration sets g = 0.05. <strong>Exogenous</strong> is doing a lot of work here — come back to it in Part 6.</p>
+      </div>
+    </div>
+    <div class="prompt" style="max-width:940px">
+      <span class="cue">Say this one out loud before moving on</span>
+      <p style="font-size:1.15rem">If <strong>A = 2</strong>, one worker does the work of two. Not “works twice as hard” — the same person, the same hours, doing what it used to take two people to do, because the tools and methods are better.</p>
+      <p style="margin-top:.6rem">So an economy with 10 workers and A = 2 has <strong>AL = 20 effective workers</strong>. It behaves, in every equation we have written so far, exactly like an economy of 20 ordinary workers. And that is the trick: constant returns still hold in K and AL, so dividing through by AL gives back the model we already solved —</p>
+      <div class="chain" style="margin-top:.6rem;font-size:1.08rem">Y/AL = F(K/AL, 1) = f(k<span class="kh">ˆ</span>) = ŷ</div>
+      <p style="margin-top:.6rem">Every result from Parts 1–4 survives, <em>with hats on</em>. What changes is what a hat means when you try to read a living standard off it.</p>
+    </div>
+  </section>
+
+  <!-- 29. THE THREE-ROW TABLE -->
+  <section class="slide" data-section="Discussion 6 · Technology">
+    <div class="eyebrow">Why replacing and equipping is not enough either</div>
+    <h2>A third job for every unit of investment</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1160px;gap:1.6rem">
+      <div class="col" style="justify-content:flex-start;gap:.8rem">
+        <p class="lede" style="max-width:60ch">Same trick as slide 24, one step further. Now δ = 0.1, n = 0.1 <em>and</em> g = 0.1. Start with K = 10, L = 10, A = 1, so AL = 10 and k<span class="kh">ˆ</span> = 1.</p>
+        <div class="tablewrap">
+          <table class="cases" style="min-width:520px;font-size:.94rem">
+            <caption class="sr-only">Investing enough to cover depreciation and new workers still lets capital per effective worker fall once technology is growing</caption>
+            <thead><tr><th scope="col">Yr</th><th scope="col">K</th><th scope="col">L</th><th scope="col">A</th><th scope="col">AL</th><th scope="col">k<span class="kh">ˆ</span></th><th scope="col">I</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">1</th><td>10</td><td>10</td><td>1</td><td>10</td><td>1</td><td>2</td></tr>
+              <tr><th scope="row">2</th><td>11</td><td>11</td><td>1.1</td><td>12.1</td><td class="no">0.91</td><td></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="serif-note" style="font-size:.95rem">I = 2 covered depreciation <em>and</em> the new worker — exactly what Part 4 said was sufficient. Capital per effective worker still fell, because the workers we already had each became 10% more effective, and effectiveness needs equipping too.</p>
+        <button class="btn" data-reveal="hrTech">Fix it</button>
+        <div class="reveal-hidden" id="hrTech">
+          <div class="tablewrap">
+            <table class="cases" style="min-width:520px;font-size:.94rem">
+              <caption class="sr-only">Investing enough to cover depreciation, new workers, and rising effectiveness holds capital per effective worker constant</caption>
+              <thead><tr><th scope="col">Yr</th><th scope="col">K</th><th scope="col">L</th><th scope="col">A</th><th scope="col">AL</th><th scope="col">k<span class="kh">ˆ</span></th><th scope="col">I</th></tr></thead>
+              <tbody>
+                <tr><th scope="row">1</th><td>10</td><td>10</td><td>1</td><td>10</td><td>1</td><td class="hi">3</td></tr>
+                <tr><th scope="row">2</th><td>12</td><td>11</td><td>1.1</td><td>12.1</td><td class="yes">≈ 1</td><td></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="chain" style="margin-top:.8rem;font-size:1.08rem">Δk<span class="kh">ˆ</span> = sf(k<span class="kh">ˆ</span>) − (δ + n + g)k<span class="kh">ˆ</span></div>
+          <p class="serif-note" style="font-size:.95rem;margin-top:.5rem">Three units of capital, three jobs: <strong>one</strong> replaces what broke, <strong>one</strong> equips the new worker, <strong>one</strong> equips the extra effectiveness the existing workers acquired. Same rule as always — only the bill grew a line item.</p>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">The same diagram, in hat space</div>
+        <svg id="hssvg" viewBox="0 0 500 360" role="img" aria-label="The Solow diagram drawn in units per effective worker. The saving curve crosses the break-even line for depreciation plus population growth plus technology growth at capital per effective worker of 2.25 and output per effective worker of 1.5. The diagram is identical in shape to the earlier ones; only the units and the break-even slope have changed.">
+          <line x1="60" y1="20" x2="60" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="320" x2="440" y2="320" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="52" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">ŷ</text>
+          <text x="440" y="356" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">capital per effective worker (k<tspan dy="-0.30em" dx="-0.6em">ˆ</tspan><tspan dy="0.30em">)</tspan></text>
+          <g font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">
+            <text x="140" y="335">2</text><text x="220" y="335">4</text>
+            <text x="300" y="335">6</text><text x="380" y="335">8</text>
+          </g>
+          <polyline fill="none" stroke="#14243A" stroke-width="2.6" stroke-linejoin="round" points="60.0,320.0 64.0,302.3 68.0,295.0 74.0,286.9 80.0,280.4 90.0,271.5 100.0,264.0 110.0,257.4 120.0,251.4 130.0,245.9 140.0,240.8 150.0,236.0 160.0,231.5 170.0,227.1 180.0,223.0 190.0,219.0 200.0,215.2 210.0,211.6 220.0,208.0 230.0,204.6 240.0,201.2 250.0,198.0 260.0,194.8 270.0,191.7 280.0,188.7 290.0,185.7 300.0,182.8 310.0,180.0 320.0,177.2 330.0,174.5 340.0,171.8 350.0,169.2 360.0,166.6 370.0,164.1 380.0,161.6 390.0,159.2 400.0,156.7 410.0,154.3 420.0,152.0"/>
+          <text x="426" y="149" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">f(k<tspan dy="-0.30em" dx="-0.6em">ˆ</tspan><tspan dy="0.30em">)</tspan></text>
+          <polyline fill="none" stroke="#1F4E79" stroke-width="2.6" stroke-linejoin="round" points="60.0,320.0 64.0,314.7 68.0,312.5 74.0,310.1 80.0,308.1 90.0,305.5 100.0,303.2 110.0,301.2 120.0,299.4 130.0,297.8 140.0,296.2 150.0,294.8 160.0,293.4 170.0,292.1 180.0,290.9 190.0,289.7 200.0,288.6 210.0,287.5 220.0,286.4 230.0,285.4 240.0,284.4 250.0,283.4 260.0,282.4 270.0,281.5 280.0,280.6 290.0,279.7 300.0,278.8 310.0,278.0 320.0,277.2 330.0,276.4 340.0,275.6 350.0,274.8 360.0,274.0 370.0,273.2 380.0,272.5 390.0,271.7 400.0,271.0 410.0,270.3 420.0,269.6"/>
+          <text x="426" y="272" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">sf(k<tspan dy="-0.30em" dx="-0.6em">ˆ</tspan><tspan dy="0.30em">)</tspan></text>
+          <g id="hs_g" opacity="0">
+            <line x1="60" y1="320" x2="420" y2="219.2" stroke="#8A5900" stroke-width="2.6" stroke-dasharray="7 4"/>
+            <text x="426" y="216" font-family="monospace" font-size="10" fill="#8A5900" font-weight="700">(δ+n+g)k<tspan dy="-0.30em" dx="-0.6em">ˆ</tspan></text>
+            <line x1="150" y1="228" x2="150" y2="320" stroke="#5A5F66" stroke-width="1.1" stroke-dasharray="4 4"/>
+            <text x="150" y="222" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="middle">k<tspan dy="-0.30em" dx="-0.6em">ˆ</tspan><tspan dy="0.30em">* = 2.25</tspan></text>
+            <circle cx="150" cy="236" r="5.5" fill="#14243A"/>
+            <line x1="60" y1="236" x2="150" y2="236" stroke="#5A5F66" stroke-width="1" stroke-dasharray="4 3"/>
+            <text x="54" y="240" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">1.5</text>
+          </g>
+        </svg>
+        <button class="btn" data-reveal-svg="hatss" style="margin-top:.7rem">Show the steady state</button>
+        <div class="reveal-hidden" id="hrHatSS">
+          <p class="serif-note" style="font-size:.9rem">With s = 0.3 and δ+n+g = 0.2: 0.3√k<span class="kh">ˆ</span> = 0.2k<span class="kh">ˆ</span> gives <strong>k<span class="kh">ˆ</span>* = 2.25, ŷ* = 1.5</strong>. Same picture, same sink property, same everything — one letter different.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 30. Q10 TWO PANELS -->
+  <section class="slide" data-section="Discussion 6 · Technology">
+    <div class="eyebrow">Write · then play</div>
+    <h2>Two panels, one economy</h2>
+    <div class="titlerule"></div>
+    <div class="prompt" style="max-width:1000px;margin-bottom:.8rem">
+      <span class="cue">Question 10 (write · before you press play)</span>
+      <p>The two panels below plot the <em>same economy</em> over the same forty years. One is in hat units, one in per-worker units. <strong>Which panel is “the steady state”? And which one does the data actually measure?</strong> Write both answers, then play.</p>
+    </div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="ptitle">Panel A · per effective worker (hat space)</div>
+        <svg id="tasvg" viewBox="0 0 460 360" role="img" aria-label="Capital and output per effective worker plotted against time. Both are perfectly flat over forty years. In hat units the economy is in a steady state and nothing grows.">
+          <line x1="60" y1="30" x2="60" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="300" x2="430" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="430" y="336" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">years</text>
+          <g font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">
+            <text x="60" y="315">0</text><text x="150" y="315">10</text><text x="240" y="315">20</text>
+            <text x="330" y="315">30</text><text x="420" y="315">40</text>
+          </g>
+          <g font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">
+            <text x="54" y="304">0</text><text x="54" y="184">1.5</text><text x="54" y="114">2.25</text>
+          </g>
+          <line x1="60" y1="110" x2="420" y2="110" stroke="#5A5F66" stroke-width="2.6" stroke-dasharray="8 4"/>
+          <text x="66" y="102" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700">k<tspan dy="-0.30em" dx="-0.6em">ˆ</tspan><tspan dy="0.30em">* = 2.25 — flat</tspan></text>
+          <line x1="60" y1="180" x2="420" y2="180" stroke="#1F4E79" stroke-width="3"/>
+          <text x="66" y="172" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">ŷ* = 1.5 — flat</text>
+          <circle id="taDot" cx="60" cy="180" r="6" fill="#1F4E79" opacity="0"/>
+          <text id="taEnd" x="240" y="215" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700" text-anchor="middle" opacity="0">nothing grows · Δk<tspan dy="-0.30em" dx="-0.6em">ˆ</tspan><tspan dy="0.30em"> = 0 for forty years</tspan></text>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="ptitle">Panel B · per worker (what the data measure)</div>
+        <svg id="tbsvg" viewBox="0 0 460 360" role="img" aria-label="Output per worker plotted against time for the same economy. It rises from 1.5 to 10.6 over forty years along a smooth curve, growing at a constant five percent a year. In per-worker units the same steady state shows sustained growth at the rate of technological progress.">
+          <line x1="60" y1="30" x2="60" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="300" x2="430" y2="300" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="430" y="336" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">years</text>
+          <g font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">
+            <text x="60" y="315">0</text><text x="150" y="315">10</text><text x="240" y="315">20</text>
+            <text x="330" y="315">30</text><text x="420" y="315">40</text>
+          </g>
+          <g font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">
+            <text x="54" y="304">0</text><text x="54" y="286">1.5</text><text x="54" y="199">5</text><text x="54" y="74">10</text>
+          </g>
+          <line x1="60" y1="282.5" x2="430" y2="282.5" stroke="#E4E0D5" stroke-width="1" stroke-dasharray="3 4"/>
+          <line x1="60" y1="195" x2="430" y2="195" stroke="#E4E0D5" stroke-width="1" stroke-dasharray="3 4"/>
+          <line x1="60" y1="70" x2="430" y2="70" stroke="#E4E0D5" stroke-width="1" stroke-dasharray="3 4"/>
+          <path id="tbPath" fill="none" stroke="#C0392B" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"
+            d="M60.0,282.5 L64.5,281.6 69.0,280.6 73.5,279.7 78.0,278.7 82.5,277.6 87.0,276.6 91.5,275.5 96.0,274.4 100.5,273.3 105.0,272.1 109.5,271.0 114.0,269.7 118.5,268.5 123.0,267.2 127.5,265.9 132.0,264.6 136.5,263.2 141.0,261.8 145.5,260.4 150.0,258.9 154.5,257.4 159.0,255.9 163.5,254.3 168.0,252.7 172.5,251.0 177.0,249.3 181.5,247.5 186.0,245.8 190.5,243.9 195.0,242.0 199.5,240.1 204.0,238.1 208.5,236.1 213.0,234.0 217.5,231.9 222.0,229.8 226.5,227.5 231.0,225.2 235.5,222.9 240.0,220.5 244.5,218.0 249.0,215.5 253.5,212.9 258.0,210.3 262.5,207.6 267.0,204.8 271.5,202.0 276.0,199.1 280.5,196.1 285.0,193.0 289.5,189.9 294.0,186.7 298.5,183.4 303.0,180.0 307.5,176.5 312.0,173.0 316.5,169.4 321.0,165.6 325.5,161.8 330.0,157.9 334.5,153.9 339.0,149.8 343.5,145.6 348.0,141.3 352.5,136.9 357.0,132.4 361.5,127.7 366.0,123.0 370.5,118.1 375.0,113.1 379.5,108.0 384.0,102.8 388.5,97.4 393.0,91.9 397.5,86.3 402.0,80.5 406.5,74.6 411.0,68.6 415.5,62.4 420.0,56.0"/>
+          <circle id="tbDot" cx="60" cy="282.5" r="6" fill="#C0392B" opacity="0"/>
+          <text id="tbEnd" x="96" y="56" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="start" opacity="0">y = A·ŷ* — grows at g = 5% forever</text>
+        </svg>
+      </div>
+    </div>
+    <div class="controls" style="flex-direction:row;gap:1rem;align-items:center;margin-top:1rem;flex-wrap:wrap">
+      <button class="btn" id="tcPlay">▶ Play forty years</button>
+      <button class="btn ghost" id="tcReset">Reset</button>
+      <div class="readout" id="tcRead" aria-live="polite" aria-atomic="true" style="flex:1;min-width:min(320px,100%)">
+        year <span id="tcT">0</span> &nbsp;·&nbsp; A = <span id="tcA">1.00</span> &nbsp;·&nbsp; ŷ* = <span class="accent" id="tcYh">1.50</span> (unchanged) &nbsp;·&nbsp; y = A·ŷ* = <span class="red" id="tcY">1.50</span>
+      </div>
+    </div>
+    <button class="btn ghost" data-reveal="hrQ10" style="margin-top:.8rem">Reveal both answers</button>
+    <div class="reveal-hidden" id="hrQ10">
+      <div class="reveal" style="max-width:1000px">
+        <span class="cue">Reveal · Question 10</span>
+        <p><strong>Panel A is the steady state.</strong> That is where Δk<span class="kh">ˆ</span> = 0, where the diagram on the previous slide lives, and where every result from Parts 1–4 still applies unchanged. <strong>Panel B is what the data measure.</strong> No statistical agency publishes output per effective worker; they publish output per worker, and it is Panel B that produces the century of steady growth on the Kaldor list.</p>
+        <p style="margin-top:.55rem"><strong>Neither panel is a picture of a different economy, or of a different time period.</strong> They are the same forty years, plotted in two sets of units, and both are true. y = A·ŷ*: the hat part stopped moving, and the A part never stops. Growth in the long run is <em>entirely</em> the growth of A, because the only other term is a constant.</p>
+        <p style="margin-top:.55rem">This is the throughline arriving. Saving decides how high the flat line in Panel A sits — a thriftier country has a bigger ŷ*, so its Panel B curve starts higher and stays higher forever. But the <em>slope</em> of Panel B is g and nothing else. Change s and you shift the curve. Change g and you tilt it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 31. Q11 DIAGNOSE -->
+  <section class="slide" data-section="Discussion 6 · Technology">
+    <div class="eyebrow">Diagnose · silent poll</div>
+    <h2>The sharpest one in the deck</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start">
+      <p class="lede" style="max-width:78ch">Three sentences about the long run with technological progress. The last one is a genuine Kaldor fact and is <strong>true</strong>. Somewhere above it, the argument breaks. <strong>Write down the number</strong>; don't say it out loud.</p>
+      <div class="diag" id="diagTech">
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">1</span><span class="s">In steady state, capital per effective worker is constant.</span></button>
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">2</span><span class="s">So capital per worker is constant too.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">3</span><span class="s">Therefore the capital–output ratio is constant in the long run.</span></button>
+      </div>
+      <span class="poll-hint">Question 11 · fingers on the chest, then reveal</span>
+      <button class="btn" data-diag-reveal="diagTech" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem;max-width:980px">
+        <span class="cue">Sentence 2 · the flaw · and why sentence 3 survives it</span>
+        <p><strong>Sentence 2 is false.</strong> Capital per worker is k = K/L = A·k<span class="kh">ˆ</span>*. The hat term is frozen, but A is growing at g, so <strong>k grows at g</strong> — 5% a year, forever. This is Kaldor fact 2, and sentence 2 denies it. It is precisely the slip slide 4 warned about: reading a hatted variable as if the hat were decoration.</p>
+        <p style="margin-top:.55rem"><strong>And yet sentence 3 is true.</strong> K/Y = k/y = (A·k<span class="kh">ˆ</span>*)/(A·ŷ*) — <em>the A cancels</em>. Both numerator and denominator grow at exactly g, so their ratio is pinned at k<span class="kh">ˆ</span>*/ŷ* = 2.25/1.5 = 1.5 forever. That is Kaldor fact 3, and this is the first version of the model that delivers it non-trivially: on slide 16 the ratio was constant because nothing moved, and here it is constant <em>while both parts are growing at 5% a year</em>.</p>
+        <p style="margin-top:.55rem"><strong>Now sit with what just happened.</strong> A true conclusion came through a false premise without a scratch. If you had believed sentence 2, you would have reached sentence 3 and been right — and you would also have been committed to k being constant, which contradicts the data, and to y being constant, which contradicts sentence 3's own companion facts. The conclusion survived because K/Y is a <em>ratio</em>, and ratios are exactly the quantities that are blind to the error sentence 2 makes.</p>
+        <p style="margin-top:.55rem">Which is the transferable lesson: <strong>arriving at the right answer is not evidence that your reasoning was sound.</strong> On an exam, sentence 2 will cost you every question that asks about a level and none of the ones that ask about a ratio — and you will not be able to tell which kind you are looking at until you have already answered.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 32. BALANCED GROWTH + FULL SCOREBOARD -->
+  <section class="slide" data-section="Discussion 6 · Technology">
+    <div class="eyebrow">Synthesis · balanced growth</div>
+    <h2>Everything grows together, and the model finally passes</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start">
+      <p class="lede" style="max-width:82ch">In the steady state with technological progress, a whole family of variables moves in lockstep. Solow called this <strong>balanced growth</strong>. Each of these comes out of the same log-and-total-derivative trick from Question 4:</p>
+      <div style="display:flex;gap:.7rem;flex-wrap:wrap;margin:.4rem 0 .2rem">
+        <div class="chain">%Δy = g</div>
+        <div class="chain">%ΔY = n + g</div>
+        <div class="chain">%Δk = g</div>
+        <div class="chain">%Δw = g</div>
+        <div class="chain" style="background:#FBF1DC;border-color:#D9BE86;color:#8A5900">%Δr = 0</div>
+        <div class="chain" style="background:#FBF1DC;border-color:#D9BE86;color:#8A5900">%Δ(K/Y) = 0</div>
+      </div>
+      <p class="footnote" style="margin:.2rem 0 .6rem">The wage is w = MPL = (1−α)A k<span class="kh">ˆ</span><sup>α</sup>, so log w carries a log A and grows at g. The rental rate is r = MPK = αk<span class="kh">ˆ</span><sup>α−1</sup>, which contains <em>no</em> A at all — so it does not grow. The two gold entries are constants that stay constant while everything around them rises 5% a year.</p>
+      <button class="btn" data-reveal="hrScore3">Score the full model</button>
+      <div class="reveal-hidden" id="hrScore3">
+        <div class="tablewrap">
+          <table class="cases">
+            <caption class="sr-only">All six Kaldor facts scored against the three versions of the Solow model. Only the version with technological progress passes all six.</caption>
+            <thead><tr><th scope="col" style="width:38%">The Kaldor fact</th><th scope="col">Basic</th><th scope="col">+ n</th><th scope="col">+ g</th><th scope="col" style="width:26%">Because</th></tr></thead>
+            <tbody>
+              <tr><th scope="row" class="fact">1 · Output per worker keeps growing</th><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td><td class="fact">%Δy = g</td></tr>
+              <tr><th scope="row" class="fact">2 · Capital per worker grows</th><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td><td class="fact">k = A k<span class="kh">ˆ</span>*, so %Δk = g</td></tr>
+              <tr><th scope="row" class="fact">3 · K/Y roughly constant</th><td class="yes">✓ trivially</td><td class="yes">✓ trivially</td><td class="yes">✓ genuinely</td><td class="fact">both grow at g — the A cancels</td></tr>
+              <tr><th scope="row" class="fact">4 · Return on capital constant</th><td class="yes">✓ trivially</td><td class="yes">✓ trivially</td><td class="yes">✓ genuinely</td><td class="fact">r = αk<span class="kh">ˆ</span>*<sup>α−1</sup> has no A in it</td></tr>
+              <tr><th scope="row" class="fact">5 · Factor shares constant</th><td class="yes">✓</td><td class="yes">✓</td><td class="yes">✓</td><td class="fact">Cobb–Douglas: α and 1−α</td></tr>
+              <tr><th scope="row" class="fact">6 · The wage grows</th><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td><td class="fact">w = (1−α)A k<span class="kh">ˆ</span>*<sup>α</sup>, so %Δw = g</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="reveal" style="margin-top:1rem;max-width:1000px">
+          <span class="cue">The throughline, stated once more</span>
+          <p style="font-size:1.16rem"><strong>Diminishing returns to capital means saving changes the LEVEL of income; only technology changes its GROWTH RATE.</strong></p>
+          <p style="margin-top:.6rem">Look down the last column and notice which parameter is responsible for every single ✓ that changed: <strong>g</strong>. Not s — s appears nowhere in that column, because s only ever set how high k<span class="kh">ˆ</span>* sits, and k<span class="kh">ˆ</span>* is a constant. Not n — n bought aggregate growth that no individual could spend. The one thing that moved the growth rate of a living standard was the one thing the model refuses to explain, since g was handed to us exogenously on slide 28.</p>
+          <p style="margin-top:.55rem">That is the honest summary of Chapters 8–9: the Solow model explains why growth <em>cannot</em> come from accumulation, and then names — without explaining — the only thing it can come from.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 6 ══════════════ -->
+
+  <!-- 33. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 6 · Empirics">
+    <div class="eyebrow">Part 6 of 6</div>
+    <h1>Empirics<br>and Policy</h1>
+    <p class="lede">The model is built. Now point it at two real questions: why don't poor countries catch up, and is the United States saving enough?</p>
+    <div class="sectrail">Δk engine ✓ → Saving ✓ → Golden rule ✓ → n ✓ → g ✓ → Empirics</div>
+    <div class="through">Throughline: diminishing returns to capital means saving changes the LEVEL of income; only technology changes its GROWTH RATE.</div>
+  </section>
+
+  <!-- 34. Q12 CONVERGENCE -->
+  <section class="slide" data-section="Discussion 6 · Empirics">
+    <div class="eyebrow">Write · then reveal</div>
+    <h2>Who catches up, and who doesn't</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:1000px">
+      <p class="lede" style="max-width:78ch">Slide 9 showed two countries converging. Slide 13 showed a country moving to a permanently higher level. Those are the two cases — here they are as a question.</p>
+      <div class="two" style="max-width:900px;margin:.2rem 0">
+        <div class="model hi" style="box-shadow:none">
+          <span class="tag">Pair 1</span>
+          <p style="font-family:'Georgia',serif;font-size:1rem;line-height:1.5">Same s, same δ, same n, same g.<br><strong>Different k₀</strong> — one was bombed flat, the other wasn't.</p>
+        </div>
+        <div class="model hi" style="box-shadow:none">
+          <span class="tag">Pair 2</span>
+          <p style="font-family:'Georgia',serif;font-size:1rem;line-height:1.5">Same k₀, same δ, same n, same g.<br><strong>Different s</strong> — one saves 30%, the other 10%.</p>
+        </div>
+      </div>
+      <div class="prompt">
+        <span class="cue">Question 12 (write)</span>
+        <p>Which pair <strong>converges in income per worker</strong>, and which does not? For the pair that does not, say what — if anything — the two countries <em>do</em> end up sharing.</p>
+      </div>
+      <button class="btn" data-reveal="hrQ12" style="margin-top:.4rem">Reveal the answer</button>
+      <div class="reveal-hidden" id="hrQ12">
+        <div class="reveal">
+          <span class="cue">Reveal · Question 12</span>
+          <p><strong>Pair 1 converges.</strong> Identical parameters mean an identical k<span class="kh">ˆ</span>*, and the sink property from Part 1 drags both economies to it regardless of where they started. This is the model's cleanest prediction, and it is the one that fits post-war Germany and Japan.</p>
+          <p style="margin-top:.55rem"><strong>Pair 2 does not converge in levels.</strong> Different s means different k<span class="kh">ˆ</span>*, so the thriftier country ends up permanently richer per worker and the gap never closes. But they do share one thing, and it is the important one: <strong>both grow at rate g in the long run</strong>. Parallel lines, permanently different heights.</p>
+          <p style="margin-top:.55rem">That distinction has a name. <strong>Unconditional convergence</strong> — poor countries catching up with rich ones simply because they are poor — is what Pair 1 describes, and it is <em>not</em> what the world looks like. <strong>Conditional convergence</strong> is what the model actually predicts: every country converges to <em>its own</em> steady state, set by its own s, n, g and δ. Countries converge to different destinations, so being behind is no guarantee of catching up.</p>
+        </div>
+        <div class="predict" style="margin-top:1rem;max-width:1000px">
+          <span class="cue">Back to Figure 1 of the notes — the cross-country income spread</span>
+          <p>Income per person differs across countries by a factor of thirty or more. Run that through the model: k<span class="kh">ˆ</span>* = (s/(δ+n+g))<sup>1/(1−α)</sup>, and with α = ⅓ the exponent is only 1.5 — so plausible differences in savings rates and population growth produce income differences of maybe two- or three-fold, nowhere near thirty.</p>
+          <p style="margin-top:.5rem">The arithmetic doesn't reach. The residual has to sit in <strong>A</strong> — differences in technology, and in everything a country's institutions do to how effectively its capital and workers are actually used. Which is exactly the variable slide 28 handed us for free. <em>The model's biggest empirical gap is the term it does not explain.</em></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 35. Q13 US SAVING -->
+  <section class="slide" data-section="Discussion 6 · Empirics">
+    <div class="eyebrow">Compute · then reveal, one fact at a time</div>
+    <h2>Is the U.S. saving too little?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:1060px">
+      <p class="lede" style="max-width:80ch">The golden rule is a test a real economy can be put to. With population growth and technology the condition is <strong>MPK − δ = n + g</strong>: above it, too little capital; below it, too much.</p>
+      <div class="prompt">
+        <span class="cue">Question 13 (compute · on paper)</span>
+        <p>Reveal the three facts one at a time, and after all three <strong>work out δ and MPK yourself</strong> before pressing the verdict. Two divisions, that's all.</p>
+      </div>
+      <div class="condrow">
+        <div class="condcard">
+          <span class="ctitle">Fact 1</span>
+          <button type="button" class="cbtn" data-cond="us1">Reveal</button>
+          <div class="cbody" id="us1">
+            <div class="calc" style="font-size:1rem">k = 2.5 y</div>
+            <p class="cnote">The capital stock is about <strong>2.5 times</strong> one year's GDP.</p>
+          </div>
+        </div>
+        <div class="condcard">
+          <span class="ctitle">Fact 2</span>
+          <button type="button" class="cbtn" data-cond="us2">Reveal</button>
+          <div class="cbody" id="us2">
+            <div class="calc" style="font-size:1rem">δk = 0.1 y</div>
+            <p class="cnote">Depreciation runs about <strong>10% of GDP</strong> a year.</p>
+          </div>
+        </div>
+        <div class="condcard">
+          <span class="ctitle">Fact 3</span>
+          <button type="button" class="cbtn" data-cond="us3">Reveal</button>
+          <div class="cbody" id="us3">
+            <div class="calc" style="font-size:1rem">MPK × k = 0.3 y</div>
+            <p class="cnote">Capital income is about <strong>30% of GDP</strong> — capital's share.</p>
+          </div>
+        </div>
+      </div>
+      <p class="footnote" style="margin-top:.7rem"><strong>Switch of units, flag it:</strong> here n + g = 0.03, the realistic figure — roughly 1% population growth and 2% productivity growth. Our cartoon calibration used 0.05 and 0.05 to keep the arithmetic clean; this slide uses the real world.</p>
+      <button class="btn" data-reveal="hrQ13" style="margin-top:.6rem">Reveal the verdict</button>
+      <div class="reveal-hidden" id="hrQ13">
+        <div class="two" style="max-width:1000px">
+          <div class="model hi" style="box-shadow:none">
+            <span class="tag">Solve for depreciation</span>
+            <div class="calc">
+              δk / k = 0.1y / 2.5y<br>
+              <span class="lbl">δ = 0.04</span>
+            </div>
+          </div>
+          <div class="model hi" style="box-shadow:none">
+            <span class="tag">Solve for MPK</span>
+            <div class="calc">
+              (MPK × k) / k = 0.3y / 2.5y<br>
+              <span class="lbl">MPK = 0.12</span>
+            </div>
+          </div>
+        </div>
+        <div class="reveal" style="margin-top:1rem">
+          <span class="cue">The verdict</span>
+          <div class="chain" style="font-size:1.14rem;background:#FBF1DC;border-color:#D9BE86;color:#8A5900">MPK − δ = 0.12 − 0.04 = <strong>0.08</strong> &nbsp;&gt;&nbsp; <strong>0.03</strong> = n + g</div>
+          <p style="margin-top:.7rem">The net return on an extra unit of capital is 8% a year; the golden rule says it should be bid down to 3%. The United States is <strong>below</strong> the golden-rule capital stock — it has <strong>too little capital</strong>, and would reach a permanently higher level of consumption per worker by saving more.</p>
+          <p style="margin-top:.55rem">Read the inequality as marginal benefit against marginal cost one last time: a unit of capital returns 12%, costs 4% a year to keep alive, and only 3% is needed to keep pace with more workers and better technology. There is 5 percentage points of unclaimed surplus sitting in every unit of capital not yet built.</p>
+        </div>
+        <div class="predict" style="margin-top:1rem">
+          <span class="cue">So why hasn't anyone done it? · argue this one out on paper</span>
+          <p>If the calculation is that clean and the gap that large, why has no government simply raised the savings rate and collected the higher consumption?</p>
+          <p style="margin-top:.5rem"><strong>Because of who pays.</strong> Getting to the higher steady state means saving more <em>now</em>, which means consuming less <em>now</em> — for as long as the transition takes, which on these parameters is decades. The generation that pays the bill is not the generation that collects. The golden rule compares two steady states and says nothing about the path between them, and the path is where all the politics is.</p>
+          <p style="margin-top:.5rem">Notice that this is not an objection to the model — the model computed the destination correctly. It is a reminder that “this steady state is better” and “moving to it is an improvement” are different claims, and the second one needs a judgment about whose consumption counts.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 36. CLOSE -->
+  <section class="slide" data-section="Discussion 6 · Empirics">
+    <div class="eyebrow">Close · write two lines</div>
+    <h2>In your own words</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:900px">
+      <div class="prompt" style="font-size:1.18rem">
+        <span class="cue">Finish this in your notes</span>
+        <p>“A permanent rise in the savings rate raises ______________ but not ______________, because ____________________________________.”</p>
+      </div>
+      <div class="prompt" style="font-size:1.18rem">
+        <span class="cue">And this one</span>
+        <p>“In the long run, output per worker grows at ______________ because ____________________________________.”</p>
+      </div>
+      <p class="footnote" style="margin-top:.4rem">If your first blank pair reads “growth / level” rather than “level / growth,” go back to Question 5. If your second “because” contains the word <em>capital</em>, go back to Question 11.</p>
+      <p class="serif-note" style="margin-top:1.2rem">Six discussions ago the question was how fast the economy returns to Ȳ. Today it was what sets Ȳ — and the answer turned out to be the one variable the model writes down and never explains. Everything after Chapter 9 in this field is an attempt to explain <strong>A</strong>.</p>
+    </div>
+  </section>
+
+
+</div>
+
+<div class="scrollcue" id="scrollcue" aria-hidden="true">▼ scroll for more</div>
+
+<div class="chrome">
+  <span class="course" id="sectionLabel">ECON 105B · Discussion 6</span>
+  <span class="navhint">
+    <button id="prevBtn" aria-label="Previous slide">← prev</button>
+    <span aria-live="polite" aria-atomic="true">Slide <span id="cur">1</span> of <span id="tot">36</span></span>
+    <button id="nextBtn" aria-label="Next slide">next →</button>
+  </span>
+</div>
+
+<script>
+(function(){
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  const prog=document.getElementById('prog');
+  const cur=document.getElementById('cur');
+  document.getElementById('tot').textContent=slides.length;
+
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    prog.style.width=((i)/(slides.length-1)*100)+'%';
+    cur.textContent=i+1;
+    const sec=slides[i].getAttribute('data-section');
+    const lbl=document.getElementById('sectionLabel');
+    if(lbl) lbl.textContent = sec ? ('ECON 105B · '+sec) : 'ECON 105B · Discussion 6';
+    slides[i].scrollTop=0;
+    requestAnimationFrame(updateCue);
+  }
+  function next(){show(i+1)}
+  function prev(){show(i-1)}
+
+  document.getElementById('nextBtn').onclick=next;
+  document.getElementById('prevBtn').onclick=prev;
+  /* The slides are absolutely positioned inside an overflow:hidden body, so
+     they are not the document scroller and arrow keys reach nothing. Drive the
+     active slide's scroll explicitly; ←/→/space stay on slide navigation. */
+  function scrollActive(dy){
+    const s=slides[i];
+    if(s.scrollHeight-s.clientHeight<=4) return false;
+    s.scrollTop+=dy; updateCue(); return true;
+  }
+  window.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();next()}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}
+    else if(e.key==='ArrowDown'){ if(scrollActive(90)) e.preventDefault(); }
+    else if(e.key==='ArrowUp'){ if(scrollActive(-90)) e.preventDefault(); }
+    else if(e.key==='End'){ if(scrollActive(slides[i].scrollHeight)) e.preventDefault(); }
+    else if(e.key==='Home'){ if(scrollActive(-slides[i].scrollHeight)) e.preventDefault(); }
+    else if(e.key.toLowerCase()==='f'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  /* Overflow is easy to miss on a projector, so say so when there is more. */
+  const cue=document.getElementById('scrollcue');
+  function updateCue(){
+    const s=slides[i];
+    const more=s.scrollHeight-s.clientHeight>8 && s.scrollTop+s.clientHeight<s.scrollHeight-8;
+    cue.classList.toggle('on',more);
+  }
+  document.addEventListener('scroll',updateCue,true);
+  window.addEventListener('resize',updateCue);
+  // reveals change a slide's height, so re-check after any click on the deck
+  document.getElementById('deck').addEventListener('click',()=>{
+    requestAnimationFrame(updateCue); setTimeout(updateCue,600);
+  });
+
+  const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const g=id=>document.getElementById(id);
+
+  /* ---- generic click-to-reveal: button[data-reveal="targetId"] ---- */
+  document.querySelectorAll('[data-reveal]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const t=document.getElementById(btn.getAttribute('data-reveal'));
+      if(t){t.classList.add('shown');}
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- generic diagnose (flawed-argument) groups ---- */
+  document.querySelectorAll('.diag').forEach(group=>{
+    const opts=[...group.querySelectorAll('.diag-opt')];
+    const revealBtn=group.parentElement.querySelector('[data-diag-reveal]');
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    if(revealBtn){
+      revealBtn.addEventListener('click',()=>{
+        group.classList.add('revealed');
+        opts.forEach(o=>{if(o.dataset.bad==='true')o.classList.add('bad');});
+        revealBtn.style.display='none';
+        const note=group.parentElement.querySelector('[data-diag-note]');
+        if(note) note.style.display='block';
+      });
+    }
+  });
+
+  /* ---- generic quick-check polls: button[data-poll-reveal="pollId"] ---- */
+  document.querySelectorAll('[data-poll-reveal]').forEach(btn=>{
+    const group=document.getElementById(btn.getAttribute('data-poll-reveal'));
+    if(!group) return;
+    const opts=[...group.querySelectorAll('.poll-opt')];
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    btn.addEventListener('click',()=>{
+      group.classList.add('revealed');
+      opts.forEach(o=>{ if(o.dataset.correct==='true') o.classList.add('correct'); });
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- graph shift reveals: button[data-reveal-svg="key"] ----
+     Each key lists the SVG element ids that fade in together, plus an
+     optional text block id to un-hide at the same time.               */
+  const svgShifts={
+    cstar:  {ids:['gr_cband','gr_cbar','gr_cah1','gr_cah2','gr_clabbg','gr_clab',
+                  'gr_ctop','gr_cbot','gb1','gbl1'],                 text:'hrCstar'},
+    hatss:  {ids:['hs_g'],                                   text:'hrHatSS'}
+  };
+  document.querySelectorAll('[data-reveal-svg]').forEach(btn=>{
+    const cfg=svgShifts[btn.getAttribute('data-reveal-svg')]||{};
+    btn.addEventListener('click',()=>{
+      (cfg.ids||[]).forEach(id=>{const el=document.getElementById(id); if(el) el.setAttribute('opacity',1);});
+      if(cfg.text){const t=document.getElementById(cfg.text); if(t) t.classList.add('shown');}
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- condition cards: button[data-cond="bodyId"] ---- */
+  document.querySelectorAll('[data-cond]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const body=document.getElementById(btn.getAttribute('data-cond'));
+      if(body){body.classList.add('shown');}
+      btn.style.display='none';
+    });
+  });
+
+  /* =====================================================================
+     Shared calibration. Every diagram below computes its geometry from
+     these numbers and from the model equations themselves — no hard-coded
+     pixel waypoints, so the dots can only land where the algebra puts them.
+        y = f(k) = k^α with α = ½   ·   s = 0.3   ·   δ = 0.1
+     ===================================================================== */
+  const ALPHA=0.5, S0=0.3, S1=0.4, DELTA=0.1;
+  const ease=p=>0.5-0.5*Math.cos(Math.PI*p);
+  const DUR=2600;
+
+  /* Draw-on helper for the two time-series paths: dash the whole length,
+     then retract the offset as the sweep advances. */
+  function dashInit(path){
+    if(!path) return 0;
+    const L=path.getTotalLength();
+    path.style.strokeDasharray=L; path.style.strokeDashoffset=L;
+    return L;
+  }
+
+  /* ---- Slide 9: convergence from two starting points --------------------
+     u ≡ √k, so u̇ = ½(sf(k) − δk)/√k = s/2 − (δ/2)u — linear, with the
+     exact solution u(t) = 3 + (u₀ − 3)e^(−0.05t). Both trajectories are
+     evaluated from that closed form, not from a numerical guess.        */
+  const cvPlay=g('cvPlay');
+  if(cvPlay){
+    const xK=k=>60+18*k, yV=v=>320-56*v;
+    const uStar=S0/DELTA, lam=DELTA/2;          // u* = 3, decay rate 0.05
+    const path=u0=>t=>uStar+(u0-uStar)*Math.exp(-lam*t);
+    const uA=path(1), uB=path(4);               // k₀ = 1 and k₀ = 16
+    const el={};
+    ['cvAv','cvAgap','cvAdot','cvAlab','cvBv','cvBgap','cvBdot','cvBlab',
+     'cvKstar','cvKstarT','cvKstarD','cvKstarG','cvKstarY','cvT','cvAk','cvAs','cvAd',
+     'cvAg','cvAw','cvBk','cvBs','cvBd','cvBg','cvBw',
+     'cvAlim','cvAglim','cvBlim','cvBglim'].forEach(id=>el[id]=g(id));
+    // Both countries are heading for the same limit; showing it next to the
+    // live number is the whole point of running two trajectories at once.
+    const LIMS=[['cvAlim','cvBlim',' → '+(uStar*uStar).toFixed(2)],
+                ['cvAglim','cvBglim',' → 0.00']];
+    function setLimits(on){
+      LIMS.forEach(([a,b,txt])=>{el[a].textContent=on?txt:''; el[b].textContent=on?txt:'';});
+    }
+    function one(u,tagV,tagGap,tagDot,tagLab,letter){
+      const k=u*u, x=xK(k), y=yV(u), sf=S0*u, dk=DELTA*k, d=sf-dk;
+      // dashed drop-line from the dot to the k-axis, shown the whole way through
+      el[tagV].setAttribute('x1',x); el[tagV].setAttribute('x2',x);
+      el[tagV].setAttribute('y1',y); el[tagV].setAttribute('y2',320);
+      el[tagGap].setAttribute('x1',x); el[tagGap].setAttribute('x2',x);
+      el[tagGap].setAttribute('y1',yV(sf)); el[tagGap].setAttribute('y2',yV(dk));
+      el[tagDot].setAttribute('cx',x); el[tagDot].setAttribute('cy',y);
+      const txt = Math.abs(d)<0.005 ? (letter+' ● Δk = 0')
+        : (d>0 ? (letter+' ▲ Δk > 0') : (letter+' ▼ Δk < 0'));
+      el[tagLab].textContent = txt;
+      // A hangs off the north-west corner of its dot, B off the south-east, so
+      // the two stay legible once both economies arrive at the same point.
+      if(letter==='A'){
+        const w=txt.length*6.4;               // monospace 11px ≈ 6.4px per char
+        el[tagLab].setAttribute('text-anchor','end');
+        el[tagLab].setAttribute('x',Math.max(8+w,x-8));
+        el[tagLab].setAttribute('y',y-8);
+      }else{
+        el[tagLab].setAttribute('text-anchor','start');
+        el[tagLab].setAttribute('x',x+9);
+        el[tagLab].setAttribute('y',y+20);
+      }
+      return {k,sf,dk,d};
+    }
+    function place(t){
+      const a=one(uA(t),'cvAv','cvAgap','cvAdot','cvAlab','A');
+      const b=one(uB(t),'cvBv','cvBgap','cvBdot','cvBlab','B');
+      el.cvT.textContent=Math.round(t);
+      el.cvAk.textContent=a.k.toFixed(2); el.cvAs.textContent=a.sf.toFixed(2);
+      el.cvAd.textContent=a.dk.toFixed(2);
+      el.cvAg.textContent=(a.d>=0?'+':'−')+Math.abs(a.d).toFixed(2);
+      el.cvAw.textContent=Math.abs(a.d)<0.005?'— at rest':'rising';
+      el.cvBk.textContent=b.k.toFixed(2); el.cvBs.textContent=b.sf.toFixed(2);
+      el.cvBd.textContent=b.dk.toFixed(2);
+      el.cvBg.textContent=(b.d>=0?'+':'−')+Math.abs(b.d).toFixed(2);
+      el.cvBw.textContent=Math.abs(b.d)<0.005?'— at rest':'falling';
+    }
+    const shockEls=[el.cvAv,el.cvBv];
+    const endEls=[el.cvKstar,el.cvKstarT,el.cvKstarD,el.cvKstarG,el.cvKstarY];
+    let raf;
+    function reset(){cancelAnimationFrame(raf);place(0);setLimits(false);
+      [...shockEls,...endEls].forEach(e=>e.setAttribute('opacity',0));}
+    function finish(){place(120);setLimits(true);
+      [...shockEls,...endEls].forEach(e=>e.setAttribute('opacity',1));}
+    function play(){
+      reset(); setLimits(true); shockEls.forEach(e=>e.setAttribute('opacity',1));
+      if(reduced){finish();return;}
+      const t0=performance.now();
+      (function step(now){
+        const p=Math.min(1,(now-t0)/DUR);
+        place(120*ease(p));
+        if(p>=1) endEls.forEach(e=>e.setAttribute('opacity',1));
+        else raf=requestAnimationFrame(step);
+      })(t0);
+    }
+    cvPlay.onclick=play; g('cvReset').onclick=reset; reset();
+  }
+
+  /* ---- Slide 13: the saving increase, in level and in growth rate -------
+     s jumps 0.3 → 0.4 at t = 0. In u = √k terms the law of motion becomes
+     u̇ = 0.2 − 0.05u, so u(t) = 4 − e^(−0.05t): k climbs 9 → 16.
+     The growth rate of y is u̇/u = (0.2 − 0.05u)/u — the right-hand panel
+     plots exactly that, which is why it decays to zero rather than
+     leveling off somewhere positive.                                   */
+  const svPlay=g('svPlay');
+  if(svPlay){
+    const xK=k=>60+18*k, yV=v=>320-56*v;
+    const xT=t=>60+(t+10)*3.6, yR=r=>300-r*120;
+    // u̇ = s′/2 − (δ/2)u  ⇒  u(t) = s′/δ + (s/δ − s′/δ)e^(−δt/2)
+    const uNew=S1/DELTA, uOld=S0/DELTA, lam=DELTA/2;
+    const u=t=>uNew+(uOld-uNew)*Math.exp(-lam*t);
+    const svDot=g('svDot'), sgDot=g('sgDot'), sgPath=g('sgPath');
+    const svVg=g('svVg'), svHg=g('svHg');
+    const svT=g('svT'), svK=g('svK'), svY=g('svY'), svG=g('svG');
+    const L=dashInit(sgPath);
+    function place(t){
+      // growth rate of y = u̇/u, straight from the law of motion
+      const uu=u(t), k=uu*uu, r=100*(S1/2-lam*uu)/uu;
+      const dx=xK(k), dy=yV(uu);
+      svDot.setAttribute('cx',dx); svDot.setAttribute('cy',dy);
+      svVg.setAttribute('x1',dx); svVg.setAttribute('x2',dx); svVg.setAttribute('y1',dy);
+      svHg.setAttribute('x2',dx); svHg.setAttribute('y1',dy); svHg.setAttribute('y2',dy);
+      sgDot.setAttribute('cx',xT(t)); sgDot.setAttribute('cy',yR(r));
+      if(L) sgPath.style.strokeDashoffset=L*(1-Math.min(1,t/90));
+      svT.textContent=Math.round(t);
+      svK.textContent=k.toFixed(2); svY.textContent=uu.toFixed(2);
+      svG.textContent=r.toFixed(2);
+    }
+    const shockEls=[g('svNew'),g('svNewT'),sgDot,svVg,svHg];
+    const endEls=[g('svK2'),g('svK2t'),g('svYg'),g('svYt'),g('sgEnd')];
+    let raf;
+    function reset(){cancelAnimationFrame(raf);place(0);
+      if(L) sgPath.style.strokeDashoffset=L;
+      [...shockEls,...endEls].forEach(e=>e.setAttribute('opacity',0));}
+    function finish(){place(90);
+      [...shockEls,...endEls].forEach(e=>e.setAttribute('opacity',1));}
+    function play(){
+      reset(); shockEls.forEach(e=>e.setAttribute('opacity',1));
+      if(reduced){finish();return;}
+      const t0=performance.now();
+      (function step(now){
+        const p=Math.min(1,(now-t0)/DUR);
+        place(90*ease(p));
+        if(p>=1) endEls.forEach(e=>e.setAttribute('opacity',1));
+        else raf=requestAnimationFrame(step);
+      })(t0);
+    }
+    svPlay.onclick=play; g('svReset').onclick=reset; reset();
+  }
+
+  /* ---- Slide 19: golden-rule stepper ------------------------------------
+     k* = (s/δ)^(1/(1−α)) = 100s², y* = √k*, i* = δk*, c* = y* − i*.
+     Nothing is tabulated; each step re-solves the steady state.          */
+  const grStep=g('grStep');
+  if(grStep){
+    const S=[0.2,0.3,0.4,0.5,0.6];
+    const xK=k=>60+10*k, yV=v=>320-46*v;
+    const band=g('gr_cband'), bar=g('gr_cbar'), ah1=g('gr_cah1'), ah2=g('gr_cah2'),
+          top=g('gr_ctop'), bot=g('gr_cbot'), lab=g('gr_cbart'), sub=g('gr_cbarh'),
+          labg=g('gr_clab'), labbg=g('gr_clabbg');
+    // the golden-rule steady state, for expressing each c* as a share of the max
+    const K_GR=Math.pow(ALPHA/DELTA,1/(1-ALPHA)), C_GR=Math.pow(K_GR,ALPHA)-DELTA*K_GR;
+    let idx=1;
+    function place(s){
+      const k=Math.pow(s/DELTA,1/(1-ALPHA)), y=Math.pow(k,ALPHA),
+            i=DELTA*k, c=y-i, x=xK(k), yt=yV(y), yb=yV(i);
+      const gold=Math.abs(s-ALPHA)<1e-9, col=gold?'#8A5900':'#1F4E79';
+      band.setAttribute('x',x-12); band.setAttribute('width',24);
+      band.setAttribute('y',yt);   band.setAttribute('height',yb-yt);
+      band.setAttribute('fill',col);
+      bar.setAttribute('x1',x); bar.setAttribute('x2',x);
+      bar.setAttribute('y1',yt); bar.setAttribute('y2',yb);
+      bar.setAttribute('stroke',col);
+      // arrowheads pointing outward to the two curves the gap is measured between
+      ah1.setAttribute('points',`${x},${yt} ${x-5.5},${yt+12} ${x+5.5},${yt+12}`);
+      ah2.setAttribute('points',`${x},${yb} ${x-5.5},${yb-12} ${x+5.5},${yb-12}`);
+      ah1.setAttribute('fill',col); ah2.setAttribute('fill',col);
+      top.setAttribute('x1',x-16); top.setAttribute('x2',x+16);
+      top.setAttribute('y1',yt); top.setAttribute('y2',yt);
+      bot.setAttribute('x1',x-16); bot.setAttribute('x2',x+16);
+      bot.setAttribute('y1',yb); bot.setAttribute('y2',yb);
+      // flip the label to the band's left half-way along, so it never reaches
+      // the δk axis label sitting outside the plot
+      const right = x>240;
+      const lx = right ? x-20 : x+20, anc = right ? 'end' : 'start';
+      lab.setAttribute('x',lx); lab.setAttribute('text-anchor',anc);
+      lab.setAttribute('y',(yt+yb)/2);
+      lab.setAttribute('fill',col);
+      lab.textContent='c* = '+c.toFixed(2)+(gold?' ★':'');
+      sub.setAttribute('x',lx); sub.setAttribute('text-anchor',anc);
+      sub.setAttribute('y',(yt+yb)/2+15);
+      sub.textContent=Math.round(100*c/C_GR)+'% of the maximum';
+      // plate behind the two lines so they stay readable over the curves
+      const bb=labg.getBBox();
+      labbg.setAttribute('x',bb.x-6);      labbg.setAttribute('y',bb.y-4);
+      labbg.setAttribute('width',bb.width+12); labbg.setAttribute('height',bb.height+8);
+      g('grS').textContent=s.toFixed(2);
+      g('grK').textContent=k.toFixed(1);
+      g('grY').textContent=y.toFixed(2);
+      g('grI').textContent=i.toFixed(2);
+      g('grC').textContent=c.toFixed(2);
+      const b=g('gb'+S.indexOf(s)), t=g('gbl'+S.indexOf(s));
+      if(b) b.setAttribute('opacity',1);
+      if(t) t.setAttribute('opacity',1);
+    }
+    grStep.onclick=()=>{ idx=(idx+1)%S.length; place(S[idx]); };
+    g('grReset').onclick=()=>{
+      idx=1; [0,2,3,4].forEach(j=>{
+        const b=g('gb'+j), t=g('gbl'+j);
+        if(b) b.setAttribute('opacity',0);
+        if(t) t.setAttribute('opacity',0);
+      });
+      place(S[1]);
+    };
+    place(S[1]);
+    // getBBox() returns zero while the slide is display:none, so size the label
+    // plate again once the reveal fires and the diagram is actually on screen.
+    const csBtn=document.querySelector('[data-reveal-svg="cstar"]');
+    if(csBtn) csBtn.addEventListener('click',()=>requestAnimationFrame(()=>place(S[idx])));
+  }
+
+  /* ---- Slide 25: the baby boom ------------------------------------------
+     The break-even line rotates from (δ+n₁)k to (δ+n₂)k over the first
+     fifth of the sweep, then the economy slides down f(k). With the new
+     break-even coefficient 0.30, u̇ = 0.15 − 0.15u, so u(t) = 1 + e^(−0.15t)
+     and k falls 4 → 1.                                                  */
+  const bbPlay=g('bbPlay');
+  if(bbPlay){
+    const xK=k=>60+40*k, yV=v=>320-56*v;
+    const C1=0.15, C2=0.30;
+    const line=g('bbLine'), dot=g('bbDot'), vg=g('bbVg'), hg=g('bbHg');
+    function place(p){
+      const rot=Math.min(1,p/0.2), c=C1+(C2-C1)*rot;
+      line.setAttribute('x2',420); line.setAttribute('y2',yV(c*9));
+      // once the line has rotated: u̇ = s/2 − (C2/2)u ⇒ u(t) = s/C2 + (2 − s/C2)e^(−C2·t/2)
+      const t=40*Math.max(0,(p-0.2)/0.8);
+      const uInf=S0/C2, lam=C2/2;
+      const uu=uInf+(2-uInf)*Math.exp(-lam*t), k=uu*uu;
+      const dx=xK(k), dy=yV(uu);
+      dot.setAttribute('cx',dx); dot.setAttribute('cy',dy);
+      vg.setAttribute('x1',dx); vg.setAttribute('x2',dx); vg.setAttribute('y1',dy);
+      hg.setAttribute('x2',dx); hg.setAttribute('y1',dy); hg.setAttribute('y2',dy);
+      g('bbN').textContent=(c-DELTA).toFixed(2);
+      g('bbB').textContent=c.toFixed(2);
+      g('bbT').textContent=Math.round(t);
+      g('bbK').textContent=k.toFixed(2);
+      g('bbY').textContent=uu.toFixed(2);
+      g('bbPhase').textContent = rot<1 ? 'break-even line rotating up'
+        : (k>1.02 ? 'sliding down f(k)' : 'at the new, poorer steady state');
+    }
+    const shockEls=[line,vg,hg];
+    const endEls=[g('bbLineT'),g('bbK2'),g('bbK2t'),g('bbYg'),g('bbYt')];
+    let raf;
+    function reset(){cancelAnimationFrame(raf);place(0);
+      [...shockEls,...endEls].forEach(e=>e.setAttribute('opacity',0));}
+    function finish(){place(1);
+      [...shockEls,...endEls].forEach(e=>e.setAttribute('opacity',1));}
+    function play(){
+      reset(); shockEls.forEach(e=>e.setAttribute('opacity',1));
+      if(reduced){finish();return;}
+      const t0=performance.now();
+      (function step(now){
+        const p=Math.min(1,(now-t0)/DUR);
+        place(ease(p));
+        if(p>=1) endEls.forEach(e=>e.setAttribute('opacity',1));
+        else raf=requestAnimationFrame(step);
+      })(t0);
+    }
+    bbPlay.onclick=play; g('bbReset').onclick=reset; reset();
+  }
+
+  /* ---- Slide 30: hat space vs per-worker space, same forty years --------
+     Panel A holds ŷ* = 1.5 fixed — the dot only moves sideways.
+     Panel B plots y = A·ŷ* with A = (1+g)^t, g = 0.05. Same economy.    */
+  const tcPlay=g('tcPlay');
+  if(tcPlay){
+    const xT=t=>60+9*t, yB=v=>320-25*v;
+    const YHAT=1.5, G=0.05;
+    const taDot=g('taDot'), tbDot=g('tbDot'), tbPath=g('tbPath');
+    const L=dashInit(tbPath);
+    function place(t){
+      const A=Math.pow(1+G,t), y=YHAT*A;
+      taDot.setAttribute('cx',xT(t)); taDot.setAttribute('cy',180);
+      tbDot.setAttribute('cx',xT(t)); tbDot.setAttribute('cy',yB(y));
+      if(L) tbPath.style.strokeDashoffset=L*(1-Math.min(1,t/40));
+      g('tcT').textContent=Math.round(t);
+      g('tcA').textContent=A.toFixed(2);
+      g('tcYh').textContent=YHAT.toFixed(2);
+      g('tcY').textContent=y.toFixed(2);
+    }
+    const shockEls=[taDot,tbDot];
+    const endEls=[g('taEnd'),g('tbEnd')];
+    let raf;
+    function reset(){cancelAnimationFrame(raf);place(0);
+      if(L) tbPath.style.strokeDashoffset=L;
+      [...shockEls,...endEls].forEach(e=>e.setAttribute('opacity',0));}
+    function finish(){place(40);
+      [...shockEls,...endEls].forEach(e=>e.setAttribute('opacity',1));}
+    function play(){
+      reset(); shockEls.forEach(e=>e.setAttribute('opacity',1));
+      if(reduced){finish();return;}
+      const t0=performance.now();
+      (function step(now){
+        const p=Math.min(1,(now-t0)/DUR);
+        place(40*ease(p));
+        if(p>=1) endEls.forEach(e=>e.setAttribute('opacity',1));
+        else raf=requestAnimationFrame(step);
+      })(t0);
+    }
+    tcPlay.onclick=play; g('tcReset').onclick=reset; reset();
+  }
+
+
+  show(0);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2748 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Solow Model: Steady State &amp; Golden Rule — ECON 105B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <!--
+    ═══════════════════════════════════════════════════════════════════════
+    DISCUSSION WEEK TEMPLATE ENTRY — copy/paste into a week page LABS array
+    ═══════════════════════════════════════════════════════════════════════
+      { id:   'solow-steady-state',
+        name: 'Solow Model: Steady State & Golden Rule',
+        icon: '🌱',
+        desc: 'Solve a randomized Solow economy for its steady state and golden rule, and build the Solow diagram one answer at a time.',
+        url:  '/classes/econ105b/labs/solow-steady-state/?disc=1' }
+
+      LAB_ID    = 'solow-steady-state'
+      LAB_LABEL = 'Solow Model: Steady State & Golden Rule'
+      URL       = /classes/econ105b/labs/solow-steady-state/
+
+    Source: Economic Growth (Chapters 8–9) lecture notes, §4.2 (steady state
+    and golden rule with technological progress) and §4.3 / §3.3 (growth
+    accounting). Replaces Solow_Model_Solver.nb and Solow_Model_Graph.nb.
+    ═══════════════════════════════════════════════════════════════════════
+  -->
+
+  <style>
+    /* ── Design tokens (CLAUDE.md) ───────────────────────────── */
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      /* Mono stack for hand-authored equations (no KaTeX/MathJax dependency) */
+      --font-mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+      --paper:#f6f2ea;
+      --panel:#ffffff;
+      --ink:#1f2937;
+      --ink-2:#374151;
+      --muted:#596878;
+      --line:#e7dfd2;
+      --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;
+      --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),
+               0 10px 24px rgba(17,24,39,.06);
+      --amber:#8c4800;
+    }
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3 / good practice) ────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    *{box-sizing:border-box;}
+    body{margin:0;background:var(--paper);color:var(--ink);
+      font-family:var(--font-sans);}
+
+    /* ── Standard header / footer ────────────────────────────── */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),
+      rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;
+      font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;
+      line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;
+      max-width:80ch;font-size:0.9375rem;}
+    .lab-wrap{max-width:1160px;margin:0 auto;padding:18px;}
+    footer{border-top:0;}
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+    .hidden{display:none!important;}
+
+    /* ── Instructions dropdown ───────────────────────────────── */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Cross-link to the companion diagram explorer */
+    .siblinglink{margin:12px 0 0;font-size:0.875rem;color:var(--ink-2);
+      line-height:1.55;max-width:80ch;}
+    .siblinglink a{color:var(--accent);font-weight:800;
+      text-decoration:underline;}
+
+    /* ── Buttons ─────────────────────────────────────────────── */
+    /* Default button border #8c7f72 = 3.53:1 on white (WCAG 1.4.11 ✓) */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+    .option-btn.active{border-color:var(--accent);
+      background:rgba(47,93,124,.12);color:var(--accent);}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover:not(:disabled){background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* ── Layout ──────────────────────────────────────────────── */
+    .lab-grid{display:grid;grid-template-columns:1fr 430px;
+      gap:18px;align-items:start;}
+    @media(max-width:980px){.lab-grid{grid-template-columns:1fr;}}
+    /* Grid items default to min-width:auto, which lets a nowrap equation
+       push the whole column past the viewport. Reflow (WCAG 1.4.10) needs
+       these to shrink and let .eq-block scroll on its own. */
+    .lab-grid > *{min-width:0;}
+    .graph-col{align-self:stretch;}
+
+    /* ── Equations (hand-authored, mono stack) ───────────────── */
+    .eq{font-family:var(--font-mono);font-weight:600;color:var(--ink);
+      white-space:nowrap;letter-spacing:.01em;}
+    .eq sup{font-size:.72em;}
+    .eq sub{font-size:.72em;}
+    .eq-block{display:block;margin:5px 0;overflow-x:auto;max-width:100%;
+      font-family:var(--font-mono);font-weight:600;color:var(--ink);
+      font-size:0.8125rem;line-height:2;}
+    .eq-block .why{font-family:var(--font-sans);font-weight:400;
+      color:var(--muted);font-size:0.75rem;margin-left:10px;
+      white-space:normal;}
+
+    /* ── Top control bar ─────────────────────────────────────── */
+    .control-bar{background:var(--panel);border:1px solid var(--line);
+      border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);
+      margin-bottom:14px;display:flex;gap:16px;flex-wrap:wrap;
+      align-items:flex-end;justify-content:space-between;}
+    .ctl-group{display:flex;flex-direction:column;gap:7px;}
+    .ctl-label{font-size:0.6875rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.07em;color:var(--muted);}
+    .ctl-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+    .mode-note{font-size:0.75rem;color:var(--muted);line-height:1.5;
+      max-width:46ch;margin:0;}
+    .progress-pill{font-size:0.8125rem;font-weight:800;color:var(--accent);
+      background:rgba(47,93,124,.08);border:1px solid rgba(47,93,124,.20);
+      border-radius:999px;padding:6px 14px;white-space:nowrap;}
+    .progress-pill.phase2{color:var(--amber);background:rgba(140,72,0,.08);
+      border-color:rgba(140,72,0,.28);}
+    .progress-pill.done{color:var(--good);background:rgba(21,92,56,.09);
+      border-color:rgba(21,92,56,.30);}
+
+    /* ── Problem card ────────────────────────────────────────── */
+    .problem-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:20px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .problem-header{font-family:var(--font-serif);font-size:1.25rem;
+      font-weight:700;color:var(--ink);margin:0 0 6px;}
+    .problem-sub{font-size:0.8125rem;color:var(--muted);
+      margin:0 0 14px;line-height:1.55;}
+    .model-box{margin-bottom:12px;padding:11px 14px;border-radius:12px;
+      background:rgba(47,93,124,.05);border:1px solid rgba(47,93,124,.16);}
+    .model-label{font-size:0.625rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.07em;color:var(--accent);margin-bottom:7px;}
+    .param-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:8px;}
+    @media(max-width:620px){.param-grid{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:420px){.param-grid{grid-template-columns:1fr;}}
+    .param{background:rgba(246,242,234,.55);border:1px solid var(--line);
+      border-radius:12px;padding:9px 13px;}
+    .param .label{font-size:0.6875rem;text-transform:uppercase;
+      letter-spacing:.06em;color:var(--muted);margin-bottom:3px;
+      line-height:1.35;}
+    /* Math symbols must not be uppercased — α would render as Α, δ as Δ. */
+    .param .label .sym{text-transform:none;font-weight:800;color:var(--ink-2);
+      font-family:var(--font-mono);}
+    .param .value{font-size:0.9375rem;font-weight:700;color:var(--ink);}
+    .param .value .pct{font-size:0.75rem;font-weight:600;color:var(--muted);}
+    .notation-note{margin:12px 0 0;padding:10px 13px;border-radius:12px;
+      background:rgba(140,72,0,.06);border:1px solid rgba(140,72,0,.24);
+      font-size:0.8125rem;color:var(--ink-2);line-height:1.6;}
+    .notation-note strong{color:#8c4800;}
+
+    /* ── Question cards ──────────────────────────────────────── */
+    .q-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:16px;padding:16px;box-shadow:var(--shadow);
+      margin-bottom:12px;}
+    .q-card.locked{opacity:.55;}
+    .q-card-header{display:flex;justify-content:space-between;
+      align-items:flex-start;gap:10px;flex-wrap:wrap;}
+    .q-num{display:inline-block;font-size:0.625rem;font-weight:800;
+      text-transform:uppercase;letter-spacing:.07em;color:var(--accent);
+      background:rgba(47,93,124,.08);border:1px solid rgba(47,93,124,.18);
+      border-radius:6px;padding:2px 7px;margin-bottom:4px;}
+    .q-title{font-size:0.9375rem;font-weight:700;color:var(--ink);
+      line-height:1.3;}
+    .q-prompt{font-size:0.8125rem;color:var(--ink-2);
+      line-height:1.6;margin:8px 0 0;}
+    .chip-row{display:flex;gap:6px;flex-wrap:wrap;}
+    .status-chip{font-size:0.625rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.06em;border-radius:999px;padding:3px 9px;
+      white-space:nowrap;}
+    .status-chip.help{background:rgba(140,72,0,.09);color:#8c4800;
+      border:1px solid rgba(140,72,0,.28);}
+    .status-chip.done{background:rgba(21,92,56,.09);color:var(--good);
+      border:1px solid rgba(21,92,56,.30);}
+    .status-chip.miss{background:rgba(180,35,24,.07);color:var(--bad);
+      border:1px solid rgba(180,35,24,.28);}
+    .status-chip.wait{background:rgba(89,104,120,.09);color:var(--muted);
+      border:1px solid rgba(89,104,120,.28);}
+
+    /* Entry area */
+    .entry-area{margin-top:12px;padding:10px 12px;
+      background:rgba(246,242,234,.5);border:1px solid var(--line);
+      border-radius:12px;}
+    .entry-row{display:flex;align-items:center;flex-wrap:wrap;gap:7px;
+      font-size:0.9375rem;font-weight:600;color:var(--ink);line-height:2.2;}
+    .entry-row + .entry-row{margin-top:4px;}
+    .entry-sym{color:var(--ink-2);white-space:nowrap;font-size:0.9375rem;
+      font-family:var(--font-mono);font-weight:700;}
+    .entry-unit{color:var(--muted);font-size:0.75rem;font-weight:700;
+      white-space:nowrap;}
+    /* Inline inputs — border #8c7f72 = 3.5:1 on white (WCAG 1.4.11 ✓) */
+    .fi{width:104px;padding:5px 8px;border:1.5px solid #8c7f72;
+      border-radius:8px;font-size:0.9375rem;font-family:var(--font-sans);
+      font-weight:700;text-align:center;background:#fff;color:var(--ink);
+      outline:none;transition:border-color .12s,background .12s;}
+    .fi:focus{border-color:var(--accent);}
+    .fi.correct{border-color:var(--good);background:rgba(21,92,56,.06);}
+    .fi.wrong{border-color:var(--bad);background:rgba(180,35,24,.06);}
+    .fi:disabled{background:rgba(246,242,234,.9);color:var(--muted);
+      cursor:not-allowed;}
+
+    /* Multiple choice */
+    fieldset.mc{border:0;margin:0;padding:0;}
+    fieldset.mc legend{font-size:0.75rem;font-weight:700;color:var(--ink-2);
+      padding:0;margin-bottom:8px;line-height:1.5;}
+    .mc-list{list-style:none;margin:0;padding:0;display:flex;
+      flex-direction:column;gap:7px;}
+    .mc-item label{display:flex;gap:10px;align-items:center;
+      padding:9px 12px;border:1.5px solid #8c7f72;border-radius:12px;
+      cursor:pointer;background:#fff;font-size:0.875rem;color:var(--ink);
+      transition:border-color .12s,background .12s;}
+    .mc-item label:hover{border-color:var(--accent);
+      background:rgba(47,93,124,.05);}
+    .mc-item.sel label{border-color:var(--accent);border-width:2.5px;
+      background:rgba(47,93,124,.09);padding:8px 11px;}
+    .mc-item.right label{border-color:var(--good);border-width:2.5px;
+      background:rgba(21,92,56,.07);padding:8px 11px;}
+    .mc-item.miss label{border-color:var(--bad);border-width:2.5px;
+      background:rgba(180,35,24,.06);padding:8px 11px;}
+    .mc-item input[type=radio]{width:17px;height:17px;flex-shrink:0;
+      accent-color:var(--accent);cursor:pointer;}
+    .mc-item input[type=radio]:disabled{cursor:not-allowed;}
+    .mc-mark{font-weight:800;margin-left:auto;font-size:0.8125rem;
+      white-space:nowrap;}
+    .mc-mark.ok{color:var(--good);}
+    .mc-mark.no{color:var(--bad);}
+
+    .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;
+      align-items:center;}
+
+    /* Feedback — role="status" region, announced by AT */
+    .entry-fb{margin-top:9px;padding:9px 12px;border-radius:10px;
+      font-size:0.8125rem;font-weight:600;line-height:1.6;
+      animation:fadeSlide .18s ease;}
+    .entry-fb.correct{background:rgba(21,92,56,.08);
+      border:1px solid rgba(21,92,56,.22);color:var(--good);}
+    .entry-fb.wrong{background:rgba(180,35,24,.06);
+      border:1px solid rgba(180,35,24,.22);color:var(--bad);}
+    .entry-fb.neutral{background:rgba(47,93,124,.06);
+      border:1px solid rgba(47,93,124,.18);color:var(--ink-2);}
+    .entry-fb strong{color:inherit;}
+
+    /* Help ladder reveals */
+    .help-box{margin-top:9px;padding:10px 13px;border-radius:12px;
+      animation:fadeSlide .2s ease;}
+    .help-box.hintbox{background:rgba(140,72,0,.05);
+      border:1px solid rgba(140,72,0,.22);}
+    .help-box.fmlbox{background:rgba(47,93,124,.04);
+      border:1px solid rgba(47,93,124,.16);}
+    .help-box.solbox{background:rgba(21,92,56,.05);
+      border:1px solid rgba(21,92,56,.22);}
+    .reveal-label{font-size:0.625rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.07em;margin-bottom:7px;}
+    .hintbox .reveal-label{color:#8c4800;}
+    .fmlbox  .reveal-label{color:var(--accent);}
+    .solbox  .reveal-label{color:var(--good);}
+    .help-content{font-size:0.8125rem;line-height:1.7;color:var(--ink-2);}
+    .help-content .eq-block{color:var(--ink);}
+    .answer-note{margin-top:9px;padding-top:8px;
+      border-top:1px solid rgba(21,92,56,.18);font-size:0.8125rem;
+      color:var(--ink-2);line-height:1.65;}
+    .answer-note strong{color:var(--ink);}
+
+    @keyframes fadeSlide{from{opacity:0;transform:translateY(6px);}
+      to{opacity:1;transform:translateY(0);}}
+
+    /* Locked placeholder */
+    .lock-msg{margin-top:10px;padding:9px 12px;border-radius:10px;
+      background:rgba(89,104,120,.06);border:1px dashed var(--line-2);
+      font-size:0.8125rem;color:var(--muted);line-height:1.55;}
+
+    /* ── Phase 2 / completion banners ────────────────────────── */
+    .phase-banner{margin:14px 0;padding:13px 16px;border-radius:14px;
+      font-size:0.875rem;line-height:1.6;}
+    .phase-banner.p2{background:rgba(140,72,0,.07);
+      border:1px solid rgba(140,72,0,.28);color:var(--ink-2);}
+    .phase-banner.p2 strong{color:#8c4800;}
+    .phase-banner.done{background:rgba(21,92,56,.08);
+      border:1px solid rgba(21,92,56,.25);color:var(--ink-2);}
+    .phase-banner.done strong{color:var(--good);}
+    .score-line{margin-top:8px;font-size:0.8125rem;color:var(--ink-2);
+      line-height:1.7;}
+
+    /* ── Graph card ──────────────────────────────────────────── */
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);
+      position:sticky;top:18px;}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .canvas-wrap{position:relative;width:100%;aspect-ratio:1/1;
+      border-radius:10px;overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+    .graph-legend{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+    .legend-row{display:flex;align-items:center;gap:8px;
+      font-size:0.75rem;color:var(--ink-2);line-height:1.4;}
+    .legend-line{width:28px;flex-shrink:0;height:0;
+      border-top-width:3px;border-top-style:solid;}
+    .legend-line.dashed{border-top-style:dashed;}
+    .legend-line.dotted{border-top-style:dotted;}
+    .legend-swatch{width:16px;height:12px;flex-shrink:0;border-radius:3px;
+      border:1px solid var(--line-2);}
+    .legend-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
+    .legend-note{font-size:0.75rem;color:var(--muted);line-height:1.55;
+      margin:10px 0 0;}
+    .graph-empty{font-size:0.8125rem;color:var(--muted);line-height:1.6;
+      margin:10px 0 0;}
+  </style>
+</head>
+<body>
+
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105b/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105B — Economic Growth</div>
+      <h1>Solow Model: Steady State &amp; Golden Rule</h1>
+      <p class="sub">
+        Solve a randomized Solow economy all the way through — steady state,
+        golden rule, and long-run growth rates — and watch the Solow diagram
+        get built one answer at a time.
+      </p>
+
+      <p class="siblinglink">
+        Want to see the diagram move first?
+        <a href="../solow-diagram/">Open the Solow Model: Diagram Explorer</a> —
+        drag the five parameters and watch the steady state, the transition
+        path, and the golden-rule trade-off respond.
+      </p>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>You are handed a Solow economy with a Cobb–Douglas production
+          function and values for the capital share, the depreciation rate,
+          population growth, technological progress, and the savings rate.
+          Your job is to take it apart: find where the economy settles, find
+          the savings rate that would make its residents best off, and say
+          what actually grows in the long run and what does not.</p>
+          <p>Questions unlock one at a time. You must commit an answer to a
+          question before the next question opens and before any help for that
+          question becomes available — that is the point. The diagram on the
+          right is drawn in layers as your answers come in.</p>
+          <p>You will be asked to answer the following questions:</p>
+          <ol>
+            <li><strong>Production function.</strong> Identify the per-effective-worker
+            production function implied by the aggregate one.</li>
+            <li><strong>Break-even investment.</strong> Give the coefficient on
+            capital in the transition equation — the investment needed just to
+            hold capital per effective worker steady.</li>
+            <li><strong>Steady-state capital.</strong> Solve the transition
+            equation for its steady state.</li>
+            <li><strong>Steady-state output.</strong> Feed that capital stock
+            through the production function.</li>
+            <li><strong>Steady-state consumption.</strong> Find what is left
+            after saving — by either of two routes.</li>
+            <li><strong>Golden-rule savings rate.</strong> Find the savings rate
+            that maximizes steady-state consumption.</li>
+            <li><strong>Position and cost.</strong> Say whether this economy
+            saves above, below, or at the golden rule, and compute how much
+            consumption that position costs.</li>
+            <li><strong>Growth accounting.</strong> Give the long-run growth
+            rates of output per effective worker, output per worker, and
+            aggregate output.</li>
+          </ol>
+          <p>For each question, enter your answer and click
+          <strong>Check Answer</strong>. After you submit, a three-step help
+          ladder opens — <strong>Hint</strong>, then <strong>Formula</strong>,
+          then <strong>Worked solution</strong>. Using help is recorded but
+          never penalized. Once all eight are submitted, a correction pass
+          opens so you can revise before submitting final answers.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- ── Control bar ─────────────────────────────────────────── -->
+  <div class="control-bar">
+    <div class="ctl-group">
+      <span class="ctl-label" id="modeLabel">Difficulty</span>
+      <div class="ctl-row" role="group" aria-labelledby="modeLabel">
+        <button type="button" class="option-btn active" id="modeClean"
+                aria-pressed="true">Clean numbers</button>
+        <button type="button" class="option-btn" id="modeStd"
+                aria-pressed="false">Realistic numbers</button>
+      </div>
+      <p class="mode-note" id="modeNote"></p>
+    </div>
+    <div class="ctl-group">
+      <span class="ctl-label">Progress</span>
+      <div class="ctl-row">
+        <span class="progress-pill" id="progressPill"
+              role="status" aria-live="polite" aria-atomic="true">Question 1 of 8</span>
+        <button type="button" class="option-btn" id="newProblemBtn">New Problem</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="lab-grid">
+
+    <!-- ── LEFT COLUMN ──────────────────────────────────────── -->
+    <div>
+      <div class="problem-card">
+        <h2 class="problem-header">Problem</h2>
+        <p class="problem-sub" id="problemSub">
+          An economy is described by the Cobb–Douglas production function below,
+          with labor-augmenting technological progress. Take the parameters as
+          given and work out where this economy ends up in the long run.
+        </p>
+
+        <div class="model-box">
+          <div class="model-label">The economy</div>
+          <div id="modelLines"></div>
+        </div>
+
+        <div class="param-grid" id="paramGrid">
+          <div class="param">
+            <div class="label">Capital share <span class="sym">α</span></div>
+            <div class="value" id="pAlpha">—</div>
+          </div>
+          <div class="param">
+            <div class="label">Savings rate <span class="sym">s</span></div>
+            <div class="value" id="pS">—</div>
+          </div>
+          <div class="param">
+            <div class="label">Depreciation rate <span class="sym">δ</span></div>
+            <div class="value" id="pDelta">—</div>
+          </div>
+          <div class="param">
+            <div class="label">Population growth <span class="sym">n</span></div>
+            <div class="value" id="pN">—</div>
+          </div>
+          <div class="param">
+            <div class="label">Technology growth <span class="sym">g</span></div>
+            <div class="value" id="pG">—</div>
+          </div>
+          <div class="param">
+            <div class="label">Production function</div>
+            <div class="value"><span class="eq"
+              aria-label="Cobb Douglas, constant returns to scale">Cobb–Douglas, CRS</span></div>
+          </div>
+        </div>
+
+        <p class="notation-note hidden" id="notationNote"></p>
+      </div>
+
+      <div id="questionsHost"></div>
+
+      <div class="phase-banner p2 hidden" id="phase2Banner"
+           role="status" aria-live="polite" aria-atomic="true"></div>
+
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button type="button" class="primary-btn hidden" id="submitFinalBtn">
+          Submit Final Answers
+        </button>
+      </div>
+
+      <div class="phase-banner done hidden" id="doneBanner"
+           role="status" aria-live="polite" aria-atomic="true"></div>
+    </div>
+
+    <!-- ── RIGHT COLUMN ─────────────────────────────────────── -->
+    <div class="graph-col">
+      <div class="graph-card">
+        <div class="graph-title" id="solowGraphTitle">The Solow diagram</div>
+        <div class="canvas-wrap">
+          <canvas id="solowCanvas"
+                  role="img"
+                  aria-labelledby="solowGraphTitle"
+                  aria-describedby="solowGraphDesc"></canvas>
+        </div>
+
+        <div class="graph-legend" id="legendHost" aria-hidden="true">
+          <div class="legend-row hidden" id="lgProd">
+            <div class="legend-line" style="border-top-color:#2f5d7c;"></div>
+            <span id="lgProdTxt">Production function — solid blue</span>
+          </div>
+          <div class="legend-row hidden" id="lgBreak">
+            <div class="legend-line dashed" style="border-top-color:#155c38;"></div>
+            <span id="lgBreakTxt">Break-even investment — dashed green</span>
+          </div>
+          <div class="legend-row hidden" id="lgSav">
+            <div class="legend-line dotted" style="border-top-color:#b42318;"></div>
+            <span id="lgSavTxt">Saving / investment — dotted red</span>
+          </div>
+          <div class="legend-row hidden" id="lgKstar">
+            <div class="legend-dot" style="background:#1f2937;"></div>
+            <span id="lgKstarTxt">Steady state</span>
+          </div>
+          <div class="legend-row hidden" id="lgCstar">
+            <div class="legend-swatch" style="background:repeating-linear-gradient(45deg,rgba(47,93,124,.30) 0 3px,transparent 3px 6px);"></div>
+            <span id="lgCstarTxt">Consumption — hatched gap</span>
+          </div>
+          <div class="legend-row hidden" id="lgGolden">
+            <div class="legend-line dotted" style="border-top-color:#8c4800;"></div>
+            <span id="lgGoldenTxt">Golden rule</span>
+          </div>
+        </div>
+
+        <p class="graph-empty" id="graphEmpty">
+          The diagram is blank until you answer Question 1. Each correct answer
+          — or each worked solution you open — adds the next layer.
+        </p>
+        <p class="legend-note">
+          Curves are told apart by line style (solid / dashed / dotted) and by
+          the label drawn on each curve, not by color alone.
+        </p>
+      </div>
+
+      <!-- Canvas accessible description — live region (WCAG 1.1.1, 4.1.3) -->
+      <section class="sr-only" id="graphsDesc" aria-live="polite" aria-atomic="true">
+        <p id="solowGraphDesc">Solow diagram. The plot area is currently empty.
+        Answer Question 1 to draw the production function.</p>
+      </section>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 105B — Intermediate Macroeconomic Theory II</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Solow Model: Steady State & Golden Rule
+   Built from Economic Growth (Ch. 8–9) lecture notes:
+     §4.2  steady state + golden rule with technological progress
+     §4.3  growth accounting with technological progress
+     §3.3  growth accounting with population growth only
+     §1.3.1 growth accounting with neither
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const LAB_ID    = 'solow-steady-state';
+const LAB_LABEL = 'Solow Model: Steady State & Golden Rule';
+const NQ        = 8;
+
+/* ── Seeded RNG (CLAUDE.md) ─────────────────────────────────────────── */
+let _rng = null;
+let _drawCount = 0;
+function rng(){ return _rng ? _rng() : Math.random(); }
+function pick(arr){ return arr[Math.floor(rng() * arr.length)]; }
+
+/* ── State ──────────────────────────────────────────────────────────── */
+let _mode  = 'clean';          // 'clean' | 'std'
+let P      = null;             // drawn + derived parameters
+let Q       = [];              // question definitions
+let QS      = [];              // per-question state
+let _phase  = 1;               // 1 = first pass, 2 = correction pass, 3 = done
+let _firstScore = 0;
+let _fs     = 1;               // canvas font scale (WCAG 1.4.4)
+
+/* Graph layer opacities, animated in */
+const LAYERS = ['prod','lines','kstar','ystar','cstar','golden'];
+let _alpha = {};
+let _target = {};
+let _animRAF = null;
+
+const REDUCED = window.matchMedia
+  && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ── DOM refs ───────────────────────────────────────────────────────── */
+const $host       = document.getElementById('questionsHost');
+const $modelLines = document.getElementById('modelLines');
+const $notation   = document.getElementById('notationNote');
+const $progress   = document.getElementById('progressPill');
+const $modeNote   = document.getElementById('modeNote');
+const $modeClean  = document.getElementById('modeClean');
+const $modeStd    = document.getElementById('modeStd');
+const $newBtn     = document.getElementById('newProblemBtn');
+const $p2Banner   = document.getElementById('phase2Banner');
+const $doneBanner = document.getElementById('doneBanner');
+const $submitBtn  = document.getElementById('submitFinalBtn');
+const $canvas     = document.getElementById('solowCanvas');
+const $canvasWrap = $canvas.parentElement;
+const $gDesc      = document.getElementById('solowGraphDesc');
+const $graphEmpty = document.getElementById('graphEmpty');
+
+const PARAM_IDS = { alpha:'pAlpha', s:'pS', delta:'pDelta', n:'pN', g:'pG' };
+
+/* ═══════════════════════════════════════════════════════════════════════
+   NUMBER HELPERS
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Trimmed fixed-decimal formatting: 25.000 → "25", 0.100 → "0.1" */
+function nf(v, d){
+  if(v === null || v === undefined || !isFinite(v)) return '—';
+  let s = v.toFixed(d);
+  if(s.indexOf('.') >= 0) s = s.replace(/\.?0+$/, '');
+  if(s === '-0') s = '0';
+  return s;
+}
+function fv(v){ return nf(v, 3); }          // level values
+function fr(v){ return nf(v, 4); }          // rate values (δ, n, g, s, α)
+function pctOf(v){ return nf(v * 100, 2) + '%'; }
+
+/* Parse student input: plain decimals, simple fractions ("1/3"), percents
+   ("10%"), and leading "+". Returns null on anything unparseable. */
+function parseNum(raw){
+  if(raw === null || raw === undefined) return null;
+  let t = String(raw).trim();
+  if(t === '') return null;
+  let isPct = false;
+  if(/%\s*$/.test(t)){ isPct = true; t = t.replace(/%\s*$/, '').trim(); }
+  t = t.replace(/^\+/, '');
+  let v = null;
+  const frac = t.match(/^(-?\d*\.?\d+)\s*\/\s*(-?\d*\.?\d+)$/);
+  if(frac){
+    const a = parseFloat(frac[1]), b = parseFloat(frac[2]);
+    if(isFinite(a) && isFinite(b) && b !== 0) v = a / b;
+  } else if(/^-?\d*\.?\d+$/.test(t)){
+    v = parseFloat(t);
+  }
+  if(v === null || !isFinite(v)) return null;
+  return { v: isPct ? v / 100 : v, pctTyped: isPct };
+}
+
+/* Tolerance. Clean mode: absolute ±0.001. Standard: relative 0.5%. */
+function tol(exact){
+  if(_mode === 'clean') return 0.001;
+  return Math.max(0.001, 0.005 * Math.abs(exact));
+}
+function near(v, exact){
+  if(exact === null || exact === undefined || !isFinite(exact)) return false;
+  return Math.abs(v - exact) <= tol(exact);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   NOTATION
+   When g = 0, effective workers and workers grow at the same rate, so the
+   notes drop the hats (§3.4). Everything below reads its symbols from SY.
+   ═══════════════════════════════════════════════════════════════════════ */
+let SY = {};
+function setSymbols(hats){
+  SY = hats
+    ? { k:'k̂', y:'ŷ', c:'ĉ', i:'î',
+        per:'per effective worker', perShort:'eff. worker',
+        kSpoken:'k-hat', ySpoken:'y-hat', cSpoken:'c-hat' }
+    : { k:'k', y:'y', c:'c', i:'i',
+        per:'per worker', perShort:'worker',
+        kSpoken:'k', ySpoken:'y', cSpoken:'c' };
+}
+
+/* Small HTML equation builder */
+function eq(html, aria){
+  return '<span class="eq" aria-label="' + aria + '">' + html + '</span>';
+}
+function eqb(html, aria, why){
+  return '<div class="eq-block">'
+       + '<span class="eq" aria-label="' + aria + '">' + html + '</span>'
+       + (why ? '<span class="why">' + why + '</span>' : '')
+       + '</div>';
+}
+const SUP = s => '<sup>' + s + '</sup>';
+const SUB = s => '<sub>' + s + '</sub>';
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PARAMETER GENERATION
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Clean mode: α = 1/2 and δ+n+g = 0.10 exactly, so every answer is an
+   integer or a one-decimal value. The decomposition varies the reasoning
+   (and the Q8 answers) without changing the sum. */
+const CLEAN_S     = [0.20, 0.30, 0.40, 0.50, 0.60];
+const CLEAN_DECOMP = [
+  [0.04, 0.03, 0.03], [0.05, 0.03, 0.02], [0.05, 0.02, 0.03],
+  [0.06, 0.02, 0.02], [0.06, 0.03, 0.01], [0.06, 0.01, 0.03],
+  [0.08, 0.02, 0.00], [0.08, 0.00, 0.02], [0.08, 0.01, 0.01],
+  [0.10, 0.00, 0.00]
+];
+
+const STD_ALPHA = [0.25, 1/3, 0.40, 0.50];
+const STD_DELTA = [0.04, 0.05, 0.06, 0.08, 0.10];
+const STD_N     = [0, 0.01, 0.02, 0.03];
+const STD_G     = [0, 0.01, 0.02, 0.03];
+const STD_S     = [0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50];
+
+/* Plottability guards. The prompt specifies the s/(δ+n+g) window; the same
+   window is applied to α/(δ+n+g) because k_gr is plotted on the same axes
+   and an out-of-range k_gr squeezes k* into the left margin. */
+const RATIO_LO = 1.5, RATIO_HI = 12;
+
+function seedRng(){
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+  else _rng = Math.random;
+  /* Advance the stream so "New Problem" gives a fresh draw while the first
+     draw stays identical across a whole discussion section. */
+  for(let i = 0; i < _drawCount * 64; i++) rng();
+}
+
+function generateParams(){
+  seedRng();
+
+  let alpha, delta, n, g, s;
+
+  if(_mode === 'clean'){
+    alpha = 0.5;
+    s     = pick(CLEAN_S);
+    const d = pick(CLEAN_DECOMP);
+    delta = d[0]; n = d[1]; g = d[2];
+  } else {
+    let guard = 0;
+    do {
+      alpha = pick(STD_ALPHA);
+      delta = pick(STD_DELTA);
+      n     = pick(STD_N);
+      g     = pick(STD_G);
+      s     = pick(STD_S);
+      guard++;
+    } while(guard < 500 && !stdOK(alpha, delta, n, g, s));
+  }
+
+  const bev = delta + n + g;
+  const kss = Math.pow(s / bev, 1 / (1 - alpha));
+  const yss = Math.pow(kss, alpha);
+  const css = (1 - s) * yss;
+  const sgr = alpha;
+  const kgr = Math.pow(alpha / bev, 1 / (1 - alpha));
+  const ygr = Math.pow(kgr, alpha);
+  const cgr = (1 - alpha) * ygr;
+
+  let position = 'at';
+  if(s > alpha + 1e-9) position = 'above';
+  else if(s < alpha - 1e-9) position = 'below';
+
+  P = {
+    alpha, delta, n, g, s, bev,
+    kss, yss, css, sgr, kgr, ygr, cgr,
+    gap: cgr - css,
+    position,
+    hats: g > 1e-12
+  };
+
+  setSymbols(P.hats);
+
+  /* Plot range — 1.4 × the rightmost marked point, snapped to a nice tick. */
+  P.xMax = snapUp(1.4 * Math.max(P.kss, P.kgr));
+  P.yMax = snapUp(1.10 * Math.pow(P.xMax, alpha));
+}
+
+function stdOK(alpha, delta, n, g, s){
+  const bev = delta + n + g;
+  if(bev <= 0) return false;
+  const rs = s / bev;
+  if(rs < RATIO_LO || rs > RATIO_HI) return false;
+  const ra = alpha / bev;
+  if(ra < RATIO_LO || ra > RATIO_HI) return false;
+  return true;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PROBLEM CARD
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function renderProblem(){
+  const a = P.alpha;
+  const aTxt = (_mode === 'clean' || Math.abs(a - 0.5) < 1e-9) ? '1/2'
+             : (Math.abs(a - 1/3) < 1e-9 ? '1/3' : nf(a, 4));
+  const aSpoken = (Math.abs(a - 1/3) < 1e-9) ? 'one third' : nf(a, 4);
+
+  document.getElementById(PARAM_IDS.alpha).innerHTML =
+    aTxt + ' <span class="pct">(' + pctOf(a) + ' of output)</span>';
+  document.getElementById(PARAM_IDS.s).innerHTML =
+    fr(P.s) + ' <span class="pct">(' + pctOf(P.s) + ')</span>';
+  document.getElementById(PARAM_IDS.delta).innerHTML =
+    fr(P.delta) + ' <span class="pct">(' + pctOf(P.delta) + ')</span>';
+  document.getElementById(PARAM_IDS.n).innerHTML =
+    fr(P.n) + ' <span class="pct">(' + pctOf(P.n) + ')</span>';
+  document.getElementById(PARAM_IDS.g).innerHTML =
+    fr(P.g) + ' <span class="pct">(' + pctOf(P.g) + ')</span>';
+
+  $modelLines.innerHTML =
+      eqb('Y = K' + SUP('α') + '(AL)' + SUP('1−α'),
+          'Capital Y equals K to the power alpha times, open paren, A L close paren, to the power one minus alpha',
+          'aggregate production function, constant returns to scale')
+    + eqb('L′ = (1+n)L', 'L prime equals one plus n, times L',
+          'the labor force grows at rate n')
+    + eqb('A′ = (1+g)A', 'A prime equals one plus g, times A',
+          'technology grows at rate g')
+    + eqb('Δ' + SY.k + ' = s' + SY.y + ' − (δ+n+g)' + SY.k,
+          'Delta ' + SY.kSpoken + ' equals s times ' + SY.ySpoken
+          + ' minus, open paren, delta plus n plus g, close paren, times ' + SY.kSpoken,
+          'the capital transition equation — §4.1');
+
+  if(!P.hats){
+    $notation.classList.remove('hidden');
+    const why = (P.n > 1e-12)
+      ? 'This problem draws <strong>g = 0</strong>, so technology <em>A</em> is constant. '
+        + 'Effective workers <em>AL</em> and workers <em>L</em> then grow at exactly the '
+        + 'same rate, and capital per effective worker moves one-for-one with capital per '
+        + 'worker. There is nothing left for the hats to distinguish, so we drop them and '
+        + 'write <em>k</em>, <em>y</em>, <em>c</em> — this is the §3.4 case of the notes.'
+      : 'This problem draws <strong>n = 0 and g = 0</strong>. With neither the labor force '
+        + 'nor technology growing, effective workers <em>AL</em> are constant and capital '
+        + 'per effective worker is just capital per worker rescaled. We drop the hats and '
+        + 'write <em>k</em>, <em>y</em>, <em>c</em> — this is the §1 baseline model.';
+    $notation.innerHTML = '<strong>Notation:</strong> ' + why
+      + ' The algebra is unchanged: everywhere you see (δ+n+g) below, the missing terms '
+      + 'are simply zero.';
+  } else {
+    $notation.classList.add('hidden');
+    $notation.innerHTML = '';
+  }
+
+  $modeNote.textContent = (_mode === 'clean')
+    ? 'α = 1/2 and δ+n+g = 0.10, so every answer is an exact integer or one decimal — no calculator needed.'
+    : 'Parameters drawn independently. Answers accepted within 0.5% of the exact value; enter three decimals.';
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   QUESTION DEFINITIONS
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Shuffle (Fisher–Yates) using the seeded RNG so option order is stable
+   across a discussion section. */
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(rng() * (i + 1));
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+
+/* Which non-empty proper subsets of {δ, n, g} sum to v?  Used by Q2 to name
+   exactly what the student left out, which stays correct even when some of
+   δ, n, g are zero and several wrong answers coincide numerically. */
+function bevSubsetDiagnosis(v){
+  const parts = [
+    { key:'δ', val:P.delta, word:'depreciation' },
+    { key:'n', val:P.n,     word:'population growth' },
+    { key:'g', val:P.g,     word:'technological progress' }
+  ];
+  for(let mask = 1; mask < 7; mask++){
+    let sum = 0, inc = [], out = [];
+    for(let b = 0; b < 3; b++){
+      if(mask & (1 << b)){ sum += parts[b].val; inc.push(parts[b]); }
+      else out.push(parts[b]);
+    }
+    if(!near(v, sum)) continue;
+    /* Only report a miss for terms that are actually non-zero — leaving out
+       a zero term is arithmetically harmless. */
+    const realMiss = out.filter(p => Math.abs(p.val) > 1e-12);
+    if(realMiss.length === 0) continue;
+    const names = realMiss.map(p => '<strong>' + p.key + '</strong> (' + p.word + ')');
+    const list = names.length === 1 ? names[0] : names.join(' and ');
+    let why = '';
+    if(realMiss.some(p => p.key === 'g'))
+      why += ' Break-even investment leaves technology out — as A grows, each '
+           + 'effective worker also has to be equipped, or capital per effective '
+           + 'worker falls.';
+    if(realMiss.some(p => p.key === 'n'))
+      why += ' Population growth is missing — new workers need capital too.';
+    if(realMiss.some(p => p.key === 'δ'))
+      why += ' Depreciation is missing — capital still wears out and has to be replaced.';
+    if(mask === 1 && realMiss.length === 2)
+      why = ' That is the no-growth break-even from §1. Once n and g are positive, '
+          + 'holding ' + SY.k + ' steady costs more than replacing worn-out capital.';
+    return 'That sum leaves out ' + list + '.' + why;
+  }
+  return null;
+}
+
+function buildQuestions(){
+  const a = P.alpha, s = P.s, bev = P.bev, kss = P.kss, yss = P.yss, css = P.css;
+  const K = SY.k, Y = SY.y, C = SY.c;
+  const kS = SY.kSpoken, yS = SY.ySpoken, cS = SY.cSpoken;
+  const per = SY.per;
+  const bevTxt = '(δ+n+g)';
+  const bevSpoken = 'open paren delta plus n plus g close paren';
+  const aTxt = (Math.abs(a - 0.5) < 1e-9) ? '1/2'
+             : (Math.abs(a - 1/3) < 1e-9 ? '1/3' : nf(a, 4));
+
+  const qs = [];
+
+  /* ── Q1 — per-effective-worker production function ─────────────────── */
+  qs.push({
+    n: 1, kind: 'mc',
+    title: 'The ' + per + ' production function',
+    prompt: 'Divide the aggregate production function ' + eq('Y = K' + SUP('α') + '(AL)' + SUP('1−α'),
+              'Y equals K to the alpha times A L to the one minus alpha')
+            + ' through by ' + eq('AL', 'A L') + '. Which expression is the '
+            + per + ' production function?',
+    legend: 'Select the ' + per + ' production function.',
+    options: shuffle([
+      { html: eq(Y + ' = ' + K + SUP('α'), yS + ' equals ' + kS + ' to the power alpha'),
+        correct: true,
+        why: 'Constant returns to scale is what makes this work: dividing both sides '
+           + 'by AL turns K/(AL) into ' + K + ' and leaves the exponent alone.' },
+      { html: eq(Y + ' = ' + K + SUP('1−α'), yS + ' equals ' + kS + ' to the power one minus alpha'),
+        correct: false,
+        why: 'The exponent is flipped. α is the exponent on <em>capital</em>; 1−α is the '
+           + 'exponent on effective labor, and that is exactly what gets divided out.' },
+      { html: eq(Y + ' = A·' + K + SUP('α'), yS + ' equals A times ' + kS + ' to the power alpha'),
+        correct: false,
+        why: 'Technology has not been divided out. Dividing by <em>AL</em> — not just '
+           + '<em>L</em> — is what removes A from the expression; that is the whole '
+           + 'point of working per <em>effective</em> worker.' },
+      { html: eq(Y + ' = α·' + K, yS + ' equals alpha times ' + kS),
+        correct: false,
+        why: 'α is an exponent, not a coefficient. Making it a coefficient would give '
+           + 'a straight line through the origin — constant marginal product of capital, '
+           + 'and no steady state at all.' }
+    ]),
+    qText: 'Q1. Which expression is the ' + per + ' production function implied by '
+         + 'Y = K^α(AL)^(1−α)?',
+    hint: 'Constant returns to scale lets you divide both sides by any positive number. '
+        + 'Divide by <em>AL</em> and see what each piece becomes: K/(AL) is '
+        + K + ', and (AL)/(AL) is 1.',
+    formula: eqb('Y/(AL) = K' + SUP('α') + '(AL)' + SUP('1−α') + '/(AL)',
+                 'Y over A L equals K to the alpha times A L to the one minus alpha, over A L')
+           + eqb('&nbsp;&nbsp;&nbsp;&nbsp; = K' + SUP('α') + '(AL)' + SUP('−α'),
+                 'equals K to the alpha times A L to the minus alpha')
+           + eqb('&nbsp;&nbsp;&nbsp;&nbsp; = (K/AL)' + SUP('α'),
+                 'equals, open paren K over A L close paren, to the alpha')
+           + eqb(Y + ' = ' + K + SUP('α'), yS + ' equals ' + kS + ' to the alpha'),
+    solutionLines: [
+      ['Y/(AL) = K' + SUP('α') + '(AL)' + SUP('1−α') + '/(AL)',
+       'Y over A L equals K to the alpha times A L to the one minus alpha over A L',
+       'divide both sides by AL — legal because F is CRS in K and AL'],
+      ['&nbsp;&nbsp;&nbsp;&nbsp; = K' + SUP('α') + '(AL)' + SUP('1−α−1'),
+       'equals K to the alpha times A L to the one minus alpha minus one',
+       'combine the AL powers'],
+      ['&nbsp;&nbsp;&nbsp;&nbsp; = K' + SUP('α') + '(AL)' + SUP('−α') + ' = (K/AL)' + SUP('α'),
+       'equals K to the alpha times A L to the minus alpha, equals K over A L, to the alpha'],
+      [Y + ' = ' + K + SUP('α') + '&nbsp;&nbsp;with α = ' + aTxt,
+       yS + ' equals ' + kS + ' to the power alpha, with alpha equal to ' + aTxt,
+       'the ' + per + ' production function']
+    ],
+    solutionNote: 'This is the move that makes the whole model tractable: a two-input '
+      + 'aggregate production function collapses to a one-variable function of ' + K + '. '
+      + 'Everything that follows — the steady state, the golden rule, the diagram — lives '
+      + 'in this single equation. Note that <em>A</em> disappears entirely; it comes back '
+      + 'only in §4.3, when we convert back to per-<em>worker</em> terms.'
+  });
+
+  /* ── Q2 — break-even investment coefficient ────────────────────────── */
+  qs.push({
+    n: 2, kind: 'num',
+    title: 'Break-even investment',
+    prompt: 'The capital transition equation is ' + eq('Δ' + K + ' = s' + Y + ' − (?)' + K,
+              'Delta ' + kS + ' equals s ' + yS + ' minus, question mark, times ' + kS)
+            + '. What is the coefficient on ' + eq(K, kS) + ' — the investment '
+            + per + ' needed just to hold ' + eq(K, kS) + ' constant?',
+    inputs: [{ sym: 'coefficient on ' + K + ' =', unit: 'decimal or %',
+               aria: 'break-even investment coefficient, as a decimal or a percent',
+               pct: true }],
+    exact: [bev],
+    carry: null,
+    diagnose: function(vals){
+      const v = vals[0];
+      const sub = bevSubsetDiagnosis(v);
+      if(sub) return sub;
+      if(near(v, P.delta * P.n)) return 'You multiplied the components. Break-even '
+        + 'investment adds up three separate drains on capital ' + per + '; it does not compound them.';
+      if(near(v, s)) return 'That is the savings rate, which sits on the <em>other</em> side '
+        + 'of the transition equation — it multiplies ' + Y + ', not ' + K + '.';
+      return null;
+    },
+    qText: 'Q2. In Δ' + K + ' = s' + Y + ' − (?)' + K + ', what is the coefficient on ' + K + '?',
+    hint: 'Ask what has to be replaced each period just to keep capital <em>per '
+        + SY.perShort + '</em> from falling. There are three separate drains, and the '
+        + 'numerical tables in §3.1 and §4.1 of the notes walk through them one at a time: '
+        + 'machines wear out, new workers arrive, and existing workers get more productive.',
+    formula: eqb(SY.i + ' = (δ+n+g)' + K,
+                 'i ' + (P.hats ? 'hat ' : '') + 'equals ' + bevSpoken + ' times ' + kS,
+                 'break-even investment — §4.1')
+           + eqb('Δ' + K + ' = s' + K + SUP('α') + ' − (δ+n+g)' + K,
+                 'Delta ' + kS + ' equals s ' + kS + ' to the alpha minus ' + bevSpoken + ' ' + kS),
+    solutionLines: [
+      ['δ' + K + '&nbsp;&nbsp;→ replace machines that wore out',
+       'delta ' + kS + ', replace machines that wore out',
+       'δ = ' + fr(P.delta)],
+      ['n' + K + '&nbsp;&nbsp;→ equip the workers who just joined',
+       'n ' + kS + ', equip the workers who just joined',
+       'n = ' + fr(P.n)],
+      ['g' + K + '&nbsp;&nbsp;→ equip the extra effective workers created by better technology',
+       'g ' + kS + ', equip the extra effective workers created by better technology',
+       'g = ' + fr(P.g)],
+      ['(δ+n+g) = ' + fr(P.delta) + ' + ' + fr(P.n) + ' + ' + fr(P.g) + ' = <strong>' + fr(bev) + '</strong>',
+       bevSpoken + ' equals ' + fr(P.delta) + ' plus ' + fr(P.n) + ' plus ' + fr(P.g)
+       + ' equals ' + fr(bev)]
+    ],
+    solutionNote: 'The numerical table in §4.1 is the cleanest way to see why all three '
+      + 'terms belong. Start with K = 10, L = 10, A = 1. Investing only δK keeps the '
+      + '<em>machines</em> intact but not ' + K + ', because next period both L and A are '
+      + 'larger and the same capital has to be spread across more effective workers. '
+      + 'Break-even investment is the level of ' + SY.i + ' that exactly offsets all three.'
+  });
+
+  /* ── Q3 — steady-state capital ─────────────────────────────────────── */
+  qs.push({
+    n: 3, kind: 'num',
+    title: 'Steady-state capital ' + per,
+    prompt: 'Set ' + eq('Δ' + K + ' = 0', 'Delta ' + kS + ' equals zero')
+          + ' and solve for ' + eq(K + SUP('*'), kS + ' star') + '.',
+    inputs: [{ sym: K + SUP('*') + ' =', unit: 'level', pct: false,
+               aria: 'steady state capital ' + per + ', ' + kS + ' star' }],
+    exact: [kss],
+    carry: function(){
+      const b = studentVal(1, 0);
+      if(b === null || b <= 0) return null;
+      return Math.pow(s / b, 1 / (1 - a));
+    },
+    diagnose: function(vals){
+      const v = vals[0];
+      if(near(v, Math.pow(s / bev, 1 / a)))
+        return 'You used the exponent <em>1/α</em>. Look again at which exponent isolates '
+             + K + ' after you divide both sides by ' + K + SUP('α') + ': you are left with '
+             + K + SUP('1−α') + ' = s/(δ+n+g), so the exponent that undoes it is '
+             + '<em>1/(1−α)</em>.';
+      /* When α = 1/2 these two coincide exactly — s/(δ+n+g) is both the
+         "stopped early" value and ŷ* — so say so rather than guessing. */
+      const stopped = near(v, s / bev), isY = near(v, yss);
+      if(stopped && isY)
+        return 'You stopped one line early: s/(δ+n+g) = ' + fv(s / bev) + ' is equal to '
+             + K + SUP('1−α') + ', not to ' + K + '. Raise it to the power 1/(1−α). '
+             + '(Because α = 1/2 here, that same number also happens to be ' + Y + SUP('*')
+             + ' — hold on to it, it is the answer to Q4.)';
+      if(isY)
+        return 'That is ' + Y + SUP('*') + ', not ' + K + SUP('*') + ' — you went one step '
+             + 'too far and already ran the answer through the production function. '
+             + 'Hold that number; it is the answer to Q4.';
+      if(stopped)
+        return 'You stopped one line early. s/(δ+n+g) = ' + fv(s / bev) + ' is equal to '
+             + K + SUP('1−α') + ', not to ' + K + '. Raise it to the power 1/(1−α).';
+      if(near(v, Math.pow(bev / s, 1 / (1 - a))))
+        return 'The ratio is inverted. Dividing Δ' + K + ' = 0 through by ' + K + SUP('α')
+             + ' puts <em>s</em> on top and <em>(δ+n+g)</em> on the bottom, not the other way around.';
+      if(near(v, Math.pow(s / bev, 1 - a)))
+        return 'You multiplied by (1−α) instead of dividing. The exponent is '
+             + '<em>1/(1−α)</em> = ' + nf(1 / (1 - a), 3) + ', not (1−α) = ' + nf(1 - a, 3) + '.';
+      return null;
+    },
+    qText: 'Q3. Solve for steady-state capital ' + per + ', ' + SY.k + '*.',
+    hint: 'A steady state is where Δ' + K + ' = 0, so saving exactly equals break-even '
+        + 'investment: s' + K + SUP('α') + ' = (δ+n+g)' + K + '. Divide both sides by '
+        + K + SUP('α') + ' and see what power of ' + K + ' is left standing.',
+    formula: eqb('s' + K + SUP('α') + ' = (δ+n+g)' + K,
+                 's ' + kS + ' to the alpha equals ' + bevSpoken + ' ' + kS)
+           + eqb('s/(δ+n+g) = ' + K + '/' + K + SUP('α') + ' = ' + K + SUP('1−α'),
+                 's over ' + bevSpoken + ' equals ' + kS + ' over ' + kS
+                 + ' to the alpha, equals ' + kS + ' to the one minus alpha')
+           + eqb(K + SUP('*') + ' = (s/(δ+n+g))' + SUP('1/(1−α)'),
+                 kS + ' star equals, open paren s over ' + bevSpoken + ' close paren, '
+                 + 'to the power one over one minus alpha'),
+    solutionLines: [
+      ['Δ' + K + ' = s' + K + SUP('α') + ' − (δ+n+g)' + K + ' = 0',
+       'Delta ' + kS + ' equals s ' + kS + ' to the alpha minus ' + bevSpoken + ' ' + kS + ' equals zero',
+       'definition of a steady state'],
+      ['s' + K + SUP('α') + ' = (δ+n+g)' + K,
+       's ' + kS + ' to the alpha equals ' + bevSpoken + ' ' + kS,
+       'saving = break-even investment'],
+      ['s/(δ+n+g) = ' + K + SUP('1−α'),
+       's over ' + bevSpoken + ' equals ' + kS + ' to the one minus alpha',
+       'divide both sides by ' + K + SUP('α')],
+      [K + SUP('*') + ' = (s/(δ+n+g))' + SUP('1/(1−α)'),
+       kS + ' star equals s over ' + bevSpoken + ', to the one over one minus alpha',
+       'raise both sides to 1/(1−α)'],
+      [K + SUP('*') + ' = (' + fr(s) + '/' + fr(bev) + ')' + SUP(nf(1 / (1 - a), 3))
+       + ' = (' + fv(s / bev) + ')' + SUP(nf(1 / (1 - a), 3)) + ' = <strong>' + fv(kss) + '</strong>',
+       kS + ' star equals ' + fv(kss)]
+    ],
+    solutionNote: 'Read the exponent. Because 1/(1−α) = ' + nf(1 / (1 - a), 3)
+      + ' &gt; 1, the steady-state capital stock responds <em>more</em> than '
+      + 'proportionally to the savings ratio — a country that saves twice as much ends up '
+      + 'with more than twice the capital ' + per + '. The same exponent is why the '
+      + 'production function&rsquo;s curvature, not its level, is what pins the steady state down.'
+  });
+
+  /* ── Q4 — steady-state output ──────────────────────────────────────── */
+  qs.push({
+    n: 4, kind: 'num',
+    title: 'Steady-state output ' + per,
+    prompt: 'Run your steady-state capital stock through the production function to get '
+          + eq(Y + SUP('*'), yS + ' star') + '.',
+    inputs: [{ sym: Y + SUP('*') + ' =', unit: 'level', pct: false,
+               aria: 'steady state output ' + per + ', ' + yS + ' star' }],
+    exact: [yss],
+    carry: function(){
+      const kv = studentVal(2, 0);
+      if(kv === null || kv < 0) return null;
+      return Math.pow(kv, a);
+    },
+    diagnose: function(vals){
+      const v = vals[0];
+      const kv = studentVal(2, 0);
+      if(near(v, kss) || (kv !== null && near(v, kv)))
+        return 'That is capital ' + per + ', not output. You have handed back '
+             + K + SUP('*') + ' unchanged — it still needs to go through '
+             + Y + ' = ' + K + SUP('α') + '.';
+      if(near(v, Math.pow(kss, 1 - a)))
+        return 'You raised ' + K + SUP('*') + ' to the power 1−α. The production function '
+             + 'exponent is α = ' + aTxt + '; 1−α is the labor share.';
+      if(near(v, a * kss))
+        return 'You multiplied by α instead of using it as an exponent — that is the same '
+             + 'slip as option "' + Y + ' = α·' + K + '" back in Q1.';
+      if(near(v, s * yss))
+        return 'That is investment ' + per + ', s' + Y + SUP('*') + '. Output is the whole '
+             + 'thing, before any of it is saved.';
+      return null;
+    },
+    qText: 'Q4. Compute steady-state output ' + per + ', ' + SY.y + '*.',
+    hint: 'You already have ' + K + SUP('*') + '. The production function from Q1 does the '
+        + 'rest in one step — no new economics, just substitution.',
+    formula: eqb(Y + SUP('*') + ' = (' + K + SUP('*') + ')' + SUP('α'),
+                 yS + ' star equals ' + kS + ' star to the power alpha')
+           + eqb('&nbsp;&nbsp;&nbsp;&nbsp; = (s/(δ+n+g))' + SUP('α/(1−α)'),
+                 'equals s over ' + bevSpoken + ', to the power alpha over one minus alpha',
+                 'the closed form, if you prefer to skip Q3'),
+    solutionLines: [
+      [Y + SUP('*') + ' = (' + K + SUP('*') + ')' + SUP('α'),
+       yS + ' star equals ' + kS + ' star to the alpha'],
+      [Y + SUP('*') + ' = (' + fv(kss) + ')' + SUP(aTxt) + ' = <strong>' + fv(yss) + '</strong>',
+       yS + ' star equals ' + fv(yss)]
+    ],
+    solutionNote: 'Worth noticing: ' + Y + SUP('*') + ' = (s/(δ+n+g))' + SUP('α/(1−α)')
+      + ', so the exponent on the savings ratio for <em>output</em> is '
+      + nf(a / (1 - a), 3) + ' — smaller than the ' + nf(1 / (1 - a), 3) + ' that applied to '
+      + '<em>capital</em>. Diminishing returns are already biting: a doubling of the savings '
+      + 'ratio buys a much larger proportional increase in capital than in output. This is '
+      + 'the first hint that saving more is not automatically good.',
+    graphNote: true
+  });
+
+  /* ── Q5 — steady-state consumption ─────────────────────────────────── */
+  qs.push({
+    n: 5, kind: 'num',
+    title: 'Steady-state consumption ' + per,
+    prompt: 'Households save a constant fraction <em>s</em> of income and consume the rest. '
+          + 'What is ' + eq(C + SUP('*'), cS + ' star') + '?',
+    inputs: [{ sym: C + SUP('*') + ' =', unit: 'level', pct: false,
+               aria: 'steady state consumption ' + per + ', ' + cS + ' star' }],
+    exact: [css],
+    carry: function(){
+      const yv = studentVal(3, 0);
+      const kv = studentVal(2, 0);
+      const bv = studentVal(1, 0);
+      const out = [];
+      if(yv !== null) out.push((1 - s) * yv);
+      if(yv !== null && kv !== null && bv !== null) out.push(yv - bv * kv);
+      return out.length ? out : null;
+    },
+    diagnose: function(vals){
+      const v = vals[0];
+      if(near(v, s * yss))
+        return 'That is investment ' + per + ' — s' + Y + SUP('*') + ' is the part of output '
+             + 'that gets <em>saved</em>. Consumption is what is left over after that.';
+      if(near(v, yss - kss))
+        return 'You subtracted the capital <em>stock</em> instead of break-even '
+             + '<em>investment</em>. Only (δ+n+g)' + K + SUP('*') + ' = ' + fv(bev * kss)
+             + ' has to be set aside each period, not the whole stock of ' + fv(kss) + '.';
+      if(near(v, yss))
+        return 'That is total output. Some of it is saved — subtract the saved share.';
+      if(near(v, P.cgr) && Math.abs(P.gap) > tol(P.cgr))
+        return 'That is the golden-rule level of consumption, which this economy is not at. '
+             + 'Use <em>this</em> economy&rsquo;s savings rate s = ' + fr(s) + '.';
+      return null;
+    },
+    qText: 'Q5. Compute steady-state consumption ' + per + ', ' + SY.c + '*.',
+    hint: 'There are two routes and they must agree. Either take the share of output that '
+        + 'is not saved, or take output and subtract the investment that actually happens '
+        + 'in steady state. If the two disagree, one of your earlier numbers is wrong.',
+    formula: eqb(C + SUP('*') + ' = (1−s)' + Y + SUP('*'),
+                 cS + ' star equals, one minus s, times ' + yS + ' star',
+                 'route 1 — households consume 1−s of income')
+           + eqb(C + SUP('*') + ' = ' + Y + SUP('*') + ' − (δ+n+g)' + K + SUP('*'),
+                 cS + ' star equals ' + yS + ' star minus ' + bevSpoken + ' ' + kS + ' star',
+                 'route 2 — output minus break-even investment'),
+    solutionLines: [
+      ['Route 1:&nbsp; ' + C + SUP('*') + ' = (1−s)' + Y + SUP('*') + ' = (1 − ' + fr(s)
+       + ')(' + fv(yss) + ') = <strong>' + fv(css) + '</strong>',
+       'Route one, ' + cS + ' star equals one minus s, times ' + yS + ' star, equals ' + fv(css)],
+      ['Route 2:&nbsp; ' + C + SUP('*') + ' = ' + Y + SUP('*') + ' − (δ+n+g)' + K + SUP('*')
+       + ' = ' + fv(yss) + ' − (' + fr(bev) + ')(' + fv(kss) + ') = ' + fv(yss) + ' − '
+       + fv(bev * kss) + ' = <strong>' + fv(css) + '</strong>',
+       'Route two, ' + cS + ' star equals ' + yS + ' star minus ' + bevSpoken + ' ' + kS
+       + ' star, equals ' + fv(css)],
+      ['Why they agree:&nbsp; s' + Y + SUP('*') + ' = ' + fv(s * yss) + ' = (δ+n+g)'
+       + K + SUP('*') + ' = ' + fv(bev * kss),
+       's ' + yS + ' star equals ' + bevSpoken + ' ' + kS + ' star',
+       'this equality <em>is</em> the steady state']
+    ],
+    solutionNote: 'The two routes agree for one reason only: in a steady state, saving '
+      + 'equals break-even investment, s' + Y + SUP('*') + ' = (δ+n+g)' + K + SUP('*')
+      + ' — both equal ' + fv(s * yss) + ' here. That is the definition of "steady state" '
+      + 'turned into arithmetic, and it gives you a free check on your own work: whenever '
+      + 'the two routes to ' + C + SUP('*') + ' disagree, you know without being told that '
+      + K + SUP('*') + ' or ' + Y + SUP('*') + ' is wrong.'
+  });
+
+  /* ── Q6 — golden-rule savings rate ─────────────────────────────────── */
+  qs.push({
+    n: 6, kind: 'num',
+    title: 'The golden-rule savings rate',
+    prompt: 'Of all the steady states this economy could sit in, one delivers the highest '
+          + 'consumption ' + per + '. Which savings rate gets it there?',
+    inputs: [{ sym: 's' + SUB('gr') + ' =', unit: 'decimal or %', pct: true,
+               aria: 'golden rule savings rate, s subscript g r, as a decimal or a percent' }],
+    exact: [a],
+    carry: null,
+    diagnose: function(vals){
+      const v = vals[0];
+      if(near(v, bev))
+        return 'That is the golden-rule condition on the <em>marginal product of capital</em> '
+             + '(MP<sub>K</sub> = δ+n+g), not the savings rate that achieves it. You have '
+             + 'stopped at the first-order condition; keep going and substitute '
+             + K + SUP('*') + ' into it.';
+      if(near(v, 1 - a))
+        return 'That is the labor share, 1−α = ' + nf(1 - a, 4) + '. The golden-rule savings '
+             + 'rate is the <em>capital</em> share.';
+      if(near(v, s))
+        return 'That is this economy&rsquo;s actual savings rate. The question asks what it '
+             + '<em>should</em> be — and the answer does not depend on s at all.';
+      if(near(v, P.kgr) || near(v, P.cgr))
+        return 'That is a level, not a rate. s' + SUB('gr') + ' is a savings rate between '
+             + '0 and 1.';
+      return null;
+    },
+    qText: 'Q6. What savings rate maximizes steady-state consumption ' + per + '?',
+    hint: 'Write consumption as a function of ' + K + SUP('*') + ' alone — using the steady-state '
+        + 'fact that investment equals break-even investment — then differentiate and set it '
+        + 'to zero. The result is a condition on MP<sub>K</sub>; substituting ' + K + SUP('*')
+        + ' into that condition collapses it to something startlingly simple.',
+    formula: eqb(C + SUP('*') + ' = ' + K + SUP('*α') + ' − (δ+n+g)' + K + SUP('*'),
+                 cS + ' star equals ' + kS + ' star to the alpha minus ' + bevSpoken + ' ' + kS + ' star')
+           + eqb('∂' + C + SUP('*') + '/∂' + K + SUP('*') + ' = α' + K + SUP('*α−1')
+                 + ' − (δ+n+g) = 0',
+                 'partial derivative of ' + cS + ' star with respect to ' + kS
+                 + ' star equals alpha ' + kS + ' star to the alpha minus one, minus '
+                 + bevSpoken + ', equals zero')
+           + eqb('MP' + SUB('K') + ' = δ+n+g',
+                 'M P K equals ' + bevSpoken,
+                 'the golden-rule condition — §4.2'),
+    solutionLines: [
+      [C + SUP('*') + ' = ' + Y + SUP('*') + ' − ' + SY.i + SUP('*') + ' = ' + K + SUP('*α')
+       + ' − (δ+n+g)' + K + SUP('*'),
+       cS + ' star equals ' + kS + ' star to the alpha minus ' + bevSpoken + ' ' + kS + ' star',
+       'in steady state, ' + SY.i + '* = (δ+n+g)' + K + '*'],
+      ['α' + K + SUP('*α−1') + ' = δ+n+g',
+       'alpha ' + kS + ' star to the alpha minus one equals ' + bevSpoken,
+       'first-order condition: MP' + SUB('K') + ' = δ+n+g'],
+      ['α[(s/(δ+n+g))' + SUP('1/(1−α)') + ']' + SUP('α−1') + ' = δ+n+g',
+       'alpha times, s over ' + bevSpoken + ' to the one over one minus alpha, all to the '
+       + 'alpha minus one, equals ' + bevSpoken,
+       'substitute the steady state, because the golden rule must itself be a steady state'],
+      ['α(s/(δ+n+g))' + SUP('−1') + ' = δ+n+g',
+       'alpha times s over ' + bevSpoken + ', to the minus one, equals ' + bevSpoken,
+       'since (α−1)/(1−α) = −1'],
+      ['α(δ+n+g)/s = δ+n+g&nbsp; ⟹ &nbsp;α/s = 1',
+       'alpha times ' + bevSpoken + ' over s equals ' + bevSpoken + ', so alpha over s equals one',
+       'the (δ+n+g) cancels — this is the whole trick'],
+      ['s' + SUB('gr') + ' = α = <strong>' + fr(a) + '</strong>',
+       's subscript g r equals alpha equals ' + fr(a)]
+    ],
+    solutionNote: '<strong>The number is not the point — the independence is.</strong> '
+      + 'Look at the fourth line: (δ+n+g) appears on both sides and cancels completely. '
+      + 'The golden-rule savings rate is α no matter what δ, n, or g happen to be. Two '
+      + 'economies with wildly different depreciation, population growth, and technological '
+      + 'progress should save exactly the same share of income, provided capital earns the '
+      + 'same share of output. Because there is nothing to compute here, treat this question '
+      + 'as a check on the derivation rather than the arithmetic; Q7 is where the number '
+      + 'actually has to do some work.'
+  });
+
+  /* ── Q7 — position and cost ────────────────────────────────────────── */
+  const posOpts = [
+    { key:'above', label:'Above the golden rule — this economy saves too much' },
+    { key:'below', label:'Below the golden rule — this economy saves too little' },
+    { key:'at',    label:'Exactly at the golden rule' }
+  ];
+  qs.push({
+    n: 7, kind: 'mixed',
+    title: 'Position and cost',
+    prompt: 'Compare this economy&rsquo;s savings rate to the golden-rule rate, then compute '
+          + 'how much steady-state consumption ' + per + ' is being given up. '
+          + '<strong>Both parts must be right.</strong>',
+    legend: 'Is this economy saving above, below, or at the golden rule?',
+    options: posOpts.map(o => ({ html: o.label, correct: o.key === P.position, key: o.key })),
+    inputs: [{ sym: C + SUB('gr') + ' − ' + C + SUP('*') + ' =', unit: 'consumption gap',
+               pct: false,
+               aria: 'the consumption gap, ' + cS + ' subscript g r minus ' + cS + ' star' }],
+    exact: [P.gap],
+    carry: function(){
+      const out = [];
+      const cv = studentVal(4, 0);
+      const bv = studentVal(1, 0);
+      if(cv !== null) out.push(P.cgr - cv);
+      if(bv !== null && bv > 0){
+        const kg = Math.pow(a / bv, 1 / (1 - a));
+        const cg = (1 - a) * Math.pow(kg, a);
+        out.push(cg - P.css);
+        if(cv !== null) out.push(cg - cv);
+      }
+      return out.length ? out : null;
+    },
+    diagnose: function(vals){
+      const v = vals[0];
+      if(near(v, -P.gap) && Math.abs(P.gap) > tol(P.gap))
+        return 'Right magnitude, wrong sign. The question asks for ' + C + SUB('gr')
+             + ' − ' + C + SUP('*') + ' — golden-rule consumption <em>minus</em> actual — '
+             + 'so it is the consumption this economy is <em>missing</em>, and it is never '
+             + 'negative: no steady state beats the golden rule.';
+      if(near(v, P.cgr))
+        return 'That is golden-rule consumption itself, ' + C + SUB('gr') + ' = ' + fv(P.cgr)
+             + '. The question asks for the <em>gap</em> — subtract this economy&rsquo;s '
+             + C + SUP('*') + ' = ' + fv(css) + '.';
+      if(near(v, P.kgr))
+        return 'That is ' + K + SUB('gr') + ' = ' + fv(P.kgr) + ', the golden-rule capital '
+             + 'stock. You still need to convert it to consumption and then difference.';
+      if(near(v, P.kgr - kss))
+        return 'That is the gap in <em>capital</em>, ' + K + SUB('gr') + ' − ' + K + SUP('*')
+             + '. The question asks for the gap in consumption.';
+      if(near(v, P.ygr - yss))
+        return 'That is the gap in <em>output</em>. More output at the golden rule is not '
+             + 'the point — some of that extra output has to be reinvested. Difference '
+             + 'consumption, not output.';
+      return null;
+    },
+    qText: 'Q7. Is this economy above, below, or at the golden rule, and what is the '
+         + 'consumption gap ' + SY.c + '_gr − ' + SY.c + '*?',
+    hint: 'For the first part, all you need is s versus α — no computation. For the second, '
+        + 'find the golden-rule capital stock the same way you found ' + K + SUP('*') + ', '
+        + 'but with α in place of s, then take consumption at that point and subtract '
+        + 'the consumption you found in Q5.',
+    formula: eqb(K + SUB('gr') + ' = (α/(δ+n+g))' + SUP('1/(1−α)'),
+                 kS + ' subscript g r equals, alpha over ' + bevSpoken + ', to the one over one minus alpha',
+                 'the steady state that a savings rate of α produces')
+           + eqb(C + SUB('gr') + ' = (1−α)(' + K + SUB('gr') + ')' + SUP('α'),
+                 cS + ' subscript g r equals, one minus alpha, times ' + kS
+                 + ' subscript g r to the alpha',
+                 'because (δ+n+g)' + K + SUB('gr') + ' = α' + K + SUB('gr') + SUP('α'))
+           + eqb('gap = ' + C + SUB('gr') + ' − ' + C + SUP('*'),
+                 'gap equals ' + cS + ' subscript g r minus ' + cS + ' star'),
+    solutionLines: [
+      ['s = ' + fr(s) + '&nbsp; vs &nbsp;α = ' + fr(a) + '&nbsp; ⟹ &nbsp;<strong>'
+       + P.position + ' the golden rule</strong>',
+       's equals ' + fr(s) + ' versus alpha equals ' + fr(a) + ', so ' + P.position
+       + ' the golden rule'],
+      [K + SUB('gr') + ' = (α/(δ+n+g))' + SUP('1/(1−α)') + ' = (' + fr(a) + '/' + fr(bev)
+       + ')' + SUP(nf(1 / (1 - a), 3)) + ' = <strong>' + fv(P.kgr) + '</strong>',
+       kS + ' subscript g r equals ' + fv(P.kgr)],
+      [Y + SUB('gr') + ' = (' + fv(P.kgr) + ')' + SUP(aTxt) + ' = ' + fv(P.ygr),
+       yS + ' subscript g r equals ' + fv(P.ygr)],
+      [C + SUB('gr') + ' = (1−α)' + Y + SUB('gr') + ' = (1 − ' + fr(a) + ')(' + fv(P.ygr)
+       + ') = <strong>' + fv(P.cgr) + '</strong>',
+       cS + ' subscript g r equals ' + fv(P.cgr)],
+      ['gap = ' + fv(P.cgr) + ' − ' + fv(css) + ' = <strong>' + fv(P.gap) + '</strong>',
+       'gap equals ' + fv(P.gap)]
+    ],
+    solutionNote: goldenNote()
+  });
+
+  /* ── Q8 — growth accounting ────────────────────────────────────────── */
+  qs.push({
+    n: 8, kind: 'num',
+    title: 'Growth accounting in the long run',
+    prompt: 'The economy has settled into its steady state. Give the long-run growth rate '
+          + 'of each of the three quantities below.',
+    inputs: [
+      { sym: '%Δ' + Y + SUP('*') + ' =', unit: 'output ' + per, pct: true,
+        aria: 'percent change in ' + yS + ' star, output ' + per },
+      { sym: '%Δy =',  unit: 'output per worker', pct: true,
+        aria: 'percent change in y, output per worker' },
+      { sym: '%ΔY =',  unit: 'aggregate output', pct: true,
+        aria: 'percent change in capital Y, aggregate output' }
+    ],
+    exact: [0, P.g, P.n + P.g],
+    carry: null,
+    diagnose: function(vals){
+      const msgs = [];
+      if(!near(vals[0], 0)){
+        if(near(vals[0], P.g) && P.g > 1e-12)
+          msgs.push('<strong>' + Y + SUP('*') + ':</strong> that is the growth rate of output '
+            + 'per <em>worker</em>. Output per <em>effective</em> worker is constant in '
+            + 'steady state — that is what "steady state" means. Its growth rate is 0.');
+        else if(near(vals[0], P.n + P.g))
+          msgs.push('<strong>' + Y + SUP('*') + ':</strong> that is aggregate output growth. '
+            + Y + SUP('*') + ' is pinned down by the steady state and does not move at all.');
+        else
+          msgs.push('<strong>' + Y + SUP('*') + ':</strong> in steady state ' + K
+            + ' is constant, and ' + Y + ' = ' + K + SUP('α') + ' is a function of ' + K
+            + ' alone — so ' + Y + SUP('*') + ' cannot be growing.');
+      }
+      if(!near(vals[1], P.g)){
+        if(near(vals[1], P.n + P.g) && P.n > 1e-12)
+          msgs.push('<strong>y:</strong> that is aggregate output. Output per worker grows '
+            + 'only with technology — adding workers raises the total but not the per-worker '
+            + 'figure.');
+        else if(near(vals[1], 0) && P.g > 1e-12)
+          msgs.push('<strong>y:</strong> y = A' + Y + SUP('*') + '. The second factor is '
+            + 'constant, but A grows at g = ' + fr(P.g) + ', so y grows at g.');
+        else
+          msgs.push('<strong>y:</strong> write y = Y/L = A' + Y + SUP('*') + ', then take '
+            + 'logs and the total derivative: %Δy = %ΔA + %Δ' + Y + SUP('*') + '.');
+      }
+      if(!near(vals[2], P.n + P.g)){
+        if(near(vals[2], P.g) && P.n > 1e-12)
+          msgs.push('<strong>Y:</strong> aggregate output also grows with the labor force. '
+            + 'You have the technology term but not the population term.');
+        else if(near(vals[2], P.n) && P.g > 1e-12)
+          msgs.push('<strong>Y:</strong> you have the population term but dropped '
+            + 'technology. Y = AL' + Y + SUP('*') + ' has <em>both</em> A and L in it.');
+        else
+          msgs.push('<strong>Y:</strong> write Y = AL' + Y + SUP('*') + ', take logs and the '
+            + 'total derivative: %ΔY = %ΔA + %ΔL + %Δ' + Y + SUP('*') + '.');
+      }
+      return msgs.length ? msgs.join(' ') : null;
+    },
+    qText: 'Q8. Long-run growth rates of ' + SY.y + '*, output per worker y, and aggregate output Y.',
+    hint: 'Each one is the same two-step trick from the notes: write the variable as a '
+        + 'product, take logs, then take the total derivative so products become sums of '
+        + 'growth rates. Start from ' + Y + SUP('*') + ' = (' + K + SUP('*') + ')' + SUP('α')
+        + ', then y = A' + Y + SUP('*') + ', then Y = AL' + Y + SUP('*') + '.',
+    formula: eqb('%Δ' + Y + SUP('*') + ' = α·%Δ' + K + SUP('*') + ' = α·0 = 0',
+                 'percent change in ' + yS + ' star equals alpha times percent change in '
+                 + kS + ' star equals zero')
+           + eqb('y = Y/L = A' + Y + SUP('*') + '&nbsp; ⟹ &nbsp;%Δy = %ΔA + %Δ' + Y + SUP('*') + ' = g + 0',
+                 'y equals Y over L equals A ' + yS + ' star, so percent change in y equals '
+                 + 'percent change in A plus percent change in ' + yS + ' star, equals g plus zero')
+           + eqb('Y = AL' + Y + SUP('*') + '&nbsp; ⟹ &nbsp;%ΔY = %ΔA + %ΔL + %Δ' + Y + SUP('*') + ' = g + n + 0',
+                 'capital Y equals A L ' + yS + ' star, so percent change in capital Y equals '
+                 + 'percent change in A plus percent change in L plus percent change in '
+                 + yS + ' star, equals g plus n plus zero'),
+    solutionLines: [
+      ['%Δ' + Y + SUP('*') + ' = α·%Δ' + K + SUP('*') + ' = α·0 = <strong>0</strong>',
+       'percent change in ' + yS + ' star equals zero',
+       K + '* is constant by construction — that <em>is</em> the steady state'],
+      ['y = Y/L = A·(Y/AL) = A' + Y + SUP('*'),
+       'y equals Y over L equals A times Y over A L equals A ' + yS + ' star',
+       'convert back to per-worker terms'],
+      ['%Δy = %ΔA + %Δ' + Y + SUP('*') + ' = g + 0 = <strong>' + fr(P.g) + '</strong>',
+       'percent change in y equals g equals ' + fr(P.g)],
+      ['Y = AL·(Y/AL) = AL' + Y + SUP('*'),
+       'capital Y equals A L times Y over A L equals A L ' + yS + ' star'],
+      ['%ΔY = %ΔA + %ΔL + %Δ' + Y + SUP('*') + ' = g + n + 0 = <strong>' + fr(P.n + P.g)
+       + '</strong>',
+       'percent change in capital Y equals g plus n equals ' + fr(P.n + P.g)]
+    ],
+    solutionNote: growthNote()
+  });
+
+  return qs;
+}
+
+/* Tailored close-out text for Q7, depending on where the economy sits. */
+function goldenNote(){
+  const C = SY.c, K = SY.k, per = SY.per;
+  const cleanSym = (_mode === 'clean');
+  let head;
+  if(P.position === 'at'){
+    head = 'This economy is already at the golden rule: s = α = ' + fr(P.alpha)
+         + ', so ' + K + '<sup>*</sup> = ' + K + '<sub>gr</sub> and the gap is exactly zero. '
+         + 'No feasible change in the savings rate raises steady-state consumption.';
+  } else if(P.position === 'above'){
+    head = 'This economy over-saves: s = ' + fr(P.s) + ' &gt; α = ' + fr(P.alpha) + '. '
+         + 'It has <em>more</em> capital and <em>more</em> output than the golden rule '
+         + '(' + K + '<sup>*</sup> = ' + fv(P.kss) + ' vs ' + K + '<sub>gr</sub> = '
+         + fv(P.kgr) + ') and still consumes less, because the extra capital costs more in '
+         + 'break-even investment than it produces. This is the dynamically inefficient case: '
+         + 'cutting the savings rate to α would raise consumption <em>immediately and forever</em> '
+         + '— there is no trade-off at all.';
+  } else {
+    head = 'This economy under-saves: s = ' + fr(P.s) + ' &lt; α = ' + fr(P.alpha) + '. '
+         + 'Raising the savings rate to α would eventually lift consumption ' + per
+         + ' by ' + fv(P.gap) + ', but not for free: consumption has to <em>fall</em> first '
+         + 'while the extra capital is being accumulated. Unlike the over-saving case, '
+         + 'getting to the golden rule here is a genuine trade-off between generations.';
+  }
+  let sym = ' The consumption gap is symmetric in a way that is easy to miss: because '
+    + C + '<sup>*</sup> = (1−s)(s/(δ+n+g))<sup>α/(1−α)</sup> peaks at s = α and falls away '
+    + 'on both sides, saving too much and saving too little by the same margin cost about '
+    + 'the same amount of consumption.';
+  if(cleanSym){
+    sym += ' In this mode you can see it exactly: s = 0.40 and s = 0.60 both give '
+        + SY.c + '<sup>*</sup> = 2.4 — equal distances from α = 0.5, equal losses of 0.1.';
+  }
+  return head + sym + ' What the golden rule does <em>not</em> do is change the long-run '
+       + 'growth rate — it changes the <em>level</em> of consumption only. That is Q8.';
+}
+
+/* Tailored close-out text for Q8, depending on which of n, g are zero. */
+function growthNote(){
+  const Y = SY.y;
+  const hasG = P.g > 1e-12, hasN = P.n > 1e-12;
+  let s = 'This is the thesis of the whole chapter, and the three numbers say it in order. ';
+  s += 'Output per <em>effective</em> worker stops growing — capital accumulation runs into '
+     + 'diminishing returns and the steady state is exactly the point where it stops paying '
+     + 'for itself. ';
+  if(hasG){
+    s += 'Output per <em>worker</em> grows at g = ' + fr(P.g) + ' anyway, and it grows for '
+       + 'one reason only: technology. Per §4.3, y = A' + Y + '<sup>*</sup>, and the second '
+       + 'factor is a constant — every bit of long-run growth in living standards comes from '
+       + 'the <em>A</em> term. Saving more raises the level of y forever, but its growth rate '
+       + 'never budges from g.';
+  } else if(hasN){
+    s += 'Output per <em>worker</em> does not grow either: this problem drew <strong>g = 0</strong>, '
+       + 'so y = A' + Y + '<sup>*</sup> with A constant — a flat line. This is the §3.3 case, '
+       + 'and it is the disappointing one: population growth makes the <em>economy</em> bigger '
+       + '(aggregate output grows at n = ' + fr(P.n) + ') without making anyone better off. '
+       + 'Living standards are dead in the water until you let technology grow.';
+  } else {
+    s += 'Neither does output per worker, and neither does aggregate output: this problem drew '
+       + '<strong>n = 0 and g = 0</strong>, so all three growth rates are zero. This is the '
+       + '§1.3.1 baseline, and it is precisely the result that motivates the rest of the '
+       + 'chapter — a model of "growth" with no growth in it. Population growth (§3) buys '
+       + 'growth in the aggregate but not per worker; only technological progress (§4) buys '
+       + 'growth in living standards.';
+  }
+  if(hasN && hasG){
+    s += ' Aggregate output picks up the labor force on top: n + g = ' + fr(P.n + P.g)
+       + '. Note that the gap between %ΔY and %Δy is exactly n — the population term — which '
+       + 'is why a country can have fast GDP growth and stagnant living standards at the same time.';
+  }
+  return s;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   QUESTION STATE + RENDERING
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function blankState(){
+  return {
+    submitted:  false,   // has a Phase 1 answer been committed?
+    firstOK:    false,
+    firstText:  '',
+    finalOK:    false,
+    finalText:  '',
+    tries:      0,
+    ladder:     0,       // 0 none, 1 hint, 2 formula, 3 worked solution
+    vals:       [],      // parsed numeric values from the last submission
+    choice:     null,    // MC selection index
+    resolved:   false    // correct, or worked solution opened → graph layer unlocks
+  };
+}
+
+/* The numeric value the student most recently submitted for question qi
+   (0-based), input index ii. Used for carry-forward grading. */
+function studentVal(qi, ii){
+  const st = QS[qi];
+  if(!st || !st.submitted) return null;
+  const v = st.vals[ii];
+  return (v === undefined || v === null || !isFinite(v)) ? null : v;
+}
+
+function qCardHTML(q){
+  const n = q.n;
+  let inner = '';
+
+  if(q.kind === 'mc' || q.kind === 'mixed'){
+    inner += '<fieldset class="mc" id="fs' + n + '">'
+          +  '<legend>' + q.legend + '</legend>'
+          +  '<ul class="mc-list" id="mcList' + n + '">';
+    q.options.forEach(function(o, i){
+      inner += '<li class="mc-item" id="mc' + n + '_' + i + '">'
+            +  '<label>'
+            +    '<input type="radio" name="q' + n + '" value="' + i + '"/>'
+            +    '<span>' + o.html + '</span>'
+            +    '<span class="mc-mark" id="mcMark' + n + '_' + i + '"></span>'
+            +  '</label></li>';
+    });
+    inner += '</ul></fieldset>';
+  }
+
+  if(q.inputs && q.inputs.length){
+    inner += '<div class="entry-area">';
+    q.inputs.forEach(function(inp, i){
+      inner += '<div class="entry-row">'
+            +    '<span class="entry-sym">' + inp.sym + '</span>'
+            +    '<input class="fi" id="in' + n + '_' + i + '" type="text" '
+            +           'inputmode="decimal" autocomplete="off" placeholder="?" '
+            +           'aria-label="' + inp.aria + '"/>'
+            +    '<span class="entry-unit">' + inp.unit + '</span>'
+            +  '</div>';
+    });
+    inner += '</div>';
+  }
+
+  return '<div class="q-card" id="qc' + n + '">'
+    + '<div class="q-card-header">'
+    +   '<div>'
+    +     '<div class="q-num">Question ' + n + '</div>'
+    +     '<div class="q-title">' + q.title + '</div>'
+    +   '</div>'
+    +   '<div class="chip-row">'
+    +     '<span class="status-chip wait hidden" id="chipWait' + n + '">🔒 Locked</span>'
+    +     '<span class="status-chip help hidden" id="chipHelp' + n + '">⚑ Help used</span>'
+    +     '<span class="status-chip done hidden" id="chipDone' + n + '">✓ Correct</span>'
+    +     '<span class="status-chip miss hidden" id="chipMiss' + n + '">✗ Not yet</span>'
+    +   '</div>'
+    + '</div>'
+    + '<p class="q-prompt">' + q.prompt + '</p>'
+    + '<div id="body' + n + '">' + inner + '</div>'
+    + '<div class="btn-row" id="btns' + n + '">'
+    +   '<button type="button" class="primary-btn" id="chk' + n + '">Check Answer</button>'
+    +   '<button type="button" class="option-btn" id="hnt' + n + '" disabled '
+    +           'aria-label="Show a hint for question ' + n
+    +           ' — unlocks after you submit an answer">Hint</button>'
+    +   '<button type="button" class="option-btn" id="fml' + n + '" disabled '
+    +           'aria-label="Show the formula for question ' + n
+    +           ' — unlocks after the hint">Formula</button>'
+    +   '<button type="button" class="option-btn" id="sol' + n + '" disabled '
+    +           'aria-label="Show the worked solution for question ' + n
+    +           ' — unlocks after the formula">Worked solution</button>'
+    + '</div>'
+    + '<div id="fb' + n + '" class="hidden" role="status" aria-live="polite" aria-atomic="true"></div>'
+    + '<div class="lock-msg hidden" id="lock' + n + '"></div>'
+    + '<div class="help-box hintbox hidden" id="hntBox' + n + '">'
+    +   '<div class="reveal-label">Hint</div>'
+    +   '<div class="help-content" id="hntC' + n + '"></div>'
+    + '</div>'
+    + '<div class="help-box fmlbox hidden" id="fmlBox' + n + '">'
+    +   '<div class="reveal-label">Formula</div>'
+    +   '<div class="help-content" id="fmlC' + n + '"></div>'
+    + '</div>'
+    + '<div class="help-box solbox hidden" id="solBox' + n + '">'
+    +   '<div class="reveal-label">Worked solution</div>'
+    +   '<div class="help-content" id="solC' + n + '"></div>'
+    +   '<div class="answer-note" id="solN' + n + '"></div>'
+    + '</div>'
+    + '</div>';
+}
+
+function renderQuestions(){
+  $host.innerHTML = Q.map(qCardHTML).join('');
+  Q.forEach(function(q){
+    const n = q.n;
+    document.getElementById('chk' + n).addEventListener('click', function(){ handleCheck(n); });
+    document.getElementById('hnt' + n).addEventListener('click', function(){ openHelp(n, 1, true); });
+    document.getElementById('fml' + n).addEventListener('click', function(){ openHelp(n, 2, true); });
+    document.getElementById('sol' + n).addEventListener('click', function(){ openHelp(n, 3, true); });
+
+    if(q.options){
+      q.options.forEach(function(o, i){
+        const el = document.querySelector('#mc' + n + '_' + i + ' input');
+        el.addEventListener('change', function(){
+          QS[n - 1].choice = i;
+          for(let j = 0; j < q.options.length; j++)
+            document.getElementById('mc' + n + '_' + j)
+              .classList.toggle('sel', j === i);
+        });
+      });
+    }
+    if(q.inputs){
+      q.inputs.forEach(function(inp, i){
+        document.getElementById('in' + n + '_' + i)
+          .addEventListener('keydown', function(e){
+            if(e.key === 'Enter'){ e.preventDefault(); handleCheck(n); }
+          });
+      });
+    }
+  });
+  applyLocks();
+}
+
+/* Question n is open when every earlier question has been submitted
+   (Phase 1), or always (Phase 2). Phase 3 locks everything. */
+function isOpen(n){
+  if(_phase === 3) return false;
+  if(_phase === 2) return true;
+  for(let i = 0; i < n - 1; i++) if(!QS[i].submitted) return false;
+  return true;
+}
+
+function applyLocks(){
+  Q.forEach(function(q){
+    const n = q.n, st = QS[n - 1];
+    const open = isOpen(n);
+    const card = document.getElementById('qc' + n);
+    const lock = document.getElementById('lock' + n);
+    const body = document.getElementById('body' + n);
+    const btns = document.getElementById('btns' + n);
+
+    card.classList.toggle('locked', !open && !st.submitted);
+    document.getElementById('chipWait' + n).classList.toggle('hidden', open || st.submitted);
+
+    if(!open && !st.submitted){
+      body.classList.add('hidden');
+      btns.classList.add('hidden');
+      lock.classList.remove('hidden');
+      lock.textContent = 'Opens once you submit an answer to Question ' + (n - 1)
+        + '. Commit to a number first — that is what makes the feedback worth anything.';
+    } else {
+      body.classList.remove('hidden');
+      btns.classList.remove('hidden');
+      lock.classList.add('hidden');
+    }
+
+    /* Inputs / radios enabled only while the question is actually workable. */
+    const active = open;
+    if(q.inputs) q.inputs.forEach(function(inp, i){
+      const el = document.getElementById('in' + n + '_' + i);
+      if(el) el.disabled = !active;
+    });
+    if(q.options) q.options.forEach(function(o, i){
+      const el = document.querySelector('#mc' + n + '_' + i + ' input');
+      if(el) el.disabled = !active;
+    });
+    const chk = document.getElementById('chk' + n);
+    if(chk){
+      chk.disabled = !active;
+      chk.textContent = (_phase === 2 && st.submitted) ? 'Re-check Answer' : 'Check Answer';
+    }
+  });
+  updateProgress();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   HELP LADDER
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function helpHTML(q, level){
+  if(level === 1) return q.hint;
+  if(level === 2) return q.formula;
+  return q.solutionLines.map(function(L){
+    return eqb(L[0], L[1], L[2] || '');
+  }).join('');
+}
+
+function openHelp(n, level, viaButton){
+  const q  = Q[n - 1], st = QS[n - 1];
+  if(!st.submitted) return;                 // no help before commitment
+  if(level > st.ladder + 1) return;         // strictly one rung at a time
+
+  const ids = { 1:['hntBox','hntC'], 2:['fmlBox','fmlC'], 3:['solBox','solC'] }[level];
+  const box = document.getElementById(ids[0] + n);
+  if(box.classList.contains('hidden')){
+    document.getElementById(ids[1] + n).innerHTML = helpHTML(q, level);
+    if(level === 3) document.getElementById('solN' + n).innerHTML = q.solutionNote;
+    box.classList.remove('hidden');
+  }
+
+  if(level > st.ladder) st.ladder = level;
+  if(viaButton) document.getElementById('chipHelp' + n).classList.remove('hidden');
+
+  document.getElementById('hnt' + n).disabled = st.ladder >= 1;
+  document.getElementById('fml' + n).disabled = st.ladder >= 2 || st.ladder < 1;
+  document.getElementById('sol' + n).disabled = st.ladder >= 3 || st.ladder < 2;
+
+  /* Seeing the worked solution reveals the answer, so the matching graph
+     layer is no longer a spoiler — unlock it so a stuck student can still
+     see the picture their algebra was supposed to produce. */
+  if(level === 3 && !st.resolved){
+    st.resolved = true;
+    st.finalText = (st.finalText || '') + ' [worked solution opened]';
+    syncGraphLayers();
+  }
+  refreshHelpButtons(n);
+}
+
+function refreshHelpButtons(n){
+  const st = QS[n - 1];
+  const h = document.getElementById('hnt' + n);
+  const f = document.getElementById('fml' + n);
+  const s = document.getElementById('sol' + n);
+  if(!st.submitted){ h.disabled = f.disabled = s.disabled = true; return; }
+  h.disabled = st.ladder >= 1;
+  f.disabled = st.ladder < 1 || st.ladder >= 2;
+  s.disabled = st.ladder < 2 || st.ladder >= 3;
+  h.setAttribute('aria-label', st.ladder >= 1
+    ? 'Hint for question ' + n + ' — already shown'
+    : 'Show a hint for question ' + n);
+  f.setAttribute('aria-label', st.ladder < 1
+    ? 'Formula for question ' + n + ' — unlocks after the hint'
+    : (st.ladder >= 2 ? 'Formula for question ' + n + ' — already shown'
+                      : 'Show the formula for question ' + n));
+  s.setAttribute('aria-label', st.ladder < 2
+    ? 'Worked solution for question ' + n + ' — unlocks after the formula'
+    : (st.ladder >= 3 ? 'Worked solution for question ' + n + ' — already shown'
+                      : 'Show the worked solution for question ' + n));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   GRADING
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function showFB(n, kind, msg){
+  const el = document.getElementById('fb' + n);
+  el.className = 'entry-fb ' + kind;
+  el.innerHTML = msg;
+}
+
+/* Read and validate every input on question n. Returns
+   { vals:[], texts:[], pctTyped:[] } or null (with feedback already shown). */
+function readInputs(n, q){
+  const vals = [], texts = [], pcts = [];
+  for(let i = 0; i < q.inputs.length; i++){
+    const el  = document.getElementById('in' + n + '_' + i);
+    const raw = el.value.trim();
+    if(raw === ''){
+      showFB(n, 'neutral', q.inputs.length > 1
+        ? 'Fill in all three boxes before checking.'
+        : 'Enter a number before checking.');
+      return null;
+    }
+    const p = parseNum(raw);
+    if(p === null){
+      showFB(n, 'neutral', '“' + raw + '” is not a number I can read. Enter a decimal '
+        + '(0.25), a simple fraction (1/4), or a percent (25%).');
+      return null;
+    }
+    vals.push(p.v); texts.push(raw); pcts.push(p.pctTyped);
+  }
+  return { vals: vals, texts: texts, pcts: pcts };
+}
+
+/* A rate question accepts both 0.10 and 10 (meaning 10%). Returns the
+   reading that matches, or the decimal reading if neither does. */
+function resolveRate(v, exact, isPct){
+  if(!isPct) return { v: v, rescaled: false };
+  if(near(v, exact)) return { v: v, rescaled: false };
+  /* Never rescale against a target of zero: dividing by 100 would let any
+     small wrong answer (0.03, say) slip inside the tolerance band around 0. */
+  if(Math.abs(exact) <= 1e-12) return { v: v, rescaled: false };
+  if(near(v / 100, exact)) return { v: v / 100, rescaled: true };
+  return { v: v, rescaled: false };
+}
+
+function matchOne(v, exacts){
+  for(let i = 0; i < exacts.length; i++) if(near(v, exacts[i])) return true;
+  return false;
+}
+
+function handleCheck(n){
+  const q = Q[n - 1], st = QS[n - 1];
+  if(!isOpen(n)) return;
+
+  let ok = true, carryOK = false, carryNote = '';
+  const answerBits = [];
+
+  /* ── multiple-choice part ── */
+  let mcOK = true;
+  if(q.options){
+    if(st.choice === null){
+      showFB(n, 'neutral', 'Select an option before checking.');
+      return;
+    }
+    const chosen = q.options[st.choice];
+    mcOK = !!chosen.correct;
+    answerBits.push(stripTags(chosen.html));
+    /* Q7: accept a position that is consistent with the student's own Q6
+       answer, even when that answer was wrong (carry-forward). */
+    if(!mcOK && n === 7){
+      const sgrStudent = studentVal(5, 0);
+      if(sgrStudent !== null){
+        let implied = 'at';
+        if(P.s > sgrStudent + tol(sgrStudent)) implied = 'above';
+        else if(P.s < sgrStudent - tol(sgrStudent)) implied = 'below';
+        if(chosen.key === implied){
+          mcOK = true; carryOK = true;
+          carryNote = 'Your position is consistent with the golden-rule savings rate you '
+            + 'gave in Q6 (' + fv(sgrStudent) + '), so it is credited — but the correct '
+            + 'rate is s<sub>gr</sub> = α = ' + fr(P.alpha) + ', which puts this economy '
+            + '<strong>' + P.position + '</strong> the golden rule.';
+        }
+      }
+    }
+    if(!mcOK) ok = false;
+  }
+
+  /* ── numeric part ── */
+  let vals = [];
+  if(q.inputs && q.inputs.length){
+    const rd = readInputs(n, q);
+    if(rd === null) return;
+    const carryVals = q.carry ? q.carry() : null;
+
+    for(let i = 0; i < q.inputs.length; i++){
+      const exact = q.exact[i];
+      const r = resolveRate(rd.vals[i], exact, q.inputs[i].pct);
+      vals.push(r.v);
+      answerBits.push(rd.texts[i]);
+    }
+
+    if(q.inputs.length === 1){
+      const exact = q.exact[0];
+      let good = near(vals[0], exact);
+      if(!good && carryVals){
+        const list = Array.isArray(carryVals) ? carryVals : [carryVals];
+        const hit = list.filter(function(c){ return c !== null && isFinite(c); })
+                        .some(function(c){ return near(vals[0], c); });
+        if(hit){
+          good = true; carryOK = true;
+          carryNote = 'You applied this step correctly to your own earlier number, so it is '
+            + 'credited — note that the exact value is <strong>' + fv(exact) + '</strong>.';
+        }
+      }
+      if(!good) ok = false;
+    } else {
+      for(let i = 0; i < q.inputs.length; i++)
+        if(!near(vals[i], q.exact[i])) ok = false;
+    }
+  }
+
+  st.vals = vals;
+  st.tries += 1;
+
+  const answerText = answerBits.join(' | ');
+
+  /* Phase 1 — the first submission is recorded verbatim, forever. */
+  if(!st.submitted){
+    st.submitted = true;
+    st.firstOK   = ok;
+    st.firstText = answerText + (st.ladder > 0 ? ' (help used)' : '');
+    if(ok) _firstScore += 1;
+  }
+  /* Phase 2 — later submissions overwrite the final values only. */
+  st.finalOK   = ok;
+  st.finalText = answerText + (st.ladder > 0 ? ' (help used)' : '');
+
+  paintResult(n, q, ok, carryOK);
+  recordQ(n - 1);
+
+  if(ok){
+    if(!st.resolved){ st.resolved = true; syncGraphLayers(); }
+    showFB(n, 'correct', carryOK
+      ? '✓ <strong>Correct — given your own earlier work.</strong> ' + carryNote
+      : '✓ <strong>Correct.</strong>' + finalWord(n));
+  } else {
+    const diag = q.diagnose ? q.diagnose(vals) : null;
+    let msg = '✗ <strong>Not quite.</strong> ';
+    if(!mcOK && q.options){
+      const chosen = q.options[st.choice];
+      if(chosen.why) msg += chosen.why + ' ';
+      else if(n === 7 && chosen.key === 'at')
+        msg += 'Compare s to α directly — s = ' + fr(P.s) + ' and α = ' + fr(P.alpha)
+             + ', which are not equal. ';
+    }
+    if(diag) msg += diag + ' ';
+    msg += ladderPrompt(n);
+    showFB(n, 'wrong', msg);
+  }
+
+  applyLocks();
+  maybeEnterPhase2();
+  redraw();
+}
+
+function finalWord(n){
+  if(n === 6) return ' Open the worked solution anyway — the interesting part of this '
+    + 'question is not the number, it is that δ, n and g cancel out of it entirely.';
+  return '';
+}
+
+function ladderPrompt(n){
+  const st = QS[n - 1];
+  if(st.ladder === 0) return 'Your answer is recorded. <strong>Hint</strong> is now unlocked — '
+    + 'try again, or work down the help ladder.';
+  if(st.ladder === 1) return '<strong>Formula</strong> is now unlocked.';
+  if(st.ladder === 2) return '<strong>Worked solution</strong> is now unlocked.';
+  return 'The worked solution is shown below.';
+}
+
+function stripTags(html){
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  return (d.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
+function paintResult(n, q, ok, carryOK){
+  document.getElementById('chipDone' + n).classList.toggle('hidden', !ok);
+  document.getElementById('chipMiss' + n).classList.toggle('hidden', ok);
+  if(q.inputs) q.inputs.forEach(function(inp, i){
+    const el = document.getElementById('in' + n + '_' + i);
+    if(!el) return;
+    const good = (q.inputs.length === 1) ? ok : near(QS[n-1].vals[i], q.exact[i]);
+    el.classList.toggle('correct', good);
+    el.classList.toggle('wrong', !good);
+  });
+  if(q.options) q.options.forEach(function(o, i){
+    const li = document.getElementById('mc' + n + '_' + i);
+    const mk = document.getElementById('mcMark' + n + '_' + i);
+    li.classList.remove('right', 'miss');
+    mk.className = 'mc-mark'; mk.textContent = '';
+    if(i === QS[n-1].choice){
+      const good = !!o.correct || (carryOK && ok);
+      li.classList.add(good ? 'right' : 'miss');
+      mk.classList.add(good ? 'ok' : 'no');
+      mk.textContent = good ? '✓ your answer' : '✗ your answer';
+    }
+  });
+  refreshHelpButtons(n);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SESSION RECORDING (CLAUDE.md two-phase pattern)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function recordQ(i){
+  if(!(window.Session && Session.recordQuestion)) return;
+  const st = QS[i];
+  Session.recordQuestion(LAB_ID, i, Q[i].qText,
+                         st.firstText, st.firstOK,
+                         st.finalText, st.finalOK);
+}
+
+function maybeEnterPhase2(){
+  if(_phase === 2){ paintPhase2Banner(); return; }
+  if(_phase !== 1) return;
+  if(!QS.every(function(s){ return s.submitted; })) return;
+  _phase = 2;
+  paintPhase2Banner();
+  $submitBtn.classList.remove('hidden');
+  applyLocks();
+}
+
+function paintPhase2Banner(){
+  const missed = QS.filter(function(s){ return !s.finalOK; }).length;
+  $p2Banner.classList.remove('hidden');
+  $p2Banner.innerHTML = '<strong>Correction pass.</strong> All eight questions are '
+    + 'submitted and your first answers are locked in — those are what get recorded as '
+    + 'your initial score, whatever you do now. Every question is open again: '
+    + (missed
+        ? 'you have <strong>' + missed + '</strong> still to fix. Work down the help ladder '
+          + 'on those, revise, and re-check.'
+        : 'all eight are already correct, so there is nothing to fix — but the worked '
+          + 'solutions are worth reading before you submit.')
+    + ' When you are finished, click <strong>Submit Final Answers</strong>.';
+}
+
+function submitFinal(){
+  _phase = 3;
+  const finalScore = QS.filter(function(s){ return s.finalOK; }).length;
+  QS.forEach(function(s, i){ recordQ(i); });
+  if(window.Session && Session.recordLabDone)
+    Session.recordLabDone(LAB_ID, LAB_LABEL, _firstScore, finalScore, NQ);
+
+  const grade = (window.Session && Session.gradePoints)
+    ? Session.gradePoints(finalScore, NQ) : null;
+
+  $submitBtn.classList.add('hidden');
+  $p2Banner.classList.add('hidden');
+  $doneBanner.classList.remove('hidden');
+  $doneBanner.innerHTML = '<strong>Lab submitted.</strong> Your results are below. '
+    + 'The worked solutions stay open — read the ones you had to correct before you leave.'
+    + '<div class="score-line">'
+    + 'First-attempt score: <strong>' + _firstScore + ' / ' + NQ + '</strong> &nbsp;·&nbsp; '
+    + 'Final score: <strong>' + finalScore + ' / ' + NQ + '</strong>'
+    + (grade !== null ? ' &nbsp;·&nbsp; Assignment grade: <strong>' + grade + ' / 5</strong>' : '')
+    + '</div>';
+  applyLocks();
+  $doneBanner.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'nearest' });
+}
+
+function updateProgress(){
+  const done = QS.filter(function(s){ return s.submitted; }).length;
+  $progress.classList.remove('phase2', 'done');
+  if(_phase === 3){
+    const fin = QS.filter(function(s){ return s.finalOK; }).length;
+    $progress.classList.add('done');
+    $progress.textContent = 'Submitted — ' + fin + ' of ' + NQ + ' correct';
+  } else if(_phase === 2){
+    const fixed = QS.filter(function(s){ return s.finalOK; }).length;
+    $progress.classList.add('phase2');
+    $progress.textContent = 'Correction pass — ' + fixed + ' of ' + NQ + ' correct';
+  } else {
+    $progress.textContent = 'Question ' + Math.min(done + 1, NQ) + ' of ' + NQ;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CANVAS — the Solow diagram, built up in layers
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const PAD = { l:52, r:16, t:16, b:48 }; // CSS px
+
+function setupCanvas(canvas, wrap){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  const W = Math.round(rect.width * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+function makeCoords(W, H, dpr, xMax, yMax){
+  const p = { l:PAD.l*dpr, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  return {
+    xC: x => p.l + (x / xMax) * PW,
+    yC: y => H - p.b - (y / yMax) * PH,
+    p, PW, PH
+  };
+}
+
+function tickStep(mx){
+  if(mx<=10) return 1; if(mx<=20) return 2; if(mx<=50) return 5;
+  if(mx<=100) return 10; if(mx<=200) return 20; if(mx<=500) return 50;
+  return 100;
+}
+function snapUp(raw){
+  const s=[5,8,10,12,15,20,25,30,40,50,60,80,100,120,
+           150,200,250,300,400,500,600,800,1000];
+  return s.find(v => v >= raw) || Math.ceil(raw/100)*100;
+}
+
+const COL = { prod:'#2f5d7c', brk:'#155c38', sav:'#b42318',
+              ink:'#1f2937', mute:'#596878', gold:'#8c4800', line:'#d9cfbf' };
+
+/* Which layer does each question unlock? */
+const Q_LAYER = { 1:'prod', 2:'lines', 3:'kstar', 4:'ystar', 5:'cstar', 7:'golden' };
+
+function syncGraphLayers(){
+  LAYERS.forEach(function(L){ _target[L] = 0; });
+  Object.keys(Q_LAYER).forEach(function(k){
+    const qi = parseInt(k, 10) - 1;
+    if(QS[qi] && QS[qi].resolved) _target[Q_LAYER[k]] = 1;
+  });
+  /* A layer only makes sense once the ones under it are drawn. */
+  let gate = 1;
+  LAYERS.forEach(function(L){
+    gate = Math.min(gate, _target[L]);
+    _target[L] = gate;
+  });
+  syncLegend();
+  startAnim();
+}
+
+function syncLegend(){
+  const on = function(id, layer){
+    document.getElementById(id).classList.toggle('hidden', _target[layer] < 1);
+  };
+  on('lgProd',   'prod');
+  on('lgBreak',  'lines');
+  on('lgSav',    'lines');
+  on('lgKstar',  'kstar');
+  on('lgCstar',  'cstar');
+  on('lgGolden', 'golden');
+  $graphEmpty.classList.toggle('hidden', _target.prod >= 1);
+
+  document.getElementById('lgProdTxt').textContent =
+    SY.y + ' = ' + SY.k + '^α — production function (solid blue)';
+  document.getElementById('lgBreakTxt').textContent =
+    '(δ+n+g)' + SY.k + ' — break-even investment (dashed green)';
+  document.getElementById('lgSavTxt').textContent =
+    's' + SY.y + ' — saving = investment (dotted red)';
+  document.getElementById('lgKstarTxt').textContent =
+    'Steady state ' + SY.k + '* = ' + fv(P.kss) + ' (dark marker)';
+  document.getElementById('lgCstarTxt').textContent =
+    'Consumption ' + SY.c + '* = ' + fv(P.css) + ' (hatched gap)';
+  document.getElementById('lgGoldenTxt').textContent =
+    'Golden rule ' + SY.k + '_gr = ' + fv(P.kgr) + ' (dotted amber)';
+}
+
+function startAnim(){
+  if(REDUCED){
+    LAYERS.forEach(function(L){ _alpha[L] = _target[L]; });
+    redraw();
+    return;
+  }
+  if(_animRAF) return;
+  const step = function(){
+    let moving = false;
+    LAYERS.forEach(function(L){
+      const d = _target[L] - _alpha[L];
+      if(Math.abs(d) < 0.01){ _alpha[L] = _target[L]; }
+      else { _alpha[L] += d * 0.14; moving = true; }
+    });
+    drawGraph();
+    if(moving){ _animRAF = requestAnimationFrame(step); }
+    else { _animRAF = null; updateGraphDesc(); }
+  };
+  _animRAF = requestAnimationFrame(step);
+}
+
+function withAlpha(ctx, a, fn){
+  if(a <= 0.005) return;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, a);
+  fn();
+  ctx.restore();
+}
+
+function clipPlot(ctx, C, W, H){
+  ctx.beginPath();
+  ctx.rect(C.p.l, C.p.t, W - C.p.l - C.p.r, H - C.p.t - C.p.b);
+  ctx.clip();
+}
+
+function drawGraph(){
+  const S = setupCanvas($canvas, $canvasWrap);
+  if(!S || !P) return;
+  const ctx = S.ctx, dpr = S.dpr, W = S.W, H = S.H;
+  const xMax = P.xMax, yMax = P.yMax;
+  const C = makeCoords(W, H, dpr, xMax, yMax);
+  const a = P.alpha;
+
+  ctx.clearRect(0, 0, W, H);
+
+  /* ── grid ── */
+  const xs = tickStep(xMax), ys = tickStep(yMax);
+  ctx.save();
+  ctx.strokeStyle = COL.line; ctx.lineWidth = 1 * dpr;
+  ctx.beginPath();
+  for(let x = xs; x <= xMax + 1e-9; x += xs){
+    ctx.moveTo(C.xC(x), C.yC(0)); ctx.lineTo(C.xC(x), C.p.t);
+  }
+  for(let y = ys; y <= yMax + 1e-9; y += ys){
+    ctx.moveTo(C.p.l, C.yC(y)); ctx.lineTo(W - C.p.r, C.yC(y));
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  /* ── axes ── */
+  ctx.save();
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = 1.8 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(C.p.l, C.p.t); ctx.lineTo(C.p.l, C.yC(0)); ctx.lineTo(W - C.p.r, C.yC(0));
+  ctx.stroke();
+  ctx.restore();
+
+  /* ── tick labels ── */
+  ctx.save();
+  ctx.fillStyle = COL.mute;
+  ctx.font = `600 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for(let x = 0; x <= xMax + 1e-9; x += xs)
+    ctx.fillText(nf(x, 0), C.xC(x), C.yC(0) + 6 * dpr);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for(let y = 0; y <= yMax + 1e-9; y += ys)
+    ctx.fillText(nf(y, 0), C.p.l - 6 * dpr, C.yC(y));
+  ctx.restore();
+
+  /* ── axis titles ── */
+  ctx.save();
+  ctx.fillStyle = COL.ink;
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText('Capital ' + SY.per + ' (' + SY.k + ')', C.p.l + C.PW / 2, H - 10 * dpr);
+  ctx.translate(14 * dpr, C.p.t + C.PH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textBaseline = 'top';
+  ctx.fillText('Output ' + SY.per + ' (' + SY.y + ')', 0, 0);
+  ctx.restore();
+
+  const prod = x => Math.pow(Math.max(0, x), a);
+  const sav  = x => P.s * prod(x);
+  const brk  = x => P.bev * x;
+
+  /* ── curves (clipped) ── */
+  ctx.save();
+  clipPlot(ctx, C, W, H);
+
+  withAlpha(ctx, _alpha.prod, function(){
+    strokeFn(ctx, C, prod, xMax, COL.prod, 3 * dpr, [], dpr);
+  });
+  withAlpha(ctx, _alpha.lines, function(){
+    strokeFn(ctx, C, brk, xMax, COL.brk, 2.6 * dpr, [9 * dpr, 6 * dpr], dpr);
+    strokeFn(ctx, C, sav, xMax, COL.sav, 2.6 * dpr, [2.5 * dpr, 5 * dpr], dpr);
+  });
+
+  /* ── steady-state drop line ── */
+  withAlpha(ctx, _alpha.kstar, function(){
+    const xk = C.xC(P.kss), yTop = C.yC(P.s * P.yss);
+    ctx.strokeStyle = COL.ink; ctx.lineWidth = 1.8 * dpr;
+    ctx.setLineDash([5 * dpr, 4 * dpr]);
+    ctx.beginPath(); ctx.moveTo(xk, C.yC(0)); ctx.lineTo(xk, yTop); ctx.stroke();
+    ctx.setLineDash([]);
+    dot(ctx, xk, yTop, 5 * dpr, COL.ink);
+  });
+
+  /* ── output marker + horizontal guide ── */
+  withAlpha(ctx, _alpha.ystar, function(){
+    const xk = C.xC(P.kss), yy = C.yC(P.yss);
+    ctx.strokeStyle = COL.prod; ctx.lineWidth = 1.6 * dpr;
+    ctx.setLineDash([5 * dpr, 4 * dpr]);
+    ctx.beginPath(); ctx.moveTo(C.p.l, yy); ctx.lineTo(xk, yy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(xk, yy); ctx.lineTo(xk, C.yC(P.s * P.yss)); ctx.stroke();
+    ctx.setLineDash([]);
+    dot(ctx, xk, yy, 5 * dpr, COL.prod);
+  });
+
+  /* ── consumption gap ── */
+  withAlpha(ctx, _alpha.cstar, function(){
+    hatchBand(ctx, C, dpr, P.kss, P.s * P.yss, P.yss, COL.prod, xMax);
+  });
+
+  /* ── golden rule ── */
+  withAlpha(ctx, _alpha.golden, function(){
+    const xg = C.xC(P.kgr);
+    ctx.strokeStyle = COL.gold; ctx.lineWidth = 2.2 * dpr;
+    ctx.setLineDash([2.5 * dpr, 4.5 * dpr]);
+    ctx.beginPath(); ctx.moveTo(xg, C.yC(0)); ctx.lineTo(xg, C.yC(P.ygr)); ctx.stroke();
+    ctx.setLineDash([]);
+    dot(ctx, xg, C.yC(P.ygr), 5 * dpr, COL.gold);
+    hatchBand(ctx, C, dpr, P.kgr, P.alpha * P.ygr, P.ygr, COL.gold, xMax);
+  });
+
+  ctx.restore();
+
+  /* ── labels (drawn unclipped so they can sit at the plot edge) ── */
+  drawLabels(ctx, C, dpr, W, H, prod, sav, brk, xMax, yMax);
+}
+
+function strokeFn(ctx, C, fn, xMax, color, lw, dash, dpr){
+  ctx.strokeStyle = color; ctx.lineWidth = lw;
+  ctx.setLineDash(dash); ctx.lineCap = 'round';
+  ctx.beginPath();
+  const N = 260;
+  for(let i = 0; i <= N; i++){
+    const x = xMax * i / N;
+    const px = C.xC(x), py = C.yC(fn(x));
+    if(i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function dot(ctx, x, y, r, color){
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = r * 0.4;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+}
+
+/* Hatched vertical band between two curve heights at a given k — the
+   consumption gap. Hatching (not fill colour alone) carries the meaning. */
+function hatchBand(ctx, C, dpr, k, yLo, yHi, color, xMax){
+  const halfW = Math.max(7 * dpr, C.PW * 0.022);
+  const x0 = C.xC(k) - halfW, x1 = C.xC(k) + halfW;
+  const yTop = C.yC(yHi), yBot = C.yC(yLo);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x0, yTop, x1 - x0, yBot - yTop); ctx.clip();
+  ctx.strokeStyle = color; ctx.lineWidth = 1.4 * dpr; ctx.globalAlpha *= 0.55;
+  ctx.beginPath();
+  const span = (x1 - x0) + (yBot - yTop);
+  for(let o = -span; o < span; o += 6 * dpr){
+    ctx.moveTo(x0 + o, yBot); ctx.lineTo(x0 + o + (yBot - yTop), yTop);
+  }
+  ctx.stroke();
+  ctx.restore();
+  ctx.save();
+  ctx.strokeStyle = color; ctx.lineWidth = 2 * dpr;
+  ctx.beginPath(); ctx.rect(x0, yTop, x1 - x0, yBot - yTop); ctx.stroke();
+  ctx.restore();
+}
+
+function drawLabels(ctx, C, dpr, W, H, prod, sav, brk, xMax, yMax){
+  const F = n => `700 ${Math.round(n * dpr * _fs)}px "Inter",sans-serif`;
+
+  /* Curve labels, placed at the right edge of the plot, nudged apart. */
+  const cand = [];
+  if(_alpha.prod > 0.5)
+    cand.push({ y: prod(xMax), t: SY.y + ' = ' + SY.k + '^α', c: COL.prod, a: _alpha.prod });
+  if(_alpha.lines > 0.5){
+    cand.push({ y: brk(xMax),  t: '(δ+n+g)' + SY.k, c: COL.brk, a: _alpha.lines });
+    cand.push({ y: sav(xMax),  t: 's' + SY.y,       c: COL.sav, a: _alpha.lines });
+  }
+  cand.sort((p, q) => q.y - p.y);
+  let lastY = -1e9;
+  cand.forEach(function(L){
+    let py = C.yC(L.y);
+    if(py - lastY < 15 * dpr * _fs) py = lastY + 15 * dpr * _fs;
+    lastY = py;
+    withAlpha(ctx, L.a, function(){
+      ctx.font = F(11);
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      const w = ctx.measureText(L.t).width;
+      ctx.fillStyle = 'rgba(255,255,255,.82)';
+      ctx.fillRect(W - C.p.r - w - 5 * dpr, py - 8 * dpr * _fs,
+                   w + 6 * dpr, 16 * dpr * _fs);
+      ctx.fillStyle = L.c;
+      ctx.fillText(L.t, W - C.p.r - 2 * dpr, py);
+    });
+  });
+
+  /* k* label on the x-axis */
+  withAlpha(ctx, _alpha.kstar, function(){
+    ctx.font = F(11);
+    ctx.fillStyle = COL.ink;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    tagBox(ctx, dpr, C.xC(P.kss), C.yC(0) + 18 * dpr * _fs,
+           SY.k + '* = ' + fv(P.kss), COL.ink);
+  });
+
+  /* y* label on the y-axis */
+  withAlpha(ctx, _alpha.ystar, function(){
+    ctx.font = F(11);
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    tagBox(ctx, dpr, C.p.l + 30 * dpr, C.yC(P.yss) - 11 * dpr * _fs,
+           SY.y + '* = ' + fv(P.yss), COL.prod);
+  });
+
+  /* c* bracket label — beside the hatched band, flipped inward near the edge */
+  withAlpha(ctx, _alpha.cstar, function(){
+    ctx.font = F(11);
+    const mid = (P.yss + P.s * P.yss) / 2;
+    besideBand(ctx, C, dpr, W, P.kss, C.yC(mid),
+               SY.c + '* = ' + fv(P.css), COL.prod);
+  });
+
+  /* golden-rule labels */
+  withAlpha(ctx, _alpha.golden, function(){
+    ctx.font = F(11);
+    /* When k_gr sits close to k*, drop the axis tag a row so the two do not
+       collide on the x-axis. */
+    const close = Math.abs(P.kgr - P.kss) < P.xMax * 0.14;
+    tagBox(ctx, dpr, C.xC(P.kgr),
+           C.yC(0) + 18 * dpr * _fs + (close ? 19 * dpr * _fs : 0),
+           SY.k + '_gr = ' + fv(P.kgr), COL.gold);
+    const mid = (P.ygr + P.alpha * P.ygr) / 2;
+    besideBand(ctx, C, dpr, W, P.kgr,
+               C.yC(mid) + (close ? -17 * dpr * _fs : 0),
+               SY.c + '_gr = ' + fv(P.cgr), COL.gold);
+  });
+}
+
+/* Place a tag next to the hatched band at capital stock k: to the right by
+   default, flipped to the left when the box would run past the plot edge. */
+function besideBand(ctx, C, dpr, W, k, py, text, color){
+  const halfW = Math.max(7 * dpr, C.PW * 0.022);
+  const tw = ctx.measureText(text).width;
+  let px = C.xC(k) + halfW + tw / 2 + 8 * dpr;
+  if(px + tw / 2 + 6 * dpr > W - C.p.r)
+    px = C.xC(k) - halfW - tw / 2 - 8 * dpr;
+  px = Math.max(C.p.l + tw / 2 + 6 * dpr, px);
+  tagBox(ctx, dpr, px, py, text, color);
+}
+
+/* Small white-backed text tag, centred at (x, y). */
+function tagBox(ctx, dpr, x, y, text, color){
+  ctx.save();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const w = ctx.measureText(text).width;
+  ctx.fillStyle = 'rgba(255,255,255,.88)';
+  ctx.fillRect(x - w / 2 - 4 * dpr, y - 9 * dpr * _fs, w + 8 * dpr, 18 * dpr * _fs);
+  ctx.strokeStyle = color; ctx.lineWidth = 1 * dpr; ctx.globalAlpha *= 0.5;
+  ctx.strokeRect(x - w / 2 - 4 * dpr, y - 9 * dpr * _fs, w + 8 * dpr, 18 * dpr * _fs);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+/* ── Screen-reader equivalent of the canvas (WCAG 1.1.1) ─────────────── */
+function updateGraphDesc(){
+  if(!P){ return; }
+  const K = SY.k, Y = SY.y, C = SY.c, per = SY.per;
+  const on = L => _target[L] >= 1;
+
+  if(!on('prod')){
+    $gDesc.textContent = 'Solow diagram. The plot area is currently empty. Capital '
+      + per + ' is on the horizontal axis and output ' + per + ' on the vertical axis. '
+      + 'Answer Question 1 to draw the production function.';
+    return;
+  }
+
+  let t = 'Solow diagram. Horizontal axis: capital ' + per + ', ' + K
+        + ', from 0 to ' + nf(P.xMax, 0) + '. Vertical axis: output ' + per + ', ' + Y
+        + ', from 0 to ' + nf(P.yMax, 0) + '. ';
+
+  t += 'A solid blue curve labelled ' + Y + ' equals ' + K + ' to the power alpha rises '
+     + 'steeply from the origin and flattens out, showing diminishing returns to capital. ';
+
+  if(on('lines')){
+    t += 'A dashed green straight line through the origin, labelled open paren delta plus n '
+       + 'plus g close paren times ' + K + ', shows break-even investment with slope '
+       + fr(P.bev) + '. A dotted red curve labelled s ' + Y + ' lies below the production '
+       + 'function at ' + pctOf(P.s) + ' of its height, showing saving and investment. '
+       + 'The dotted red saving curve starts above the dashed green line and crosses it once. ';
+  }
+  if(on('kstar')){
+    t += 'The crossing point is the steady state. A dashed vertical drop line marks it at '
+       + K + ' star equals ' + fv(P.kss) + ', where saving and break-even investment are '
+       + 'both equal to ' + fv(P.s * P.yss) + '. To the left of this point saving exceeds '
+       + 'break-even investment and capital grows; to the right it falls short and capital shrinks. ';
+  }
+  if(on('ystar')){
+    t += 'A dashed horizontal guide runs from the vertical axis to the production function '
+       + 'directly above the steady state, marking steady-state output ' + Y + ' star equals '
+       + fv(P.yss) + '. ';
+  }
+  if(on('cstar')){
+    t += 'The vertical gap between the production function and the saving curve at the '
+       + 'steady state is hatched in blue and labelled ' + C + ' star equals ' + fv(P.css)
+       + ': this is steady-state consumption ' + per + ', the part of output not saved. ';
+  }
+  if(on('golden')){
+    const side = P.position === 'above' ? 'to the left of'
+               : (P.position === 'below' ? 'to the right of' : 'exactly on top of');
+    t += 'A dotted amber vertical line marks the golden-rule capital stock ' + K
+       + ' subscript g r equals ' + fv(P.kgr) + ', which sits ' + side + ' the steady state. '
+       + 'A second hatched amber band there shows golden-rule consumption ' + C
+       + ' subscript g r equals ' + fv(P.cgr) + ', the widest vertical gap that any steady '
+       + 'state can achieve. ';
+    if(P.position === 'at')
+      t += 'Because this economy saves exactly the capital share, s equals alpha equals '
+         + fr(P.alpha) + ', the two vertical lines coincide and the consumption gap is zero. ';
+    else
+      t += 'This economy saves ' + fr(P.s) + ' against a golden-rule rate of ' + fr(P.alpha)
+         + ', so it is ' + P.position + ' the golden rule and gives up ' + fv(P.gap)
+         + ' of consumption ' + per + ' in the long run. ';
+  }
+  $gDesc.textContent = t;
+}
+
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  drawGraph();
+  updateGraphDesc();
+}
+
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+   RESET / MODE
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function anyProgress(){
+  return QS.some(function(s){ return s.submitted; });
+}
+
+function resetAll(){
+  _phase = 1;
+  _firstScore = 0;
+  QS = [];
+  for(let i = 0; i < NQ; i++) QS.push(blankState());
+  LAYERS.forEach(function(L){ _alpha[L] = 0; _target[L] = 0; });
+  if(_animRAF){ cancelAnimationFrame(_animRAF); _animRAF = null; }
+  $p2Banner.classList.add('hidden');
+  $doneBanner.classList.add('hidden');
+  $submitBtn.classList.add('hidden');
+}
+
+function newProblem(){
+  resetAll();
+  generateParams();
+  renderProblem();
+  Q = buildQuestions();
+  renderQuestions();
+  syncGraphLayers();
+  redraw();
+}
+
+function setMode(m){
+  if(m === _mode) return;
+  if(anyProgress() && !window.confirm(
+      'Switching difficulty draws a new problem and clears every answer you have '
+      + 'submitted so far. Continue?')) return;
+  _mode = m;
+  _drawCount = 0;
+  $modeClean.classList.toggle('active', m === 'clean');
+  $modeStd.classList.toggle('active', m === 'std');
+  $modeClean.setAttribute('aria-pressed', String(m === 'clean'));
+  $modeStd.setAttribute('aria-pressed', String(m === 'std'));
+  newProblem();
+}
+
+$modeClean.addEventListener('click', function(){ setMode('clean'); });
+$modeStd.addEventListener('click',   function(){ setMode('std'); });
+$submitBtn.addEventListener('click', submitFinal);
+$newBtn.addEventListener('click', function(){
+  if(anyProgress() && !window.confirm(
+      'Draw a new problem? Every answer you have submitted for this problem will be cleared.'))
+    return;
+  _drawCount += 1;
+  newProblem();
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CLEAN-MODE ANSWER-KEY SELF-TEST
+   Verifies the five clean-mode rows against the published key. Silent on
+   success; logs a table and an error to the console on any mismatch.
+   Run manually at any time with:  window.__solowSelfTest()
+   ═══════════════════════════════════════════════════════════════════════ */
+const CLEAN_KEY = [
+  /*  s     k*    y*   c*    s_gr  k_gr  c_gr  gap */
+  [0.20,  4,    2,   1.6,  0.5,  25,   2.5,  0.9],
+  [0.30,  9,    3,   2.1,  0.5,  25,   2.5,  0.4],
+  [0.40, 16,    4,   2.4,  0.5,  25,   2.5,  0.1],
+  [0.50, 25,    5,   2.5,  0.5,  25,   2.5,  0.0],
+  [0.60, 36,    6,   2.4,  0.5,  25,   2.5,  0.1]
+];
+
+function selfTest(){
+  const A = 0.5, BEV = 0.10, EPS = 1e-9;
+  const rows = [], bad = [];
+  CLEAN_KEY.forEach(function(r){
+    const s = r[0];
+    const kss = Math.pow(s / BEV, 1 / (1 - A));
+    const yss = Math.pow(kss, A);
+    const css = (1 - s) * yss;
+    const sgr = A;
+    const kgr = Math.pow(A / BEV, 1 / (1 - A));
+    const cgr = (1 - A) * Math.pow(kgr, A);
+    const gap = cgr - css;
+    const got = [s, kss, yss, css, sgr, kgr, cgr, gap];
+    const okRow = got.every(function(v, i){ return Math.abs(v - r[i]) < EPS; });
+    if(!okRow) bad.push({ s: s, expected: r, got: got });
+    rows.push({ s: s, 'k*': kss, 'y*': yss, 'c*': css, s_gr: sgr,
+                k_gr: kgr, c_gr: cgr, gap: gap, match: okRow ? 'OK' : 'MISMATCH' });
+  });
+  /* Cross-check: the second route to c* must agree with the first. */
+  CLEAN_KEY.forEach(function(r){
+    const s = r[0];
+    const kss = Math.pow(s / BEV, 1 / (1 - A));
+    const yss = Math.pow(kss, A);
+    if(Math.abs(((1 - s) * yss) - (yss - BEV * kss)) > 1e-9)
+      bad.push({ s: s, error: 'c* routes disagree' });
+  });
+  if(window.console && console.table) console.table(rows);
+  if(bad.length && window.console) console.error('[solow] answer-key MISMATCH', bad);
+  else if(window.console) console.info('[solow] clean-mode answer key verified — 5/5 rows exact.');
+  return bad.length === 0;
+}
+window.__solowSelfTest = selfTest;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const WEEK_LABEL = 'Economic Growth — The Solow Model';
+
+/* The lab must render whether or not /assets/*.js resolve. Opening this file
+   directly (file://) makes the absolute /assets/ paths 404, so nothing below
+   may depend on Session or DiscussionModal existing. */
+function boot(){
+  const isDiscussion = new URLSearchParams(location.search).get('disc') === '1';
+
+  /* In a graded discussion every student must get the same seeded problem, so
+     "New Problem" is a practice-mode affordance only. */
+  if(isDiscussion) $newBtn.remove();
+
+  try {
+    resetAll();
+    newProblem();
+  } catch(e){
+    console.error('Lab failed to initialise:', e);
+    return;
+  }
+
+  /* Discussion mode only: collect name / NetID / session code so the problem
+     is seeded off the code and results are recorded. Practice mode never
+     blocks on a modal. */
+  if(isDiscussion && window.DiscussionModal && window.Session && !Session.isActive()){
+    DiscussionModal.init({
+      weekLabel: WEEK_LABEL,
+      onReady: function(){
+        _drawCount = 0;
+        resetAll();
+        newProblem();      // re-seed off the session code
+      }
+    });
+  }
+}
+
+if(document.readyState === 'loading')
+  document.addEventListener('DOMContentLoaded', boot);
+else
+  boot();
+
+})();
+</script>
+</body>
+</html>
