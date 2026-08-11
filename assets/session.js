@@ -31,31 +31,17 @@
     };
   }
 
-  // ── Seeded RNG (mulberry32) ─────────────────────────────────────────────────
-  // Produces a deterministic sequence from a string seed.
-  // Labs call Session.rng() instead of Math.random() to get reproducible questions.
-
-  function hashSeed(str) {
-    // Simple djb2-style hash → 32-bit integer
-    let h = 1779033703;
-    for (let i = 0; i < str.length; i++) {
-      h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
-      h = (h << 13) | (h >>> 19);
-    }
-    return h >>> 0;
-  }
-
-  let _rngState = null;
-
-  function makeRng(seed) {
-    let s = hashSeed(String(seed));
-    return function () {
-      s |= 0; s = s + 0x6D2B79F5 | 0;
-      let t = Math.imul(s ^ s >>> 15, 1 | s);
-      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-      return ((t ^ t >>> 14) >>> 0) / 4294967296;
-    };
-  }
+  // ── RNG ─────────────────────────────────────────────────────────────────────
+  // Problem generation is UNSEEDED.
+  //
+  // This used to be a mulberry32 PRNG seeded from the session code. Because
+  // every lab re-seeds at the top of generateParams() via rngForLab(), that
+  // made each "New Problem" click replay the same sequence and regenerate the
+  // identical problem. Reproducible problems only mattered for running these
+  // labs in a discussion section, which we no longer do, so the seeding is
+  // gone and the session code is now purely a label on the summary PDF.
+  //
+  // The rng()/rngForLab() API is kept so the ~70 labs calling it need no edit.
 
   // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -69,7 +55,6 @@
       data.seed      = String(seed).trim().toUpperCase();
       data.weekLabel = weekLabel || '';
       save(data);
-      _rngState = makeRng(data.seed);
     },
 
     // True if a session has been started this browser session
@@ -88,24 +73,16 @@
       return d ? d.seed : '';
     },
 
-    // Return a seeded random number [0, 1).
-    // Must call Session.start() first. Falls back to Math.random() if not.
+    // Return a random number [0, 1). Not reproducible by design — see above.
     rng() {
-      if (!_rngState) {
-        const d = load();
-        if (d && d.seed) { _rngState = makeRng(d.seed); }
-        else { return Math.random(); }
-      }
-      return _rngState();
+      return Math.random();
     },
 
-    // Re-create the RNG at a named checkpoint so a specific lab always gets
-    // the same sequence regardless of what ran before it.
-    // Labs should call: Session.rngForLab('what-went-wrong')
+    // Kept for API compatibility: labs call this at the top of generateParams()
+    // and use the returned function as their RNG. It no longer seeds anything,
+    // so every call — including every "New Problem" click — yields a fresh
+    // problem. labId is accepted and ignored.
     rngForLab(labId) {
-      const d = load();
-      const seed = d ? d.seed + '|' + labId : labId;
-      _rngState = makeRng(seed);
       return Session.rng.bind(Session);
     },
 
@@ -171,15 +148,8 @@
     // Clear session (called on tab close automatically, but useful for testing)
     clear() {
       sessionStorage.removeItem(KEY);
-      _rngState = null;
     }
   };
-
-  // Re-hydrate RNG if page is refreshed mid-session
-  (function init() {
-    const d = load();
-    if (d && d.seed) { _rngState = makeRng(d.seed); }
-  })();
 
   global.Session = Session;
 

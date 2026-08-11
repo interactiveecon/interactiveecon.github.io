@@ -373,7 +373,7 @@ Quick reference — the three calls every lab must make:
 const LAB_ID    = 'kebab-case-id';
 const LAB_LABEL = 'Human-Readable Lab Name';
 
-// 1. In generateParams() — seed the RNG per-lab:
+// 1. In generateParams() — get the RNG (unseeded; see "RNG" below):
 if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
 
 // 2. On each Phase 1 answer submission:
@@ -408,7 +408,7 @@ const LAB_LABEL = 'Human-Readable Name';  // shown in the PDF summary
 - Kebab-case matching the folder/filename (e.g. `'price-ceiling'`)
 - **Stable** — changing it breaks any session that already recorded it
 
-### Seeded RNG
+### RNG
 
 ```js
 let _rng = null;
@@ -418,6 +418,19 @@ function pick(arr){ return arr[Math.floor(rng() * arr.length)]; }
 // At the start of generateParams():
 if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
 ```
+
+**The RNG is unseeded — do not reintroduce seeding.** `rngForLab()` used to
+return a PRNG seeded from the session code so every student with the same
+code got the same problem. Because labs re-seed at the top of
+`generateParams()`, that made the "New Problem" button replay the identical
+sequence and regenerate the identical problem every click — the bug was
+invisible in local `file://` testing, where `/assets/session.js` 404s and
+`rng()` silently falls back to `Math.random()`. `rngForLab()` now ignores
+`labId` and returns an unseeded generator.
+
+If reproducible problems are ever needed again, do **not** seed on `labId`
+alone — add a variant counter the "New Problem" handler increments, so
+repeat clicks advance the sequence instead of restarting it.
 
 ### Two-phase answer recording
 
@@ -500,6 +513,8 @@ In addition to the standard WCAG checklist, verify:
 
 - [ ] `LAB_ID` is kebab-case, unique site-wide, matches the folder name
 - [ ] `Session.rngForLab(LAB_ID)` called at the start of `generateParams()`
+- [ ] "New Problem" verified to produce a *different* problem on repeat clicks,
+      tested over HTTP (not `file://` — see "RNG" above)
 - [ ] `Session.recordQuestion(...)` called at Phase 1 submission for each question
 - [ ] `Session.recordQuestion(...)` called again at Phase 2 with corrected answers
       (or once only for single-phase labs)
