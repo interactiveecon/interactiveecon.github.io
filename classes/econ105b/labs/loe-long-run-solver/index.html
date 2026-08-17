@@ -1,0 +1,2639 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>The Large Open Economy in the Long Run — ECON 105B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <!--
+    ═══════════════════════════════════════════════════════════════════════
+      LAB_ID    = 'loe-long-run-solver'
+      LAB_LABEL = 'The Large Open Economy in the Long Run'
+      URL       = /classes/econ105b/labs/loe-long-run-solver/
+
+      Week-template LABS entry (copy-paste):
+        { id:   'loe-long-run-solver',
+          name: 'The Large Open Economy in the Long Run',
+          icon: '🌐',
+          desc: 'Solve a large open economy: saving and the demand for loanable '
+              + 'funds as functions of r, the domestic interest rate that clears '
+              + 'them, and the real exchange rate net capital outflow delivers.',
+          url:  '/classes/econ105b/labs/loe-long-run-solver/?disc=1' }
+    ═══════════════════════════════════════════════════════════════════════
+
+    Companion to soe-long-run-solver. Same page structure, same step-card
+    markup, same hint ladder, same grading helpers — only the economics
+    changes. A practice lab: every problem is drawn fresh and there is no
+    graded mode, but it still makes the three Session calls (CLAUDE.md), so
+    if it is ever put behind a summary page the results are there.
+
+    Web port of the large-open-economy Mathematica notebook, with three
+    deliberate departures from the source:
+
+      1. CF carries a world-interest-rate term, CF = CF0 − CF1·r + CF2·r*.
+         The notebook's CF = CF0 − CF1·r has no r* in it at all, which
+         contradicts the lecture appendix and the large-open-economy graph
+         notebook. Problems are drawn with CF2 = CF1, so CF responds to the
+         interest differential, CF = CF0 − CF1(r − r*).
+      2. Problems are generated constructively (target the equilibrium, back
+         out the coefficients) so the magnitudes are plausible. Drawing every
+         coefficient independently, as the notebook does, puts r above 15% in
+         two thirds of problems.
+      3. The reveal slider is replaced by answer-first entry with a gated
+         help ladder.
+
+    Everything is in billions of dollars; r and r* are in percent; ε is a
+    unitless index.
+    ═══════════════════════════════════════════════════════════════════════
+  -->
+
+  <style>
+    /* ── Design tokens (CLAUDE.md) ───────────────────────────── */
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      /* Mono stack for hand-authored equations (no math library) */
+      --font-mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+      --paper:#f6f2ea;
+      --panel:#ffffff;
+      --ink:#1f2937;
+      --ink-2:#374151;
+      --muted:#596878;
+      --line:#e7dfd2;
+      --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;
+      --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),
+               0 10px 24px rgba(17,24,39,.06);
+      --amber:#8c4800;
+    }
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3 / good practice) ────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    *{box-sizing:border-box;}
+    body{margin:0;background:var(--paper);color:var(--ink);
+      font-family:var(--font-sans);}
+
+    /* ── Standard header / footer ────────────────────────────── */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),
+      rgba(255,255,255,0));}
+    .container{max-width:1100px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;
+      font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;
+      line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;
+      max-width:80ch;font-size:0.9375rem;}
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+    .hidden{display:none!important;}
+
+    /* ── Instructions dropdown ───────────────────────────────── */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+    .instructions-body h4{font-family:var(--font-serif);font-size:1rem;
+      font-weight:700;color:var(--ink);margin:16px 0 6px;}
+    .instructions-body h4:first-child{margin-top:4px;}
+    .example-eq{margin:8px 0;padding:9px 13px;border-radius:10px;
+      background:rgba(47,93,124,.05);border:1px solid rgba(47,93,124,.16);
+      overflow-x:auto;max-width:100%;}
+    .example-eq .eq-block{margin:2px 0;font-size:0.8125rem;}
+
+    /* ── Buttons ─────────────────────────────────────────────── */
+    /* Default button border #8c7f72 = 3.53:1 on white (WCAG 1.4.11 ✓) */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover:not(:disabled){background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* ── Control bar ─────────────────────────────────────────── */
+    .control-bar{background:var(--panel);border:1px solid var(--line);
+      border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);
+      margin-bottom:14px;display:flex;gap:16px;flex-wrap:wrap;
+      align-items:center;justify-content:space-between;}
+    .ctl-group{display:flex;flex-direction:column;gap:7px;min-width:0;}
+    .ctl-label{font-size:0.6875rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.07em;color:var(--muted);}
+    .ctl-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+    .mode-note{font-size:0.75rem;color:var(--muted);line-height:1.55;
+      max-width:52ch;margin:0;}
+    .progress-pill{font-size:0.8125rem;font-weight:800;border-radius:999px;
+      padding:6px 14px;white-space:nowrap;color:var(--accent);
+      background:rgba(47,93,124,.08);border:1px solid rgba(47,93,124,.20);}
+    .progress-pill.done{color:var(--good);background:rgba(21,92,56,.09);
+      border-color:rgba(21,92,56,.30);}
+
+    /* Reflow (WCAG 1.4.10): the nowrap pills and buttons above must be free
+       to wrap on a narrow viewport — or at a large user font size — rather
+       than push the page sideways. */
+    @media(max-width:560px){
+      .control-bar{flex-direction:column;align-items:stretch;}
+      .progress-pill,.primary-btn,.option-btn{white-space:normal;}
+      .btn-row .primary-btn,.btn-row .option-btn{flex:1 1 auto;}
+    }
+
+    /* ── Problem card ────────────────────────────────────────── */
+    .problem-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:20px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .problem-header{font-family:var(--font-serif);font-size:1.25rem;
+      font-weight:700;color:var(--ink);margin:0 0 6px;}
+    .problem-sub{font-size:0.8125rem;color:var(--muted);
+      margin:0 0 14px;line-height:1.55;max-width:80ch;}
+    .model-box{margin-bottom:12px;padding:12px 14px;border-radius:12px;
+      background:rgba(47,93,124,.05);border:1px solid rgba(47,93,124,.16);}
+    .model-label{font-size:0.625rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.07em;color:var(--accent);margin-bottom:9px;}
+    .eq-row{display:grid;grid-template-columns:minmax(0,15rem) minmax(0,1fr);
+      gap:6px 14px;align-items:baseline;padding:3px 0;}
+    @media(max-width:620px){.eq-row{grid-template-columns:1fr;}}
+    .eq-lab{font-size:0.75rem;color:var(--muted);line-height:1.45;}
+    .eq{font-family:var(--font-mono);font-weight:600;color:var(--ink);
+      font-size:0.875rem;letter-spacing:.01em;white-space:nowrap;
+      overflow-x:auto;max-width:100%;display:block;}
+    .eq sup{font-size:.72em;}
+    .eq sub{font-size:.72em;}
+    .eq-block{display:block;margin:5px 0;overflow-x:auto;max-width:100%;
+      font-family:var(--font-mono);font-weight:600;color:var(--ink);
+      font-size:0.8125rem;line-height:2;white-space:nowrap;}
+    .eq-block .why{font-family:var(--font-sans);font-weight:400;
+      color:var(--muted);font-size:0.75rem;margin-left:10px;
+      white-space:normal;}
+    .cf-note{margin:0 0 12px;padding:10px 13px;border-radius:12px;
+      background:rgba(47,93,124,.05);border:1px solid rgba(47,93,124,.16);
+      font-size:0.8125rem;color:var(--ink-2);line-height:1.65;}
+    .cf-note strong{color:var(--ink);}
+    .units-note{margin:12px 0 0;padding:10px 13px;border-radius:12px;
+      background:rgba(140,72,0,.06);border:1px solid rgba(140,72,0,.24);
+      font-size:0.8125rem;color:var(--ink-2);line-height:1.6;}
+    .units-note strong{color:#8c4800;}
+
+    /* ── Step cards ──────────────────────────────────────────── */
+    .q-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:16px;padding:16px;box-shadow:var(--shadow);
+      margin-bottom:12px;}
+    .q-card.locked{opacity:.55;}
+    .q-card-header{display:flex;justify-content:space-between;
+      align-items:flex-start;gap:10px;flex-wrap:wrap;}
+    .q-num{display:inline-block;font-size:0.625rem;font-weight:800;
+      text-transform:uppercase;letter-spacing:.07em;color:var(--accent);
+      background:rgba(47,93,124,.08);border:1px solid rgba(47,93,124,.18);
+      border-radius:6px;padding:2px 7px;margin-bottom:4px;}
+    .q-title{font-size:0.9375rem;font-weight:700;color:var(--ink);
+      line-height:1.3;}
+    .q-prompt{font-size:0.8125rem;color:var(--ink-2);
+      line-height:1.6;margin:8px 0 0;max-width:80ch;}
+    .chip-row{display:flex;gap:6px;flex-wrap:wrap;}
+    .status-chip{font-size:0.625rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.06em;border-radius:999px;padding:3px 9px;
+      white-space:nowrap;}
+    .status-chip.help{background:rgba(140,72,0,.09);color:#8c4800;
+      border:1px solid rgba(140,72,0,.28);}
+    .status-chip.done{background:rgba(21,92,56,.09);color:var(--good);
+      border:1px solid rgba(21,92,56,.30);}
+    .status-chip.miss{background:rgba(180,35,24,.07);color:var(--bad);
+      border:1px solid rgba(180,35,24,.28);}
+    .status-chip.wait{background:rgba(89,104,120,.09);color:var(--muted);
+      border:1px solid rgba(89,104,120,.28);}
+
+    /* Entry area */
+    .entry-area{margin-top:12px;padding:10px 12px;
+      background:rgba(246,242,234,.5);border:1px solid var(--line);
+      border-radius:12px;}
+    .entry-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+      font-size:0.9375rem;font-weight:600;color:var(--ink);line-height:2.2;}
+    .entry-sym{color:var(--ink-2);white-space:nowrap;font-size:0.9375rem;
+      font-family:var(--font-mono);font-weight:700;}
+    .entry-unit{color:var(--muted);font-size:0.75rem;font-weight:700;
+      white-space:nowrap;}
+    .entry-hint{margin:8px 0 0;font-size:0.75rem;color:var(--muted);
+      line-height:1.6;max-width:80ch;}
+    .entry-hint strong{color:var(--ink-2);}
+    /* Inline inputs — border #8c7f72 = 3.5:1 on white (WCAG 1.4.11 ✓) */
+    .fi{width:120px;padding:5px 8px;border:1.5px solid #8c7f72;
+      border-radius:8px;font-size:0.9375rem;font-family:var(--font-sans);
+      font-weight:700;text-align:center;background:#fff;color:var(--ink);
+      outline:none;transition:border-color .12s,background .12s;}
+    .fi:focus{border-color:var(--accent);}
+    .fi.correct{border-color:var(--good);background:rgba(21,92,56,.06);}
+    .fi.wrong{border-color:var(--bad);background:rgba(180,35,24,.06);}
+    .fi:disabled{background:rgba(246,242,234,.9);color:var(--muted);
+      cursor:not-allowed;}
+
+    /* Multiple choice (Step 5) */
+    fieldset.mc{border:0;margin:12px 0 0;padding:0;}
+    fieldset.mc legend{font-size:0.8125rem;font-weight:700;color:var(--ink);
+      padding:0;margin-bottom:8px;line-height:1.55;}
+    .mc-list{list-style:none;margin:0;padding:0;display:flex;
+      flex-direction:column;gap:7px;}
+    .mc-item label{display:flex;gap:10px;align-items:center;
+      padding:9px 12px;border:1.5px solid #8c7f72;border-radius:12px;
+      cursor:pointer;background:#fff;font-size:0.875rem;color:var(--ink);
+      transition:border-color .12s,background .12s;line-height:1.45;}
+    .mc-item label:hover{border-color:var(--accent);
+      background:rgba(47,93,124,.05);}
+    .mc-item.sel label{border-color:var(--accent);border-width:2.5px;
+      background:rgba(47,93,124,.09);padding:8px 11px;}
+    .mc-item.right label{border-color:var(--good);border-width:2.5px;
+      background:rgba(21,92,56,.07);padding:8px 11px;}
+    .mc-item.miss label{border-color:var(--bad);border-width:2.5px;
+      background:rgba(180,35,24,.06);padding:8px 11px;}
+    .mc-item input[type=radio]{width:17px;height:17px;flex-shrink:0;
+      accent-color:var(--accent);cursor:pointer;}
+    .mc-item input[type=radio]:disabled{cursor:not-allowed;}
+    .mc-mark{font-weight:800;margin-left:auto;font-size:0.8125rem;
+      white-space:nowrap;}
+    .mc-mark.ok{color:var(--good);}
+    .mc-mark.no{color:var(--bad);}
+
+    .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;
+      align-items:center;}
+
+    /* Feedback — role="status" region, announced by AT */
+    .entry-fb{margin-top:10px;padding:9px 12px;border-radius:10px;
+      font-size:0.8125rem;font-weight:600;line-height:1.65;
+      animation:fadeSlide .18s ease;}
+    .entry-fb.correct{background:rgba(21,92,56,.08);
+      border:1px solid rgba(21,92,56,.22);color:var(--good);}
+    .entry-fb.wrong{background:rgba(180,35,24,.06);
+      border:1px solid rgba(180,35,24,.22);color:var(--bad);}
+    .entry-fb.neutral{background:rgba(47,93,124,.06);
+      border:1px solid rgba(47,93,124,.18);color:var(--ink-2);}
+
+    /* Help ladder reveals */
+    .help-box{margin-top:9px;padding:10px 13px;border-radius:12px;
+      animation:fadeSlide .2s ease;}
+    .help-box.hintbox{background:rgba(140,72,0,.05);
+      border:1px solid rgba(140,72,0,.22);}
+    .help-box.fmlbox{background:rgba(47,93,124,.04);
+      border:1px solid rgba(47,93,124,.16);}
+    .help-box.solbox{background:rgba(21,92,56,.05);
+      border:1px solid rgba(21,92,56,.22);}
+    .reveal-label{font-size:0.625rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.07em;margin-bottom:7px;}
+    .hintbox .reveal-label{color:#8c4800;}
+    .fmlbox  .reveal-label{color:var(--accent);}
+    .solbox  .reveal-label{color:var(--good);}
+    .help-content{font-size:0.8125rem;line-height:1.7;color:var(--ink-2);}
+    .help-content .eq-block{color:var(--ink);}
+    .answer-note{margin-top:9px;padding-top:8px;
+      border-top:1px solid rgba(21,92,56,.18);font-size:0.8125rem;
+      color:var(--ink-2);line-height:1.65;}
+    .answer-note strong{color:var(--ink);}
+
+    @keyframes fadeSlide{from{opacity:0;transform:translateY(6px);}
+      to{opacity:1;transform:translateY(0);}}
+
+    /* Locked placeholder */
+    .lock-msg{margin-top:10px;padding:9px 12px;border-radius:10px;
+      background:rgba(89,104,120,.06);border:1px dashed var(--line-2);
+      font-size:0.8125rem;color:var(--muted);line-height:1.55;}
+
+    /* ── Completion banner ───────────────────────────────────── */
+    .phase-banner{margin:14px 0;padding:13px 16px;border-radius:14px;
+      font-size:0.875rem;line-height:1.65;}
+    .phase-banner.done{background:rgba(21,92,56,.08);
+      border:1px solid rgba(21,92,56,.25);color:var(--ink-2);}
+    .phase-banner.done strong{color:var(--good);}
+    .score-line{margin-top:8px;font-size:0.8125rem;color:var(--ink-2);
+      line-height:1.7;}
+
+    /* ── Figure ──────────────────────────────────────────────── */
+    .figure-section{margin:16px 0 4px;}
+    .figure-heading{font-family:var(--font-serif);font-size:1.25rem;
+      font-weight:700;color:var(--ink);margin:0 0 6px;}
+    .figure-lede{font-size:0.8125rem;color:var(--ink-2);line-height:1.6;
+      margin:0 0 12px;max-width:80ch;}
+
+    /* Three panels, laid out as in the appendix: loanable funds top-left,
+       net capital outflow top-right, foreign exchange directly beneath it.
+       Panels 1 and 2 share a row so r₁ is at the same height in both; panels
+       2 and 3 share a column so CF₁ is at the same horizontal position. */
+    .tri-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;
+      align-items:start;margin-bottom:14px;}
+    .tri-row > *{min-width:0;}
+    .panel-lf{grid-column:1;grid-row:1;}
+    .panel-cf{grid-column:2;grid-row:1;}
+    .panel-fx{grid-column:2;grid-row:2;}
+    @media(max-width:700px){
+      .tri-row{grid-template-columns:1fr;}
+      .panel-lf,.panel-cf,.panel-fx{grid-column:1;grid-row:auto;}
+    }
+
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .canvas-wrap{position:relative;width:100%;aspect-ratio:1/1;
+      border-radius:10px;overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+    .graph-legend{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+    .legend-row{display:flex;align-items:center;gap:8px;
+      font-size:0.75rem;color:var(--ink-2);line-height:1.4;}
+    .legend-line{width:28px;flex-shrink:0;height:0;
+      border-top-width:3px;border-top-style:solid;}
+    .legend-line.dashed{border-top-style:dashed;}
+    .legend-line.dotted{border-top-style:dotted;}
+    .legend-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
+    .fig-note{font-size:0.8125rem;color:var(--ink-2);line-height:1.65;
+      margin:0 0 6px;max-width:80ch;padding:10px 13px;border-radius:12px;
+      background:rgba(47,93,124,.05);border:1px solid rgba(47,93,124,.16);}
+    .fig-note strong{color:var(--ink);}
+  </style>
+</head>
+<body>
+
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105b/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105B — The Open Economy</div>
+      <h1>The Large Open Economy in the Long Run</h1>
+      <p class="sub">
+        Take a large open economy apart in five steps: saving as a function of
+        the interest rate, the total demand for loanable funds, the domestic
+        interest rate that clears them, and the real exchange rate net capital
+        outflow delivers — then say in words what the sign of CF actually means.
+      </p>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>You are handed a large open economy: output is fixed at full
+          employment, and — unlike the small open economy — the domestic real
+          interest rate is <strong>not</strong> handed to you. This country is
+          big enough that its own saving and borrowing move the world market,
+          so r is determined at home, where saving equals the total demand for
+          loanable funds. Net capital outflow then determines the real exchange
+          rate.</p>
+          <p>Net capital outflow depends on <em>both</em> interest rates,
+          CF = CF<sub>0</sub> &minus; CF<sub>1</sub>&middot;r +
+          CF<sub>2</sub>&middot;r*. In every problem here
+          CF<sub>1</sub> = CF<sub>2</sub>, so the schedule collapses to
+          CF = CF<sub>0</sub> &minus; CF<sub>1</sub>(r &minus; r*): capital
+          responds to the <strong>interest differential</strong>. A domestic
+          rate above the world rate makes domestic assets the better buy, and
+          capital flows in. That is the economic content of the CF curve, not a
+          modelling convenience — but note that CF<sub>0</sub> is positive, so
+          r above r* does <em>not</em> by itself make CF negative.</p>
+          <p>Steps unlock one at a time. You have to commit an answer to a step
+          before the next one opens and before any help for that step becomes
+          available — that is the point of the lab. Once you have the exchange
+          rate, the three-panel diagram from the appendix is drawn from
+          <em>your</em> numbers.</p>
+          <p>You will be asked to answer the following questions:</p>
+          <ol>
+            <li><strong>Total saving as a function of r.</strong> Substitute the
+            consumption function into S = Y &minus; C &minus; G and collect the
+            r terms. Two boxes: the intercept, then the coefficient on r.</li>
+            <li><strong>Investment plus net capital outflow as a function of
+            r.</strong> Add the two schedules and collect the r terms. Two
+            boxes again, but this line is printed with a <em>minus</em> between
+            them, so the second box takes the size of the slope. Remember r* is
+            a given number, not an unknown — substitute it.</li>
+            <li><strong>The equilibrium real interest rate.</strong> Set saving
+            equal to the total demand for loanable funds and solve for
+            r<sub>1</sub>.</li>
+            <li><strong>The equilibrium real exchange rate.</strong> Evaluate
+            CF at r<sub>1</sub>, set it equal to NX(&epsilon;), and solve for
+            &epsilon;<sub>1</sub>.</li>
+            <li><strong>Interpretation.</strong> Three questions about the
+            economy you just solved: lender or borrower, surplus or deficit,
+            and which way CF moves when r rises relative to r*.</li>
+          </ol>
+          <p>Enter your answer and click <strong>Check Answer</strong> (or press
+          Enter). All dollar amounts are in <strong>billions of dollars</strong>,
+          r and r* are in <strong>percent</strong>, and &epsilon; is a
+          <strong>unitless index</strong>. Round to two decimals. After you
+          submit, a three-step help ladder opens — <strong>Hint</strong>, then
+          <strong>Formula</strong>, then <strong>Worked solution</strong>. A step
+          you got wrong stays open, so you can fix it once you see where it went
+          off.</p>
+        </div>
+      </details>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Worked Example</summary>
+        <div class="instructions-body">
+          <p>Here is the whole chain worked through once, on a different economy
+          from the one below. Suppose we are given:</p>
+          <div class="example-eq">
+            <span class="eq-block">Y  = 8000</span>
+            <span class="eq-block">C  = 350 + 0.70(Y &minus; T) &minus; 30r</span>
+            <span class="eq-block">I  = 1910 &minus; 40r</span>
+            <span class="eq-block">CF = 400 &minus; 50r + 50r*</span>
+            <span class="eq-block">G  = 1400</span>
+            <span class="eq-block">T  = 1600</span>
+            <span class="eq-block">NX = 950 &minus; 500&epsilon;</span>
+            <span class="eq-block">r* = 6  (percent)</span>
+          </div>
+
+          <h4>Step 1 — Saving as a function of r</h4>
+          <p>Saving is output minus consumption minus government purchases. We
+          cannot reduce it to a number, because consumption depends on r and r
+          is exactly what we do not know yet. So substitute and collect:</p>
+          <div class="example-eq">
+            <span class="eq-block">S = Y &minus; C &minus; G</span>
+            <span class="eq-block">S = 8000 &minus; [350 + 0.70(8000 &minus; 1600) &minus; 30r] &minus; 1400</span>
+            <span class="eq-block">S = (8000 &minus; 350 &minus; 4480 &minus; 1400) + 30r</span>
+            <span class="eq-block">S = 1770 + 30r</span>
+          </div>
+          <p>The coefficient on r is <strong>positive</strong>: a higher interest
+          rate makes households consume less, and what they do not consume they
+          save. Saving slopes <em>up</em>.</p>
+
+          <h4>Step 2 — Investment plus net capital outflow</h4>
+          <p>I + CF is the <strong>total demand for loanable funds</strong>.
+          Investment is the obvious use of domestic saving; net capital outflow
+          is the less obvious one. Buying a foreign bond is a use of saving in
+          exactly the same way that buying a machine at home is — the dollars
+          leave the domestic pool either way. So the two schedules add:</p>
+          <div class="example-eq">
+            <span class="eq-block">I + CF = (1910 &minus; 40r) + (400 &minus; 50r + 50(6))&nbsp;&nbsp;&larr; r* = 6 substituted</span>
+            <span class="eq-block">I + CF = (1910 + 400 + 300) &minus; (40 + 50)r</span>
+            <span class="eq-block">I + CF = 2610 &minus; 90r</span>
+          </div>
+          <p>Notice where the 50(6) went. r* is the <em>world</em> rate — a
+          number we are given, not something we solve for — so
+          CF<sub>2</sub>&middot;r* = 300 sits in the intercept, not in the
+          coefficient on r. Both slopes are negative, so the total slope is
+          &minus;90.</p>
+
+          <h4>Step 3 — The equilibrium real interest rate</h4>
+          <p>This is where the large open economy departs from the small one.
+          The rate is not handed to us; the loanable funds market has to clear
+          at home:</p>
+          <div class="example-eq">
+            <span class="eq-block">S = I + CF</span>
+            <span class="eq-block">1770 + 30r = 2610 &minus; 90r</span>
+            <span class="eq-block">30r + 90r = 2610 &minus; 1770</span>
+            <span class="eq-block">120r = 840</span>
+            <span class="eq-block">r<sub>1</sub> = 840 / 120 = 7.00</span>
+          </div>
+
+          <h4>Step 4 — The equilibrium real exchange rate</h4>
+          <p>Now evaluate CF at that rate. The market for foreign exchange
+          clears when the dollars supplied by net capital outflow equal the
+          dollars demanded to pay for net exports:</p>
+          <div class="example-eq">
+            <span class="eq-block">CF = 400 &minus; 50(7.00) + 50(6) = 350</span>
+            <span class="eq-block">CF = NX(&epsilon;):&nbsp;&nbsp;350 = 950 &minus; 500&epsilon;</span>
+            <span class="eq-block">500&epsilon; = 950 &minus; 350 = 600</span>
+            <span class="eq-block">&epsilon;<sub>1</sub> = 600 / 500 = 1.20</span>
+          </div>
+          <p>Notice the order. Saving and the demand for funds fix r; r fixes
+          net capital outflow; net capital outflow fixes net exports; and
+          &epsilon; is whatever it has to be to deliver them. The exchange rate
+          is the <em>last</em> thing determined, not the first.</p>
+
+          <h4>Step 5 — What it means</h4>
+          <p>CF = +350, so this economy sends 350 billion of saving abroad: it
+          is a <strong>net lender</strong>. In equilibrium the foreign-exchange
+          market forces NX = CF, so net exports are +350 too — a
+          <strong>trade surplus</strong>. And spending falls short of output by
+          the same 350:</p>
+          <div class="example-eq">
+            <span class="eq-block">C = 350 + 0.70(6400) &minus; 30(7) = 4620</span>
+            <span class="eq-block">I = 1910 &minus; 40(7) = 1630</span>
+            <span class="eq-block">C + I + G = 4620 + 1630 + 1400 = 7650</span>
+            <span class="eq-block">Y &minus; (C + I + G) = 8000 &minus; 7650 = +350 = NX</span>
+          </div>
+
+          <h4>The trap worth noticing</h4>
+          <p>Here r<sub>1</sub> = 7 is <em>above</em> r* = 6, and yet CF is
+          positive. It is tempting to reason "domestic rates are high, so
+          capital flows in, so CF must be negative" — but that ignores
+          CF<sub>0</sub>. What the differential controls is the
+          <strong>direction of the effect</strong>, not the sign of the level:
+          raising r relative to r* pushes CF <em>down</em>, from wherever
+          CF<sub>0</sub> put it. Whether it ends up above or below zero is an
+          arithmetic question, and you have to actually compute it.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- ── Control bar ─────────────────────────────────────────── -->
+  <div class="control-bar">
+    <div class="ctl-group">
+      <span class="ctl-label">Progress</span>
+      <div class="ctl-row">
+        <span class="progress-pill" id="progressPill"
+              role="status" aria-live="polite" aria-atomic="true">Step 1 of 5</span>
+        <button type="button" class="option-btn" id="newProblemBtn">New Problem</button>
+      </div>
+    </div>
+    <p class="mode-note">
+      Every problem is drawn fresh, so you can work as many as you like.
+      Trade balances alternate between surplus and deficit as you draw.
+    </p>
+  </div>
+
+  <!-- ── Problem ─────────────────────────────────────────────── -->
+  <div class="problem-card">
+    <h2 class="problem-header">Problem</h2>
+    <p class="problem-sub">
+      A large open economy is described by the equations below. Output is fixed
+      at its full-employment level. The domestic real interest rate is not
+      given: it is determined where saving equals investment plus net capital
+      outflow.
+    </p>
+
+    <div class="model-box">
+      <div class="model-label">The economy</div>
+      <div id="modelLines"></div>
+    </div>
+
+    <p class="cf-note" id="cfNote"></p>
+
+    <p class="units-note">
+      <strong>Units.</strong> Y, C, I, G, T, S, CF and NX are measured in
+      <strong>billions of dollars</strong>. The interest rates r and r* are in
+      <strong>percent</strong> — so r = 5 means 5%, and a term like 30r
+      contributes 150 when r = 5. The real exchange rate ε is a
+      <strong>unitless index</strong>. Round every answer to two decimals.
+    </p>
+  </div>
+
+  <!-- Steps 1–4 -->
+  <div id="stepsHostA"></div>
+
+  <!-- ── Figure (appears once Step 4 is resolved) ────────────── -->
+  <section class="figure-section hidden" id="figureSection"
+           aria-labelledby="figureHeading">
+    <h2 class="figure-heading" id="figureHeading">Your economy, in three markets</h2>
+    <p class="figure-lede" id="figureLede"></p>
+
+    <div class="tri-row">
+      <!-- Panel 1 — loanable funds -->
+      <div class="graph-card panel-lf">
+        <div class="graph-title" id="lfTitle">1. Market for Loanable Funds</div>
+        <div class="canvas-wrap">
+          <canvas id="lfCanvas"
+                  role="img"
+                  aria-labelledby="lfTitle"
+                  aria-describedby="lfDesc"></canvas>
+        </div>
+        <div class="graph-legend" aria-hidden="true">
+          <div class="legend-row">
+            <div class="legend-line" style="border-top-color:#155c38;"></div>
+            <span>Saving S(r) — solid green, sloping up</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-line dashed" style="border-top-color:#b42318;"></div>
+            <span>Demand for funds I(r) + CF(r, r*) — dashed red</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-line dotted" style="border-top-color:#8c4800;"></div>
+            <span>Equilibrium rate r₁ — dotted amber guide</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1f2937;"></div>
+            <span>Equilibrium, where S = I + CF</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2 — net capital outflow -->
+      <div class="graph-card panel-cf">
+        <div class="graph-title" id="cfTitle">2. Net Capital Outflow</div>
+        <div class="canvas-wrap">
+          <canvas id="cfCanvas"
+                  role="img"
+                  aria-labelledby="cfTitle"
+                  aria-describedby="cfDesc"></canvas>
+        </div>
+        <div class="graph-legend" aria-hidden="true">
+          <div class="legend-row">
+            <div class="legend-line" style="border-top-color:#b42318;"></div>
+            <span>Net capital outflow CF(r, r*) — solid red</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-line dotted" style="border-top-color:#8c4800;"></div>
+            <span>r₁ carried over from panel 1 — dotted amber</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-line dashed" style="border-top-color:#8c4800;"></div>
+            <span>Drop to CF₁ on the axis — dashed amber</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 3 — foreign exchange -->
+      <div class="graph-card panel-fx">
+        <div class="graph-title" id="fxTitle">3. Market for Foreign Exchange</div>
+        <div class="canvas-wrap">
+          <canvas id="fxCanvas"
+                  role="img"
+                  aria-labelledby="fxTitle"
+                  aria-describedby="fxDesc"></canvas>
+        </div>
+        <div class="graph-legend" aria-hidden="true">
+          <div class="legend-row">
+            <div class="legend-line" style="border-top-color:#2f5d7c;"></div>
+            <span>Net exports NX(ε) — solid blue</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-line" style="border-top-color:#8c4800;"></div>
+            <span>CF₁ carried over from panel 2 — vertical amber line</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1f2937;"></div>
+            <span>Equilibrium at (CF₁, ε₁)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="fig-note" id="slopeNote"></p>
+
+    <!-- Canvas accessible descriptions — live region (WCAG 1.1.1, 4.1.3) -->
+    <section class="sr-only" id="graphsDesc" aria-live="polite" aria-atomic="true">
+      <p id="lfDesc">The loanable funds diagram is drawn once Step 4 is complete.</p>
+      <p id="cfDesc">The net capital outflow diagram is drawn once Step 4 is complete.</p>
+      <p id="fxDesc">The foreign exchange diagram is drawn once Step 4 is complete.</p>
+    </section>
+  </section>
+
+  <!-- Step 5 -->
+  <div id="stepsHostB"></div>
+
+  <div class="phase-banner done hidden" id="doneBanner"
+       role="status" aria-live="polite" aria-atomic="true"></div>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 105B — Intermediate Macroeconomic Theory II</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════════════════
+   The Large Open Economy in the Long Run
+
+     Y  = C + I + G + NX          (Y fixed)
+     C  = c0 + MPC(Y - T) - c1·r
+     I  = I0 - I1·r
+     CF = CF0 - CF1·r + CF2·r*    (net capital outflow; CF2 = CF1 here)
+     NX = NX0 - NX1·ε
+
+   Solution chain:
+     S(r)       = Y - C - G      = [Y - c0 - MPC(Y-T) - G] + c1·r
+     I(r)+CF(r) = [I0 + CF0 + CF2·r*] - (I1 + CF1)·r
+     S = I + CF                  ⟹  r1 = (A - Sint) / (B + c1)
+     CF(r1, r*) = NX(ε)          ⟹  ε1 = (NX0 - CF) / NX1
+
+   Unlike the small open economy, r is solved for, not given. That is the
+   whole difference, and it is why steps 1 and 2 are expressions in r rather
+   than numbers.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const LAB_ID    = 'loe-long-run-solver';
+const LAB_LABEL = 'The Large Open Economy in the Long Run';
+const NSTEPS    = 5;   // cards the student works through
+const NREC      = 7;   // recorded items: 4 solve steps + 3 interpretation Qs
+
+/* ── RNG (CLAUDE.md) ────────────────────────────────────────────────────
+   Unseeded by design — Session.rngForLab() ignores labId and returns an
+   unseeded generator, so every "New Problem" click draws a genuinely new
+   problem. Do not reintroduce seeding here (see CLAUDE.md § RNG). The one
+   thing this lab controls across draws is _probIndex, which alternates the
+   trade-balance sign so surpluses and deficits come up equally often. */
+let _rng = null;
+function rng(){ return _rng ? _rng() : Math.random(); }
+function pick(arr){ return arr[Math.floor(rng() * arr.length)]; }
+function ri(lo, hi){ return lo + Math.floor(rng() * (hi - lo + 1)); }
+function ru(lo, hi){ return lo + rng() * (hi - lo); }
+function roundTo(v, m){ return Math.round(v / m) * m; }
+
+/* ── State ──────────────────────────────────────────────────────────── */
+let P  = null;          // drawn parameters + derived answers
+let Q  = [];            // step definitions
+let QS = [];            // per-step state
+let RQ = [];            // per-recorded-item state (NREC entries)
+let _probIndex = 0;     // drives the alternating trade-balance sign
+let _labDone   = false;
+let _fs        = 1;     // canvas font scale (WCAG 1.4.4)
+
+const MINUS = '−';   // proper minus sign
+const EPS   = 'ε';   // ε
+const SUB1  = '₁';   // subscript one, for r₁ / ε₁ / CF₁ in plain text
+
+/* ── DOM ────────────────────────────────────────────────────────────── */
+const $hostA      = document.getElementById('stepsHostA');
+const $hostB      = document.getElementById('stepsHostB');
+const $modelLines = document.getElementById('modelLines');
+const $cfNote     = document.getElementById('cfNote');
+const $progress   = document.getElementById('progressPill');
+const $newBtn     = document.getElementById('newProblemBtn');
+const $doneBanner = document.getElementById('doneBanner');
+const $figure     = document.getElementById('figureSection');
+const $figLede    = document.getElementById('figureLede');
+const $slopeNote  = document.getElementById('slopeNote');
+const $lf         = document.getElementById('lfCanvas');
+const $cf         = document.getElementById('cfCanvas');
+const $fx         = document.getElementById('fxCanvas');
+const $lfDesc     = document.getElementById('lfDesc');
+const $cfDesc     = document.getElementById('cfDesc');
+const $fxDesc     = document.getElementById('fxDesc');
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FORMATTING
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Trimmed fixed-decimal formatting: 1920 not 1920.00, 1.25 not 1.2500. */
+function nf(v, d){
+  if(v === null || v === undefined || !isFinite(v)) return '—';
+  let s = Math.abs(v).toFixed(d);
+  if(s.indexOf('.') !== -1) s = s.replace(/0+$/, '').replace(/\.$/, '');
+  return (v < 0 ? MINUS : '') + s;
+}
+function f2(v){ return nf(v, 2); }
+/* Explicit sign — used wherever the sign carries the economics. */
+function fs2(v){ return (v >= 0 ? '+' : MINUS) + nf(Math.abs(v), 2); }
+function mpcTxt(v){ return v.toFixed(2); }
+
+/* Render "± coef·sym", suppressing the term when coef = 0 and suppressing
+   the numeral when |coef| = 1 (the source notebook printed "- 0×r"). */
+function term(coef, sym){
+  if(!coef) return '';
+  const c = Math.abs(coef);
+  const body = (c === 1 ? '' : nf(c, 2)) + sym;
+  return (coef < 0 ? ' ' + MINUS + ' ' : ' + ') + body;
+}
+
+/* "1770 + 30r" / "2610 − 90r" — a linear function of r, written out. */
+function linTxt(a, b){ return nf(a, 2) + term(b, 'r'); }
+
+function parseNum(raw){
+  let s = String(raw).trim()
+    .replace(/[−–—]/g, '-')   /* − – —  →  - */
+    .replace(/[,\s$]/g, '');
+  if(s === '') return null;
+  if(!/^[-+]?(\d+\.?\d*|\.\d+)$/.test(s)) return null;
+  const v = parseFloat(s);
+  return isFinite(v) ? v : null;
+}
+
+function eqb(html, aria, why){
+  return '<span class="eq-block"' + (aria ? ' aria-label="' + aria + '"' : '') + '>'
+       + html + (why ? '<span class="why">' + why + '</span>' : '') + '</span>';
+}
+
+function stripTags(html){
+  const d = document.createElement('div');
+  d.innerHTML = html;
+  return (d.textContent || '').replace(/\s+/g, ' ').trim();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PROBLEM GENERATION — constructive
+
+   Draw the economy first (Y, T, G, MPC, c0, c1, r*), target an equilibrium
+   interest rate and trade balance, then back the CF and investment
+   coefficients out of those targets. The targets are scaffolding only:
+   every graded answer below is recomputed from the rounded coefficients the
+   student can actually see.
+
+   The jitter on I0 is load-bearing. Without it the construction lands r
+   exactly on r_target — an integer — in essentially every problem, and
+   students pattern-match instead of solving.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const FALLBACK = { Y:8000, T:1600, G:1400, MPC:0.70, c0:350, c1:30, rs:6,
+                   I0:1910, I1:40, CF0:400, CF1:50, CF2:50,
+                   NX0:950, NX1:500 };
+
+function derive(p){
+  const Sint = p.Y - p.c0 - p.MPC * (p.Y - p.T) - p.G;   /* S(r) intercept   */
+  const A    = p.I0 + p.CF0 + p.CF2 * p.rs;              /* I+CF intercept   */
+  const B    = p.I1 + p.CF1;                             /* |I+CF slope|     */
+  const r    = (A - Sint) / (B + p.c1);
+  const S    = Sint + p.c1 * r;
+  const I    = p.I0 - p.I1 * r;
+  const CF   = p.CF0 - p.CF1 * r + p.CF2 * p.rs;
+  const C    = p.c0 + p.MPC * (p.Y - p.T) - p.c1 * r;
+  const eps  = (p.NX0 - CF) / p.NX1;
+  return Object.assign({}, p, {
+    Sint: Sint, A: A, B: B, r: r, S: S, I: I, CF: CF, C: C, eps: eps,
+    demand: A - B * r,              /* I + CF at r₁ — equals S              */
+    spending: C + I + p.G           /* C + I + G = Y − NX                   */
+  });
+}
+
+function generateParams(){
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+
+  /* Alternate lender / borrower across consecutive problems so students see
+     both in equal measure. The first problem drawn is a net lender. */
+  const sign = (_probIndex % 2 === 0) ? 1 : -1;
+
+  for(let t = 0; t < 300; t++){
+    const Y   = ri(40, 120) * 100;                 /* 4000 … 12000, step 100 */
+    const T   = roundTo(Y * ru(0.15, 0.25), 10);
+    const G   = roundTo(Y * ru(0.15, 0.22), 10);
+    const MPC = pick([0.55, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85]);
+    const c0  = roundTo(ru(100, 600), 10);
+    const c1  = pick([10, 20, 30, 40, 50]);        /* never 0 — S must slope */
+    const rs  = ri(2, 8);                          /* world rate r*          */
+    const rt  = ri(2, 9);                          /* target r₁              */
+
+    const Sint = Y - c0 - MPC * (Y - T) - G;
+    const St   = Sint + c1 * rt;
+    if(!(St >= 0.08 * Y && St <= 0.28 * Y)) continue;
+    const Ct = c0 + MPC * (Y - T) - c1 * rt;
+    if(!(Ct > 0 && Ct < Y))                 continue;
+
+    /* Target a trade balance, then back out the CF curve. CF2 = CF1 makes
+       CF respond to the interest differential, CF0 − CF1(r − r*). */
+    const CFt = sign * Y * ru(0.01, 0.06);
+    const CF1 = roundTo(ru(25, 120), 5);
+    const CF2 = CF1;
+    const CF0 = Math.round(CFt + CF1 * rt - CF2 * rs);
+    const CFat = CF0 - CF1 * rt + CF2 * rs;        /* recomputed after rounding */
+
+    /* Investment absorbs the saving CF does not. */
+    const I1 = ri(6, 24) * 5;                      /* 30 … 120, step 5 */
+    const I0 = Math.round(St - CFat + I1 * rt) + ri(-60, 60);
+
+    /* Recompute everything from the displayed integer coefficients. */
+    const A  = I0 + CF0 + CF2 * rs;
+    const B  = I1 + CF1;
+    const r  = (A - Sint) / (B + c1);
+    const S  = Sint + c1 * r;
+    const I  = I0 - I1 * r;
+    const CF = CF0 - CF1 * r + CF2 * rs;
+
+    if(!(r >= 1.5 && r <= 9.5))                            continue;
+    if(!(I >= 0.05 * Y && I <= 0.35 * Y))                  continue;
+    if(!(S >= 0.08 * Y && S <= 0.28 * Y))                  continue;
+    if(!(Math.abs(CF) >= 0.005 * Y && Math.abs(CF) <= 0.10 * Y)) continue;
+    /* The jitter can nudge CF across zero on small economies; the alternating
+       surplus/deficit pattern is a promise the control bar makes, so enforce it. */
+    if(Math.sign(CF) !== sign)                             continue;
+
+    /* Target an exchange rate, then back out the NX curve. */
+    const et  = ru(0.8, 1.6);
+    const NX1 = ri(20, 130) * 10;                  /* 200 … 1300, step 10 */
+    const NX0 = Math.round(CF + NX1 * et);
+    const eps = (NX0 - CF) / NX1;                  /* from rounded NX0, not et */
+    if(!(eps >= 0.5 && eps <= 2.0))                        continue;
+    if(!(NX0 > 0 && I0 > 0 && CF0 > 0))                    continue;
+
+    P = derive({ Y:Y, T:T, G:G, MPC:MPC, c0:c0, c1:c1, rs:rs,
+                 I0:I0, I1:I1, CF0:CF0, CF1:CF1, CF2:CF2,
+                 NX0:NX0, NX1:NX1 });
+    return;
+  }
+  P = derive(FALLBACK);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PROBLEM RENDERING
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function cEqTxt(){
+  return 'C = ' + P.c0 + ' + ' + mpcTxt(P.MPC) + '(Y ' + MINUS + ' T)'
+       + term(-P.c1, 'r');
+}
+function iEqTxt(){  return 'I = '  + P.I0  + term(-P.I1, 'r'); }
+/* r* is left as a symbol here — its value is given on its own row below, and
+   substituting it is part of what Step 2 asks the student to do. The note
+   under the model box spells the substitution out. */
+function cfEqTxt(){ return 'CF = ' + P.CF0 + term(-P.CF1, 'r')
+                         + term(P.CF2, 'r*'); }
+function nxEqTxt(){ return 'NX = ' + P.NX0 + term(-P.NX1, EPS); }
+
+function renderProblem(){
+  const rows = [
+    ['National income identity', 'Y = C + I + G + NX',
+     'Y equals C plus I plus G plus N X'],
+    ['Output (fixed at full employment)', 'Y = ' + P.Y, ''],
+    ['Consumption', cEqTxt(), ''],
+    ['Investment', iEqTxt(), ''],
+    ['Net capital outflow', cfEqTxt(),
+     'C F equals ' + P.CF0 + ' minus ' + P.CF1 + ' r plus ' + P.CF2 + ' r star'],
+    ['Government purchases', 'G = ' + P.G, ''],
+    ['Taxes', 'T = ' + P.T, ''],
+    ['Net exports', nxEqTxt(), ''],
+    ['World real interest rate', 'r* = ' + P.rs + '  (percent)', ''],
+    ['Domestic real interest rate', 'r = ?  (solve for it)', '']
+  ];
+  $modelLines.innerHTML = rows.map(function(r){
+    return '<div class="eq-row"><span class="eq-lab">' + r[0] + '</span>'
+         + '<span class="eq"' + (r[2] ? ' aria-label="' + r[2] + '"' : '') + '>'
+         + r[1] + '</span></div>';
+  }).join('');
+
+  $cfNote.innerHTML = '<strong>About the CF curve.</strong> Here '
+    + 'CF<sub>1</sub> = CF<sub>2</sub> = ' + P.CF1 + ', so net capital outflow '
+    + 'is really a function of the <strong>interest differential</strong>: '
+    + 'CF = ' + P.CF0 + ' ' + MINUS + ' ' + P.CF1 + '(r ' + MINUS + ' ' + P.rs
+    + '). A domestic rate above the world rate makes domestic assets the better '
+    + 'buy and pulls capital in, which is why r enters with a minus sign and r* '
+    + 'with a plus. The CF equation above leaves r* as a symbol, but it is a '
+    + 'given number: substituting r* = ' + P.rs + ' turns CF<sub>2</sub>&middot;r* '
+    + 'into the constant ' + P.CF2 + '(' + P.rs + ') = ' + f2(P.CF2 * P.rs)
+    + '. Only r is unknown.';
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   STEP DEFINITIONS
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Answers the student most recently submitted, for carried-error credit. */
+function stepNum(n){
+  const st = QS[n - 1];
+  if(!st || !st.submitted) return null;
+  return (st.val === null || !isFinite(st.val)) ? null : st.val;
+}
+/* Returns the line the student actually wrote: { a, b } with b the *signed*
+   coefficient on r, which is q.sgn times what they typed (Step 2 prints the
+   minus sign for them, so the typed value is a magnitude). */
+function stepExpr(n){
+  const st = QS[n - 1];
+  if(!st || !st.submitted) return null;
+  if(st.valA === null || st.coefB === null) return null;
+  if(!isFinite(st.valA) || !isFinite(st.coefB)) return null;
+  return { a: st.valA, b: st.coefB };
+}
+/* r implied by the student's own steps 1 and 2: a1 + b1·r = a2 + b2·r. */
+function rFromOwnCurves(){
+  const e1 = stepExpr(1), e2 = stepExpr(2);
+  if(!e1 || !e2) return null;
+  const den = e1.b - e2.b;
+  if(Math.abs(den) < 1e-9) return null;
+  const r = (e2.a - e1.a) / den;
+  return isFinite(r) ? r : null;
+}
+function cfAt(r){ return P.CF0 - P.CF1 * r + P.CF2 * P.rs; }
+function epsFromR(r){ return (P.NX0 - cfAt(r)) / P.NX1; }
+
+function buildSteps(){
+  const s = [];
+  const lender = P.CF > 0;
+  const mpcY   = P.MPC * (P.Y - P.T);
+  const cf2rs  = P.CF2 * P.rs;
+
+  /* ── Step 1 — saving as a function of r ──────────────────────────── */
+  s.push({
+    n:1, kind:'expr', rec:[0],
+    title:'Total saving S as a function of r',
+    prompt:'Write total (national) saving as a linear function of the real '
+         + 'interest rate. You cannot reduce it to a number: r is not given in '
+         + 'a large open economy — it is what Step 3 solves for. Substitute the '
+         + 'consumption function, collect the r terms, and fill in both boxes. '
+         + 'Round to two decimals.',
+    qText:'Step 1 — Write total saving as a function of r: S = [intercept] + [coefficient]·r.',
+    lhs:'S =', conn:'+', sgn:1, phB:'coefficient',
+    exactA:P.Sint, tolA:0.5,
+    exactB:P.c1,   tolB:1e-6,
+    ariaA:'intercept of the saving function, in billions of dollars',
+    ariaB:'coefficient on r in the saving function, entered after a plus sign',
+    unitA:'$ billions',
+    unitB:'$ billions per point of r',
+    hintText:'First box: the <strong>intercept</strong>, in $ billions. Second '
+           + 'box: the <strong>coefficient on r</strong>, in $ billions per '
+           + 'point of r. The line already reads “S = … <strong>+</strong> … '
+           + '&middot; r”, so a positive number here means '
+           + 'saving <em>rises</em> with the interest rate and a negative number '
+           + 'means it falls. Decide which before you type.',
+    hint:'Saving is what is left of output after households consume and the '
+       + 'government spends: S = Y ' + MINUS + ' C ' + MINUS + ' G. Consumption '
+       + 'carries a ' + MINUS + ' ' + P.c1 + 'r term, so saving carries a '
+       + '<em>+</em>' + P.c1 + 'r term once you subtract it — that is the whole '
+       + 'reason saving slopes rather than standing vertical. Substitute C, '
+       + 'group the constants, and leave r as r.',
+    formula:eqb('S = Y ' + MINUS + ' C ' + MINUS + ' G = Y ' + MINUS
+              + ' [c<sub>0</sub> + MPC(Y ' + MINUS + ' T) ' + MINUS
+              + ' c<sub>1</sub>&middot;r] ' + MINUS + ' G',
+              'S equals Y minus C minus G')
+          + eqb('S = [Y ' + MINUS + ' c<sub>0</sub> ' + MINUS + ' MPC(Y '
+              + MINUS + ' T) ' + MINUS + ' G] + c<sub>1</sub>&middot;r',
+              'S equals the bracket plus c one times r',
+              'the bracket is the intercept; c₁ is the coefficient'),
+    solLines:[
+      ['S = ' + P.Y + ' ' + MINUS + ' [' + P.c0 + ' + ' + mpcTxt(P.MPC)
+        + '(' + P.Y + ' ' + MINUS + ' ' + P.T + ')' + term(-P.c1, 'r') + '] '
+        + MINUS + ' ' + P.G, 'substitute the consumption function', 'substitute C'],
+      ['S = (' + P.Y + ' ' + MINUS + ' ' + P.c0 + ' ' + MINUS + ' ' + f2(mpcY)
+        + ' ' + MINUS + ' ' + P.G + ')' + term(P.c1, 'r'),
+       'group the constants', 'MPC(Y − T) = ' + f2(mpcY)],
+      ['S = ' + linTxt(P.Sint, P.c1), 'S equals ' + f2(P.Sint) + ' plus '
+        + P.c1 + ' r', '']
+    ],
+    solNote:'Saving is <strong>S = ' + linTxt(P.Sint, P.c1) + '</strong>. The '
+          + 'coefficient is <strong>positive</strong>: a higher interest rate '
+          + 'means less consumption, and less consumption is more saving.',
+    diagnose:function(vA, vB){
+      const msgs = [];
+      if(!near(vA, P.Sint, 0.5)){
+        if(near(vA, P.Y - P.c0 - mpcY, 0.5))
+          msgs.push('Your intercept is Y ' + MINUS + ' c<sub>0</sub> ' + MINUS
+            + ' MPC(Y ' + MINUS + ' T) — you have not subtracted government '
+            + 'purchases, G = ' + P.G + '.');
+        else if(near(vA, P.Y - P.T - P.c0 - mpcY, 0.5))
+          msgs.push('That intercept belongs to <em>private</em> saving, '
+            + '(Y ' + MINUS + ' T) ' + MINUS + ' C. Total saving adds public '
+            + 'saving T ' + MINUS + ' G on top.');
+        else if(near(vA, P.S, 0.5))
+          msgs.push('You have already folded r into the intercept. Leave r as a '
+            + 'variable here — Step 3 is where it gets pinned down.');
+      }
+      if(!near(vB, P.c1, 1e-6)){
+        if(near(vB, -P.c1, 1e-6))
+          msgs.push('Your magnitude is right, but check the direction: does '
+            + 'saving rise or fall when the interest rate rises? Consumption '
+            + 'carries ' + MINUS + ' ' + P.c1 + 'r, and saving subtracts '
+            + 'consumption — so the two minus signs cancel and the coefficient '
+            + 'is <strong>+' + P.c1 + '</strong>.');
+        else if(vB === 0)
+          msgs.push('A zero coefficient would make saving vertical. It is not: '
+            + 'the ' + MINUS + ' ' + P.c1 + 'r term in consumption puts a '
+            + '+' + P.c1 + 'r term into saving.');
+        else if(near(vB, P.MPC, 1e-6) || near(vB, -P.MPC, 1e-6))
+          msgs.push('The MPC is the coefficient on <em>disposable income</em>, '
+            + 'not on r. The coefficient on r comes from the c<sub>1</sub> term.');
+      }
+      return msgs.length ? msgs.join(' ') : null;
+    }
+  });
+
+  /* ── Step 2 — investment plus net capital outflow ────────────────── */
+  s.push({
+    n:2, kind:'expr', rec:[1],
+    title:'Investment plus net capital outflow, I + CF, as a function of r',
+    prompt:'Write investment plus net capital outflow as a linear function of '
+         + 'r. Both schedules are given; add them and collect the r terms. r* '
+         + 'is a number you are handed, so substitute it. Round to two decimals.',
+    qText:'Step 2 — Write investment plus net capital outflow as a function of r: '
+        + 'I + CF = [intercept] ' + MINUS + ' [coefficient]·r.',
+    lhs:'I + CF =', conn:MINUS, sgn:-1, phB:'coefficient',
+    exactA:P.A, tolA:0.5,
+    /* The line prints a minus between the boxes, so the value entered here is
+       the slope *magnitude*: I + CF = A − (I₁ + CF₁)·r. */
+    exactB:P.B, tolB:1e-6,
+    ariaA:'intercept of investment plus net capital outflow, in billions of dollars',
+    ariaB:'coefficient on r in investment plus net capital outflow, entered after a minus sign',
+    unitA:'$ billions',
+    unitB:'$ billions per point of r',
+    hintText:'First box: the <strong>intercept</strong>, in $ billions. Second '
+           + 'box: the <strong>coefficient on r</strong>, in $ billions per '
+           + 'point of r. Note the line already reads “I + CF = … <strong>'
+           + MINUS + '</strong> … &middot; r” — the minus is printed for you, so '
+           + 'enter the size of the slope, not another minus sign. Typing a '
+           + 'negative number here would say the demand for loanable funds '
+           + '<em>rises</em> as r rises.',
+    hint:'I + CF is the <strong>total demand for loanable funds</strong>. '
+       + 'Investment is the obvious use of domestic saving. Net capital outflow '
+       + 'is the one that trips people up: buying a foreign bond is a '
+       + '<em>use</em> of domestic saving in exactly the way that buying a '
+       + 'machine at home is — the dollars leave the domestic pool either way. '
+       + 'That is why CF sits on the demand side and not, say, netted out of '
+       + 'saving. So just add the two schedules. One caution: r* = ' + P.rs
+       + ' is the <em>world</em> rate, a given number, so ' + P.CF2 + 'r* is a '
+       + 'constant worth ' + f2(cf2rs) + ' — it belongs in the intercept, not in '
+       + 'the coefficient on r.',
+    formula:eqb('I + CF = (I<sub>0</sub> ' + MINUS + ' I<sub>1</sub>&middot;r) + '
+              + '(CF<sub>0</sub> ' + MINUS + ' CF<sub>1</sub>&middot;r + '
+              + 'CF<sub>2</sub>&middot;r*)',
+              'I plus C F equals the investment schedule plus the capital outflow schedule')
+          + eqb('I + CF = [I<sub>0</sub> + CF<sub>0</sub> + '
+              + 'CF<sub>2</sub>&middot;r*] ' + MINUS + ' (I<sub>1</sub> + '
+              + 'CF<sub>1</sub>)&middot;r',
+              'I plus C F equals the bracket minus I one plus C F one times r',
+              'r* is given, so CF₂·r* is part of the intercept'),
+    solLines:[
+      ['I + CF = (' + P.I0 + term(-P.I1, 'r') + ') + (' + P.CF0
+        + term(-P.CF1, 'r') + term(P.CF2, '(' + P.rs + ')') + ')',
+       'add the two schedules', 'substitute r* = ' + P.rs],
+      ['I + CF = (' + P.I0 + ' + ' + P.CF0 + ' + ' + f2(cf2rs) + ') '
+        + MINUS + ' (' + P.I1 + ' + ' + P.CF1 + ')r',
+       'group the constants and the r terms', ''],
+      ['I + CF = ' + linTxt(P.A, -P.B),
+       'I plus C F equals ' + f2(P.A) + ' minus ' + P.B + ' r', '']
+    ],
+    solNote:'The total demand for loanable funds is <strong>I + CF = '
+          + linTxt(P.A, -P.B) + '</strong>. The intercept is <strong>'
+          + f2(P.A) + '</strong> — note that it includes CF<sub>2</sub>&middot;r* = '
+          + f2(cf2rs) + ', because r* is given rather than solved for. The slope '
+          + 'is <strong>I<sub>1</sub> + CF<sub>1</sub> = ' + P.I1 + ' + ' + P.CF1
+          + ' = ' + P.B + '</strong>, and it is <em>subtracted</em>: both '
+          + 'investment and net capital outflow fall when r rises, so their '
+          + 'slopes add.',
+    diagnose:function(vA, vB){
+      const msgs = [];
+      if(!near(vA, P.A, 0.5)){
+        if(near(vA, P.I0 + P.CF0, 0.5))
+          msgs.push('You left CF<sub>2</sub>&middot;r* out of the intercept. '
+            + 'With r* = ' + P.rs + ' that term is worth ' + P.CF2 + '('
+            + P.rs + ') = ' + f2(cf2rs) + ', and it is a constant, so it belongs '
+            + 'there.');
+        else if(near(vA, P.I0, 0.5))
+          msgs.push('That is I<sub>0</sub> alone — the whole CF schedule is '
+            + 'missing. Net capital outflow is part of the demand for loanable '
+            + 'funds.');
+        else if(near(vA, P.CF0 + cf2rs, 0.5))
+          msgs.push('That is the CF intercept alone. Investment has to be added '
+            + 'to it.');
+      }
+      if(!near(vB, P.B, 1e-6)){
+        if(near(vB, -P.B, 1e-6))
+          msgs.push('Your magnitude is right, but check the direction. The box '
+            + 'already sits behind a printed minus sign, so entering '
+            + MINUS + P.B + ' makes the line read I + CF = ' + f2(P.A) + ' '
+            + MINUS + ' (' + MINUS + P.B + ')r = ' + linTxt(P.A, P.B) + ' — the '
+            + 'demand for loanable funds <em>rising</em> as r rises. It falls: '
+            + 'dearer borrowing means less investment, and a higher domestic '
+            + 'return keeps capital at home. Enter <strong>' + P.B + '</strong>.');
+        else if(near(vB, P.I1, 1e-6))
+          msgs.push('That is just ' + P.I1 + ', the investment slope. Either CF '
+            + 'is missing from the slope entirely, or you let '
+            + 'CF<sub>2</sub>&middot;r* move with r and cancel part of it. r* is '
+            + 'the world rate — a fixed number — so it contributes nothing to '
+            + 'the slope. The slope is I<sub>1</sub> + CF<sub>1</sub> = '
+            + P.I1 + ' + ' + P.CF1 + ' = ' + P.B + '.');
+        else if(near(vB, P.CF1, 1e-6))
+          msgs.push('That is the CF slope alone; add the investment slope '
+            + P.I1 + ' to it.');
+      }
+      return msgs.length ? msgs.join(' ') : null;
+    }
+  });
+
+  /* ── Step 3 — the equilibrium real interest rate ─────────────────── */
+  s.push({
+    n:3, kind:'num', rec:[2],
+    title:'Equilibrium real interest rate r' + SUB1,
+    prompt:'Find the equilibrium real interest rate r' + SUB1 + ', in percent. '
+         + 'Round to two decimals.',
+    qText:'Step 3 — Find the equilibrium real interest rate r₁ (percent).',
+    sym:'r' + SUB1 + ' =', unit:'percent',
+    aria:'equilibrium real interest rate r one, in percent',
+    exact:P.r, tol:0.02,
+    hint:'This is the step that makes the economy <em>large</em>. In a small '
+       + 'open economy you would be told r = r*; here the country is big enough '
+       + 'to move the world market, so the rate is set at home — where the '
+       + 'supply of loanable funds equals the demand for them: '
+       + 'S(r) = I(r) + CF(r, r*). You already have both sides from Steps 1 and '
+       + '2. One equation, one unknown.',
+    formula:eqb('S(r) = I(r) + CF(r, r*)', 'saving equals the demand for funds')
+          + eqb('[Y ' + MINUS + ' c<sub>0</sub> ' + MINUS + ' MPC(Y ' + MINUS
+              + ' T) ' + MINUS + ' G] + c<sub>1</sub>r = [I<sub>0</sub> + '
+              + 'CF<sub>0</sub> + CF<sub>2</sub>r*] ' + MINUS
+              + ' (I<sub>1</sub> + CF<sub>1</sub>)r',
+              'the step one expression equals the step two expression')
+          + eqb('r<sub>1</sub> = ([I<sub>0</sub> + CF<sub>0</sub> + '
+              + 'CF<sub>2</sub>r*] ' + MINUS + ' [Y ' + MINUS + ' c<sub>0</sub> '
+              + MINUS + ' MPC(Y ' + MINUS + ' T) ' + MINUS + ' G]) / '
+              + '(I<sub>1</sub> + CF<sub>1</sub> + c<sub>1</sub>)',
+              'r one equals the difference of intercepts over the sum of slopes',
+              'difference of intercepts ÷ sum of slope magnitudes'),
+    solLines:[
+      [linTxt(P.Sint, P.c1) + ' = ' + linTxt(P.A, -P.B),
+       'set saving equal to the demand for funds', 'S = I + CF'],
+      ['(' + P.c1 + ' + ' + P.B + ')r = ' + f2(P.A) + ' ' + MINUS + ' '
+        + f2(P.Sint), 'collect the r terms on one side', ''],
+      [f2(P.B + P.c1) + 'r = ' + f2(P.A - P.Sint), '', ''],
+      ['r' + SUB1 + ' = ' + f2(P.A - P.Sint) + ' / ' + f2(P.B + P.c1) + ' = '
+        + f2(P.r), 'r one equals ' + f2(P.r) + ' percent', '']
+    ],
+    solNote:'The equilibrium interest rate is <strong>' + f2(P.r)
+          + '%</strong>, against a world rate of r* = ' + P.rs + '%. At that '
+          + 'rate saving is ' + f2(P.S) + ' and the demand for funds — '
+          + 'investment of ' + f2(P.I) + ' plus net capital outflow of '
+          + fs2(P.CF) + ' — is ' + f2(P.demand) + '. They match, which is what '
+          + '"equilibrium" means here.',
+    carry:function(){
+      const r = rFromOwnCurves();
+      return r === null ? null : [r];
+    },
+    diagnose:function(v){
+      if(near(v, P.rs, 0.02))
+        return 'That is r*, the world rate. Setting r = r* is the '
+             + '<em>small</em> open economy assumption — it holds when the '
+             + 'country is too small to affect the world market. A large open '
+             + 'economy determines its own rate, and here it comes out at '
+             + f2(P.r) + '%, not ' + P.rs + '%.';
+      if(near(v, (P.A - P.Sint) / P.B, 0.02))
+        return 'You divided by I<sub>1</sub> + CF<sub>1</sub> = ' + P.B
+             + ' only. Saving also moves with r — the +' + P.c1 + 'r term from '
+             + 'Step 1 — so it belongs in the denominator too: '
+             + P.B + ' + ' + P.c1 + ' = ' + f2(P.B + P.c1) + '.';
+      if(near(v, (P.I0 - P.Sint) / (P.I1 + P.c1), 0.02))
+        return 'That is the <em>closed</em>-economy rate, from S = I with CF '
+             + 'dropped. In an open economy the demand for funds includes net '
+             + 'capital outflow.';
+      if(near(v, (P.A - P.Sint) / (P.B + P.c1) * 100, 1) ||
+         near(v, P.r / 100, 0.0002))
+        return 'Check your units. r is measured in <strong>percent</strong> '
+             + 'here, so the answer is a number like ' + f2(P.r) + ', not '
+             + f2(P.r / 100) + ' and not ' + f2(P.r * 100) + '.';
+      return null;
+    }
+  });
+
+  /* ── Step 4 — the equilibrium real exchange rate ─────────────────── */
+  s.push({
+    n:4, kind:'num', rec:[3],
+    title:'Equilibrium real exchange rate ' + EPS + SUB1,
+    prompt:'Find the equilibrium real exchange rate ' + EPS + SUB1 + ', a '
+         + 'unitless index. Round to two decimals.',
+    qText:'Step 4 — Find the equilibrium real exchange rate ε₁.',
+    sym:EPS + SUB1 + ' =', unit:'index (unitless)',
+    aria:'equilibrium real exchange rate epsilon one, a unitless index',
+    exact:P.eps, tol:0.02,
+    hint:'Two moves. First, net capital outflow is now a number: you know r'
+       + SUB1 + ', so evaluate CF = CF<sub>0</sub> ' + MINUS
+       + ' CF<sub>1</sub>r' + SUB1 + ' + CF<sub>2</sub>r*. Second, the market '
+       + 'for foreign exchange clears when the dollars supplied by net capital '
+       + 'outflow equal the dollars demanded to pay for net exports — so set '
+       + 'CF = NX(' + EPS + ') and solve. ' + EPS + ' is the only unknown left.',
+    formula:eqb('CF(r<sub>1</sub>, r*) = NX<sub>0</sub> ' + MINUS
+              + ' NX<sub>1</sub>&middot;' + EPS,
+              'C F equals net exports')
+          + eqb(EPS + '<sub>1</sub> = (NX<sub>0</sub> ' + MINUS
+              + ' CF(r<sub>1</sub>, r*)) / NX<sub>1</sub>',
+              'epsilon one equals N X zero minus C F, over N X one'),
+    solLines:[
+      ['CF = ' + P.CF0 + ' ' + MINUS + ' ' + P.CF1 + '(' + f2(P.r) + ') + '
+        + P.CF2 + '(' + P.rs + ') = ' + fs2(P.CF),
+       'net capital outflow at r one', 'evaluate CF at r₁ = ' + f2(P.r)],
+      [fs2(P.CF) + ' = ' + P.NX0 + term(-P.NX1, EPS),
+       'set net capital outflow equal to net exports', 'CF = NX(ε)'],
+      [P.NX1 + EPS + ' = ' + P.NX0 + ' ' + MINUS + ' (' + fs2(P.CF) + ') = '
+        + f2(P.NX0 - P.CF), 'collect terms', ''],
+      [EPS + SUB1 + ' = ' + f2(P.NX0 - P.CF) + ' / ' + P.NX1 + ' = ' + f2(P.eps),
+       'epsilon one equals ' + f2(P.eps), '']
+    ],
+    solNote:'The real exchange rate is <strong>' + f2(P.eps) + '</strong>, and '
+          + 'net capital outflow is <strong>' + fs2(P.CF) + '</strong> billion. '
+          + EPS + ' is the last thing determined, not the first: saving and the '
+          + 'demand for funds fix r, r fixes CF, CF fixes NX, and ' + EPS + ' is '
+          + 'whatever it has to be to deliver them.',
+    carry:function(){
+      const out = [];
+      const r3 = stepNum(3);
+      if(r3 !== null) out.push(epsFromR(r3));
+      const rOwn = rFromOwnCurves();
+      if(rOwn !== null) out.push(epsFromR(rOwn));
+      return out.length ? out : null;
+    },
+    diagnose:function(v){
+      if(near(v, (P.NX0 + P.CF) / P.NX1, 0.02))
+        return 'Check the sign when you move CF across: ' + EPS
+             + '<sub>1</sub> = (NX<sub>0</sub> ' + MINUS + ' CF) / NX<sub>1</sub>.';
+      if(near(v, P.NX0 / P.NX1, 0.02))
+        return 'That is the ' + EPS + ' that would make net exports zero. This '
+             + 'economy has to deliver NX = CF = ' + fs2(P.CF) + ', not 0.';
+      if(near(v, P.CF, 0.02) || near(v, cfAt(P.rs), 0.02))
+        return 'That looks like a value of CF, not of ' + EPS + '. CF is the '
+             + 'left-hand side; you still have to solve NX(' + EPS + ') = CF for '
+             + EPS + '.';
+      return null;
+    }
+  });
+
+  /* ── Step 5 — interpretation ─────────────────────────────────────── */
+  const flowKey  = P.CF > 0 ? 'lender'  : (P.CF < 0 ? 'borrower' : 'neither');
+  const tradeKey = P.CF > 0 ? 'surplus' : (P.CF < 0 ? 'deficit'  : 'balanced');
+
+  s.push({
+    n:5, kind:'interp', rec:[4, 5, 6],
+    title:'What it all means',
+    prompt:'You have the numbers. Now say what they describe. Answer all three, '
+         + 'then check them together.',
+    hint:'The first two questions are the same sign in different clothes. The '
+       + 'foreign-exchange market clears at CF = NX, so net capital outflow and '
+       + 'the trade balance always carry the same sign — look at CF = '
+       + fs2(P.CF) + ' and read both off it. The third question is different: '
+       + 'it is about a <em>movement along</em> the CF curve, so ignore the '
+       + 'level and look at the slope.',
+    formula:eqb('CF = NX&nbsp;&nbsp;(equilibrium in the foreign-exchange market)',
+                'C F equals N X in equilibrium')
+          + eqb('CF = CF<sub>0</sub> ' + MINUS + ' CF<sub>1</sub>(r ' + MINUS
+              + ' r*)&nbsp;&nbsp;&#8658;&nbsp;&nbsp;&part;CF/&part;r &lt; 0',
+              'C F falls when r rises',
+              'the level depends on CF₀; the direction does not'),
+    groups:[
+      { key:'flow', correct:flowKey, rec:4,
+        legend:'1. Net capital outflow CF is positive or negative — is this '
+             + 'economy a net lender to, or a net borrower from, the rest of '
+             + 'the world?',
+        qText:'Step 5a — Net lender or net borrower?',
+        options:[
+          { key:'lender',   html:'CF &gt; 0, so a net <strong>lender</strong> — domestic saving is buying foreign assets' },
+          { key:'borrower', html:'CF &lt; 0, so a net <strong>borrower</strong> — foreigners are financing domestic investment' },
+          { key:'neither',  html:'CF = 0, so <strong>neither</strong> — no capital crosses the border in net terms' }
+        ]
+      },
+      { key:'trade', correct:tradeKey, rec:5,
+        legend:'2. Is this country running a trade surplus or a trade deficit?',
+        qText:'Step 5b — Trade surplus or trade deficit?',
+        options:[
+          { key:'surplus',  html:'A trade <strong>surplus</strong> — exports exceed imports (NX &gt; 0)' },
+          { key:'deficit',  html:'A trade <strong>deficit</strong> — imports exceed exports (NX &lt; 0)' },
+          { key:'balanced', html:'<strong>Balanced trade</strong> — exports equal imports (NX = 0)' }
+        ]
+      },
+      { key:'diff', correct:'fall', rec:6,
+        legend:'3. Holding everything else fixed, if the domestic interest rate '
+             + 'r rose relative to r*, would net capital outflow rise or fall?',
+        qText:'Step 5c — If r rose relative to r*, would net capital outflow rise or fall?',
+        options:[
+          { key:'fall', html:'It would <strong>fall</strong> — a higher domestic return makes domestic assets more attractive, so capital flows in' },
+          { key:'rise', html:'It would <strong>rise</strong> — a higher domestic return means more saving, so more of it goes abroad' },
+          { key:'same', html:'It would be <strong>unchanged</strong> — net capital outflow depends on CF<sub>0</sub>, not on interest rates' }
+        ]
+      }
+    ],
+    solLines:[
+      ['CF = ' + P.CF0 + ' ' + MINUS + ' ' + P.CF1 + '(' + f2(P.r) + ') + '
+        + P.CF2 + '(' + P.rs + ') = ' + fs2(P.CF),
+       'net capital outflow equals ' + f2(P.CF), lender ? 'net lender' : 'net borrower'],
+      ['NX = CF = ' + fs2(P.CF), 'net exports equal net capital outflow',
+       tradeKey === 'surplus' ? 'trade surplus' : 'trade deficit'],
+      ['&part;CF/&part;r = ' + MINUS + P.CF1 + ' &lt; 0',
+       'C F falls when r rises', 'a higher r pulls capital in']
+    ],
+    solNote:mechanismHTML()
+  });
+
+  return s;
+}
+
+/* The mechanism paragraph — the point of Step 5, and the thing the source
+   notebook skips past entirely. */
+function mechanismHTML(){
+  const mag = f2(Math.abs(P.CF));
+  const nxWhy = 'Why do the first two answers have to match? Because the '
+    + 'foreign-exchange market clears at <strong>CF = NX</strong>. Every dollar '
+    + 'a domestic resident sends abroad to buy a foreign asset has to be '
+    + 'converted into foreign currency, and the only thing foreigners want '
+    + 'domestic currency <em>for</em> is to buy domestic goods. So the dollars '
+    + 'supplied by net capital outflow and the dollars demanded to pay for net '
+    + 'exports are the same dollars, and ' + EPS + ' = ' + f2(P.eps) + ' is the '
+    + 'price that makes the two sides equal. Net capital outflow and the trade '
+    + 'balance can never have opposite signs.';
+
+  const level = (P.CF > 0)
+    ? 'CF = <strong>+' + mag + '</strong> is positive. At r' + SUB1 + ' = '
+      + f2(P.r) + '%, saving of ' + f2(P.S) + ' exceeds domestic investment of '
+      + f2(P.I) + ', and the difference goes abroad: this economy is a '
+      + '<strong>net lender</strong>, running a <strong>trade surplus</strong> '
+      + 'of ' + mag + ' billion.'
+    : 'CF = <strong>' + MINUS + mag + '</strong> is negative, and the minus sign '
+      + 'is the whole content of the answer. At r' + SUB1 + ' = ' + f2(P.r)
+      + '%, domestic investment of ' + f2(P.I) + ' exceeds saving of ' + f2(P.S)
+      + ', so capital flows <em>in</em>: this economy is a <strong>net '
+      + 'borrower</strong>, running a <strong>trade deficit</strong> of ' + mag
+      + ' billion.';
+
+  const dirn = 'The third question is about direction, not level. CF = '
+    + P.CF0 + ' ' + MINUS + ' ' + P.CF1 + '(r ' + MINUS + ' r*), so raising r '
+    + 'above r* pushes CF <strong>down</strong> — a higher domestic return makes '
+    + 'domestic assets the better buy and pulls capital in. Notice that this is '
+    + 'a separate question from the sign of CF itself. Here r' + SUB1 + ' = '
+    + f2(P.r) + '% and r* = ' + P.rs + '%, so r' + SUB1 + ' is '
+    + (P.r > P.rs ? 'above' : (P.r < P.rs ? 'below' : 'equal to')) + ' the world '
+    + 'rate — but CF is ' + (P.CF > 0 ? 'still positive' : 'negative') + ', '
+    + 'because CF<sub>0</sub> = ' + P.CF0 + ' shifts the whole schedule. The '
+    + 'differential tells you which way CF <em>moves</em>; it does not by itself '
+    + 'tell you which side of zero CF <em>sits</em>.';
+
+  return level + ' ' + nxWhy + ' ' + dirn;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   STEP STATE + CARD RENDERING
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function blankStep(){
+  return { submitted:false, resolved:false, ok:false, tries:0, ladder:0,
+           val:null, valA:null, valB:null, coefB:null, choice:{} };
+}
+function blankRec(){
+  return { firstText:'', firstOK:false, finalText:'', finalOK:false, seeded:false };
+}
+
+function cardHTML(q){
+  const n = q.n;
+  let inner = '';
+
+  if(q.kind === 'num'){
+    inner += '<div class="entry-area"><div class="entry-row">'
+          +    '<span class="entry-sym">' + q.sym + '</span>'
+          +    '<input class="fi" id="in' + n + '" type="text" inputmode="decimal" '
+          +           'autocomplete="off" placeholder="?" aria-label="' + q.aria + '"/>'
+          +    '<span class="entry-unit">' + q.unit + '</span>'
+          +  '</div></div>';
+
+  } else if(q.kind === 'expr'){
+    /* Two boxes, laid out so the equation reads left to right. The operator
+       printed between them is fixed per step (q.conn): Step 1 prints "+"
+       because saving slopes up, Step 2 prints "−" because the demand for
+       loanable funds slopes down. The student supplies the number that makes
+       the printed line true — see q.sgn. */
+    inner += '<div class="entry-area"><div class="entry-row">'
+          +    '<span class="entry-sym">' + q.lhs + '</span>'
+          +    '<input class="fi" id="in' + n + 'a" type="text" inputmode="decimal" '
+          +           'autocomplete="off" placeholder="intercept" aria-label="'
+          +           q.ariaA + '"/>'
+          +    '<span class="entry-sym">' + q.conn + '</span>'
+          +    '<input class="fi" id="in' + n + 'b" type="text" inputmode="decimal" '
+          +           'autocomplete="off" placeholder="' + q.phB + '" aria-label="'
+          +           q.ariaB + '"/>'
+          +    '<span class="entry-sym">&middot; r</span>'
+          +  '</div>'
+          +  '<p class="entry-hint">' + q.hintText + '</p>'
+          +  '</div>';
+
+  } else {
+    q.groups.forEach(function(g, gi){
+      inner += '<fieldset class="mc" id="fs' + n + '_' + gi + '">'
+            +  '<legend>' + g.legend + '</legend>'
+            +  '<ul class="mc-list">';
+      g.options.forEach(function(o, oi){
+        inner += '<li class="mc-item" id="mc' + n + '_' + gi + '_' + oi + '">'
+              +  '<label>'
+              +    '<input type="radio" name="q' + n + 'g' + gi + '" value="' + oi + '"/>'
+              +    '<span>' + o.html + '</span>'
+              +    '<span class="mc-mark" id="mk' + n + '_' + gi + '_' + oi + '"></span>'
+              +  '</label></li>';
+      });
+      inner += '</ul></fieldset>';
+    });
+  }
+
+  return '<div class="q-card" id="qc' + n + '">'
+    + '<div class="q-card-header">'
+    +   '<div>'
+    +     '<div class="q-num">Step ' + n + ' of ' + NSTEPS + '</div>'
+    +     '<div class="q-title">' + q.title + '</div>'
+    +   '</div>'
+    +   '<div class="chip-row">'
+    +     '<span class="status-chip wait hidden" id="chipWait' + n + '">🔒 Locked</span>'
+    +     '<span class="status-chip help hidden" id="chipHelp' + n + '">⚑ Help used</span>'
+    +     '<span class="status-chip done hidden" id="chipDone' + n + '">✓ Correct</span>'
+    +     '<span class="status-chip miss hidden" id="chipMiss' + n + '">✗ Not yet</span>'
+    +   '</div>'
+    + '</div>'
+    + '<p class="q-prompt">' + q.prompt + '</p>'
+    + '<div id="body' + n + '">' + inner + '</div>'
+    + '<div class="btn-row" id="btns' + n + '">'
+    +   '<button type="button" class="primary-btn" id="chk' + n + '">Check Answer</button>'
+    +   '<button type="button" class="option-btn" id="hnt' + n + '" disabled '
+    +           'aria-label="Show a hint for step ' + n
+    +           ' — unlocks after you submit an answer">Hint</button>'
+    +   '<button type="button" class="option-btn" id="fml' + n + '" disabled '
+    +           'aria-label="Show the formula for step ' + n
+    +           ' — unlocks after the hint">Show the formula</button>'
+    +   '<button type="button" class="option-btn" id="sol' + n + '" disabled '
+    +           'aria-label="Show the worked solution for step ' + n
+    +           ' — unlocks after the formula">Show the worked solution</button>'
+    + '</div>'
+    + '<div id="fb' + n + '" class="hidden" role="status" aria-live="polite" aria-atomic="true"></div>'
+    + '<div class="lock-msg hidden" id="lock' + n + '"></div>'
+    + '<div class="help-box hintbox hidden" id="hntBox' + n + '">'
+    +   '<div class="reveal-label">Hint</div>'
+    +   '<div class="help-content" id="hntC' + n + '"></div>'
+    + '</div>'
+    + '<div class="help-box fmlbox hidden" id="fmlBox' + n + '">'
+    +   '<div class="reveal-label">Formula</div>'
+    +   '<div class="help-content" id="fmlC' + n + '"></div>'
+    + '</div>'
+    + '<div class="help-box solbox hidden" id="solBox' + n + '">'
+    +   '<div class="reveal-label">Worked solution</div>'
+    +   '<div class="help-content" id="solC' + n + '"></div>'
+    +   '<div class="answer-note" id="solN' + n + '"></div>'
+    + '</div>'
+    + '</div>';
+}
+
+function renderSteps(){
+  $hostA.innerHTML = Q.slice(0, 4).map(cardHTML).join('');
+  $hostB.innerHTML = Q.slice(4).map(cardHTML).join('');
+
+  Q.forEach(function(q){
+    const n = q.n;
+    document.getElementById('chk' + n).addEventListener('click', function(){ handleCheck(n); });
+    document.getElementById('hnt' + n).addEventListener('click', function(){ openHelp(n, 1, true); });
+    document.getElementById('fml' + n).addEventListener('click', function(){ openHelp(n, 2, true); });
+    document.getElementById('sol' + n).addEventListener('click', function(){ openHelp(n, 3, true); });
+
+    if(q.kind === 'num'){
+      document.getElementById('in' + n).addEventListener('keydown', onEnter(n));
+    } else if(q.kind === 'expr'){
+      document.getElementById('in' + n + 'a').addEventListener('keydown', onEnter(n));
+      document.getElementById('in' + n + 'b').addEventListener('keydown', onEnter(n));
+    } else {
+      q.groups.forEach(function(g, gi){
+        g.options.forEach(function(o, oi){
+          const el = document.querySelector('#mc' + n + '_' + gi + '_' + oi + ' input');
+          el.addEventListener('change', function(){
+            QS[n - 1].choice[gi] = oi;
+            g.options.forEach(function(_, oj){
+              document.getElementById('mc' + n + '_' + gi + '_' + oj)
+                .classList.toggle('sel', oj === oi);
+            });
+          });
+        });
+      });
+    }
+  });
+  applyLocks();
+}
+
+function onEnter(n){
+  return function(e){
+    if(e.key === 'Enter'){ e.preventDefault(); handleCheck(n); }
+  };
+}
+
+/* Step n is open when every earlier step has been submitted. A step stays
+   open after a wrong answer so it can be fixed; a correct one locks. */
+function isOpen(n){
+  const st = QS[n - 1];
+  if(st.ok) return false;
+  for(let i = 0; i < n - 1; i++) if(!QS[i].submitted) return false;
+  return true;
+}
+
+function applyLocks(){
+  Q.forEach(function(q){
+    const n = q.n, st = QS[n - 1];
+    const open = isOpen(n);
+    const gated = !st.submitted && !open;      /* still waiting on an earlier step */
+    const card = document.getElementById('qc' + n);
+    const lock = document.getElementById('lock' + n);
+    const body = document.getElementById('body' + n);
+    const btns = document.getElementById('btns' + n);
+
+    card.classList.toggle('locked', gated);
+    document.getElementById('chipWait' + n).classList.toggle('hidden', !gated);
+
+    if(gated){
+      body.classList.add('hidden');
+      btns.classList.add('hidden');
+      lock.classList.remove('hidden');
+      lock.textContent = 'Opens once you submit an answer to Step ' + (n - 1)
+        + '. Commit to a number first — that is what makes the feedback worth anything.';
+    } else {
+      body.classList.remove('hidden');
+      btns.classList.remove('hidden');
+      lock.classList.add('hidden');
+    }
+
+    if(q.kind === 'num'){
+      const el = document.getElementById('in' + n);
+      if(el) el.disabled = !open;
+    } else if(q.kind === 'expr'){
+      ['a', 'b'].forEach(function(sfx){
+        const el = document.getElementById('in' + n + sfx);
+        if(el) el.disabled = !open;
+      });
+    } else {
+      q.groups.forEach(function(g, gi){
+        g.options.forEach(function(_, oi){
+          const el = document.querySelector('#mc' + n + '_' + gi + '_' + oi + ' input');
+          if(el) el.disabled = !open;
+        });
+      });
+    }
+    const chk = document.getElementById('chk' + n);
+    if(chk){
+      chk.disabled = !open;
+      chk.textContent = st.submitted ? 'Re-check Answer' : 'Check Answer';
+    }
+  });
+  updateProgress();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   HELP LADDER — hint, then formula, then worked solution; nothing before
+   a submitted attempt.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function helpHTML(q, level){
+  if(level === 1) return q.hint;
+  if(level === 2) return q.formula;
+  return q.solLines.map(function(L){ return eqb(L[0], L[1], L[2] || ''); }).join('');
+}
+
+function openHelp(n, level, viaButton){
+  const q = Q[n - 1], st = QS[n - 1];
+  if(!st.submitted) return;               /* no help before commitment */
+  if(level > st.ladder + 1) return;       /* strictly one rung at a time */
+
+  const ids = { 1:['hntBox', 'hntC'], 2:['fmlBox', 'fmlC'], 3:['solBox', 'solC'] }[level];
+  const box = document.getElementById(ids[0] + n);
+  if(box.classList.contains('hidden')){
+    document.getElementById(ids[1] + n).innerHTML = helpHTML(q, level);
+    if(level === 3) document.getElementById('solN' + n).innerHTML = q.solNote;
+    box.classList.remove('hidden');
+  }
+  if(level > st.ladder) st.ladder = level;
+  if(viaButton) document.getElementById('chipHelp' + n).classList.remove('hidden');
+
+  /* The worked solution gives the answer away, so the diagram is no longer a
+     spoiler — a stuck student should still get to see the picture. */
+  if(level === 3 && !st.resolved){
+    st.resolved = true;
+    syncFigure();
+    maybeFinish();
+  }
+  refreshHelpButtons(n);
+}
+
+function refreshHelpButtons(n){
+  const st = QS[n - 1];
+  const h = document.getElementById('hnt' + n);
+  const f = document.getElementById('fml' + n);
+  const s = document.getElementById('sol' + n);
+  if(!h) return;
+  if(!st.submitted){ h.disabled = f.disabled = s.disabled = true; return; }
+  h.disabled = st.ladder >= 1;
+  f.disabled = st.ladder < 1 || st.ladder >= 2;
+  s.disabled = st.ladder < 2 || st.ladder >= 3;
+  h.setAttribute('aria-label', st.ladder >= 1
+    ? 'Hint for step ' + n + ' — already shown'
+    : 'Show a hint for step ' + n);
+  f.setAttribute('aria-label', st.ladder < 1
+    ? 'Formula for step ' + n + ' — unlocks after the hint'
+    : (st.ladder >= 2 ? 'Formula for step ' + n + ' — already shown'
+                      : 'Show the formula for step ' + n));
+  s.setAttribute('aria-label', st.ladder < 2
+    ? 'Worked solution for step ' + n + ' — unlocks after the formula'
+    : (st.ladder >= 3 ? 'Worked solution for step ' + n + ' — already shown'
+                      : 'Show the worked solution for step ' + n));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   GRADING
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function showFB(n, kind, msg){
+  const el = document.getElementById('fb' + n);
+  el.className = 'entry-fb ' + kind;
+  el.classList.remove('hidden');
+  el.innerHTML = msg;
+}
+
+function near(v, exact, tol){ return Math.abs(v - exact) <= tol + 1e-9; }
+
+function handleCheck(n){
+  if(!isOpen(n)) return;
+  const k = Q[n - 1].kind;
+  if(k === 'num')  return checkNum(n);
+  if(k === 'expr') return checkExpr(n);
+  return checkInterp(n);
+}
+
+function badNumberMsg(raw){
+  return '“' + stripTags(raw) + '” is not a number I can read. Enter a plain '
+    + 'decimal — for example 1234.56, or ' + MINUS + '250 for a negative amount.';
+}
+
+/* ── Single-value steps (3 and 4) ────────────────────────────────────── */
+function checkNum(n){
+  const q = Q[n - 1], st = QS[n - 1];
+  const el  = document.getElementById('in' + n);
+  const raw = el.value.trim();
+
+  if(raw === ''){ showFB(n, 'neutral', 'Enter a number before checking.'); return; }
+  const v = parseNum(raw);
+  if(v === null){ showFB(n, 'neutral', badNumberMsg(raw)); return; }
+
+  let ok = near(v, q.exact, q.tol);
+  let carryOK = false, carryNote = '';
+
+  /* Carried-error tolerance: right method, wrong input from an earlier step.
+     Essential here — r₁ feeds Step 4, and students carry a rounded r₁. */
+  if(!ok && q.carry){
+    const cands = q.carry();
+    if(cands && cands.some(function(c){
+        return c !== null && isFinite(c) && near(v, c, q.tol); })){
+      ok = true; carryOK = true;
+      carryNote = 'This follows correctly from your own earlier answers, so it is '
+        + 'credited — but note that the exact value here is <strong>'
+        + f2(q.exact) + '</strong>, because an earlier step slipped.';
+    }
+  }
+
+  st.val = v;
+  st.tries += 1;
+  const answerText = raw + (st.ladder > 0 ? ' (help used)' : '');
+
+  if(!st.submitted) st.submitted = true;
+  record(q.rec[0], q.qText, answerText, ok);
+
+  el.classList.toggle('correct', ok);
+  el.classList.toggle('wrong', !ok);
+  document.getElementById('chipDone' + n).classList.toggle('hidden', !ok);
+  document.getElementById('chipMiss' + n).classList.toggle('hidden', ok);
+
+  if(ok){
+    st.ok = true;
+    if(!st.resolved){ st.resolved = true; syncFigure(); }
+    showFB(n, 'correct', carryOK
+      ? '✓ <strong>Correct — given your own earlier work.</strong> ' + carryNote
+      : '✓ <strong>Correct.</strong>' + (n === 3
+          ? ' The domestic rate settles at ' + f2(P.r) + '%, against a world rate '
+            + 'of ' + P.rs + '%.'
+          : ' Net capital outflow is ' + fs2(P.CF) + ' billion, and ' + EPS + SUB1
+            + ' = ' + f2(P.eps) + '.'));
+  } else {
+    const diag = q.diagnose ? q.diagnose(v) : null;
+    showFB(n, 'wrong', '✗ <strong>Not quite.</strong> '
+      + (diag ? diag + ' ' : '') + ladderPrompt(n));
+  }
+
+  refreshHelpButtons(n);
+  applyLocks();
+  maybeFinish();
+  redraw();
+}
+
+/* ── Two-box expression steps (1 and 2) ──────────────────────────────── */
+function checkExpr(n){
+  const q = Q[n - 1], st = QS[n - 1];
+  const elA = document.getElementById('in' + n + 'a');
+  const elB = document.getElementById('in' + n + 'b');
+  const rawA = elA.value.trim(), rawB = elB.value.trim();
+
+  if(rawA === '' || rawB === ''){
+    showFB(n, 'neutral', 'Fill in both boxes before checking — the '
+      + (rawA === '' ? 'intercept' : 'coefficient on r') + ' is still blank.');
+    return;
+  }
+  const vA = parseNum(rawA), vB = parseNum(rawB);
+  if(vA === null){ showFB(n, 'neutral', badNumberMsg(rawA)); return; }
+  if(vB === null){ showFB(n, 'neutral', badNumberMsg(rawB)); return; }
+
+  const okA = near(vA, q.exactA, q.tolA);
+  const okB = near(vB, q.exactB, q.tolB);
+  const ok  = okA && okB;
+
+  /* coefB is the signed coefficient the student's line implies; valB is what
+     they typed. They differ on Step 2, where the minus is printed for them. */
+  st.valA = vA; st.valB = vB; st.coefB = q.sgn * vB;
+  st.tries += 1;
+  const answerText = q.lhs + ' ' + linTxt(vA, st.coefB)
+                   + (st.ladder > 0 ? ' (help used)' : '');
+
+  if(!st.submitted) st.submitted = true;
+  record(q.rec[0], q.qText, answerText, ok);
+
+  elA.classList.toggle('correct', okA); elA.classList.toggle('wrong', !okA);
+  elB.classList.toggle('correct', okB); elB.classList.toggle('wrong', !okB);
+  document.getElementById('chipDone' + n).classList.toggle('hidden', !ok);
+  document.getElementById('chipMiss' + n).classList.toggle('hidden', ok);
+
+  if(ok){
+    st.ok = true;
+    st.resolved = true;
+    showFB(n, 'correct', '✓ <strong>Correct.</strong> ' + q.lhs + ' '
+      + linTxt(q.exactA, q.sgn * q.exactB) + '.');
+  } else {
+    const diag = q.diagnose ? q.diagnose(vA, vB) : null;
+    const which = okA ? 'The intercept is right; the coefficient on r is not.'
+                : (okB ? 'The coefficient on r is right; the intercept is not.'
+                       : 'Both boxes are off.');
+    showFB(n, 'wrong', '✗ <strong>Not quite.</strong> ' + which + ' '
+      + (diag ? diag + ' ' : '') + ladderPrompt(n));
+  }
+
+  refreshHelpButtons(n);
+  applyLocks();
+  maybeFinish();
+}
+
+/* ── Interpretation (step 5) ─────────────────────────────────────────── */
+function checkInterp(n){
+  const q = Q[n - 1], st = QS[n - 1];
+
+  for(let gi = 0; gi < q.groups.length; gi++){
+    if(st.choice[gi] === undefined){
+      showFB(n, 'neutral', 'Answer all three questions before checking — '
+        + 'question ' + (gi + 1) + ' is still blank.');
+      return;
+    }
+  }
+
+  let allOK = true;
+  q.groups.forEach(function(g, gi){
+    const chosen = g.options[st.choice[gi]];
+    const good   = chosen.key === g.correct;
+    if(!good) allOK = false;
+
+    g.options.forEach(function(o, oi){
+      const li = document.getElementById('mc' + n + '_' + gi + '_' + oi);
+      const mk = document.getElementById('mk' + n + '_' + gi + '_' + oi);
+      li.classList.remove('right', 'miss');
+      mk.className = 'mc-mark'; mk.textContent = '';
+      if(oi === st.choice[gi]){
+        li.classList.add(good ? 'right' : 'miss');
+        mk.classList.add(good ? 'ok' : 'no');
+        mk.textContent = good ? '✓ your answer' : '✗ your answer';
+      }
+    });
+
+    const text = stripTags(chosen.html) + (st.ladder > 0 ? ' (help used)' : '');
+    record(g.rec, g.qText, text, good);
+  });
+
+  st.tries += 1;
+  if(!st.submitted) st.submitted = true;
+
+  document.getElementById('chipDone' + n).classList.toggle('hidden', !allOK);
+  document.getElementById('chipMiss' + n).classList.toggle('hidden', allOK);
+
+  if(allOK){
+    st.ok = true;
+    st.resolved = true;
+    showFB(n, 'correct', '✓ <strong>All three correct.</strong> ' + mechanismHTML());
+  } else {
+    showFB(n, 'wrong', '✗ <strong>Not all three.</strong> The ones marked ✗ are '
+      + 'wrong. For the first two, look at the sign of CF = ' + fs2(P.CF)
+      + ' — the foreign-exchange market clears at CF = NX, so the trade balance '
+      + 'has to carry that same sign. The third question is about the slope of '
+      + 'the CF curve, not its level. ' + ladderPrompt(n));
+  }
+
+  refreshHelpButtons(n);
+  applyLocks();
+  maybeFinish();
+}
+
+function ladderPrompt(n){
+  const st = QS[n - 1];
+  if(st.ladder === 0) return 'Your answer is recorded. <strong>Hint</strong> is now '
+    + 'unlocked — try again, or work down the help ladder.';
+  if(st.ladder === 1) return '<strong>Show the formula</strong> is now unlocked.';
+  if(st.ladder === 2) return '<strong>Show the worked solution</strong> is now unlocked.';
+  return 'The worked solution is shown below.';
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SESSION RECORDING (CLAUDE.md two-phase pattern)
+
+   The first submission of an item is its first answer, forever; later
+   submissions only move the final answer.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* If this browser session already holds a first answer for item i (page
+   reload, or a return after a new draw), keep it rather than overwriting. */
+function priorFirst(i){
+  try{
+    if(!(window.Session && Session.export)) return null;
+    const d = Session.export();
+    const lab = d && d.labs && d.labs[LAB_ID];
+    const q = lab && lab.questions && lab.questions[i];
+    return q ? { text:q.firstAnswer, ok:!!q.firstCorrect } : null;
+  }catch(e){ return null; }
+}
+
+function record(i, qText, answerText, ok){
+  const r = RQ[i];
+  if(!r.seeded){
+    const prior = priorFirst(i);
+    r.firstText = prior ? prior.text : answerText;
+    r.firstOK   = prior ? prior.ok   : ok;
+    r.seeded    = true;
+  }
+  r.finalText = answerText;
+  r.finalOK   = ok;
+  if(window.Session && Session.recordQuestion)
+    Session.recordQuestion(LAB_ID, i, qText,
+                           r.firstText, r.firstOK,
+                           r.finalText, r.finalOK);
+}
+
+/* _firstScore — correct before any help was opened on that step. */
+function firstScore(){ return RQ.filter(function(r){ return r.seeded && r.firstOK; }).length; }
+function finalScore(){ return RQ.filter(function(r){ return r.seeded && r.finalOK; }).length; }
+
+function maybeFinish(){
+  const all = QS.every(function(s){ return s.resolved; });
+  if(!all) return;
+  const _firstScore = firstScore(), fin = finalScore();
+
+  if(window.Session && Session.recordLabDone)
+    Session.recordLabDone(LAB_ID, LAB_LABEL, _firstScore, fin, NREC);
+
+  _labDone = true;
+  $doneBanner.classList.remove('hidden');
+  $doneBanner.innerHTML = '<strong>All five steps complete.</strong> '
+    + 'Saving of S = ' + linTxt(P.Sint, P.c1) + ' and a demand for funds of '
+    + 'I + CF = ' + linTxt(P.A, -P.B) + ' clear at r' + SUB1 + ' = ' + f2(P.r)
+    + '%. That rate leaves net capital outflow of ' + fs2(P.CF) + ', which the '
+    + 'foreign-exchange market prices at ' + EPS + SUB1 + ' = ' + f2(P.eps)
+    + '. Draw another problem to practice the opposite sign — the trade balance '
+    + 'flips with every new draw.'
+    + '<div class="score-line">'
+    + 'Correct before any help: <strong>' + _firstScore + ' / ' + NREC + '</strong> &nbsp;·&nbsp; '
+    + 'Correct after corrections: <strong>' + fin + ' / ' + NREC + '</strong>'
+    + '<br><span style="color:var(--muted);">Out of 7: the four solve steps plus '
+    + 'the three interpretation questions in Step 5.</span></div>';
+  updateProgress();
+}
+
+function updateProgress(){
+  const done = QS.filter(function(s){ return s.submitted; }).length;
+  $progress.classList.toggle('done', _labDone);
+  if(_labDone){
+    $progress.textContent = 'Complete — ' + finalScore() + ' of ' + NREC + ' correct';
+  } else {
+    $progress.textContent = 'Step ' + Math.min(done + 1, NSTEPS) + ' of ' + NSTEPS;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FIGURE — three panels, drawn from the student's own solved economy
+
+   The chain of determination is the point of the figure, so the geometry is
+   shared deliberately: panels 1 and 2 use the same r axis (so r₁ sits at the
+   same height in both), and panels 2 and 3 use the same horizontal axis (so
+   CF₁ sits at the same horizontal position in both).
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const PAD = { l:52, r:16, t:16, b:48 };  // CSS px
+const COL = { S:'#155c38', D:'#b42318', NX:'#2f5d7c', carry:'#8c4800',
+              ink:'#1f2937', mute:'#596878', line:'#d9cfbf' };
+
+function setupCanvas(canvas, wrap){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  const W = Math.round(rect.width * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+/* CLAUDE.md coordinate helper, generalized to an arbitrary range so panels 2
+   and 3 can run negative (CF may be below zero). The left and bottom gutters
+   hold text, so they scale with _fs — otherwise a reader at 200% text size
+   gets tick labels sitting on top of the axis titles. */
+function makeCoordsRange(W, H, dpr, xMin, xMax, yMin, yMax){
+  const p = { l:PAD.l*dpr*_fs, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr*_fs };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  return {
+    xC: x => p.l + ((x - xMin) / (xMax - xMin)) * PW,
+    yC: y => H - p.b - ((y - yMin) / (yMax - yMin)) * PH,
+    p, PW, PH
+  };
+}
+function makeCoords(W, H, dpr, xMax, yMax){
+  return makeCoordsRange(W, H, dpr, 0, xMax, 0, yMax);
+}
+
+/* CLAUDE.md ladders, extended upward — these axes run to thousands of
+   billions of dollars. */
+function tickStep(mx){
+  if(mx<=10) return 1; if(mx<=20) return 2; if(mx<=50) return 5;
+  if(mx<=100) return 10; if(mx<=200) return 20; if(mx<=500) return 50;
+  if(mx<=1000) return 100; if(mx<=2000) return 200; if(mx<=5000) return 500;
+  if(mx<=10000) return 1000; return 2000;
+}
+function snapUp(raw){
+  const s=[5,8,10,12,15,20,25,30,40,50,60,80,100,120,
+           150,200,250,300,400,500,600,800,1000,1200,1500,2000,
+           2500,3000,4000,5000,6000,8000,10000,12000];
+  return s.find(v => v >= raw) || Math.ceil(raw/1000)*1000;
+}
+
+function clipPlot(ctx, C, W, H){
+  ctx.beginPath();
+  ctx.rect(C.p.l, C.p.t, W - C.p.l - C.p.r, H - C.p.t - C.p.b);
+  ctx.clip();
+}
+
+function fontPx(n, dpr){ return `700 ${Math.round(n * dpr * _fs)}px "Inter",sans-serif`; }
+
+/* Keep a centred label inside the plot area — a label that runs off the
+   canvas is a label nobody can read. */
+function clampX(ctx, text, x, C, W, size, dpr){
+  ctx.font = fontPx(size, dpr);
+  const half = ctx.measureText(text).width / 2 + 2 * dpr;
+  return Math.max(C.p.l + half, Math.min(W - C.p.r - half, x));
+}
+
+function halo(ctx, text, x, y, color, size, dpr, align, baseline){
+  ctx.font = fontPx(size, dpr);
+  ctx.textAlign = align || 'center';
+  ctx.textBaseline = baseline || 'middle';
+  ctx.lineWidth = 3.5 * dpr;
+  ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+}
+
+function dot(ctx, x, y, r, color){
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = r * 0.45;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+}
+
+/* Grid, axes, ticks and axis titles — shared by all three panels. */
+function drawFrame(ctx, C, dpr, W, H, o){
+  ctx.save();
+  ctx.strokeStyle = COL.line; ctx.lineWidth = 1 * dpr;
+  ctx.beginPath();
+  for(let x = Math.ceil(o.xMin / o.xStep) * o.xStep; x <= o.xMax + 1e-9; x += o.xStep){
+    ctx.moveTo(C.xC(x), C.yC(o.yMin)); ctx.lineTo(C.xC(x), C.p.t);
+  }
+  for(let y = Math.ceil(o.yMin / o.yStep) * o.yStep; y <= o.yMax + 1e-9; y += o.yStep){
+    ctx.moveTo(C.p.l, C.yC(y)); ctx.lineTo(W - C.p.r, C.yC(y));
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  /* Axes: left edge and the y = yMin baseline. */
+  ctx.save();
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = 1.8 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(C.p.l, C.p.t);
+  ctx.lineTo(C.p.l, C.yC(o.yMin));
+  ctx.lineTo(W - C.p.r, C.yC(o.yMin));
+  ctx.stroke();
+  ctx.restore();
+
+  /* A visible x = 0 line whenever the axis runs negative — CF can be. */
+  if(o.xMin < 0 && o.xMax > 0){
+    ctx.save();
+    ctx.strokeStyle = COL.mute; ctx.lineWidth = 1.4 * dpr;
+    ctx.setLineDash([2 * dpr, 3 * dpr]);
+    ctx.beginPath();
+    ctx.moveTo(C.xC(0), C.p.t); ctx.lineTo(C.xC(0), C.yC(o.yMin));
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /* Tick labels. At large user font sizes the labels grow but the axis does
+     not, so thin them out rather than let them overprint each other. */
+  ctx.save();
+  ctx.fillStyle = COL.mute;
+  ctx.font = `600 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+
+  const xs = [], ys = [];
+  for(let x = Math.ceil(o.xMin / o.xStep) * o.xStep; x <= o.xMax + 1e-9; x += o.xStep)
+    xs.push(x);
+  for(let y = Math.ceil(o.yMin / o.yStep) * o.yStep; y <= o.yMax + 1e-9; y += o.yStep)
+    ys.push(y);
+
+  const xWide = xs.reduce(function(m, x){
+    return Math.max(m, ctx.measureText(nf(x, o.xDp || 0)).width); }, 0);
+  const xGap  = Math.abs(C.xC(o.xMin + o.xStep) - C.xC(o.xMin));
+  const xEvery = Math.max(1, Math.ceil((xWide + 10 * dpr) / Math.max(1, xGap)));
+  const yGap   = Math.abs(C.yC(o.yMin + o.yStep) - C.yC(o.yMin));
+  const yEvery = Math.max(1, Math.ceil((14 * dpr * _fs) / Math.max(1, yGap)));
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  xs.forEach(function(x, i){
+    if(i % xEvery) return;
+    const t = nf(x, o.xDp || 0);
+    /* Drop a label that would be cut off by the canvas edge. */
+    if(C.xC(x) + ctx.measureText(t).width / 2 > W - 2 * dpr) return;
+    ctx.fillText(t, C.xC(x), C.yC(o.yMin) + 6 * dpr);
+  });
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  ys.forEach(function(y, i){
+    if(i % yEvery) return;
+    ctx.fillText(nf(y, o.yDp || 0), C.p.l - 6 * dpr, C.yC(y));
+  });
+  ctx.restore();
+
+  /* Axis titles, shrunk to fit rather than clipped. */
+  ctx.save();
+  ctx.fillStyle = COL.ink;
+  const fit = function(text, room){
+    let size = 11;
+    ctx.font = fontPx(size, dpr);
+    while(size > 8 && ctx.measureText(text).width > room){
+      size -= 0.5;
+      ctx.font = fontPx(size, dpr);
+    }
+  };
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  fit(o.xTitle, C.PW);
+  ctx.fillText(o.xTitle, C.p.l + C.PW / 2, H - 8 * dpr);
+  ctx.translate(13 * dpr * _fs, C.p.t + C.PH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textBaseline = 'top';
+  fit(o.yTitle, C.PH);
+  ctx.fillText(o.yTitle, 0, 0);
+  ctx.restore();
+}
+
+/* Stroke x = f(y) over a y-range (all three panels have the "price" on y). */
+function strokeXofY(ctx, C, f, yLo, yHi, color, lw, dash, dpr){
+  ctx.strokeStyle = color; ctx.lineWidth = lw;
+  ctx.setLineDash(dash); ctx.lineCap = 'round';
+  ctx.beginPath();
+  const N = 180;
+  for(let i = 0; i <= N; i++){
+    const y = yLo + (yHi - yLo) * i / N;
+    const px = C.xC(f(y)), py = C.yC(y);
+    if(i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/* ── Shared geometry ─────────────────────────────────────────────────── */
+
+/* The r axis, used by panels 1 and 2 alike. */
+function rAxisMax(){ return Math.max(10, Math.ceil((P.r + 4) / 2) * 2); }
+
+/* The CF / NX axis, used by panels 2 and 3 alike. It is built from the CF
+   schedule so CF₁ lands in a sensible place; the NX curve is simply clipped
+   where it runs past the edge. */
+function cfAxis(){
+  const rMax = rAxisMax();
+  const lo0 = Math.min(0, P.CF, cfAt(rMax));
+  const hi0 = Math.max(0, P.CF, cfAt(0));
+  const span = Math.max(1, hi0 - lo0);
+  const xStep = tickStep(snapUp(span * 1.15));
+  return {
+    xMin: Math.floor((lo0 - span * 0.08) / xStep) * xStep,
+    xMax: Math.ceil((hi0 + span * 0.08) / xStep) * xStep,
+    xStep: xStep
+  };
+}
+function epsAxisMax(){ return Math.max(2, Math.ceil((P.eps + 0.6) * 2) / 2); }
+
+/* ── Panel 1 — market for loanable funds ─────────────────────────────── */
+function drawLF(){
+  const S0 = setupCanvas($lf, $lf.parentElement);
+  if(!S0 || !P) return;
+  const ctx = S0.ctx, dpr = S0.dpr, W = S0.W, H = S0.H;
+  ctx.clearRect(0, 0, W, H);
+
+  const rMax = rAxisMax();
+  const sOf = r => P.Sint + P.c1 * r;         /* saving, sloping up   */
+  const dOf = r => P.A - P.B * r;             /* I + CF, sloping down */
+
+  const xMax = snapUp(1.12 * Math.max(P.A, sOf(rMax), P.S));
+  const xMin = Math.min(0, P.Sint);
+  const C = makeCoordsRange(W, H, dpr, xMin, xMax, 0, rMax);
+  const xStep = tickStep(xMax - xMin), yStep = tickStep(rMax);
+
+  drawFrame(ctx, C, dpr, W, H, {
+    xMin:xMin, xMax:xMax, yMin:0, yMax:rMax, xStep:xStep, yStep:yStep,
+    xTitle:'Net Capital Outflow, Investment and Saving, $ billions',
+    yTitle:'Real Interest Rate r (%)'
+  });
+
+  ctx.save();
+  clipPlot(ctx, C, W, H);
+
+  strokeXofY(ctx, C, sOf, 0, rMax, COL.S, 3 * dpr, [], dpr);
+  strokeXofY(ctx, C, dOf, 0, rMax, COL.D, 2.8 * dpr, [9 * dpr, 6 * dpr], dpr);
+
+  /* Dashed guide from the equilibrium back to r₁ on the axis. */
+  ctx.strokeStyle = COL.carry; ctx.lineWidth = 1.8 * dpr;
+  ctx.setLineDash([2.5 * dpr, 4 * dpr]);
+  ctx.beginPath();
+  ctx.moveTo(C.p.l, C.yC(P.r)); ctx.lineTo(C.xC(P.S), C.yC(P.r));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  dot(ctx, C.xC(P.S), C.yC(P.r), 5.5 * dpr, COL.ink);
+  ctx.restore();
+
+  /* Labels (unclipped so they can sit at the plot edge). Offsets scale with
+     _fs so they clear their own text at large user font sizes. */
+  const off = dpr * _fs;
+  halo(ctx, 'S(r)', C.xC(sOf(rMax * 0.9)) + 5 * off, C.yC(rMax * 0.9),
+       COL.S, 11, dpr, 'left', 'middle');
+  halo(ctx, 'I(r) + CF(r, r*)', clampX(ctx, 'I(r) + CF(r, r*)',
+       C.xC(dOf(rMax * 0.18)), C, W, 11, dpr), C.yC(rMax * 0.18) + 13 * off,
+       COL.D, 11, dpr, 'center', 'middle');
+  halo(ctx, 'r' + SUB1 + ' = ' + f2(P.r) + '%', C.p.l + 6 * dpr,
+       C.yC(P.r) - 11 * off, COL.carry, 11, dpr, 'left', 'middle');
+}
+
+/* ── Panel 2 — net capital outflow ───────────────────────────────────── */
+function drawCF(){
+  const S0 = setupCanvas($cf, $cf.parentElement);
+  if(!S0 || !P) return;
+  const ctx = S0.ctx, dpr = S0.dpr, W = S0.W, H = S0.H;
+  ctx.clearRect(0, 0, W, H);
+
+  const rMax = rAxisMax();
+  const ax = cfAxis();
+  const C = makeCoordsRange(W, H, dpr, ax.xMin, ax.xMax, 0, rMax);
+
+  drawFrame(ctx, C, dpr, W, H, {
+    xMin:ax.xMin, xMax:ax.xMax, yMin:0, yMax:rMax,
+    xStep:ax.xStep, yStep:tickStep(rMax),
+    xTitle:'Net Capital Outflow CF, $ billions',
+    yTitle:'Real Interest Rate r (%)'
+  });
+
+  ctx.save();
+  clipPlot(ctx, C, W, H);
+
+  strokeXofY(ctx, C, cfAt, 0, rMax, COL.D, 3 * dpr, [], dpr);
+
+  /* r₁ carried over from panel 1 — the same height on the same axis. */
+  ctx.strokeStyle = COL.carry; ctx.lineWidth = 1.8 * dpr;
+  ctx.setLineDash([2.5 * dpr, 4 * dpr]);
+  ctx.beginPath();
+  ctx.moveTo(C.p.l, C.yC(P.r)); ctx.lineTo(C.xC(P.CF), C.yC(P.r));
+  ctx.stroke();
+
+  /* …and the drop from there to CF₁ on the horizontal axis. */
+  ctx.setLineDash([5 * dpr, 4 * dpr]);
+  ctx.beginPath();
+  ctx.moveTo(C.xC(P.CF), C.yC(P.r)); ctx.lineTo(C.xC(P.CF), C.yC(0));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  dot(ctx, C.xC(P.CF), C.yC(P.r), 5.5 * dpr, COL.ink);
+  ctx.restore();
+
+  const off = dpr * _fs;
+  halo(ctx, 'CF(r, r*)', C.xC(cfAt(rMax * 0.86)) + 6 * off, C.yC(rMax * 0.86),
+       COL.D, 11, dpr, 'left', 'middle');
+  halo(ctx, 'r' + SUB1 + ' = ' + f2(P.r) + '%', C.p.l + 6 * dpr,
+       C.yC(P.r) - 11 * off, COL.carry, 11, dpr, 'left', 'middle');
+  const cfLbl = 'CF' + SUB1 + ' = ' + fs2(P.CF);
+  halo(ctx, cfLbl, clampX(ctx, cfLbl, C.xC(P.CF), C, W, 11, dpr),
+       C.yC(0) - 12 * off, COL.carry, 11, dpr, 'center', 'middle');
+}
+
+/* ── Panel 3 — market for foreign exchange ───────────────────────────── */
+function drawFX(){
+  const S0 = setupCanvas($fx, $fx.parentElement);
+  if(!S0 || !P) return;
+  const ctx = S0.ctx, dpr = S0.dpr, W = S0.W, H = S0.H;
+  ctx.clearRect(0, 0, W, H);
+
+  const eMax = epsAxisMax();
+  const ax = cfAxis();                          /* same x axis as panel 2 */
+  const nxAt = e => P.NX0 - P.NX1 * e;
+  const C = makeCoordsRange(W, H, dpr, ax.xMin, ax.xMax, 0, eMax);
+
+  drawFrame(ctx, C, dpr, W, H, {
+    xMin:ax.xMin, xMax:ax.xMax, yMin:0, yMax:eMax,
+    xStep:ax.xStep, yStep:0.5, xDp:0, yDp:1,
+    xTitle:'Net Exports NX, $ billions',
+    yTitle:'Real Exchange Rate ' + EPS + ' (index)'
+  });
+
+  ctx.save();
+  clipPlot(ctx, C, W, H);
+
+  strokeXofY(ctx, C, nxAt, 0, eMax, COL.NX, 3 * dpr, [], dpr);
+
+  /* CF₁ carried over from panel 2 — a vertical line at the same horizontal
+     position, because CF does not depend on ε. */
+  ctx.strokeStyle = COL.carry; ctx.lineWidth = 3 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(C.xC(P.CF), C.yC(0)); ctx.lineTo(C.xC(P.CF), C.p.t);
+  ctx.stroke();
+
+  /* Dashed guide from the equilibrium back to ε₁. */
+  ctx.strokeStyle = COL.carry; ctx.lineWidth = 1.8 * dpr;
+  ctx.setLineDash([5 * dpr, 4 * dpr]);
+  ctx.beginPath();
+  ctx.moveTo(C.p.l, C.yC(P.eps)); ctx.lineTo(C.xC(P.CF), C.yC(P.eps));
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  dot(ctx, C.xC(P.CF), C.yC(P.eps), 5.5 * dpr, COL.ink);
+  ctx.restore();
+
+  const off = dpr * _fs;
+  halo(ctx, 'NX(' + EPS + ')', C.xC(nxAt(eMax * 0.88)) + 6 * off,
+       C.yC(eMax * 0.88), COL.NX, 11, dpr, 'left', 'middle');
+  halo(ctx, EPS + SUB1 + ' = ' + f2(P.eps), C.p.l + 6 * dpr,
+       C.yC(P.eps) - 11 * off, COL.carry, 11, dpr, 'left', 'middle');
+
+  /* Sit the CF₁ label beside the vertical line, not on top of it. */
+  const cfLbl = 'CF' + SUB1 + ' = ' + fs2(P.CF);
+  ctx.font = fontPx(11, dpr);
+  const wLbl  = ctx.measureText(cfLbl).width;
+  const right = C.xC(P.CF) + 8 * off + wLbl < W - C.p.r;
+  halo(ctx, cfLbl, C.xC(P.CF) + (right ? 8 : -8) * off, C.p.t + 10 * off,
+       COL.carry, 11, dpr, right ? 'left' : 'right', 'middle');
+}
+
+/* ── Accessible descriptions (WCAG 1.1.1 / 4.1.3) ────────────────────── */
+function updateGraphDesc(){
+  if(!P) return;
+  if(!QS[3] || !QS[3].resolved){
+    $lfDesc.textContent = 'The loanable funds diagram is drawn once Step 4 is complete.';
+    $cfDesc.textContent = 'The net capital outflow diagram is drawn once Step 4 is complete.';
+    $fxDesc.textContent = 'The foreign exchange diagram is drawn once Step 4 is complete.';
+    return;
+  }
+  const lender = P.CF > 0;
+  const signWord = lender ? 'positive' : 'negative';
+  const meaning = lender
+    ? 'A positive net capital outflow means domestic saving is buying foreign '
+      + 'assets: this country is a net lender to the rest of the world, and it '
+      + 'runs a trade surplus of the same size.'
+    : 'A negative net capital outflow means capital is flowing in — foreigners '
+      + 'are buying more domestic assets than domestic residents are buying '
+      + 'foreign ones. This country is a net borrower from the rest of the '
+      + 'world, and it runs a trade deficit of the same size.';
+
+  $lfDesc.textContent =
+    'Panel 1, market for loanable funds. Net capital outflow, investment and saving, '
+    + 'in billions of dollars, run along the horizontal axis; the real interest rate '
+    + 'in percent runs up the vertical axis. Saving slopes up to the right: S of r '
+    + 'equals ' + f2(P.Sint) + ' plus ' + P.c1 + ' times r, because a higher interest '
+    + 'rate means less consumption and so more saving. The demand for loanable funds, '
+    + 'investment plus net capital outflow, slopes down: it equals ' + f2(P.A)
+    + ' minus ' + P.B + ' times r. The two cross at the equilibrium interest rate '
+    + 'r one equals ' + f2(P.r) + ' percent, where saving and the demand for funds '
+    + 'are both ' + f2(P.S) + ' billion. A dashed amber guide runs from that crossing '
+    + 'back to r one on the vertical axis. The world interest rate, for comparison, is '
+    + P.rs + ' percent.';
+
+  $cfDesc.textContent =
+    'Panel 2, net capital outflow. Net capital outflow in billions of dollars runs '
+    + 'along the horizontal axis, which extends below zero; the real interest rate in '
+    + 'percent runs up the vertical axis, on the same scale as panel 1. The CF curve '
+    + 'slopes down: CF equals ' + P.CF0 + ' minus ' + P.CF1 + ' times r plus '
+    + P.CF2 + ' times the world rate of ' + P.rs + ', so a higher domestic rate pulls '
+    + 'capital in and lowers CF. A dashed amber line at r one equals ' + f2(P.r)
+    + ' percent is carried over from panel 1 at exactly the same height; where it '
+    + 'meets the CF curve, a dashed amber line drops to the horizontal axis at CF one '
+    + 'equals ' + f2(P.CF) + ' billion, which is ' + signWord + '. ' + meaning;
+
+  $fxDesc.textContent =
+    'Panel 3, market for foreign exchange. Net exports in billions of dollars run along '
+    + 'the horizontal axis, on exactly the same scale as panel 2; the real exchange rate '
+    + 'epsilon runs up the vertical axis. Net exports slope down as epsilon rises: NX '
+    + 'equals ' + P.NX0 + ' minus ' + P.NX1 + ' times epsilon. A vertical amber line '
+    + 'stands at CF one equals ' + f2(P.CF) + ' billion, carried over from panel 2 at '
+    + 'the same horizontal position, because net capital outflow does not depend on the '
+    + 'exchange rate. The two cross at the equilibrium, with net exports of '
+    + f2(P.CF) + ' and epsilon one equal to ' + f2(P.eps) + ', and a dashed amber guide '
+    + 'runs from there back to epsilon one on the vertical axis. Net exports equal net '
+    + 'capital outflow because the foreign-exchange market clears at NX equals CF, so '
+    + 'net exports are ' + signWord + ' too: a trade '
+    + (lender ? 'surplus' : 'deficit') + ' of ' + f2(Math.abs(P.CF)) + ' billion.';
+}
+
+function syncFigure(){
+  const show = QS[3] && QS[3].resolved;
+  $figure.classList.toggle('hidden', !show);
+  if(!show) return;
+
+  $figLede.innerHTML = 'These are the three panels from the appendix, drawn with '
+    + '<em>your</em> numbers, and the order they are read in <em>is</em> the '
+    + 'chain of determination. Saving and the demand for funds on the left fix '
+    + 'r' + SUB1 + ' = ' + f2(P.r) + '%; that same rate — the amber line at the '
+    + 'same height in panel 2 — fixes net capital outflow at CF' + SUB1 + ' = '
+    + fs2(P.CF) + '; and that same quantity — the amber line at the same '
+    + 'horizontal position in panel 3 — is what the net-export schedule has to '
+    + 'deliver, which prices the currency at ' + EPS + SUB1 + ' = ' + f2(P.eps)
+    + '. Nothing runs backwards: ' + EPS + ' is determined last.';
+
+  $slopeNote.innerHTML = '<strong>Why is saving sloped here, when the appendix '
+    + 'draws it vertical?</strong> The appendix writes saving as a fixed amount '
+    + 'S&#772;, because it treats consumption as depending only on disposable '
+    + 'income. This economy carries a ' + MINUS + ' ' + P.c1 + 'r term in '
+    + 'consumption, so a higher interest rate means less consumption and '
+    + 'therefore more saving: S(r) = ' + linTxt(P.Sint, P.c1) + ' slopes up. '
+    + 'Nothing else about the figure changes — the equilibrium is still where '
+    + 'saving meets I + CF, and the chain from r' + SUB1 + ' to CF' + SUB1
+    + ' to ' + EPS + SUB1 + ' is identical. Set c<sub>1</sub> = 0 and the line '
+    + 'stands straight up, exactly as in the notes.';
+
+  redraw();
+}
+
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  if(QS[3] && QS[3].resolved){ drawLF(); drawCF(); drawFX(); }
+  updateGraphDesc();
+}
+
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PROBLEM LIFECYCLE
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function anyProgress(){ return QS.some(function(s){ return s.submitted; }); }
+
+function resetState(){
+  QS = [];
+  for(let i = 0; i < NSTEPS; i++) QS.push(blankStep());
+  RQ = [];
+  for(let i = 0; i < NREC; i++) RQ.push(blankRec());
+  _labDone = false;
+  $doneBanner.classList.add('hidden');
+  $figure.classList.add('hidden');
+}
+
+function buildProblem(){
+  resetState();
+  generateParams();
+  renderProblem();
+  Q = buildSteps();
+  renderSteps();
+  redraw();
+}
+
+$newBtn.addEventListener('click', function(){
+  if(anyProgress() && !window.confirm(
+      'Draw a new problem? Every answer you have submitted for this one will be '
+      + 'cleared.')) return;
+  _probIndex += 1;
+  buildProblem();
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SELF-TEST — invariants of the generator plus grader consistency.
+   Run in the console:  window.__loeSelfTest(200)
+   ═══════════════════════════════════════════════════════════════════════ */
+function selfTest(n){
+  n = n || 200;
+  const saveP = P, saveIdx = _probIndex;
+  const bad = [], signs = [];
+  let nearInt = 0;
+
+  for(let i = 0; i < n; i++){
+    _probIndex = i;
+    generateParams();
+    const p = P;
+    const errs = [];
+
+    if(!(p.r >= 1.5 - 1e-9 && p.r <= 9.5 + 1e-9))        errs.push('r out of [1.5,9.5]');
+    if(!(p.eps >= 0.5 - 1e-9 && p.eps <= 2.0 + 1e-9))    errs.push('eps out of [0.5,2]');
+    if(!(p.S > 0))                                        errs.push('S <= 0');
+    if(!(p.S >= 0.08*p.Y - 1e-9 && p.S <= 0.28*p.Y + 1e-9)) errs.push('S out of band');
+    if(!(p.C > 0 && p.C < p.Y))                           errs.push('C out of band');
+    if(!(p.I >= 0.05*p.Y - 1e-9 && p.I <= 0.35*p.Y + 1e-9)) errs.push('I out of band');
+    if(!(Math.abs(p.CF) <= 0.10*p.Y + 1e-9))              errs.push('|CF| > 10% of Y');
+
+    /* Every displayed coefficient must be a positive integer. */
+    ['Y','T','G','c0','c1','rs','I0','I1','CF0','CF1','CF2','NX0','NX1']
+      .forEach(function(k){
+        if(!(p[k] > 0))               errs.push(k + ' <= 0');
+        if(!Number.isInteger(p[k]))   errs.push(k + ' not an integer');
+      });
+    if(p.CF2 !== p.CF1)               errs.push('CF2 != CF1');
+
+    /* Every graded answer must reproduce from the displayed coefficients. */
+    const Sint = p.Y - p.c0 - p.MPC*(p.Y - p.T) - p.G;
+    const A    = p.I0 + p.CF0 + p.CF2*p.rs;      /* Step 2 intercept: includes CF2·r* */
+    const B    = p.I1 + p.CF1;
+    const r    = (A - Sint) / (B + p.c1);
+    const CF   = p.CF0 - p.CF1*r + p.CF2*p.rs;
+    const eps  = (p.NX0 - CF) / p.NX1;
+    if(Math.abs(Sint - p.Sint) > 1e-9)  errs.push('Step 1 intercept not reproducible');
+    if(Math.abs(A - p.A) > 1e-9)        errs.push('Step 2 intercept not reproducible');
+    if(Math.abs(B - p.B) > 1e-9)        errs.push('Step 2 coefficient not reproducible');
+    if(Math.abs(r - p.r) > 1e-9)        errs.push('Step 3 answer not reproducible');
+    if(Math.abs(eps - p.eps) > 1e-9)    errs.push('Step 4 answer not reproducible');
+    if(Math.abs(A - (p.I0 + p.CF0)) < 1e-9) errs.push('Step 2 intercept omits CF2·r*');
+
+    /* Market clearing and the national income identity. */
+    if(Math.abs(p.S - (p.I + p.CF)) > 1e-6)             errs.push('S != I + CF');
+    if(Math.abs((p.C + p.I + p.G + p.CF) - p.Y) > 1e-6) errs.push('Y identity fails');
+
+    if(Math.abs(p.r - Math.round(p.r)) <= 0.01) nearInt++;
+    signs.push(Math.sign(p.CF));
+    if(errs.length) bad.push({ i:i, errs:errs, p:p });
+  }
+
+  let alt = true;
+  for(let i = 1; i < signs.length; i++) if(signs[i] === signs[i-1]) alt = false;
+  if(!alt) bad.push({ i:'—', errs:['trade balance sign does not alternate'] });
+  const nearPct = 100 * nearInt / n;
+  if(nearPct >= 10) bad.push({ i:'—', errs:['r within 0.01 of an integer in '
+    + nearPct.toFixed(1) + '% of problems (want < 10%)'] });
+
+  P = saveP; _probIndex = saveIdx;
+  if(window.console){
+    if(bad.length) console.error('[loe] self-test FAILED', bad);
+    else console.info('[loe] self-test passed — ' + n + ' problems, all invariants '
+                    + 'hold, signs alternate, r near an integer in '
+                    + nearPct.toFixed(1) + '% of draws.');
+  }
+  return { ok: bad.length === 0, checked: n, nearIntegerPct: nearPct, failures: bad };
+}
+window.__loeSelfTest = selfTest;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* This is a practice lab: it draws problems on demand and never blocks on a
+   discussion modal. Results still go through the Session calls above, so a
+   session summary picks them up if one happens to be running.
+
+   The lab must render whether or not /assets/*.js resolve, so nothing below
+   may depend on Session existing. */
+function boot(){
+  try{
+    buildProblem();
+  }catch(e){
+    console.error('Lab failed to initialise:', e);
+  }
+}
+
+if(document.readyState === 'loading')
+  document.addEventListener('DOMContentLoaded', boot);
+else
+  boot();
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1689 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>IS-LM Graph — ECON 105B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <!--
+    Discussion week template entry (paste into a week's LABS array):
+    { id: 'is-lm-graph', name: 'IS-LM Graph', icon: '📈',
+      desc: 'See how shocks and policy moves shift IS-LM and the underlying markets.',
+      url: '/classes/econ105b/labs/is-lm-graph/?disc=1' }
+  -->
+
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea; --panel:#ffffff;
+      --ink:#1f2937;   --ink-2:#374151; --muted:#596878;
+      --line:#e7dfd2;  --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;  --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3 / good practice) ────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;
+      font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;
+      line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;
+      max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Layout */
+    .lab-wrap{max-width:1160px;margin:0 auto;padding:18px;}
+
+    /* Problem card */
+    .problem-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:20px;box-shadow:var(--shadow);margin-bottom:18px;}
+    .phase-header{font-size:0.6875rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.08em;color:var(--accent);background:rgba(47,93,124,.08);
+      border:1px solid rgba(47,93,124,.18);border-radius:6px;
+      padding:3px 8px;display:inline-block;margin-bottom:8px;}
+    .phase-prompt{font-family:var(--font-serif);font-size:1.0625rem;
+      font-weight:700;color:var(--ink);line-height:1.4;margin:0 0 12px;}
+    .phase-prompt em{font-style:normal;color:var(--accent);}
+
+    /* Phase 1 scenario block — student must interpret the headline */
+    #phase1Prompt{display:block;margin:0 0 14px;font-family:var(--font-sans);
+      font-weight:normal;font-size:0.875rem;}
+    #phase1Prompt .scenario-label{display:inline-block;
+      font-size:0.6875rem;font-weight:800;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--accent);
+      background:rgba(47,93,124,.08);border:1px solid rgba(47,93,124,.18);
+      border-radius:6px;padding:2px 8px;margin-bottom:8px;}
+    #phase1Prompt .scenario-text{display:block;font-family:var(--font-serif);
+      font-size:1.0625rem;font-weight:600;color:var(--ink);line-height:1.45;
+      margin:0 0 10px;padding:10px 14px;
+      background:rgba(246,242,234,.55);
+      border-left:3px solid var(--accent);border-radius:0 8px 8px 0;}
+    #phase1Prompt .scenario-cta{display:block;font-size:0.8125rem;
+      color:var(--ink-2);line-height:1.4;}
+
+    .button-grid{display:grid;grid-template-columns:auto 1fr 1fr;gap:6px 8px;
+      align-items:center;max-width:520px;margin-bottom:8px;}
+    .button-grid .var-label{font-family:var(--font-serif);font-style:italic;
+      font-size:0.9375rem;font-weight:700;color:var(--ink-2);text-align:right;padding-right:4px;}
+    .single-pair{display:flex;gap:8px;max-width:520px;margin-bottom:8px;}
+    .single-pair .option-btn{flex:1;}
+
+    /* Standard option button — border #8c7f72 = 3.5:1 on white (WCAG 1.4.11 ✓) */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;
+      display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.45;cursor:not-allowed;}
+    .option-btn[aria-pressed="true"]{background:rgba(47,93,124,.12);
+      border-color:var(--accent);color:var(--accent);}
+    .option-btn.correct{border-color:var(--good);
+      background:rgba(21,92,56,.10);color:var(--good);}
+    .option-btn.wrong{border-color:var(--bad);
+      background:rgba(180,35,24,.08);color:var(--bad);}
+
+    .feedback{margin-top:10px;padding:9px 13px;border-radius:10px;
+      font-size:0.875rem;line-height:1.5;font-weight:600;}
+    .feedback.correct{background:rgba(21,92,56,.08);
+      border:1px solid rgba(21,92,56,.22);color:var(--good);}
+    .feedback.wrong{background:rgba(180,35,24,.06);
+      border:1px solid rgba(180,35,24,.22);color:var(--bad);}
+    .feedback .mark{font-size:1.125rem;margin-right:6px;font-weight:800;}
+
+    .phase-divider{border:none;border-top:1px solid var(--line);margin:18px 0;}
+
+    .explanation{margin-top:14px;padding:12px 16px;border-radius:12px;
+      background:rgba(47,93,124,.05);border:1px solid rgba(47,93,124,.18);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .explanation strong{color:var(--ink);}
+
+    .lab-done-banner{margin-top:14px;padding:12px 16px;border-radius:12px;
+      background:rgba(21,92,56,.08);border:1px solid rgba(21,92,56,.25);
+      color:var(--ink);font-size:0.875rem;line-height:1.55;}
+    .lab-done-banner .banner-title{font-family:var(--font-serif);
+      font-size:1.0625rem;font-weight:700;color:var(--good);margin:0 0 4px;}
+
+    .actions{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;}
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover{background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* Canvas grid */
+    .canvas-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+    @media(max-width:700px){.canvas-grid{grid-template-columns:1fr;}}
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
+    .graph-role{font-size:0.6875rem;color:var(--muted);margin-bottom:8px;
+      line-height:1.45;}
+    .graph-role b{color:var(--ink-2);font-weight:700;}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;
+      overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);transition:box-shadow .3s, border-color .3s;}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+    .graph-card.updated .canvas-wrap{
+      border-color:#8c4800; /* 6.3:1 on white — accessible amber */
+      box-shadow:0 0 0 3px rgba(140,72,0,.18);}
+    .graph-card.updated .graph-title::after{
+      content:' • UPDATED';color:#8c4800;font-size:0.625rem;
+      font-weight:800;letter-spacing:.08em;}
+    .graph-readout{margin-top:8px;font-size:0.75rem;color:var(--ink-2);
+      line-height:1.55;}
+    .graph-readout .ro-row{display:flex;flex-wrap:wrap;gap:10px;}
+    .graph-readout .ro-row span{white-space:nowrap;}
+    .graph-readout b{color:var(--ink);font-weight:700;}
+    .graph-readout .from{color:#8c4800;font-weight:700;font-size:0.6875rem;
+      text-transform:uppercase;letter-spacing:.05em;}
+
+    /* Chain of effect panel */
+    .chain-panel{margin-top:14px;background:var(--panel);
+      border:1px solid var(--line);border-radius:14px;
+      padding:14px 18px;box-shadow:var(--shadow);}
+    .chain-panel h3{margin:0 0 8px;font-family:var(--font-serif);
+      font-size:1rem;font-weight:700;color:var(--ink);}
+    .chain-panel ol{margin:0;padding-left:22px;font-size:0.8125rem;
+      color:var(--ink-2);line-height:1.55;}
+    .chain-panel li{margin-bottom:4px;}
+    .chain-panel li::marker{color:var(--accent);font-weight:700;}
+    .chain-panel li strong{color:var(--accent);}
+    .chain-panel li b.panel{display:inline-block;font-size:0.625rem;
+      font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+      color:var(--accent);background:rgba(47,93,124,.08);
+      border:1px solid rgba(47,93,124,.18);border-radius:5px;
+      padding:1px 6px;margin-right:4px;vertical-align:1px;}
+    .chain-panel .empty{color:var(--muted);font-style:italic;
+      font-size:0.8125rem;}
+
+    /* Legend */
+    .legend{margin-top:12px;display:flex;flex-wrap:wrap;gap:10px 18px;
+      padding:10px 14px;background:var(--panel);
+      border:1px solid var(--line);border-radius:12px;
+      font-size:0.75rem;color:var(--ink-2);}
+    .legend-item{display:flex;align-items:center;gap:8px;}
+    .legend-swatch{width:28px;height:3px;border-radius:2px;flex-shrink:0;}
+    .legend-swatch.solid-accent{background:var(--accent);}
+    .legend-swatch.dashed-shock{background-image:
+      repeating-linear-gradient(90deg,#6b2d8a 0 6px,transparent 6px 11px);
+      height:3px;}
+    .legend-swatch.solid-good{background:var(--good);}
+    .legend-swatch.solid-bad{background:var(--bad);}
+
+    /* Footer */
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+
+    .hidden{display:none!important;}
+  </style>
+</head>
+<body>
+
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105b/labs/">← ECON 105B Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105B — Review of Aggregate Demand</div>
+      <h1>IS-LM Graph</h1>
+      <p class="sub">
+        Apply a randomly drawn shock to the economy, then prescribe the
+        fiscal or monetary policy that fully offsets it. Watch all four
+        panels — Investment, the Keynesian Cross, the Money Market, and
+        IS-LM — update in real time.
+      </p>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>Each problem has two phases.</p>
+          <ol>
+            <li><strong>Phase 1 — Identify the shock.</strong> You're given
+            a real-world scenario (a news headline). Decide which model
+            variable shifted — government spending (<em>G</em>), taxes
+            (<em>T</em>), autonomous investment (<em>I₀</em>), or
+            autonomous consumption (<em>c₀</em>) — and in which direction.
+            Click the matching button. The shock is then applied to the
+            model regardless of whether you picked correctly, so you can
+            see the curve shifts.</li>
+            <li><strong>Phase 2 — Apply the policy.</strong> An institution
+            (Congress or the Fed) wants to stabilise either output or the
+            interest rate by changing one policy lever. Click the direction
+            that <em>actually</em> achieves that target. The magnitude is
+            computed for you exactly — only the direction is your choice.</li>
+          </ol>
+          <p>The four panels (Investment, Keynesian Cross, Money Market,
+          IS-LM) all share the same underlying parameters. Curves are
+          drawn solid in blue at baseline, dashed in blue after the
+          shock, and solid in green (or red, if you picked the wrong
+          policy direction) after the policy.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- Problem card -->
+  <section class="problem-card" aria-label="Problem">
+
+    <!-- PHASE 1 -->
+    <div id="phase1Block">
+      <span class="phase-header">Phase 1 — The Shock</span>
+      <p class="phase-prompt" id="phase1Prompt" aria-live="polite"></p>
+
+      <div class="button-grid" role="group" aria-label="Apply the shock — choose variable and direction">
+        <span class="var-label" aria-hidden="true">G</span>
+        <button class="option-btn" data-shock="G" data-dir="1"  aria-pressed="false">↑ Increase G</button>
+        <button class="option-btn" data-shock="G" data-dir="-1" aria-pressed="false">↓ Decrease G</button>
+
+        <span class="var-label" aria-hidden="true">T</span>
+        <button class="option-btn" data-shock="T" data-dir="1"  aria-pressed="false">↑ Increase T</button>
+        <button class="option-btn" data-shock="T" data-dir="-1" aria-pressed="false">↓ Decrease T</button>
+
+        <span class="var-label" aria-hidden="true">I₀</span>
+        <button class="option-btn" data-shock="I0" data-dir="1"  aria-pressed="false">↑ Increase I₀</button>
+        <button class="option-btn" data-shock="I0" data-dir="-1" aria-pressed="false">↓ Decrease I₀</button>
+
+        <span class="var-label" aria-hidden="true">c₀</span>
+        <button class="option-btn" data-shock="c0" data-dir="1"  aria-pressed="false">↑ Increase c₀</button>
+        <button class="option-btn" data-shock="c0" data-dir="-1" aria-pressed="false">↓ Decrease c₀</button>
+      </div>
+
+      <div id="phase1Feedback" class="hidden" aria-live="polite"></div>
+    </div>
+
+    <hr class="phase-divider hidden" id="phaseDivider">
+
+    <!-- PHASE 2 -->
+    <div id="phase2Block" class="hidden">
+      <span class="phase-header">Phase 2 — The Policy</span>
+      <p class="phase-prompt" id="phase2Prompt" aria-live="polite"></p>
+
+      <div class="single-pair" role="group" aria-label="Choose policy direction">
+        <button class="option-btn" id="policyUp"   data-pdir="1"  aria-pressed="false">↑ Increase</button>
+        <button class="option-btn" id="policyDown" data-pdir="-1" aria-pressed="false">↓ Decrease</button>
+      </div>
+
+      <div id="phase2Feedback" class="hidden" aria-live="polite"></div>
+      <div id="explanationBox" class="hidden"></div>
+      <div id="labDoneBanner" class="hidden" aria-live="polite"></div>
+    </div>
+
+    <div class="actions">
+      <button class="primary-btn" id="newProblemBtn">New Problem</button>
+    </div>
+  </section>
+
+  <!-- Canvas grid -->
+  <section class="canvas-grid" aria-label="Four-panel diagrams">
+
+    <div class="graph-card" id="invCard">
+      <div class="graph-title" id="invTitle">Investment — I as a function of r</div>
+      <div class="graph-role">Takes <b>r</b> from IS-LM &rarr; outputs <b>I</b></div>
+      <div class="canvas-wrap"><canvas id="invCanvas"
+           role="img" aria-labelledby="invTitle" aria-describedby="invDesc"
+           style="aspect-ratio:1/1;"></canvas></div>
+      <div class="graph-readout" id="invReadout"></div>
+    </div>
+
+    <div class="graph-card" id="kxCard">
+      <div class="graph-title" id="kxTitle">Keynesian Cross — PE as a function of Y</div>
+      <div class="graph-role">Takes <b>r</b> from Money Market plus c₀, T, I₀, G &rarr; outputs <b>Y</b></div>
+      <div class="canvas-wrap"><canvas id="kxCanvas"
+           role="img" aria-labelledby="kxTitle" aria-describedby="kxDesc"
+           style="aspect-ratio:1/1;"></canvas></div>
+      <div class="graph-readout" id="kxReadout"></div>
+    </div>
+
+    <div class="graph-card" id="mmCard">
+      <div class="graph-title" id="mmTitle">Money Market — r as a function of M/P</div>
+      <div class="graph-role">Takes <b>Y</b> from the goods market &rarr; outputs <b>r</b></div>
+      <div class="canvas-wrap"><canvas id="mmCanvas"
+           role="img" aria-labelledby="mmTitle" aria-describedby="mmDesc"
+           style="aspect-ratio:1/1;"></canvas></div>
+      <div class="graph-readout" id="mmReadout"></div>
+    </div>
+
+    <div class="graph-card" id="islmCard">
+      <div class="graph-title" id="islmTitle">IS-LM — r as a function of Y</div>
+      <div class="graph-role">Combines IS (goods market) and LM (money market) &rarr; joint <b>(Y*, r*)</b></div>
+      <div class="canvas-wrap"><canvas id="islmCanvas"
+           role="img" aria-labelledby="islmTitle" aria-describedby="islmDesc"
+           style="aspect-ratio:1/1;"></canvas></div>
+      <div class="graph-readout" id="islmReadout"></div>
+    </div>
+  </section>
+
+  <!-- Chain of effect -->
+  <section class="chain-panel" aria-labelledby="chainHeading">
+    <h3 id="chainHeading">Chain of effect</h3>
+    <ol id="chainSteps" aria-live="polite">
+      <li class="empty">Apply a shock to see how it propagates across the four markets.</li>
+    </ol>
+  </section>
+
+  <!-- Legend -->
+  <div class="legend" aria-label="Curve legend">
+    <span class="legend-item"><span class="legend-swatch solid-accent"></span><b>A</b> &mdash; Baseline (pre-shock, solid blue)</span>
+    <span class="legend-item"><span class="legend-swatch dashed-shock"></span><b>B</b> &mdash; Post-shock (dashed violet)</span>
+    <span class="legend-item"><span class="legend-swatch solid-good"></span><b>C</b> &mdash; Post-policy (correct direction)</span>
+    <span class="legend-item"><span class="legend-swatch solid-bad"></span><b>C</b> &mdash; Post-policy (wrong direction)</span>
+    <span class="legend-item">Arrows indicate the direction each curve shifts.</span>
+  </div>
+
+  <!-- Live region with canvas descriptions -->
+  <section class="sr-only" id="graphsDesc"
+           aria-live="polite" aria-atomic="true">
+    <p id="invDesc">Investment panel showing baseline state.</p>
+    <p id="kxDesc">Keynesian Cross panel showing baseline state.</p>
+    <p id="mmDesc">Money Market panel showing baseline state.</p>
+    <p id="islmDesc">IS-LM panel showing baseline state.</p>
+  </section>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 105B — Intermediate Macroeconomic Theory II</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ====================================================================
+   IS-LM Graph — ECON 105B
+   --------------------------------------------------------------------
+   Model:
+     Y = C + I + G
+     C = c0 + MPC·(Y − T)         (consumption interest sensitivity c1 = 0)
+     I = I0 − I1·r
+     M/P = MDY·Y − MDR·r          (money-market equilibrium)
+
+   Closed-form equilibrium (let A = c0 + I0 + G − MPC·T,
+                                 D = P·(MDR·(1 − MPC) + I1·MDY)):
+     Y* = (MDR·P·A + I1·M) / D
+     r* = (MDY·P·A − M·(1 − MPC)) / D
+
+   Marginal effects of a unit change in each lever:
+     dY/dc0 = dY/dI0 = dY/dG =  MDR·P / D            dr/. = MDY·P / D
+     dY/dT  = −MPC·MDR·P / D                          dr/dT = −MPC·MDY·P / D
+     dY/dM  =  I1 / D                                 dr/dM = −(1 − MPC) / D
+
+   Policy magnitudes to fully offset a shock that changes A by ΔA
+   (or, for an M-shock, by ΔM):
+     Policy = T, any target:    ΔT = −ΔA / MPC
+     Policy = G, any target:    ΔG = −ΔA
+     Policy = M, target = Y:    ΔM = −MDR·P·ΔA / I1
+     Policy = M, target = r:    ΔM =  MDY·P·ΔA / (1 − MPC)
+     (For a T-shock of magnitude Δ_T, use ΔA = −MPC·Δ_T in the formulas above.)
+
+   T- and G-policies shift only IS, so a single ΔT (or ΔG) restores
+   both Y* and r* simultaneously when the shock was itself an IS shift —
+   the two targets coincide.  Only M-policies behave differently for the
+   two targets, because shifting LM trades off Y against r.
+   ==================================================================== */
+
+const LAB_ID    = 'is-lm-graph';
+const LAB_LABEL = 'IS-LM Graph';
+
+/* ---------- Baseline parameters (fixed) ---------- */
+const BASE = Object.freeze({
+  c0:250, I0:2000, I1:30, G:500, T:1000, MPC:0.75,
+  M:1800, P:3, MDY:1, MDR:20
+});
+
+/* ---------- Fixed plot ranges (accommodate worst-case combos) ---------- */
+const RANGES = { Y:2400, r:85, I:2500, MP:1700, PE:2500 };
+
+/* ---------- State ---------- */
+let _rng         = null;
+let problem      = null;   // {shockVar, shockDir, shockMag, policyVar, policyTarget, policyMag}
+let phase        = 1;      // 1 = waiting for shock click, 2 = waiting for policy click, 3 = done
+let phase1Pick   = null;   // {shock,dir} the student picked
+let phase1Right  = null;
+let phase2Pick   = null;   // dir ±1
+let phase2Right  = null;
+let _firstScore  = 0;
+let _chainSoFar  = [];
+// Animation progress (0..1).  Lets the curves glide from baseline to post-shock,
+// then from post-shock to post-policy, rather than jump-cutting on each click.
+let _shockProgress  = 0;
+let _policyProgress = 0;
+let _animFrame      = null;
+
+/* ---------- DOM ---------- */
+const $ = id => document.getElementById(id);
+const SHOCK_BTNS = Array.from(document.querySelectorAll('[data-shock]'));
+const POLICY_BTNS = [$('policyUp'), $('policyDown')];
+
+/* ---------- RNG helpers ---------- */
+function rng(){ return _rng ? _rng() : Math.random(); }
+function pick(arr){ return arr[Math.floor(rng() * arr.length)]; }
+
+/* ---------- Equilibrium ---------- */
+function eqOf(p){
+  const A = p.c0 + p.I0 + p.G - p.MPC*p.T;
+  const D = p.P * (p.MDR*(1 - p.MPC) + p.I1*p.MDY);
+  const Y = (p.MDR*p.P*A + p.I1*p.M) / D;
+  const r = (p.MDY*p.P*A - p.M*(1 - p.MPC)) / D;
+  const I = p.I0 - p.I1*r;
+  const C = p.c0 + p.MPC*(Y - p.T);
+  const MP = p.M / p.P;
+  return { Y, r, I, C, MP, A, D };
+}
+
+/* ---------- Apply a shock or policy delta ---------- */
+function apply(params, lever, delta){
+  const out = Object.assign({}, params);
+  out[lever] = out[lever] + delta;
+  return out;
+}
+
+/* ---------- Closed-form policy magnitude ---------- */
+function computePolicyMag(shockVar, shockMag, policyVar, target){
+  const p = BASE;
+  const D = p.P * (p.MDR*(1 - p.MPC) + p.I1*p.MDY);
+
+  // Effect of the shock on (Y, r)
+  let dY, dr;
+  if(shockVar === 'M'){
+    dY = p.I1 * shockMag / D;
+    dr = -(1 - p.MPC) * shockMag / D;
+  } else if(shockVar === 'T'){
+    dY = -p.MPC * p.MDR * p.P * shockMag / D;
+    dr = -p.MPC * p.MDY * p.P * shockMag / D;
+  } else { // c0, I0, G — all simple A-shifters
+    dY = p.MDR * p.P * shockMag / D;
+    dr = p.MDY * p.P * shockMag / D;
+  }
+
+  // Marginal effect of the policy lever per unit change
+  let mY, mr;
+  if(policyVar === 'T'){
+    mY = -p.MPC * p.MDR * p.P / D;
+    mr = -p.MPC * p.MDY * p.P / D;
+  } else if(policyVar === 'G'){
+    mY = p.MDR * p.P / D;
+    mr = p.MDY * p.P / D;
+  } else { // M
+    mY = p.I1 / D;
+    mr = -(1 - p.MPC) / D;
+  }
+
+  if(target === 'Y') return -dY / mY;
+  return -dr / mr;
+}
+
+/* ---------- Random problem generator with reject-and-resample ---------- */
+const SHOCK_VARS = ['G','T','I0','c0'];
+// Magnitudes chosen so the PE line in the Keynesian Cross visibly shifts
+// (intercept moves by Δc0 / ΔG / ΔI0 / −MPC·ΔT respectively).  Some larger
+// combos with policy=M and target=r are rejected by the resample loop.
+const SHOCK_MAGS = { G:400, T:450, I0:600, c0:200 };
+
+/* ===================================================================
+   Scenario bank — students interpret the headline to decide which
+   variable shifted and in which direction.  Every scenario is
+   unambiguously tied to one (variable, direction) pair.
+   Keyed by `${var}${'+'|'-'}` where '+' = increase, '-' = decrease.
+   =================================================================== */
+const SCENARIOS = {
+  'G+': [
+    'Congress passes a major infrastructure spending bill, financed by new federal borrowing.',
+    'The federal government launches a $500 billion defense buildup, expanding military procurement.',
+    'Lawmakers approve a sweeping expansion of Medicare benefits, raising federal outlays.',
+    'A new federal jobs program substantially increases public-sector employment and wages.'
+  ],
+  'G-': [
+    'Congress passes deep cuts to discretionary federal spending across most agencies.',
+    'A long-running wartime spending program ends, sharply reducing federal outlays.',
+    'A new fiscal-restraint law forces across-the-board cuts to government programs.',
+    'Lawmakers shut down a major federal agency as part of a budget-trimming package.'
+  ],
+  'T+': [
+    'Congress raises personal income-tax rates on most working households.',
+    'A new payroll-tax surcharge takes effect to shore up the Social Security trust fund.',
+    'Lawmakers raise the corporate income-tax rate, broadening the base of federal revenue.',
+    'A new federal excise tax on consumer goods is enacted to fund deficit reduction.'
+  ],
+  'T-': [
+    'Congress passes a broad personal income-tax cut affecting most filers.',
+    'The IRS expands a major refundable tax credit, lowering effective tax bills for working families.',
+    'Lawmakers eliminate the federal estate tax in a high-profile reform bill.',
+    'Congress enacts a one-time tax rebate, mailing checks to every taxpayer.'
+  ],
+  'I0+': [
+    'A breakthrough in AI sparks an investment boom — firms race to build new data centers.',
+    'Business confidence surges; CEOs announce a wave of major capacity expansions.',
+    'A leading capital-spending survey shows the strongest investment plans in a decade.',
+    'A sudden drop in input costs makes new factory projects newly attractive to firms.'
+  ],
+  'I0-': [
+    'Business pessimism rises sharply; firms slash their planned capital spending.',
+    'A wave of corporate defaults triggers a broad pullback in new private investment.',
+    'Firms postpone major construction and equipment projects amid mounting policy uncertainty.',
+    'A leading investment survey shows the deepest decline in planned outlays in a decade.'
+  ],
+  'c0+': [
+    'Consumer confidence surges after a string of positive economic news.',
+    'A booming stock market lifts household wealth and planned spending.',
+    'Holiday spending plans hit record highs as households feel newly secure.',
+    'A rapid rise in home values boosts household consumption plans.'
+  ],
+  'c0-': [
+    'A stock-market crash wipes out household wealth and dents consumer confidence.',
+    'Consumer sentiment plunges to a multi-year low in the latest survey.',
+    'Households retrench amid widespread recession fears, cutting planned spending.',
+    'A sharp decline in home prices triggers a broad pullback in consumer outlays.'
+  ]
+};
+const POLICY_VARS = ['T','G','M'];
+const TARGETS = ['Y','r'];
+const PLAUSIBLE = { T:BASE.T*1.5, G:BASE.G*1.5, M:BASE.M*1.5 };
+
+function generateProblem(){
+  let last = null;
+  for(let i=0; i<50; i++){
+    const sv  = pick(SHOCK_VARS);
+    const dir = pick([1, -1]);
+    const validPolicies = POLICY_VARS.filter(v => v !== sv);
+    const pv  = pick(validPolicies);
+    const tg  = pick(TARGETS);
+    const sm  = dir * SHOCK_MAGS[sv];
+    const pm  = computePolicyMag(sv, sm, pv, tg);
+    const scenarioKey = sv + (dir > 0 ? '+' : '-');
+    const scenario = pick(SCENARIOS[scenarioKey]);
+    last = { shockVar:sv, shockDir:dir, shockMag:sm,
+             policyVar:pv, policyTarget:tg, policyMag:pm,
+             scenario, scenarioKey };
+    if(Math.abs(pm) <= PLAUSIBLE[pv]) return last;
+  }
+  return last;
+}
+
+/* ---------- Variable display ---------- */
+const VAR_PRETTY = { c0:'c₀', I0:'I₀', G:'G', T:'T', M:'M' };
+const VAR_INSTITUTION = { T:'Congress', G:'Congress', M:'The Fed' };
+const TARGET_PRETTY = { Y:'output', r:'interest rate' };
+
+/* ===================================================================
+   PHASE 1 — shock prompt and button handling
+   =================================================================== */
+function renderPhase1Prompt(){
+  $('phase1Prompt').innerHTML =
+    '<span class="scenario-label">Scenario</span>' +
+    '<span class="scenario-text">&ldquo;' + escapeHTML(problem.scenario) + '&rdquo;</span>' +
+    '<span class="scenario-cta">Which variable shifted, and in which direction? ' +
+    'Click the matching button below.</span>';
+}
+
+function escapeHTML(s){
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+function handlePhase1Click(e){
+  if(phase !== 1) return;
+  const btn = e.currentTarget;
+  const sv  = btn.dataset.shock;
+  const dir = parseInt(btn.dataset.dir, 10);
+  phase1Pick = { shock:sv, dir };
+  phase1Right = (sv === problem.shockVar && dir === problem.shockDir);
+
+  SHOCK_BTNS.forEach(b => {
+    b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+    b.disabled = true;
+  });
+  btn.classList.add(phase1Right ? 'correct' : 'wrong');
+
+  // Feedback — explicitly reveals the variable interpretation of the scenario
+  const fb = $('phase1Feedback');
+  const verbDir = problem.shockDir > 0 ? 'an increase' : 'a decrease';
+  const trueShock = verbDir + ' in ' + VAR_PRETTY[problem.shockVar] +
+                    ' of ' + Math.abs(problem.shockMag);
+  fb.className = 'feedback ' + (phase1Right ? 'correct' : 'wrong');
+  fb.innerHTML = (phase1Right
+    ? '<span class="mark" aria-hidden="true">✓</span><span class="sr-only">Correct.</span>' +
+      'Correct — that scenario describes <strong>' + trueShock + '</strong>. Applying it now.'
+    : '<span class="mark" aria-hidden="true">✗</span><span class="sr-only">Incorrect.</span>' +
+      'Not quite. That scenario describes <strong>' + trueShock + '</strong>. ' +
+      'Applying it anyway so you can see the effect.');
+  fb.classList.remove('hidden');
+
+  // Record question 1 — the scenario text the student saw plus their interpretation
+  const qText1 = 'Identify the shock from this scenario: "' + problem.scenario + '"';
+  const ansText = (dir > 0 ? 'Increase' : 'Decrease') + ' in ' + VAR_PRETTY[sv];
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(LAB_ID, 0, qText1, ansText, phase1Right, ansText, phase1Right);
+  }
+  if(phase1Right) _firstScore++;
+
+  // Advance to phase 2 — but keep policy block disabled until the shock
+  // animation finishes, so a fast clicker can't trigger phase 2 mid-glide.
+  phase = 2;
+  $('phaseDivider').classList.remove('hidden');
+  $('phase2Block').classList.remove('hidden');
+  renderPhase2Prompt();
+  POLICY_BTNS.forEach(b => { b.disabled = true; });
+
+  // Active linkage: chain narrative + pulse cards in cascade order
+  _chainSoFar = buildShockChain();
+  chainSet(_chainSoFar);
+  pulseSequence(problem.shockVar);
+
+  // Glide the curves from A to B over ~1.2 s (instant under reduced-motion)
+  _shockProgress = 0;
+  animateProgress(v => { _shockProgress = v; }, ANIM_MS, () => {
+    POLICY_BTNS.forEach(b => { b.disabled = false; });
+  });
+}
+
+function renderPhase2Prompt(){
+  const inst = VAR_INSTITUTION[problem.policyVar];
+  $('phase2Prompt').innerHTML =
+    'Policy: <em>' + inst + '</em> wants to maintain <em>' + TARGET_PRETTY[problem.policyTarget] +
+    ' stability</em> by changing <em>' + VAR_PRETTY[problem.policyVar] +
+    '</em>. Click the direction that achieves this.';
+  POLICY_BTNS.forEach(b => {
+    b.disabled = false;
+    b.setAttribute('aria-pressed', 'false');
+    b.classList.remove('correct','wrong');
+    const dir = parseInt(b.dataset.pdir, 10);
+    b.firstChild.nodeValue = (dir > 0 ? '↑ Increase ' : '↓ Decrease ') + VAR_PRETTY[problem.policyVar];
+  });
+}
+
+/* ===================================================================
+   PHASE 2 — policy direction click
+   =================================================================== */
+function handlePhase2Click(e){
+  if(phase !== 2) return;
+  const btn = e.currentTarget;
+  const dir = parseInt(btn.dataset.pdir, 10);
+  const correctDir = problem.policyMag > 0 ? 1 : -1;
+  phase2Pick  = dir;
+  phase2Right = (dir === correctDir);
+
+  POLICY_BTNS.forEach(b => {
+    b.setAttribute('aria-pressed', b === btn ? 'true' : 'false');
+    b.disabled = true;
+  });
+  btn.classList.add(phase2Right ? 'correct' : 'wrong');
+  // Lock Phase 1 buttons too (already disabled but make sure)
+  SHOCK_BTNS.forEach(b => { b.disabled = true; });
+
+  // Compute post-policy params
+  const postShock = apply(BASE, problem.shockVar, problem.shockMag);
+  const appliedPolicy = dir * Math.abs(problem.policyMag);
+  const postPolicy = apply(postShock, problem.policyVar, appliedPolicy);
+  const baseEq = eqOf(BASE);
+  const finalEq = eqOf(postPolicy);
+
+  // Feedback with deviation from baseline for the target
+  const target = problem.policyTarget;
+  const baseVal = (target === 'Y') ? baseEq.Y : baseEq.r;
+  const finalVal = (target === 'Y') ? finalEq.Y : finalEq.r;
+  const dev = finalVal - baseVal;
+  const targetName = target === 'Y' ? 'Output (Y)' : 'Interest rate (r)';
+
+  const fb = $('phase2Feedback');
+  fb.className = 'feedback ' + (phase2Right ? 'correct' : 'wrong');
+  fb.innerHTML = (phase2Right
+    ? '<span class="mark" aria-hidden="true">✓</span><span class="sr-only">Correct.</span>Correct direction. ' +
+      'Applied ' + (dir>0?'+':'') + appliedPolicy.toFixed(1) + ' to ' + VAR_PRETTY[problem.policyVar] +
+      '. ' + targetName + ' deviation from baseline: ' + (dev>=0?'+':'') + dev.toFixed(2) + '.'
+    : '<span class="mark" aria-hidden="true">✗</span><span class="sr-only">Incorrect.</span>Wrong direction. ' +
+      'Applied ' + (dir>0?'+':'') + appliedPolicy.toFixed(1) + ' to ' + VAR_PRETTY[problem.policyVar] +
+      ' — that pushes the economy further from baseline, not toward it. ' +
+      targetName + ' deviation from baseline: ' + (dev>=0?'+':'') + dev.toFixed(2) + '.');
+  fb.classList.remove('hidden');
+
+  // Explanation
+  $('explanationBox').className = 'explanation';
+  $('explanationBox').innerHTML = buildExplanation(phase2Right);
+  $('explanationBox').classList.remove('hidden');
+
+  // Record question 2
+  const qText2 = (VAR_INSTITUTION[problem.policyVar] === 'The Fed' ? 'The Fed' : 'Congress') +
+    ' wants ' + TARGET_PRETTY[problem.policyTarget] + ' stability via ' +
+    VAR_PRETTY[problem.policyVar] + '. Increase or decrease?';
+  const ansText = (dir > 0 ? 'Increase' : 'Decrease') + ' ' + VAR_PRETTY[problem.policyVar];
+  if(window.Session && Session.recordQuestion){
+    Session.recordQuestion(LAB_ID, 1, qText2, ansText, phase2Right, ansText, phase2Right);
+  }
+  const finalScore = (phase1Right ? 1 : 0) + (phase2Right ? 1 : 0);
+  if(phase2Right) _firstScore++;
+  if(window.Session && Session.recordLabDone){
+    Session.recordLabDone(LAB_ID, LAB_LABEL, _firstScore, finalScore, 2);
+  }
+
+  // Lab-done banner
+  const banner = $('labDoneBanner');
+  banner.className = 'lab-done-banner';
+  banner.innerHTML = '<div class="banner-title">Problem complete.</div>' +
+    'Score: ' + finalScore + '/2. Click <strong>New Problem</strong> to try another.';
+  banner.classList.remove('hidden');
+
+  phase = 3;
+
+  // Active linkage: extend the chain with the policy steps and pulse again
+  _chainSoFar = buildPolicyChain(_chainSoFar);
+  chainSet(_chainSoFar);
+  pulseSequence(problem.policyVar);
+
+  // Glide the C-state in from B
+  _policyProgress = 0;
+  animateProgress(v => { _policyProgress = v; }, ANIM_MS);
+}
+
+/* ---------- Explanation generator ---------- */
+function buildExplanation(correct){
+  const sv = problem.shockVar, sd = problem.shockDir;
+  const pv = problem.policyVar, tg = problem.policyTarget;
+  const svDir   = sd > 0 ? 'increase' : 'decrease';
+  const correctPolDir = problem.policyMag > 0 ? 'increase' : 'decrease';
+  const wrongPolDir   = problem.policyMag > 0 ? 'decrease' : 'increase';
+
+  // Direction the shock pushes IS (or LM for hypothetical M shocks)
+  // For c0, I0, G: + shock shifts IS right; for T: + shock shifts IS left (since T raises taxes → lower disposable income).
+  let isShiftDir;
+  if(sv === 'T') isShiftDir = (sd > 0 ? 'left (down)' : 'right (up)');
+  else           isShiftDir = (sd > 0 ? 'right (up)' : 'left (down)');
+
+  // Effect on Y and r from this IS shift
+  const yEff = (sv === 'T' ? -sd : sd) > 0 ? 'rises' : 'falls';
+  const rEff = (sv === 'T' ? -sd : sd) > 0 ? 'rises' : 'falls';
+
+  // Policy explanation
+  let policySent;
+  if(pv === 'M'){
+    if(tg === 'r'){
+      policySent = 'To hold the interest rate at its original level, the Fed must ' +
+        correctPolDir + ' the money supply, shifting LM so that it meets the new IS at the original r.';
+    } else {
+      policySent = 'To hold output at its original level, the Fed must ' +
+        correctPolDir + ' the money supply, shifting LM along the new IS until Y returns to baseline.';
+    }
+  } else {
+    // T or G fiscal policy — single IS shift in either direction restores both Y and r
+    if(pv === 'G'){
+      policySent = 'Since the original shock was a pure IS shift, Congress can offset it with an equal-and-opposite IS shift: ' +
+        correctPolDir + ' G to push IS back to its original position. This restores both Y and r at once.';
+    } else { // T
+      policySent = 'Congress can offset an IS shift by moving taxes: ' +
+        correctPolDir + ' T to push IS back to its original position. Both Y and r return to baseline simultaneously.';
+    }
+  }
+
+  const article = sd > 0 ? 'An' : 'A';
+  let intro = article + ' ' + svDir + ' in ' + VAR_PRETTY[sv] + ' shifts the IS curve ' +
+    isShiftDir + ', so equilibrium Y ' + yEff + ' and r ' + rEff + '. ';
+
+  if(correct){
+    return '<strong>Correct.</strong> ' + intro + policySent;
+  } else {
+    return '<strong>Wrong direction.</strong> ' + intro +
+      'You ' + wrongPolDir + 'd ' + VAR_PRETTY[pv] +
+      ', which moves ' + (tg==='Y'?'output':'the interest rate') +
+      ' further from baseline. The correct policy was to ' + correctPolDir +
+      ' ' + VAR_PRETTY[pv] + '. ' + policySent;
+  }
+}
+
+/* ===================================================================
+   CANVAS DRAWING
+   =================================================================== */
+const PAD = { l:64, r:18, t:22, b:54 };
+let _fs = 1;
+
+function setupCanvas(canvas, wrap){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  const W = Math.round(rect.width * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+
+function makeCoords(W, H, dpr, xMax, yMax){
+  const p = { l:PAD.l*dpr, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  return {
+    xC: x => p.l + (x / xMax) * PW,
+    yC: y => H - p.b - (y / yMax) * PH,
+    p, PW, PH
+  };
+}
+
+function tickStep(mx){
+  if(mx<=10) return 1; if(mx<=20) return 2; if(mx<=50) return 5;
+  if(mx<=100) return 10; if(mx<=200) return 20; if(mx<=500) return 50;
+  if(mx<=1000) return 100; if(mx<=2000) return 200; if(mx<=5000) return 500;
+  return 1000;
+}
+
+function drawAxes(ctx, co, W, H, dpr, xMax, yMax, xLabel, yLabel){
+  const { p } = co;
+  ctx.strokeStyle = '#d9cfbf';
+  ctx.lineWidth = 1 * dpr;
+  ctx.beginPath();
+  // Y axis
+  ctx.moveTo(p.l, p.t); ctx.lineTo(p.l, H - p.b);
+  // X axis
+  ctx.moveTo(p.l, H - p.b); ctx.lineTo(W - p.r, H - p.b);
+  ctx.stroke();
+
+  ctx.fillStyle = '#596878';
+  ctx.font = `400 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  const yStep = tickStep(yMax);
+  for(let y = 0; y <= yMax + 1e-6; y += yStep){
+    const py = co.yC(y);
+    ctx.strokeStyle = '#e7dfd2'; ctx.lineWidth = 1 * dpr;
+    ctx.beginPath(); ctx.moveTo(p.l, py); ctx.lineTo(W - p.r, py); ctx.stroke();
+    ctx.fillText(String(y), p.l - 6*dpr, py);
+  }
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  const xStep = tickStep(xMax);
+  for(let x = 0; x <= xMax + 1e-6; x += xStep){
+    const px = co.xC(x);
+    ctx.strokeStyle = '#e7dfd2'; ctx.lineWidth = 1 * dpr;
+    ctx.beginPath(); ctx.moveTo(px, p.t); ctx.lineTo(px, H - p.b); ctx.stroke();
+    ctx.fillText(String(x), px, H - p.b + 6*dpr);
+  }
+
+  // Axis labels
+  ctx.fillStyle = '#374151';
+  ctx.font = `700 ${Math.round(11 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillText(xLabel, p.l + co.PW/2, H - 10*dpr);
+  ctx.save();
+  ctx.translate(14*dpr, p.t + co.PH/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(yLabel, 0, 0);
+  ctx.restore();
+}
+
+function clipPlot(ctx, co, W, H){
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(co.p.l, co.p.t, W - co.p.l - co.p.r, H - co.p.t - co.p.b);
+  ctx.clip();
+}
+function unclip(ctx){ ctx.restore(); }
+
+function strokeLine(ctx, x1, y1, x2, y2, color, width, dash){
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.setLineDash(dash || []);
+  ctx.beginPath();
+  ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawDot(ctx, x, y, color, r, dpr){
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y, r*dpr, 0, Math.PI*2);
+  ctx.fill();
+}
+
+// A / B / C label drawn next to an equilibrium dot, with a white halo
+// so it stays readable when it overlaps a curve.
+function drawDotLabel(ctx, x, y, label, color, dpr){
+  ctx.save();
+  ctx.font = `800 ${Math.round(13 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  const dx = 8*dpr, dy = -8*dpr;
+  // White halo
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 3.5*dpr;
+  ctx.strokeText(label, x + dx, y + dy);
+  ctx.fillStyle = color;
+  ctx.fillText(label, x + dx, y + dy);
+  ctx.restore();
+}
+
+// Arrow with a filled triangular head.  Used to indicate the direction
+// a curve has shifted (A→B or B→C).
+function drawArrow(ctx, x1, y1, x2, y2, color, dpr, opts){
+  opts = opts || {};
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = (opts.lineWidth || 2.5) * dpr;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const head = (opts.headLen || 9) * dpr;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - head*Math.cos(angle - Math.PI/7),
+             y2 - head*Math.sin(angle - Math.PI/7));
+  ctx.lineTo(x2 - head*Math.cos(angle + Math.PI/7),
+             y2 - head*Math.sin(angle + Math.PI/7));
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+// Letter assignment: index 0=A, 1=B, 2=C.
+const DOT_LETTERS = ['A', 'B', 'C'];
+
+// Color used for an arrow showing a shift between two specific states
+function arrowColorFor(stateIdx){
+  // 0 = baseline, 1 = post-shock, 2 = post-policy
+  if(stateIdx === 1) return '#6b2d8a';                 // A→B: violet
+  return phase2Right ? '#155c38' : '#b42318';          // B→C: good or bad
+}
+
+/* Tracer guides: dotted L-shape from the live equilibrium dot to both axes
+   plus a small value badge near each axis.  Highlights the SHARED variables
+   (r and Y) so a moving r* visibly aligns across IS-LM / Investment / MM. */
+const GUIDE_R = '#8c4800';   // amber, 6.3:1 on white
+const GUIDE_Y = '#155c38';   // green, 7.7:1 on white
+function drawGuides(ctx, co, W, H, dpr, xVal, yVal, opts){
+  opts = opts || {};
+  const xColor = opts.xColor || GUIDE_Y;   // x-axis (Y or I or M/P) guide color
+  const yColor = opts.yColor || GUIDE_R;   // y-axis (r or PE) guide color
+  const xLabel = opts.xLabel || '';
+  const yLabel = opts.yLabel || '';
+  const px = co.xC(xVal), py = co.yC(yVal);
+  if(px < co.p.l || px > W - co.p.r || py < co.p.t || py > H - co.p.b) return;
+
+  ctx.save();
+  ctx.lineWidth = 1.5 * dpr;
+  ctx.setLineDash([5*dpr, 4*dpr]);
+
+  // Horizontal guide: y-axis to dot (y-value)
+  ctx.strokeStyle = yColor;
+  ctx.beginPath();
+  ctx.moveTo(co.p.l, py); ctx.lineTo(px, py); ctx.stroke();
+
+  // Vertical guide: dot to x-axis (x-value)
+  ctx.strokeStyle = xColor;
+  ctx.beginPath();
+  ctx.moveTo(px, py); ctx.lineTo(px, H - co.p.b); ctx.stroke();
+
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  // Value badges — drawn outside the axis so they don't clash with tick labels
+  ctx.save();
+  ctx.font = `800 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+
+  // y-axis badge (left of plot area, slightly offset)
+  const yText = yLabel;
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  const tw = ctx.measureText(yText).width;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(co.p.l - tw - 12*dpr, py - 8*dpr, tw + 8*dpr, 16*dpr);
+  ctx.strokeStyle = yColor; ctx.lineWidth = 1*dpr;
+  ctx.strokeRect(co.p.l - tw - 12*dpr, py - 8*dpr, tw + 8*dpr, 16*dpr);
+  ctx.fillStyle = yColor;
+  ctx.fillText(yText, co.p.l - 8*dpr, py);
+
+  // x-axis badge (below plot area)
+  const xText = xLabel;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const txw = ctx.measureText(xText).width;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(px - txw/2 - 4*dpr, H - co.p.b + 18*dpr, txw + 8*dpr, 16*dpr);
+  ctx.strokeStyle = xColor; ctx.lineWidth = 1*dpr;
+  ctx.strokeRect(px - txw/2 - 4*dpr, H - co.p.b + 18*dpr, txw + 8*dpr, 16*dpr);
+  ctx.fillStyle = xColor;
+  ctx.fillText(xText, px, H - co.p.b + 26*dpr);
+
+  ctx.restore();
+}
+
+function fmt1(v){ return Number(v).toFixed(1); }
+function fmt2(v){ return Number(v).toFixed(2); }
+
+/* ---------- Per-panel renderers ---------- */
+
+// Investment: line I(r) = I0 − I1·r, plotted with x=I, y=r
+function drawInvestment(){
+  const wrap = $('invCanvas').parentNode;
+  const s = setupCanvas($('invCanvas'), wrap);
+  if(!s) return;
+  const { ctx, dpr, W, H } = s;
+  ctx.clearRect(0,0,W,H);
+  const co = makeCoords(W, H, dpr, RANGES.I, RANGES.r);
+  drawAxes(ctx, co, W, H, dpr, RANGES.I, RANGES.r, 'I (investment)', 'r (interest rate)');
+
+  const states = currentStates();
+  clipPlot(ctx, co, W, H);
+  for(const st of states){
+    // I = I0 − I1·r ⇒ over r∈[0, rMax]: I varies linearly
+    const r0 = 0, r1 = RANGES.r;
+    const I0p = st.params.I0, I1 = st.params.I1;
+    const x0 = co.xC(I0p - I1*r0), y0 = co.yC(r0);
+    const x1 = co.xC(I0p - I1*r1), y1 = co.yC(r1);
+    strokeLine(ctx, x0, y0, x1, y1, st.color, 2.5*dpr, st.dash);
+  }
+
+  // Shift arrows: the I(r) curve only moves when I0 changes (I0 shock).
+  for(let i = 1; i < states.length; i++){
+    const pre  = states[i-1].params, post = states[i].params;
+    if(pre.I0 !== post.I0){
+      const rMid = (states[0].eq.r + states[i].eq.r) / 2;
+      const I_pre  = pre.I0  - pre.I1 * rMid;
+      const I_post = post.I0 - post.I1 * rMid;
+      drawArrow(ctx, co.xC(I_pre), co.yC(rMid),
+                     co.xC(I_post), co.yC(rMid),
+                     arrowColorFor(i), dpr);
+    }
+  }
+  unclip(ctx);
+
+  // Equilibrium dots + A/B/C labels
+  for(let i = 0; i < states.length; i++){
+    const st = states[i];
+    const px = co.xC(st.eq.I), py = co.yC(st.eq.r);
+    if(px>=co.p.l && px<=W-co.p.r && py>=co.p.t && py<=H-co.p.b){
+      drawDot(ctx, px, py, st.color, 4.5, dpr);
+      drawDotLabel(ctx, px, py, DOT_LETTERS[i], st.color, dpr);
+    }
+  }
+
+  // Tracer guides for the live equilibrium — links r (from IS-LM) to I
+  const live = states[states.length-1].eq;
+  drawGuides(ctx, co, W, H, dpr, live.I, live.r, {
+    yLabel: 'r = ' + fmt2(live.r),
+    xLabel: 'I = ' + fmt1(live.I),
+  });
+
+  // Readout
+  $('invReadout').innerHTML =
+    '<div class="ro-row"><span class="from">r from IS-LM</span>' +
+    '<span><b>r</b> = ' + live.r.toFixed(2) + '</span>' +
+    '<span><b>I</b> = ' + live.I.toFixed(1) + '</span>' +
+    '<span><b>I₀</b> = ' + states[states.length-1].params.I0 + '</span></div>';
+}
+
+// Keynesian Cross: 45° line PE=Y plus PE(Y) = (c0 − MPC·T − I1·r + I0 + G) + MPC·Y
+function drawKeynesianCross(){
+  const wrap = $('kxCanvas').parentNode;
+  const s = setupCanvas($('kxCanvas'), wrap);
+  if(!s) return;
+  const { ctx, dpr, W, H } = s;
+  ctx.clearRect(0,0,W,H);
+  const co = makeCoords(W, H, dpr, RANGES.Y, RANGES.PE);
+  drawAxes(ctx, co, W, H, dpr, RANGES.Y, RANGES.PE, 'Y (income)', 'PE (planned expenditure)');
+
+  // 45° line (same across all states)
+  clipPlot(ctx, co, W, H);
+  const m = Math.min(RANGES.Y, RANGES.PE);
+  strokeLine(ctx, co.xC(0), co.yC(0), co.xC(m), co.yC(m),
+             '#9aa3ad', 1.5*dpr, [4*dpr, 4*dpr]);
+
+  const states = currentStates();
+  function peIntercept(p, r){
+    return p.c0 - p.MPC*p.T - p.I1*r + p.I0 + p.G;
+  }
+  for(const st of states){
+    const p = st.params, r = st.eq.r;
+    const intercept = peIntercept(p, r);
+    // PE(Y) = intercept + MPC·Y
+    const y0 = intercept;
+    const y1 = intercept + p.MPC*RANGES.Y;
+    strokeLine(ctx, co.xC(0), co.yC(y0),
+                    co.xC(RANGES.Y), co.yC(y1),
+                    st.color, 2.5*dpr, st.dash);
+  }
+
+  // Shift arrow on the PE line — PE intercept changes whenever any of
+  // c0, T, I0, G, or r* moves, which is true for every shock and policy.
+  for(let i = 1; i < states.length; i++){
+    const pre  = states[i-1], post = states[i];
+    const Y_mid = Math.min(states[0].eq.Y, post.eq.Y) * 0.62;
+    const PE_pre  = peIntercept(pre.params,  pre.eq.r)  + pre.params.MPC  * Y_mid;
+    const PE_post = peIntercept(post.params, post.eq.r) + post.params.MPC * Y_mid;
+    if(Math.abs(PE_post - PE_pre) > 5){
+      drawArrow(ctx, co.xC(Y_mid), co.yC(PE_pre),
+                     co.xC(Y_mid), co.yC(PE_post),
+                     arrowColorFor(i), dpr);
+    }
+  }
+  unclip(ctx);
+
+  // Equilibrium dots: (Y*, Y*) + A/B/C labels
+  for(let i = 0; i < states.length; i++){
+    const st = states[i];
+    const px = co.xC(st.eq.Y), py = co.yC(st.eq.Y);
+    if(px>=co.p.l && px<=W-co.p.r && py>=co.p.t && py<=H-co.p.b){
+      drawDot(ctx, px, py, st.color, 4.5, dpr);
+      drawDotLabel(ctx, px, py, DOT_LETTERS[i], st.color, dpr);
+    }
+  }
+
+  // 45° label
+  ctx.fillStyle = '#596878';
+  ctx.font = `600 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+  ctx.fillText('PE = Y', co.xC(RANGES.Y*0.88), co.yC(RANGES.Y*0.92));
+
+  // Tracer guides — vertical Y* feeds out to IS-LM and Money Market
+  const live = states[states.length-1].eq;
+  drawGuides(ctx, co, W, H, dpr, live.Y, live.Y, {
+    xColor: GUIDE_Y, yColor: GUIDE_Y,
+    yLabel: 'PE = Y* = ' + fmt1(live.Y),
+    xLabel: 'Y* = ' + fmt1(live.Y),
+  });
+
+  $('kxReadout').innerHTML =
+    '<div class="ro-row"><span class="from">r from Money Market</span>' +
+    '<span><b>r</b> = ' + live.r.toFixed(2) + '</span>' +
+    '<span><b>Y*</b> = ' + live.Y.toFixed(1) + '</span>' +
+    '<span><b>C</b> = ' + live.C.toFixed(1) + '</span>' +
+    '<span><b>I</b> = ' + live.I.toFixed(1) + '</span></div>';
+}
+
+// Money Market: vertical M/P, downward MD line at equilibrium Y
+function drawMoneyMarket(){
+  const wrap = $('mmCanvas').parentNode;
+  const s = setupCanvas($('mmCanvas'), wrap);
+  if(!s) return;
+  const { ctx, dpr, W, H } = s;
+  ctx.clearRect(0,0,W,H);
+  const co = makeCoords(W, H, dpr, RANGES.MP, RANGES.r);
+  drawAxes(ctx, co, W, H, dpr, RANGES.MP, RANGES.r, 'M / P', 'r (interest rate)');
+
+  const states = currentStates();
+  clipPlot(ctx, co, W, H);
+  for(const st of states){
+    const p = st.params, Y = st.eq.Y;
+    // Vertical money supply at M/P
+    const mp = p.M / p.P;
+    strokeLine(ctx, co.xC(mp), co.yC(0), co.xC(mp), co.yC(RANGES.r),
+               st.color, 2.5*dpr, st.dash);
+    // Money demand: r ranges 0 to rMax, M/P = MDY·Y − MDR·r
+    const x0 = co.xC(p.MDY*Y - p.MDR*0),    y0 = co.yC(0);
+    const x1 = co.xC(p.MDY*Y - p.MDR*RANGES.r), y1 = co.yC(RANGES.r);
+    strokeLine(ctx, x0, y0, x1, y1, st.color, 2.5*dpr,
+               st.dash ? st.dash : [9*dpr, 5*dpr]);
+  }
+
+  // Shift arrows for MS (M-policy only) and MD (whenever Y changes)
+  for(let i = 1; i < states.length; i++){
+    const pre  = states[i-1], post = states[i];
+    const color = arrowColorFor(i);
+    // MS shift: M/P_pre → M/P_post at a representative r
+    if(pre.params.M !== post.params.M || pre.params.P !== post.params.P){
+      const rMid = RANGES.r * 0.78;
+      drawArrow(ctx, co.xC(pre.params.M/pre.params.P), co.yC(rMid),
+                     co.xC(post.params.M/post.params.P), co.yC(rMid),
+                     color, dpr);
+    }
+    // MD shift: at chosen r, M/P_demand = MDY·Y − MDR·r
+    if(Math.abs(post.eq.Y - pre.eq.Y) > 5){
+      const rMid = RANGES.r * 0.28;
+      const x_pre  = pre.params.MDY*pre.eq.Y   - pre.params.MDR*rMid;
+      const x_post = post.params.MDY*post.eq.Y - post.params.MDR*rMid;
+      drawArrow(ctx, co.xC(x_pre), co.yC(rMid),
+                     co.xC(x_post), co.yC(rMid),
+                     color, dpr);
+    }
+  }
+  unclip(ctx);
+
+  for(let i = 0; i < states.length; i++){
+    const st = states[i];
+    const px = co.xC(st.eq.MP), py = co.yC(st.eq.r);
+    if(px>=co.p.l && px<=W-co.p.r && py>=co.p.t && py<=H-co.p.b){
+      drawDot(ctx, px, py, st.color, 4.5, dpr);
+      drawDotLabel(ctx, px, py, DOT_LETTERS[i], st.color, dpr);
+    }
+  }
+
+  // Tracer guides — r (output, shared with IS-LM and Investment)
+  // and M/P (intersection of MS and MD given Y from goods market).
+  const live = states[states.length-1];
+  drawGuides(ctx, co, W, H, dpr, live.eq.MP, live.eq.r, {
+    yLabel: 'r = ' + fmt2(live.eq.r),
+    xLabel: 'M/P = ' + fmt1(live.eq.MP),
+  });
+
+  $('mmReadout').innerHTML =
+    '<div class="ro-row"><span class="from">Y from goods market</span>' +
+    '<span><b>Y</b> = ' + live.eq.Y.toFixed(1) + '</span>' +
+    '<span><b>r</b> = ' + live.eq.r.toFixed(2) + '</span>' +
+    '<span><b>M/P</b> = ' + live.eq.MP.toFixed(1) + '</span>' +
+    '<span><b>M</b> = ' + live.params.M.toFixed(0) + '</span></div>';
+}
+
+// IS-LM
+function drawISLM(){
+  const wrap = $('islmCanvas').parentNode;
+  const s = setupCanvas($('islmCanvas'), wrap);
+  if(!s) return;
+  const { ctx, dpr, W, H } = s;
+  ctx.clearRect(0,0,W,H);
+  const co = makeCoords(W, H, dpr, RANGES.Y, RANGES.r);
+  drawAxes(ctx, co, W, H, dpr, RANGES.Y, RANGES.r, 'Y (income)', 'r (interest rate)');
+
+  const states = currentStates();
+  function getA(p){ return p.c0 + p.I0 + p.G - p.MPC*p.T; }
+
+  clipPlot(ctx, co, W, H);
+  for(const st of states){
+    const p = st.params;
+    const A = getA(p);
+    // IS: Y = (A − I1·r)/(1−MPC), or r = (A − Y(1−MPC))/I1
+    const rAt0   = (A - 0)/p.I1;
+    const rAtMax = (A - RANGES.Y*(1-p.MPC))/p.I1;
+    strokeLine(ctx, co.xC(0), co.yC(rAt0),
+               co.xC(RANGES.Y), co.yC(rAtMax),
+               st.color, 2.5*dpr, st.dash);
+    // LM: r = (MDY·Y − M/P)/MDR
+    const rL0   = (p.MDY*0 - p.M/p.P)/p.MDR;
+    const rLMax = (p.MDY*RANGES.Y - p.M/p.P)/p.MDR;
+    strokeLine(ctx, co.xC(0), co.yC(rL0),
+               co.xC(RANGES.Y), co.yC(rLMax),
+               st.color, 2.5*dpr,
+               st.dash ? st.dash : [9*dpr, 5*dpr]);
+  }
+
+  // Shift arrows: horizontal on IS (when A changes), vertical on LM (when M/P changes)
+  for(let i = 1; i < states.length; i++){
+    const pre  = states[i-1], post = states[i];
+    const color = arrowColorFor(i);
+    const A_pre = getA(pre.params), A_post = getA(post.params);
+    if(Math.abs(A_post - A_pre) > 5){
+      // Horizontal arrow on IS at a fixed r
+      const rMid = (states[0].eq.r + post.eq.r) / 2;
+      const Y_IS_pre  = (A_pre  - pre.params.I1  * rMid) / (1 - pre.params.MPC);
+      const Y_IS_post = (A_post - post.params.I1 * rMid) / (1 - post.params.MPC);
+      drawArrow(ctx, co.xC(Y_IS_pre), co.yC(rMid),
+                     co.xC(Y_IS_post), co.yC(rMid),
+                     color, dpr);
+    }
+    if(pre.params.M !== post.params.M || pre.params.P !== post.params.P){
+      // Vertical arrow on LM at a fixed Y
+      const Y_mid = Math.min(states[0].eq.Y, post.eq.Y) * 0.7;
+      const r_LM_pre  = (pre.params.MDY*Y_mid  - pre.params.M /pre.params.P ) / pre.params.MDR;
+      const r_LM_post = (post.params.MDY*Y_mid - post.params.M/post.params.P) / post.params.MDR;
+      drawArrow(ctx, co.xC(Y_mid), co.yC(r_LM_pre),
+                     co.xC(Y_mid), co.yC(r_LM_post),
+                     color, dpr);
+    }
+  }
+  unclip(ctx);
+
+  for(let i = 0; i < states.length; i++){
+    const st = states[i];
+    const px = co.xC(st.eq.Y), py = co.yC(st.eq.r);
+    if(px>=co.p.l && px<=W-co.p.r && py>=co.p.t && py<=H-co.p.b){
+      drawDot(ctx, px, py, st.color, 4.5, dpr);
+      drawDotLabel(ctx, px, py, DOT_LETTERS[i], st.color, dpr);
+    }
+  }
+
+  // IS / LM labels for current state
+  const live = states[states.length-1];
+  ctx.fillStyle = '#596878';
+  ctx.font = `700 ${Math.round(10 * dpr * _fs)}px "Inter",sans-serif`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText('IS', co.xC(RANGES.Y*0.94), co.yC(
+    ((live.params.c0 + live.params.I0 + live.params.G - live.params.MPC*live.params.T) -
+      RANGES.Y*0.94*(1-live.params.MPC)) / live.params.I1));
+  ctx.fillText('LM', co.xC(RANGES.Y*0.94), co.yC(
+    (live.params.MDY*RANGES.Y*0.94 - live.params.M/live.params.P) / live.params.MDR));
+
+  // Tracer guides — joint (Y*, r*) is the central anchor that all the other
+  // panels read from.  Same colors as the other panels: r → amber, Y → green.
+  drawGuides(ctx, co, W, H, dpr, live.eq.Y, live.eq.r, {
+    yLabel: 'r* = ' + fmt2(live.eq.r),
+    xLabel: 'Y* = ' + fmt1(live.eq.Y),
+  });
+
+  $('islmReadout').innerHTML =
+    '<div class="ro-row"><span class="from">Joint equilibrium</span>' +
+    '<span><b>Y*</b> = ' + live.eq.Y.toFixed(1) + '</span>' +
+    '<span><b>r*</b> = ' + live.eq.r.toFixed(2) + '</span></div>';
+}
+
+/* ===================================================================
+   CHAIN OF EFFECT + active-linkage pulse
+   =================================================================== */
+
+const PANEL_LABEL = {
+  inv:'Investment', kx:'Keynesian Cross',
+  mm:'Money Market', islm:'IS-LM'
+};
+
+// Which panels light up first vs second, depending on where the lever
+// physically lives.  Goods-market levers hit KC + IS-LM first, then ripple
+// out to MM and Investment via r and Y.  Money-market levers hit MM + IS-LM
+// first, then ripple to Investment and KC.
+function pulseSequence(lever){
+  const isMoneyLever = (lever === 'M');
+  const first  = isMoneyLever ? ['mm','islm']      : ['kx','islm'];
+  const second = isMoneyLever ? ['inv','kx']       : ['mm','inv'];
+  pulseCards(first);
+  setTimeout(() => pulseCards(second), 650);
+}
+function pulseCards(keys){
+  for(const k of keys){
+    const el = $(k + 'Card');
+    if(!el) continue;
+    el.classList.remove('updated');
+    // force reflow so the class re-applies cleanly on rapid clicks
+    void el.offsetWidth;
+    el.classList.add('updated');
+    setTimeout(() => el.classList.remove('updated'), 1700);
+  }
+}
+
+function chainSet(items){
+  const ol = $('chainSteps');
+  if(!items || !items.length){
+    ol.innerHTML = '<li class="empty">Apply a shock to see how it propagates across the four markets.</li>';
+    return;
+  }
+  ol.innerHTML = items.map(it => '<li>' + it + '</li>').join('');
+}
+
+function panelBadge(key){
+  return '<b class="panel">' + PANEL_LABEL[key] + '</b>';
+}
+
+function buildShockChain(){
+  const sv = problem.shockVar, sd = problem.shockDir;
+  const postShock = apply(BASE, sv, problem.shockMag);
+  const base = eqOf(BASE), post = eqOf(postShock);
+  const yDir = post.Y > base.Y ? 'rises' : 'falls';
+  const rDir = post.r > base.r ? 'rises' : 'falls';
+  const isShift = (sv === 'T')
+    ? (sd > 0 ? 'left'  : 'right')
+    : (sd > 0 ? 'right' : 'left');
+  const dirWord = sd > 0 ? 'increase' : 'decrease';
+  const article = sd > 0 ? 'An'       : 'A';
+
+  // What the shock variable actually does, in the goods market
+  let goodsLine;
+  if(sv === 'I0'){
+    goodsLine = panelBadge('kx') + article + ' ' + dirWord + ' in I₀ shifts the PE line ' +
+      (sd > 0 ? 'up' : 'down') + '. Investment-demand curve also shifts in the Investment panel.';
+  } else if(sv === 'G'){
+    goodsLine = panelBadge('kx') + article + ' ' + dirWord + ' in G shifts the PE line ' +
+      (sd > 0 ? 'up' : 'down') + ' by the full amount of the shock.';
+  } else if(sv === 'T'){
+    goodsLine = panelBadge('kx') + article + ' ' + dirWord + ' in T cuts disposable income by ' +
+      (sd > 0 ? '' : '−') + 'MPC·ΔT, so the PE line shifts ' + (sd > 0 ? 'down' : 'up') + '.';
+  } else {
+    goodsLine = panelBadge('kx') + article + ' ' + dirWord + ' in c₀ shifts the PE line ' +
+      (sd > 0 ? 'up' : 'down') + ' by the shock amount.';
+  }
+
+  return [
+    goodsLine,
+    panelBadge('islm') + 'IS curve shifts <strong>' + isShift +
+      '</strong>; new IS–LM intersection has Y* ' + yDir + ' (' + fmt1(base.Y) +
+      ' → ' + fmt1(post.Y) + ') and r* ' + rDir + ' (' + fmt2(base.r) + ' → ' + fmt2(post.r) + ').',
+    panelBadge('mm') + 'Money-demand curve shifts ' + (yDir === 'rises' ? 'right' : 'left') +
+      ' because Y ' + yDir + '. With M/P fixed, r ' + rDir + ' to clear the market.',
+    panelBadge('inv') + 'New r feeds into investment: I slides ' +
+      (rDir === 'rises' ? 'down (lower)' : 'up (higher)') + ' along the I(r) curve. ' +
+      'I = ' + fmt1(base.I) + ' → ' + fmt1(post.I) + '.'
+  ];
+}
+
+function buildPolicyChain(currentChain){
+  const pv = problem.policyVar, tg = problem.policyTarget;
+  const correctDir = problem.policyMag > 0 ? 'increase' : 'decrease';
+  const chosenDir  = phase2Pick > 0 ? 'increase' : 'decrease';
+  const wasCorrect = phase2Right;
+
+  const postShock = apply(BASE, problem.shockVar, problem.shockMag);
+  const applied = phase2Pick * Math.abs(problem.policyMag);
+  const postPolicy = apply(postShock, pv, applied);
+  const finalEq = eqOf(postPolicy);
+  const baseEq = eqOf(BASE);
+
+  let policyLine;
+  if(pv === 'M'){
+    policyLine = panelBadge('mm') + 'Policy: the Fed ' + chosenDir + 's M by ' +
+      Math.abs(applied).toFixed(0) + ', shifting the vertical money supply ' +
+      (phase2Pick > 0 ? 'right' : 'left') + '. LM shifts ' +
+      (phase2Pick > 0 ? 'down (lower r at each Y)' : 'up (higher r at each Y)') + '.';
+  } else {
+    policyLine = panelBadge('kx') + 'Policy: Congress ' + chosenDir + 's ' + VAR_PRETTY[pv] +
+      ' by ' + Math.abs(applied).toFixed(0) + '. PE line shifts ' +
+      ((pv === 'G' && phase2Pick > 0) || (pv === 'T' && phase2Pick < 0) ? 'up' : 'down') +
+      '; IS shifts ' +
+      ((pv === 'G' && phase2Pick > 0) || (pv === 'T' && phase2Pick < 0) ? 'right' : 'left') + '.';
+  }
+
+  const newEq = panelBadge('islm') + 'New joint equilibrium: Y* = ' + fmt1(finalEq.Y) +
+    ' (baseline ' + fmt1(baseEq.Y) + '), r* = ' + fmt2(finalEq.r) +
+    ' (baseline ' + fmt2(baseEq.r) + ').';
+
+  const targetVar = tg === 'Y' ? 'Y*' : 'r*';
+  const verdict = wasCorrect
+    ? '<strong>Target restored.</strong> ' + targetVar +
+      ' is back within tolerance of its pre-shock value.'
+    : '<strong>Wrong direction.</strong> ' + targetVar + ' moved further from baseline. ' +
+      'The correct policy was to ' + correctDir + ' ' + VAR_PRETTY[pv] + '.';
+
+  return currentChain.concat([policyLine, newEq, verdict]);
+}
+
+/* ---------- States to draw on each panel ---------- */
+function currentStates(){
+  // The B-state (post-shock) is scaled by _shockProgress and the C-state
+  // (post-policy) is scaled by _policyProgress so we can glide between them
+  // during the button-click animations.  At progress 1 they sit at the final
+  // values; at progress 0 they coincide with the previous state.
+  const states = [{
+    label:'baseline', params:BASE, eq:eqOf(BASE),
+    color:'#2f5d7c', dash:null
+  }];
+  if(phase >= 2){
+    const shockAmt = problem.shockMag * _shockProgress;
+    const postShock = apply(BASE, problem.shockVar, shockAmt);
+    states.push({
+      label:'post-shock', params:postShock, eq:eqOf(postShock),
+      // Violet — distinct hue from baseline blue, amber guides, green, and red.
+      // ≈7.8:1 contrast on white, well above WCAG 1.4.11 / 1.4.3 thresholds.
+      color:'#6b2d8a',
+      dash:[9, 5].map(v=>v*(window.devicePixelRatio||1))
+    });
+  }
+  if(phase >= 3){
+    const postShock = apply(BASE, problem.shockVar, problem.shockMag);
+    const policyApplied = phase2Pick * Math.abs(problem.policyMag) * _policyProgress;
+    const postPolicy = apply(postShock, problem.policyVar, policyApplied);
+    states.push({
+      label:'post-policy', params:postPolicy, eq:eqOf(postPolicy),
+      color: phase2Right ? '#155c38' : '#b42318', dash:null
+    });
+  }
+  return states;
+}
+
+/* ---------- Animation helper ---------- */
+const ANIM_MS = 1200;
+function animateProgress(setter, durationMs, onDone){
+  if(_animFrame){ cancelAnimationFrame(_animFrame); _animFrame = null; }
+  const reduce = window.matchMedia &&
+                 window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce){
+    setter(1);
+    redraw();
+    if(onDone) onDone();
+    return;
+  }
+  const start = performance.now();
+  function tick(now){
+    const t = Math.min(1, (now - start) / durationMs);
+    // ease-out cubic for a settle-in feel
+    const eased = 1 - Math.pow(1 - t, 3);
+    setter(eased);
+    redraw();
+    if(t < 1){
+      _animFrame = requestAnimationFrame(tick);
+    } else {
+      _animFrame = null;
+      if(onDone) onDone();
+    }
+  }
+  _animFrame = requestAnimationFrame(tick);
+}
+
+/* ---------- Update screen-reader descriptions ---------- */
+function updateGraphDescs(){
+  const states = currentStates();
+  const live = states[states.length-1];
+  const base = states[0];
+  function fmt(x){ return Number(x).toFixed(1); }
+
+  const phaseLabel = phase === 1 ? 'baseline'
+                  : phase === 2 ? 'after shock applied (pre-policy)'
+                  : (phase2Right ? 'after correct policy applied' : 'after incorrect policy applied');
+
+  $('invDesc').textContent =
+    'Investment panel, ' + phaseLabel + '. The downward-sloping investment line I = I₀ − I₁·r ' +
+    'is drawn at current parameters. Current equilibrium: investment I = ' + fmt(live.eq.I) +
+    ', interest rate r = ' + fmt(live.eq.r) + '. Baseline values were I = ' + fmt(base.eq.I) +
+    ', r = ' + fmt(base.eq.r) + '.';
+
+  $('kxDesc').textContent =
+    'Keynesian Cross panel, ' + phaseLabel + '. The 45-degree line PE = Y crosses the planned expenditure ' +
+    'line PE = (c₀ − MPC·T − I₁·r + I₀ + G) + MPC·Y at equilibrium income Y = ' + fmt(live.eq.Y) +
+    '. Consumption C = ' + fmt(live.eq.C) + ', investment I = ' + fmt(live.eq.I) +
+    ', government G = ' + live.params.G + '. Baseline Y was ' + fmt(base.eq.Y) + '.';
+
+  $('mmDesc').textContent =
+    'Money Market panel, ' + phaseLabel + '. Vertical money supply M/P = ' + fmt(live.eq.MP) +
+    ' meets downward-sloping money demand at interest rate r = ' + fmt(live.eq.r) +
+    '. Baseline M/P was ' + fmt(base.eq.MP) + ', baseline r was ' + fmt(base.eq.r) + '.';
+
+  $('islmDesc').textContent =
+    'IS-LM panel, ' + phaseLabel + '. The downward-sloping IS curve and the upward-sloping LM curve ' +
+    'intersect at equilibrium output Y = ' + fmt(live.eq.Y) + ' and interest rate r = ' + fmt(live.eq.r) +
+    '. Baseline equilibrium was Y = ' + fmt(base.eq.Y) + ', r = ' + fmt(base.eq.r) + '.';
+}
+
+/* ---------- Redraw ---------- */
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  drawInvestment();
+  drawKeynesianCross();
+  drawMoneyMarket();
+  drawISLM();
+  updateGraphDescs();
+}
+
+/* ---------- Resize ---------- */
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+/* ---------- New problem / reset ---------- */
+function resetUI(){
+  if(_animFrame){ cancelAnimationFrame(_animFrame); _animFrame = null; }
+  phase = 1;
+  phase1Pick = null; phase1Right = null;
+  phase2Pick = null; phase2Right = null;
+  _shockProgress = 0;
+  _policyProgress = 0;
+
+  SHOCK_BTNS.forEach(b => {
+    b.disabled = false;
+    b.setAttribute('aria-pressed', 'false');
+    b.classList.remove('correct','wrong');
+  });
+  POLICY_BTNS.forEach(b => {
+    b.disabled = true;
+    b.setAttribute('aria-pressed', 'false');
+    b.classList.remove('correct','wrong');
+  });
+
+  $('phase1Feedback').classList.add('hidden');
+  $('phase1Feedback').className = 'hidden';
+  $('phase2Feedback').classList.add('hidden');
+  $('phase2Feedback').className = 'hidden';
+  $('explanationBox').classList.add('hidden');
+  $('labDoneBanner').classList.add('hidden');
+  $('phase2Block').classList.add('hidden');
+  $('phaseDivider').classList.add('hidden');
+
+  _chainSoFar = [];
+  chainSet([]);
+  ['inv','kx','mm','islm'].forEach(k => {
+    const el = $(k + 'Card'); if(el) el.classList.remove('updated');
+  });
+}
+
+function newProblem(){
+  resetUI();
+  problem = generateProblem();
+  renderPhase1Prompt();
+  redraw();
+}
+
+/* ---------- Wire up ---------- */
+SHOCK_BTNS.forEach(b => b.addEventListener('click', handlePhase1Click));
+POLICY_BTNS.forEach(b => b.addEventListener('click', handlePhase2Click));
+$('newProblemBtn').addEventListener('click', newProblem);
+
+// Seed the RNG once per page load so each "New Problem" advances the
+// sequence (within a discussion session the seed is per-student).
+if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+
+// Initial problem
+newProblem();
+
+})();
+</script>
+</body>
+</html>

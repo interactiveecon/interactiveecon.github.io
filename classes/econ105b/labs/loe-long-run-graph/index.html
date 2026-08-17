@@ -1,0 +1,2180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Large Open Economy in the Long Run: Graphical Analysis — ECON 105B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <!--
+    ═══════════════════════════════════════════════════════════════════════
+      LAB_ID    = 'loe-long-run-graph'
+      LAB_LABEL = 'Large Open Economy in the Long Run: Graphical Analysis'
+      URL       = /classes/econ105b/labs/loe-long-run-graph/
+    ═══════════════════════════════════════════════════════════════════════
+
+    THIS LAB IS INTENTIONALLY NOT DISCUSSION-COMPATIBLE.
+
+    It is an exploration lab, not a graded one: the baseline economy is fixed,
+    nothing is randomized, and the student can re-run any experiment as often
+    as they like. So it makes none of the Session calls (recordQuestion,
+    recordLabDone, rngForLab), omits the jsPDF tag, and is not listed in any
+    discussion week's LABS array. LAB_ID / LAB_LABEL are declared anyway so the
+    file matches the shape of every other lab on the site.
+
+    Companion to soe-long-run-graph: same scenario-button interface, same
+    frozen-snapshot impacts table, same gated numeric readouts, same canvas
+    treatment and naming. Web port of the large-open-economy comparative-statics
+    Mathematica notebook, with a recalibrated baseline (documented in the JS
+    header), narrowed slider ranges, data-driven axis bounds, and primed labels
+    that appear only when the corresponding curve actually moved.
+    ═══════════════════════════════════════════════════════════════════════
+  -->
+
+  <style>
+    /* ── Design tokens (CLAUDE.md) ───────────────────────────── */
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --font-mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+      --paper:#f6f2ea;
+      --panel:#ffffff;
+      --ink:#1f2937;
+      --ink-2:#374151;
+      --muted:#596878;
+      --line:#e7dfd2;
+      --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;
+      --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),
+               0 10px 24px rgba(17,24,39,.06);
+      --amber:#8c4800;
+    }
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3 / good practice) ────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    *{box-sizing:border-box;}
+    body{margin:0;background:var(--paper);color:var(--ink);
+      font-family:var(--font-sans);}
+
+    /* ── Standard header / footer ────────────────────────────── */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),
+      rgba(255,255,255,0));}
+    .container{max-width:1100px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;
+      font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;
+      line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;
+      max-width:80ch;font-size:0.9375rem;}
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+    .hidden{display:none!important;}
+
+    /* ── Instructions dropdown ───────────────────────────────── */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol,.instructions-body ul{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* ── Buttons ─────────────────────────────────────────────── */
+    /* Default button border #8c7f72 = 3.53:1 on white (WCAG 1.4.11 ✓) */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+    /* Selected state carries a 2.5px border + a ✓ glyph, not colour alone. */
+    .option-btn.active{border-color:var(--accent);border-width:2.5px;
+      padding:7px 13px;background:rgba(47,93,124,.10);color:var(--accent);}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover:not(:disabled){background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* ── Cards ───────────────────────────────────────────────── */
+    .card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .card-h{font-family:var(--font-serif);font-size:1.25rem;
+      font-weight:700;color:var(--ink);margin:0 0 6px;}
+    .card-sub{font-size:0.8125rem;color:var(--muted);margin:0 0 14px;
+      line-height:1.55;max-width:80ch;}
+    .ctl-label{font-size:0.6875rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.07em;color:var(--muted);margin-bottom:7px;display:block;}
+
+    /* ── Scenario chooser ────────────────────────────────────── */
+    .scen-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+    @media(max-width:860px){.scen-grid{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:520px){.scen-grid{grid-template-columns:1fr;}}
+    .scen-btn{display:flex;flex-direction:column;align-items:flex-start;gap:5px;
+      text-align:left;padding:11px 13px;border-radius:14px;
+      border:1.5px solid #8c7f72;background:var(--panel);cursor:pointer;
+      font-family:var(--font-sans);transition:all .12s;height:100%;}
+    .scen-btn:hover{border-color:var(--accent);background:rgba(47,93,124,.06);}
+    .scen-btn .sc-name{font-size:0.875rem;font-weight:800;color:var(--ink);
+      line-height:1.3;}
+    .scen-btn .sc-delta{font-family:var(--font-mono);font-size:0.75rem;
+      font-weight:700;color:var(--accent);line-height:1.4;}
+    .scen-btn.active{border-color:var(--accent);border-width:2.5px;
+      padding:10px 12px;background:rgba(47,93,124,.10);}
+    .scen-btn.active .sc-name::before{content:'✓ ';color:var(--good);}
+
+    .toggle-row{display:flex;gap:20px;flex-wrap:wrap;margin-top:16px;}
+    .toggle-group{min-width:0;}
+    .btn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+
+    /* ── Active-experiment strip ─────────────────────────────── */
+    .strip{margin-top:14px;padding:11px 14px;border-radius:12px;
+      background:rgba(47,93,124,.05);border:1px solid rgba(47,93,124,.18);
+      font-size:0.8125rem;color:var(--ink-2);line-height:1.6;}
+    .strip strong{color:var(--ink);}
+    .chain{display:inline-block;margin-top:6px;font-family:var(--font-mono);
+      font-size:0.75rem;font-weight:700;color:var(--accent);
+      background:rgba(47,93,124,.08);border:1px solid rgba(47,93,124,.20);
+      border-radius:999px;padding:4px 11px;line-height:1.6;}
+
+    /* ── Free explore sliders ────────────────────────────────── */
+    .slider-grid{display:grid;grid-template-columns:repeat(2,1fr);
+      gap:12px 20px;margin-top:4px;}
+    @media(max-width:620px){.slider-grid{grid-template-columns:1fr;}}
+    .sl-item{min-width:0;}
+    .sl-top{display:flex;justify-content:space-between;gap:10px;
+      align-items:baseline;font-size:0.8125rem;}
+    .sl-name{font-weight:700;color:var(--ink-2);line-height:1.4;}
+    .sl-val{font-family:var(--font-mono);font-weight:700;color:var(--accent);
+      white-space:nowrap;}
+    input[type=range]{width:100%;margin:6px 0 0;accent-color:var(--accent);
+      cursor:pointer;}
+    input[type=range]:disabled{cursor:not-allowed;opacity:.45;}
+    .sl-note{margin:0 0 12px;font-size:0.8125rem;color:var(--ink-2);
+      line-height:1.6;}
+    .sl-note.warn{padding:9px 12px;border-radius:10px;
+      background:rgba(140,72,0,.06);border:1px solid rgba(140,72,0,.24);}
+    .sl-note.warn strong{color:#8c4800;}
+
+    /* ── Graph cards — two on the top row, the third below the second,
+           matching the appendix layout. Single column at ≤700px. ── */
+    .tri-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;
+      align-items:start;margin-bottom:14px;}
+    .tri-row > *{min-width:0;}
+    .panel-lf{grid-column:1;grid-row:1;}
+    .panel-cf{grid-column:2;grid-row:1;}
+    .panel-fx{grid-column:2;grid-row:2;}
+    @media(max-width:700px){
+      .tri-row{grid-template-columns:1fr;}
+      .panel-lf,.panel-cf,.panel-fx{grid-column:1;grid-row:auto;}
+    }
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .canvas-wrap{position:relative;width:100%;aspect-ratio:1/1;
+      border-radius:10px;overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+    .graph-legend{display:flex;flex-direction:column;gap:6px;margin-top:10px;}
+    .legend-row{display:flex;align-items:center;gap:8px;
+      font-size:0.75rem;color:var(--ink-2);line-height:1.4;}
+    .legend-line{width:28px;flex-shrink:0;height:0;
+      border-top-width:3px;border-top-style:solid;}
+    .legend-line.dashed{border-top-style:dashed;}
+    .legend-line.dotted{border-top-style:dotted;border-top-width:2px;}
+    .legend-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
+    .fig-note{font-size:0.8125rem;color:var(--ink-2);line-height:1.65;
+      margin:0 0 14px;max-width:80ch;}
+
+    /* ── Numeric readouts ────────────────────────────────────── */
+    .num-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+    @media(max-width:820px){.num-grid{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:480px){.num-grid{grid-template-columns:1fr;}}
+    .num-card{border:1px solid var(--line);border-radius:12px;padding:10px 12px;
+      background:rgba(246,242,234,.5);min-width:0;}
+    .num-name{font-size:0.75rem;font-weight:800;color:var(--ink-2);
+      line-height:1.35;margin-bottom:7px;}
+    .num-vals{display:flex;gap:12px;flex-wrap:wrap;}
+    .num-cell{min-width:0;}
+    .num-lab{display:block;font-size:0.625rem;font-weight:800;
+      text-transform:uppercase;letter-spacing:.06em;color:var(--muted);}
+    .num-v{font-family:var(--font-mono);font-size:0.875rem;font-weight:700;
+      color:var(--ink);}
+    .num-v.locked{color:var(--muted);}
+    .num-v.up{color:var(--good);}
+    .num-v.down{color:var(--bad);}
+
+    /* ── Impacts table ───────────────────────────────────────── */
+    fieldset.imp{border:0;margin:0;padding:0;}
+    fieldset.imp legend{font-family:var(--font-serif);font-size:1.25rem;
+      font-weight:700;color:var(--ink);padding:0;margin:0 0 6px;}
+    .imp-item{padding:10px 0;border-top:1px solid var(--line);}
+    .imp-item:first-of-type{border-top:0;}
+    .imp-row{display:grid;grid-template-columns:minmax(0,1fr) auto;
+      gap:8px 14px;align-items:center;}
+    @media(max-width:560px){.imp-row{grid-template-columns:1fr;}}
+    .imp-q{font-size:0.875rem;font-weight:700;color:var(--ink);
+      line-height:1.45;}
+    .imp-sel{padding:7px 10px;border:1.5px solid #8c7f72;border-radius:10px;
+      font-family:var(--font-sans);font-size:0.875rem;font-weight:700;
+      color:var(--ink);background:#fff;min-width:11rem;max-width:100%;
+      cursor:pointer;}
+    .imp-sel.ok{border-color:var(--good);border-width:2.5px;
+      background:rgba(21,92,56,.06);}
+    .imp-sel.no{border-color:var(--bad);border-width:2.5px;
+      background:rgba(180,35,24,.06);}
+    .imp-fb{margin-top:8px;font-size:0.8125rem;line-height:1.65;
+      color:var(--ink-2);}
+    .imp-fb .verdict{font-weight:800;display:block;margin-bottom:2px;}
+    .imp-fb .verdict.ok{color:var(--good);}
+    .imp-fb .verdict.no{color:var(--bad);}
+    .imp-fb .delta{font-family:var(--font-mono);font-weight:700;
+      color:var(--muted);white-space:nowrap;}
+    .imp-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+      margin-top:14px;padding-top:12px;border-top:1px solid var(--line);}
+    .chk-summary{font-size:0.8125rem;font-weight:800;color:var(--ink-2);
+      line-height:1.55;}
+    .chk-summary.done{color:var(--good);}
+
+    /* ── Callouts ────────────────────────────────────────────── */
+    .callout{margin-top:14px;padding:13px 16px;border-radius:14px;
+      background:rgba(140,72,0,.06);border:1px solid rgba(140,72,0,.28);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.7;}
+    .callout h3{margin:0 0 6px;font-family:var(--font-serif);font-size:1rem;
+      font-weight:700;color:#8c4800;}
+    .callout p{margin:0 0 8px;}
+    .callout p:last-child{margin-bottom:0;}
+    .callout strong{color:var(--ink);}
+    .callout .mono{font-family:var(--font-mono);font-weight:700;
+      color:#8c4800;white-space:nowrap;}
+
+    /* Reflow (WCAG 1.4.10) — nothing may push the page sideways at 320px. */
+    @media(max-width:560px){
+      .primary-btn,.option-btn{white-space:normal;}
+      .btn-row .primary-btn,.btn-row .option-btn{flex:1 1 auto;}
+      .imp-sel{width:100%;min-width:0;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- FIRST element in body — skip link (WCAG 2.4.1) -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105b/labs/">← Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 105B — The Open Economy</div>
+      <h1>Large Open Economy in the Long Run: Graphical Analysis</h1>
+      <p class="sub">
+        In a large open economy the interest rate is neither handed down by the
+        world market nor settled behind a closed border — it clears at home, where
+        saving meets investment <em>plus</em> net capital outflow. Pick a shock and
+        follow it across three panels: loanable funds fix r<sub>1</sub>, the
+        net-capital-outflow schedule turns r<sub>1</sub> into CF<sub>1</sub>, and
+        the market for foreign exchange turns CF<sub>1</sub> into &epsilon;<sub>1</sub>.
+      </p>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>This is an exploration lab, not a graded one. Nothing is recorded and
+          nothing is randomized: the baseline economy is always the same, so you can
+          run an experiment, reset, and run it again with one structural assumption
+          changed and see exactly what that assumption was doing.</p>
+          <p>The workflow is the same every time:</p>
+          <ol>
+            <li><strong>Pick an experiment.</strong> Four buttons, one clean shock
+            each. Exactly one is active at a time.</li>
+            <li><strong>Predict the six impacts.</strong> For each quantity, choose
+            Fall, Stay the Same, or Rise <em>before</em> you check. The diagrams
+            update as soon as you pick a scenario — read the shift off the picture,
+            that is the skill.</li>
+            <li><strong>Check your answers.</strong> The table is graded against the
+            state of the economy at the moment you clicked. Change anything
+            afterwards — a dropdown, a slider, the saving toggle — and the result
+            clears; you have to check again.</li>
+            <li><strong>Read the explanation.</strong> Every row gets the causal
+            chain behind it, and the numeric column for the new economy is revealed
+            alongside the baseline.</li>
+            <li><strong>Reset</strong> and try the same shock with the other saving
+            assumption, or open <strong>Free explore</strong> and move the
+            parameters yourself.</li>
+          </ol>
+          <p>The six impacts you predict are the interest rate <strong>r</strong>,
+          saving <strong>S</strong>, investment <strong>I</strong>, net capital
+          outflow <strong>CF</strong>, the real exchange rate
+          <strong>&epsilon;</strong>, and net exports <strong>NX</strong>. Unlike
+          the small-open-economy lab, the interest rate row is a real question here:
+          r is determined at home, so a domestic shock moves it.</p>
+          <p>The baseline economy, if you want the algebra behind the picture —
+          but you should not need it. Everything below is on the diagrams:</p>
+          <ul>
+            <li>Y = 6000, G = 1000, T = 1000</li>
+            <li>C = 250 + 0.75(Y &minus; T) &minus; c<sub>1</sub>r, so
+            S(r) = 1000 + c<sub>1</sub>r</li>
+            <li>I(r) = 1950 &minus; 250r</li>
+            <li>CF(r) = 400 &minus; 150r + 150r*, with r* = 3</li>
+            <li>NX(&epsilon;) = 750 &minus; 500&epsilon;</li>
+          </ul>
+          <p>Equilibrium is a chain, and the chain is the point of the lab:
+          S(r) = I(r) + CF(r) gives r<sub>1</sub>; r<sub>1</sub> read off the CF
+          schedule gives CF<sub>1</sub>; and CF<sub>1</sub> = NX(&epsilon;) gives
+          &epsilon;<sub>1</sub>. At the baseline with c<sub>1</sub> = 50 that is
+          r<sub>1</sub> = 4.00%, S = 1200, I = 950, CF = +250,
+          &epsilon;<sub>1</sub> = 1.00.</p>
+          <p><strong>CF<sub>2</sub> = CF<sub>1</sub> = 150 is economics, not
+          bookkeeping.</strong> Writing the schedule as
+          CF = CF<sub>0</sub> &minus; CF<sub>1</sub>(r &minus; r*) says that capital
+          chases the <em>interest differential</em>: what makes a saver send funds
+          abroad is not the level of the domestic rate but how it compares with the
+          rate available overseas. Raise r and r* together by the same amount and
+          net capital outflow does not move at all.</p>
+          <p><strong>Units.</strong> Y, C, I, G, T, S, CF and NX are in
+          <strong>billions of dollars</strong>. The interest rates r and r* are in
+          <strong>percent</strong>, so r = 4 means 4% and the term 250r contributes
+          1000 when r = 4. The real exchange rate &epsilon; is a
+          <strong>unitless index</strong>.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- ── Experiment chooser ──────────────────────────────────── -->
+  <section class="card" aria-labelledby="expH">
+    <h2 class="card-h" id="expH">Choose an experiment</h2>
+    <p class="card-sub">
+      Each button applies one shock to the baseline economy, large enough to see
+      on the diagrams. Selecting one clears the others.
+    </p>
+
+    <div class="scen-grid" role="group" aria-label="Choose an experiment"
+         id="scenGrid"></div>
+
+    <div class="toggle-row">
+      <div class="toggle-group">
+        <span class="ctl-label" id="c1Lab">Does saving depend on the interest rate?</span>
+        <div class="btn-row" role="group" aria-labelledby="c1Lab" id="c1Grid"></div>
+      </div>
+      <div class="toggle-group">
+        <span class="ctl-label">Start over</span>
+        <div class="btn-row">
+          <button type="button" class="option-btn" id="resetBtn">Reset to baseline</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="strip" id="strip" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <details class="instructions-box" id="freeBox">
+      <summary class="instructions-toggle">Free explore — move the parameters yourself</summary>
+      <div class="instructions-body">
+        <p class="sl-note">Each slider starts at its baseline value. Moving one is a
+        shock: the impacts table and all three diagrams compare the economy you have
+        built against the baseline. The ranges are deliberately narrow — wide enough
+        for a visible shift, tight enough that saving, investment, the interest rate
+        and the exchange rate all stay sensible at every combination. Net capital
+        outflow is the one quantity allowed to turn negative, because a large open
+        economy that borrows from the rest of the world is half of what this chapter
+        is about.</p>
+        <p class="sl-note warn hidden" id="slLock">
+          <strong>Sliders are inactive</strong> while a named experiment is
+          selected. Press <strong>Reset to baseline</strong> to explore freely.
+        </p>
+        <div class="slider-grid" id="sliderGrid"></div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ── The three panels ────────────────────────────────────── -->
+  <section aria-labelledby="figH">
+    <h2 class="card-h" id="figH" style="margin:16px 0 6px;">The three markets</h2>
+    <p class="card-sub" id="figLede"></p>
+
+    <div class="tri-row">
+      <!-- Panel 1 — loanable funds -->
+      <div class="graph-card panel-lf">
+        <div class="graph-title" id="lfTitle">1. Market for Loanable Funds</div>
+        <div class="canvas-wrap">
+          <canvas id="lfCanvas" role="img"
+                  aria-labelledby="lfTitle" aria-describedby="lfDesc"></canvas>
+        </div>
+        <div class="graph-legend" aria-hidden="true">
+          <div class="legend-row">
+            <div class="legend-line" style="border-top-color:#155c38;"></div>
+            <span>Saving S(r) — solid green</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-line" style="border-top-color:#b42318;"></div>
+            <span>Demand for funds I(r) + CF(r, r*) — solid red</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-line dashed" style="border-top-color:#596878;"></div>
+            <span>Shifted curves S&prime;, (I+CF)&prime; — dashed, primed labels</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-line dotted" style="border-top-color:#8c4800;"></div>
+            <span>Equilibrium rate r<sub>1</sub> — dotted amber guide</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1f2937;"></div>
+            <span>Equilibrium, where S = I + CF</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2 — net capital outflow -->
+      <div class="graph-card panel-cf">
+        <div class="graph-title" id="cfTitle">2. Net Capital Outflow</div>
+        <div class="canvas-wrap">
+          <canvas id="cfCanvas" role="img"
+                  aria-labelledby="cfTitle" aria-describedby="cfDesc"></canvas>
+        </div>
+        <div class="graph-legend" aria-hidden="true">
+          <div class="legend-row">
+            <div class="legend-line" style="border-top-color:#b42318;"></div>
+            <span>Net capital outflow CF(r, r*) — solid red</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-line dashed" style="border-top-color:#b42318;"></div>
+            <span>Shifted schedule CF&prime; — dashed red</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-line dotted" style="border-top-color:#8c4800;"></div>
+            <span>r<sub>1</sub> carried in from panel 1, dropping to CF<sub>1</sub></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 3 — foreign exchange -->
+      <div class="graph-card panel-fx">
+        <div class="graph-title" id="fxTitle">3. Market for Foreign Exchange</div>
+        <div class="canvas-wrap">
+          <canvas id="fxCanvas" role="img"
+                  aria-labelledby="fxTitle" aria-describedby="fxDesc"></canvas>
+        </div>
+        <div class="graph-legend" aria-hidden="true">
+          <div class="legend-row">
+            <div class="legend-line" style="border-top-color:#2f5d7c;"></div>
+            <span>Net exports NX(&epsilon;) — solid blue</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-line dashed" style="border-top-color:#2f5d7c;"></div>
+            <span>Shifted schedule NX&prime; — dashed blue</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-line" style="border-top-color:#8c4800;"></div>
+            <span>CF<sub>1</sub> carried in from panel 2 — vertical amber line</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-dot" style="background:#1f2937;"></div>
+            <span>Equilibrium at (CF<sub>1</sub>, &epsilon;<sub>1</sub>)</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="fig-note" id="slopeNote"></p>
+
+    <!-- Canvas accessible descriptions — live region (WCAG 1.1.1, 4.1.3) -->
+    <section class="sr-only" id="graphsDesc" aria-live="polite" aria-atomic="true">
+      <p id="lfDesc"></p>
+      <p id="cfDesc"></p>
+      <p id="fxDesc"></p>
+    </section>
+  </section>
+
+  <!-- ── Impacts ─────────────────────────────────────────────── -->
+  <section class="card" aria-labelledby="impH">
+    <fieldset class="imp">
+      <legend id="impH">Predict the impacts</legend>
+      <p class="card-sub">
+        Compared with the baseline economy, what happens to each of these? Answer
+        all six, then check them together. Changing anything afterwards clears the
+        result.
+      </p>
+      <div id="impRows"></div>
+      <div class="imp-actions">
+        <button type="button" class="primary-btn" id="checkBtn" disabled>Check Answers</button>
+        <span class="chk-summary" id="chkSummary" role="status"
+              aria-live="polite" aria-atomic="true">Choose all six before checking.</span>
+      </div>
+    </fieldset>
+
+    <div class="callout hidden" id="coCrowd">
+      <h3>Partial crowding out — where the large open economy sits</h3>
+      <div id="coCrowdBody"></div>
+    </div>
+
+    <div class="callout hidden" id="coShift">
+      <h3>Both curves shifted — why the CF shift wins</h3>
+      <div id="coShiftBody"></div>
+    </div>
+
+    <div class="callout hidden" id="coTrade">
+      <h3>Why net exports did not move</h3>
+      <div id="coTradeBody"></div>
+    </div>
+  </section>
+
+  <!-- ── Numeric readouts ────────────────────────────────────── -->
+  <section class="card" aria-labelledby="numH">
+    <h2 class="card-h" id="numH">The numbers</h2>
+    <p class="card-sub" id="numNote"></p>
+    <div class="num-grid" id="numGrid"></div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 105B — Intermediate Macroeconomic Theory II</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Large Open Economy in the Long Run — Graphical Analysis
+
+     C(r)   = c0 + MPC(Y - T) - c1·r
+     S(r)   = Y - C(r) - G            = A + c1·r,  A = Y - c0 - MPC(Y-T) - G
+     I(r)   = I0 - I1·r
+     CF(r)  = CF0 - CF1·r + CF2·r*    (net capital outflow; CF2 = CF1 here,
+                                       so CF = CF0 - CF1(r - r*) responds to
+                                       the interest DIFFERENTIAL)
+     NX(ε)  = NX0 - NX1·ε
+
+   The demand for loanable funds is I + CF:
+
+     D(r) = (I0 + CF0 + CF2·r*) - (I1 + CF1)·r  =  D0 - B·r
+
+   and equilibrium is the three-step chain the appendix figure draws:
+
+     (1)  S(r) = D(r)         ⟹  r1 = (D0 - A) / (c1 + I1 + CF1)
+     (2)  CF at r1            ⟹  CF1
+     (3)  CF1 = NX(ε)         ⟹  ε1 = (NX0 - CF) / NX1
+
+   ── The baseline is NOT the notebook's. ────────────────────────────────
+   Solving the model,
+
+     CF* = [ (c1+I1)(CF0 + CF2·r*) - CF1(I0 - A) ] / (c1 + I1 + CF1)
+
+   so CF turns negative only when CF0 + CF2·r* < CF1(I0 - A)/(c1 + I1). At the
+   notebook's numbers (I0 1500, I1 200, CF0 500, CF1 = CF2 = 50, r* 4) that
+   reads 700 < 100 — off by a factor of seven. CF1 = CF2 = 50 is far too small
+   relative to CF0 = 500, so net capital outflow barely responds to the
+   differential and never crosses zero: a student could never see a large open
+   economy that is a NET BORROWER RUNNING A TRADE DEFICIT, which is half of what
+   the chapter covers, and the negative region of panel 3's horizontal axis was
+   purely decorative.
+
+   Recalibrated: I0 1950, I1 250, CF0 400, CF1 = CF2 = 150, r* = 3, NX0 = 750.
+   Verified over all 512 slider-corner × saving-toggle combinations:
+
+     baseline c1=50   r = 4.000, S = 1200, I = 950, CF = +250, ε = 1.000
+     baseline c1=0    r = 4.500, S = 1000, I = 825, CF = +175, ε = 1.150
+     r    ∈ [2.39, 6.31]      S  ∈ [675, 1533]
+     CF   ∈ [-159, +575] — negative in 7.4% of corners
+     ε    ∈ [0.15, 2.02]
+     S = I + CF holds identically; nothing else goes negative.
+
+   ── Slider ranges are narrower than the notebook's. ───────────────────
+   The notebook's ranges push r to -4.30, saving to -375 and ε to -0.81, and
+   16% of corner combinations put r outside its own hardcoded plot frame — a
+   NEGATIVE equilibrium interest rate is reachable. The ranges below keep every
+   quantity sane at every corner while still producing visibly large shifts.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const LAB_ID    = 'loe-long-run-graph';
+const LAB_LABEL = 'Large Open Economy in the Long Run: Graphical Analysis';
+/* Intentionally not discussion-compatible — see the comment block in the head.
+   No Session.rngForLab / recordQuestion / recordLabDone here. */
+
+const BASE  = { Y:6000, T:1000, G:1000, c0:250, I0:1950, CF0:400, NX0:750, rs:3 };
+const FIX   = { MPC:0.75, I1:250, CF1:150, CF2:150, NX1:500 };
+const C1_ON = 50;          /* saving responds to r */
+const TOL   = 1e-6;        /* float comparison for "Stay the Same" */
+
+const MINUS = '−';
+const EPS   = 'ε';
+const PRIME = '′';
+const SUB1  = '₁';
+
+/* ── Named experiments (appendix §1.3) ──────────────────────────────────
+   Each is one clean, visible shock applied to a copy of the baseline
+   parameter set. All four land inside the free-explore ranges, but the
+   sliders are still locked while an experiment is active so that "named
+   experiment" and "free explore" stay mutually exclusive. */
+const SCEN = {
+  g: {
+    name:'Fiscal policy at home',
+    delta:'G: 1000 → 1100',
+    chain:'G↑ → saving ↓ → r↑ → CF↓ → ε↑ → NX↓',
+    lede:'The government raises purchases by 100 with taxes unchanged, so public '
+       + 'saving falls and the saving line shifts left.',
+    apply:function(p){ p.G = 1100; }
+  },
+  rw: {
+    name:'Fiscal policy abroad',
+    delta:'r*: 3 → 4',
+    chain:'r*↑ → I+CF and CF both shift → r↑ but by less than r* → CF↑ → ε↓ → NX↑',
+    lede:'A fiscal expansion in the rest of the world raises the world interest '
+       + 'rate by one percentage point. Two curves move at once — and one of them wins.',
+    apply:function(p){ p.rs = 4; }
+  },
+  i0: {
+    name:'Investment demand rises',
+    delta:'I₀: 1950 → 2100',
+    chain:'I₀↑ → r↑ → CF↓ → ε↑ → NX↓',
+    lede:'Firms become more optimistic: the whole investment schedule shifts right '
+       + 'by 150 at every interest rate, so the demand for loanable funds does too.',
+    apply:function(p){ p.I0 = 2100; }
+  },
+  nx0: {
+    name:'Trade policy (protectionism)',
+    delta:'NX₀: 750 → 850',
+    chain:'NX shifts out → r and CF unchanged → ε↑ → NX unchanged',
+    lede:'A tariff raises the demand for domestic goods at every exchange rate, '
+       + 'shifting the net-export schedule out by 100. Nothing in panels 1 or 2 moves.',
+    apply:function(p){ p.NX0 = 850; }
+  }
+};
+
+/* ── Free-explore sliders ──────────────────────────────────────────────
+   Ordered as in the appendix. Every corner of this box was swept (see
+   selfTest below): r ∈ [2.39, 6.31], S ∈ [675, 1533], ε ∈ [0.15, 2.02],
+   CF ∈ [-159, +575] with CF negative in 7.4% of corners, and S = I + CF
+   to floating-point tolerance everywhere. */
+const SLIDERS = [
+  { key:'Y',   label:'Output Y',                             aria:'Output Y',
+    min:5800, max:6200, step:20,  dp:0 },
+  { key:'T',   label:'Taxes T',                              aria:'Taxes T',
+    min:900,  max:1100, step:10,  dp:0 },
+  { key:'G',   label:'Government purchases G',               aria:'Government purchases G',
+    min:900,  max:1100, step:10,  dp:0 },
+  { key:'c0',  label:'Autonomous consumption c<sub>0</sub>', aria:'Autonomous consumption c zero',
+    min:150,  max:350,  step:10,  dp:0 },
+  { key:'I0',  label:'Investment demand I<sub>0</sub>',      aria:'Investment demand I zero',
+    min:1800, max:2100, step:10,  dp:0 },
+  { key:'CF0', label:'Net capital outflow intercept CF<sub>0</sub>',
+    aria:'Net capital outflow intercept C F zero',           min:300,  max:500,  step:10, dp:0 },
+  { key:'NX0', label:'Net export intercept NX<sub>0</sub>',  aria:'Net export intercept N X zero',
+    min:650,  max:850,  step:10,  dp:0 },
+  { key:'rs',  label:'World interest rate r*',               aria:'World interest rate r star',
+    min:2,    max:4,    step:0.1, dp:1 }
+];
+
+/* ── The six impacts ───────────────────────────────────────────────────
+   Row 1 is a genuine question here, unlike in the small-open-economy lab:
+   r is endogenous, determined where S = I + CF at home. There is no
+   world-interest-rate row, because r* is set directly by the student. */
+const ROWS = [
+  { k:'r',   q:'The interest rate will…',      get:function(e){ return e.r;   }, unit:'%',   dp:2 },
+  { k:'S',   q:'Saving will…',                 get:function(e){ return e.S;   }, unit:'$bn', dp:2 },
+  { k:'I',   q:'Investment will…',             get:function(e){ return e.I;   }, unit:'$bn', dp:2 },
+  { k:'CF',  q:'Net capital outflow will…',    get:function(e){ return e.CF;  }, unit:'$bn', dp:2, signed:true },
+  { k:'eps', q:'The exchange rate will…',      get:function(e){ return e.eps; }, unit:'',    dp:2 },
+  { k:'NX',  q:'Net exports will…',            get:function(e){ return e.NX;  }, unit:'$bn', dp:2, signed:true }
+];
+
+const DIRWORD = { fall:'Fall', same:'Stay the Same', rise:'Rise' };
+
+/* ── State ─────────────────────────────────────────────────────────────
+   c1 is structural: it redefines the BASELINE economy, so changing it never
+   registers as a shock. scenario and sl describe the NEW economy. */
+let ST  = { c1:C1_ON, scenario:null, sl:null };
+let CHK = null;     /* frozen snapshot: {choices, ans, why, econ, scenario} */
+let ECON = null;    /* current {base, next, ...} — recomputed every render */
+let _fs = 1;        /* canvas font scale (WCAG 1.4.4) */
+
+function defaultSliders(){
+  return { Y:BASE.Y, T:BASE.T, G:BASE.G, c0:BASE.c0,
+           I0:BASE.I0, CF0:BASE.CF0, NX0:BASE.NX0, rs:BASE.rs };
+}
+ST.sl = defaultSliders();
+
+/* ═══════════════════════════════════════════════════════════════════════
+   FORMATTING
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function nf(v, d){
+  if(v === null || v === undefined || !isFinite(v)) return '—';
+  let s = Math.abs(v).toFixed(d);
+  if(s.indexOf('.') !== -1) s = s.replace(/0+$/, '').replace(/\.$/, '');
+  return (v < 0 ? MINUS : '') + s;
+}
+function f2(v){ return nf(v, 2); }
+function fixed(v, d){ return (v < 0 ? MINUS : '') + Math.abs(v).toFixed(d); }
+function fixedS(v, d){ return (v >= 0 ? '+' : MINUS) + Math.abs(v).toFixed(d); }
+
+/* Value as it appears in the readouts and feedback, with units. */
+function fmtRow(row, v){
+  const body = row.signed ? fixedS(v, row.dp) : fixed(v, row.dp);
+  return row.unit === '%' ? body + '%' : body;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   THE MODEL
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function Aof(p){ return p.Y - p.c0 - FIX.MPC * (p.Y - p.T) - p.G; }
+
+function econ(p, c1){
+  const A   = Aof(p);                            /* saving intercept       */
+  const D0  = p.I0 + p.CF0 + FIX.CF2 * p.rs;     /* I + CF intercept       */
+  const B   = FIX.I1 + FIX.CF1;                  /* |slope of I + CF|      */
+  const r   = (D0 - A) / (c1 + B);
+  const S   = A + c1 * r;
+  const I   = p.I0 - FIX.I1 * r;
+  const CF  = p.CF0 - FIX.CF1 * r + FIX.CF2 * p.rs;
+  const eps = (p.NX0 - CF) / FIX.NX1;
+  return { p:p, c1:c1, A:A, D0:D0, B:B, r:r, S:S, I:I, CF:CF, eps:eps,
+           NX:p.NX0 - FIX.NX1 * eps,             /* identically CF         */
+           rClosed:(p.I0 - A) / (c1 + FIX.I1) }; /* autarky rate, for the
+                                                    crowding-out callout   */
+}
+
+function compute(){
+  const c1 = ST.c1;
+  const pb = defaultSliders();
+
+  let pn;
+  if(ST.scenario){
+    pn = defaultSliders();
+    SCEN[ST.scenario].apply(pn);
+  } else {
+    pn = { Y:ST.sl.Y, T:ST.sl.T, G:ST.sl.G, c0:ST.sl.c0,
+           I0:ST.sl.I0, CF0:ST.sl.CF0, NX0:ST.sl.NX0, rs:ST.sl.rs };
+  }
+
+  const base = econ(pb, c1);
+  const next = econ(pn, c1);
+
+  /* Explicit, per-curve shift tests. The notebook wrote three of these with
+     implicit multiplication —
+
+         If[I0S != i00 CFS != CF00 rw != rw0, ...]
+         If[YS != Y0 TS != T0 GS != G0 c0S != c00, ...]
+         If[CFS != CF00 rw != rw0, ...]
+
+     — where the spaces are multiplication, so each parses as a chained
+     Unequal over products rather than the || that was intended, and (I+CF)′,
+     S′ and CF′ were drawn even when nothing had moved. (NXS != 1000 is a
+     single comparison and was fine.) Written out properly, each test asks
+     only whether the curve's own intercept moved. */
+  const moved = {
+    S : Math.abs(next.A   - base.A)   > TOL,
+    D : Math.abs(next.D0  - base.D0)  > TOL,
+    CF: Math.abs(next.p.CF0 - base.p.CF0) > TOL
+        || Math.abs(next.p.rs - base.p.rs) > TOL,
+    NX: Math.abs(next.p.NX0 - base.p.NX0) > TOL
+  };
+  moved.any = moved.S || moved.D || moved.CF || moved.NX;
+
+  return { c1:c1, base:base, next:next, moved:moved };
+}
+
+/* Correct direction for one row — computed from the two economies, never
+   hardcoded per scenario. (The right answer for "Saving will…" under fiscal
+   policy abroad is Rise when c1 = 50 and Stay the Same when c1 = 0.) */
+function dirOf(row, E){
+  const d = row.get(E.next) - row.get(E.base);
+  return d > TOL ? 'rise' : (d < -TOL ? 'fall' : 'same');
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   PER-ROW EXPLANATIONS
+
+   Red with no explanation teaches nothing, so every row gets the causal
+   chain behind it — for the active experiment where there is one, and the
+   arithmetic of the student's own parameter changes in free explore.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const PNAME = { Y:'Y', T:'T', G:'G', c0:'c<sub>0</sub>', I0:'I<sub>0</sub>',
+                CF0:'CF<sub>0</sub>', NX0:'NX<sub>0</sub>', rs:'r*' };
+
+function changedList(E){
+  const b = E.base.p, n = E.next.p, out = [];
+  ['Y','T','G','c0','I0','CF0','NX0','rs'].forEach(function(k){
+    if(Math.abs(n[k] - b[k]) > TOL)
+      out.push(PNAME[k] + ' from ' + f2(b[k]) + ' to ' + f2(n[k]));
+  });
+  return out;
+}
+
+function whyCustom(k, E){
+  const c1 = E.c1, chg = changedList(E), none = chg.length === 0;
+  const dr = E.next.r - E.base.r;
+  switch(k){
+    case 'r':
+      return 'r clears the domestic market for loanable funds: S(r) = I(r) + CF(r), '
+        + 'so r<sub>1</sub> = (I<sub>0</sub> + CF<sub>0</sub> + CF<sub>2</sub>r* '
+        + MINUS + ' A) / (c<sub>1</sub> + I<sub>1</sub> + CF<sub>1</sub>) = '
+        + fixed(E.next.r, 2) + '%. Anything that raises the demand for funds or cuts '
+        + 'saving pushes it up.' + (none ? ' You have not moved any of them.' : '');
+    case 'S':
+      return 'S = Y ' + MINUS + ' c<sub>0</sub> ' + MINUS + ' MPC(Y ' + MINUS + ' T) '
+        + MINUS + ' G' + (c1 ? ' + c<sub>1</sub>r' : '')
+        + ' — so it responds to Y, T, G and c<sub>0</sub>'
+        + (c1 ? ', and because consumption carries a ' + MINUS + ' 50r term, to the '
+              + 'equilibrium interest rate as well. Here r ' + moveWord(E.base.r, E.next.r)
+              + ', which moves saving by c<sub>1</sub> × ' + fixedS(dr, 2) + ' = '
+              + fixedS(c1 * dr, 2) + ' on top of any shift in the line itself.'
+              : '. With c<sub>1</sub> = 0 the saving line is vertical, so saving is '
+              + 'whatever the intercept says and the interest rate does not enter.');
+    case 'I':
+      return 'I = I<sub>0</sub> ' + MINUS + ' I<sub>1</sub>r, so investment moves if '
+        + 'the schedule shifts (I<sub>0</sub>) or the equilibrium rate moves. Here r '
+        + moveWord(E.base.r, E.next.r) + ', worth ' + MINUS + 'I<sub>1</sub> × '
+        + fixedS(dr, 2) + ' = ' + fixedS(-FIX.I1 * dr, 2) + ' to investment.';
+    case 'CF':
+      return 'CF = CF<sub>0</sub> ' + MINUS + ' CF<sub>1</sub>(r ' + MINUS + ' r*), so '
+        + 'what matters is the <em>differential</em>. It went from '
+        + fixedS(E.base.r - E.base.p.rs, 2) + ' to '
+        + fixedS(E.next.r - E.next.p.rs, 2) + ' points, and CF<sub>0</sub> is '
+        + (Math.abs(E.next.p.CF0 - E.base.p.CF0) > TOL
+            ? 'also different' : 'unchanged') + '.';
+    case 'eps':
+      return EPS + '<sub>1</sub> = (NX<sub>0</sub> ' + MINUS + ' CF) / NX<sub>1</sub> = ('
+        + f2(E.next.p.NX0) + ' ' + MINUS + ' (' + fixedS(E.next.CF, 2) + ')) / '
+        + FIX.NX1 + ' = ' + fixed(E.next.eps, 2) + '. It rises when fewer dollars are '
+        + 'supplied to the foreign-exchange market, or when the NX schedule shifts out.';
+    case 'NX':
+      return 'In equilibrium NX = CF identically, so net exports and net capital '
+        + 'outflow always move together — whatever you changed. A shift in '
+        + 'NX<sub>0</sub> on its own moves ' + EPS + ', not NX.';
+  }
+  return '';
+}
+
+function whyScen(k, E){
+  const s = ST.scenario, c1 = E.c1;
+  const dr = E.next.r - E.base.r, den = c1 + E.base.B;
+
+  if(s === 'g') return {
+    r:'A rise of 100 in G cuts public saving one-for-one, so the saving line '
+     + 'shifts left by 100 while the demand for funds stays put. The two curves '
+     + 'now cross higher: Δr = ΔG / (c<sub>1</sub> + I<sub>1</sub> + CF<sub>1</sub>) '
+     + '= 100 / ' + den + ' = ' + fixed(dr, 2) + ' points. In the small open economy '
+     + 'this term is zero — see the callout below.',
+    S:'The saving line shifts left by the full 100'
+     + (c1 ? ', but the higher interest rate pulls some private saving back: the net '
+           + 'fall is 100 ' + MINUS + ' c<sub>1</sub>(' + fixed(dr, 2) + ') = '
+           + fixed(100 - c1 * dr, 2) + '.'
+           : '. With c<sub>1</sub> = 0 nothing pulls it back, so saving falls by exactly 100.'),
+    I:'Investment slopes down in r and r rose, so investment is crowded out by '
+     + 'I<sub>1</sub> × ' + fixed(dr, 2) + ' = ' + fixed(FIX.I1 * dr, 2)
+     + '. Only partly, though — that is the whole point of this scenario.',
+    CF:'CF slopes down in r too. The domestic rate rose while r* did not, so the '
+     + 'differential r ' + MINUS + ' r* widened and capital flows <em>in</em>: net '
+     + 'capital outflow falls by CF<sub>1</sub> × ' + fixed(dr, 2) + ' = '
+     + fixed(FIX.CF1 * dr, 2) + '. Foreigners help finance the deficit.',
+    eps:'Fewer dollars are supplied to the foreign-exchange market, so the dollar '
+     + 'appreciates: ' + EPS + ' rises from ' + fixed(E.base.eps, 2) + ' to '
+     + fixed(E.next.eps, 2) + '.',
+    NX:'The stronger currency prices domestic goods out of foreign markets. Net '
+     + 'exports fall by exactly the fall in CF — a budget deficit at home shows up '
+     + 'as a trade deficit abroad, the twin-deficits result.'
+  }[k];
+
+  if(s === 'rw') return {
+    r:'Raising r* shifts <em>two</em> curves: the demand for funds I + CF moves '
+     + 'right by CF<sub>2</sub> × 1 = ' + FIX.CF2 + ', and the CF schedule in panel 2 '
+     + 'moves right by the same amount. Against an unchanged saving line the '
+     + 'domestic rate rises by CF<sub>1</sub> / (c<sub>1</sub> + I<sub>1</sub> + '
+     + 'CF<sub>1</sub>) = ' + FIX.CF1 + ' / ' + den + ' = ' + fixed(dr, 2)
+     + ' points — less than the full point r* moved. That gap is the whole result.',
+    S:c1
+      ? 'Consumption falls when the interest rate rises (the ' + MINUS + ' 50r term), '
+      + 'and r rose by ' + fixed(dr, 2) + ', so saving rises by c<sub>1</sub> × '
+      + fixed(dr, 2) + ' = ' + fixed(c1 * dr, 2) + '. This is the one row whose '
+      + 'answer depends on the saving toggle.'
+      : 'With c<sub>1</sub> = 0 the saving line is vertical: nothing on the right-hand '
+      + 'side of this diagram can move saving. Switch the saving toggle on and this '
+      + 'row changes to Rise.',
+    I:'r rose by ' + fixed(dr, 2) + ' points, so investment falls by I<sub>1</sub> × '
+     + fixed(dr, 2) + ' = ' + fixed(FIX.I1 * dr, 2) + '.',
+    CF:'r rose by only ' + fixed(dr, 2) + ' while r* rose by a full point, so the '
+     + 'differential r ' + MINUS + ' r* <strong>fell</strong> by '
+     + fixed(1 - dr, 2) + ' points. Since CF = CF<sub>0</sub> ' + MINUS
+     + ' CF<sub>1</sub>(r ' + MINUS + ' r*), net capital outflow rises by '
+     + 'CF<sub>1</sub> × ' + fixed(1 - dr, 2) + ' = ' + fixed(FIX.CF1 * (1 - dr), 2)
+     + '. Saving goes abroad chasing the higher foreign return.',
+    eps:'More dollars are supplied to the foreign-exchange market, so the dollar '
+     + 'depreciates: ' + EPS + ' falls from ' + fixed(E.base.eps, 2) + ' to '
+     + fixed(E.next.eps, 2) + '.',
+    NX:'The weaker currency makes domestic goods cheaper abroad, and net exports '
+     + 'rise by exactly the rise in CF.'
+  }[k];
+
+  if(s === 'i0') return {
+    r:'The investment schedule shifts right by 150, so the demand for loanable funds '
+     + 'shifts right by 150 at every rate. Against the same saving line, r rises by '
+     + '150 / (c<sub>1</sub> + I<sub>1</sub> + CF<sub>1</sub>) = 150 / ' + den + ' = '
+     + fixed(dr, 2) + ' points.',
+    S:c1
+      ? 'The saving line did not shift — investment demand appears nowhere in it. But '
+      + 'saving is read off that line at the new, higher rate, so it rises by '
+      + 'c<sub>1</sub> × ' + fixed(dr, 2) + ' = ' + fixed(c1 * dr, 2) + '.'
+      : 'The saving line did not shift, and with c<sub>1</sub> = 0 it is vertical, so '
+      + 'the higher interest rate has nothing to grip: saving does not budge.',
+    I:'Two forces pull against each other. The schedule shifted right by 150, but the '
+     + 'rate rose by ' + fixed(dr, 2) + ' and that costs I<sub>1</sub> × '
+     + fixed(dr, 2) + ' = ' + fixed(FIX.I1 * dr, 2) + '. Net: '
+     + fixedS(E.next.I - E.base.I, 2) + '. In a small open economy the whole 150 would '
+     + 'have gone through, because r could not rise at all.',
+    CF:'CF did not shift — CF<sub>0</sub> and r* are untouched — but it is read off at '
+     + 'a higher domestic rate, so net capital outflow falls by CF<sub>1</sub> × '
+     + fixed(dr, 2) + ' = ' + fixed(FIX.CF1 * dr, 2) + '. Part of the investment boom '
+     + 'is financed by capital flowing in from abroad.',
+    eps:'Fewer dollars are supplied to the foreign-exchange market, so the dollar '
+     + 'appreciates: ' + EPS + ' rises from ' + fixed(E.base.eps, 2) + ' to '
+     + fixed(E.next.eps, 2) + '.',
+    NX:'NX = CF, so net exports fall by the same amount. The rest of the world '
+     + 'finances part of the investment boom, and that shows up as a trade deficit.'
+  }[k];
+
+  if(s === 'nx0') return {
+    r:'The interest rate is settled in panel 1, where saving meets investment plus '
+     + 'net capital outflow. A tariff enters none of those three functions, so panel 1 '
+     + 'does not move at all.',
+    S:'Trade policy does not enter the saving function — Y, T, G and c<sub>0</sub> are '
+     + 'each unchanged, and r did not move either.',
+    I:'Trade policy does not enter the investment function, and r did not move.',
+    CF:'Neither CF<sub>0</sub> nor r* changed, and the domestic rate is exactly where '
+     + 'it was, so net capital outflow is unchanged. This is the step the whole result '
+     + 'turns on — look at panel 2: nothing has moved.',
+    eps:'The NX schedule shifted out by 100, but the vertical CF line did not move. '
+     + 'The only way both can hold at once is a higher ' + EPS + ': the currency '
+     + 'appreciates by 100 / NX<sub>1</sub> = ' + fixed(100 / FIX.NX1, 2) + '.',
+    NX:'Equilibrium net exports equal CF, and CF did not change — so net exports do '
+     + 'not change either. The appreciation exactly cancels the protection.'
+  }[k];
+
+  return whyCustom(k, E);
+}
+
+/* ── The two large-open-economy callouts ───────────────────────────────
+   Both are computed from the frozen snapshot, so they follow the saving
+   toggle rather than quoting one hardcoded set of numbers. */
+
+function crowdBody(E){
+  const c1 = E.c1, dG = E.next.p.G - E.base.p.G;
+  const drC = dG / (c1 + FIX.I1);                 /* closed economy */
+  const drL = dG / (c1 + FIX.I1 + FIX.CF1);       /* large open economy */
+  return '<p>This is the comparison the chapter is built around, and it is worth '
+    + 'making explicit. The same rise of ' + f2(dG) + ' in G does three different '
+    + 'things depending on how open the economy is:</p>'
+    + '<p><strong>Small open economy:</strong> r is pinned at the world rate. It does '
+    + 'not move, investment is untouched, and the entire ' + f2(dG) + ' is financed by '
+    + 'borrowing from abroad. <span class="mono">Δr = 0.00, ΔI = 0.00</span></p>'
+    + '<p><strong>Closed economy:</strong> the market must clear at home with no '
+    + 'capital flows at all, so Δr = ΔG / (c<sub>1</sub> + I<sub>1</sub>) and '
+    + 'investment is crowded out one-for-one with the fall in saving. '
+    + '<span class="mono">Δr = ' + fixedS(drC, 2) + ', ΔI = '
+    + fixedS(-FIX.I1 * drC, 2) + '</span></p>'
+    + '<p><strong>Large open economy — this one:</strong> '
+    + '<span class="mono">Δr = ' + fixedS(drL, 2) + ', ΔI = '
+    + fixedS(-FIX.I1 * drL, 2) + '</span>, strictly between the other two. The only '
+    + 'difference in the algebra is the extra CF<sub>1</sub> in the denominator: when '
+    + 'r starts to rise, capital flows <em>in</em> rather than out, and that inflow '
+    + 'supplies part of the funds the government just absorbed. The country is big '
+    + 'enough to move its own interest rate, but not so isolated that it has to clear '
+    + 'the market out of domestic saving alone.</p>'
+    + '<p>So crowding out here is <strong>partial</strong>. The rest of the deficit is '
+    + 'financed by the rest of the world — which is the same thing as saying net '
+    + 'capital outflow, and therefore net exports, fell.</p>';
+}
+
+function shiftBody(E){
+  const c1 = E.c1, den = c1 + E.base.B;
+  const drs = E.next.p.rs - E.base.p.rs;
+  const dr  = E.next.r - E.base.r;
+  return '<p>“Both curves shift” is where students lose the thread, so here is which '
+    + 'one wins and why.</p>'
+    + '<p>A rise of ' + f2(drs) + ' point in r* moves two things at once. The demand '
+    + 'for funds in panel 1 shifts right by CF<sub>2</sub> × ' + f2(drs) + ' = '
+    + f2(FIX.CF2 * drs) + ', because at any domestic rate more capital now wants to '
+    + 'leave. And the CF schedule in panel 2 shifts right by the same amount, for the '
+    + 'same reason.</p>'
+    + '<p>Solve the model and the domestic rate rises by only '
+    + '<span class="mono">CF<sub>1</sub>·Δr* / (c<sub>1</sub> + I<sub>1</sub> + '
+    + 'CF<sub>1</sub>) = ' + FIX.CF1 + '·' + f2(drs) + ' / ' + den + ' = '
+    + fixed(dr, 2) + '</span> points — '
+    + fixed(100 * dr / drs, 0) + '% of the rise abroad. It <em>cannot</em> match r* as '
+    + 'long as saving or investment respond to r at all, because part of the extra '
+    + 'demand is met by those responses rather than by a higher rate.</p>'
+    + '<p>So the differential <span class="mono">r ' + MINUS + ' r*</span> '
+    + '<strong>falls</strong> by ' + fixed(drs - dr, 2) + ' points. Since '
+    + 'CF = CF<sub>0</sub> ' + MINUS + ' CF<sub>1</sub>(r ' + MINUS + ' r*), net '
+    + 'capital outflow <strong>rises</strong> by CF<sub>1</sub> × '
+    + fixed(drs - dr, 2) + ' = ' + fixed(FIX.CF1 * (drs - dr), 2) + '. The CF shift '
+    + 'wins over the interest-rate response, always — and that is what sends '
+    + EPS + ' down and net exports up.</p>';
+}
+
+function tradeBody(E){
+  const dNX0 = E.next.p.NX0 - E.base.p.NX0;
+  return '<p>Protection raises the demand for domestic goods at any given exchange '
+    + 'rate, so the net-export schedule shifts out by ' + f2(dNX0) + '. But equilibrium '
+    + 'net exports are not settled in the market for goods — they are pinned down by '
+    + '<strong>NX = CF</strong>, and CF is settled one panel earlier, by saving, '
+    + 'investment and the interest differential r ' + MINUS + ' r*. A tariff changes '
+    + 'none of those.</p>'
+    + '<p>The only variable left free to adjust is the real exchange rate, and it '
+    + 'appreciates by exactly enough to offset the protection: '
+    + f2(dNX0) + ' / NX<sub>1</sub> = ' + fixed(dNX0 / FIX.NX1, 2) + '. A tariff can '
+    + 'change the <em>composition</em> of trade — fewer imports and, through the '
+    + 'stronger currency, fewer exports — but it cannot change the trade balance.</p>';
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DOM
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const $ = function(id){ return document.getElementById(id); };
+const $scenGrid = $('scenGrid'), $c1Grid = $('c1Grid');
+const $sliderGrid = $('sliderGrid'), $slLock = $('slLock');
+const $strip = $('strip'), $figLede = $('figLede'), $slopeNote = $('slopeNote');
+const $impRows = $('impRows'), $checkBtn = $('checkBtn'), $chkSummary = $('chkSummary');
+const $numGrid = $('numGrid'), $numNote = $('numNote'), $resetBtn = $('resetBtn');
+const $lf = $('lfCanvas'), $cf = $('cfCanvas'), $fx = $('fxCanvas');
+const $lfDesc = $('lfDesc'), $cfDesc = $('cfDesc'), $fxDesc = $('fxDesc');
+const CALLOUTS = {
+  g:   { box:$('coCrowd'), body:$('coCrowdBody'), fill:crowdBody },
+  rw:  { box:$('coShift'), body:$('coShiftBody'), fill:shiftBody },
+  nx0: { box:$('coTrade'), body:$('coTradeBody'), fill:tradeBody }
+};
+
+const scenBtns = {}, c1Btns = {}, slInputs = {}, slOuts = {},
+      selEls = {}, fbEls = {};
+
+/* Any change to a control invalidates a checked result (the notebook kept its
+   ECHK flag set until Reset while the cell colours recomputed on every redraw,
+   so a student could cycle the dropdowns and watch every cell go green without
+   ever clicking Check again). */
+function invalidate(){ CHK = null; }
+
+function buildScenarios(){
+  Object.keys(SCEN).forEach(function(key){
+    const s = SCEN[key];
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'scen-btn';
+    b.setAttribute('aria-pressed', 'false');
+    b.innerHTML = '<span class="sc-name">' + s.name + '</span>'
+                + '<span class="sc-delta">' + s.delta + '</span>';
+    b.addEventListener('click', function(){
+      ST.scenario = (ST.scenario === key) ? null : key;
+      if(ST.scenario) ST.sl = defaultSliders();
+      invalidate();
+      render();
+    });
+    scenBtns[key] = b;
+    $scenGrid.appendChild(b);
+  });
+}
+
+function buildToggles(){
+  [['Yes — c₁ = 50', C1_ON], ['No — c₁ = 0', 0]].forEach(function(o){
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'option-btn';
+    b.textContent = o[0];
+    b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', function(){
+      ST.c1 = o[1];
+      invalidate(); render();
+    });
+    c1Btns[o[1]] = b;
+    $c1Grid.appendChild(b);
+  });
+}
+
+function buildSliders(){
+  SLIDERS.forEach(function(s){
+    const item = document.createElement('div');
+    item.className = 'sl-item';
+    const id = 'sl-' + s.key, oid = 'slv-' + s.key;
+    item.innerHTML =
+        '<div class="sl-top">'
+      +   '<label class="sl-name" for="' + id + '">' + s.label + '</label>'
+      +   '<output class="sl-val" id="' + oid + '" for="' + id + '"></output>'
+      + '</div>'
+      + '<input type="range" id="' + id + '" min="' + s.min + '" max="' + s.max
+      +   '" step="' + s.step + '" aria-label="' + s.aria + '">';
+    $sliderGrid.appendChild(item);
+    const inp = $(id);
+    inp.addEventListener('input', function(){
+      ST.sl[s.key] = parseFloat(inp.value);
+      invalidate(); render();
+    });
+    slInputs[s.key] = inp;
+    slOuts[s.key]   = $(oid);
+  });
+}
+
+function buildRows(){
+  ROWS.forEach(function(r, i){
+    const item = document.createElement('div');
+    item.className = 'imp-item';
+    item.innerHTML =
+        '<div class="imp-row">'
+      +   '<label class="imp-q" for="sel-' + r.k + '">' + (i + 1) + '. ' + r.q + '</label>'
+      +   '<select class="imp-sel" id="sel-' + r.k + '" aria-describedby="fb-' + r.k + '">'
+      +     '<option value="">— choose —</option>'
+      +     '<option value="fall">Fall</option>'
+      +     '<option value="same">Stay the Same</option>'
+      +     '<option value="rise">Rise</option>'
+      +   '</select>'
+      + '</div>'
+      + '<div class="imp-fb" id="fb-' + r.k + '"></div>';
+    $impRows.appendChild(item);
+    const sel = $('sel-' + r.k);
+    sel.addEventListener('change', function(){ invalidate(); render(); });
+    selEls[r.k] = sel;
+    fbEls[r.k]  = $('fb-' + r.k);
+  });
+}
+
+function buildNumCards(){
+  ROWS.forEach(function(r){
+    const c = document.createElement('div');
+    c.className = 'num-card';
+    c.innerHTML =
+        '<div class="num-name">' + r.q.replace(' will…', '') + '</div>'
+      + '<div class="num-vals">'
+      +   '<div class="num-cell"><span class="num-lab">Baseline</span>'
+      +     '<span class="num-v" id="nb-' + r.k + '">—</span></div>'
+      +   '<div class="num-cell"><span class="num-lab">New</span>'
+      +     '<span class="num-v" id="nn-' + r.k + '">—</span></div>'
+      + '</div>';
+    $numGrid.appendChild(c);
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   RENDER
+   ═══════════════════════════════════════════════════════════════════════ */
+
+function renderControls(){
+  Object.keys(scenBtns).forEach(function(k){
+    const on = ST.scenario === k;
+    scenBtns[k].classList.toggle('active', on);
+    scenBtns[k].setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  Object.keys(c1Btns).forEach(function(k){
+    const on = ST.c1 === Number(k);
+    c1Btns[k].classList.toggle('active', on);
+    c1Btns[k].setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+
+  const locked = !!ST.scenario;
+  $slLock.classList.toggle('hidden', !locked);
+  SLIDERS.forEach(function(s){
+    const inp = slInputs[s.key];
+    inp.disabled = locked;
+    const v = locked ? BASE[s.key] : ST.sl[s.key];
+    inp.value = v;
+    slOuts[s.key].textContent = (s.key === 'rs' ? fixed(v, s.dp) + '%'
+                                                : fixed(v, s.dp));
+  });
+}
+
+function renderStrip(E){
+  if(ST.scenario){
+    const s = SCEN[ST.scenario];
+    $strip.innerHTML = '<strong>Active experiment: ' + s.name + '</strong> — '
+      + s.delta.replace('→', '&rarr;') + '. ' + s.lede
+      + '<br><span class="chain">' + s.chain + '</span>';
+  } else if(E.moved.any){
+    $strip.innerHTML = '<strong>Free explore.</strong> You changed '
+      + changedList(E).join('; ') + '. Predict the six impacts below, then check.';
+  } else {
+    $strip.innerHTML = '<strong>No experiment selected.</strong> The economy is '
+      + 'sitting at its baseline: r' + SUB1 + ' = ' + fixed(E.base.r, 2) + '%, CF'
+      + SUB1 + ' = ' + fixedS(E.base.CF, 2) + ', ' + EPS + SUB1 + ' = '
+      + fixed(E.base.eps, 2) + '. Pick one of the four experiments above, or open '
+      + 'Free explore.';
+  }
+}
+
+function renderFigLede(E){
+  $figLede.innerHTML =
+    'Read them left to right, then down. Panel 1 settles the interest rate where '
+    + 'saving meets investment plus net capital outflow. Panel 2 carries that same '
+    + 'r' + SUB1 + ' across — the amber guide sits at exactly the same height — and '
+    + 'drops to CF' + SUB1 + '. Panel 3 stands CF' + SUB1 + ' up as a vertical line '
+    + 'at exactly the same horizontal position, and where it meets the net-export '
+    + 'schedule is the real exchange rate.'
+    + (E.moved.any ? ' Shifted curves are dashed and carry primed labels.' : '');
+
+  $slopeNote.innerHTML =
+    'Panels 2 and 3 run below zero on the horizontal axis, and they mean it: when '
+    + 'CF' + SUB1 + ' is negative this economy is a <strong>net borrower</strong> from '
+    + 'the rest of the world and runs a <strong>trade deficit</strong>, and the vertical '
+    + 'line in panel 3 stands to the left of the origin. Because CF<sub>2</sub> = '
+    + 'CF<sub>1</sub> = ' + FIX.CF1 + ', the CF schedule is really CF = CF<sub>0</sub> '
+    + MINUS + ' CF<sub>1</sub>(r ' + MINUS + ' r*): capital responds to the interest '
+    + '<em>differential</em>, so raising r and r* together by the same amount would '
+    + 'leave panel 2 exactly where it is.';
+}
+
+function renderRows(E){
+  ROWS.forEach(function(r){
+    const sel = selEls[r.k], fb = fbEls[r.k];
+    sel.classList.remove('ok', 'no');
+    if(!CHK){ fb.innerHTML = ''; return; }
+
+    const chose  = CHK.choices[r.k];
+    const answer = CHK.ans[r.k];
+    const right  = chose === answer;
+    sel.classList.add(right ? 'ok' : 'no');
+
+    const b = r.get(CHK.econ.base), n = r.get(CHK.econ.next);
+    fb.innerHTML =
+        '<span class="verdict ' + (right ? 'ok' : 'no') + '">'
+      +   (right ? '✓ Correct — ' + DIRWORD[answer]
+                 : '✗ Not quite — the correct answer is “' + DIRWORD[answer] + '”')
+      + '</span>'
+      + CHK.why[r.k]
+      + ' <span class="delta">[' + fmtRow(r, b) + ' → ' + fmtRow(r, n) + ']</span>';
+  });
+
+  const allChosen = ROWS.every(function(r){ return selEls[r.k].value !== ''; });
+  $checkBtn.disabled = !allChosen;
+
+  if(CHK){
+    const score = ROWS.filter(function(r){
+      return CHK.choices[r.k] === CHK.ans[r.k]; }).length;
+    $chkSummary.textContent = 'Checked — ' + score + ' of ' + ROWS.length
+      + ' correct. Change anything and you will need to check again.';
+    $chkSummary.classList.toggle('done', score === ROWS.length);
+  } else {
+    $chkSummary.classList.remove('done');
+    $chkSummary.textContent = allChosen
+      ? 'Ready — click Check Answers.'
+      : 'Choose all six before checking.';
+  }
+
+  Object.keys(CALLOUTS).forEach(function(k){
+    const on = !!(CHK && CHK.scenario === k);
+    CALLOUTS[k].box.classList.toggle('hidden', !on);
+    if(on) CALLOUTS[k].body.innerHTML = CALLOUTS[k].fill(CHK.econ);
+  });
+}
+
+function renderNumbers(E){
+  $numNote.textContent = CHK
+    ? 'Baseline against the economy you built. Dollar amounts in billions; '
+      + 'r and r* in percent; ε a unitless index.'
+    : 'The “new” column is revealed once you check your answers — showing it now '
+      + 'would hand over the table above. Dollar amounts in billions; r and r* in '
+      + 'percent; ε a unitless index.';
+
+  ROWS.forEach(function(r){
+    const nb = $('nb-' + r.k), nn = $('nn-' + r.k);
+    nb.textContent = fmtRow(r, r.get(E.base));
+    nn.classList.remove('up', 'down', 'locked');
+    if(!CHK){
+      nn.textContent = '—';
+      nn.classList.add('locked');
+      nn.setAttribute('aria-label', 'hidden until you check your answers');
+      return;
+    }
+    nn.removeAttribute('aria-label');
+    const d = dirOf(r, CHK.econ);
+    /* Arrow + sign, never colour alone (WCAG 1.4.1). */
+    nn.textContent = fmtRow(r, r.get(CHK.econ.next))
+      + (d === 'rise' ? ' ↑' : (d === 'fall' ? ' ↓' : ' ='));
+    if(d === 'rise') nn.classList.add('up');
+    if(d === 'fall') nn.classList.add('down');
+  });
+}
+
+function render(){
+  ECON = compute();
+  renderControls();
+  renderStrip(ECON);
+  renderFigLede(ECON);
+  renderRows(ECON);
+  renderNumbers(ECON);
+  redraw();
+}
+
+/* ── Check / Reset ─────────────────────────────────────────────────────
+   Check freezes BOTH the six choices and the economy they were made about,
+   and every colour, explanation and callout below is rendered from that
+   frozen snapshot. Any later change to a dropdown, slider or toggle clears
+   it and the student has to check again. */
+$checkBtn.addEventListener('click', function(){
+  const E = compute();
+  const choices = {}, ans = {}, why = {};
+  ROWS.forEach(function(r){
+    choices[r.k] = selEls[r.k].value;
+    ans[r.k]     = dirOf(r, E);
+    why[r.k]     = ST.scenario ? whyScen(r.k, E) : whyCustom(r.k, E);
+  });
+  CHK = { choices:choices, ans:ans, why:why, econ:E, scenario:ST.scenario };
+  render();
+});
+
+$resetBtn.addEventListener('click', function(){
+  ST.scenario = null;
+  ST.sl = defaultSliders();
+  CHK = null;
+  ROWS.forEach(function(r){ selEls[r.k].value = ''; });
+  render();
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+   CANVAS — CLAUDE.md conventions
+
+   Axis bounds are computed from the data on every redraw. The notebook
+   hardcoded {0,2000}×{0,10}, {-1000,1000}×{0,10} and {-1100,1100}×{0,4}
+   while its own sliders pushed r to −4.3 and ε to −0.81, so curves ran off
+   the frame; its label positions (9.25, 3.7, 3.65) were hardcoded to match.
+   Everything here is placed relative to computed coordinates and clipped.
+
+   Panels 1 and 2 share the r window, so r₁ sits at the same pixel height in
+   both. Panels 2 and 3 share the CF/NX window, so CF₁ sits at the same pixel
+   x in both. All three canvases are the same size (1:1, equal grid columns),
+   so "the same coordinate" really is the same place on screen — which is the
+   one thing an interactive version of this figure can show that a static one
+   cannot.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const PAD = { l:52, r:16, t:16, b:48 };  // CSS px
+const COL = { S:'#155c38', D:'#b42318', NX:'#2f5d7c', carry:'#8c4800',
+              ink:'#1f2937', mute:'#596878', line:'#d9cfbf' };
+
+function setupCanvas(canvas, wrap){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  const W = Math.round(rect.width * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr:dpr, W:W, H:H };
+}
+
+/* CLAUDE.md coordinate helper, generalized to arbitrary x- and y-ranges so
+   panels 2 and 3 can run negative. The left and bottom gutters hold text, so
+   they scale with _fs. */
+function makeCoordsRange(W, H, dpr, xMin, xMax, yMin, yMax){
+  const p = { l:PAD.l*dpr*_fs, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr*_fs };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  return {
+    xC: function(x){ return p.l + ((x - xMin) / (xMax - xMin)) * PW; },
+    yC: function(y){ return H - p.b - ((y - yMin) / (yMax - yMin)) * PH; },
+    p:p, PW:PW, PH:PH
+  };
+}
+
+function tickStep(mx){
+  if(mx<=10) return 1; if(mx<=20) return 2; if(mx<=50) return 5;
+  if(mx<=100) return 10; if(mx<=200) return 20; if(mx<=500) return 50;
+  if(mx<=1000) return 100; if(mx<=2000) return 200; if(mx<=5000) return 500;
+  if(mx<=10000) return 1000; return 2000;
+}
+function snapUp(raw){
+  const s=[5,8,10,12,15,20,25,30,40,50,60,80,100,120,
+           150,200,250,300,400,500,600,800,1000,1200,1500,2000,
+           2500,3000,4000,5000,6000,8000,10000,12000];
+  return s.find(function(v){ return v >= raw; }) || Math.ceil(raw/1000)*1000;
+}
+
+function clipPlot(ctx, C, W, H){
+  ctx.beginPath();
+  ctx.rect(C.p.l, C.p.t, W - C.p.l - C.p.r, H - C.p.t - C.p.b);
+  ctx.clip();
+}
+function fontPx(n, dpr){
+  return '700 ' + Math.round(n * dpr * _fs) + 'px "Inter",sans-serif';
+}
+function halo(ctx, text, x, y, color, size, dpr, align, baseline){
+  ctx.font = fontPx(size, dpr);
+  ctx.textAlign = align || 'center';
+  ctx.textBaseline = baseline || 'middle';
+  ctx.lineWidth = 3.5 * dpr;
+  ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+  ctx.strokeText(text, x, y);
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+}
+/* Keep a label inside the plot box whatever the alignment — labels sit near
+   curves whose position is data-driven, so any of them can reach an edge. */
+function place(ctx, text, x, C, W, size, dpr, align){
+  ctx.font = fontPx(size, dpr);
+  const w = ctx.measureText(text).width, pad = 3 * dpr;
+  const lo = C.p.l + pad, hi = W - C.p.r - pad;
+  if(align === 'left')  return Math.max(lo, Math.min(hi - w, x));
+  if(align === 'right') return Math.max(lo + w, Math.min(hi, x));
+  return Math.max(lo + w/2, Math.min(hi - w/2, x));
+}
+/* Label layout pass. Queue every halo label with a priority, then place them
+   most-important-first, nudging a label vertically until its box clears the
+   ones already placed. Fixed offsets are not enough on their own: at 200%
+   text size every box doubles while the plot does not, so pairs that never
+   touched at 100% overlap. Positions stay anchored to their own line or
+   curve — a nudge is about one label height. */
+function makeLabels(ctx, C, W, H, dpr){
+  const placed = [], queue = [];
+  function boxOf(it, y){
+    ctx.font = fontPx(it.size, dpr);
+    const w = ctx.measureText(it.text).width, h = it.size * dpr * _fs;
+    let x0 = it.x;
+    if(it.align === 'center')     x0 -= w / 2;
+    else if(it.align === 'right') x0 -= w;
+    return { x0:x0, x1:x0 + w, y0:y - h / 2, y1:y + h / 2, h:h, y:y };
+  }
+  function hits(b){
+    return placed.some(function(p){
+      return b.x0 < p.x1 && p.x0 < b.x1 && b.y0 < p.y1 && p.y0 < b.y1;
+    });
+  }
+  return {
+    add:function(text, x, y, color, size, align, prio){
+      queue.push({ text:text, x:x, y:y, color:color, size:size,
+                   align:align, prio:prio || 0 });
+    },
+    flush:function(){
+      queue.sort(function(a, b){ return b.prio - a.prio; });
+      queue.forEach(function(it){
+        let b = boxOf(it, it.y);
+        const step = b.h * 1.15;
+        if(hits(b)){
+          for(let k = 1; k <= 6; k++){
+            let done = false;
+            [it.y + k * step, it.y - k * step].forEach(function(cy){
+              if(done) return;
+              const yy = Math.max(b.h / 2, Math.min(H - b.h / 2, cy));
+              const bb = boxOf(it, yy);
+              if(!hits(bb)){ b = bb; done = true; }
+            });
+            if(done) break;
+          }
+        }
+        placed.push(b);
+        halo(ctx, it.text, it.x, b.y, it.color, it.size, dpr, it.align, 'middle');
+      });
+      queue.length = 0;
+    }
+  };
+}
+
+/* Choose the height at which to hang a curve label: of a few candidate points
+   along the curve, take the one furthest from everything already committed to
+   the canvas. */
+function pickLabelY(C, cands, yLo, yHi, f, avoid){
+  let best = cands[0], bd = -1;
+  cands.forEach(function(c){
+    const y = yLo + c * (yHi - yLo), px = C.xC(f(y)), py = C.yC(y);
+    let m = Infinity;
+    avoid.forEach(function(a){
+      m = Math.min(m, (px - a.x) * (px - a.x) + (py - a.y) * (py - a.y));
+    });
+    if(m > bd){ bd = m; best = c; }
+  });
+  return yLo + best * (yHi - yLo);
+}
+
+function dot(ctx, x, y, r, color){
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = r * 0.45;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+}
+
+function drawFrame(ctx, C, dpr, W, H, o){
+  ctx.save();
+  ctx.strokeStyle = COL.line; ctx.lineWidth = 1 * dpr;
+  ctx.beginPath();
+  for(let x = Math.ceil(o.xMin / o.xStep) * o.xStep; x <= o.xMax + 1e-9; x += o.xStep){
+    ctx.moveTo(C.xC(x), C.yC(o.yMin)); ctx.lineTo(C.xC(x), C.p.t);
+  }
+  for(let y = Math.ceil(o.yMin / o.yStep) * o.yStep; y <= o.yMax + 1e-9; y += o.yStep){
+    ctx.moveTo(C.p.l, C.yC(y)); ctx.lineTo(W - C.p.r, C.yC(y));
+  }
+  ctx.stroke();
+  ctx.restore();
+
+  /* Axes: left edge and the y = yMin baseline. */
+  ctx.save();
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = 1.8 * dpr;
+  ctx.beginPath();
+  ctx.moveTo(C.p.l, C.p.t);
+  ctx.lineTo(C.p.l, C.yC(o.yMin));
+  ctx.lineTo(W - C.p.r, C.yC(o.yMin));
+  ctx.stroke();
+  ctx.restore();
+
+  /* A visible x = 0 line whenever the axis runs negative — CF and NX do. */
+  if(o.xMin < 0 && o.xMax > 0){
+    ctx.save();
+    ctx.strokeStyle = COL.mute; ctx.lineWidth = 1.4 * dpr;
+    ctx.setLineDash([2 * dpr, 3 * dpr]);
+    ctx.beginPath();
+    ctx.moveTo(C.xC(0), C.p.t); ctx.lineTo(C.xC(0), C.yC(o.yMin));
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /* Tick labels, thinned out rather than overprinted at large font sizes. */
+  ctx.save();
+  ctx.fillStyle = COL.mute;
+  ctx.font = '600 ' + Math.round(10 * dpr * _fs) + 'px "Inter",sans-serif';
+  const xs = [], ys = [];
+  for(let x = Math.ceil(o.xMin / o.xStep) * o.xStep; x <= o.xMax + 1e-9; x += o.xStep) xs.push(x);
+  for(let y = Math.ceil(o.yMin / o.yStep) * o.yStep; y <= o.yMax + 1e-9; y += o.yStep) ys.push(y);
+
+  const xWide = xs.reduce(function(m, x){
+    return Math.max(m, ctx.measureText(nf(x, o.xDp || 0)).width); }, 0);
+  const xGap  = Math.abs(C.xC(o.xMin + o.xStep) - C.xC(o.xMin));
+  const xEvery = Math.max(1, Math.ceil((xWide + 10 * dpr) / Math.max(1, xGap)));
+  const yGap   = Math.abs(C.yC(o.yMin + o.yStep) - C.yC(o.yMin));
+  const yEvery = Math.max(1, Math.ceil((14 * dpr * _fs) / Math.max(1, yGap)));
+
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  xs.forEach(function(x, i){
+    if(i % xEvery) return;
+    const t = nf(x, o.xDp || 0);
+    if(C.xC(x) + ctx.measureText(t).width / 2 > W - 2 * dpr) return;
+    ctx.fillText(t, C.xC(x), C.yC(o.yMin) + 6 * dpr);
+  });
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  ys.forEach(function(y, i){
+    if(i % yEvery) return;
+    ctx.fillText(nf(y, o.yDp || 0), C.p.l - 6 * dpr, C.yC(y));
+  });
+  ctx.restore();
+
+  /* Axis titles, shrunk to fit rather than clipped. */
+  ctx.save();
+  ctx.fillStyle = COL.ink;
+  /* Shrink a title to fit rather than let it run off the plot — a clipped
+     axis title is lost content at 200% text size (WCAG 1.4.4). The floor is
+     7, which is only ever reached when _fs is large, so the rendered size
+     never actually drops below about 14 CSS px there. */
+  const fit = function(text, room){
+    let size = 11;
+    ctx.font = fontPx(size, dpr);
+    while(size > 7 && ctx.measureText(text).width > room){
+      size -= 0.5; ctx.font = fontPx(size, dpr);
+    }
+  };
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  fit(o.xTitle, C.PW);
+  ctx.fillText(o.xTitle, C.p.l + C.PW / 2, H - 8 * dpr);
+  ctx.translate(13 * dpr * _fs, C.p.t + C.PH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textBaseline = 'top';
+  fit(o.yTitle, C.PH);
+  ctx.fillText(o.yTitle, 0, 0);
+  ctx.restore();
+}
+
+/* Stroke x = f(y) over a y-range (all three panels put the "price" on y). */
+function strokeXofY(ctx, C, f, yLo, yHi, color, lw, dash, alpha){
+  ctx.save();
+  if(alpha !== undefined) ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color; ctx.lineWidth = lw;
+  ctx.setLineDash(dash || []); ctx.lineCap = 'round';
+  ctx.beginPath();
+  const N = 160;
+  for(let i = 0; i <= N; i++){
+    const y = yLo + (yHi - yLo) * i / N;
+    const px = C.xC(f(y)), py = C.yC(y);
+    if(i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* ── Shared geometry ───────────────────────────────────────────────────
+   The r window is deliberately NOT anchored at zero. The demand for funds
+   falls by I1 + CF1 = 400 per point of r, so an axis running 0…8 spans 3200
+   on the horizontal and shrinks a 100-billion shift in the saving line into
+   3% of the panel — the reason a slider can look like it does nothing. The
+   window below tracks the equilibria instead, and every bound is still
+   computed from the data, so nothing can leave the frame. */
+function rWindow(E){
+  const a = Math.min(E.base.r, E.next.r), b = Math.max(E.base.r, E.next.r);
+  const mid = (a + b) / 2, half = Math.max(2, (b - a) / 2 + 1.6);
+  const step = tickStep(2 * half);
+  return { lo:Math.max(0, Math.floor((mid - half) / step) * step),
+           hi:Math.ceil((mid + half) / step) * step,
+           step:step };
+}
+
+function cfOf(X, r){ return X.p.CF0 - FIX.CF1 * r + FIX.CF2 * X.p.rs; }
+
+/* The CF / NX axis, used by panels 2 and 3 alike. It is built from the CF
+   schedule so CF₁ lands in a sensible place; the NX curve is clipped where it
+   runs past the edge. Zero is always inside, because whether CF is positive or
+   negative is the reading the student has to make. */
+function cfWindow(E, rw){
+  const vals = [0];
+  [E.base, E.next].forEach(function(X){
+    vals.push(cfOf(X, rw.lo), cfOf(X, rw.hi), X.CF, X.NX);
+  });
+  const lo0 = Math.min.apply(null, vals), hi0 = Math.max.apply(null, vals);
+  const span = Math.max(1, hi0 - lo0);
+  return { xMin:lo0 - span * 0.08, xMax:hi0 + span * 0.08,
+           step:tickStep(snapUp(span * 1.15)) };
+}
+
+function epsMax(E){
+  return Math.max(2, Math.ceil((Math.max(E.base.eps, E.next.eps) + 0.5) * 2) / 2);
+}
+
+/* ── Panel 1 — market for loanable funds ─────────────────────────────── */
+function drawLF(){
+  const S0 = setupCanvas($lf, $lf.parentElement);
+  if(!S0 || !ECON) return;
+  const ctx = S0.ctx, dpr = S0.dpr, W = S0.W, H = S0.H;
+  ctx.clearRect(0, 0, W, H);
+
+  const E = ECON, B = E.base, N = E.next, c1 = E.c1, M = E.moved;
+  const rw = rWindow(E);
+
+  const sB = function(r){ return B.A + c1 * r; };
+  const sN = function(r){ return N.A + c1 * r; };
+  const dB = function(r){ return B.D0 - B.B * r; };
+  const dN = function(r){ return N.D0 - N.B * r; };
+
+  const xs = [sB(rw.lo), sB(rw.hi), sN(rw.lo), sN(rw.hi),
+              dB(rw.lo), dB(rw.hi), dN(rw.lo), dN(rw.hi), B.S, N.S];
+  const lo0 = Math.max(0, Math.min.apply(null, xs));
+  const hi0 = Math.max.apply(null, xs);
+  const span = Math.max(1, hi0 - lo0);
+  const xMin = Math.max(0, lo0 - span * 0.05), xMax = hi0 + span * 0.05;
+  const C = makeCoordsRange(W, H, dpr, xMin, xMax, rw.lo, rw.hi);
+
+  drawFrame(ctx, C, dpr, W, H, {
+    xMin:xMin, xMax:xMax, yMin:rw.lo, yMax:rw.hi,
+    xStep:tickStep(snapUp(span * 1.15)), yStep:rw.step,
+    /* Abbreviated units: at 200% text size the spelled-out form needs more
+       room than the plot has, and a clipped axis title is lost content
+       (WCAG 1.4.4). This wording fits at every size fit() will choose. */
+    xTitle:'Saving, Investment, Net Capital Outflow ($bn)',
+    yTitle:'Real interest rate r (%)'
+  });
+
+  ctx.save();
+  clipPlot(ctx, C, W, H);
+
+  /* Baseline curves solid; shifted curves dashed with primed labels. */
+  strokeXofY(ctx, C, sB, rw.lo, rw.hi, COL.S, 3 * dpr, []);
+  strokeXofY(ctx, C, dB, rw.lo, rw.hi, COL.D, 3 * dpr, []);
+  if(M.S) strokeXofY(ctx, C, sN, rw.lo, rw.hi, COL.S, 2.8 * dpr, [9 * dpr, 6 * dpr]);
+  if(M.D) strokeXofY(ctx, C, dN, rw.lo, rw.hi, COL.D, 2.8 * dpr, [9 * dpr, 6 * dpr]);
+
+  /* r₁ guides — the baseline faintly when it moved, the new one in full. */
+  const guide = function(r, x, lw, alpha){
+    ctx.save();
+    if(alpha !== undefined) ctx.globalAlpha = alpha;
+    ctx.strokeStyle = COL.carry; ctx.lineWidth = lw;
+    ctx.setLineDash([2.5 * dpr, 4 * dpr]);
+    ctx.beginPath();
+    ctx.moveTo(C.p.l, C.yC(r)); ctx.lineTo(C.xC(x), C.yC(r));
+    ctx.stroke();
+    ctx.restore();
+  };
+  if(Math.abs(N.r - B.r) > TOL){
+    guide(B.r, B.S, 1.6 * dpr, 0.4);
+    dot(ctx, C.xC(B.S), C.yC(B.r), 4.5 * dpr, COL.mute);
+  }
+  guide(N.r, N.S, 2 * dpr);
+  dot(ctx, C.xC(N.S), C.yC(N.r), 5.5 * dpr, COL.ink);
+  ctx.restore();
+
+  /* Labels — every position derived from computed coordinates. */
+  const off = dpr * _fs;
+  const L = makeLabels(ctx, C, W, H, dpr);
+  const sLab = c1 ? 'S(r)' : 'S', dLab = 'I(r) + CF(r, r*)';
+
+  const avoid = [{ x:C.xC(N.S), y:C.yC(N.r) }, { x:C.p.l, y:C.yC(N.r) }];
+  const curveLbl = function(text, f, cands, color, prio){
+    const y = pickLabelY(C, cands, rw.lo, rw.hi, f, avoid);
+    L.add(text, place(ctx, text, C.xC(f(y)) + 6 * off, C, W, 11, dpr, 'left'),
+          C.yC(y), color, 11, 'left', prio);
+    avoid.push({ x:C.xC(f(y)), y:C.yC(y) });
+  };
+  curveLbl(sLab, sB, [0.90, 0.62, 0.34], COL.S, 50);
+  if(M.S) curveLbl(sLab + PRIME, sN, [0.76, 0.48, 0.22], COL.S, 49);
+  curveLbl(dLab, dB, [0.12, 0.40, 0.68], COL.D, 48);
+  if(M.D) curveLbl('(I+CF)' + PRIME, dN, [0.26, 0.54, 0.82], COL.D, 47);
+
+  L.add('r' + SUB1 + ' = ' + fixed(N.r, 2) + '%', C.p.l + 6 * dpr,
+        C.yC(N.r) - 11 * off, COL.carry, 11, 'left', 100);
+  if(Math.abs(N.r - B.r) > TOL)
+    L.add('r' + SUB1 + ' was ' + fixed(B.r, 2) + '%', C.p.l + 6 * dpr,
+          C.yC(B.r) - 11 * off, COL.mute, 10, 'left', 80);
+
+  L.flush();
+}
+
+/* ── Panel 2 — net capital outflow ───────────────────────────────────── */
+function drawCF(){
+  const S0 = setupCanvas($cf, $cf.parentElement);
+  if(!S0 || !ECON) return;
+  const ctx = S0.ctx, dpr = S0.dpr, W = S0.W, H = S0.H;
+  ctx.clearRect(0, 0, W, H);
+
+  const E = ECON, B = E.base, N = E.next, M = E.moved;
+  const rw = rWindow(E), cw = cfWindow(E, rw);
+  const C = makeCoordsRange(W, H, dpr, cw.xMin, cw.xMax, rw.lo, rw.hi);
+
+  const cB = function(r){ return cfOf(B, r); };
+  const cN = function(r){ return cfOf(N, r); };
+
+  drawFrame(ctx, C, dpr, W, H, {
+    xMin:cw.xMin, xMax:cw.xMax, yMin:rw.lo, yMax:rw.hi,
+    xStep:cw.step, yStep:rw.step,
+    xTitle:'Net capital outflow CF, $ billions',
+    yTitle:'Real interest rate r (%)'
+  });
+
+  ctx.save();
+  clipPlot(ctx, C, W, H);
+
+  strokeXofY(ctx, C, cB, rw.lo, rw.hi, COL.D, 3 * dpr, []);
+  if(M.CF) strokeXofY(ctx, C, cN, rw.lo, rw.hi, COL.D, 2.8 * dpr, [9 * dpr, 6 * dpr]);
+
+  /* r₁ carried in from panel 1 — the same height on the same r axis — and the
+     drop from there to CF₁ on the horizontal axis. */
+  const carry = function(r, cf, lw, alpha){
+    ctx.save();
+    if(alpha !== undefined) ctx.globalAlpha = alpha;
+    ctx.strokeStyle = COL.carry; ctx.lineWidth = lw;
+    ctx.setLineDash([2.5 * dpr, 4 * dpr]);
+    ctx.beginPath();
+    ctx.moveTo(C.p.l, C.yC(r)); ctx.lineTo(C.xC(cf), C.yC(r));
+    ctx.stroke();
+    ctx.setLineDash([5 * dpr, 4 * dpr]);
+    ctx.beginPath();
+    ctx.moveTo(C.xC(cf), C.yC(r)); ctx.lineTo(C.xC(cf), C.yC(rw.lo));
+    ctx.stroke();
+    ctx.restore();
+  };
+  if(Math.abs(N.CF - B.CF) > TOL || Math.abs(N.r - B.r) > TOL){
+    carry(B.r, B.CF, 1.6 * dpr, 0.4);
+    dot(ctx, C.xC(B.CF), C.yC(B.r), 4.5 * dpr, COL.mute);
+  }
+  carry(N.r, N.CF, 2 * dpr);
+  dot(ctx, C.xC(N.CF), C.yC(N.r), 5.5 * dpr, COL.ink);
+  ctx.restore();
+
+  const off = dpr * _fs;
+  const L = makeLabels(ctx, C, W, H, dpr);
+  const avoid = [{ x:C.xC(N.CF), y:C.yC(N.r) }, { x:C.p.l, y:C.yC(N.r) },
+                 { x:C.xC(N.CF), y:C.yC(rw.lo) - 12 * off }];
+  const curveLbl = function(text, f, cands, prio){
+    const y = pickLabelY(C, cands, rw.lo, rw.hi, f, avoid);
+    L.add(text, place(ctx, text, C.xC(f(y)) + 6 * off, C, W, 11, dpr, 'left'),
+          C.yC(y), COL.D, 11, 'left', prio);
+    avoid.push({ x:C.xC(f(y)), y:C.yC(y) });
+  };
+  curveLbl('CF(r, r*)', cB, [0.88, 0.58, 0.28], 50);
+  if(M.CF) curveLbl('CF' + PRIME, cN, [0.74, 0.44, 0.16], 49);
+
+  L.add('r' + SUB1 + ' = ' + fixed(N.r, 2) + '%', C.p.l + 6 * dpr,
+        C.yC(N.r) - 11 * off, COL.carry, 11, 'left', 100);
+  const cfLbl = 'CF' + SUB1 + ' = ' + fixedS(N.CF, 2);
+  L.add(cfLbl, place(ctx, cfLbl, C.xC(N.CF), C, W, 11, dpr, 'center'),
+        C.yC(rw.lo) - 12 * off, COL.carry, 11, 'center', 90);
+
+  L.flush();
+}
+
+/* ── Panel 3 — market for foreign exchange ───────────────────────────── */
+function drawFX(){
+  const S0 = setupCanvas($fx, $fx.parentElement);
+  if(!S0 || !ECON) return;
+  const ctx = S0.ctx, dpr = S0.dpr, W = S0.W, H = S0.H;
+  ctx.clearRect(0, 0, W, H);
+
+  const E = ECON, B = E.base, N = E.next, M = E.moved;
+  const rw = rWindow(E), cw = cfWindow(E, rw), eMax = epsMax(E);
+  const C = makeCoordsRange(W, H, dpr, cw.xMin, cw.xMax, 0, eMax);
+
+  const nB = function(e){ return B.p.NX0 - FIX.NX1 * e; };
+  const nN = function(e){ return N.p.NX0 - FIX.NX1 * e; };
+
+  drawFrame(ctx, C, dpr, W, H, {
+    xMin:cw.xMin, xMax:cw.xMax, yMin:0, yMax:eMax,
+    xStep:cw.step, yStep:0.5, xDp:0, yDp:1,
+    xTitle:'Net exports NX, $ billions',
+    yTitle:'Real exchange rate ' + EPS + ' (index)'
+  });
+
+  ctx.save();
+  clipPlot(ctx, C, W, H);
+
+  strokeXofY(ctx, C, nB, 0, eMax, COL.NX, 3 * dpr, []);
+  if(M.NX) strokeXofY(ctx, C, nN, 0, eMax, COL.NX, 2.8 * dpr, [9 * dpr, 6 * dpr]);
+
+  /* CF₁ carried in from panel 2 — a vertical line at the same horizontal
+     position, because CF does not depend on ε. It stands left of the origin
+     whenever CF₁ is negative. */
+  const vline = function(x, lw, alpha, dash){
+    ctx.save();
+    if(alpha !== undefined) ctx.globalAlpha = alpha;
+    ctx.strokeStyle = COL.carry; ctx.lineWidth = lw; ctx.setLineDash(dash || []);
+    ctx.beginPath(); ctx.moveTo(C.xC(x), C.yC(0)); ctx.lineTo(C.xC(x), C.p.t);
+    ctx.stroke(); ctx.restore();
+  };
+  if(Math.abs(N.CF - B.CF) > TOL) vline(B.CF, 2 * dpr, 0.4);
+  vline(N.CF, 3 * dpr);
+
+  /* Dashed guide from the equilibrium back to ε₁ on the vertical axis. */
+  const epsGuide = function(e, cf, lw, alpha){
+    ctx.save();
+    if(alpha !== undefined) ctx.globalAlpha = alpha;
+    ctx.strokeStyle = COL.carry; ctx.lineWidth = lw;
+    ctx.setLineDash([5 * dpr, 4 * dpr]);
+    ctx.beginPath();
+    ctx.moveTo(C.p.l, C.yC(e)); ctx.lineTo(C.xC(cf), C.yC(e));
+    ctx.stroke();
+    ctx.restore();
+  };
+  if(Math.abs(N.eps - B.eps) > TOL){
+    epsGuide(B.eps, B.CF, 1.6 * dpr, 0.4);
+    dot(ctx, C.xC(B.CF), C.yC(B.eps), 4.5 * dpr, COL.mute);
+  }
+  epsGuide(N.eps, N.CF, 2 * dpr);
+  dot(ctx, C.xC(N.CF), C.yC(N.eps), 5.5 * dpr, COL.ink);
+  ctx.restore();
+
+  const off = dpr * _fs;
+  const L = makeLabels(ctx, C, W, H, dpr);
+
+  L.add(EPS + SUB1 + ' = ' + fixed(N.eps, 2), C.p.l + 6 * dpr,
+        C.yC(N.eps) - 11 * off, COL.carry, 11, 'left', 100);
+
+  const cfLbl = 'CF' + SUB1 + ' = ' + fixedS(N.CF, 2);
+  ctx.font = fontPx(11, dpr);
+  const cfW = ctx.measureText(cfLbl).width;
+  const right = C.xC(N.CF) + 8 * off + cfW < W - C.p.r;
+  const cfX = place(ctx, cfLbl, C.xC(N.CF) + (right ? 8 : -8) * off, C, W, 11, dpr,
+                    right ? 'left' : 'right');
+  const cfY = C.p.t + 10 * off;
+  L.add(cfLbl, cfX, cfY, COL.carry, 11, right ? 'left' : 'right', 90);
+
+  const ptLab = 'NX' + SUB1 + ' = ' + fixedS(N.NX, 2);
+  const ptX = place(ctx, ptLab, C.xC(N.CF) + 12 * off, C, W, 11, dpr, 'left');
+  const ptY = C.yC(N.eps) + 13 * off;
+  L.add(ptLab, ptX, ptY, COL.ink, 11, 'left', 85);
+
+  const avoid = [
+    { x:C.xC(N.CF), y:C.yC(N.eps) },
+    { x:ptX + ctx.measureText(ptLab).width / 2, y:ptY },
+    { x:cfX + (right ? cfW / 2 : -cfW / 2), y:cfY }
+  ];
+  const curveLbl = function(text, f, cands, prio){
+    const e = pickLabelY(C, cands, 0, eMax, f, avoid);
+    L.add(text, place(ctx, text, C.xC(f(e)) + 6 * off, C, W, 11, dpr, 'left'),
+          C.yC(e), COL.NX, 11, 'left', prio);
+    avoid.push({ x:C.xC(f(e)), y:C.yC(e) });
+  };
+  curveLbl('NX(' + EPS + ')', nB, [0.90, 0.60, 0.30], 50);
+  if(M.NX) curveLbl('NX' + PRIME, nN, [0.76, 0.46, 0.18], 49);
+
+  L.flush();
+}
+
+/* ── Accessible descriptions (WCAG 1.1.1 / 4.1.3) ────────────────────── */
+
+function moveWord(a, b){
+  const d = b - a;
+  return d > TOL ? 'rises' : (d < -TOL ? 'falls' : 'does not change');
+}
+function signWord(v){
+  return v > TOL ? 'positive' : (v < -TOL ? 'negative' : 'zero');
+}
+
+function shiftSentence(E){
+  const M = E.moved, B = E.base, N = E.next, out = [];
+  if(M.S) out.push('the saving line shifts ' + (N.A > B.A ? 'right' : 'left')
+    + ' to S prime, its intercept moving from ' + f2(B.A) + ' to ' + f2(N.A));
+  if(M.D) out.push('the demand for funds, I plus CF, shifts '
+    + (N.D0 > B.D0 ? 'right' : 'left') + ' to I plus CF prime, from an intercept of '
+    + f2(B.D0) + ' to ' + f2(N.D0));
+  if(!out.length) return 'Neither curve in this panel has shifted: this is the '
+    + 'baseline economy.';
+  return 'After the change, ' + out.join('; ') + '.';
+}
+
+function updateGraphDesc(){
+  const E = ECON;
+  if(!E) return;
+  const B = E.base, N = E.next, c1 = E.c1, M = E.moved;
+
+  $lfDesc.textContent =
+    'Panel 1, the market for loanable funds. Saving, investment and net capital '
+    + 'outflow, in billions of dollars, run along the horizontal axis; the real '
+    + 'interest rate in percent runs up the vertical axis. Baseline saving is drawn as '
+    + (c1 ? 'a line sloping up to the right, S of r equals ' + f2(B.A) + ' plus ' + c1
+          + ' times r, because consumption falls when the interest rate rises'
+          : 'a vertical line at ' + f2(B.A) + ', because saving does not depend on the '
+          + 'interest rate in this economy')
+    + '. The demand for funds slopes down: I plus CF equals ' + f2(B.D0) + ' minus '
+    + B.B + ' times r. ' + shiftSentence(E)
+    + ' The two curves cross at r sub 1 equals ' + fixed(N.r, 2)
+    + ' percent, marked by a dashed amber guide running back to the vertical axis, '
+    + 'where saving and the demand for funds are both ' + fixed(N.S, 2) + ' billion. '
+    + (M.any ? 'Before the change the equilibrium rate was ' + fixed(B.r, 2)
+             + ' percent, so the interest rate ' + moveWord(B.r, N.r)
+             + ', and saving ' + moveWord(B.S, N.S) + ' from ' + fixed(B.S, 2) + ' to '
+             + fixed(N.S, 2) + ' while investment ' + moveWord(B.I, N.I) + ' from '
+             + fixed(B.I, 2) + ' to ' + fixed(N.I, 2) + ' billion.' : '');
+
+  $cfDesc.textContent =
+    'Panel 2, net capital outflow. Net capital outflow in billions of dollars runs '
+    + 'along the horizontal axis, which extends below zero; the real interest rate '
+    + 'runs up the vertical axis on exactly the same scale as panel 1. The baseline '
+    + 'schedule slopes down: CF equals ' + f2(B.p.CF0) + ' minus ' + FIX.CF1
+    + ' times r plus ' + FIX.CF2 + ' times the world rate of ' + f2(B.p.rs)
+    + ', which is the same as saying CF equals ' + f2(B.p.CF0) + ' minus ' + FIX.CF1
+    + ' times the differential r minus r star. '
+    + (M.CF ? 'After the change the schedule shifts '
+            + (cfOf(N, B.r) > cfOf(B, B.r) ? 'out to the right' : 'in to the left')
+            + ' to CF prime, because '
+            + (Math.abs(N.p.rs - B.p.rs) > TOL
+                ? 'the world interest rate moved from ' + f2(B.p.rs) + ' to '
+                  + f2(N.p.rs) + ' percent'
+                : 'the intercept CF zero moved from ' + f2(B.p.CF0) + ' to '
+                  + f2(N.p.CF0)) + '. ' : '')
+    + 'The amber guide carries r sub 1 equals ' + fixed(N.r, 2) + ' percent across '
+    + 'from panel 1 at the same height, meets the schedule, and drops to the '
+    + 'horizontal axis at CF sub 1 equals ' + fixedS(N.CF, 2) + ' billion, which is '
+    + signWord(N.CF) + '. '
+    + (N.CF > TOL
+        ? 'A positive net capital outflow means this economy is a net lender to the '
+          + 'rest of the world.'
+        : (N.CF < -TOL
+            ? 'A negative net capital outflow means this economy is a net borrower '
+              + 'from the rest of the world, and the drop lands to the left of the '
+              + 'origin.'
+            : 'A net capital outflow of zero means this economy neither lends to nor '
+              + 'borrows from the rest of the world.'))
+    + (M.any ? ' Before the change CF sub 1 was ' + fixedS(B.CF, 2)
+             + ' billion, so net capital outflow ' + moveWord(B.CF, N.CF) + '.' : '');
+
+  $fxDesc.textContent =
+    'Panel 3, the market for foreign exchange. Net exports in billions of dollars run '
+    + 'along the horizontal axis, on exactly the same scale as panel 2; the real '
+    + 'exchange rate epsilon runs up the vertical axis. The baseline net-export '
+    + 'schedule slopes down as epsilon rises: NX equals ' + f2(B.p.NX0) + ' minus '
+    + FIX.NX1 + ' times epsilon. '
+    + (M.NX ? 'After the change the schedule shifts '
+            + (N.p.NX0 > B.p.NX0 ? 'out to the right' : 'in to the left')
+            + ' to NX prime, with an intercept of ' + f2(N.p.NX0) + '. ' : '')
+    + 'A vertical amber line stands at CF sub 1 equals ' + fixedS(N.CF, 2)
+    + ' billion — the same quantity, at the same horizontal position, as the drop in '
+    + 'panel 2. Where it meets the net-export schedule is the equilibrium: net exports '
+    + 'of ' + fixedS(N.NX, 2) + ' billion at epsilon sub 1 equal to '
+    + fixed(N.eps, 2) + ', with a dashed guide running back to epsilon sub 1 on the '
+    + 'vertical axis. '
+    + (M.any
+        ? 'Compared with the baseline, the exchange rate ' + moveWord(B.eps, N.eps)
+          + ' from ' + fixed(B.eps, 2) + ' to ' + fixed(N.eps, 2) + ', and net exports '
+          + moveWord(B.NX, N.NX) + ' from ' + fixedS(B.NX, 2) + ' to '
+          + fixedS(N.NX, 2) + ' billion. '
+        : '')
+    + 'Because net exports are ' + signWord(N.NX) + ', this economy runs a trade '
+    + (N.NX > TOL ? 'surplus.' : (N.NX < -TOL ? 'deficit.'
+                                              : 'balance: exports and imports are equal.'));
+}
+
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  drawLF();
+  drawCF();
+  drawFX();
+  updateGraphDesc();
+}
+
+let _resizeTimer;
+window.addEventListener('resize', function(){
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+   SELF-TEST — sweeps both saving assumptions × every named experiment, and
+   every corner of the free-explore box (2 × 256 = 512 states). Run it in the
+   console: __loeGraphTest()
+   ═══════════════════════════════════════════════════════════════════════ */
+function selfTest(){
+  const save = { c1:ST.c1, scenario:ST.scenario, sl:ST.sl };
+  const bad = [];
+  let n = 0, negCF = 0;
+  const rng = { r:[Infinity,-Infinity], S:[Infinity,-Infinity],
+                I:[Infinity,-Infinity], CF:[Infinity,-Infinity],
+                eps:[Infinity,-Infinity] };
+
+  const check = function(tag){
+    const E = compute(); n++;
+    const N = E.next;
+    ['r','S','I','CF','eps'].forEach(function(k){
+      rng[k][0] = Math.min(rng[k][0], N[k]);
+      rng[k][1] = Math.max(rng[k][1], N[k]);
+    });
+    if(N.CF < 0) negCF++;
+    const errs = [];
+    if(Math.abs(N.S - (N.I + N.CF)) > 1e-9) errs.push('S != I + CF');
+    if(Math.abs(N.NX - N.CF) > 1e-9)        errs.push('NX != CF');
+    if(!(N.r   > 0)) errs.push('r <= 0');
+    if(!(N.S   > 0)) errs.push('S <= 0');
+    if(!(N.I   > 0)) errs.push('I <= 0');
+    if(!(N.eps > 0)) errs.push('eps <= 0');
+    /* Every curve must stay inside its computed frame. */
+    const rw = rWindow(E), cw = cfWindow(E, rw), eM = epsMax(E);
+    if(N.r < rw.lo - 1e-9 || N.r > rw.hi + 1e-9)         errs.push('r1 outside frame');
+    if(N.CF < cw.xMin - 1e-9 || N.CF > cw.xMax + 1e-9)   errs.push('CF1 outside frame');
+    if(N.eps > eM + 1e-9)                                errs.push('eps1 outside frame');
+    /* Primed labels only when the curve actually moved. */
+    if(!E.moved.any && (E.moved.S || E.moved.D || E.moved.CF || E.moved.NX))
+      errs.push('primed label with nothing moved');
+    if(errs.length) bad.push({ tag:tag, errs:errs });
+  };
+
+  [C1_ON, 0].forEach(function(c1){
+    ST.c1 = c1;
+    [null, 'g', 'rw', 'i0', 'nx0'].forEach(function(s){
+      ST.scenario = s; ST.sl = defaultSliders();
+      check('c1=' + c1 + ' scen=' + s);
+    });
+    /* Every corner of the free-explore box. */
+    ST.scenario = null;
+    const dims = SLIDERS.map(function(x){ return [x.key, x.min, x.max]; });
+    for(let m = 0; m < (1 << dims.length); m++){
+      const sl = defaultSliders();
+      dims.forEach(function(d, i){ sl[d[0]] = (m >> i) & 1 ? d[2] : d[1]; });
+      ST.sl = sl;
+      check('c1=' + c1 + ' corner=' + m);
+    }
+  });
+
+  /* The baseline must reproduce exactly. */
+  const want = { 50:{ r:4, S:1200, I:950, CF:250, eps:1 },
+                 0: { r:4.5, S:1000, I:825, CF:175, eps:1.15 } };
+  [C1_ON, 0].forEach(function(c1){
+    ST.c1 = c1; ST.scenario = null; ST.sl = defaultSliders();
+    const N = compute().next, w = want[c1];
+    Object.keys(w).forEach(function(k){
+      if(Math.abs(N[k] - w[k]) > 1e-9)
+        bad.push({ tag:'baseline c1=' + c1, errs:[k + ' = ' + N[k] + ', want ' + w[k]] });
+    });
+  });
+
+  ST.c1 = save.c1; ST.scenario = save.scenario; ST.sl = save.sl;
+  render();
+
+  const round = function(a){ return [+a[0].toFixed(2), +a[1].toFixed(2)]; };
+  const out = { ok:bad.length === 0, checked:n,
+                negativeCF:negCF + ' / ' + n
+                           + ' (' + (100 * negCF / n).toFixed(1) + '%)',
+                r:round(rng.r), S:round(rng.S), I:round(rng.I),
+                CF:round(rng.CF), eps:round(rng.eps), failures:bad };
+  if(window.console){
+    if(bad.length) console.error('[loe-graph] self-test FAILED', out);
+    else console.info('[loe-graph] self-test passed — ' + n + ' states; r ∈ ['
+      + out.r + '], S ∈ [' + out.S + '], CF ∈ [' + out.CF + '] (negative in '
+      + out.negativeCF + '), ε ∈ [' + out.eps + ']; S = I + CF everywhere.');
+  }
+  return out;
+}
+window.__loeGraphTest = selfTest;
+
+/* ═══════════════════════════════════════════════════════════════════════
+   INIT
+   ═══════════════════════════════════════════════════════════════════════ */
+function boot(){
+  try{
+    buildScenarios();
+    buildToggles();
+    buildSliders();
+    buildRows();
+    buildNumCards();
+    render();
+  }catch(e){
+    if(window.console) console.error('Lab failed to initialise:', e);
+  }
+}
+
+if(document.readyState === 'loading')
+  document.addEventListener('DOMContentLoaded', boot);
+else
+  boot();
+
+})();
+</script>
+</body>
+</html>

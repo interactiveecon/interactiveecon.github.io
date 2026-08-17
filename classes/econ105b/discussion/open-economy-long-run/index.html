@@ -1,0 +1,2454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECON 105B &middot; The Open Economy in the Long Run</title>
+<style>
+  :root{
+    --ink:#14243A;          /* near-navy ink */
+    --accent:#1F4E79;       /* deep blue (from worksheets) */
+    --accent-soft:#8FAADC;
+    --paper:#F6F4EE;        /* warm chalk-paper */
+    --paper-line:#E4E0D5;
+    --gold:#8A5900;
+    --gold-soft:#FBF1DC;
+    --red:#C0392B;
+    --grey:#5A5F66;
+    --chalk:#FbFaF7;
+    --shadow:0 8px 30px rgba(20,36,58,.10);
+    --mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Georgia','Iowan Old Style',serif;
+    color:var(--ink);
+    background:var(--paper);
+    overflow:hidden;
+  }
+  /* ---------- deck scaffold ---------- */
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;
+    padding:clamp(1.25rem,4vw,4.5rem) clamp(1.5rem,6vw,6rem);
+    /* extra bottom room so content never hides behind the fixed nav bar (~46px) */
+    padding-bottom:calc(46px + clamp(1rem,3vw,2rem));
+    /* if a slide is taller than the screen, scroll it instead of clipping/overlapping */
+    overflow-y:auto;overflow-x:hidden;
+    scroll-padding-bottom:46px;
+    opacity:0;
+    transition:opacity .38s ease;
+  }
+  .slide.active{display:flex;opacity:1;animation:rise .45s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide.active{animation:none}
+    .slide{transition:none}
+    *{transition-duration:.001ms !important;animation-duration:.001ms !important}
+  }
+  /* visible keyboard focus (WCAG 2.4.7) */
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+    outline:3px solid var(--accent);outline-offset:3px;border-radius:6px;
+  }
+  :focus:not(:focus-visible){outline:none}
+  /* ---------- typography ---------- */
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--grey);margin-bottom:1.1rem;font-weight:600;
+  }
+  h1{font-size:clamp(2.4rem,5.5vw,4.4rem);line-height:1.02;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3.2vw,2.4rem);line-height:1.1;font-weight:700;letter-spacing:-.01em;margin-bottom:.4rem}
+  .lede{font-size:clamp(1.05rem,1.7vw,1.35rem);line-height:1.5;color:var(--ink);max-width:52ch}
+  .muted{color:var(--grey)}
+  .serif-note{font-style:italic;color:var(--grey);font-size:1rem;line-height:1.5}
+  strong{font-weight:700}
+  .accent{color:var(--accent)}
+  .red{color:var(--red)}
+  .gold{color:var(--gold)}
+  /* title rule */
+  h2 + .titlerule{height:2px;background:linear-gradient(90deg,var(--accent-soft),transparent);
+    width:min(100%,640px);margin:.2rem 0 1.4rem}
+  /* ---------- model cards ---------- */
+  .models{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin:1.4rem 0;max-width:900px}
+  .model{
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;
+    padding:1.4rem 1.6rem;box-shadow:var(--shadow);position:relative;
+  }
+  .model .tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:.6rem;display:block}
+  .model .eq{font-family:var(--mono);font-size:1.35rem;color:var(--ink)}
+  .model .eq .coef{color:var(--red);font-weight:700}
+  .model.dim{opacity:.4;filter:saturate(.4)}
+  .model.hi{border-color:var(--accent);box-shadow:0 8px 30px rgba(31,78,121,.22)}
+  .model.hiRed{border-color:var(--red);box-shadow:0 8px 30px rgba(192,57,43,.20)}
+  .model.hiRed .tag{color:var(--red)}
+  /* ---------- boxes ---------- */
+  .prompt,.reveal,.predict{
+    border-radius:10px;padding:1.05rem 1.3rem;max-width:820px;line-height:1.5;
+    font-family:'Georgia',serif;font-size:1.08rem;
+  }
+  .prompt{background:#EEF3FA;border-left:4px solid var(--accent)}
+  .reveal{background:var(--gold-soft);border-left:4px solid var(--gold)}
+  .cue{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;display:block;margin-bottom:.4rem}
+  .prompt .cue{color:var(--accent)}
+  .reveal .cue{color:var(--gold)}
+  .predict .cue{color:var(--red)}
+  .predict{background:#FBEEEC;border-left:4px solid var(--red)}
+  .prompt p,.reveal p,.predict p{margin:0;line-height:1.5}
+  .prompt .cue + p,.reveal .cue + p,.predict .cue + p{margin-top:.15rem}
+  .prompt p + p,.reveal p + p,.predict p + p{margin-top:.6rem}
+  /* chain / mono line */
+  .chain{
+    font-family:var(--mono);background:#EDF1F8;border:1px solid var(--accent-soft);
+    border-radius:8px;padding:.7rem 1rem;font-size:1.05rem;color:var(--accent);
+    display:inline-block;margin-top:.4rem
+  }
+  .chain.warm{background:var(--gold-soft);border-color:#D8BE87;color:var(--gold)}
+  .chain.hot{background:#FBEEEC;border-color:#E3A9A1;color:var(--red)}
+  /* ---------- reveal-on-click ---------- */
+  .hidden-reveal{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .hidden-reveal.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* ---------- interactive graph panel ---------- */
+  .graphwrap{display:grid;grid-template-columns:1.15fr .85fr;gap:2rem;align-items:center;margin-top:.6rem;flex:1 0 auto}
+  @media (max-width:900px){.graphwrap{grid-template-columns:1fr}}
+  .panel{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;padding:1.2rem;box-shadow:var(--shadow)}
+  .panel .ptitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-bottom:.3rem;font-weight:700}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .controls{display:flex;flex-direction:column;gap:1.3rem}
+  .readout{font-family:var(--mono);font-size:.92rem;line-height:1.7;color:var(--ink);background:#EDF1F8;border-radius:8px;padding:.8rem 1rem}
+  .readout .big{font-size:1.25rem;color:var(--accent);font-weight:700}
+  .btn{
+    font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.7rem 1.2rem;cursor:pointer;
+    box-shadow:0 3px 10px rgba(31,78,121,.3);transition:transform .1s,background .2s;align-self:flex-start
+  }
+  .btn:hover{background:#173a5c;transform:translateY(-1px)}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
+  .btn.ghost:hover{background:#EEF3FA}
+  /* ---------- poll ---------- */
+  .poll-opts{display:flex;flex-direction:column;gap:.8rem;max-width:860px;margin-top:1.1rem}
+  .poll-opt{
+    display:flex;align-items:stretch;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;
+    cursor:pointer;background:var(--chalk);transition:border-color .2s,transform .08s;position:relative;
+    width:100%;text-align:left;font:inherit;color:inherit;padding:0
+  }
+  .poll-opt:hover{border-color:var(--accent-soft)}
+  .poll-opt:active{transform:scale(.995)}
+  .poll-opt .num{background:var(--accent);color:#fff;font-family:var(--mono);font-weight:700;
+    display:flex;align-items:center;justify-content:center;padding:0 1.1rem;font-size:1.1rem;z-index:2}
+  .poll-opt .txt{padding:.9rem 1.1rem;line-height:1.4;z-index:2;font-size:1.02rem;font-family:'Georgia',serif}
+  .poll.revealed .poll-opt{opacity:.5;transition:opacity .4s}
+  .poll.revealed .poll-opt.correct{opacity:1;border-color:var(--gold);background:var(--gold-soft)}
+  .poll-opt.correct .num{background:var(--gold)}
+  .poll-opt.correct .txt::after{content:" ✓ correct";color:var(--gold);font-family:var(--mono);font-weight:700;font-size:.82rem}
+  .poll-hint{font-family:var(--mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-top:.9rem;font-weight:600}
+  /* ---------- footer / nav ---------- */
+  .chrome{position:fixed;bottom:0;left:0;right:0;height:46px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 1.4rem;font-family:var(--mono);font-size:.72rem;
+    letter-spacing:.08em;color:var(--grey);pointer-events:none;z-index:50}
+  .chrome .course{text-transform:uppercase}
+  .progress-track{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:60}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-soft));width:0;transition:width .35s ease}
+  .navhint{display:flex;gap:1.2rem;align-items:center;pointer-events:auto}
+  .navhint button{pointer-events:auto;background:none;border:none;color:var(--grey);cursor:pointer;font-family:var(--mono);font-size:.9rem;padding:.2rem .5rem;border-radius:5px}
+  .navhint button:hover{color:var(--accent);background:rgba(31,78,121,.08)}
+  .kbd{font-family:var(--mono);font-size:.66rem;border:1px solid var(--paper-line);border-radius:4px;padding:.1rem .35rem;color:var(--grey)}
+  /* content column helper */
+  .col{display:flex;flex-direction:column;gap:1.1rem;flex:1 0 auto;justify-content:center}
+  .grow{flex:1 0 auto}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+  @media (max-width:900px){.two{grid-template-columns:1fr}}
+  .calc{font-family:var(--mono);font-size:1.05rem;line-height:1.8}
+  .calc .lbl{color:var(--accent);font-weight:700}
+  .delta{font-size:1.15rem;font-weight:700}
+  .footnote{font-size:.92rem;color:var(--grey);font-style:italic}
+  /* title slide special */
+  .title-slide{justify-content:safe center}
+  .title-slide h1{margin:.6rem 0}
+  .signature{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:2rem}
+  /* ---------- section divider ---------- */
+  .divider{justify-content:safe center;background:linear-gradient(135deg,#1B3B5C,#14243A)}
+  .divider *{color:#F6F4EE}
+  .divider .eyebrow{color:#8FAADC}
+  .divider h1{font-size:clamp(2.2rem,5vw,4rem);color:#fff}
+  .divider .lede{color:#D6DEE9;max-width:46ch}
+  .divider .sectrail{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#8FAADC;margin-top:1.6rem}
+  .divider .through{font-family:var(--mono);font-size:.8rem;line-height:1.6;color:#D6DEE9;
+    border-left:3px solid #8FAADC;padding-left:.9rem;margin-top:1.4rem;max-width:60ch}
+  /* ---------- generic click-reveal ---------- */
+  .reveal-hidden{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .reveal-hidden.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* condition cards (3-across) */
+  .condrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem}
+  @media (max-width:900px){.condrow{grid-template-columns:1fr}}
+  .condcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.5rem}
+  .condcard .ctitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .condcard .cbtn{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:.55rem .8rem;cursor:pointer}
+  .condcard .cbtn:hover{background:#173a5c}
+  .condcard .cbody{opacity:0;max-height:0;overflow:hidden;transition:opacity .35s,max-height .45s}
+  .condcard .cbody.shown{opacity:1;max-height:none;overflow:visible;margin-top:.3rem}
+  .condcard svg{width:100%;height:auto}
+  .condcard .cnote{font-size:.9rem;line-height:1.45;color:var(--ink)}
+  .condcard .verdict{font-family:var(--mono);font-size:.78rem;font-weight:700;padding:.2rem 0}
+  .verdict.severe{color:var(--red)}
+  .verdict.mild{color:var(--accent)}
+  /* diagnose (numbered flawed-argument) list */
+  .diag{display:flex;flex-direction:column;gap:.7rem;max-width:900px;margin:1rem 0}
+  .diag-opt{display:flex;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;background:var(--chalk);width:100%;text-align:left;font:inherit;color:inherit;padding:0;cursor:pointer;transition:border-color .2s}
+  .diag-opt:hover{border-color:var(--accent-soft)}
+  .diag-opt .n{background:var(--grey);color:#fff;font-family:var(--mono);font-weight:700;display:flex;align-items:center;padding:0 1rem;font-size:1.05rem}
+  .diag-opt .s{padding:.85rem 1.1rem;line-height:1.45;font-family:'Georgia',serif;font-size:1.02rem}
+  .diag.revealed .diag-opt{opacity:.5}
+  .diag.revealed .diag-opt.bad{opacity:1;border-color:var(--red);background:#FBEEEC}
+  .diag-opt.bad .n{background:var(--red)}
+  .diag.revealed .diag-opt.bad .s::after{content:" ✗ the flaw";color:var(--red);font-family:var(--mono);font-weight:700;font-size:.8rem}
+  /* TA run-sheet table */
+  .runsheet{display:grid;grid-template-columns:auto 1fr;gap:.35rem 1.1rem;font-family:var(--mono);font-size:.86rem;line-height:1.5;margin-top:.4rem}
+  .runsheet .rk{color:var(--accent);font-weight:700;white-space:nowrap}
+  /* comparison table */
+  .tablewrap{width:100%;max-width:1040px;overflow-x:auto}
+  .cases{width:100%;min-width:760px;border-collapse:collapse;font-family:var(--mono);font-size:1rem;margin-top:.6rem}
+  .cases th,.cases td{border:1px solid var(--paper-line);padding:.6rem .8rem;text-align:left}
+  .cases th{background:#EDF1F8;color:var(--accent);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase}
+  .cases td.hi{background:var(--gold-soft);font-weight:700}
+</style>
+</head>
+<body>
+<div class="progress-track"><div class="progress-fill" id="prog"></div></div>
+<div class="deck" id="deck">
+
+  <!-- ══════════════ FRONT MATTER ══════════════ -->
+
+  <!-- 1. TITLE -->
+  <section class="slide active title-slide" data-section="Discussion 4 · Opening">
+    <div class="eyebrow">ECON 105B · Intermediate Macro · Discussion Section</div>
+    <h1>The Open Economy<br>in the <span class="accent">Long Run</span></h1>
+    <p class="lede" style="margin-top:1rem">Four shocks, one accounting identity, and a price that never gets to decide anything. We open the economy, break <em>S = I</em>, and find out what takes over the job the interest rate used to do.</p>
+    <p class="serif-note" style="margin-top:1.6rem">Work on your own paper. Write before each reveal — the point is your reasoning, not a clean final answer.</p>
+    <div class="signature">Identity → ε → SOE → LOE → Synthesis</div>
+  </section>
+
+  <!-- 3. THROUGHLINE -->
+  <section class="slide title-slide" data-section="Discussion 4 · Opening">
+    <div class="eyebrow">The one sentence for today</div>
+    <div class="col" style="justify-content:center;max-width:960px">
+      <p class="lede" style="font-size:clamp(1.3rem,2.6vw,2.05rem);line-height:1.4;max-width:30ch;font-weight:700">Net exports are decided in the <span class="accent">capital market</span>, not the currency market.</p>
+      <p class="lede" style="font-size:clamp(1.15rem,2.1vw,1.7rem);line-height:1.45;max-width:44ch">The real exchange rate is the <span class="gold"><strong>messenger</strong></span> — it moves to whatever value makes <span style="font-family:var(--mono)">NX</span> equal <span style="font-family:var(--mono)">S − I</span>.</p>
+      <p class="serif-note" style="margin-top:1.2rem">Copy this onto the top of your page now. You will be asked to write it back, in your own words, on the last slide — and you will be asked to say <em>why</em>.</p>
+    </div>
+  </section>
+
+  <!-- 4. CALLBACK TO CH.3 -->
+  <section class="slide" data-section="Discussion 4 · Opening">
+    <div class="eyebrow">Where you already are</div>
+    <h2>In Chapter 3, the interest rate did all the work</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:960px">
+      <p class="lede">The closed-economy long-run model had exactly one market-clearing condition, and exactly one price to clear it with:</p>
+      <div class="models" style="max-width:840px">
+        <div class="model hi">
+          <span class="tag">Closed economy · Ch. 3</span>
+          <div class="eq">S = I(r)</div>
+          <div class="calc" style="font-size:.92rem;margin-top:.7rem;color:var(--grey)">
+            S is fixed by Ȳ, T and G.<br>
+            <span style="color:var(--accent);font-weight:700">r</span> moves until investment equals it.
+          </div>
+        </div>
+        <div class="model hi">
+          <span class="tag">Open economy · Ch. 6</span>
+          <div class="eq">S − I(r) = NX</div>
+          <div class="calc" style="font-size:.92rem;margin-top:.7rem;color:var(--grey)">
+            Saving no longer has to equal investment.<br>
+            The gap goes abroad — so what clears it?
+          </div>
+        </div>
+      </div>
+      <p class="lede">Opening the economy breaks <strong>S = I</strong>. Domestic savers can now lend abroad, and foreign savers can lend here, so the two sides are free to differ. That means <em>r</em> is no longer being asked to equate them.</p>
+      <div class="prompt">
+        <span class="cue">Think, don't write yet</span>
+        <p>If the interest rate is no longer the price that adjusts, <strong>what is?</strong> Hold your guess. By the end of Part 2 you will have the answer — and by the end of Part 3 you will find out that the answer is not the one doing the deciding.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 1 ══════════════ -->
+
+  <!-- 5. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 4 · Identity">
+    <div class="eyebrow">Part 1 of 5</div>
+    <h1>The Accounting<br>Spine</h1>
+    <p class="lede">Before any behaviour, any curve, any policy: two identities that must hold no matter what anyone does. Everything else in this discussion is a story about which side of them moved.</p>
+    <div class="sectrail">Identity → ε → SOE → LOE → Synthesis</div>
+    <div class="through">Throughline: net exports are decided in the capital market, not the currency market. The real exchange rate is the messenger — it moves to whatever value makes NX equal S − I.</div>
+  </section>
+
+  <!-- 6. READ EQUATIONS: Y = C + I + G + NX -->
+  <section class="slide" data-section="Discussion 4 · Identity">
+    <div class="eyebrow">Read the equations before you compute</div>
+    <h2>Where net exports come from</h2>
+    <div class="titlerule"></div>
+    <p class="lede">Open the economy and output has four destinations — but only the <em>domestic</em> part of each counts, plus what foreigners buy from us:</p>
+    <div class="model hi" style="max-width:820px;margin:1rem 0">
+      <span class="tag">Step 1 · the open-economy identity</span>
+      <div class="eq">Y = C<sup>d</sup> + I<sup>d</sup> + G<sup>d</sup> + X</div>
+      <div class="calc" style="font-size:.9rem;margin-top:.7rem;color:var(--grey)">
+        C<sup>d</sup>, I<sup>d</sup>, G<sup>d</sup> — spending on <em>domestically produced</em> goods &nbsp;·&nbsp; X — exports
+      </div>
+    </div>
+    <div class="two" style="max-width:900px;margin:.2rem 0 0">
+      <div class="model hi" style="box-shadow:none">
+        <span class="tag">Step 2 · split total spending</span>
+        <div class="calc">
+          C = C<sup>d</sup> + C<sup>f</sup><br>
+          I = I<sup>d</sup> + I<sup>f</sup><br>
+          G = G<sup>d</sup> + G<sup>f</sup>
+        </div>
+      </div>
+      <div class="model hi" style="box-shadow:none">
+        <span class="tag">Step 3 · substitute back</span>
+        <div class="calc">
+          Y = (C − C<sup>f</sup>) + (I − I<sup>f</sup>) + (G − G<sup>f</sup>) + X<br>
+          Y = C + I + G + X − <span class="lbl">IM</span><br>
+          <span class="lbl">Y = C + I + G + NX</span>
+        </div>
+      </div>
+    </div>
+    <p class="footnote" style="margin-top:.9rem">Nothing behavioural has happened yet. This is bookkeeping: the <span style="font-family:var(--mono)">C<sup>f</sup> + I<sup>f</sup> + G<sup>f</sup></span> we stripped out of each term <em>is</em> imports.</p>
+  </section>
+
+  <!-- 7. Q1 + REVEAL -->
+  <section class="slide" data-section="Discussion 4 · Identity">
+    <div class="eyebrow">Rearrange it, then read it</div>
+    <h2>What a trade deficit actually says</h2>
+    <div class="titlerule"></div>
+    <div class="chain" style="font-size:1.15rem;margin-bottom:.4rem">NX = Y − (C + I + G) &nbsp;&nbsp;⇒&nbsp;&nbsp; net exports = <strong>output</strong> − <strong>domestic spending</strong></div>
+    <div class="prompt" style="margin-top:.8rem">
+      <span class="cue">Question 1 (write)</span>
+      <p>In <strong>one sentence</strong>: what does a trade <em>deficit</em> tell you about this country's spending relative to its output? And — careful — does a deficit mean the country exports nothing?</p>
+    </div>
+    <button class="btn" data-reveal="r1" style="margin-top:1.1rem">Reveal</button>
+    <div class="reveal-hidden" id="r1">
+      <div class="reveal">
+        <span class="cue">Reveal</span>
+        <p>A deficit means <strong>total consumption exceeds production</strong>. Households, firms and the government together are consuming more goods than domestic factors of production made. Those extra goods have to come from somewhere — they come from abroad, and we call them <strong>imports</strong>.</p>
+        <p><strong>No, exports are not zero.</strong> NX is a <em>net</em> figure. A country with a deficit can be exporting enormously; it is simply importing more. Students who read "trade deficit" as "we don't sell anything abroad" have misread a difference as a level — and they will make the same mistake with S − I in ten minutes.</p>
+        <p class="footnote" style="margin-top:.6rem;font-style:italic">Flip it: if spending is <em>less</em> than output, the excess goods are sold abroad and NX &gt; 0. Again, imports are not zero.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. READ EQUATIONS: S - I = NX -->
+  <section class="slide" data-section="Discussion 4 · Identity">
+    <div class="eyebrow">Read the equations before you predict</div>
+    <h2>The second identity — and it is the important one</h2>
+    <div class="titlerule"></div>
+    <p class="lede">Start from the identity you just derived and subtract consumption and government purchases from both sides:</p>
+    <div class="model hi" style="max-width:860px;margin:1rem 0">
+      <span class="tag">Derivation</span>
+      <div class="calc" style="font-size:1.12rem">
+        Y = C + I + G + NX<br>
+        <span class="lbl">Y − C − G</span> = I + NX &nbsp;&nbsp;<span style="color:var(--grey);font-size:.9rem">← the left side is national saving, S</span><br>
+        S = I + NX<br>
+        <span class="lbl" style="font-size:1.25rem">S − I = NX</span>
+      </div>
+    </div>
+    <div class="two" style="max-width:900px">
+      <div class="model hi" style="box-shadow:none">
+        <span class="tag">Left side · S − I</span>
+        <div class="calc" style="font-size:1rem;line-height:1.6">
+          <strong>Net capital outflow</strong><br>
+          <span style="font-size:.9rem;color:var(--grey)">What domestic residents lend abroad, minus what foreigners lend to us. A <em>capital-market</em> quantity.</span>
+        </div>
+      </div>
+      <div class="model hi" style="box-shadow:none">
+        <span class="tag">Right side · NX</span>
+        <div class="calc" style="font-size:1rem;line-height:1.6">
+          <strong>The trade balance</strong><br>
+          <span style="font-size:.9rem;color:var(--grey)">Exports minus imports. A <em>goods-market</em> quantity.</span>
+        </div>
+      </div>
+    </div>
+    <p class="footnote" style="margin-top:.9rem">Two completely different markets, forced to the same number by an identity. That equals sign is the whole chapter.</p>
+  </section>
+
+  <!-- 9. PREDICT Q2 -->
+  <section class="slide" data-section="Discussion 4 · Identity">
+    <div class="eyebrow">Commit before deriving</div>
+    <h2>Predict</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:860px">
+      <p class="lede">A country runs a <strong>trade surplus</strong>: it sells more goods and services to the rest of the world than it buys from them.</p>
+      <div class="predict">
+        <span class="cue">Question 2 (predict)</span>
+        <p>Is that country a net <strong>buyer</strong> of foreign assets, or a net <strong>seller</strong> of its own assets to foreigners? Write down a commitment — and one sentence saying why — before the next slide.</p>
+      </div>
+      <p class="footnote">Don't derive it from the identity yet. Guess it from the goods. If you get it right for the wrong reason, that will show up in a moment.</p>
+    </div>
+  </section>
+
+  <!-- 10. REVEAL Q2 -->
+  <section class="slide" data-section="Discussion 4 · Identity">
+    <div class="eyebrow">The goods intuition</div>
+    <h2>They cannot pay you back in goods</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:900px">
+      <div class="chain" style="font-size:1.05rem">NX &gt; 0 &nbsp;⇒&nbsp; S − I &gt; 0 &nbsp;⇒&nbsp; net capital <em>outflow</em> is positive</div>
+      <div class="reveal">
+        <span class="cue">Reveal</span>
+        <p><strong>A net buyer of foreign assets.</strong> Here is why, without touching the algebra.</p>
+        <p>You ship them goods. The natural way for them to compensate you is to ship goods back — that is what imports are. But a surplus <em>means precisely that they did not ship back enough goods</em>. So they settle the balance the only other way available: by handing over <strong>assets</strong>. They sell you their bonds, their equity, claims on their future output.</p>
+        <p>Acquiring those claims is a form of saving. That is why S − I rises exactly in step with NX — not by coincidence, but because they are the same transaction described from two sides.</p>
+      </div>
+      <p class="lede" style="margin-top:.3rem">Run it backwards for a deficit: <em>we</em> consume more than we produce, so we hand over claims on ourselves. Foreigners lend to us, buy our debt, buy stock in our firms. S − I &lt; 0.</p>
+      <p class="footnote">Capital flows take many forms — loans between countries, purchases of government or corporate debt, foreigners buying shares in a domestic company. The model does not care which.</p>
+    </div>
+  </section>
+
+  <!-- 11. DIAGNOSE Q3 -->
+  <section class="slide" data-section="Discussion 4 · Identity">
+    <div class="eyebrow">Question 3 · diagnose · silent poll</div>
+    <h2>One of these three is reasoning badly</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:70ch">All three statements below are about the same identity. Two are sound. One reaches a familiar-sounding claim by a route that does not hold up.</p>
+    <div>
+      <div class="diag" id="dg1">
+        <button type="button" class="diag-opt"><span class="n">1</span><span class="s">A country running a trade deficit is absorbing more goods than it produces, and it finances the difference by handing foreigners claims on itself. Deficit and net capital inflow are two descriptions of one transaction.</span></button>
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">2</span><span class="s">The U.S. trade deficit is <em>caused by</em> foreigners buying U.S. assets: the capital flooding in is what forces American imports to exceed American exports.</span></button>
+        <button type="button" class="diag-opt"><span class="n">3</span><span class="s">Because S − I = NX is an identity, any change in the trade balance is matched one-for-one by a change in net capital outflow — but the identity by itself tells you nothing about which side moved first.</span></button>
+      </div>
+      <p class="poll-hint">Students pick a number on paper. No hands until everyone has written.</p>
+      <button class="btn" data-diag-reveal="dg1">Reveal the flaw</button>
+      <div data-diag-note style="display:none;margin-top:1.1rem">
+        <div class="reveal">
+          <span class="cue">Why the reasoning fails</span>
+          <p><strong>Statement 2 has the co-movement exactly right and the causation backwards.</strong> Capital inflows and trade deficits do move together — statement 1 and statement 3 say so too. But an identity is not a causal claim. <span style="font-family:var(--mono)">S − I = NX</span> is true by construction; it holds every year, in every country, whatever anyone's motives were.</p>
+          <p>To say what <em>caused</em> the deficit you need a model, and in this model the primitives are <strong>saving and investment</strong> — set by Ȳ, T, G and the interest rate. Those move first. NX is what falls out. "Foreigners bought our assets, therefore we import more" gets the arrow pointing from the accounting residual to the primitive.</p>
+          <p><strong>Connect it to the throughline:</strong> net exports are decided in the capital market. That is the claim statement 2 is closest to getting right — and it is precisely the claim it inverts.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 2 ══════════════ -->
+
+  <!-- 12. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 4 · Exchange Rate">
+    <div class="eyebrow">Part 2 of 5</div>
+    <h1>The Real Exchange<br>Rate as a Price</h1>
+    <p class="lede">ε is not a mysterious international variable. It is a relative price of goods, and prices are set by supply and demand — so we are going to find the supply curve and the demand curve.</p>
+    <div class="sectrail">Identity ✓ → ε → SOE → LOE → Synthesis</div>
+    <div class="through">Throughline: net exports are decided in the capital market, not the currency market. The real exchange rate is the messenger — it moves to whatever value makes NX equal S − I.</div>
+  </section>
+
+  <!-- 13. READ EQUATIONS: e and ε -->
+  <section class="slide" data-section="Discussion 4 · Exchange Rate">
+    <div class="eyebrow">Read the equations before you compute</div>
+    <h2>Two exchange rates, one convention</h2>
+    <div class="titlerule"></div>
+    <div class="model hiRed" style="max-width:900px;margin:.6rem 0 1rem">
+      <span class="tag">State this convention out loud — everything downstream depends on it</span>
+      <div class="eq" style="font-size:1.15rem"><strong>e</strong> = units of <span class="red">foreign</span> currency per unit of <span class="accent">domestic</span> currency</div>
+      <div class="calc" style="font-size:.95rem;margin-top:.7rem;line-height:1.7">
+        e = 80 ¥/$ &nbsp;→&nbsp; one dollar buys eighty yen.<br>
+        <span style="color:var(--accent);font-weight:700">e ↑ = appreciation</span> — the domestic currency buys <em>more</em> foreign currency, so it is more valuable.<br>
+        <span style="color:var(--red);font-weight:700">e ↓ = depreciation</span> — it buys less.
+      </div>
+    </div>
+    <p class="lede">The nominal rate has a problem: it says nothing about what the money <em>buys</em>. One dollar gets you 80 yen — but does a dollar buy 80 times as much in the U.S. as a yen buys in Japan? That depends on prices. So deflate it:</p>
+    <div class="model hi" style="max-width:900px;margin:1rem 0">
+      <span class="tag">The real exchange rate</span>
+      <div class="eq" style="font-size:1.3rem">ε = e × (P / P*)</div>
+      <div class="calc" style="font-size:.95rem;margin-top:.7rem;color:var(--grey)">
+        ε = nominal rate × (domestic price level ÷ foreign price level)<br>
+        Units: <strong>foreign goods per domestic good</strong>. It is a relative price of <em>goods</em>, not of money.
+      </div>
+    </div>
+  </section>
+
+  <!-- 14. COMPUTE Q4 -->
+  <section class="slide" data-section="Discussion 4 · Exchange Rate">
+    <div class="eyebrow">Compute · then say it in words</div>
+    <h2>One car, two countries</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:960px;margin-bottom:.4rem">
+      <div class="model hi" style="box-shadow:none">
+        <span class="tag">The data</span>
+        <div class="calc">
+          American car:&nbsp; <strong>$25,000</strong><br>
+          Japanese car:&nbsp; <strong>¥4,000,000</strong><br>
+          Nominal rate:&nbsp; <strong>80 ¥/$</strong>
+        </div>
+      </div>
+      <div class="prompt" style="align-self:start">
+        <span class="cue">Question 4 (write)</span>
+        <p>Compute ε. Then write the number as an English sentence — <em>"one American car is worth ______"</em>. The sentence is the part that matters.</p>
+      </div>
+    </div>
+    <button class="btn" data-reveal="r4">Reveal the computation</button>
+    <div class="reveal-hidden" id="r4">
+      <div class="two" style="max-width:960px">
+        <div class="model hi" style="box-shadow:none">
+          <span class="tag">The arithmetic</span>
+          <div class="calc">
+            ε = (80 ¥/$) × ($25,000 ÷ ¥4,000,000)<br>
+            &nbsp;&nbsp; = ¥2,000,000 ÷ ¥4,000,000<br>
+            &nbsp;&nbsp; = <span class="lbl" style="font-size:1.25rem">0.5</span>
+          </div>
+          <p class="footnote" style="margin-top:.5rem">The middle line is the whole trick: convert the American car into yen first (80 × 25,000 = 2 million yen), then compare it to a Japanese car at 4 million yen.</p>
+        </div>
+        <div class="reveal" style="align-self:start">
+          <span class="cue">Say it out loud</span>
+          <p>"One American car buys <strong>half a Japanese car</strong>."</p>
+          <p>ε is not a number of dollars or a number of yen. It is <strong>goods per good</strong>. That is exactly why it, and not <em>e</em>, is the price that governs trade flows: an importer cares how many foreign cars a domestic car is worth, not how many yen a dollar fetches.</p>
+        </div>
+      </div>
+      <p class="footnote" style="margin-top:.7rem">In the model we use whole price levels rather than one good, so ε = e·P/P* is the same calculation done for the basket.</p>
+    </div>
+  </section>
+
+  <!-- 15. PROMPT Q5 -->
+  <section class="slide" data-section="Discussion 4 · Exchange Rate">
+    <div class="eyebrow">Reason it through</div>
+    <h2>What a high ε does to trade</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:900px">
+      <p class="lede">Suppose ε <strong>rises</strong>. That could happen because the nominal rate rose, or because domestic prices rose relative to foreign prices — the model does not care which.</p>
+      <div class="prompt">
+        <span class="cue">Question 5 (write)</span>
+        <p>Which way do <strong>exports (X)</strong> and <strong>imports (IM)</strong> move, and <em>why</em>? Write the "why" as a sentence about who finds what expensive — not just two arrows.</p>
+      </div>
+      <button class="btn" data-reveal="r5" style="margin-top:.4rem">Reveal</button>
+      <div class="reveal-hidden" id="r5">
+        <div class="reveal">
+          <span class="cue">Reveal</span>
+          <p>A <strong>high ε</strong> means one domestic good trades for a lot of foreign goods — which is another way of saying <strong>domestic goods are expensive in foreign terms</strong>, and foreign goods are cheap in ours.</p>
+          <p>So foreigners buy fewer of our goods: <strong>X ↓</strong>. And we buy more of theirs: <strong>IM ↑</strong>. Both move against the trade balance, so <strong>NX falls</strong>.</p>
+          <p>Run it the other way and every sign flips: a <strong>low ε</strong> makes domestic goods cheap abroad, so X ↑, IM ↓, and NX rises.</p>
+        </div>
+        <div class="chain" style="margin-top:.9rem">ε↑ → domestic goods expensive abroad → X↓ and IM↑ → NX↓</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16. GRAPH: NX(ε) -->
+  <section class="slide" data-section="Discussion 4 · Exchange Rate">
+    <div class="eyebrow">The first curve</div>
+    <h2>Net exports as a function of ε</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:1fr 1fr">
+      <div class="panel">
+        <div class="ptitle">NX(ε) — downward sloping</div>
+        <svg style="max-width:500px;margin:0 auto" viewBox="0 0 430 330" role="img" aria-label="The net exports curve. With the real exchange rate on the vertical axis and net exports on the horizontal axis, the NX curve slopes downward: at a high real exchange rate domestic goods are expensive abroad and net exports are negative; at a low real exchange rate they are cheap abroad and net exports are positive; the curve crosses zero net exports at a real exchange rate of one.">
+          <line x1="55" y1="20" x2="55" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="55" y1="280" x2="415" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="47" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">ε</text>
+          <text x="415" y="318" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Net Exports (NX)</text>
+          <!-- zero NX vertical reference -->
+          <line x1="235" y1="20" x2="235" y2="280" stroke="#C9C6BC" stroke-width="1" stroke-dasharray="4 4"/>
+          <text x="235" y="296" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">0</text>
+          <!-- NX(ε) from (100,130) to (415,270) -->
+          <line x1="100" y1="130" x2="415" y2="270" stroke="#1F4E79" stroke-width="3.2" stroke-linecap="round"/>
+          <text x="415" y="220" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" text-anchor="end">NX(ε)</text>
+          <!-- annotation arrows, revealed. Each callout sits in empty space
+               on the correct side of the zero line, with a leader to the curve. -->
+          <g id="nxA" opacity="0">
+            <text x="64" y="50" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700">ε high</text>
+            <text x="64" y="65" font-family="monospace" font-size="9" fill="#C0392B">our goods dear abroad ⇒ X↓ IM↑</text>
+            <text x="64" y="78" font-family="monospace" font-size="9" fill="#C0392B">⇒ NX &lt; 0, left of the 0 line</text>
+            <line x1="152" y1="88" x2="152" y2="138" stroke="#C0392B" stroke-width="1.6" marker-end="url(#nxDown)"/>
+          </g>
+          <g id="nxB" opacity="0">
+            <text x="100" y="238" font-family="monospace" font-size="10" fill="#155C38" font-weight="700">ε low</text>
+            <text x="100" y="253" font-family="monospace" font-size="9" fill="#155C38">our goods cheap abroad ⇒ X↑ IM↓</text>
+            <text x="100" y="266" font-family="monospace" font-size="9" fill="#155C38">⇒ NX &gt; 0, right of the 0 line</text>
+            <line x1="288" y1="244" x2="348" y2="244" stroke="#155C38" stroke-width="1.6" marker-end="url(#nxRight)"/>
+          </g>
+          <defs>
+            <marker id="nxDown" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#C0392B"/></marker>
+            <marker id="nxRight" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#155C38"/></marker>
+          </defs>
+        </svg>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <p class="lede">Note the axes: ε is on the <strong>vertical</strong> axis and NX on the horizontal. That is the convention for the rest of the deck, and it is worth ten seconds of confusion now rather than twenty minutes later.</p>
+        <button class="btn" data-reveal-svg="nxslope">Why does it slope down?</button>
+        <div class="reveal-hidden" id="nxslopeTxt">
+          <div class="reveal">
+            <span class="cue">The justification, not just the curve</span>
+            <p>Every point on this curve is a <em>different relative price of goods</em>. Move up it and domestic output becomes dearer in foreign terms, so foreigners buy less of it and we buy more of theirs. Both effects push NX left.</p>
+            <p>The slope therefore comes entirely from <strong>substitution in the goods market</strong>. There is no capital, no interest rate, and no saving anywhere in this curve — which is exactly why it will turn out to be unable to set NX on its own.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 17. PUNCHLINE: ε IS A PRICE -->
+  <section class="slide" data-section="Discussion 4 · Exchange Rate">
+    <div class="eyebrow">The move that makes the model work</div>
+    <h2>ε is a price, so find its supply and demand</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:960px">
+      <p class="lede">If ε is a price, then it is determined the way every price is: by the quantity demanded and the quantity supplied. So name them.</p>
+      <div class="two" style="max-width:940px">
+        <div class="model hi">
+          <span class="tag">Demand · NX(ε)</span>
+          <div class="calc" style="font-size:1rem;line-height:1.6">
+            <strong>Net demand for domestic currency</strong><br>
+            <span style="font-size:.9rem;color:var(--grey)">When exports exceed imports, foreigners need <em>more</em> of our currency to pay for our goods. When imports exceed exports, they need less. NX(ε) <em>is</em> that net demand — and it slopes down in ε.</span>
+          </div>
+        </div>
+        <div class="model hiRed">
+          <span class="tag">Supply · S − I</span>
+          <div class="calc" style="font-size:1rem;line-height:1.6">
+            <strong>Supply of domestic currency</strong><br>
+            <span style="font-size:.9rem;color:var(--grey)">Net capital outflow is domestic residents sending funds abroad — putting domestic currency onto world financial markets. That is the supply side.</span>
+          </div>
+        </div>
+      </div>
+      <div class="chain" style="font-size:1.1rem;margin-top:.6rem">S − I = NX(ε) &nbsp;&nbsp;⇒&nbsp;&nbsp; supply = demand &nbsp;&nbsp;⇒&nbsp;&nbsp; ε is pinned down</div>
+      <p class="lede" style="margin-top:.3rem">Read that equation from left to right and the throughline falls out on its own. <strong>The left side is a capital-market quantity.</strong> It does not contain ε. So the left side is a <em>number</em>, and ε is whatever it takes on the right to hit it.</p>
+    </div>
+  </section>
+
+  <!-- 18. GRAPH: FOREX DIAGRAM -->
+  <section class="slide" data-section="Discussion 4 · Exchange Rate">
+    <div class="eyebrow">The market for foreign exchange</div>
+    <h2>A vertical supply meets a downward-sloping demand</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:1.1fr .9fr">
+      <div class="panel">
+        <div class="ptitle">The foreign-exchange market</div>
+        <svg style="max-width:500px;margin:0 auto" viewBox="0 0 430 330" role="img" aria-label="The market for foreign exchange. A vertical net capital outflow line, S minus I, meets the downward-sloping net exports curve at point A. Because the real exchange rate does not appear in saving or investment, the supply line is vertical, so the level of net exports is set entirely by S minus I and the real exchange rate adjusts to reach it.">
+          <line x1="55" y1="20" x2="55" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="55" y1="280" x2="415" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="47" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">ε</text>
+          <text x="415" y="318" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Net Exports (NX)</text>
+          <line x1="100" y1="130" x2="415" y2="270" stroke="#1F4E79" stroke-width="3.2" stroke-linecap="round"/>
+          <text x="415" y="220" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" text-anchor="end">NX(ε)</text>
+          <!-- vertical S-I at NX = 0 -->
+          <line x1="235" y1="30" x2="235" y2="280" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="235" y="24" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700" text-anchor="middle">S − I</text>
+          <!-- equilibrium A, revealed -->
+          <g id="fx0A" opacity="0">
+            <circle cx="235" cy="190" r="5.5" fill="#14243A"/>
+            <text x="246" y="181" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+            <line x1="55" y1="190" x2="235" y2="190" stroke="#5A5F66" stroke-width="1.1" stroke-dasharray="4 3"/>
+            <text x="49" y="194" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">ε₁</text>
+            <text x="235" y="296" font-family="monospace" font-size="10" fill="#14243A" text-anchor="middle">NX₁</text>
+          </g>
+        </svg>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <p class="lede">The horizontal position of the red line is decided in the loanable-funds market, before we ever get here. The blue curve then tells us the only ε consistent with it.</p>
+        <button class="btn" data-reveal-svg="fx0">Show the equilibrium</button>
+        <div class="reveal-hidden" id="fx0Txt">
+          <div class="reveal">
+            <span class="cue">Read the picture in the right order</span>
+            <p><strong>Left to right, not up and down.</strong> First S − I fixes the horizontal position. Then ε slides to wherever NX(ε) crosses it. The exchange rate is the last thing to be determined, not the first.</p>
+            <p>Reverse that order and you get every wrong answer in this chapter.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 19. QUICK CHECK Q6 -->
+  <section class="slide" data-section="Discussion 4 · Exchange Rate">
+    <div class="eyebrow">Question 6 · quick check · the hinge for Part 3</div>
+    <h2>Why is the S − I line vertical?</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:70ch">Not a trivia question. Everything surprising in the next twenty minutes is a consequence of the answer.</p>
+    <div class="poll" id="poll6">
+      <div class="poll-opts">
+        <button type="button" class="poll-opt" data-correct="true"><span class="num">1</span><span class="txt">Because ε does not appear in the saving function or the investment function — so no matter what ε is, S − I is the same number.</span></button>
+        <button type="button" class="poll-opt" data-correct="false"><span class="num">2</span><span class="txt">Because capital is immobile: funds cannot cross the border, so the quantity is stuck.</span></button>
+        <button type="button" class="poll-opt" data-correct="false"><span class="num">3</span><span class="txt">Because net exports are fixed by trade policy and the model treats them as exogenous.</span></button>
+      </div>
+      <p class="poll-hint">Commit on paper. Then reveal.</p>
+      <button class="btn" data-poll-reveal="poll6" style="margin-top:1rem">Reveal the answer</button>
+    </div>
+    <button class="btn ghost" data-reveal="r6" style="margin-top:.9rem">Why the other two are tempting</button>
+    <div class="reveal-hidden" id="r6">
+      <div class="reveal">
+        <span class="cue">The reasoning</span>
+        <p><strong>Option 1.</strong> Look at what S and I are made of. S = Ȳ − C(Ȳ − T) − G — output, taxes, government purchases, none of which is a function of the exchange rate. I = I(r) — the interest rate, which in a small open economy is pinned at r*. So ε is simply absent from both. A curve that does not respond to the variable on the vertical axis is a vertical line.</p>
+        <p><strong>Option 2 is the opposite of our assumption.</strong> We have assumed <em>perfect</em> capital mobility. Immobile capital would force S − I to zero, which is a different model entirely.</p>
+        <p><strong>Option 3 confuses the conclusion with the assumption.</strong> NX will indeed turn out to be fixed in some experiments — but as a <em>result</em> of S − I being fixed, not as an assumption about trade policy. Part 3 makes that distinction pay.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 3 ══════════════ -->
+
+  <!-- 20. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 4 · Small Open Economy">
+    <div class="eyebrow">Part 3 of 5</div>
+    <h1>Small Open Economy:<br>Four Experiments</h1>
+    <p class="lede">One model, four shocks, and a running scorecard. Three of them move net exports. One of them does not — and that one is the reason this chapter exists.</p>
+    <div class="sectrail">Identity ✓ → ε ✓ → SOE → LOE → Synthesis</div>
+    <div class="through">Throughline: net exports are decided in the capital market, not the currency market. The real exchange rate is the messenger — it moves to whatever value makes NX equal S − I.</div>
+  </section>
+
+  <!-- 21. READ EQUATIONS: SOE -->
+  <section class="slide" data-section="Discussion 4 · Small Open Economy">
+    <div class="eyebrow">Read the equations before you predict</div>
+    <h2>The small open economy in four lines</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1000px;margin:.6rem 0">
+      <div class="model hi" style="box-shadow:none">
+        <span class="tag">Carried over from Chapter 3</span>
+        <div class="calc" style="line-height:1.9">
+          Ȳ = F(K̄, L̄)&nbsp;&nbsp;<span style="color:var(--grey);font-size:.85rem">output fixed by factors</span><br>
+          C = C(Ȳ − T)&nbsp;&nbsp;<span style="color:var(--grey);font-size:.85rem">consumption from disposable income</span><br>
+          I = I(r)&nbsp;&nbsp;<span style="color:var(--grey);font-size:.85rem">investment falls in r</span>
+        </div>
+      </div>
+      <div class="model hiRed" style="box-shadow:none">
+        <span class="tag">The one new assumption</span>
+        <div class="eq" style="font-size:1.5rem">r = r*</div>
+        <div class="calc" style="font-size:.9rem;margin-top:.6rem;color:var(--grey)">
+          <strong>Small</strong> — this country's actions have a negligible effect on the world economy.<br>
+          <strong>Perfect capital mobility</strong> — residents have full access to world financial markets.
+        </div>
+      </div>
+    </div>
+    <div class="prompt" style="max-width:900px">
+      <span class="cue">The arbitrage argument · say it, do not just assert it</span>
+      <p>From an investor's point of view all small economies offer the same opportunity. So if this country offered a rate <strong>below</strong> r*, no foreign funds would come and domestic savings would leave for the better return elsewhere — pushing the rate back up. If it offered a rate <strong>above</strong> r*, funds would pour in until the rate was competed back down. Neither gap survives. Hence r = r*.</p>
+    </div>
+    <div class="chain" style="margin-top:1rem">NX = [Ȳ − C(Ȳ − T) − G] − I(r*) &nbsp;=&nbsp; S̄ − I(r*)</div>
+    <p class="footnote" style="margin-top:.6rem">Every term on the right is now a number. That is the sentence to underline: <strong>saving does not have to equal investment</strong>, and neither side is waiting on the exchange rate.</p>
+  </section>
+
+  <!-- 22. BASELINE GRAPH (NX > 0 case) -->
+  <section class="slide" data-section="Discussion 4 · Small Open Economy">
+    <div class="eyebrow">The model, assembled</div>
+    <h2>Why a small open economy lends abroad</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:76ch">Here the world rate sits <em>above</em> the rate this country would have had on its own. Read the left panel first, then carry the number across.</p>
+    <div class="graphwrap" style="grid-template-columns:1fr 1fr;margin-top:.4rem">
+      <div class="panel">
+        <div class="ptitle">1 · Loanable funds — fixes S − I</div>
+        <svg style="max-width:500px;margin:0 auto" viewBox="0 0 430 330" role="img" aria-label="The loanable funds market in a small open economy. National saving is a vertical line and investment slopes downward in the interest rate. The world interest rate lies above the interest rate that would clear a closed economy, so at the world rate saving exceeds investment. The horizontal gap between investment at point B prime and saving at point B is positive net capital outflow, which also equals positive net exports.">
+          <line x1="55" y1="20" x2="55" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="55" y1="280" x2="415" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="47" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">r</text>
+          <text x="415" y="318" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">Investment and Saving (I, S)</text>
+          <!-- I(r) = 1000 - 50r -->
+          <line x1="334" y1="269" x2="64" y2="53" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="340" y="266" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">I(r)</text>
+          <!-- S vertical at 750 -->
+          <line x1="235" y1="40" x2="235" y2="280" stroke="#8A5900" stroke-width="3" stroke-linecap="round"/>
+          <text x="235" y="34" font-family="monospace" font-size="12" fill="#8A5900" font-weight="700" text-anchor="middle">S̄</text>
+          <!-- closed economy rate r_c = 5 -->
+          <line x1="55" y1="190" x2="250" y2="190" stroke="#5A5F66" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <text x="49" y="194" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700" text-anchor="end">r<tspan font-size="8" dy="3">c</tspan></text>
+          <circle cx="235" cy="190" r="5" fill="#5A5F66"/>
+          <text x="246" y="181" font-family="monospace" font-size="12" font-weight="700" fill="#5A5F66">A</text>
+          <!-- world rate r* = 8 -->
+          <line x1="55" y1="82" x2="415" y2="82" stroke="#C0392B" stroke-width="2" stroke-dasharray="6 3"/>
+          <text x="49" y="86" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="end">r*</text>
+          <circle cx="235" cy="82" r="5.5" fill="#14243A"/>
+          <text x="246" y="73" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">B</text>
+          <circle cx="100" cy="82" r="5.5" fill="#14243A"/>
+          <text x="89" y="99" font-family="monospace" font-size="12" font-weight="700" fill="#14243A" text-anchor="end">B′</text>
+          <!-- the gap — both captions stacked above the bar, clear of I(r) -->
+          <line x1="100" y1="82" x2="235" y2="82" stroke="#155C38" stroke-width="4" stroke-linecap="round"/>
+          <text x="167" y="60" font-family="monospace" font-size="11" fill="#155C38" font-weight="700" text-anchor="middle">S − I &gt; 0  (NCO)</text>
+          <text x="167" y="72" font-family="monospace" font-size="11" fill="#155C38" font-weight="700" text-anchor="middle">= NX &gt; 0</text>
+          <line x1="100" y1="82" x2="100" y2="280" stroke="#9AA0A6" stroke-width=".9" stroke-dasharray="4 3"/>
+          <text x="100" y="296" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">I(r*)</text>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="ptitle">2 · Foreign exchange — ε adjusts</div>
+        <svg style="max-width:500px;margin:0 auto" viewBox="0 0 430 330" role="img" aria-label="The foreign exchange market for the same economy. The vertical net capital outflow line sits at the positive value carried over from the loanable funds panel, and the real exchange rate falls to the level at which the net exports curve delivers that same positive number.">
+          <line x1="55" y1="20" x2="55" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="55" y1="280" x2="415" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="47" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">ε</text>
+          <text x="415" y="318" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Net Exports (NX)</text>
+          <line x1="235" y1="20" x2="235" y2="280" stroke="#C9C6BC" stroke-width="1" stroke-dasharray="4 4"/>
+          <text x="235" y="296" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">0</text>
+          <line x1="100" y1="130" x2="415" y2="270" stroke="#1F4E79" stroke-width="3.2" stroke-linecap="round"/>
+          <!-- labelled at the left end: the equilibrium sits far right in this panel -->
+          <text x="104" y="122" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">NX(ε)</text>
+          <line x1="370" y1="30" x2="370" y2="280" stroke="#155C38" stroke-width="3" stroke-linecap="round"/>
+          <text x="370" y="24" font-family="monospace" font-size="11" fill="#155C38" font-weight="700" text-anchor="middle">S − I &gt; 0</text>
+          <circle cx="370" cy="250" r="5.5" fill="#14243A"/>
+          <text x="381" y="241" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">B</text>
+          <line x1="55" y1="250" x2="370" y2="250" stroke="#5A5F66" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <text x="49" y="254" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">ε₁</text>
+          <text x="370" y="296" font-family="monospace" font-size="10" fill="#155C38" text-anchor="middle">NX &gt; 0</text>
+        </svg>
+      </div>
+    </div>
+    <p class="footnote" style="margin-top:.8rem"><strong>Why capital leaves.</strong> If domestic savers could only invest at home, the rate would be bid down to r<sub>c</sub> at point A. But the world pays r* &gt; r<sub>c</sub>, so they lend abroad instead. The horizontal distance B′→B is that lending — and by the identity it is also the trade surplus.</p>
+    <div class="chain warm" style="margin-top:.9rem">From here on: r* = r<sub>c</sub>, so <strong>NX starts at zero</strong> in all four experiments. Same starting point, four shocks — that is what makes them comparable.</div>
+  </section>
+
+  <!-- 23. PREDICT Q7 -->
+  <section class="slide" data-section="Discussion 4 · Small Open Economy">
+    <div class="eyebrow">Experiment 1 · commit before graphing</div>
+    <h2>Predict</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:880px">
+      <p class="lede">We start from balanced trade: NX = 0, so S = I(r*). Now the <strong>domestic</strong> government raises spending — G rises, with taxes unchanged.</p>
+      <div class="predict">
+        <span class="cue">Question 7 (predict)</span>
+        <p>Predict the <strong>sign of ΔNX</strong>. Write the sign, then one sentence naming the <em>first</em> thing that moves. Do not draw anything yet.</p>
+      </div>
+      <p class="footnote">If your sentence starts with "the exchange rate", stop and start it again somewhere else.</p>
+    </div>
+  </section>
+
+  <!-- 24. ANIMATED: G UP AT HOME -->
+  <section class="slide" data-section="Discussion 4 · Small Open Economy">
+    <div class="eyebrow">Experiment 1 · fiscal policy at home</div>
+    <h2>Government spending rises</h2>
+    <div class="titlerule"></div>
+    <div class="panel" style="margin-top:.2rem">
+      <svg style="max-width:960px;margin:0 auto" viewBox="0 0 890 366" role="img" aria-label="Two panels showing a rise in domestic government spending in a small open economy. In the left loanable funds panel, national saving shifts left while investment stays at the world interest rate, opening a negative gap: saving minus investment becomes negative. In the right foreign exchange panel the vertical net capital outflow line moves left with it, and the real exchange rate rises along the net exports curve, so net exports fall below zero.">
+        <!-- LEFT: loanable funds -->
+        <g>
+          <line x1="55" y1="20" x2="55" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="55" y1="280" x2="415" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="47" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">r</text>
+          <text x="415" y="318" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">Investment and Saving (I, S)</text>
+          <text x="235" y="342" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle" font-weight="700">Loanable funds</text>
+          <line x1="334" y1="269" x2="64" y2="53" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="340" y="266" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">I(r)</text>
+          <line x1="55" y1="190" x2="415" y2="190" stroke="#C0392B" stroke-width="2" stroke-dasharray="6 3"/>
+          <text x="49" y="194" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="end">r*</text>
+          <!-- original S (ghost) -->
+          <line x1="235" y1="40" x2="235" y2="280" stroke="#D8C79B" stroke-width="2" stroke-dasharray="5 4"/>
+          <text x="235" y="34" font-family="monospace" font-size="11" fill="#B08A3C" font-weight="700" text-anchor="middle">S̄</text>
+          <!-- moving S -->
+          <line id="gS" x1="235" y1="40" x2="235" y2="280" stroke="#8A5900" stroke-width="3" stroke-linecap="round"/>
+          <text id="gSt" x="235" y="34" font-family="monospace" font-size="11" fill="#8A5900" font-weight="700" text-anchor="middle" opacity="0">S̄′</text>
+          <!-- fixed I(r*) point = A -->
+          <circle cx="235" cy="190" r="5.5" fill="#14243A"/>
+          <text x="244" y="184" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+          <!-- moving point on S at r* -->
+          <circle id="gB" cx="235" cy="190" r="5.5" fill="#C0392B"/>
+          <text id="gBt" x="225" y="184" font-family="monospace" font-size="12" font-weight="700" fill="#C0392B" text-anchor="end" opacity="0">B</text>
+          <!-- gap bar -->
+          <line id="gGap" x1="235" y1="190" x2="235" y2="190" stroke="#C0392B" stroke-width="4" stroke-linecap="round" opacity="0"/>
+          <text id="gGapT" x="190" y="174" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="middle" opacity="0">S − I &lt; 0</text>
+          <text id="gArr" x="190" y="60" font-family="monospace" font-size="11" fill="#8A5900" font-weight="700" text-anchor="middle" opacity="0">G↑ ⇒ S↓</text>
+        </g>
+        <!-- RIGHT: forex -->
+        <g transform="translate(460,0)">
+          <line x1="55" y1="20" x2="55" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="55" y1="280" x2="415" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="47" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">ε</text>
+          <text x="415" y="318" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Net Exports (NX)</text>
+          <text x="235" y="342" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle" font-weight="700">Foreign exchange</text>
+          <line x1="235" y1="20" x2="235" y2="280" stroke="#C9C6BC" stroke-width="1" stroke-dasharray="4 4"/>
+          <text x="235" y="296" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">0</text>
+          <line x1="100" y1="130" x2="415" y2="270" stroke="#1F4E79" stroke-width="3.2" stroke-linecap="round"/>
+          <text x="415" y="220" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" text-anchor="end">NX(ε)</text>
+          <line x1="235" y1="30" x2="235" y2="280" stroke="#D8C79B" stroke-width="2" stroke-dasharray="5 4"/>
+          <line id="gSI" x1="235" y1="30" x2="235" y2="280" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text id="gSIt" x="235" y="24" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="middle" opacity="0">S′ − I</text>
+          <!-- ε₁ guide to the original equilibrium — stays put as the shock runs -->
+          <line x1="55" y1="190" x2="235" y2="190" stroke="#9AA0A6" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <circle cx="235" cy="190" r="5.5" fill="#14243A"/>
+          <text x="246" y="181" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+          <circle id="gDot" cx="235" cy="190" r="5.5" fill="#C0392B"/>
+          <text id="gDotT" x="225" y="146" font-family="monospace" font-size="12" font-weight="700" fill="#C0392B" text-anchor="end" opacity="0">B</text>
+          <line id="gEg" x1="55" y1="190" x2="235" y2="190" stroke="#C0392B" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/>
+          <text id="gEt" x="49" y="154" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="end" opacity="0">ε₂</text>
+          <text x="49" y="194" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">ε₁</text>
+          <text id="gNXt" x="145" y="296" font-family="monospace" font-size="10" fill="#C0392B" text-anchor="middle" opacity="0">NX₂ &lt; 0</text>
+        </g>
+      </svg>
+      <div class="controls" style="flex-direction:row;gap:1rem;align-items:center;margin-top:1rem;flex-wrap:wrap">
+        <button class="btn" id="playG">▶ Play the shock</button>
+        <button class="btn ghost" id="resetG">Reset</button>
+        <div class="readout" id="readG" aria-live="polite" aria-atomic="true" style="flex:1;min-width:300px">
+          G = <span id="gGv">1000</span> &nbsp;·&nbsp; S = <span class="gold" id="gSv">750</span> &nbsp;·&nbsp; I(r*) = 750 &nbsp;·&nbsp; S − I = <span class="red" id="gNv">0</span> &nbsp;·&nbsp; ε = <span class="accent" id="gEv">1.00</span> &nbsp;·&nbsp; NX = <span class="red" id="gXv">0</span>
+        </div>
+      </div>
+    </div>
+    <div class="chain hot" style="margin-top:.9rem">G↑ → S↓ → S−I↓ → ε↑ → NX↓</div>
+    <p class="footnote" style="margin-top:.5rem">Numbers used: S̄ = Ȳ − C(Ȳ−T) − G with Ȳ = 5000, C = 250 + 0.75(Y−T), T = 1000; I(r) = 1000 − 50r; r* = 5; NX(ε) = 500 − 500ε.</p>
+  </section>
+
+  <!-- 25. REVEAL: TWIN DEFICITS + THE r OVERSHOOT -->
+  <section class="slide" data-section="Discussion 4 · Small Open Economy">
+    <div class="eyebrow">Experiment 1 · the mechanism</div>
+    <h2>Twin deficits — and the step almost everyone skips</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:980px">
+      <div class="reveal">
+        <span class="cue">Reveal · the answer</span>
+        <p><strong>NX falls.</strong> A budget deficit and a trade deficit arrive together — the <strong>twin deficits</strong>. Higher G cuts national saving, saving minus investment goes negative, and the exchange rate appreciates until net exports have fallen to match.</p>
+      </div>
+      <button class="btn" data-reveal="r25" style="margin-top:1rem">The step almost everyone skips</button>
+      <div class="reveal-hidden" id="r25">
+        <div class="predict">
+          <span class="cue">Why r returns to r*</span>
+          <p>Write the chain as "S falls, therefore ε rises" and you have the right answer with a <strong>broken mechanism</strong>. Nothing in that sentence explains why capital comes in.</p>
+          <p>What actually happens: lower saving means a <strong>shortage of loanable funds</strong>, which — exactly as in the closed economy — pushes the domestic real interest rate <strong>up</strong>. That rise is real but <strong>temporary</strong>, and we do not draw it. It is the bait. The higher return attracts foreign investors, capital flows <em>in</em>, and the inflow keeps arriving until the rate has been competed back <strong>down to r*</strong>.</p>
+          <p>So r ends where it started — but only after net capital outflow has fallen. <strong>The overshoot is what does the work; the final r just does not record it.</strong></p>
+        </div>
+        <div class="chain hot" style="margin-top:.9rem;line-height:1.7">G↑ → S↓ → shortage of funds → r <em>temporarily</em> ↑ → capital flows in → r back to r*, S−I↓ → ε↑ → NX↓</div>
+        <p class="lede" style="margin-top:.9rem">The same story in goods, with no money in it at all: a net capital <em>inflow</em> means the country is consuming more than it produces — that is why it is borrowing. A country consuming more than it produces must be importing more than it exports.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 26. PREDICT Q8 -->
+  <section class="slide" data-section="Discussion 4 · Small Open Economy">
+    <div class="eyebrow">Experiment 2 · commit before graphing</div>
+    <h2>Predict</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:900px">
+      <p class="lede">Same shock, different country. A <strong>large</strong> economy abroad raises <em>its</em> government spending. Our own G, T and Ȳ are untouched.</p>
+      <div class="predict">
+        <span class="cue">Question 8 (predict)</span>
+        <p>Predict the <strong>sign of ΔNX at home</strong>. Then answer the harder half: how does a fiscal decision made in another country reach us at all? Name the channel.</p>
+      </div>
+      <p class="footnote" style="margin-top:.4rem">One clue, since it is worth being explicit: a foreign <em>small</em> economy raising G would do nothing to us — by assumption it is too small to move world financial markets. The word "large" in this question is carrying the entire result.</p>
+    </div>
+  </section>
+
+  <!-- 27. ANIMATED: r* UP -->
+  <section class="slide" data-section="Discussion 4 · Small Open Economy">
+    <div class="eyebrow">Experiment 2 · fiscal policy abroad</div>
+    <h2>The world interest rate rises</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:80ch">Lower foreign saving means fewer loanable funds in world markets, and the higher foreign rate pulls investment toward that country. Both leave less for everyone else, so <strong>r* rises</strong>. That is the channel — and r* is the <em>only</em> link between this economy and the rest of the world.</p>
+    <div class="panel" style="margin-top:.5rem">
+      <svg style="max-width:960px;margin:0 auto" viewBox="0 0 890 366" role="img" aria-label="Two panels showing a rise in the world interest rate for a small open economy. In the left loanable funds panel the world rate line rises, so investment slides up and to the left along the investment curve while saving is unchanged, opening a positive gap between saving and investment. In the right foreign exchange panel the vertical net capital outflow line moves right, the real exchange rate falls along the net exports curve, and net exports rise above zero.">
+        <g>
+          <line x1="55" y1="20" x2="55" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="55" y1="280" x2="415" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="47" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">r</text>
+          <text x="415" y="318" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">Investment and Saving (I, S)</text>
+          <text x="235" y="342" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle" font-weight="700">Loanable funds</text>
+          <line x1="334" y1="269" x2="64" y2="53" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="340" y="266" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">I(r)</text>
+          <line x1="235" y1="40" x2="235" y2="280" stroke="#8A5900" stroke-width="3" stroke-linecap="round"/>
+          <text x="235" y="34" font-family="monospace" font-size="11" fill="#8A5900" font-weight="700" text-anchor="middle">S̄</text>
+          <!-- ghost r*1 -->
+          <line x1="55" y1="190" x2="415" y2="190" stroke="#E0B6B0" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <text x="49" y="194" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="end">r*₁</text>
+          <!-- moving r* line -->
+          <line id="wR" x1="55" y1="190" x2="415" y2="190" stroke="#C0392B" stroke-width="2.4" stroke-dasharray="6 3"/>
+          <text id="wRt" x="49" y="122" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="end" opacity="0">r*₂</text>
+          <circle cx="235" cy="190" r="5.5" fill="#14243A"/>
+          <text x="246" y="181" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+          <!-- moving dots: on S and on I(r) -->
+          <circle id="wBs" cx="235" cy="190" r="5.5" fill="#155C38"/>
+          <text id="wBst" x="245" y="112" font-family="monospace" font-size="12" font-weight="700" fill="#155C38" opacity="0">B</text>
+          <circle id="wBi" cx="235" cy="190" r="5.5" fill="#155C38"/>
+          <text id="wBit" x="135" y="112" font-family="monospace" font-size="12" font-weight="700" fill="#155C38" text-anchor="end" opacity="0">B′</text>
+          <line id="wGap" x1="235" y1="190" x2="235" y2="190" stroke="#155C38" stroke-width="4" stroke-linecap="round" opacity="0"/>
+          <text id="wGapT" x="190" y="102" font-family="monospace" font-size="11" fill="#155C38" font-weight="700" text-anchor="middle" opacity="0">S − I &gt; 0</text>
+          <line id="wIdrop" x1="145" y1="118" x2="145" y2="280" stroke="#9AA0A6" stroke-width=".9" stroke-dasharray="4 3" opacity="0"/>
+          <text id="wIt" x="145" y="296" font-family="monospace" font-size="10" fill="#1F4E79" text-anchor="middle" opacity="0">I₂ &lt; I₁</text>
+        </g>
+        <g transform="translate(460,0)">
+          <line x1="55" y1="20" x2="55" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="55" y1="280" x2="415" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="47" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">ε</text>
+          <text x="415" y="318" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Net Exports (NX)</text>
+          <text x="235" y="342" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle" font-weight="700">Foreign exchange</text>
+          <line x1="235" y1="20" x2="235" y2="280" stroke="#C9C6BC" stroke-width="1" stroke-dasharray="4 4"/>
+          <text x="235" y="296" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">0</text>
+          <line x1="100" y1="130" x2="415" y2="270" stroke="#1F4E79" stroke-width="3.2" stroke-linecap="round"/>
+          <text x="415" y="220" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" text-anchor="end">NX(ε)</text>
+          <line x1="235" y1="30" x2="235" y2="280" stroke="#D8C79B" stroke-width="2" stroke-dasharray="5 4"/>
+          <text x="235" y="24" font-family="monospace" font-size="11" fill="#B08A3C" font-weight="700" text-anchor="middle">S − I₁</text>
+          <line id="wSI" x1="235" y1="30" x2="235" y2="280" stroke="#155C38" stroke-width="3" stroke-linecap="round"/>
+          <text id="wSIt" x="325" y="24" font-family="monospace" font-size="11" fill="#155C38" font-weight="700" text-anchor="middle" opacity="0">S − I₂</text>
+          <!-- ε₁ guide to the original equilibrium — stays put as the shock runs -->
+          <line x1="55" y1="190" x2="235" y2="190" stroke="#9AA0A6" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <circle cx="235" cy="190" r="5.5" fill="#14243A"/>
+          <text x="246" y="181" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+          <circle id="wDot" cx="235" cy="190" r="5.5" fill="#155C38"/>
+          <text id="wDotT" x="335" y="226" font-family="monospace" font-size="12" font-weight="700" fill="#155C38">B</text>
+          <line id="wEg" x1="55" y1="190" x2="235" y2="190" stroke="#155C38" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/>
+          <text id="wEt" x="49" y="234" font-family="monospace" font-size="11" fill="#155C38" font-weight="700" text-anchor="end" opacity="0">ε₂</text>
+          <text x="49" y="194" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">ε₁</text>
+          <text id="wNXt" x="325" y="296" font-family="monospace" font-size="10" fill="#155C38" text-anchor="middle" opacity="0">NX₂ &gt; 0</text>
+        </g>
+      </svg>
+      <div class="controls" style="flex-direction:row;gap:1rem;align-items:center;margin-top:1rem;flex-wrap:wrap">
+        <button class="btn" id="playW">▶ Play the rate rise</button>
+        <button class="btn ghost" id="resetW">Reset</button>
+        <div class="readout" id="readW" aria-live="polite" aria-atomic="true" style="flex:1;min-width:300px">
+          r* = <span class="red" id="wRv">5.0</span> &nbsp;·&nbsp; S = 750 &nbsp;·&nbsp; I(r*) = <span class="accent" id="wIv">750</span> &nbsp;·&nbsp; S − I = <span id="wNv">0</span> &nbsp;·&nbsp; ε = <span class="accent" id="wEv">1.00</span> &nbsp;·&nbsp; NX = <span id="wXv">0</span>
+        </div>
+      </div>
+    </div>
+    <div class="chain" style="margin-top:.9rem">G<sub>f</sub>↑ → r*↑ → I↓ → S−I↑ → ε↓ → NX↑</div>
+  </section>
+
+  <!-- 28. CONTRAST -->
+  <section class="slide" data-section="Discussion 4 · Small Open Economy">
+    <div class="eyebrow">The anchor slide for Part 3</div>
+    <h2>Same policy. Opposite sign. It depends on <em>where</em>.</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1040px;margin-top:.4rem">
+      <div class="model hiRed">
+        <span class="tag">G↑ at home</span>
+        <div class="calc" style="font-size:.98rem;line-height:1.85">
+          works through <strong>S</strong><br>
+          S↓ ⇒ S − I ↓<br>
+          <span style="color:var(--red);font-weight:700">ε ↑ &nbsp; NX ↓</span>
+        </div>
+        <p class="cnote" style="font-size:.9rem;margin-top:.6rem;color:var(--grey)">Our own budget moves the <em>left</em> side of the loanable-funds gap. Investment never budges, because r is pinned at r*.</p>
+      </div>
+      <div class="model hi">
+        <span class="tag">G↑ abroad (large economy)</span>
+        <div class="calc" style="font-size:.98rem;line-height:1.85">
+          works through <strong>r*</strong><br>
+          r*↑ ⇒ I↓ ⇒ S − I ↑<br>
+          <span style="color:#155C38;font-weight:700">ε ↓ &nbsp; NX ↑</span>
+        </div>
+        <p class="cnote" style="font-size:.9rem;margin-top:.6rem;color:var(--grey)">Their budget moves the <em>right</em> side, by moving the one price we take as given. Our saving never budges.</p>
+      </div>
+    </div>
+    <div class="reveal" style="margin-top:1.2rem;max-width:1000px">
+      <span class="cue">What to take away</span>
+      <p>Identical policies, opposite effects on our trade balance — and no contradiction anywhere. The sign of ΔNX is not a property of "fiscal expansion." It is a property of <strong>which side of S − I the shock lands on</strong>.</p>
+      <p>That is the throughline doing real work. If you can say which way S − I moved, you already know which way ε and NX moved. If you can only say "the government spent more," you know nothing yet.</p>
+    </div>
+    <p class="footnote" style="margin-top:.8rem">Note the asymmetry buried here: a <em>small</em> foreign economy doing the same thing would have no effect on us at all. Size is what lets a policy touch r*.</p>
+  </section>
+
+  <!-- 29. COMPUTE Q9: INVESTMENT DEMAND UP -->
+  <section class="slide" data-section="Discussion 4 · Small Open Economy">
+    <div class="eyebrow">Experiment 3 · you write the chain this time</div>
+    <h2>Investment demand rises</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:78ch">Firms become more optimistic: at <em>every</em> interest rate they now want to invest more, so the whole I(r) curve shifts right. Saving, taxes, government purchases and r* are all unchanged.</p>
+    <div class="prompt" style="margin-top:.8rem;max-width:900px">
+      <span class="cue">Question 9 (write)</span>
+      <p>Write the <strong>full chain</strong> yourself — five links, in the style of the last two experiments — from the shift in investment demand to the change in net exports. Then draw the two panels.</p>
+    </div>
+    <button class="btn" data-reveal-svg="inv" style="margin-top:1.1rem">Show the graphs</button>
+    <div class="reveal-hidden" id="invTxt">
+      <div class="panel" style="margin-top:.2rem">
+        <svg style="max-width:960px;margin:0 auto" viewBox="0 0 890 366" role="img" aria-label="Two panels showing a rise in investment demand in a small open economy. In the left loanable funds panel the investment curve shifts right while saving and the world interest rate are unchanged, so investment now exceeds saving and the gap between saving and investment becomes negative. In the right foreign exchange panel the net capital outflow line moves left, the real exchange rate rises, and net exports fall below zero.">
+          <g>
+            <line x1="55" y1="20" x2="55" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+            <line x1="55" y1="280" x2="415" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+            <text x="47" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">r</text>
+            <text x="415" y="318" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">Investment and Saving (I, S)</text>
+            <text x="235" y="342" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle" font-weight="700">Loanable funds</text>
+            <line x1="334" y1="269" x2="64" y2="53" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+            <text x="340" y="266" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">I(r)</text>
+            <line x1="415" y1="262" x2="154" y2="53" stroke="#C0392B" stroke-width="3" stroke-dasharray="7 4" stroke-linecap="round"/>
+            <text x="160" y="48" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700">I′(r)</text>
+            <line x1="235" y1="40" x2="235" y2="280" stroke="#8A5900" stroke-width="3" stroke-linecap="round"/>
+            <text x="235" y="34" font-family="monospace" font-size="11" fill="#8A5900" font-weight="700" text-anchor="middle">S̄</text>
+            <line x1="55" y1="190" x2="415" y2="190" stroke="#C0392B" stroke-width="2" stroke-dasharray="6 3"/>
+            <text x="49" y="194" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="end">r*</text>
+            <!-- shift arrow spans the actual gap between I(r) and I′(r) at r = 164 -->
+            <text x="248" y="154" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="middle">I<tspan font-size="9" dy="3">d</tspan><tspan dy="-3">↑</tspan></text>
+            <line x1="205" y1="164" x2="291" y2="164" stroke="#C0392B" stroke-width="1.6" marker-end="url(#arrR1)"/>
+            <circle cx="235" cy="190" r="5.5" fill="#14243A"/>
+            <text x="246" y="176" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+            <circle cx="325" cy="190" r="5.5" fill="#C0392B"/>
+            <text x="336" y="176" font-family="monospace" font-size="12" font-weight="700" fill="#C0392B">A′</text>
+            <line x1="235" y1="190" x2="325" y2="190" stroke="#C0392B" stroke-width="4" stroke-linecap="round"/>
+            <text x="280" y="212" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="middle">S − I &lt; 0</text>
+            <defs><marker id="arrR1" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#C0392B"/></marker></defs>
+          </g>
+          <g transform="translate(460,0)">
+            <line x1="55" y1="20" x2="55" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+            <line x1="55" y1="280" x2="415" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+            <text x="47" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">ε</text>
+            <text x="415" y="318" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Net Exports (NX)</text>
+            <text x="235" y="342" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle" font-weight="700">Foreign exchange</text>
+            <line x1="235" y1="20" x2="235" y2="280" stroke="#C9C6BC" stroke-width="1" stroke-dasharray="4 4"/>
+            <text x="235" y="296" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">0</text>
+            <line x1="100" y1="130" x2="415" y2="270" stroke="#1F4E79" stroke-width="3.2" stroke-linecap="round"/>
+            <text x="415" y="220" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" text-anchor="end">NX(ε)</text>
+            <line x1="235" y1="30" x2="235" y2="280" stroke="#D8C79B" stroke-width="2" stroke-dasharray="5 4"/>
+            <text x="240" y="24" font-family="monospace" font-size="11" fill="#B08A3C" font-weight="700" text-anchor="start">S − I₁</text>
+            <line x1="145" y1="30" x2="145" y2="280" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+            <text x="140" y="24" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="end">S − I₂</text>
+            <line x1="231" y1="60" x2="150" y2="60" stroke="#C0392B" stroke-width="1.6" marker-end="url(#arrL1)"/>
+            <text x="191" y="52" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" text-anchor="middle">I↑ ⇒ S−I↓</text>
+            <line x1="55" y1="190" x2="235" y2="190" stroke="#9AA0A6" stroke-width="1.1" stroke-dasharray="4 3"/>
+            <circle cx="235" cy="190" r="5.5" fill="#14243A"/>
+            <text x="246" y="181" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+            <circle cx="145" cy="150" r="5.5" fill="#C0392B"/>
+            <text x="156" y="141" font-family="monospace" font-size="12" font-weight="700" fill="#C0392B">B</text>
+            <line x1="55" y1="150" x2="145" y2="150" stroke="#C0392B" stroke-width="1.1" stroke-dasharray="4 3"/>
+            <text x="49" y="154" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="end">ε₂</text>
+            <text x="49" y="194" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">ε₁</text>
+            <text x="145" y="296" font-family="monospace" font-size="10" fill="#C0392B" text-anchor="middle">NX₂ &lt; 0</text>
+            <defs><marker id="arrL1" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#C0392B"/></marker></defs>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <button class="btn ghost" data-reveal="r9" style="margin-top:.9rem">Reveal the chain</button>
+    <div class="reveal-hidden" id="r9">
+      <div class="chain hot" style="line-height:1.7">I<sup>d</sup>↑ → I↑ → S−I↓ → ε↑ → NX↓</div>
+      <div class="reveal" style="margin-top:.9rem">
+        <span class="cue">Read the mechanism, not just the arrows</span>
+        <p>Before the shift, households were saving <em>enough</em> to meet domestic demand for loanable funds. After it, national saving is <strong>insufficient</strong> — firms have to borrow from abroad to make up the shortage. That inward borrowing is a fall in net capital outflow.</p>
+        <p>As in Experiment 1, the shortage puts <strong>temporary</strong> upward pressure on the domestic rate, which is what draws the foreign funds in; once they arrive the rate is back at r*. Less domestic currency is supplied to world markets, its price rises, ε appreciates, and net exports fall.</p>
+        <p><strong>In goods:</strong> by borrowing, the country is plainly consuming more than it produces — so it must be importing more than it exports.</p>
+        <p class="footnote" style="margin-top:.6rem;font-style:italic">Same sign as Experiment 1, and for the same underlying reason: both shocks made S − I smaller. Experiment 1 shrank the left term; this one grew the right term. The identity does not care which.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 30. PREDICT Q10: PROTECTIONISM -->
+  <section class="slide" data-section="Discussion 4 · Small Open Economy">
+    <div class="eyebrow">Experiment 4 · commit before graphing</div>
+    <h2>Predict</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:900px">
+      <p class="lede">The government imposes a <strong>tariff</strong>. It works exactly as intended: at any given real exchange rate, imports are lower than they were.</p>
+      <div class="predict">
+        <span class="cue">Question 10 (predict)</span>
+        <p>Predict the <strong>sign of ΔNX</strong>. Everyone writes a sign — no abstaining. Then, underneath it, write the single sentence you would use to defend it.</p>
+      </div>
+      <p class="footnote">The whole point of trade policy is to raise net exports through lower imports. NX = X − IM, and IM just fell. Write what that suggests.</p>
+      <p class="serif-note" style="margin-top:1rem">TA: take the count. Show of hands, "NX up / NX down / NX unchanged," and <strong>write the tally on the board</strong> so you can point back at it in two slides.</p>
+    </div>
+  </section>
+
+  <!-- 31. GRAPH: X and IM, IM SHIFTS LEFT -->
+  <section class="slide" data-section="Discussion 4 · Small Open Economy">
+    <div class="eyebrow">Experiment 4 · what the tariff does</div>
+    <h2>Imports fall at every exchange rate</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:1fr 1fr;margin-top:.2rem">
+      <div class="panel">
+        <div class="ptitle">Exports and imports separately</div>
+        <svg style="max-width:500px;margin:0 auto" viewBox="0 0 430 330" role="img" aria-label="Exports and imports against the real exchange rate. The exports curve falls as the real exchange rate rises and the imports curve rises with it; they cross where net exports are zero. A tariff shifts the import curve to the left, so at the original exchange rate imports are now below exports.">
+          <line x1="55" y1="20" x2="55" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="55" y1="280" x2="415" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="47" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">ε</text>
+          <text x="415" y="318" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">Quantity of exports and imports</text>
+          <!-- exports: high eps -> low X -->
+          <line x1="355" y1="270" x2="115" y2="110" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="362" y="272" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">X</text>
+          <!-- imports -->
+          <line x1="115" y1="270" x2="355" y2="110" stroke="#8A5900" stroke-width="3" stroke-linecap="round"/>
+          <text x="362" y="110" font-family="monospace" font-size="12" fill="#8A5900" font-weight="700">IM</text>
+          <circle cx="235" cy="190" r="5.5" fill="#14243A"/>
+          <!-- both curves pass through A on the diagonals, so the label goes due north -->
+          <text x="235" y="176" font-family="monospace" font-size="12" font-weight="700" fill="#14243A" text-anchor="middle">A</text>
+          <line x1="55" y1="190" x2="235" y2="190" stroke="#5A5F66" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <text x="49" y="194" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">ε₁</text>
+          <line x1="235" y1="190" x2="235" y2="280" stroke="#9AA0A6" stroke-width=".9" stroke-dasharray="4 3"/>
+          <text x="235" y="296" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">X₁ = IM₁</text>
+          <g id="protA" opacity="0">
+            <line x1="55" y1="230" x2="235" y2="110" stroke="#C0392B" stroke-width="3" stroke-dasharray="7 4" stroke-linecap="round"/>
+            <text x="242" y="108" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700">IM′</text>
+            <!-- arrow spans the true gap between IM and IM′ at this height -->
+            <line x1="304" y1="140" x2="196" y2="140" stroke="#C0392B" stroke-width="1.8" marker-end="url(#arrL2)"/>
+            <text x="250" y="132" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" text-anchor="middle">tariff</text>
+            <circle cx="115" cy="190" r="5" fill="#C0392B"/>
+            <line x1="115" y1="190" x2="235" y2="190" stroke="#C0392B" stroke-width="4" stroke-linecap="round"/>
+            <text x="148" y="212" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" text-anchor="middle">NX′ &gt; 0</text>
+            <!-- carry the new import level down to the axis -->
+            <line x1="115" y1="190" x2="115" y2="280" stroke="#C0392B" stroke-width="1.1" stroke-dasharray="4 3"/>
+            <text x="115" y="296" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" text-anchor="middle">IM′</text>
+          </g>
+          <defs><marker id="arrL2" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#C0392B"/></marker></defs>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="ptitle">The same thing, as a shift in NX(ε)</div>
+        <svg style="max-width:500px;margin:0 auto" viewBox="0 0 430 330" role="img" aria-label="The net exports curve shifts to the right when a tariff reduces imports, because at every real exchange rate net exports are now larger.">
+          <line x1="55" y1="20" x2="55" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="55" y1="280" x2="415" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="47" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">ε</text>
+          <text x="415" y="318" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Net Exports (NX)</text>
+          <line x1="235" y1="20" x2="235" y2="280" stroke="#C9C6BC" stroke-width="1" stroke-dasharray="4 4"/>
+          <text x="235" y="296" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">0</text>
+          <line x1="100" y1="130" x2="415" y2="270" stroke="#1F4E79" stroke-width="3.2" stroke-linecap="round"/>
+          <text x="415" y="220" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" text-anchor="end">NX(ε)</text>
+          <circle cx="235" cy="190" r="5.5" fill="#14243A"/>
+          <text x="246" y="181" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+          <line x1="55" y1="190" x2="235" y2="190" stroke="#5A5F66" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <text x="49" y="194" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">ε₁</text>
+          <g id="protB" opacity="0">
+            <line x1="190" y1="130" x2="415" y2="230" stroke="#C0392B" stroke-width="3" stroke-dasharray="7 4" stroke-linecap="round"/>
+            <text x="196" y="120" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700">NX′(ε)</text>
+            <!-- arrow spans the true horizontal shift between the two curves -->
+            <line x1="172" y1="160" x2="253" y2="160" stroke="#C0392B" stroke-width="1.8" marker-end="url(#arrR2)"/>
+            <text x="212" y="147" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" text-anchor="middle">protectionism</text>
+            <!-- ε₁ guide runs on to the new point, then drops to the axis -->
+            <line x1="235" y1="190" x2="325" y2="190" stroke="#C0392B" stroke-width="1.1" stroke-dasharray="4 3"/>
+            <circle cx="325" cy="190" r="5" fill="#C0392B"/>
+            <text x="334" y="178" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700">NX′ &gt; 0 at ε₁</text>
+            <line x1="325" y1="190" x2="325" y2="280" stroke="#C0392B" stroke-width="1.1" stroke-dasharray="4 3"/>
+            <text x="325" y="296" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" text-anchor="middle">NX′</text>
+          </g>
+          <defs><marker id="arrR2" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#C0392B"/></marker></defs>
+        </svg>
+      </div>
+    </div>
+    <button class="btn" data-reveal-svg="prot" style="margin-top:1rem">Show the shift</button>
+    <div class="reveal-hidden" id="protTxt">
+      <div class="prompt" style="max-width:960px">
+        <span class="cue">Careful — this is not the answer yet</span>
+        <p>At the <em>original</em> exchange rate ε₁, net exports really are positive now. If that were the end of the story, the tariff would have worked and half the room would be right.</p>
+        <p>But ε₁ is no longer an equilibrium. Ask the question that has decided every experiment today: <strong>what happened to S − I?</strong></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 32. PUNCHLINE: NX UNCHANGED -->
+  <section class="slide" data-section="Discussion 4 · Small Open Economy">
+    <div class="eyebrow">Experiment 4 · the punchline</div>
+    <h2>Net exports do not move at all</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:1.05fr .95fr;margin-top:.2rem">
+      <div class="panel">
+        <div class="ptitle">A → B runs straight up the same vertical line</div>
+        <svg style="max-width:500px;margin:0 auto" viewBox="0 0 430 330" role="img" aria-label="The foreign exchange market under protectionism. The vertical net capital outflow line does not move because the tariff changes neither saving nor investment. The net exports curve shifts right, so the equilibrium travels straight up the unchanged vertical line from point A to point B: the real exchange rate appreciates and net exports end at exactly the value they started at.">
+          <line x1="55" y1="20" x2="55" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="55" y1="280" x2="415" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="47" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">ε</text>
+          <text x="415" y="318" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">Net Exports (NX)</text>
+          <line x1="100" y1="130" x2="415" y2="270" stroke="#1F4E79" stroke-width="3.2" stroke-linecap="round"/>
+          <text x="352" y="264" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" text-anchor="end">NX(ε)</text>
+          <line x1="190" y1="130" x2="415" y2="230" stroke="#C0392B" stroke-width="3" stroke-dasharray="7 4" stroke-linecap="round"/>
+          <text x="188" y="122" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700" text-anchor="end">NX′(ε)</text>
+          <!-- unchanged vertical -->
+          <line x1="235" y1="30" x2="235" y2="280" stroke="#155C38" stroke-width="4" stroke-linecap="round"/>
+          <text x="235" y="24" font-family="monospace" font-size="11" fill="#155C38" font-weight="700" text-anchor="middle">S − I  (unchanged)</text>
+          <circle cx="235" cy="190" r="5.5" fill="#14243A"/>
+          <text x="245" y="204" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+          <circle cx="235" cy="150" r="5.5" fill="#C0392B"/>
+          <text x="245" y="146" font-family="monospace" font-size="12" font-weight="700" fill="#C0392B">B</text>
+          <!-- A → B: starts just above A, tip lands just under B -->
+          <line x1="248" y1="186" x2="248" y2="155" stroke="#C0392B" stroke-width="1.8" marker-end="url(#arrU2)"/>
+          <line x1="55" y1="190" x2="235" y2="190" stroke="#5A5F66" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <line x1="55" y1="150" x2="235" y2="150" stroke="#C0392B" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <text x="49" y="194" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">ε₁</text>
+          <text x="49" y="154" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="end">ε₂</text>
+          <line x1="235" y1="280" x2="235" y2="288" stroke="#155C38" stroke-width="2"/>
+          <text x="235" y="300" font-family="monospace" font-size="10" fill="#155C38" text-anchor="middle" font-weight="700">NX₁ = NX₂</text>
+          <defs><marker id="arrU2" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#C0392B"/></marker></defs>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="ptitle">Composition changed. The balance did not.</div>
+        <svg style="max-width:500px;margin:0 auto" viewBox="0 0 430 330" role="img" aria-label="Exports and imports under protectionism. The appreciation moves the economy up to a new crossing point where both exports and imports are lower than before by the same amount, leaving net exports unchanged.">
+          <line x1="55" y1="20" x2="55" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="55" y1="280" x2="415" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="47" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">ε</text>
+          <text x="415" y="318" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">Quantity of exports and imports</text>
+          <line x1="355" y1="270" x2="115" y2="110" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="362" y="272" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">X</text>
+          <line x1="115" y1="270" x2="355" y2="110" stroke="#8A5900" stroke-width="3" stroke-linecap="round"/>
+          <text x="362" y="110" font-family="monospace" font-size="12" fill="#8A5900" font-weight="700">IM</text>
+          <line x1="55" y1="230" x2="235" y2="110" stroke="#C0392B" stroke-width="3" stroke-dasharray="7 4" stroke-linecap="round"/>
+          <text x="242" y="108" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700">IM′</text>
+          <circle cx="235" cy="190" r="5.5" fill="#14243A"/>
+          <!-- curves cross on the diagonals at both points, so labels go due north -->
+          <text x="235" y="176" font-family="monospace" font-size="12" font-weight="700" fill="#14243A" text-anchor="middle">A</text>
+          <circle cx="175" cy="150" r="5.5" fill="#C0392B"/>
+          <text x="175" y="136" font-family="monospace" font-size="12" font-weight="700" fill="#C0392B" text-anchor="middle">B</text>
+          <line x1="55" y1="190" x2="235" y2="190" stroke="#5A5F66" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <line x1="55" y1="150" x2="175" y2="150" stroke="#C0392B" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <text x="49" y="194" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">ε₁</text>
+          <text x="49" y="154" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="end">ε₂</text>
+          <line x1="235" y1="190" x2="235" y2="280" stroke="#9AA0A6" stroke-width=".9" stroke-dasharray="4 3"/>
+          <line x1="175" y1="150" x2="175" y2="280" stroke="#C0392B" stroke-width=".9" stroke-dasharray="4 3"/>
+          <text x="235" y="296" font-family="monospace" font-size="10" fill="#14243A" text-anchor="middle">X₁ = IM₁</text>
+          <text x="163" y="296" font-family="monospace" font-size="10" fill="#C0392B" text-anchor="end">X₂ = IM′₂</text>
+          <text x="215" y="60" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">both fall by the same amount</text>
+        </svg>
+      </div>
+    </div>
+    <div class="reveal" style="margin-top:1rem;max-width:1040px">
+      <span class="cue">Why</span>
+      <p><strong>Trade policy touches neither saving nor investment.</strong> A tariff is not in the saving function and it is not in the investment function, so <span style="font-family:var(--mono)">S − I</span> is exactly the number it was. The vertical line does not move a pixel.</p>
+      <p>The rightward shift in NX(ε) therefore cannot end anywhere except <em>directly above A</em>. The excess demand for domestic currency at ε₁ bids ε up, and it keeps rising until <strong>exports have fallen by precisely the amount imports fell</strong>. Both are lower; the difference between them is untouched.</p>
+      <p><strong>This is the throughline in its sharpest form.</strong> The currency market moved — dramatically. Net exports did not, because nothing happened in the capital market.</p>
+    </div>
+    <div class="chain hot" style="margin-top:.9rem;line-height:1.7">IM↓ → NX(ε) shifts right → ε↑ → X↓ → NX unchanged</div>
+  </section>
+
+  <!-- 33. DIAGNOSE Q11 -->
+  <section class="slide" data-section="Discussion 4 · Small Open Economy">
+    <div class="eyebrow">Question 11 · diagnose · silent poll</div>
+    <h2>Three defences of the same conclusion</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:74ch">All three reach the correct conclusion — a tariff does not raise net exports. Two of them get there honestly. One is right by accident.</p>
+    <div>
+      <div class="diag" id="dg2">
+        <button type="button" class="diag-opt"><span class="n">1</span><span class="s">The tariff cannot change NX because it does not touch S or I, and NX = S − I. The real exchange rate appreciates until exports fall by exactly the drop in imports.</span></button>
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">2</span><span class="s">Tariffs fail to raise net exports because foreign countries retaliate with tariffs of their own, so our exports end up falling by as much as our imports did.</span></button>
+        <button type="button" class="diag-opt"><span class="n">3</span><span class="s">Protectionism does raise NX at the initial exchange rate — but that is not an equilibrium. The extra demand for domestic currency bids ε up, and it keeps rising until NX is back at the value S − I dictates.</span></button>
+      </div>
+      <p class="poll-hint">Silent poll. Everyone writes a number before anyone speaks.</p>
+      <button class="btn" data-diag-reveal="dg2">Reveal the flaw</button>
+      <div data-diag-note style="display:none;margin-top:1.1rem">
+        <div class="reveal">
+          <span class="cue">Why the reasoning fails</span>
+          <p><strong>Statement 2 gets the right answer with a mechanism the model never used.</strong> Go back through slide 32: at no point did any foreign government do anything. Retaliation was not assumed, drawn, or needed.</p>
+          <p><strong>Neutrality holds with zero retaliation.</strong> That is what makes the result surprising and what makes it strong. Exports fall because <em>our own currency appreciated</em> — a price effect inside our own model — not because anyone abroad punished us. Statement 2 replaces an unavoidable equilibrium force with an optional political choice.</p>
+          <p>Test it the way you should test any mechanism: <em>ask what would happen if it were false.</em> If no country retaliates, statement 2 predicts the tariff works. Statements 1 and 3 still predict NX unchanged — and they are right.</p>
+          <p class="footnote" style="margin-top:.6rem;font-style:italic">Retaliation is a real phenomenon and would make the welfare loss worse. It is simply not what delivers neutrality.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 34. SYNTHESIS MINI -->
+  <section class="slide" data-section="Discussion 4 · Small Open Economy">
+    <div class="eyebrow">Restate it before moving on</div>
+    <h2>Composition, not balance</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:980px">
+      <p class="lede" style="font-size:clamp(1.15rem,2vw,1.55rem);font-weight:700;max-width:44ch">Net exports are decided in the capital market, not the currency market.</p>
+      <p class="lede">The real exchange rate is the <strong>messenger</strong>. It carries whatever number S − I has already set, and it will move as far as it has to in order to deliver it. On slide 32 it moved a great deal — and delivered exactly the same message as before.</p>
+      <div class="two" style="max-width:940px;margin-top:.4rem">
+        <div class="model hi" style="box-shadow:none">
+          <span class="tag">Trade policy changes</span>
+          <div class="calc" style="font-size:1rem;line-height:1.8">
+            the <strong>volume</strong> of trade<br>
+            X ↓ &nbsp;and&nbsp; IM ↓<br>
+            the real exchange rate ε ↑
+          </div>
+        </div>
+        <div class="model hiRed" style="box-shadow:none">
+          <span class="tag">Trade policy never changes</span>
+          <div class="calc" style="font-size:1rem;line-height:1.8">
+            the <strong>balance</strong> of trade<br>
+            NX unchanged<br>
+            because S − I unchanged
+          </div>
+        </div>
+      </div>
+      <p class="lede" style="margin-top:.4rem">A country that genuinely wants to change its trade balance has to change its <strong>saving or its investment</strong>. Tariffs, quotas and subsidies are aimed at the wrong market — which is why the model calls them a policy about composition, not about the balance.</p>
+      <p class="footnote">And note what "unchanged NX" is <em>not</em> saying: that the tariff was harmless. Less trade at a worse relative price is a real welfare cost. The model is silent on nothing here — it says the cost is paid and the stated goal is not achieved.</p>
+    </div>
+  </section>
+
+  <!-- 35. QUICK CHECK: SCORECARD -->
+  <section class="slide" data-section="Discussion 4 · Small Open Economy">
+    <div class="eyebrow">Quick check · the scorecard</div>
+    <h2>Which shocks moved NX — and what did they share?</h2>
+    <div class="titlerule"></div>
+    <div class="poll" id="poll35">
+      <div class="poll-opts">
+        <button type="button" class="poll-opt" data-correct="false"><span class="num">1</span><span class="txt">All four moved net exports; protectionism simply moved it by the least.</span></button>
+        <button type="button" class="poll-opt" data-correct="true"><span class="num">2</span><span class="txt">Three moved it — G↑ at home, r*↑ abroad, and the rise in investment demand — and every one of the three moved S − I.</span></button>
+        <button type="button" class="poll-opt" data-correct="false"><span class="num">3</span><span class="txt">Only the two fiscal shocks moved it; investment demand works through r, which is pinned at r*, so it cannot do anything.</span></button>
+      </div>
+      <p class="poll-hint">Commit on paper. Then reveal.</p>
+      <button class="btn" data-poll-reveal="poll35" style="margin-top:1rem">Reveal the answer</button>
+    </div>
+    <button class="btn ghost" data-reveal="r35" style="margin-top:.9rem">The test you can now apply to anything</button>
+    <div class="reveal-hidden" id="r35">
+      <div class="reveal">
+        <span class="cue">One question, four experiments</span>
+        <p>You never needed to reason about exchange rates, tariffs, or trading partners. For every shock in Part 3 the same single question settled it: <strong>does this change S, or does it change I?</strong></p>
+        <p>If yes, S − I moves, ε moves, and NX moves in the opposite direction to ε. If no — as with the tariff — ε may still move, but <strong>NX cannot</strong>.</p>
+        <p><strong>Why option 3 is wrong,</strong> since it is the tempting one: r is indeed pinned at r*, but a shift in the investment <em>demand curve</em> raises I <em>at</em> r*. The curve moved, not the point along it. That is the whole difference between a shift and a movement along.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 4 ══════════════ -->
+
+  <!-- 36. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 4 · Large Open Economy">
+    <div class="eyebrow">Part 4 of 5</div>
+    <h1>The Large<br>Open Economy</h1>
+    <p class="lede">Drop one assumption — just one — and the interest rate starts moving again. Every result in Part 3 keeps its sign. Not one of them keeps its size.</p>
+    <div class="sectrail">Identity ✓ → ε ✓ → SOE ✓ → LOE → Synthesis</div>
+    <div class="through">Throughline: net exports are decided in the capital market, not the currency market. The real exchange rate is the messenger — it moves to whatever value makes NX equal S − I.</div>
+  </section>
+
+  <!-- 37. PREDICT Q12 -->
+  <section class="slide" data-section="Discussion 4 · Large Open Economy">
+    <div class="eyebrow">Commit before we tell you</div>
+    <h2>Predict</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:900px">
+      <p class="lede">We now model an economy large enough to matter — the United States, say — rather than one that takes world conditions as given.</p>
+      <div class="predict">
+        <span class="cue">Question 12 (predict)</span>
+        <p>Of everything we assumed in Part 3, <strong>which single assumption breaks</strong> when the country is big? Write it down as a specific line from slide 21, not as a general feeling.</p>
+      </div>
+      <p class="footnote">There were four lines on that slide. Three of them survive intact. Say which one goes, and — one sentence — say why size is what kills it.</p>
+      <button class="btn" data-reveal="r12" style="margin-top:.6rem">Reveal</button>
+      <div class="reveal-hidden" id="r12">
+        <div class="reveal">
+          <span class="cue">Reveal</span>
+          <p><strong>r = r*.</strong> Ȳ = F(K̄,L̄), C = C(Ȳ−T) and I = I(r) all survive untouched. The casualty is the arbitrage condition.</p>
+          <p>Two things break it at once. First, the country is <strong>large enough to influence world financial markets</strong> — when its saving or investment changes, the world rate itself responds, so it can no longer be treated as given. Second, <strong>capital may not be perfectly mobile</strong>: you might reasonably accept a different return to invest in the United States than elsewhere, for reasons the model does not name.</p>
+          <p>Either way the conclusion is the same: r is now <strong>determined inside the model</strong>, not handed to it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 38. READ EQUATIONS: LOE -->
+  <section class="slide" data-section="Discussion 4 · Large Open Economy">
+    <div class="eyebrow">Read the equations before you graph</div>
+    <h2>Net capital outflow becomes a curve</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:80ch">Put yourself in an investor's shoes. Your willingness to put funds into the U.S. rises with the U.S. interest rate and falls with the returns available elsewhere — for which we use r* as the proxy. Flip that around: <strong>capital flowing out of the U.S.</strong> falls when the domestic rate rises.</p>
+    <div class="model hiRed" style="max-width:880px;margin:1rem 0">
+      <span class="tag">The new object</span>
+      <div class="eq" style="font-size:1.35rem">CF = CF(r, r*)</div>
+      <div class="calc" style="font-size:.95rem;margin-top:.7rem;color:var(--grey);line-height:1.7">
+        Downward sloping in r. Positive CF = lending abroad; negative CF = borrowing from abroad.<br>
+        If the U.S. pays 5% and the world pays 7%, funds leave — CF is high. Raise the U.S. rate and they stay.
+      </div>
+    </div>
+    <div class="two" style="max-width:960px">
+      <div class="model hi" style="box-shadow:none">
+        <span class="tag">Loanable funds — savers have two uses</span>
+        <div class="calc" style="line-height:1.9">
+          S = I + CF<br>
+          <span class="lbl">S̄ = I(r) + CF(r, r*)</span>
+        </div>
+        <p class="cnote" style="font-size:.88rem;color:var(--grey);margin-top:.5rem">Lend to domestic firms, or lend overseas. Note S − I = CF — the same net capital outflow as before, now given its own name and its own curve.</p>
+      </div>
+      <div class="model hi" style="box-shadow:none">
+        <span class="tag">Foreign exchange — unchanged from Part 1</span>
+        <div class="calc" style="line-height:1.9">
+          NX = S − I<br>
+          <span class="lbl">NX(ε) = CF(r, r*)</span>
+        </div>
+        <p class="cnote" style="font-size:.88rem;color:var(--grey);margin-top:.5rem">The identity was never a small-economy result. It holds for large and small economies alike — which is exactly why the throughline survives this part intact.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 39. MODEL A vs MODEL B -->
+  <section class="slide" data-section="Discussion 4 · Large Open Economy">
+    <div class="eyebrow">Callback · flat versus steep, one more time</div>
+    <h2>The whole difference is a slope</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:80ch">You have run this comparison before, in Worksheet 0 and again on the LM and IS curves. Same vocabulary, new curve — and once again everything downstream is a consequence of the slope alone.</p>
+    <div class="models" style="max-width:980px">
+      <div class="model hi">
+        <span class="tag">Model A · small open economy</span>
+        <div class="eq" style="font-size:1.05rem">CF perfectly <strong>flat</strong> at r*</div>
+        <svg viewBox="0 0 240 150" role="img" aria-label="In the small open economy the net capital outflow curve is a horizontal line at the world interest rate: capital is infinitely responsive, so the domestic interest rate can never differ from the world rate.">
+          <line x1="35" y1="12" x2="35" y2="122" stroke="#8A8F96" stroke-width="1.3"/>
+          <line x1="35" y1="122" x2="228" y2="122" stroke="#8A8F96" stroke-width="1.3"/>
+          <text x="29" y="18" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">r</text>
+          <text x="228" y="140" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">CF</text>
+          <line x1="35" y1="67" x2="222" y2="67" stroke="#1F4E79" stroke-width="3.4" stroke-linecap="round"/>
+          <text x="150" y="58" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700">r* — solid, flat</text>
+          <text x="29" y="71" font-family="monospace" font-size="9" fill="#1F4E79" font-weight="700" text-anchor="end">r*</text>
+        </svg>
+        <div class="calc" style="font-size:.9rem;margin-top:.6rem;color:var(--grey);line-height:1.6">
+          Infinitely responsive capital. r <em>cannot</em> differ from r*, so any shock is absorbed entirely by the quantity CF.
+        </div>
+      </div>
+      <div class="model hiRed">
+        <span class="tag">Model B · large open economy</span>
+        <div class="eq" style="font-size:1.05rem">CF <strong>downward sloping</strong> in r</div>
+        <svg viewBox="0 0 240 150" role="img" aria-label="In the large open economy the net capital outflow curve slopes downward: a higher domestic interest rate keeps more capital at home, so the domestic rate is free to move away from the world rate.">
+          <line x1="35" y1="12" x2="35" y2="122" stroke="#8A8F96" stroke-width="1.3"/>
+          <line x1="35" y1="122" x2="228" y2="122" stroke="#8A8F96" stroke-width="1.3"/>
+          <text x="29" y="18" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">r</text>
+          <text x="228" y="140" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">CF</text>
+          <line x1="48" y1="24" x2="216" y2="112" stroke="#C0392B" stroke-width="3.4" stroke-dasharray="9 4" stroke-linecap="round"/>
+          <text x="118" y="46" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700">dashed, sloped</text>
+          <text x="216" y="80" font-family="monospace" font-size="9" fill="#C0392B" font-weight="700" text-anchor="end">CF(r, r*)</text>
+        </svg>
+        <div class="calc" style="font-size:.9rem;margin-top:.6rem;color:var(--grey);line-height:1.6">
+          Finitely responsive capital. A higher r keeps funds at home, so r <em>can</em> move — and every shock is split between r and CF.
+        </div>
+      </div>
+    </div>
+    <div class="reveal" style="margin-top:.6rem;max-width:1000px">
+      <span class="cue">Everything downstream follows from this one slope</span>
+      <p>The small open economy is not a different model. It is <strong>Model B with the CF curve laid flat</strong> — the limiting case where capital is infinitely responsive. Rotate the red curve until it is horizontal and every Part 3 result reappears.</p>
+      <p>So when a Part 4 answer differs from its Part 3 counterpart, do not memorise it as a new fact. Ask: <em>what does a shock get to do here that it could not do when the curve was flat?</em> The answer is always the same — <strong>it gets to move r</strong>.</p>
+    </div>
+  </section>
+
+  <!-- 40. THREE-PANEL BUILD -->
+  <section class="slide" data-section="Discussion 4 · Large Open Economy">
+    <div class="eyebrow">The equilibrium, built in three steps</div>
+    <h2>r₁ and ε₁ are determined jointly</h2>
+    <div class="titlerule"></div>
+    <div class="panel" style="margin-top:.2rem">
+      <svg style="max-width:720px;margin:0 auto" viewBox="0 0 900 710" role="img" aria-label="A three-panel diagram of the large open economy. Top left, the loanable funds market: fixed saving meets investment plus net capital outflow, determining the domestic real interest rate r one. That interest rate is carried horizontally into the top right panel, where the downward-sloping net capital outflow curve converts it into a level of net capital outflow. That level becomes the vertical line in the bottom right foreign exchange panel, where the net exports curve sets the real exchange rate epsilon one.">
+        <!-- ── TOP LEFT: loanable funds ── -->
+        <g>
+          <line x1="40" y1="20" x2="40" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="40" y1="280" x2="400" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="32" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">r</text>
+          <text x="400" y="318" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">Quantity of loanable funds</text>
+          <text x="220" y="342" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle" font-weight="700">1 · Loanable funds</text>
+          <line x1="295" y1="240" x2="40" y2="60" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="302" y="238" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700">I(r) + CF(r, r*)</text>
+          <line x1="210" y1="40" x2="210" y2="280" stroke="#8A5900" stroke-width="3" stroke-linecap="round"/>
+          <text x="210" y="34" font-family="monospace" font-size="11" fill="#8A5900" font-weight="700" text-anchor="middle">S̄</text>
+          <g id="lb1a" opacity="0">
+            <circle cx="210" cy="180" r="5.5" fill="#14243A"/>
+            <text x="221" y="171" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+            <text x="34" y="184" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">r₁</text>
+          </g>
+        </g>
+        <!-- ── the carried r1 line, spanning both top panels ── -->
+        <g id="lb1b" opacity="0">
+          <line x1="40" y1="180" x2="880" y2="180" stroke="#14243A" stroke-width="1.5" stroke-dasharray="6 4"/>
+          <text x="430" y="172" font-family="monospace" font-size="10" fill="#14243A" font-weight="700" text-anchor="middle">carry r₁ across →</text>
+        </g>
+        <!-- ── TOP RIGHT: CF ── -->
+        <g transform="translate(480,0)">
+          <line x1="40" y1="20" x2="40" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="40" y1="280" x2="400" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="32" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">r</text>
+          <text x="400" y="318" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">Net Capital Outflow (CF)</text>
+          <text x="220" y="342" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle" font-weight="700">2 · Net capital outflow</text>
+          <line x1="210" y1="20" x2="210" y2="280" stroke="#C9C6BC" stroke-width="1" stroke-dasharray="4 4"/>
+          <text x="210" y="296" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="middle">0</text>
+          <line x1="252.5" y1="240" x2="125" y2="60" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="120" y="56" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" text-anchor="end">CF(r, r*)</text>
+          <g id="lb2" opacity="0">
+            <circle cx="210" cy="180" r="5.5" fill="#14243A"/>
+            <text x="221" y="171" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+            <line x1="210" y1="180" x2="210" y2="280" stroke="#C0392B" stroke-width="1.3" stroke-dasharray="4 3"/>
+            <text x="210" y="296" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" text-anchor="middle">CF(r₁, r*)</text>
+          </g>
+        </g>
+        <!-- ── BOTTOM RIGHT: forex ── -->
+        <g transform="translate(480,350)">
+          <line x1="40" y1="20" x2="40" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="40" y1="280" x2="400" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="32" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">ε</text>
+          <text x="400" y="318" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">Net Exports (NX)</text>
+          <text x="220" y="342" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle" font-weight="700">3 · Foreign exchange</text>
+          <line x1="82.5" y1="60" x2="337.5" y2="300" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="330" y="292" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700" text-anchor="end">NX(ε)</text>
+          <g id="lb3" opacity="0">
+            <line x1="210" y1="30" x2="210" y2="280" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+            <text x="210" y="24" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" text-anchor="middle">CF(r₁, r*)</text>
+            <circle cx="210" cy="180" r="5.5" fill="#14243A"/>
+            <text x="221" y="171" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+            <line x1="40" y1="180" x2="210" y2="180" stroke="#14243A" stroke-width="1.2" stroke-dasharray="4 3"/>
+            <text x="34" y="184" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">ε₁</text>
+            <text x="210" y="296" font-family="monospace" font-size="10" fill="#14243A" text-anchor="middle">NX₁</text>
+          </g>
+        </g>
+      </svg>
+      <div class="controls" style="flex-direction:row;gap:.8rem;align-items:center;margin-top:1rem;flex-wrap:wrap">
+        <button class="btn" data-reveal-svg="lbA">1 · Find r₁</button>
+        <button class="btn" data-reveal-svg="lbB">2 · Find CF(r₁, r*)</button>
+        <button class="btn" data-reveal-svg="lbC">3 · Find ε₁</button>
+      </div>
+    </div>
+    <div class="prompt" style="margin-top:1rem;max-width:1000px">
+      <span class="cue">Say this out loud — it is the part students get wrong on exams</span>
+      <p>The arrows run left to right, but that does <strong>not</strong> mean r₁ is settled before ε₁ exists. Look at panel 1: the curve is I(r) + CF(r, r*), and CF is part of the very same system that produces ε. <strong>r₁ and ε₁ are determined jointly</strong> — the three panels are one equilibrium drawn in three pieces, not a sequence of three separate markets.</p>
+      <p>The left-to-right order is how you <em>solve</em> it with a pencil. It is not the order in which the economy decides anything.</p>
+    </div>
+  </section>
+
+  <!-- 41. Q13: G UP IN THE LOE -->
+  <section class="slide" data-section="Discussion 4 · Large Open Economy">
+    <div class="eyebrow">Experiment · fiscal policy in the large open economy</div>
+    <h2>Government spending rises — write the chain</h2>
+    <div class="titlerule"></div>
+    <div class="prompt" style="max-width:920px">
+      <span class="cue">Question 13 (write)</span>
+      <p>G rises at home, in the <strong>large</strong> open economy. Write the full chain from ↑G to the change in NX. You now have <strong>six</strong> links, not five — one variable that was frozen in Part 3 is free to move here. Find it.</p>
+    </div>
+    <button class="btn" data-reveal-svg="lfis" style="margin-top:1.1rem">Show the three panels</button>
+    <div class="reveal-hidden" id="lfisTxt">
+      <div class="panel" style="margin-top:.2rem">
+        <svg style="max-width:720px;margin:0 auto" viewBox="0 0 900 710" role="img" aria-label="A rise in government spending in the large open economy shown in three panels. Saving shifts left, so the domestic interest rate rises from r one to r two at point B. The higher rate moves the economy up and to the left along the net capital outflow curve, so net capital outflow falls from CF one to CF two. In the foreign exchange panel the vertical net capital outflow line moves left, the real exchange rate appreciates from epsilon one to epsilon two, and net exports fall.">
+          <g>
+            <line x1="40" y1="20" x2="40" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+            <line x1="40" y1="280" x2="400" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+            <text x="32" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">r</text>
+            <text x="400" y="318" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">Quantity of loanable funds</text>
+            <text x="220" y="342" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle" font-weight="700">1 · Loanable funds</text>
+            <line x1="295" y1="240" x2="40" y2="60" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+            <text x="302" y="238" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700">I(r) + CF(r, r*)</text>
+            <line x1="210" y1="40" x2="210" y2="280" stroke="#D8C79B" stroke-width="2.4" stroke-dasharray="5 4"/>
+            <text x="210" y="34" font-family="monospace" font-size="11" fill="#B08A3C" font-weight="700" text-anchor="middle">S̄</text>
+            <line x1="125" y1="40" x2="125" y2="280" stroke="#8A5900" stroke-width="3" stroke-linecap="round"/>
+            <text x="125" y="34" font-family="monospace" font-size="11" fill="#8A5900" font-weight="700" text-anchor="middle">S̄′</text>
+            <line x1="200" y1="66" x2="134" y2="66" stroke="#8A5900" stroke-width="1.8" marker-end="url(#aL3)"/>
+            <text x="167" y="58" font-family="monospace" font-size="10" fill="#8A5900" font-weight="700" text-anchor="middle">G↑</text>
+            <circle cx="210" cy="180" r="5.5" fill="#14243A"/>
+            <text x="221" y="171" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+            <circle cx="125" cy="120" r="5.5" fill="#C0392B"/>
+            <text x="136" y="111" font-family="monospace" font-size="12" font-weight="700" fill="#C0392B">B</text>
+            <line x1="40" y1="180" x2="210" y2="180" stroke="#14243A" stroke-width="1.2" stroke-dasharray="4 3"/>
+            <line x1="40" y1="120" x2="125" y2="120" stroke="#C0392B" stroke-width="1.2" stroke-dasharray="4 3"/>
+            <text x="34" y="184" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">r₁</text>
+            <text x="34" y="124" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="end">r₂</text>
+            <defs><marker id="aL3" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#8A5900"/></marker>
+              <marker id="aL4" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#C0392B"/></marker></defs>
+          </g>
+          <g transform="translate(480,0)">
+            <line x1="40" y1="20" x2="40" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+            <line x1="40" y1="280" x2="400" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+            <text x="32" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">r</text>
+            <text x="400" y="318" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">Net Capital Outflow (CF)</text>
+            <text x="220" y="342" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle" font-weight="700">2 · Net capital outflow (curve does not shift)</text>
+            <line x1="210" y1="20" x2="210" y2="280" stroke="#C9C6BC" stroke-width="1" stroke-dasharray="4 4"/>
+            <line x1="252.5" y1="240" x2="125" y2="60" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+            <text x="120" y="56" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" text-anchor="end">CF(r, r*)</text>
+            <circle cx="210" cy="180" r="5.5" fill="#14243A"/>
+            <text x="221" y="171" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+            <circle cx="167.5" cy="120" r="5.5" fill="#C0392B"/>
+            <text x="178" y="111" font-family="monospace" font-size="12" font-weight="700" fill="#C0392B">B</text>
+            <line x1="40" y1="180" x2="210" y2="180" stroke="#14243A" stroke-width="1.2" stroke-dasharray="4 3"/>
+            <line x1="40" y1="120" x2="167.5" y2="120" stroke="#C0392B" stroke-width="1.2" stroke-dasharray="4 3"/>
+            <text x="34" y="184" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">r₁</text>
+            <text x="34" y="124" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="end">r₂</text>
+            <line x1="210" y1="180" x2="210" y2="280" stroke="#14243A" stroke-width="1.1" stroke-dasharray="4 3"/>
+            <line x1="167.5" y1="120" x2="167.5" y2="280" stroke="#C0392B" stroke-width="1.1" stroke-dasharray="4 3"/>
+            <text x="216" y="296" font-family="monospace" font-size="10" fill="#14243A" text-anchor="start">CF₁</text>
+            <text x="162" y="296" font-family="monospace" font-size="10" fill="#C0392B" text-anchor="end">CF₂</text>
+            <line x1="204" y1="256" x2="174" y2="256" stroke="#C0392B" stroke-width="1.8" marker-end="url(#aL4)"/>
+            <text x="189" y="248" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" text-anchor="middle">CF↓</text>
+          </g>
+          <g transform="translate(480,350)">
+            <line x1="40" y1="20" x2="40" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+            <line x1="40" y1="280" x2="400" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+            <text x="32" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">ε</text>
+            <text x="400" y="318" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">Net Exports (NX)</text>
+            <text x="220" y="342" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle" font-weight="700">3 · Foreign exchange</text>
+            <line x1="82.5" y1="60" x2="337.5" y2="300" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+            <text x="330" y="292" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700" text-anchor="end">NX(ε)</text>
+            <line x1="210" y1="30" x2="210" y2="280" stroke="#D8C79B" stroke-width="2.4" stroke-dasharray="5 4"/>
+            <text x="216" y="24" font-family="monospace" font-size="10" fill="#B08A3C" font-weight="700" text-anchor="start">CF₁</text>
+            <line x1="167.5" y1="30" x2="167.5" y2="280" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+            <text x="162" y="24" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" text-anchor="end">CF₂</text>
+            <circle cx="210" cy="180" r="5.5" fill="#14243A"/>
+            <text x="221" y="171" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+            <circle cx="167.5" cy="140" r="5.5" fill="#C0392B"/>
+            <text x="178" y="131" font-family="monospace" font-size="12" font-weight="700" fill="#C0392B">B</text>
+            <line x1="40" y1="180" x2="210" y2="180" stroke="#14243A" stroke-width="1.2" stroke-dasharray="4 3"/>
+            <line x1="40" y1="140" x2="167.5" y2="140" stroke="#C0392B" stroke-width="1.2" stroke-dasharray="4 3"/>
+            <text x="34" y="184" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">ε₁</text>
+            <text x="34" y="144" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="end">ε₂</text>
+            <text x="216" y="296" font-family="monospace" font-size="10" fill="#14243A" text-anchor="start">NX₁</text>
+            <text x="162" y="296" font-family="monospace" font-size="10" fill="#C0392B" text-anchor="end">NX₂</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <button class="btn ghost" data-reveal="r13" style="margin-top:.9rem">Reveal the chain</button>
+    <div class="reveal-hidden" id="r13">
+      <div class="chain hot" style="font-size:1.1rem;line-height:1.7">↑G → ↓S → ↑r → ↓CF &amp; ↓I → ↑ε → ↓NX</div>
+      <div class="reveal" style="margin-top:.9rem">
+        <span class="cue">Read every link</span>
+        <p>Lower saving means a shortage of loanable funds, which <strong>raises the real interest rate</strong> — and this time it stays raised. That is the free variable Part 3 did not have.</p>
+        <p>The higher rate does <em>two</em> things at once, which is why the chain has a branch. It <strong>reduces investment</strong>, and it makes domestic assets more attractive to foreign investors, so <strong>net capital outflow falls</strong>. Fewer units of domestic currency reach world financial markets, ε appreciates, and net exports fall.</p>
+        <p class="footnote" style="margin-top:.6rem;font-style:italic">Notice the CF curve itself never shifted — panel 2 is a movement <em>along</em> a fixed curve, driven entirely by r. That distinction is about to matter twice more.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 42. COMPARE TO SOE -->
+  <section class="slide" data-section="Discussion 4 · Large Open Economy">
+    <div class="eyebrow">Same sign, different mechanism</div>
+    <h2>The sign transfers. The magnitude does not.</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1060px;margin-top:.4rem">
+      <div class="model hi">
+        <span class="tag">Model A · SOE — G↑ at home</span>
+        <div class="calc" style="font-size:.95rem;line-height:1.85">
+          r: <strong>pinned at r*</strong><br>
+          I: <strong>unchanged</strong><br>
+          S − I falls by the <em>full</em> fall in S<br>
+          <span style="color:var(--red);font-weight:700">ε ↑↑ &nbsp; NX ↓↓</span>
+        </div>
+      </div>
+      <div class="model hiRed">
+        <span class="tag">Model B · LOE — G↑ at home</span>
+        <div class="calc" style="font-size:.95rem;line-height:1.85">
+          r: <strong>rises</strong><br>
+          I: <strong>falls</strong><br>
+          CF falls by <em>less</em> than S did<br>
+          <span style="color:var(--red);font-weight:700">ε ↑ &nbsp; NX ↓ &nbsp;(smaller)</span>
+        </div>
+      </div>
+    </div>
+    <div class="reveal" style="margin-top:1.1rem;max-width:1040px">
+      <span class="cue">Where the difference comes from</span>
+      <p>In both economies the fall in saving has to be absorbed. The question is <strong>by what</strong>.</p>
+      <p>In the small open economy investment cannot help — r is stuck at r*, so I does not move, and the <em>entire</em> reduction in saving is taken out of net capital outflow. NX falls by the full amount.</p>
+      <p>In the large open economy the interest rate rises, so <strong>domestic investment absorbs part of the shock</strong>. Only the remainder is left for CF. Less CF movement means less exchange-rate movement, and a <strong>smaller</strong> fall in net exports.</p>
+      <p>With the numbers behind these graphs, the SOE fall in NX is exactly <strong>twice</strong> the LOE fall. Nothing sacred about the factor of two — it is set by how steep CF is. What <em>is</em> general: crowding out at home is the mirror image of a smaller trade effect abroad.</p>
+    </div>
+    <p class="footnote" style="margin-top:.8rem">This is the shape of every Part 4 result. Ask what r does; whatever r absorbs, the exchange rate does not have to.</p>
+  </section>
+
+  <!-- 43. QUICK CHECK Q14 -->
+  <section class="slide" data-section="Discussion 4 · Large Open Economy">
+    <div class="eyebrow">Quick check · the most transferable result in the deck</div>
+    <h2>Is protectionism still NX-neutral when the country is large?</h2>
+    <div class="titlerule"></div>
+    <div class="poll" id="poll14">
+      <div class="poll-opts">
+        <button type="button" class="poll-opt" data-correct="false"><span class="num">1</span><span class="txt">No — in a large open economy the interest rate is free to move, so CF changes and net exports change with it.</span></button>
+        <button type="button" class="poll-opt" data-correct="true"><span class="num">2</span><span class="txt">Yes — the tariff never touches S, I or r, so CF is unchanged. ε appreciates and the equilibrium travels straight up the fixed CF line, exactly as in Part 3.</span></button>
+        <button type="button" class="poll-opt" data-correct="false"><span class="num">3</span><span class="txt">Yes, but only because CF happens to be perfectly flat at r* — which is what makes the vertical line hold still.</span></button>
+      </div>
+      <p class="poll-hint">Question 14. Commit on paper before the reveal.</p>
+      <button class="btn" data-poll-reveal="poll14" style="margin-top:1rem">Reveal the answer</button>
+    </div>
+    <button class="btn ghost" data-reveal-svg="lprot" style="margin-top:.9rem">Show it on the panels</button>
+    <div class="reveal-hidden" id="lprotTxt">
+      <div class="panel" style="margin-top:.3rem">
+        <svg style="max-width:720px;margin:0 auto" viewBox="0 0 900 710" role="img" aria-label="Protectionism in the large open economy, in the same three panels. The loanable funds market and the net capital outflow curve are completely undisturbed, so the interest rate r one and the level of net capital outflow are exactly what they were. In the foreign exchange panel the net exports curve shifts right, but the vertical net capital outflow line has not moved, so the equilibrium travels straight up from A to B: the real exchange rate appreciates and net exports are unchanged.">
+          <!-- ── TOP LEFT: loanable funds — untouched ── -->
+          <g>
+            <line x1="40" y1="20" x2="40" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+            <line x1="40" y1="280" x2="400" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+            <text x="32" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">r</text>
+            <text x="400" y="318" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">Quantity of loanable funds</text>
+            <text x="220" y="342" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle" font-weight="700">1 · Loanable funds — nothing moves</text>
+            <line x1="295" y1="240" x2="40" y2="60" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+            <text x="302" y="238" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700">I(r) + CF(r, r*)</text>
+            <line x1="210" y1="40" x2="210" y2="280" stroke="#8A5900" stroke-width="3" stroke-linecap="round"/>
+            <text x="210" y="34" font-family="monospace" font-size="11" fill="#8A5900" font-weight="700" text-anchor="middle">S̄</text>
+            <circle cx="210" cy="180" r="5.5" fill="#14243A"/>
+            <text x="221" y="171" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+            <text x="34" y="184" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">r₁</text>
+          </g>
+          <!-- the carried r1 line, unchanged by the tariff -->
+          <line x1="40" y1="180" x2="880" y2="180" stroke="#14243A" stroke-width="1.5" stroke-dasharray="6 4"/>
+          <text x="430" y="172" font-family="monospace" font-size="10" fill="#14243A" font-weight="700" text-anchor="middle">r₁ unchanged →</text>
+          <!-- ── TOP RIGHT: CF — untouched ── -->
+          <g transform="translate(480,0)">
+            <line x1="40" y1="20" x2="40" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+            <line x1="40" y1="280" x2="400" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+            <text x="32" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">r</text>
+            <text x="400" y="318" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">Net Capital Outflow (CF)</text>
+            <text x="220" y="342" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle" font-weight="700">2 · CF — curve and point unchanged</text>
+            <line x1="210" y1="20" x2="210" y2="280" stroke="#C9C6BC" stroke-width="1" stroke-dasharray="4 4"/>
+            <line x1="252.5" y1="240" x2="125" y2="60" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+            <text x="120" y="56" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" text-anchor="end">CF(r, r*)</text>
+            <circle cx="210" cy="180" r="5.5" fill="#14243A"/>
+            <text x="221" y="171" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+            <line x1="210" y1="180" x2="210" y2="280" stroke="#C0392B" stroke-width="1.3" stroke-dasharray="4 3"/>
+            <text x="210" y="296" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" text-anchor="middle">CF₁</text>
+          </g>
+          <!-- ── BOTTOM RIGHT: forex — the only panel that moves ── -->
+          <g transform="translate(480,350)">
+            <line x1="40" y1="20" x2="40" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+            <line x1="40" y1="280" x2="400" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+            <text x="32" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">ε</text>
+            <text x="400" y="318" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">Net Exports (NX)</text>
+            <text x="220" y="342" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle" font-weight="700">3 · Foreign exchange — A → B straight up</text>
+            <line x1="82.5" y1="60" x2="337.5" y2="300" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+            <text x="345" y="296" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700">NX(ε)</text>
+            <line x1="167.5" y1="60" x2="400" y2="279" stroke="#C0392B" stroke-width="3" stroke-dasharray="7 4" stroke-linecap="round"/>
+            <text x="161" y="54" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" text-anchor="end">NX′(ε)</text>
+            <line x1="120" y1="90" x2="193" y2="90" stroke="#C0392B" stroke-width="1.8" marker-end="url(#aR43)"/>
+            <text x="156" y="82" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700" text-anchor="middle">protectionism</text>
+            <line x1="210" y1="30" x2="210" y2="280" stroke="#155C38" stroke-width="4" stroke-linecap="round"/>
+            <text x="210" y="24" font-family="monospace" font-size="10" fill="#155C38" font-weight="700" text-anchor="middle">CF(r₁, r*) — unchanged</text>
+            <line x1="40" y1="180" x2="210" y2="180" stroke="#14243A" stroke-width="1.2" stroke-dasharray="4 3"/>
+            <line x1="40" y1="100" x2="210" y2="100" stroke="#C0392B" stroke-width="1.2" stroke-dasharray="4 3"/>
+            <text x="34" y="184" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">ε₁</text>
+            <text x="34" y="104" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" text-anchor="end">ε₂</text>
+            <line x1="224" y1="176" x2="224" y2="112" stroke="#C0392B" stroke-width="1.8" marker-end="url(#aU43)"/>
+            <circle cx="210" cy="180" r="5.5" fill="#14243A"/>
+            <text x="234" y="172" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+            <circle cx="210" cy="100" r="5.5" fill="#C0392B"/>
+            <text x="234" y="92" font-family="monospace" font-size="12" font-weight="700" fill="#C0392B">B</text>
+            <text x="210" y="296" font-family="monospace" font-size="10" fill="#155C38" text-anchor="middle" font-weight="700">NX₁ = NX₂</text>
+          </g>
+          <defs>
+            <marker id="aU43" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#C0392B"/></marker>
+            <marker id="aR43" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#C0392B"/></marker>
+          </defs>
+        </svg>
+      </div>
+      <div class="reveal" style="margin-top:1rem;max-width:1060px">
+        <span class="cue">Why this is the result worth carrying out of the room</span>
+        <p><strong>Option 3 is the trap</strong>, because it says something true about Part 3 and offers it as the reason. Flatness is <em>not</em> what delivers neutrality. The CF curve here is emphatically not flat — and the result survives anyway.</p>
+        <p>What delivers it is much cheaper: a tariff is <strong>not an argument of any equation in panels 1 or 2</strong>. It does not appear in S, in I(r), or in CF(r, r*). So r cannot move, so CF cannot move, so the vertical line in panel 3 holds still — and every rightward shift of NX(ε) has nowhere to go but straight up.</p>
+        <p><strong>Option 1 has the right instinct and the wrong trigger.</strong> Yes, r is free to move in the LOE. But "free to move" is not "moved." Something has to push it, and a tariff does not touch anything that could.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 44. ANIMATED: r* UP IN THE LOE -->
+  <section class="slide" data-section="Discussion 4 · Large Open Economy">
+    <div class="eyebrow">Experiment · a rise in the world interest rate</div>
+    <h2>Two competing effects — and one of them always wins</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:88ch">The world rate rises (another large economy raised <em>its</em> G, say). Investing abroad is now more attractive, so both the CF curve and the I + CF curve shift <strong>right</strong>. But the rightward shift raises the domestic rate too — and a higher r pulls capital back home. So which way does CF end up?</p>
+    <div class="panel" style="margin-top:.4rem">
+      <svg style="max-width:720px;margin:0 auto" viewBox="0 0 900 710" role="img" aria-label="A rise in the world interest rate in the large open economy shown in three panels. Both the investment plus net capital outflow curve and the net capital outflow curve shift right, but the net capital outflow curve shifts up by the full rise in the world rate while the combined curve shifts up by only part of it. The domestic rate therefore rises by less than the world rate, the gap between them widens, and net capital outflow rises on net. In the foreign exchange panel the vertical line moves right, the real exchange rate depreciates and net exports rise.">
+        <!-- TOP LEFT -->
+        <g>
+          <line x1="40" y1="20" x2="40" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="40" y1="280" x2="400" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="32" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">r</text>
+          <text x="400" y="318" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">Quantity of loanable funds</text>
+          <text x="220" y="342" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle" font-weight="700">1 · Loanable funds</text>
+          <line x1="295" y1="240" x2="40" y2="60" stroke="#C9C6BC" stroke-width="2.2" stroke-dasharray="5 4"/>
+          <text x="300" y="262" font-family="monospace" font-size="9" fill="#9AA0A6" font-weight="700">I + CF(r, r*₁)</text>
+          <line id="uLF" x1="295" y1="240" x2="40" y2="60" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text id="uLFt" x="390" y="214" font-family="monospace" font-size="9" fill="#1F4E79" font-weight="700" text-anchor="end" opacity="0">I + CF(r, r*₂)</text>
+          <line x1="210" y1="40" x2="210" y2="280" stroke="#8A5900" stroke-width="3" stroke-linecap="round"/>
+          <text x="210" y="34" font-family="monospace" font-size="11" fill="#8A5900" font-weight="700" text-anchor="middle">S̄</text>
+          <circle cx="210" cy="180" r="5.5" fill="#14243A"/>
+          <text x="221" y="171" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+          <circle id="uLFd" cx="210" cy="180" r="5.5" fill="#155C38"/>
+          <text id="uLFdt" x="221" y="111" font-family="monospace" font-size="12" font-weight="700" fill="#155C38" opacity="0">B</text>
+          <text x="34" y="184" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">r₁</text>
+          <text id="uLFgt" x="34" y="124" font-family="monospace" font-size="11" fill="#155C38" font-weight="700" text-anchor="end" opacity="0">r₂</text>
+          <text id="uLFn" x="300" y="96" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle" opacity="0">shifts up by ½ of Δr*</text>
+        </g>
+        <!-- r carried horizontally across both top panels, before and after -->
+        <line x1="40" y1="180" x2="880" y2="180" stroke="#14243A" stroke-width="1.3" stroke-dasharray="6 4"/>
+        <text x="430" y="172" font-family="monospace" font-size="10" fill="#14243A" font-weight="700" text-anchor="middle">r₁ carried across →</text>
+        <line id="uRline" x1="40" y1="180" x2="880" y2="180" stroke="#155C38" stroke-width="1.3" stroke-dasharray="6 4" opacity="0"/>
+        <text id="uRlineT" x="430" y="112" font-family="monospace" font-size="10" fill="#155C38" font-weight="700" text-anchor="middle" opacity="0">r₂ carried across →</text>
+        <!-- TOP RIGHT -->
+        <g transform="translate(480,0)">
+          <line x1="40" y1="20" x2="40" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="40" y1="280" x2="400" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="32" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">r</text>
+          <text x="400" y="318" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">Net Capital Outflow (CF)</text>
+          <!-- left-aligned so the CF carry-down guide has a clear channel through to panel 3 -->
+          <text x="40" y="342" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700">2 · Net capital outflow</text>
+          <line x1="210" y1="20" x2="210" y2="280" stroke="#C9C6BC" stroke-width="1" stroke-dasharray="4 4"/>
+          <line x1="252.5" y1="240" x2="125" y2="60" stroke="#C9C6BC" stroke-width="2.2" stroke-dasharray="5 4"/>
+          <text x="120" y="56" font-family="monospace" font-size="9" fill="#9AA0A6" font-weight="700" text-anchor="end">CF(r, r*₁)</text>
+          <line id="uCF" x1="252.5" y1="240" x2="125" y2="60" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text id="uCFt" x="216" y="52" font-family="monospace" font-size="9" fill="#C0392B" font-weight="700" text-anchor="start" opacity="0">CF(r, r*₂)</text>
+          <circle cx="210" cy="180" r="5.5" fill="#14243A"/>
+          <text x="221" y="171" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+          <circle id="uCFd" cx="210" cy="180" r="5.5" fill="#155C38"/>
+          <text id="uCFdt" x="263" y="111" font-family="monospace" font-size="12" font-weight="700" fill="#155C38" opacity="0">B</text>
+          <!-- world rate marker: where the CF curve crosses CF = 0 -->
+          <circle id="uRs" cx="210" cy="180" r="4" fill="#8A5900"/>
+          <text id="uRst" x="196" y="44" font-family="monospace" font-size="10" fill="#8A5900" font-weight="700" text-anchor="end" opacity="0">r*₂</text>
+          <line x1="210" y1="180" x2="210" y2="280" stroke="#14243A" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <text x="204" y="296" font-family="monospace" font-size="10" fill="#14243A" text-anchor="end">CF₁ = 0</text>
+          <line id="uCFg" x1="210" y1="180" x2="210" y2="280" stroke="#155C38" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/>
+          <text id="uCFgt" x="258" y="296" font-family="monospace" font-size="10" fill="#155C38" text-anchor="start" opacity="0">CF₂</text>
+          <line id="uCFarr" x1="214" y1="258" x2="249" y2="258" stroke="#155C38" stroke-width="1.8" marker-end="url(#aR5)" opacity="0"/>
+          <text id="uCFarrT" x="231" y="250" font-family="monospace" font-size="10" fill="#155C38" font-weight="700" text-anchor="middle" opacity="0">CF↑</text>
+          <text id="uCFn" x="330" y="96" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle" opacity="0">shifts up by the full Δr*</text>
+          <defs><marker id="aR5" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#155C38"/></marker>
+            <marker id="aD5" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#155C38"/></marker></defs>
+        </g>
+        <!-- CF carried down from panel 2 into the foreign-exchange panel -->
+        <line x1="690" y1="280" x2="690" y2="380" stroke="#14243A" stroke-width="1.1" stroke-dasharray="4 3"/>
+        <line id="uCFconn" x1="690" y1="280" x2="690" y2="380" stroke="#155C38" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/>
+        <!-- BOTTOM RIGHT -->
+        <g transform="translate(480,350)">
+          <line x1="40" y1="20" x2="40" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="40" y1="280" x2="400" y2="280" stroke="#8A8F96" stroke-width="1.6"/>
+          <text x="32" y="26" font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">ε</text>
+          <text x="400" y="318" font-family="monospace" font-size="10" fill="#5A5F66" text-anchor="end">Net Exports (NX)</text>
+          <text x="220" y="342" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle" font-weight="700">3 · Foreign exchange</text>
+          <line x1="82.5" y1="60" x2="337.5" y2="300" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="345" y="296" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700">NX(ε)</text>
+          <line x1="210" y1="30" x2="210" y2="280" stroke="#D8C79B" stroke-width="2.2" stroke-dasharray="5 4"/>
+          <text x="204" y="24" font-family="monospace" font-size="10" fill="#B08A3C" font-weight="700" text-anchor="end">CF₁</text>
+          <line id="uFX" x1="210" y1="30" x2="210" y2="280" stroke="#155C38" stroke-width="3" stroke-linecap="round"/>
+          <text id="uFXt" x="258" y="24" font-family="monospace" font-size="10" fill="#155C38" font-weight="700" text-anchor="start" opacity="0">CF₂</text>
+          <circle cx="210" cy="180" r="5.5" fill="#14243A"/>
+          <text x="221" y="171" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A</text>
+          <circle id="uFXd" cx="210" cy="180" r="5.5" fill="#155C38"/>
+          <text id="uFXdt" x="263" y="211" font-family="monospace" font-size="12" font-weight="700" fill="#155C38" opacity="0">B</text>
+          <line x1="40" y1="180" x2="210" y2="180" stroke="#14243A" stroke-width="1.2" stroke-dasharray="4 3"/>
+          <text x="34" y="184" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">ε₁</text>
+          <line id="uFXg" x1="40" y1="180" x2="210" y2="180" stroke="#155C38" stroke-width="1.2" stroke-dasharray="4 3" opacity="0"/>
+          <text id="uFXgt" x="34" y="224" font-family="monospace" font-size="11" fill="#155C38" font-weight="700" text-anchor="end" opacity="0">ε₂</text>
+          <!-- ε falls from the ε₁ guide to the ε₂ guide: tip lands just above ε₂ -->
+          <line id="uFXarr" x1="70" y1="186" x2="70" y2="215" stroke="#155C38" stroke-width="1.8" marker-end="url(#aD5)" opacity="0"/>
+          <text id="uFXarrT" x="80" y="206" font-family="monospace" font-size="10" fill="#155C38" font-weight="700" opacity="0">ε↓ depreciation</text>
+          <text x="204" y="296" font-family="monospace" font-size="10" fill="#14243A" text-anchor="end">NX₁</text>
+          <text id="uNXt" x="258" y="296" font-family="monospace" font-size="10" fill="#155C38" text-anchor="start" opacity="0">NX₂ &gt; NX₁</text>
+        </g>
+      </svg>
+      <div class="controls" style="flex-direction:row;gap:1rem;align-items:center;margin-top:1rem;flex-wrap:wrap">
+        <button class="btn" id="playU">▶ Play the world rate rise</button>
+        <button class="btn ghost" id="resetU">Reset</button>
+        <div class="readout" id="readU" aria-live="polite" aria-atomic="true" style="flex:1;min-width:320px">
+          r* = <span class="gold" id="uRsv">5.0</span> &nbsp;·&nbsp; r = <span class="accent" id="uRv">5.0</span> &nbsp;·&nbsp; r* − r = <span id="uGv">0.0</span> &nbsp;·&nbsp; I = <span id="uIv">750</span> &nbsp;·&nbsp; CF = <span id="uCv">0</span> &nbsp;·&nbsp; ε = <span class="accent" id="uEv">1.00</span> &nbsp;·&nbsp; NX = <span id="uXv">0</span>
+        </div>
+      </div>
+    </div>
+    <button class="btn ghost" data-reveal="r44" style="margin-top:.9rem">Which effect wins, and why</button>
+    <div class="reveal-hidden" id="r44">
+      <div class="reveal">
+        <span class="cue">Watch the two shifts, they are not the same size</span>
+        <p>Measure each shift <strong>vertically</strong> — in interest-rate units — and the asymmetry is obvious. The CF curve shifts up by the <strong>full</strong> rise in r*, because r* is the only thing in it. The I + CF curve shifts up by <strong>less</strong>, because half of it is investment, and investment does not care what the world rate is.</p>
+        <p>So the domestic rate rises by <strong>less than r* did</strong>. The gap <span style="font-family:var(--mono)">r* − r</span> therefore <em>widens</em> — and CF, which depends on that gap, <strong>rises on net</strong>. The homeward pull from a higher r is real, but it is never enough to reverse the outward push.</p>
+        <p>More domestic currency reaches world financial markets, so its price falls: ε <strong>depreciates</strong>, and net exports <strong>rise</strong>.</p>
+      </div>
+      <div class="chain warm" style="margin-top:.9rem;line-height:1.7">r*↑ → CF curve shifts up more than I+CF → r↑ but by less → (r* − r)↑ → CF↑ → ε↓ → NX↑</div>
+      <p class="footnote" style="margin-top:.6rem">Same sign as the small open economy's Experiment 2 — and again about half the size, for the same reason: investment absorbed part of the shock.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 5 ══════════════ -->
+
+  <!-- 45. DIVIDER -->
+  <section class="slide divider" data-section="Discussion 4 · Synthesis">
+    <div class="eyebrow">Part 5 of 5</div>
+    <h1>Nominal Rates,<br>Data, and the Close</h1>
+    <p class="lede">One equation connects the real exchange rate to the one you actually read in the newspaper. Then we take the whole model to the data and ask, honestly, what it does and does not explain.</p>
+    <div class="sectrail">Identity ✓ → ε ✓ → SOE ✓ → LOE ✓ → Synthesis</div>
+    <div class="through">Throughline: net exports are decided in the capital market, not the currency market. The real exchange rate is the messenger — it moves to whatever value makes NX equal S − I.</div>
+  </section>
+
+  <!-- 46. Q15 + SCATTERPLOT -->
+  <section class="slide" data-section="Discussion 4 · Synthesis">
+    <div class="eyebrow">Compute · then test it against the world</div>
+    <h2>Inflation and the nominal exchange rate</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1060px;align-items:start">
+      <div>
+        <div class="model hi" style="box-shadow:none">
+          <span class="tag">Derivation — three lines</span>
+          <div class="calc" style="font-size:1rem;line-height:1.85">
+            ε = e × P/P* &nbsp;⇒&nbsp; e = ε × P*/P<br>
+            log e = log ε + log P* − log P<br>
+            <span class="lbl">%Δe = %Δε + (π* − π)</span>
+          </div>
+        </div>
+        <div class="prompt" style="margin-top:1rem">
+          <span class="cue">Question 15 (compute)</span>
+          <p>Foreign inflation π* = <strong>6%</strong>. Domestic inflation π = <strong>2%</strong>. The real exchange rate is unchanged, so %Δε = 0. What happens to the <strong>nominal</strong> exchange rate <em>e</em>? Give a number and a direction, then say in words why it moves that way.</p>
+        </div>
+        <button class="btn" data-reveal="r15" style="margin-top:1rem">Reveal</button>
+        <div class="reveal-hidden" id="r15">
+          <div class="reveal">
+            <span class="cue">Reveal</span>
+            <p>%Δe = 0 + (6 − 2) = <strong>+4%</strong>. The domestic currency <strong>appreciates</strong> by 4% — one unit of it buys 4% more foreign currency than last year.</p>
+            <p><strong>Why, in words:</strong> inflation is the rate at which a currency loses value. The foreign currency is losing value faster than ours. So to keep the <em>real</em> price of goods where it was, households have to be handed more units of the fast-depreciating currency per unit of ours. The nominal rate moves purely to offset the inflation gap — nothing real happened at all.</p>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="ptitle">Inflation differentials and nominal exchange rates</div>
+        <svg style="max-width:620px;margin:0 auto" viewBox="0 0 720 400" role="img" aria-label="A scatterplot of sixteen countries. The horizontal axis is each country's inflation differential against the United States and the vertical axis is the percentage change in its nominal exchange rate, with positive values meaning depreciation against the dollar. High-inflation countries such as Iceland, Pakistan, Mexico and South Africa sit in the upper right and depreciated; low-inflation countries such as Switzerland, Japan, Singapore and Norway sit in the lower left and appreciated. The points fall along a roughly forty-five degree line, which is what the equation predicts.">
+          <!-- axes -->
+          <line x1="90" y1="50" x2="90" y2="345" stroke="#8A8F96" stroke-width="1.5"/>
+          <line x1="85" y1="340" x2="650" y2="340" stroke="#8A8F96" stroke-width="1.5"/>
+          <!-- zero lines -->
+          <line x1="90" y1="220" x2="645" y2="220" stroke="#14243A" stroke-width="1.2"/>
+          <line x1="270" y1="55" x2="270" y2="340" stroke="#14243A" stroke-width="1.2"/>
+          <!-- ticks -->
+          <g font-family="monospace" font-size="10" fill="#5A5F66">
+            <text x="90" y="356" text-anchor="middle">−4</text>
+            <text x="180" y="356" text-anchor="middle">−2</text>
+            <text x="270" y="356" text-anchor="middle">0</text>
+            <text x="360" y="356" text-anchor="middle">2</text>
+            <text x="450" y="356" text-anchor="middle">4</text>
+            <text x="540" y="356" text-anchor="middle">6</text>
+            <text x="630" y="356" text-anchor="middle">8</text>
+            <text x="84" y="344" text-anchor="end">−6</text>
+            <text x="84" y="304" text-anchor="end">−4</text>
+            <text x="84" y="264" text-anchor="end">−2</text>
+            <text x="84" y="224" text-anchor="end">0</text>
+            <text x="84" y="184" text-anchor="end">2</text>
+            <text x="84" y="144" text-anchor="end">4</text>
+            <text x="84" y="104" text-anchor="end">6</text>
+            <text x="84" y="64" text-anchor="end">8</text>
+          </g>
+          <text x="450" y="378" font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">Inflation differential (π − π*, percentage points)</text>
+          <text x="16" y="40" font-family="monospace" font-size="10" fill="#5A5F66">% change in nominal exchange rate</text>
+          <text x="660" y="140" font-family="monospace" font-size="10" fill="#C0392B" font-weight="700">↑ depreciation</text>
+          <text x="660" y="156" font-family="monospace" font-size="10" fill="#C0392B">vs. U.S. dollar</text>
+          <text x="660" y="286" font-family="monospace" font-size="10" fill="#1F4E79" font-weight="700">↓ appreciation</text>
+          <text x="660" y="302" font-family="monospace" font-size="10" fill="#1F4E79">vs. U.S. dollar</text>
+          <!-- 45-degree reference line, revealed -->
+          <g id="scat45" opacity="0">
+            <line x1="180" y1="260" x2="585" y2="80" stroke="#8A5900" stroke-width="2.4" stroke-dasharray="8 5"/>
+            <text x="590" y="76" font-family="monospace" font-size="11" fill="#8A5900" font-weight="700">45°: %Δe = π − π*</text>
+          </g>
+          <!-- points -->
+          <g fill="#4E7C57">
+            <rect x="441" y="91" width="8" height="8"/>
+            <rect x="563" y="116" width="8" height="8"/>
+            <rect x="372" y="152" width="8" height="8"/>
+            <rect x="439" y="198" width="8" height="8"/>
+            <rect x="304" y="201" width="8" height="8"/>
+            <rect x="259" y="214" width="8" height="8"/>
+            <rect x="154" y="250" width="8" height="8"/>
+            <rect x="232" y="256" width="8" height="8"/>
+            <rect x="237" y="260" width="8" height="8"/>
+            <rect x="255" y="283" width="8" height="8"/>
+            <rect x="246" y="285" width="8" height="8"/>
+            <rect x="284" y="293" width="8" height="8"/>
+            <rect x="304" y="293" width="8" height="8"/>
+            <rect x="241" y="306" width="8" height="8"/>
+            <rect x="201" y="307" width="8" height="8"/>
+          </g>
+          <g font-family="Georgia,serif" font-size="11" font-style="italic" fill="#14243A">
+            <text x="436" y="88" text-anchor="end">Iceland</text>
+            <text x="575" y="123">Pakistan</text>
+            <text x="367" y="159" text-anchor="end">Mexico</text>
+            <text x="451" y="205">South Africa</text>
+            <text x="299" y="197" text-anchor="end">South Korea</text>
+            <text x="254" y="212" text-anchor="end">U.K.</text>
+            <text x="150" y="247" text-anchor="end">Japan</text>
+            <text x="244" y="248">Sweden</text>
+            <text x="228" y="276" text-anchor="end">Singapore</text>
+            <text x="267" y="272">Denmark</text>
+            <text x="240" y="292" text-anchor="end">Canada</text>
+            <text x="278" y="311" text-anchor="end">New Zealand</text>
+            <text x="316" y="299">Australia</text>
+            <text x="253" y="316">Norway</text>
+            <text x="196" y="313" text-anchor="end">Switzerland</text>
+          </g>
+        </svg>
+        <p class="footnote" style="margin-top:.4rem;font-size:.82rem">Redrawn from the lecture notes, Figure 2. Each point is one country against the United States over the period.</p>
+      </div>
+    </div>
+    <button class="btn" data-reveal-svg="scat" style="margin-top:1rem">Draw the 45° line</button>
+    <div class="reveal-hidden" id="scatTxt">
+      <div class="reveal" style="max-width:1060px">
+        <span class="cue">The empirical test</span>
+        <p>Set %Δε = 0 and the equation predicts a slope of <strong>exactly one</strong>: a country whose inflation runs one point above the U.S. should see its currency lose one point of value against the dollar. The cloud does sit roughly along that 45° line. Iceland, Pakistan and Mexico inflated and depreciated; Switzerland, Japan and Singapore did not, and appreciated.</p>
+        <p><strong>Note what the scatter is not.</strong> It is not tight, and it should not be — %Δε is not literally zero for any of these countries, and real exchange rates do move. What the picture establishes is that the <em>inflation differential term dominates</em> over long horizons. That is exactly the claim the equation makes.</p>
+        <p class="footnote" style="margin-top:.6rem;font-style:italic">One convention warning: this figure is drawn from each country's own point of view, with the U.S. as the foreign country, and it puts <em>depreciation</em> upward. Under our own e-convention that is a fall in e. The economics is identical; only the direction of the arrow is flipped.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 47. DATA + SYNTHESIS TABLE -->
+  <section class="slide" data-section="Discussion 4 · Synthesis">
+    <div class="eyebrow">Take the model to the data</div>
+    <h2>Goods and services, 1995–2022</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:1.15fr .85fr;margin-top:.2rem;align-items:start">
+      <div class="panel">
+        <div class="ptitle">U.S. trade balance, balance-of-payments basis</div>
+        <svg style="max-width:620px;margin:0 auto" viewBox="0 0 720 380" role="img" aria-label="The U.S. trade balance in goods and in services from 1995 to 2022, in millions of dollars per month. The goods balance, drawn as a solid line, is negative throughout and grows steadily more negative, from about minus twelve thousand in 1995 to beyond minus one hundred thousand by 2022, with a temporary improvement during the 2009 recession. The services balance, drawn as a dashed line, is positive throughout and rises from about six thousand to around twenty thousand.">
+          <line x1="80" y1="45" x2="80" y2="325" stroke="#8A8F96" stroke-width="1.5"/>
+          <line x1="80" y1="325" x2="670" y2="325" stroke="#8A8F96" stroke-width="1.5"/>
+          <line x1="80" y1="118" x2="665" y2="118" stroke="#14243A" stroke-width="1.4"/>
+          <g font-family="monospace" font-size="9.5" fill="#5A5F66">
+            <text x="74" y="63" text-anchor="end">+40,000</text>
+            <text x="74" y="121" text-anchor="end">0</text>
+            <text x="74" y="179" text-anchor="end">−40,000</text>
+            <text x="74" y="237" text-anchor="end">−80,000</text>
+            <text x="74" y="295" text-anchor="end">−120,000</text>
+            <text x="80" y="341" text-anchor="middle">1995</text>
+            <text x="185" y="341" text-anchor="middle">2000</text>
+            <text x="290" y="341" text-anchor="middle">2005</text>
+            <text x="395" y="341" text-anchor="middle">2010</text>
+            <text x="500" y="341" text-anchor="middle">2015</text>
+            <text x="605" y="341" text-anchor="middle">2020</text>
+          </g>
+          <text x="20" y="38" font-family="monospace" font-size="10" fill="#5A5F66">Millions of dollars</text>
+          <!-- goods: solid -->
+          <polyline fill="none" stroke="#1F4E79" stroke-width="2.6" stroke-linejoin="round"
+            points="80,135 122,141 164,157 206,165 248,181 290,204 332,216 353,223 374,176 395,193 437,204 479,207 521,204 563,222 584,219 605,223 626,251 647,269"/>
+          <text x="500" y="196" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700" text-anchor="end">Goods — solid</text>
+          <!-- services: dashed -->
+          <polyline fill="none" stroke="#8A5900" stroke-width="2.6" stroke-dasharray="8 4" stroke-linejoin="round"
+            points="80,109 185,108 290,110 353,102 395,99 458,92 521,87 584,85 605,93 647,89"/>
+          <text x="500" y="76" font-family="monospace" font-size="11" fill="#8A5900" font-weight="700" text-anchor="end">Services — dashed</text>
+          <text x="374" y="166" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="middle">2009</text>
+        </svg>
+        <p class="footnote" style="margin-top:.4rem;font-size:.82rem">Schematic redrawing of the FRED series in the lecture notes (Figure 1), sources U.S. Census Bureau and BEA. Read the shapes, not the individual months.</p>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <div class="prompt">
+          <span class="cue">Discuss (no writing)</span>
+          <p>The <strong>goods</strong> deficit widens for twenty-five years. The <strong>services</strong> surplus grows steadily. Does our model explain this picture?</p>
+        </div>
+        <button class="btn" data-reveal="r47">Reveal</button>
+        <div class="reveal-hidden" id="r47">
+          <div class="reveal">
+            <span class="cue">Be honest about the model's reach</span>
+            <p><strong>Partly — and it matters which part.</strong> The model speaks to the <em>total</em>: NX = S − I. The persistent overall U.S. deficit is a statement about American saving being low relative to American investment, and the model handles that directly.</p>
+            <p><strong>The goods-versus-services split is composition, and the model is silent on it.</strong> Nothing in S − I distinguishes a container of steel from a software licence. Explaining why the U.S. runs a deficit in goods and a surplus in services takes comparative advantage — a different chapter, a different question.</p>
+            <p>That is the same distinction Part 3 drew about tariffs. <strong>The model sets the balance; it does not choose the mix.</strong></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="btn ghost" data-reveal="rTable" style="margin-top:1rem">Unfold the full scorecard</button>
+    <div class="reveal-hidden" id="rTable">
+      <div class="tablewrap">
+        <table class="cases">
+          <caption class="sr-caption" style="caption-side:top;text-align:left;font-family:var(--mono);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--grey);padding-bottom:.4rem">Every shock in this discussion, both models</caption>
+          <thead>
+            <tr>
+              <th scope="col">Shock</th>
+              <th scope="col">SOE: S − I</th>
+              <th scope="col">SOE: ε</th>
+              <th scope="col">SOE: NX</th>
+              <th scope="col">LOE: r</th>
+              <th scope="col">LOE: NX</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">G ↑ at home</th><td>↓</td><td>↑</td><td>↓</td><td>↑</td><td>↓ (smaller)</td></tr>
+            <tr><th scope="row">r* ↑ (foreign G ↑)</th><td>↑</td><td>↓</td><td>↑</td><td>↑</td><td>↑</td></tr>
+            <tr><th scope="row">Investment demand ↑</th><td>↓</td><td>↑</td><td>↓</td><td>↑</td><td>↓</td></tr>
+            <tr><th scope="row">Protectionism</th><td class="hi">— none</td><td class="hi">↑</td><td class="hi">0 — no change</td><td class="hi">— none</td><td class="hi">0 — no change</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="predict" style="margin-top:1rem;max-width:1040px">
+        <span class="cue">Read the bottom row out loud</span>
+        <p><strong>Protectionism is the only row where ε moves and NX does not.</strong> Every other shock moved S − I first, and the exchange rate simply carried the news. The tariff moved nothing in the capital market — so the messenger had a long way to travel and nothing new to say.</p>
+        <p>It is also the row students reliably get wrong, and the one most likely to appear on an exam. If you remember one line from this table, make it this one.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 48. CLOSE -->
+  <section class="slide" data-section="Discussion 4 · Synthesis">
+    <div class="eyebrow">Close · write one line, then hand it in</div>
+    <h2>In your own words</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:900px">
+      <div class="predict" style="font-size:1.2rem">
+        <span class="cue">Write and hand in</span>
+        <p>"A tariff cannot change net exports because ____________________________, so instead ____________________________."</p>
+      </div>
+      <p class="lede" style="margin-top:.4rem">Both blanks. The first one is the mechanism; the second one is what the economy does instead. A sentence that fills only the first blank has not finished the argument.</p>
+      <p class="serif-note" style="margin-top:1.2rem">You started today by asking what replaces the interest rate once the economy opens. The answer turned out to be the real exchange rate — and then the whole discussion was about how little that answer actually decides. <strong>Net exports are decided in the capital market, not the currency market.</strong></p>
+    </div>
+  </section>
+
+</div>
+
+<div class="chrome">
+  <span class="course" id="sectionLabel">ECON 105B · Discussion 4</span>
+  <span class="course" id="moreHint" style="visibility:hidden;color:var(--accent);font-weight:700">▾ more below</span>
+  <span class="navhint">
+    <button id="prevBtn" aria-label="Previous slide">← prev</button>
+    <span aria-live="polite" aria-atomic="true">Slide <span id="cur">1</span> of <span id="tot">48</span></span>
+    <button id="nextBtn" aria-label="Next slide">next →</button>
+  </span>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  const prog=document.getElementById('prog');
+  const cur=document.getElementById('cur');
+  document.getElementById('tot').textContent=slides.length;
+
+  /* Slides are the scroll containers (body is overflow:hidden), so the active
+     one needs focus for the keyboard to reach it. */
+  slides.forEach(s=>s.setAttribute('tabindex','-1'));
+
+  /* Tell the presenter when the current slide has content below the fold. */
+  const moreHint=document.getElementById('moreHint');
+  function updateMore(){
+    const s=slides[i];
+    const more = s.scrollHeight - s.clientHeight - s.scrollTop > 8;
+    if(moreHint) moreHint.style.visibility = more ? 'visible' : 'hidden';
+  }
+  slides.forEach(s=>s.addEventListener('scroll',updateMore,{passive:true}));
+  window.addEventListener('resize',updateMore);
+  /* any reveal grows the slide, so re-check once the transition has run */
+  document.getElementById('deck').addEventListener('click',()=>setTimeout(updateMore,80));
+
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    prog.style.width=((i)/(slides.length-1)*100)+'%';
+    cur.textContent=i+1;
+    const sec=slides[i].getAttribute('data-section');
+    const lbl=document.getElementById('sectionLabel');
+    if(lbl) lbl.textContent = sec ? ('ECON 105B · '+sec) : 'ECON 105B · Discussion';
+    slides[i].scrollTop=0;                       // always open a slide at the top
+    slides[i].focus({preventScroll:true});       // so ↑/↓ and the wheel land here
+    updateMore();
+  }
+  function next(){show(i+1)}
+  function prev(){show(i-1)}
+
+  document.getElementById('nextBtn').onclick=next;
+  document.getElementById('prevBtn').onclick=prev;
+  window.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();next()}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}
+    else if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+      /* scroll within a tall slide rather than moving between slides */
+      const s=slides[i];
+      if(s.scrollHeight>s.clientHeight+2){
+        e.preventDefault();
+        s.scrollTop += (e.key==='ArrowDown' ? 110 : -110);
+      }
+    }
+    else if(e.key==='Home'){e.preventDefault();slides[i].scrollTop=0}
+    else if(e.key==='End'){e.preventDefault();slides[i].scrollTop=slides[i].scrollHeight}
+    else if(e.key.toLowerCase()==='f'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  /* ---- generic click-to-reveal: button[data-reveal="targetId"] ---- */
+  document.querySelectorAll('[data-reveal]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const t=document.getElementById(btn.getAttribute('data-reveal'));
+      if(t){t.classList.add('shown');}
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- generic diagnose (flawed-argument) groups ---- */
+  document.querySelectorAll('.diag').forEach(group=>{
+    const opts=[...group.querySelectorAll('.diag-opt')];
+    const revealBtn=group.parentElement.querySelector('[data-diag-reveal]');
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    if(revealBtn){
+      revealBtn.addEventListener('click',()=>{
+        group.classList.add('revealed');
+        opts.forEach(o=>{if(o.dataset.bad==='true')o.classList.add('bad');});
+        revealBtn.style.display='none';
+        const note=group.parentElement.querySelector('[data-diag-note]');
+        if(note) note.style.display='block';
+      });
+    }
+  });
+
+  /* ---- generic quick-check polls: button[data-poll-reveal="pollId"] ---- */
+  document.querySelectorAll('[data-poll-reveal]').forEach(btn=>{
+    const group=document.getElementById(btn.getAttribute('data-poll-reveal'));
+    if(!group) return;
+    const opts=[...group.querySelectorAll('.poll-opt')];
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    btn.addEventListener('click',()=>{
+      group.classList.add('revealed');
+      opts.forEach(o=>{ if(o.dataset.correct==='true') o.classList.add('correct'); });
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- graph-shift reveals: button[data-reveal-svg="key"] ----
+     Sets opacity 1 on the listed SVG element ids, and — if a matching
+     "<key>Txt" block exists — unfolds it in the same press. */
+  const svgShifts={
+    nxslope:['nxA','nxB'],
+    fx0:['fx0A'],
+    inv:[],
+    prot:['protA','protB'],
+    lbA:['lb1a','lb1b'],
+    lbB:['lb2'],
+    lbC:['lb3'],
+    lfis:[],
+    lprot:[],
+    scat:['scat45']
+  };
+  document.querySelectorAll('[data-reveal-svg]').forEach(btn=>{
+    const key=btn.getAttribute('data-reveal-svg');
+    btn.addEventListener('click',()=>{
+      (svgShifts[key]||[]).forEach(id=>{const el=document.getElementById(id); if(el) el.setAttribute('opacity',1);});
+      const txt=document.getElementById(key+'Txt');
+      if(txt) txt.classList.add('shown');
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- condition cards: button[data-cond="bodyId"] ---- */
+  document.querySelectorAll('[data-cond]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const body=document.getElementById(btn.getAttribute('data-cond'));
+      if(body){body.classList.add('shown');}
+      btn.style.display='none';
+    });
+  });
+
+  const reduced=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const $=id=>document.getElementById(id);
+
+  /* Shared cosine-eased sweep. place(v) computes all geometry from the
+     model equations; shockEls appear when the sweep starts, endEls only
+     once it has finished. The `reduced` branch jumps to the end state. */
+  function sweep(playBtn,resetBtn,place,v0,v1,shockEls,endEls){
+    if(!playBtn) return;
+    let raf;
+    function reset(){
+      cancelAnimationFrame(raf);
+      place(v0);
+      [...shockEls,...endEls].forEach(e=>{if(e)e.setAttribute('opacity',0);});
+    }
+    function finish(){
+      place(v1);
+      [...shockEls,...endEls].forEach(e=>{if(e)e.setAttribute('opacity',1);});
+    }
+    function play(){
+      reset();
+      shockEls.forEach(e=>{if(e)e.setAttribute('opacity',1);});
+      if(reduced){finish();return;}
+      const dur=2600,t0=performance.now();
+      function step(now){
+        const p=Math.min(1,(now-t0)/dur);
+        const e=p<1?(0.5-0.5*Math.cos(Math.PI*p)):1;
+        place(v0+(v1-v0)*e);
+        if(p>=1){endEls.forEach(el=>{if(el)el.setAttribute('opacity',1);});}
+        else raf=requestAnimationFrame(step);
+      }
+      raf=requestAnimationFrame(step);
+    }
+    playBtn.onclick=play;
+    if(resetBtn) resetBtn.onclick=reset;
+    reset();
+  }
+  function setLine(el,x1,y1,x2,y2){
+    if(!el) return;
+    if(x1!=null){el.setAttribute('x1',x1);el.setAttribute('x2',x2);}
+    if(y1!=null){el.setAttribute('y1',y1);el.setAttribute('y2',y2);}
+  }
+
+  /* ══ Slide 24 · SOE, G rises at home ══
+     S̄ = 750 − ΔG ; I(r*) = 750 fixed ; S − I = −ΔG ; ε = 1 + ΔG/500 ; NX = −ΔG
+     Panel scales: x = 55 + (Q−550)·0.9 ; ε: y = 190 − (ε−1)·200 */
+  (function(){
+    const gS=$('gS'),gSt=$('gSt'),gB=$('gB'),gBt=$('gBt'),gGap=$('gGap'),gGapT=$('gGapT'),
+      gArr=$('gArr'),gSI=$('gSI'),gSIt=$('gSIt'),gDot=$('gDot'),gDotT=$('gDotT'),
+      gEg=$('gEg'),gEt=$('gEt'),gNXt=$('gNXt');
+    if(!gS) return;
+    function place(dG){
+      const x=235-0.9*dG;                 // S̄ and S−I share the same pixel scale
+      const eps=1+dG/500, yE=190-0.4*dG;  // ε rises as S−I falls
+      setLine(gS,x,null,x,null); if(gSt) gSt.setAttribute('x',x);
+      gB.setAttribute('cx',x); gBt.setAttribute('x',x-10);
+      setLine(gGap,x,190,235,190); gGapT.setAttribute('x',(x+235)/2);
+      gArr.setAttribute('x',(x+235)/2);
+      setLine(gSI,x,null,x,null); gSIt.setAttribute('x',x);
+      gDot.setAttribute('cx',x); gDot.setAttribute('cy',yE);
+      gDotT.setAttribute('x',x-10); gDotT.setAttribute('y',yE-8);
+      setLine(gEg,55,yE,x,yE); gEt.setAttribute('y',yE+4);
+      gNXt.setAttribute('x',x);
+      $('gGv').textContent=Math.round(1000+dG);
+      $('gSv').textContent=Math.round(750-dG);
+      $('gNv').textContent=(-dG).toFixed(0);
+      $('gEv').textContent=eps.toFixed(2);
+      $('gXv').textContent=(-dG).toFixed(0);
+    }
+    sweep($('playG'),$('resetG'),place,0,100,[gGap,gEg],[gSt,gBt,gGapT,gArr,gSIt,gDotT,gEt,gNXt]);
+  })();
+
+  /* ══ Slide 27 · SOE, the world interest rate rises ══
+     I = 1000 − 50r* ; S̄ = 750 ; S − I = NX = 50(r*−5) ; ε = 1 − NX/500
+     r: y = 280 − (r−2.5)·36 */
+  (function(){
+    const wR=$('wR'),wRt=$('wRt'),wBs=$('wBs'),wBst=$('wBst'),wBi=$('wBi'),wBit=$('wBit'),
+      wGap=$('wGap'),wGapT=$('wGapT'),wIdrop=$('wIdrop'),wIt=$('wIt'),wSI=$('wSI'),wSIt=$('wSIt'),
+      wDot=$('wDot'),wDotT=$('wDotT'),wEg=$('wEg'),wEt=$('wEt'),wNXt=$('wNXt');
+    if(!wR) return;
+    function place(rs){
+      const yR=280-(rs-2.5)*36;
+      const I=1000-50*rs, xI=55+(I-550)*0.9;
+      const NX=750-I, xN=235+0.9*NX, yE=190+0.4*NX, eps=1-NX/500;
+      setLine(wR,null,yR,null,yR); wRt.setAttribute('y',yR+4);
+      wBs.setAttribute('cy',yR); wBst.setAttribute('y',yR-9);   // B  → north-east
+      wBi.setAttribute('cx',xI); wBi.setAttribute('cy',yR);
+      wBit.setAttribute('x',xI-11); wBit.setAttribute('y',yR+17); // B′ → south-west
+      setLine(wGap,xI,yR,235,yR);
+      wGapT.setAttribute('x',(xI+235)/2); wGapT.setAttribute('y',yR-14);
+      setLine(wIdrop,xI,yR,xI,280); wIt.setAttribute('x',xI);
+      setLine(wSI,xN,null,xN,null); wSIt.setAttribute('x',xN);
+      wDot.setAttribute('cx',xN); wDot.setAttribute('cy',yE);
+      wDotT.setAttribute('x',xN+11); wDotT.setAttribute('y',yE-9); // B → north-east
+      setLine(wEg,55,yE,xN,yE); wEt.setAttribute('y',yE+4);
+      wNXt.setAttribute('x',xN);
+      $('wRv').textContent=rs.toFixed(1);
+      $('wIv').textContent=Math.round(I);
+      $('wNv').textContent=Math.round(NX);
+      $('wEv').textContent=eps.toFixed(2);
+      $('wXv').textContent=Math.round(NX);
+    }
+    sweep($('playW'),$('resetW'),place,5,7,[wGap,wEg,wIdrop],[wRt,wBst,wBit,wGapT,wIt,wSIt,wDotT,wEt,wNXt]);
+  })();
+
+  /* ══ Slide 44 · LOE, the world interest rate rises ══
+     S̄ = I(r) + CF(r,r*) with I = 1000 − 50r and CF = 50(r*−r)
+       ⇒ 750 = 1250 + 50(r*−5) − 100r  ⇒  r = 2.5 + 0.5r*
+     so r rises by HALF the rise in r*, the gap r*−r widens, and CF = 25r* − 125 rises.
+     Panel scales: loanable funds x = 40 + (Q−550)·0.85 ; CF and NX x = 210 + v·0.85
+     r: y = 240 − (r−4)·60 ; ε: y = 180 − (ε−1)·400 */
+  (function(){
+    const uLF=$('uLF'),uLFt=$('uLFt'),uLFd=$('uLFd'),uLFdt=$('uLFdt'),uLFgt=$('uLFgt'),
+      uRline=$('uRline'),uRlineT=$('uRlineT'),uCFconn=$('uCFconn'),
+      uLFn=$('uLFn'),uCF=$('uCF'),uCFt=$('uCFt'),uCFd=$('uCFd'),uCFdt=$('uCFdt'),uRs=$('uRs'),uRst=$('uRst'),
+      uCFg=$('uCFg'),uCFgt=$('uCFgt'),uCFarr=$('uCFarr'),uCFarrT=$('uCFarrT'),uCFn=$('uCFn'),
+      uFX=$('uFX'),uFXt=$('uFXt'),uFXd=$('uFXd'),uFXdt=$('uFXdt'),uFXg=$('uFXg'),uFXgt=$('uFXgt'),
+      uFXarr=$('uFXarr'),uFXarrT=$('uFXarrT'),uNXt=$('uNXt');
+    if(!uLF) return;
+    function place(rs){
+      const r=2.5+0.5*rs;          // domestic rate — rises by half of Δr*
+      const I=1000-50*r;
+      const CF=25*rs-125;          // = 50(r* − r)
+      const eps=1-CF/500;
+      const yr=240-(r-4)*60;       // domestic rate on the shared r axis
+      const yrs=240-(rs-4)*60;     // world rate, where CF crosses zero
+      const xCF=210+CF*0.85;
+      const yE=180+CF*0.8;
+      // panel 1 — the I+CF curve slides right as r* rises
+      setLine(uLF,82.5+42.5*rs,240,-172.5+42.5*rs,60);
+      uLFd.setAttribute('cy',yr);
+      uLFdt.setAttribute('y',yr-9);
+      uLFgt.setAttribute('y',yr+4);
+      // r₂ carried horizontally across both top panels
+      setLine(uRline,40,yr,880,yr);
+      uRlineT.setAttribute('y',yr-8);
+      // panel 2 — the CF curve slides right by the same horizontal amount,
+      // but further UP, because r* is the only thing inside it
+      setLine(uCF,40+42.5*rs,240,-87.5+42.5*rs,60);
+      uCFd.setAttribute('cx',xCF); uCFd.setAttribute('cy',yr);
+      uCFdt.setAttribute('x',xCF+11); uCFdt.setAttribute('y',yr-9);
+      uRs.setAttribute('cy',yrs);
+      uRst.setAttribute('y',yrs-16);
+      setLine(uCFg,xCF,yr,xCF,280);
+      uCFgt.setAttribute('x',xCF+6);
+      // panel 3 — the vertical CF line carries into the forex market
+      setLine(uFX,xCF,null,xCF,null);
+      uFXt.setAttribute('x',xCF+6);
+      setLine(uCFconn,480+xCF,280,480+xCF,380);   // the carry-down guide itself
+      uFXd.setAttribute('cx',xCF); uFXd.setAttribute('cy',yE);
+      uFXdt.setAttribute('x',xCF+11); uFXdt.setAttribute('y',yE-9);
+      setLine(uFXg,40,yE,xCF,yE);
+      uFXgt.setAttribute('y',yE+4);
+      uNXt.setAttribute('x',xCF+6);
+      $('uRsv').textContent=rs.toFixed(1);
+      $('uRv').textContent=r.toFixed(1);
+      $('uGv').textContent=(rs-r).toFixed(1);
+      $('uIv').textContent=Math.round(I);
+      $('uCv').textContent=Math.round(CF);
+      $('uEv').textContent=eps.toFixed(2);
+      $('uXv').textContent=Math.round(CF);
+    }
+    sweep($('playU'),$('resetU'),place,5,7,
+      [uRline,uCFg,uFXg,uCFconn],
+      [uLFt,uLFdt,uLFgt,uRlineT,uLFn,uCFt,uCFdt,uRst,uCFgt,uCFarr,uCFarrT,uCFn,
+       uFXt,uFXdt,uFXgt,uFXarr,uFXarrT,uNXt]);
+  })();
+
+  show(0);
+})();
+</script>
+</body>
+</html>

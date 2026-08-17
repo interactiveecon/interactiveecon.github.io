@@ -1,0 +1,1036 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Policy Classifier — ECON 105B</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea;  --panel:#ffffff;
+      --ink:#1f2937;    --ink-2:#374151;  --muted:#596878;
+      --line:#e7dfd2;   --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;
+      --bad:#b42318;
+      --good-bg:rgba(21,92,56,0.08);
+      --bad-bg:rgba(180,35,24,0.08);
+      --good-border:rgba(21,92,56,0.35);
+      --bad-border:rgba(180,35,24,0.35);
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{height:100%;margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* Header */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1200px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;
+      display:grid;grid-template-columns:1.4fr 1fr;gap:18px;align-items:start;}
+    @media(max-width:980px){.header-inner{grid-template-columns:1fr;}}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;max-width:80ch;font-size:0.9375rem;}
+
+    /* Instructions dropdown */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:10px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* Controls card */
+    .controls-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:14px;box-shadow:var(--shadow);}
+    .controls-actions{display:flex;gap:10px;flex-wrap:wrap;}
+    .status{margin-top:10px;min-height:20px;color:var(--muted);font-size:0.8125rem;}
+
+    /* Buttons */
+    .btn{border:1.5px solid #8c7f72;background:var(--panel);color:var(--ink);
+      padding:10px 14px;border-radius:12px;font-weight:700;font-size:0.875rem;
+      cursor:pointer;font-family:var(--font-sans);
+      transition:background .15s,border-color .15s,transform .06s;}
+    .btn:hover:not(:disabled){background:rgba(47,93,124,0.06);border-color:rgba(47,93,124,0.35);}
+    .btn:active:not(:disabled){transform:translateY(1px);}
+    .btn.primary{background:rgba(47,93,124,0.10);border-color:rgba(47,93,124,0.35);color:var(--accent);}
+    .btn.primary:hover:not(:disabled){background:rgba(47,93,124,0.16);}
+    .btn.subtle{background:rgba(139,90,43,0.08);border-color:rgba(139,90,43,0.25);}
+    .btn.subtle:hover:not(:disabled){background:rgba(139,90,43,0.13);}
+    .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+
+    /* Score bar */
+    .score-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px;}
+    .score-chip{font-size:0.8125rem;font-weight:700;padding:4px 10px;
+      border-radius:999px;border:1px solid var(--line-2);
+      background:rgba(255,255,255,0.8);color:var(--ink);}
+    .score-chip.correct{background:var(--good-bg);border-color:var(--good-border);color:var(--good);}
+    .score-chip.incorrect{background:var(--bad-bg);border-color:var(--bad-border);color:var(--bad);}
+
+    /* Main layout */
+    .lab-wrap{max-width:1200px;margin:0 auto;padding:18px;}
+    .main-stack{display:grid;gap:14px;margin-top:6px;}
+
+    .panel{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px;box-shadow:var(--shadow);}
+    .panel-head{display:flex;justify-content:space-between;align-items:baseline;
+      gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+    .panel-head h2{margin:0;font-size:0.8125rem;text-transform:uppercase;
+      letter-spacing:0.08em;color:var(--accent);font-weight:800;}
+
+    /* Scenario box */
+    .scenario-box{border:1px solid var(--line);border-radius:14px;
+      background:rgba(246,242,234,0.5);padding:14px 16px;margin-bottom:18px;}
+    .scenario-stamp{font-size:0.6875rem;text-transform:uppercase;letter-spacing:0.08em;
+      color:var(--muted);margin-bottom:6px;}
+    .scenario-headline{font-family:var(--font-serif);font-size:1.25rem;font-weight:700;
+      color:var(--ink);line-height:1.25;margin:0 0 6px;}
+    .scenario-brief{font-size:0.875rem;color:var(--ink-2);line-height:1.5;margin:0;}
+    .scenario-placeholder{font-size:0.875rem;color:var(--muted);font-style:italic;}
+
+    /* Question grid — five blocks */
+    .q-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+    @media(max-width:1100px){.q-grid{grid-template-columns:repeat(3,1fr);}}
+    @media(max-width:760px){.q-grid{grid-template-columns:1fr 1fr;}}
+    @media(max-width:520px){.q-grid{grid-template-columns:1fr;}}
+
+    .q-block{border:1px solid var(--line);border-radius:14px;
+      background:rgba(255,255,255,0.7);padding:14px;
+      display:flex;flex-direction:column;gap:10px;
+      transition:border-color 0.2s,background 0.2s;}
+    .q-block.answered-correct{border-color:var(--good-border);background:var(--good-bg);}
+    .q-block.answered-wrong{border-color:var(--bad-border);background:var(--bad-bg);}
+
+    .q-label{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;
+      color:var(--muted);font-weight:700;}
+    .q-title{font-weight:900;font-size:0.9375rem;color:var(--ink);}
+
+    /* Choice buttons */
+    .choices{display:flex;flex-direction:column;gap:7px;}
+    .choice-btn{width:100%;text-align:left;padding:9px 12px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:rgba(255,255,255,0.85);color:var(--ink);
+      font-size:0.8125rem;font-weight:600;font-family:var(--font-sans);cursor:pointer;
+      transition:background 0.12s,border-color 0.12s,transform 0.06s;
+      display:flex;align-items:center;gap:6px;}
+    .choice-btn:hover:not(:disabled){background:rgba(47,93,124,0.07);
+      border-color:rgba(47,93,124,0.30);}
+    .choice-btn:active:not(:disabled){transform:translateY(1px);}
+    .choice-btn.selected{background:rgba(47,93,124,0.12);
+      border-color:rgba(47,93,124,0.45);color:var(--accent);}
+    .choice-btn.correct-reveal{background:var(--good-bg);border-color:var(--good-border);
+      color:var(--good);font-weight:800;}
+    .choice-btn.correct-reveal::before{content:'✓';font-weight:900;}
+    .choice-btn.wrong-reveal{background:var(--bad-bg);border-color:var(--bad-border);color:var(--bad);}
+    .choice-btn.wrong-reveal::before{content:'✗';font-weight:900;}
+    .choice-btn:disabled{cursor:default;}
+
+    /* Per-question feedback */
+    .q-feedback{font-size:0.75rem;line-height:1.5;color:var(--ink-2);display:none;}
+    .q-feedback.visible{display:block;}
+    .q-feedback .verdict{font-weight:800;margin-bottom:3px;}
+    .q-feedback .verdict.good{color:var(--good);}
+    .q-feedback .verdict.bad{color:var(--bad);}
+
+    /* Explanation panel */
+    .explain-panel{margin-top:14px;border:1px solid var(--line);border-radius:14px;
+      background:rgba(246,242,234,0.40);padding:14px 16px;display:none;}
+    .explain-panel.visible{display:block;}
+    .explain-title{font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;
+      color:var(--accent);font-weight:800;margin-bottom:8px;}
+    .explain-body{font-size:0.8125rem;color:var(--ink-2);line-height:1.6;}
+    .explain-chain{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px;}
+    .chain-tok{font-size:0.75rem;font-weight:800;padding:3px 9px;border-radius:999px;
+      background:rgba(47,93,124,0.10);border:1px solid rgba(47,93,124,0.25);color:var(--accent);}
+    .chain-arrow{color:var(--muted);font-size:0.8125rem;font-weight:700;}
+
+    /* Progress dots */
+    .progress-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+    .prog-dot{width:10px;height:10px;border-radius:50%;
+      border:1.5px solid var(--line-2);background:rgba(255,255,255,0.7);
+      transition:background 0.2s,border-color 0.2s;}
+    .prog-dot.correct{background:var(--good);border-color:var(--good);}
+    .prog-dot.partial{background:rgba(180,35,24,0.45);border-color:var(--bad);}
+    .prog-dot.wrong{background:var(--bad);border-color:var(--bad);}
+
+    /* Footer */
+    footer{margin-top:24px;}
+    .footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;
+      font-size:0.75rem;color:var(--muted);padding-top:12px;border-top:1px solid var(--line);
+      max-width:1200px;margin:0 auto;padding-left:18px;padding-right:18px;}
+    .hidden{display:none!important;}
+
+    @keyframes shake{
+      0%,100%{transform:translateX(0);}
+      20%{transform:translateX(-5px);} 40%{transform:translateX(5px);}
+      60%{transform:translateX(-4px);} 80%{transform:translateX(4px);}}
+    .shake{animation:shake 0.35s ease;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+    .fade-in{animation:fadeIn 0.25s ease forwards;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ105b/">← ECON 105B Home</a>
+    </nav>
+    <div class="header-inner">
+      <div>
+        <div class="kicker">ECON 105B — Review of Aggregate Demand</div>
+        <h1>Policy Classifier</h1>
+        <p class="sub">
+          Read each policy scenario, then classify it: Is it fiscal or monetary?
+          Expansionary or contractionary? Which curve shifts? What happens to AD and r?
+        </p>
+
+        <details class="instructions-box">
+          <summary class="instructions-toggle">Instructions</summary>
+          <div class="instructions-body">
+            <p>Each round shows a news-style policy headline. Read it, then answer five classification questions.</p>
+            <ol>
+              <li><strong>Question 1 — Type of policy.</strong> Is the action fiscal (changing G or T) or monetary (changing the money supply M)?</li>
+              <li><strong>Question 2 — Stance.</strong> Does it stimulate the economy (expansionary) or restrain it (contractionary)?</li>
+              <li><strong>Question 3 — Which curve shifts.</strong> Fiscal policy shifts <strong>IS</strong>; monetary policy shifts <strong>LM</strong>. Pick the direction too.</li>
+              <li><strong>Question 4 — Effect on AD.</strong> Does AD shift, or is there only a movement along AD? (Policy shifts AD — only a change in P moves along it.)</li>
+              <li><strong>Question 5 — Effect on r.</strong> The interest rate <em>r</em> is determined endogenously in the money market. It can rise, fall, or stay unchanged. Think about what happens to money demand and money supply after the shock plays out.</li>
+            </ol>
+            <p>Click <strong>Check answers</strong> to see how you did. Correct choices are marked ✓; wrong choices are marked ✗ and the correct answer is revealed. Read the explanation, then click <strong>New Scenario</strong> to continue.</p>
+          </div>
+        </details>
+      </div>
+      <div class="controls-card">
+        <div class="controls-actions">
+          <button id="newBtn" class="btn primary">New Scenario</button>
+          <button id="checkBtn" class="btn" disabled>Check answers</button>
+          <button id="resetBtn" class="btn subtle">Reset</button>
+          <button id="pdfBtn" class="btn subtle hidden">Download Summary PDF</button>
+        </div>
+        <div class="score-bar" aria-live="polite" aria-atomic="true">
+          <span class="score-chip correct" id="scoreCorrect">✓ 0</span>
+          <span class="score-chip incorrect" id="scoreWrong">✗ 0</span>
+          <span class="score-chip" id="scoreTotal">0 / 0</span>
+          <span class="score-chip hidden" id="scoreScenario">Scenario 0 of 6</span>
+        </div>
+        <div id="status" class="status" aria-live="polite">Click "New Scenario" to begin.</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+  <div class="main-stack">
+    <div class="panel fade-in">
+      <div class="panel-head">
+        <h2>Scenario</h2>
+        <div class="progress-row" id="progressRow" aria-label="Round history"></div>
+      </div>
+
+      <div class="scenario-box" id="scenarioBox">
+        <p class="scenario-placeholder">Click "New Scenario" to start.</p>
+      </div>
+
+      <div class="q-grid" id="qGrid">
+        <div class="q-block" id="qBlock0">
+          <div class="q-label">Question 1</div>
+          <div class="q-title">What type of policy is this?</div>
+          <div class="choices" id="choices0" role="group" aria-label="Question 1: Type of policy"></div>
+          <div class="q-feedback" id="feedback0" aria-live="polite" aria-atomic="true"></div>
+        </div>
+        <div class="q-block" id="qBlock1">
+          <div class="q-label">Question 2</div>
+          <div class="q-title">Is it expansionary or contractionary?</div>
+          <div class="choices" id="choices1" role="group" aria-label="Question 2: Stance"></div>
+          <div class="q-feedback" id="feedback1" aria-live="polite" aria-atomic="true"></div>
+        </div>
+        <div class="q-block" id="qBlock2">
+          <div class="q-label">Question 3</div>
+          <div class="q-title">Which curve shifts, and in which direction?</div>
+          <div class="choices" id="choices2" role="group" aria-label="Question 3: Curve shift"></div>
+          <div class="q-feedback" id="feedback2" aria-live="polite" aria-atomic="true"></div>
+        </div>
+        <div class="q-block" id="qBlock3">
+          <div class="q-label">Question 4</div>
+          <div class="q-title">What happens to the AD curve?</div>
+          <div class="choices" id="choices3" role="group" aria-label="Question 4: AD effect"></div>
+          <div class="q-feedback" id="feedback3" aria-live="polite" aria-atomic="true"></div>
+        </div>
+        <div class="q-block" id="qBlock4">
+          <div class="q-label">Question 5</div>
+          <div class="q-title">What happens to the interest rate r?</div>
+          <div class="choices" id="choices4" role="group" aria-label="Question 5: Interest rate effect"></div>
+          <div class="q-feedback" id="feedback4" aria-live="polite" aria-atomic="true"></div>
+        </div>
+      </div>
+
+      <div class="explain-panel" id="explainPanel">
+        <div class="explain-title">Explanation</div>
+        <div class="explain-body" id="explainBody"></div>
+        <div class="explain-chain" id="explainChain"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <span>ECON 105B — Review of Aggregate Demand</span>
+    <span>Hosted on GitHub Pages</span>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+/* ─────────────────────────────────────────────────────────────────────────
+   Sample week-template entry (paste into a discussion week's LABS array):
+     { id: 'policy-classifier', name: 'Policy Classifier', icon: '🏷️',
+       desc: 'Classify policy scenarios by type, stance, curve shift, AD effect, and r effect.',
+       url: '/classes/econ105b/labs/policy-classifier/?disc=1' }
+   ───────────────────────────────────────────────────────────────────────── */
+(function(){
+'use strict';
+
+const LAB_ID    = 'policy-classifier';
+const LAB_LABEL = 'Policy Classifier';
+
+const DISC_MODE = new URLSearchParams(location.search).has('disc');
+const DISC_TOTAL_SCEN = 6;
+const QS_PER_SCEN = 5;
+const DISC_TOTAL_POINTS = DISC_TOTAL_SCEN * QS_PER_SCEN; // 30
+
+// ── Scenarios ────────────────────────────────────────────────────────────
+// type:    'fiscal' | 'monetary'
+// stance:  'expansionary' | 'contractionary'
+// curve:   'IS' | 'LM'
+// dir:     for IS: 'right' | 'left'
+//          for LM: 'down' (and right) | 'up' (and left)
+// chain:   tokens — must match the Aggregate Demand Prediction lab verbatim
+// explain: prose using LM/money-market transmission
+// note:    optional extra note (used for the two "Fed cuts/raises rates" teaching scenarios)
+
+const SCEN = [
+  // ── FISCAL / EXPANSIONARY (6) ─────────────────────────────────────────
+  {
+    source: "Congress",
+    headline: "Emergency infrastructure bill passes, boosting federal spending",
+    brief:    "The federal government significantly increases purchases of goods and services.",
+    type: "fiscal", stance: "expansionary", curve: "IS", dir: "right",
+    chain: ["G↑","PE↑","Unplanned Inv↓","Y↑","Money Demand↑","r↑"],
+    template: "fiscal_exp_G"
+  },
+  {
+    source: "White House",
+    headline: "Federal agencies accelerate contract awards this quarter",
+    brief:    "Government purchases of goods and services rise sharply.",
+    type: "fiscal", stance: "expansionary", curve: "IS", dir: "right",
+    chain: ["G↑","PE↑","Unplanned Inv↓","Y↑","Money Demand↑","r↑"],
+    template: "fiscal_exp_G"
+  },
+  {
+    source: "State & Local",
+    headline: "State and local governments accelerate public works spending",
+    brief:    "Public purchases of goods and services rise as projects move forward.",
+    type: "fiscal", stance: "expansionary", curve: "IS", dir: "right",
+    chain: ["G↑","PE↑","Unplanned Inv↓","Y↑","Money Demand↑","r↑"],
+    template: "fiscal_exp_G"
+  },
+  {
+    source: "Policy Desk",
+    headline: "Tax cuts take effect; withholding falls for millions of households",
+    brief:    "Net taxes paid by households decline, boosting disposable income.",
+    type: "fiscal", stance: "expansionary", curve: "IS", dir: "right",
+    chain: ["T↓","C↑","PE↑","Unplanned Inv↓","Y↑","Money Demand↑","r↑"],
+    template: "fiscal_exp_T"
+  },
+  {
+    source: "Policy Desk",
+    headline: "Child tax credit expansion begins, raising household take-home pay",
+    brief:    "Effective net taxes fall this period for most families.",
+    type: "fiscal", stance: "expansionary", curve: "IS", dir: "right",
+    chain: ["T↓","C↑","PE↑","Unplanned Inv↓","Y↑","Money Demand↑","r↑"],
+    template: "fiscal_exp_T"
+  },
+  {
+    source: "Treasury",
+    headline: "Stimulus checks sent to households as part of relief package",
+    brief:    "One-time payments reduce households' effective net tax burden.",
+    type: "fiscal", stance: "expansionary", curve: "IS", dir: "right",
+    chain: ["T↓","C↑","PE↑","Unplanned Inv↓","Y↑","Money Demand↑","r↑"],
+    template: "fiscal_exp_T"
+  },
+
+  // ── FISCAL / CONTRACTIONARY (6) ───────────────────────────────────────
+  {
+    source: "OMB",
+    headline: "Budget directive freezes new federal contracts across agencies",
+    brief:    "Federal purchases fall as agencies delay procurement.",
+    type: "fiscal", stance: "contractionary", curve: "IS", dir: "left",
+    chain: ["G↓","PE↓","Unplanned Inv↑","Y↓","Money Demand↓","r↓"],
+    template: "fiscal_con_G"
+  },
+  {
+    source: "Congress",
+    headline: "Spending caps trigger broad cuts to federal programs",
+    brief:    "The government reduces purchases of goods and services to meet budget targets.",
+    type: "fiscal", stance: "contractionary", curve: "IS", dir: "left",
+    chain: ["G↓","PE↓","Unplanned Inv↑","Y↓","Money Demand↓","r↓"],
+    template: "fiscal_con_G"
+  },
+  {
+    source: "Congress",
+    headline: "Across-agency procurement cuts reduce government buying",
+    brief:    "Government buys fewer goods and services this quarter.",
+    type: "fiscal", stance: "contractionary", curve: "IS", dir: "left",
+    chain: ["G↓","PE↓","Unplanned Inv↑","Y↓","Money Demand↓","r↓"],
+    template: "fiscal_con_G"
+  },
+  {
+    source: "Policy Desk",
+    headline: "Payroll tax surcharge introduced to reduce the deficit",
+    brief:    "Households face a higher tax burden, reducing disposable income.",
+    type: "fiscal", stance: "contractionary", curve: "IS", dir: "left",
+    chain: ["T↑","C↓","PE↓","Unplanned Inv↑","Y↓","Money Demand↓","r↓"],
+    template: "fiscal_con_T"
+  },
+  {
+    source: "Policy Desk",
+    headline: "Tax deductions reduced as part of fiscal consolidation plan",
+    brief:    "Most households will owe more in taxes this year.",
+    type: "fiscal", stance: "contractionary", curve: "IS", dir: "left",
+    chain: ["T↑","C↓","PE↓","Unplanned Inv↑","Y↓","Money Demand↓","r↓"],
+    template: "fiscal_con_T"
+  },
+  {
+    source: "Policy Desk",
+    headline: "Temporary tax credits sunset; effective tax burden rises",
+    brief:    "Expiring credits mean households owe more in taxes this period.",
+    type: "fiscal", stance: "contractionary", curve: "IS", dir: "left",
+    chain: ["T↑","C↓","PE↓","Unplanned Inv↑","Y↓","Money Demand↓","r↓"],
+    template: "fiscal_con_T"
+  },
+
+  // ── MONETARY / EXPANSIONARY (5) ───────────────────────────────────────
+  {
+    source: "Federal Reserve",
+    headline: "Fed launches large-scale asset purchase program (QE)",
+    brief:    "Open-market purchases inject reserves into the banking system; the money supply expands.",
+    type: "monetary", stance: "expansionary", curve: "LM", dir: "down",
+    chain: ["M↑","M/P↑","r↓","I↑","PE↑","Unplanned Inv↓","Y↑"],
+    template: "monetary_exp"
+  },
+  {
+    source: "Open-Market Desk",
+    headline: "Open-market operations expand bank reserves to support lending",
+    brief:    "The Fed buys Treasuries from banks, raising reserves and the money supply.",
+    type: "monetary", stance: "expansionary", curve: "LM", dir: "down",
+    chain: ["M↑","M/P↑","r↓","I↑","PE↑","Unplanned Inv↓","Y↑"],
+    template: "monetary_exp"
+  },
+  {
+    source: "Federal Reserve",
+    headline: "Fed cuts reserve requirements; banks have more lendable funds",
+    brief:    "Lower reserve requirements expand the money supply.",
+    type: "monetary", stance: "expansionary", curve: "LM", dir: "down",
+    chain: ["M↑","M/P↑","r↓","I↑","PE↑","Unplanned Inv↓","Y↑"],
+    template: "monetary_exp"
+  },
+  {
+    source: "Federal Reserve",
+    headline: "Fed expands its balance sheet in response to weakening growth",
+    brief:    "Large-scale asset purchases inject reserves; the money supply rises.",
+    type: "monetary", stance: "expansionary", curve: "LM", dir: "down",
+    chain: ["M↑","M/P↑","r↓","I↑","PE↑","Unplanned Inv↓","Y↑"],
+    template: "monetary_exp"
+  },
+  // ── Teaching scenario: news framing vs model mechanism ──
+  {
+    source: "Federal Reserve",
+    headline: "Fed cuts the federal funds rate by 50 basis points",
+    brief:    "The headline reports a rate cut — but in the IS-LM framework, the Fed's lever is M.",
+    type: "monetary", stance: "expansionary", curve: "LM", dir: "down",
+    chain: ["M↑","M/P↑","r↓","I↑","PE↑","Unplanned Inv↓","Y↑"],
+    template: "monetary_exp_teach"
+  },
+
+  // ── MONETARY / CONTRACTIONARY (5) ─────────────────────────────────────
+  {
+    source: "Federal Reserve",
+    headline: "Fed begins balance-sheet runoff (quantitative tightening)",
+    brief:    "Maturing assets are not replaced; reserves drain and the money supply contracts.",
+    type: "monetary", stance: "contractionary", curve: "LM", dir: "up",
+    chain: ["M↓","M/P↓","r↑","I↓","PE↓","Unplanned Inv↑","Y↓"],
+    template: "monetary_con"
+  },
+  {
+    source: "Open-Market Desk",
+    headline: "Open-market sales drain bank reserves to slow the economy",
+    brief:    "The Fed sells Treasuries; reserves and the money supply fall.",
+    type: "monetary", stance: "contractionary", curve: "LM", dir: "up",
+    chain: ["M↓","M/P↓","r↑","I↓","PE↓","Unplanned Inv↑","Y↓"],
+    template: "monetary_con"
+  },
+  {
+    source: "Federal Reserve",
+    headline: "Fed raises reserve requirements to reduce lendable funds",
+    brief:    "Banks must hold more reserves; the money supply contracts.",
+    type: "monetary", stance: "contractionary", curve: "LM", dir: "up",
+    chain: ["M↓","M/P↓","r↑","I↓","PE↓","Unplanned Inv↑","Y↓"],
+    template: "monetary_con"
+  },
+  {
+    source: "Federal Reserve",
+    headline: "Fed contracts the money supply to fight persistent inflation",
+    brief:    "Asset sales and balance-sheet roll-off reduce reserves and M.",
+    type: "monetary", stance: "contractionary", curve: "LM", dir: "up",
+    chain: ["M↓","M/P↓","r↑","I↓","PE↓","Unplanned Inv↑","Y↓"],
+    template: "monetary_con"
+  },
+  // ── Teaching scenario: news framing vs model mechanism ──
+  {
+    source: "Federal Reserve",
+    headline: "Fed raises rates sharply to combat above-target inflation",
+    brief:    "The headline reports a rate hike — but in the IS-LM framework, the Fed's lever is M.",
+    type: "monetary", stance: "contractionary", curve: "LM", dir: "up",
+    chain: ["M↓","M/P↓","r↑","I↓","PE↓","Unplanned Inv↑","Y↓"],
+    template: "monetary_con_teach"
+  },
+];
+
+// ── Explanation templates ────────────────────────────────────────────────
+function explainFor(s){
+  const T = s.template;
+  if(T === "fiscal_exp_G"){
+    return "Higher government purchases raise planned expenditure. Unplanned inventories fall and firms expand output, so Y rises. With Y higher, money demand rises while the money supply is unchanged — the money market clears at a higher r. On the IS-LM diagram, the IS curve shifts right; the LM curve stays put; the new equilibrium has higher Y and higher r. At any given price level, output is higher, so AD shifts right. The higher r partially crowds out investment, which is why the AD shift is smaller than the initial spending shock.";
+  }
+  if(T === "fiscal_exp_T"){
+    return "Lower net taxes raise households' disposable income, increasing consumption. Higher C raises planned expenditure, unplanned inventories fall, and firms expand output, so Y rises. With Y higher, money demand rises while the money supply is unchanged — the money market clears at a higher r. The IS curve shifts right; LM stays put; new equilibrium has higher Y and higher r. AD shifts right. The higher r partially crowds out investment, so the AD shift is smaller than the initial consumption boost.";
+  }
+  if(T === "fiscal_con_G"){
+    return "Lower government purchases reduce planned expenditure. Unplanned inventories rise and firms cut output, so Y falls. With Y lower, money demand falls while the money supply is unchanged — the money market clears at a lower r. The IS curve shifts left; LM stays put; new equilibrium has lower Y and lower r. At any given price level, output is lower, so AD shifts left. The lower r partially offsets the contraction by stimulating investment.";
+  }
+  if(T === "fiscal_con_T"){
+    return "Higher net taxes reduce households' disposable income and consumption. Lower C reduces planned expenditure, unplanned inventories rise, and firms cut output, so Y falls. With Y lower, money demand falls while the money supply is unchanged — the money market clears at a lower r. The IS curve shifts left; LM stays put; new equilibrium has lower Y and lower r. AD shifts left. The lower r partially offsets the contraction by stimulating investment.";
+  }
+  if(T === "monetary_exp"){
+    return "An increase in the money supply raises real money balances M/P. With more liquidity in the economy, the interest rate that clears the money market falls. Lower r stimulates investment; higher I raises planned expenditure; unplanned inventories fall and firms expand output. On the IS-LM diagram, the IS curve is unchanged; the LM curve shifts down (and right). At any given price level, output is higher, so AD shifts right.";
+  }
+  if(T === "monetary_con"){
+    return "A decrease in the money supply lowers real money balances M/P. With less liquidity in the economy, the interest rate that clears the money market rises. Higher r discourages investment; lower I cuts planned expenditure; unplanned inventories rise and firms reduce output. On the IS-LM diagram, the IS curve is unchanged; the LM curve shifts up (and left). At any given price level, output is lower, so AD shifts left.";
+  }
+  if(T === "monetary_exp_teach"){
+    return "News headlines often say \"the Fed cut rates,\" but in the IS-LM framework, the Fed's actual policy lever is the money supply M. To cut rates, the Fed must expand M (typically by buying Treasuries in the open market). The rate cut is the consequence of the M increase, not the action itself. Mechanism: M rises, so real money balances M/P rise, and the money market clears at a lower r. Lower r stimulates investment; higher I raises planned expenditure; unplanned inventories fall and Y rises. The IS curve is unchanged; the LM curve shifts down (and right). AD shifts right.";
+  }
+  if(T === "monetary_con_teach"){
+    return "News headlines often say \"the Fed raised rates,\" but in the IS-LM framework, the Fed's actual policy lever is the money supply M. To raise rates, the Fed must contract M (typically by selling Treasuries in the open market). The rate hike is the consequence of the M decrease, not the action itself. Mechanism: M falls, so real money balances M/P fall, and the money market clears at a higher r. Higher r discourages investment; lower I cuts planned expenditure; unplanned inventories rise and Y falls. The IS curve is unchanged; the LM curve shifts up (and left). AD shifts left.";
+  }
+  return "";
+}
+
+// ── Questions ────────────────────────────────────────────────────────────
+function buildQuestions(s){
+  const adDir = s.stance === "expansionary" ? "right" : "left";
+  // r direction:
+  //   fiscal expansionary  → r rises
+  //   fiscal contractionary→ r falls
+  //   monetary expansionary→ r falls
+  //   monetary contractionary→ r rises
+  const rUp = (s.type === "fiscal" && s.stance === "expansionary")
+           || (s.type === "monetary" && s.stance === "contractionary");
+  const rDir = rUp ? "rises" : "falls";
+
+  return [
+    // Q1 — Type of policy
+    {
+      id: 0,
+      prompt: "What type of policy is this?",
+      correct: s.type,
+      choices: [
+        { value: "fiscal",   label: "Fiscal policy" },
+        { value: "monetary", label: "Monetary policy" },
+      ],
+      feedbackCorrect: "Correct! " + (s.type === "fiscal"
+        ? "This policy changes government purchases (G) or taxes (T) — the tools of fiscal policy."
+        : "This policy changes the money supply (M) — the lever of monetary policy in the IS-LM framework."),
+      feedbackWrong: s.type === "fiscal"
+        ? "This is actually fiscal policy — it changes G or T directly."
+        : "This is actually monetary policy — it changes the money supply M. In IS-LM, the Fed's policy instrument is M, not r."
+    },
+
+    // Q2 — Stance
+    {
+      id: 1,
+      prompt: "Is it expansionary or contractionary?",
+      correct: s.stance,
+      choices: [
+        { value: "expansionary",   label: "Expansionary" },
+        { value: "contractionary", label: "Contractionary" },
+      ],
+      feedbackCorrect: "Correct! " + (s.stance === "expansionary"
+        ? "This policy raises output and aggregate demand."
+        : "This policy reduces output and aggregate demand."),
+      feedbackWrong: s.stance === "expansionary"
+        ? "This is actually expansionary — it raises Y and shifts AD right."
+        : "This is actually contractionary — it lowers Y and shifts AD left."
+    },
+
+    // Q3 — Which curve shifts (IS vs LM, four directional choices)
+    {
+      id: 2,
+      prompt: "Which curve shifts, and in which direction?",
+      correct: s.curve + "-" + s.dir,
+      choices: [
+        { value: "IS-right", label: "IS shifts right" },
+        { value: "IS-left",  label: "IS shifts left" },
+        { value: "LM-up",    label: "LM shifts up (and left)" },
+        { value: "LM-down",  label: "LM shifts down (and right)" },
+      ],
+      feedbackCorrect: q3Correct(s),
+      feedbackWrong:   q3Wrong(s)
+    },
+
+    // Q4 — Effect on AD
+    {
+      id: 3,
+      prompt: "What happens to the AD curve?",
+      correct: "shift-" + adDir,
+      choices: [
+        { value: "shift-right", label: "AD shifts right" },
+        { value: "shift-left",  label: "AD shifts left" },
+        { value: "move-right",  label: "Movement along AD (rightward)" },
+        { value: "move-left",   label: "Movement along AD (leftward)" },
+      ],
+      feedbackCorrect: `Correct! Fiscal and monetary policy change equilibrium Y at every price level, so the AD curve itself shifts ${adDir}.`,
+      feedbackWrong:   `The AD curve shifts ${adDir}. Remember: fiscal and monetary policy shift AD — only a change in the price level causes a movement along AD.`
+    },
+
+    // Q5 — Effect on r
+    {
+      id: 4,
+      prompt: "What happens to the interest rate r?",
+      correct: rUp ? "r-up" : "r-down",
+      choices: [
+        { value: "r-up",        label: "r rises" },
+        { value: "r-down",      label: "r falls" },
+        { value: "r-unchanged", label: "r unchanged" },
+      ],
+      feedbackCorrect: q5Correct(s),
+      feedbackWrong:   q5Wrong(s, rDir)
+    }
+  ];
+}
+
+function q3Correct(s){
+  if(s.curve === "IS"){
+    return s.dir === "right"
+      ? "Correct! Fiscal expansion raises planned expenditure at every interest rate, so the IS curve shifts right."
+      : "Correct! Fiscal contraction lowers planned expenditure at every interest rate, so the IS curve shifts left.";
+  }
+  // LM
+  return s.dir === "down"
+    ? "Correct! A larger money supply raises M/P. To clear the money market at any given Y, r must be lower — the LM curve shifts down (and right)."
+    : "Correct! A smaller money supply lowers M/P. To clear the money market at any given Y, r must be higher — the LM curve shifts up (and left).";
+}
+
+function q3Wrong(s){
+  if(s.curve === "IS"){
+    return s.dir === "right"
+      ? "Not quite. Fiscal expansion raises planned expenditure — the IS curve shifts right. (LM doesn't shift because the money supply is unchanged.)"
+      : "Not quite. Fiscal contraction lowers planned expenditure — the IS curve shifts left. (LM doesn't shift because the money supply is unchanged.)";
+  }
+  return s.dir === "down"
+    ? "Not quite. Monetary expansion raises real money balances M/P, so the LM curve shifts down (and right). IS is unchanged because G, T, and autonomous spending are all unchanged."
+    : "Not quite. Monetary contraction lowers real money balances M/P, so the LM curve shifts up (and left). IS is unchanged because G, T, and autonomous spending are all unchanged.";
+}
+
+function q5Correct(s){
+  if(s.type === "fiscal" && s.stance === "expansionary"){
+    return "Correct! Higher G (or lower T) raises Y, which raises money demand. With the money supply unchanged, the money market clears at a higher r.";
+  }
+  if(s.type === "fiscal" && s.stance === "contractionary"){
+    return "Correct! Lower G (or higher T) lowers Y, which lowers money demand. With the money supply unchanged, the money market clears at a lower r.";
+  }
+  if(s.type === "monetary" && s.stance === "expansionary"){
+    return "Correct! A larger money supply raises real money balances M/P. With more liquidity available, the money market clears at a lower r.";
+  }
+  return "Correct! A smaller money supply lowers real money balances M/P. With less liquidity available, the money market clears at a higher r.";
+}
+
+function q5Wrong(s, rDir){
+  if(s.type === "fiscal"){
+    return `Not quite — r ${rDir}. In IS-LM, r is determined in the money market. Fiscal policy changes Y, which changes money demand. Higher Y ⇒ higher money demand ⇒ higher r (and vice versa). The money supply itself isn't touched by fiscal policy.`;
+  }
+  return `Not quite — r ${rDir}. Monetary policy changes the money supply directly. A larger M raises M/P and clears the money market at a lower r; a smaller M does the opposite. Note: r is the equilibrium outcome, not the Fed's instrument.`;
+}
+
+// ── RNG (seeded in discussion mode) ──────────────────────────────────────
+let _rng = null;
+function rand(){ return _rng ? _rng() : Math.random(); }
+
+// ── State ─────────────────────────────────────────────────────────────────
+let scenario = null;
+let questions = [];
+let selections = [null, null, null, null, null];
+let checked = false;
+let history = []; // 0..5 correct per round
+let totalCorrect = 0;
+let totalWrong = 0;
+let _firstScore = 0;       // identical to totalCorrect (single-phase per Q)
+let _scenariosCompleted = 0;
+let _discQueue = [];       // pre-shuffled queue (disc mode)
+let _discIdx = 0;          // 0..DISC_TOTAL_SCEN
+let recentScenarios = [];  // standalone-mode recency guard
+
+// ── DOM refs ─────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const newBtn      = $("newBtn");
+const checkBtn    = $("checkBtn");
+const resetBtn    = $("resetBtn");
+const pdfBtn      = $("pdfBtn");
+const statusEl    = $("status");
+const scenarioBox = $("scenarioBox");
+const explainPanel = $("explainPanel");
+const explainBody  = $("explainBody");
+const explainChain = $("explainChain");
+const progressRow  = $("progressRow");
+const scoreCorrect = $("scoreCorrect");
+const scoreWrong   = $("scoreWrong");
+const scoreTotal   = $("scoreTotal");
+const scoreScenario = $("scoreScenario");
+
+function setStatus(msg){ statusEl.textContent = msg; }
+
+function updateScoreBar(){
+  scoreCorrect.textContent = `✓ ${totalCorrect}`;
+  scoreWrong.textContent   = `✗ ${totalWrong}`;
+  const denom = DISC_MODE ? DISC_TOTAL_POINTS : (totalCorrect + totalWrong);
+  scoreTotal.textContent   = DISC_MODE
+    ? `${totalCorrect} / ${DISC_TOTAL_POINTS}`
+    : `${totalCorrect + totalWrong} answered`;
+  if(DISC_MODE){
+    scoreScenario.classList.remove("hidden");
+    scoreScenario.textContent = `Scenario ${Math.min(_scenariosCompleted, DISC_TOTAL_SCEN)} of ${DISC_TOTAL_SCEN}`;
+  }
+}
+
+function updateProgress(){
+  progressRow.innerHTML = "";
+  history.forEach((nCorrect, i) => {
+    const d = document.createElement("div");
+    let cls = "wrong";
+    if(nCorrect === QS_PER_SCEN) cls = "correct";
+    else if(nCorrect > 0) cls = "partial";
+    d.className = "prog-dot " + cls;
+    d.setAttribute("role", "img");
+    d.setAttribute("aria-label",
+      `Scenario ${i+1}: ${nCorrect} of ${QS_PER_SCEN} correct`);
+    progressRow.appendChild(d);
+  });
+}
+
+function makeStamp(){
+  const days = ["Mon","Tue","Wed","Thu","Fri"];
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const d = days[Math.floor(rand() * days.length)];
+  const m = months[Math.floor(rand() * months.length)];
+  const day = 1 + Math.floor(rand() * 28);
+  const hr = 7 + Math.floor(rand() * 9);
+  const min = rand() < 0.5 ? "00" : "30";
+  return `${d}, ${m} ${day} — ${hr}:${min} ${hr < 12 ? "AM" : "PM"}`;
+}
+
+// ── Render ───────────────────────────────────────────────────────────────
+function renderScenario(){
+  scenarioBox.innerHTML = `
+    <div class="scenario-stamp">${scenario.stamp} · ${scenario.source}</div>
+    <p class="scenario-headline">${scenario.headline}</p>
+    <p class="scenario-brief">${scenario.brief}</p>
+  `;
+}
+
+function renderQuestions(){
+  questions.forEach(q => {
+    const choicesEl = $(`choices${q.id}`);
+    const blockEl   = $(`qBlock${q.id}`);
+    choicesEl.innerHTML = "";
+    blockEl.className = "q-block fade-in";
+    q.choices.forEach(c => {
+      const btn = document.createElement("button");
+      btn.className = "choice-btn";
+      btn.textContent = c.label;
+      btn.dataset.value = c.value;
+      btn.setAttribute("aria-pressed", "false");
+      btn.addEventListener("click", () => onSelect(q.id, c.value));
+      choicesEl.appendChild(btn);
+    });
+    const fb = $(`feedback${q.id}`);
+    fb.innerHTML = "";
+    fb.className = "q-feedback";
+  });
+}
+
+function onSelect(qId, value){
+  if(checked) return;
+  selections[qId] = value;
+  const choicesEl = $(`choices${qId}`);
+  choicesEl.querySelectorAll(".choice-btn").forEach(b => {
+    const isSelected = b.dataset.value === value;
+    b.classList.toggle("selected", isSelected);
+    b.setAttribute("aria-pressed", isSelected ? "true" : "false");
+  });
+  checkBtn.disabled = !allSelected();
+  if(allSelected()) setStatus("All questions answered — click Check answers.");
+}
+
+function allSelected(){ return selections.every(s => s !== null); }
+
+// ── Check answers ────────────────────────────────────────────────────────
+function checkAnswers(){
+  if(!allSelected() || checked) return;
+  checked = true;
+  checkBtn.disabled = true;
+
+  let nCorrectThisRound = 0;
+  const subAnswers = {};
+  const subCorrect = {};
+
+  questions.forEach(q => {
+    const isCorrect = selections[q.id] === q.correct;
+    if(isCorrect) nCorrectThisRound++;
+
+    const blockEl   = $(`qBlock${q.id}`);
+    const choicesEl = $(`choices${q.id}`);
+    const feedbackEl = $(`feedback${q.id}`);
+
+    blockEl.className = "q-block " + (isCorrect ? "answered-correct" : "answered-wrong");
+    choicesEl.querySelectorAll(".choice-btn").forEach(b => {
+      b.disabled = true;
+      b.setAttribute("aria-pressed", "false");
+      if(b.dataset.value === q.correct){
+        b.classList.remove("selected");
+        b.classList.add("correct-reveal");
+      } else if(b.dataset.value === selections[q.id] && !isCorrect){
+        b.classList.remove("selected");
+        b.classList.add("wrong-reveal");
+      }
+    });
+
+    feedbackEl.innerHTML = `<div class="verdict ${isCorrect?'good':'bad'}">${isCorrect?'✓ Correct':'✗ Not quite'}</div>${isCorrect?q.feedbackCorrect:q.feedbackWrong}`;
+    feedbackEl.className = "q-feedback visible";
+
+    if(!isCorrect){
+      blockEl.classList.add("shake");
+      setTimeout(() => blockEl.classList.remove("shake"), 400);
+    }
+
+    subAnswers[`q${q.id+1}`] = labelFor(q, selections[q.id]);
+    subCorrect[`q${q.id+1}`] = isCorrect;
+  });
+
+  totalCorrect += nCorrectThisRound;
+  totalWrong   += (QS_PER_SCEN - nCorrectThisRound);
+  _firstScore  += nCorrectThisRound;
+  history.push(nCorrectThisRound);
+  _scenariosCompleted += 1;
+  updateScoreBar();
+  updateProgress();
+
+  // Explanation
+  explainBody.textContent = explainFor(scenario);
+  explainChain.innerHTML = scenario.chain.map((tok, i) =>
+    `<span class="chain-tok">${tok}</span>` +
+    (i < scenario.chain.length - 1 ? `<span class="chain-arrow">→</span>` : "")
+  ).join("");
+  explainPanel.className = "explain-panel visible fade-in";
+
+  // Session recording
+  recordScenario(subAnswers, subCorrect, nCorrectThisRound);
+
+  // Status / discussion-mode completion
+  if(DISC_MODE && _scenariosCompleted >= DISC_TOTAL_SCEN){
+    setStatus(`Final score: ${totalCorrect} / ${DISC_TOTAL_POINTS}. All six scenarios complete — download your summary PDF.`);
+    newBtn.disabled = true;
+    pdfBtn.classList.remove("hidden");
+  } else if(DISC_MODE){
+    setStatus(`${nCorrectThisRound}/${QS_PER_SCEN} correct. Click New Scenario for the next one (${_scenariosCompleted}/${DISC_TOTAL_SCEN} done).`);
+  } else {
+    setStatus(nCorrectThisRound === QS_PER_SCEN
+      ? "✓ Perfect! All five correct. Click New Scenario to continue."
+      : `${nCorrectThisRound}/${QS_PER_SCEN} correct. Review the explanation, then try a new scenario.`);
+  }
+}
+
+function labelFor(q, value){
+  const c = q.choices.find(ch => ch.value === value);
+  return c ? c.label : String(value);
+}
+
+function recordScenario(subAnswers, subCorrect, nCorrect){
+  if(!window.Session || !Session.recordQuestion) return;
+  const qIndex = _scenariosCompleted - 1;
+  const qText  = `${scenario.source} — ${scenario.headline}`;
+  const ansObj = {
+    answers: subAnswers,
+    correct: subCorrect,
+    score:   `${nCorrect}/${QS_PER_SCEN}`
+  };
+  const ansStr = JSON.stringify(ansObj);
+  const allCorrect = nCorrect === QS_PER_SCEN;
+  // Single-phase per scenario: first and final are the same.
+  Session.recordQuestion(LAB_ID, qIndex, qText,
+    ansStr, allCorrect, ansStr, allCorrect);
+
+  if(DISC_MODE && _scenariosCompleted >= DISC_TOTAL_SCEN){
+    if(Session.recordLabDone){
+      Session.recordLabDone(LAB_ID, LAB_LABEL,
+        _firstScore, totalCorrect, DISC_TOTAL_POINTS);
+    }
+  } else if(!DISC_MODE && Session.recordLabDone){
+    // In standalone, keep the session in sync after each round.
+    const total = _scenariosCompleted * QS_PER_SCEN;
+    Session.recordLabDone(LAB_ID, LAB_LABEL,
+      _firstScore, totalCorrect, total);
+  }
+}
+
+// ── Scenario selection ───────────────────────────────────────────────────
+function buildDiscQueue(){
+  const pool = SCEN.slice();
+  // Fisher-Yates with seeded rng
+  for(let i = pool.length - 1; i > 0; i--){
+    const j = Math.floor(rand() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  _discQueue = pool.slice(0, DISC_TOTAL_SCEN);
+}
+
+function pickScenario(){
+  if(DISC_MODE){
+    return _discQueue[_discIdx++];
+  }
+  // standalone: avoid immediate repeats
+  let pick, attempts = 0;
+  do {
+    pick = SCEN[Math.floor(rand() * SCEN.length)];
+    attempts++;
+  } while(recentScenarios.includes(pick.headline) && attempts < 30);
+  recentScenarios.push(pick.headline);
+  if(recentScenarios.length > 6) recentScenarios.shift();
+  return pick;
+}
+
+function newScenario(){
+  if(DISC_MODE && _discIdx >= DISC_TOTAL_SCEN) return;
+  const base = pickScenario();
+  scenario = { ...base, stamp: makeStamp() };
+  questions = buildQuestions(scenario);
+  selections = [null, null, null, null, null];
+  checked = false;
+
+  renderScenario();
+  renderQuestions();
+
+  explainPanel.className = "explain-panel";
+  checkBtn.disabled = true;
+  setStatus("Read the scenario, then answer all five questions.");
+}
+
+// ── Reset ────────────────────────────────────────────────────────────────
+function resetAll(){
+  if(DISC_MODE) return; // disabled in discussion mode
+  scenario = null;
+  questions = [];
+  selections = [null, null, null, null, null];
+  checked = false;
+  history = [];
+  totalCorrect = 0;
+  totalWrong = 0;
+  _firstScore = 0;
+  _scenariosCompleted = 0;
+  recentScenarios = [];
+
+  scenarioBox.innerHTML = `<p class="scenario-placeholder">Click "New Scenario" to start.</p>`;
+  [0,1,2,3,4].forEach(i => {
+    $(`choices${i}`).innerHTML = "";
+    $(`feedback${i}`).className = "q-feedback";
+    $(`feedback${i}`).innerHTML = "";
+    $(`qBlock${i}`).className = "q-block";
+  });
+  explainPanel.className = "explain-panel";
+  checkBtn.disabled = true;
+  progressRow.innerHTML = "";
+  updateScoreBar();
+  setStatus("Click \"New Scenario\" to begin.");
+}
+
+// ── Wire events ──────────────────────────────────────────────────────────
+newBtn.addEventListener("click", newScenario);
+checkBtn.addEventListener("click", checkAnswers);
+resetBtn.addEventListener("click", resetAll);
+pdfBtn.addEventListener("click", () => {
+  if(window.DiscussionPDF && DiscussionPDF.generate) DiscussionPDF.generate();
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────
+function init(){
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+  if(DISC_MODE){
+    buildDiscQueue();
+    resetBtn.classList.add("hidden");
+    scoreScenario.classList.remove("hidden");
+  }
+  updateScoreBar();
+}
+
+if(DISC_MODE && window.DiscussionModal && DiscussionModal.init){
+  DiscussionModal.init({
+    weekLabel: 'Policy Classifier',
+    onReady: function(){ init(); }
+  });
+} else {
+  init();
+}
+
+})();
+</script>
+</body>
+</html>
