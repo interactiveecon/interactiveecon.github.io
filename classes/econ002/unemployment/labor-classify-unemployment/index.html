@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Classify the Unemployment — ECON 002</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <!--
+    LAB_ID:    labor-classify-unemployment
+    LAB_LABEL: Classify the Unemployment
+    url:       /classes/econ002/unemployment/labor-classify-unemployment/?disc=1
+    Single-phase lab: each item is scored on its one Check (both parts right
+    = 1 point, one part right = 1/2 point).
+  -->
+
+  <style>
+    /* ── Design tokens ─────────────────────────────────────────── */
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea;
+      --panel:#ffffff;
+      --ink:#1f2937;
+      --ink-2:#374151;
+      --muted:#596878;
+      --line:#e7dfd2;
+      --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;
+      --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3 / good practice) ────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* ── Header / footer ───────────────────────────────────────── */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),
+      rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;
+      font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;
+      line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;
+      max-width:80ch;font-size:0.9375rem;}
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+    footer{margin-top:24px;}
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+    .hidden{display:none!important;}
+
+    /* ── Instructions dropdown ─────────────────────────────────── */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* ── Buttons ───────────────────────────────────────────────── */
+    /* Default button border #8c7f72 = 3.53:1 on white (WCAG 1.4.11 ✓) */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+    .option-btn.active,
+    .option-btn.active:hover:not(:disabled){background:var(--accent);color:#fff;
+      border-color:var(--accent);}
+    .option-btn.active:disabled{opacity:.75;}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover{background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center;}
+
+    /* ── Cards / text ──────────────────────────────────────────── */
+    .card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .card h2{font-family:var(--font-serif);font-size:1.25rem;margin:0 0 8px;}
+    .card h3{font-family:var(--font-serif);font-size:1.0625rem;margin:0 0 6px;}
+    .card p{margin:8px 0;line-height:1.55;color:var(--ink-2);font-size:0.9375rem;}
+    .step-label{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
+
+    /* ── Item view ─────────────────────────────────────────────── */
+    .progress-row{display:flex;flex-wrap:wrap;justify-content:space-between;
+      align-items:center;gap:8px;margin-bottom:10px;}
+    .progress-label{font-size:0.8125rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.08em;}
+    .progress-count{font-size:0.8125rem;color:var(--muted);font-weight:700;}
+    .progress-bar{height:8px;border-radius:99px;background:var(--line);
+      overflow:hidden;margin-bottom:14px;border:1px solid var(--line-2);}
+    .progress-fill{height:100%;background:var(--accent);width:0;transition:width .2s;}
+    .story{font-family:var(--font-serif);font-size:1.125rem;line-height:1.55;
+      color:var(--ink);margin:4px 0 16px;padding:14px 16px;border-radius:12px;
+      background:rgba(246,242,234,.7);border-left:4px solid var(--accent);}
+    .q-block{margin:14px 0;}
+    .q-label{font-size:0.875rem;font-weight:800;color:var(--ink);margin:0 0 8px;}
+    .type-group{display:flex;flex-wrap:wrap;gap:8px;}
+    .reason-group{display:flex;flex-direction:column;gap:6px;}
+    .reason-group .option-btn{text-align:left;font-weight:600;font-size:0.875rem;
+      line-height:1.4;display:flex;gap:8px;}
+    .reason-group .rk{font-weight:800;min-width:2.1em;}
+    /* Checked items stay readable: locked buttons keep full contrast, and the
+       correct option gets a green border plus a text tag (not color alone). */
+    .type-group .option-btn:disabled,.reason-group .option-btn:disabled{opacity:1;
+      cursor:default;color:var(--muted);border-color:var(--line-2);}
+    .type-group .option-btn.active:disabled,.reason-group .option-btn.active:disabled{
+      color:#fff;background:var(--accent);border-color:var(--accent);}
+    .type-group .option-btn.is-answer:disabled,.reason-group .option-btn.is-answer:disabled{
+      border:2.5px solid var(--good);color:var(--ink);}
+    .type-group .option-btn.is-answer.active:disabled,.reason-group .option-btn.is-answer.active:disabled{
+      color:#fff;background:var(--good);}
+    .ans-tag{font-size:0.75rem;font-weight:800;margin-left:auto;padding-left:8px;white-space:nowrap;}
+    .option-btn:not(.active) .ans-tag{color:var(--good);}
+    .nav-row{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;
+      margin-top:16px;padding-top:14px;border-top:1px solid var(--line);}
+
+    .feedback{margin-top:12px;padding:10px 14px;border-radius:10px;
+      font-size:0.9375rem;line-height:1.55;border:1px solid transparent;}
+    .feedback.correct{background:rgba(21,92,56,.08);border-color:rgba(21,92,56,.25);color:#0d4427;}
+    .feedback.partial{background:#fff7e6;border-color:#e8c989;color:#6b3700;}
+    .feedback.incorrect{background:rgba(180,35,24,.06);border-color:rgba(180,35,24,.25);color:#7a1810;}
+    .feedback.hint{background:#fff7e6;border-color:#e8c989;color:#8c4800;}
+    .feedback p{margin:4px 0;}
+    .symbol{font-weight:900;margin-right:6px;display:inline-block;min-width:1em;}
+
+    /* ── Results ───────────────────────────────────────────────── */
+    .score-big{font-family:var(--font-serif);font-size:2rem;font-weight:700;color:var(--ink);margin:4px 0;}
+    .res-table{width:100%;border-collapse:collapse;font-size:0.875rem;margin:10px 0 4px;}
+    .res-table th,.res-table td{border:1px solid var(--line-2);padding:8px 10px;text-align:left;}
+    .res-table thead th{background:rgba(47,93,124,.07);font-size:0.75rem;
+      text-transform:uppercase;letter-spacing:.05em;color:var(--ink);}
+    .res-table td.num{text-align:right;font-variant-numeric:tabular-nums;}
+    .missed-list{list-style:none;padding:0;margin:8px 0;display:flex;flex-direction:column;gap:8px;}
+    .missed-list li{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;
+      padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:rgba(246,242,234,.5);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.45;}
+    .missed-list .m-text{flex:1 1 220px;min-width:0;}
+    .missed-list .m-tag{font-weight:800;color:#8c4800;margin-right:4px;}
+    .recap-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px;}
+    @media(max-width:700px){.recap-grid{grid-template-columns:1fr;}}
+    .recap-card{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--panel);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.5;}
+    .recap-card strong{display:block;color:var(--ink);font-size:0.9375rem;margin-bottom:4px;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ002/labs/">← ECON 002 Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 002 — Unemployment</div>
+      <h1>Classify the Unemployment</h1>
+      <p class="sub">Sort real-world stories into frictional, structural and cyclical
+      unemployment, and say why.</p>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>You will read 12 short stories about people without jobs. For each one,
+          answer two questions:</p>
+          <ol>
+            <li><strong>Type.</strong> Is this frictional, structural or cyclical
+            unemployment, or is the person not counted as unemployed at all?</li>
+            <li><strong>Reason.</strong> Which of the five reasons explains it?</li>
+          </ol>
+          <p>Click <strong>Check</strong> to score the item. Getting both parts right
+          earns 1 point; getting one part right earns ½ point. Each item is scored
+          on its first check, and the feedback explains the answer. Use
+          <strong>Previous</strong> and <strong>Next</strong> to move between items.
+          After all 12 are checked, you will see your score, a breakdown by type, and
+          any items you missed so you can review them.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <!-- ── Item view ─────────────────────────────────────────────── -->
+  <section class="card" id="itemView" aria-labelledby="itemHeading">
+    <div class="progress-row">
+      <h2 class="progress-label" id="itemHeading" tabindex="-1" style="margin:0;">Item 1 of 12</h2>
+      <span class="progress-count" id="progressCount" aria-live="polite">0 of 12 checked</span>
+    </div>
+    <div class="progress-bar" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
+    <p class="story" id="story"></p>
+
+    <div class="q-block">
+      <p class="q-label" id="typeLabel">1. What type is it?</p>
+      <div class="type-group" role="group" aria-labelledby="typeLabel" id="typeGroup"></div>
+    </div>
+
+    <div class="q-block">
+      <p class="q-label" id="reasonLabel">2. What is the reason?</p>
+      <div class="reason-group" role="group" aria-labelledby="reasonLabel" id="reasonGroup"></div>
+    </div>
+
+    <div class="btn-row">
+      <button type="button" class="primary-btn" id="checkBtn">Check</button>
+    </div>
+    <div id="itemFb" class="feedback hidden" aria-live="polite" aria-atomic="true"></div>
+
+    <div class="nav-row">
+      <button type="button" class="option-btn" id="prevBtn">← Previous</button>
+      <div class="btn-row" style="margin:0;">
+        <button type="button" class="option-btn hidden" id="backResultsBtn">Back to results</button>
+        <button type="button" class="primary-btn hidden" id="resultsBtn">See my results</button>
+        <button type="button" class="option-btn" id="nextBtn">Next →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Results view ──────────────────────────────────────────── -->
+  <section class="card hidden" id="resultsView" aria-labelledby="resultsHeading">
+    <h2 id="resultsHeading" tabindex="-1">Your results</h2>
+    <p class="score-big" id="scoreBig"></p>
+    <p id="scoreLine"></p>
+
+    <table class="res-table">
+      <caption class="sr-only">Score by correct type</caption>
+      <thead><tr><th scope="col">Correct type</th><th scope="col">Items</th><th scope="col">Points earned</th></tr></thead>
+      <tbody id="breakdownBody"></tbody>
+    </table>
+
+    <h3 style="margin-top:16px;">Items to review</h3>
+    <p id="missedNone" class="hidden">You earned full credit on every item.</p>
+    <ul class="missed-list" id="missedList"></ul>
+
+    <div class="btn-row">
+      <button type="button" class="option-btn" id="restartBtn">Start over (new order)</button>
+    </div>
+  </section>
+
+  <section class="card hidden" id="recapCard" aria-labelledby="recapHeading">
+    <h2 id="recapHeading">Recap: the definitions from the notes</h2>
+    <div class="recap-grid">
+      <div class="recap-card"><strong>Frictional unemployment</strong>
+        Unemployment that results from people switching jobs. The “right” job exists and
+        there is a vacancy you can fill, but finding it takes time. Durations are
+        typically short.</div>
+      <div class="recap-card"><strong>Structural unemployment</strong>
+        Unemployment caused by a change in the structure of the economy (such as
+        technological change) that leaves too few jobs for a particular set of skills,
+        or by wages kept above equilibrium (unions, the minimum wage, efficiency wages).
+        Durations are typically long (27+ weeks); retraining is usually the only
+        remedy.</div>
+      <div class="recap-card"><strong>Cyclical unemployment</strong>
+        Deviations from the natural rate of unemployment that occur during the business
+        cycle. Sticky wages cause it in the short run; in the long run demand recovers
+        or wages adjust.</div>
+      <div class="recap-card"><strong>The natural rate of unemployment</strong>
+        Frictional plus structural unemployment. The unemployment rate fluctuates
+        around it. People who are not actively looking for work (retirees, discouraged
+        workers) are out of the labor force and are not counted as unemployed.</div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 002 — Principles of Macroeconomics</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+const LAB_ID    = 'labor-classify-unemployment';
+const LAB_LABEL = 'Classify the Unemployment';
+
+function $(id){ return document.getElementById(id); }
+
+let _rng = null;
+function rng(){ return _rng ? _rng() : Math.random(); }
+
+/* ─────────────────────────────────────────────────────────────────
+   Content
+   ───────────────────────────────────────────────────────────────── */
+const TYPES = [
+  { key: 'F', label: 'Frictional' },
+  { key: 'S', label: 'Structural' },
+  { key: 'C', label: 'Cyclical' },
+  { key: 'N', label: 'Not counted as unemployed' }
+];
+const TYPE_NAME = Object.fromEntries(TYPES.map(t => [t.key, t.label]));
+
+const REASONS = [
+  { key: 'R1', text: 'The right job exists; finding it takes time.' },
+  { key: 'R2', text: 'There aren\'t enough jobs for their skills because the structure of the economy changed (e.g., technology).' },
+  { key: 'R3', text: 'The wage is kept above equilibrium (minimum wage, unions, efficiency wages).' },
+  { key: 'R4', text: 'Demand fell in a downturn and wages haven\'t adjusted down yet.' },
+  { key: 'R5', text: 'They aren\'t actively looking for work, so they aren\'t in the labor force.' }
+];
+const REASON_TEXT = Object.fromEntries(REASONS.map(r => [r.key, r.text]));
+
+const ITEMS = [
+  { story: 'Maya just graduated with a nursing degree. Several hospitals are hiring, and she\'s spending a few weeks comparing offers in Seattle and Portland.',
+    type: 'F', reason: 'R1',
+    fb: 'A vacancy she can fill exists; searching for the “right” job takes time. Durations are typically short.' },
+  { story: 'A factory installs robotic welders and lays off 300 welders. Local firms are hiring, but only electrical and software technicians.',
+    type: 'S', reason: 'R2',
+    fb: 'Technological change permanently reduced demand for their skills. Jobs exist, but not for their skill set.' },
+  { story: 'In 2009, as consumer spending collapses, a furniture maker lays off 40 workers and plans to rehire when sales recover.',
+    type: 'C', reason: 'R4',
+    fb: 'This is a business-cycle drop in demand, and the jobs are expected to return.' },
+  { story: 'A city raises the minimum wage well above the market wage for teen workers. More teens apply for fast-food jobs, but fast-food restaurants hire fewer workers.',
+    type: 'S', reason: 'R3',
+    fb: 'The wage is held above equilibrium, so more people want jobs than there are jobs available.' },
+  { story: 'Coal miners lose their jobs as power plants switch to natural gas. Many have been searching for more than a year.',
+    type: 'S', reason: 'R2',
+    fb: 'A permanent change in the economy\'s structure, with long duration (27+ weeks). Retraining is the main remedy.' },
+  { story: 'Carlos quits his accounting job to move closer to family. He\'s applying to firms in his new city and expects to start within a month.',
+    type: 'F', reason: 'R1',
+    fb: 'He\'s switching jobs, and suitable openings exist.' },
+  { story: 'During a recession, home building drops sharply and a construction worker is laid off. Construction wages have barely fallen.',
+    type: 'C', reason: 'R4',
+    fb: 'Sticky wages plus a demand shortfall create cyclical unemployment.' },
+  { story: 'A 67-year-old retires and is not looking for work.',
+    type: 'N', reason: 'R5',
+    fb: 'Retirees are out of the labor force.' },
+  { story: 'After eight months of searching during a recession, Dana stops looking because she believes no jobs are available.',
+    type: 'N', reason: 'R5',
+    fb: 'She is a <strong>discouraged worker</strong>. She wants a job but isn\'t actively looking, so she\'s not counted in U-3, though she is counted in U-4.' },
+  { story: 'A tech company pays well above the market wage to keep its best workers. Hundreds apply for each opening, and many applicants stay jobless for months.',
+    type: 'S', reason: 'R3',
+    fb: 'Efficiency wages keep the wage above equilibrium.' },
+  { story: 'A recession cuts vacation spending, and a travel agency lays off staff. The local unemployment rate rises from 4% to 9%.',
+    type: 'C', reason: 'R4',
+    fb: 'This is a deviation above the natural rate during the business cycle.' },
+  { story: 'A software engineer has turned down two offers because the commutes were too long. She\'s three weeks into her search.',
+    type: 'F', reason: 'R1',
+    fb: 'She\'s waiting for the “right” job (salary, location, commute), and such jobs exist.' }
+];
+
+/* ─────────────────────────────────────────────────────────────────
+   State
+   ───────────────────────────────────────────────────────────────── */
+let order = [];      // shuffled item indices
+let pos = 0;         // position in `order`
+let answers = [];    // per original item: {type, reason, checked, typeOk, reasonOk, pts}
+let showingResults = false;
+let resultsUnlocked = false;
+
+function generateParams(){
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+  order = ITEMS.map((_, i) => i);
+  for(let i = order.length - 1; i > 0; i--){
+    const j = Math.floor(rng() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  pos = 0;
+  answers = ITEMS.map(() => ({ type: null, reason: null, checked: false, typeOk: false, reasonOk: false, pts: 0 }));
+  showingResults = false;
+  resultsUnlocked = false;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Rendering
+   ───────────────────────────────────────────────────────────────── */
+const typeBtns = TYPES.map(t => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'option-btn';
+  b.setAttribute('aria-pressed', 'false');
+  b.dataset.key = t.key;
+  b.innerHTML = `<span class="bl">${t.label}</span>`;
+  $('typeGroup').appendChild(b);
+  b.addEventListener('click', () => choose('type', t.key));
+  return b;
+});
+const reasonBtns = REASONS.map(r => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.className = 'option-btn';
+  b.setAttribute('aria-pressed', 'false');
+  b.dataset.key = r.key;
+  b.innerHTML = `<span class="rk">${r.key}.</span><span class="bl">${r.text}</span>`;
+  $('reasonGroup').appendChild(b);
+  b.addEventListener('click', () => choose('reason', r.key));
+  return b;
+});
+
+function cur(){ return order[pos]; }
+
+function choose(part, key){
+  const a = answers[cur()];
+  if(a.checked) return;
+  a[part] = key;
+  renderItem();
+}
+
+function syncGroup(btns, chosen, correctKey, checked){
+  btns.forEach(b => {
+    const on = b.dataset.key === chosen;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.disabled = checked;
+    const isAns = checked && b.dataset.key === correctKey;
+    b.classList.toggle('is-answer', isAns);
+    let tag = b.querySelector('.ans-tag');
+    if(isAns){
+      if(!tag){ tag = document.createElement('span'); tag.className = 'ans-tag'; b.appendChild(tag); }
+      tag.textContent = on ? '✓ Your answer, correct' : '✓ Correct answer';
+    } else if(tag){ tag.remove(); }
+  });
+}
+
+function checkedCount(){ return answers.filter(a => a.checked).length; }
+
+function renderItem(){
+  const i = cur(), it = ITEMS[i], a = answers[i];
+  $('itemHeading').textContent = `Item ${pos + 1} of ${ITEMS.length}`;
+  $('story').textContent = it.story;
+  syncGroup(typeBtns, a.type, it.type, a.checked);
+  syncGroup(reasonBtns, a.reason, it.reason, a.checked);
+  $('checkBtn').disabled = a.checked || !a.type || !a.reason;
+  $('checkBtn').textContent = a.checked ? 'Checked' : 'Check';
+  if(a.checked) showFeedback(i); else $('itemFb').classList.add('hidden');
+
+  const n = checkedCount();
+  $('progressCount').textContent = `${n} of ${ITEMS.length} checked`;
+  $('progressFill').style.width = (n / ITEMS.length * 100) + '%';
+  $('prevBtn').disabled = pos === 0;
+  $('nextBtn').disabled = pos === ITEMS.length - 1;
+  $('resultsBtn').classList.toggle('hidden', !(n === ITEMS.length && !resultsUnlocked));
+  $('backResultsBtn').classList.toggle('hidden', !resultsUnlocked);
+  if(document.activeElement && document.activeElement.disabled) $('itemHeading').focus();
+}
+
+function showFeedback(i){
+  const it = ITEMS[i], a = answers[i];
+  const el = $('itemFb');
+  const answer = `<strong>${TYPE_NAME[it.type]}</strong>, ${it.reason}: “${REASON_TEXT[it.reason]}”`;
+  let cls, sym, head;
+  if(a.typeOk && a.reasonOk){
+    cls = 'correct'; sym = '✓'; head = '<strong>Correct, 1 point.</strong> Both the type and the reason are right.';
+  } else if(a.typeOk){
+    cls = 'partial'; sym = '½';
+    head = `<strong>Half credit.</strong> The type is right (${TYPE_NAME[it.type]}), but the reason isn't: you chose ` +
+      `${a.reason}. The reason is ${it.reason}: “${REASON_TEXT[it.reason]}”`;
+  } else if(a.reasonOk){
+    cls = 'partial'; sym = '½';
+    head = `<strong>Half credit.</strong> Your reason (${it.reason}) is right, but that reason points to ` +
+      `<strong>${TYPE_NAME[it.type]}</strong>, not ${TYPE_NAME[a.type]}.`;
+  } else {
+    cls = 'incorrect'; sym = '✗';
+    head = `<strong>Not quite, 0 points.</strong> You chose ${TYPE_NAME[a.type]} and ${a.reason}. The answer is ${answer}`;
+  }
+  el.className = 'feedback ' + cls;
+  el.innerHTML = `<p><span class="symbol" aria-hidden="true">${sym}</span>${head}</p><p>${it.fb}</p>`;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Actions
+   ───────────────────────────────────────────────────────────────── */
+$('checkBtn').addEventListener('click', () => {
+  const i = cur(), it = ITEMS[i], a = answers[i];
+  if(a.checked || !a.type || !a.reason) return;
+  a.checked = true;
+  a.typeOk = a.type === it.type;
+  a.reasonOk = a.reason === it.reason;
+  a.pts = (a.typeOk ? 0.5 : 0) + (a.reasonOk ? 0.5 : 0);
+  const both = a.typeOk && a.reasonOk;
+  const ansText = `${TYPE_NAME[a.type]} / ${a.reason}`;
+  if(window.Session && Session.recordQuestion)
+    Session.recordQuestion(LAB_ID, i, it.story, ansText, both, ansText, both);
+  if(checkedCount() === ITEMS.length && window.Session && Session.recordLabDone){
+    const score = totalPoints();
+    Session.recordLabDone(LAB_ID, LAB_LABEL, score, score, ITEMS.length);
+  }
+  renderItem();
+  // move focus somewhere useful now that Check is disabled
+  if(checkedCount() === ITEMS.length && !resultsUnlocked) $('resultsBtn').focus();
+  else if(pos < ITEMS.length - 1) $('nextBtn').focus();
+  else { $('itemFb').setAttribute('tabindex', '-1'); $('itemFb').focus(); }
+});
+
+$('prevBtn').addEventListener('click', () => { if(pos > 0){ pos--; renderItem(); } });
+$('nextBtn').addEventListener('click', () => { if(pos < ITEMS.length - 1){ pos++; renderItem(); } });
+$('resultsBtn').addEventListener('click', showResults);
+$('backResultsBtn').addEventListener('click', showResults);
+$('restartBtn').addEventListener('click', () => {
+  generateParams();
+  $('resultsView').classList.add('hidden');
+  $('recapCard').classList.add('hidden');
+  $('itemView').classList.remove('hidden');
+  renderItem();
+  $('itemHeading').focus();
+});
+
+function totalPoints(){ return answers.reduce((s, a) => s + a.pts, 0); }
+function fmtPts(x){ return Number.isInteger(x) ? String(x) : (Math.floor(x) ? Math.floor(x) + '½' : '½'); }
+
+function showResults(){
+  resultsUnlocked = true;
+  showingResults = true;
+  const total = totalPoints();
+  $('scoreBig').textContent = `${fmtPts(total)} / ${ITEMS.length} points`;
+  const full = answers.filter(a => a.pts === 1).length;
+  const half = answers.filter(a => a.pts === 0.5).length;
+  const zero = answers.filter(a => a.pts === 0).length;
+  $('scoreLine').textContent = `${full} fully correct, ${half} half credit, ${zero} missed.`;
+
+  $('breakdownBody').innerHTML = TYPES.map(t => {
+    const idx = ITEMS.map((it, i) => i).filter(i => ITEMS[i].type === t.key);
+    const pts = idx.reduce((s, i) => s + answers[i].pts, 0);
+    return `<tr><th scope="row">${t.label}</th><td class="num">${idx.length}</td>` +
+      `<td class="num">${fmtPts(pts)} of ${idx.length}</td></tr>`;
+  }).join('');
+
+  const missed = order.map((i, p) => ({ i, p })).filter(({ i }) => answers[i].pts < 1);
+  $('missedNone').classList.toggle('hidden', missed.length > 0);
+  $('missedList').innerHTML = missed.map(({ i, p }) => {
+    const a = answers[i];
+    const tag = a.pts === 0.5 ? '½ point' : '0 points';
+    return `<li><span class="m-text"><span class="m-tag">Item ${p + 1} (${tag}).</span>${ITEMS[i].story}</span>` +
+      `<button type="button" class="option-btn" data-review="${p}">Review item ${p + 1}</button></li>`;
+  }).join('');
+  $('missedList').querySelectorAll('[data-review]').forEach(b => b.addEventListener('click', () => {
+    pos = +b.dataset.review;
+    showingResults = false;
+    $('resultsView').classList.add('hidden');
+    $('itemView').classList.remove('hidden');
+    renderItem();
+    $('itemHeading').focus();
+  }));
+
+  $('itemView').classList.add('hidden');
+  $('resultsView').classList.remove('hidden');
+  $('recapCard').classList.remove('hidden');
+  $('resultsHeading').focus();
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Init
+   ───────────────────────────────────────────────────────────────── */
+generateParams();
+renderItem();
+
+})();
+</script>
+</body>
+</html>
