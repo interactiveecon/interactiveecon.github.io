@@ -546,9 +546,11 @@ are editing, not the template above:**
   `Unit 2 - Supply and Demand`, …), not by topic name.
 - The course hub at `/classes/econ002/index.html` carries large
   `.choice-card` links, one per kind of resource: Practice Labs
-  (`labs/`), Accessible Lecture Notes (`notes/`) and Dynamic Lecture
-  Slides (`slides/`). It is a router, not a catalogue — do **not** add
-  per-unit cards to it.
+  (`labs/`), Dynamic Lecture Slides (`slides/`) and Discussion Section
+  (`discussion/`). It is a router, not a catalogue — do **not** add
+  per-unit cards to it. `notes/` is deliberately not linked from the
+  hub, but the directory stays: `notes/index.html` is still reachable
+  directly and `slides/index.html` links into it.
 - Per-unit cards go on the matching index, all three of which use the
   `.deck-card` grid markup borrowed from
   `/classes/econ002/discussion/index.html`:
