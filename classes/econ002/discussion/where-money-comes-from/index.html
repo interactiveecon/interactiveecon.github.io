@@ -1,0 +1,1797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECON 002 · Where Money Comes From</title>
+<style>
+  :root{
+    --ink:#14243A;          /* near-navy ink */
+    --accent:#1F4E79;       /* deep blue (from worksheets) */
+    --accent-soft:#8FAADC;
+    --paper:#F6F4EE;        /* warm chalk-paper */
+    --paper-line:#E4E0D5;
+    --gold:#8A5900;
+    --gold-soft:#FBF1DC;
+    --red:#C0392B;
+    --grey:#5A5F66;
+    --chalk:#FbFaF7;
+    --shadow:0 8px 30px rgba(20,36,58,.10);
+    --mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Georgia','Iowan Old Style',serif;
+    color:var(--ink);
+    background:var(--paper);
+    overflow:hidden;
+  }
+  /* ---------- deck scaffold ---------- */
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;
+    padding:clamp(1.25rem,4vw,4.5rem) clamp(1.5rem,6vw,6rem);
+    /* extra bottom room so content never hides behind the fixed nav bar (~46px) */
+    padding-bottom:calc(46px + clamp(1rem,3vw,2rem));
+    /* if a slide is taller than the screen, scroll it instead of clipping/overlapping */
+    overflow-y:auto;overflow-x:hidden;
+    scroll-padding-bottom:46px;
+    opacity:0;
+    transition:opacity .38s ease;
+  }
+  .slide.active{display:flex;opacity:1;animation:rise .45s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide.active{animation:none}
+    .slide{transition:none}
+    *{transition-duration:.001ms !important;animation-duration:.001ms !important}
+  }
+  /* visible keyboard focus (WCAG 2.4.7) */
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+    outline:3px solid var(--accent);outline-offset:3px;border-radius:6px;
+  }
+  :focus:not(:focus-visible){outline:none}
+  /* ---------- typography ---------- */
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--grey);margin-bottom:1.1rem;font-weight:600;
+  }
+  h1{font-size:clamp(2.4rem,5.5vw,4.4rem);line-height:1.02;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3.2vw,2.4rem);line-height:1.1;font-weight:700;letter-spacing:-.01em;margin-bottom:.4rem}
+  .lede{font-size:clamp(1.05rem,1.7vw,1.35rem);line-height:1.5;color:var(--ink);max-width:52ch}
+  .muted{color:var(--grey)}
+  .serif-note{font-style:italic;color:var(--grey);font-size:1rem;line-height:1.5}
+  strong{font-weight:700}
+  .accent{color:var(--accent)}
+  .red{color:var(--red)}
+  .gold{color:var(--gold)}
+  /* title rule */
+  h2 + .titlerule{height:2px;background:linear-gradient(90deg,var(--accent-soft),transparent);
+    width:min(100%,640px);margin:.2rem 0 1.4rem}
+  /* ---------- model cards ---------- */
+  .models{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin:1.4rem 0;max-width:900px}
+  .model{
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;
+    padding:1.4rem 1.6rem;box-shadow:var(--shadow);position:relative;
+  }
+  .model .tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:.6rem;display:block}
+  .model .eq{font-family:var(--mono);font-size:1.35rem;color:var(--ink)}
+  .model .eq .coef{color:var(--red);font-weight:700}
+  .model.dim{opacity:.4;filter:saturate(.4)}
+  .model.hi{border-color:var(--accent);box-shadow:0 8px 30px rgba(31,78,121,.22)}
+  .model .body{font-size:1rem;line-height:1.5;margin-top:.7rem}
+  .model.warm{background:var(--gold-soft);border-color:#E2CFA4}
+  .model.warm .tag{color:var(--gold)}
+  /* ---------- boxes ---------- */
+  .prompt,.reveal,.predict{
+    border-radius:10px;padding:1.05rem 1.3rem;max-width:820px;line-height:1.5;
+    font-family:'Georgia',serif;font-size:1.08rem;
+  }
+  .prompt{background:#EEF3FA;border-left:4px solid var(--accent)}
+  .reveal{background:var(--gold-soft);border-left:4px solid var(--gold)}
+  .cue{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;display:block;margin-bottom:.4rem}
+  .prompt .cue{color:var(--accent)}
+  .reveal .cue{color:var(--gold)}
+  .predict .cue{color:var(--red)}
+  .predict{background:#FBEEEC;border-left:4px solid var(--red)}
+  .prompt p,.reveal p,.predict p{margin:0;line-height:1.5}
+  .prompt .cue + p,.reveal .cue + p,.predict .cue + p{margin-top:.15rem}
+  .prompt ol,.predict ol,.reveal ol{margin:.5rem 0 0 1.3rem;line-height:1.6}
+  .prompt li,.predict li,.reveal li{margin-bottom:.25rem}
+  /* chain / mono line */
+  .chain{
+    font-family:var(--mono);background:#EDF1F8;border:1px solid var(--accent-soft);
+    border-radius:8px;padding:.7rem 1rem;font-size:1.05rem;color:var(--accent);
+    display:inline-block;margin-top:.4rem
+  }
+  .chain.warm{background:var(--gold-soft);border-color:#E2CFA4;color:var(--gold)}
+  /* ---------- interactive graph panel ---------- */
+  .graphwrap{display:grid;grid-template-columns:1.15fr .85fr;gap:2rem;align-items:center;margin-top:.6rem;flex:1 0 auto}
+  @media (max-width:900px){.graphwrap{grid-template-columns:1fr}}
+  .panel{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;padding:1.2rem;box-shadow:var(--shadow)}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .controls{display:flex;flex-direction:column;gap:1.3rem}
+  .readout{font-family:var(--mono);font-size:.92rem;line-height:1.7;color:var(--ink);background:#EDF1F8;border-radius:8px;padding:.8rem 1rem}
+  .readout .big{font-size:1.25rem;color:var(--accent);font-weight:700}
+  .readout .lbl2{color:var(--grey)}
+  .btn{
+    font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.7rem 1.2rem;cursor:pointer;
+    box-shadow:0 3px 10px rgba(31,78,121,.3);transition:transform .1s,background .2s;align-self:flex-start
+  }
+  .btn:hover{background:#173a5c;transform:translateY(-1px)}
+  /* a spent reveal button stays in place — hiding it slid the row under the
+     cursor, so a second click landed on the next answer (disabled controls
+     are exempt from the contrast minimum) */
+  .btn:disabled,.btn.ghost:disabled{opacity:.38;cursor:default;transform:none;box-shadow:none}
+  .btn:disabled:hover{background:var(--accent);transform:none}
+  .btn.ghost:disabled:hover{background:transparent}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
+  .btn.ghost:hover{background:#EEF3FA}
+  .btnrow{display:flex;gap:.7rem;flex-wrap:wrap}
+  /* ---------- poll ---------- */
+  .poll-opts{display:flex;flex-direction:column;gap:.8rem;max-width:860px;margin-top:1.1rem}
+  .poll-opt{
+    display:flex;align-items:stretch;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;
+    cursor:pointer;background:var(--chalk);transition:border-color .2s,transform .08s;position:relative;
+    width:100%;text-align:left;font:inherit;color:inherit;padding:0
+  }
+  .poll-opt:hover{border-color:var(--accent-soft)}
+  .poll-opt:active{transform:scale(.995)}
+  .poll-opt .num{background:var(--accent);color:#fff;font-family:var(--mono);font-weight:700;
+    display:flex;align-items:center;justify-content:center;padding:0 1.1rem;font-size:1.1rem;z-index:2}
+  .poll-opt .txt{padding:.9rem 1.1rem;line-height:1.4;z-index:2;font-size:1.02rem;font-family:'Georgia',serif}
+  .poll.revealed .poll-opt{opacity:.5;transition:opacity .4s}
+  .poll.revealed .poll-opt.correct{opacity:1;border-color:var(--gold);background:var(--gold-soft)}
+  .poll-opt.correct .num{background:var(--gold)}
+  .poll-opt.correct .txt::after{content:" ✓ correct";color:var(--gold);font-family:var(--mono);font-weight:700;font-size:.82rem}
+  .poll-hint{font-family:var(--mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-top:.9rem;font-weight:600}
+  /* ---------- footer / nav ---------- */
+  .chrome{position:fixed;bottom:0;left:0;right:0;height:46px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 1.4rem;font-family:var(--mono);font-size:.72rem;
+    letter-spacing:.08em;color:var(--grey);pointer-events:none;z-index:50}
+  .chrome .course{text-transform:uppercase}
+  .progress-track{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:60}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-soft));width:0;transition:width .35s ease}
+  .navhint{display:flex;gap:1.2rem;align-items:center;pointer-events:auto}
+  .navhint button{pointer-events:auto;background:none;border:none;color:var(--grey);cursor:pointer;font-family:var(--mono);font-size:.9rem;padding:.2rem .5rem;border-radius:5px}
+  .navhint button:hover{color:var(--accent);background:rgba(31,78,121,.08)}
+  .kbd{font-family:var(--mono);font-size:.66rem;border:1px solid var(--paper-line);border-radius:4px;padding:.1rem .35rem;color:var(--grey)}
+  /* content column helper */
+  .col{display:flex;flex-direction:column;gap:1.1rem;flex:1 0 auto;justify-content:center}
+  .grow{flex:1 0 auto}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+  @media (max-width:900px){.two{grid-template-columns:1fr}}
+  .calc{font-family:var(--mono);font-size:1.05rem;line-height:1.8}
+  .calc .lbl{color:var(--accent);font-weight:700}
+  .footnote{font-size:.92rem;color:var(--grey);font-style:italic}
+  /* two graphs above, readout + buttons below */
+  .ctrlrow{display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;align-items:start;margin-top:1rem}
+  @media (max-width:900px){.ctrlrow{grid-template-columns:1fr}}
+  .paneltitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;
+    font-weight:700;color:var(--accent);margin-bottom:.5rem}
+  .runsheet{display:grid;grid-template-columns:auto 1fr;gap:.35rem 1.1rem;font-family:var(--mono);font-size:.86rem;line-height:1.5;margin-top:.4rem}
+  .runsheet .rk{color:var(--accent);font-weight:700;white-space:nowrap}
+  /* title slide special */
+  .title-slide{justify-content:safe center}
+  .title-slide h1{margin:.6rem 0}
+  .signature{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:2rem}
+  /* ---------- section divider ---------- */
+  .divider{justify-content:safe center;background:linear-gradient(135deg,#1B3B5C,#14243A)}
+  .divider *{color:#F6F4EE}
+  .divider .eyebrow{color:#8FAADC}
+  .divider h1{font-size:clamp(2.2rem,5vw,4rem);color:#fff}
+  .divider .lede{color:#D6DEE9;max-width:52ch}
+  .divider .sectrail{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#8FAADC;margin-top:1.6rem}
+  .divider .through{font-family:var(--mono);font-size:.8rem;line-height:1.6;color:#D6DEE9;
+    border-left:3px solid #8FAADC;padding-left:.9rem;margin-top:1.4rem;max-width:60ch}
+  /* ---------- generic click-reveal ---------- */
+  .reveal-hidden{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .reveal-hidden.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* cell-level hide: keeps the table's layout, but the value is neither seen
+     nor read out by a screen reader until its reveal button is pressed */
+  .hid{visibility:hidden}
+  .hid.shown{visibility:visible}
+  /* condition cards (3-across; override grid-template-columns for 2) */
+  .condrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem}
+  @media (max-width:900px){.condrow{grid-template-columns:1fr !important}}
+  .condcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.5rem}
+  .condcard .ctitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .condcard .cbtn{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:.55rem .8rem;cursor:pointer;align-self:flex-start}
+  .condcard .cbtn:hover{background:#173a5c}
+  .condcard .cbody{opacity:0;max-height:0;overflow:hidden;transition:opacity .35s,max-height .45s}
+  .condcard .cbody.shown{opacity:1;max-height:none;overflow:visible;margin-top:.3rem}
+  .condcard .cnote{font-size:.95rem;line-height:1.5;color:var(--ink)}
+  .condcard ul{margin:.2rem 0 0 1.1rem;font-size:.95rem;line-height:1.55}
+  .condcard li{margin-bottom:.3rem}
+  .condcard .big{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--accent)}
+  .condcard.warm{background:var(--gold-soft);border-color:#E2CFA4}
+  .condcard.warm .ctitle,.condcard.warm .big{color:var(--gold)}
+  /* diagnose (numbered flawed-argument) list */
+  .diag{display:flex;flex-direction:column;gap:.7rem;max-width:920px;margin:1rem 0}
+  .diag-opt{display:flex;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;background:var(--chalk);width:100%;text-align:left;font:inherit;color:inherit;padding:0;cursor:pointer;transition:border-color .2s}
+  .diag-opt:hover{border-color:var(--accent-soft)}
+  .diag-opt .n{background:var(--grey);color:#fff;font-family:var(--mono);font-weight:700;display:flex;align-items:center;padding:0 1rem;font-size:1.05rem}
+  .diag-opt .s{padding:.85rem 1.1rem;line-height:1.45;font-family:'Georgia',serif;font-size:1.02rem}
+  .diag.revealed .diag-opt{opacity:.5}
+  .diag.revealed .diag-opt.bad{opacity:1;border-color:var(--red);background:#FBEEEC}
+  .diag-opt.bad .n{background:var(--red)}
+  .diag.revealed .diag-opt.bad .s::after{content:" ✗ the flaw";color:var(--red);font-family:var(--mono);font-weight:700;font-size:.8rem}
+  /* fill-in-the-blank close line */
+  .blankline{font-family:var(--mono);font-size:clamp(1.1rem,2.4vw,1.7rem);line-height:2;color:var(--ink);
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1.4rem 1.6rem;
+    box-shadow:var(--shadow);max-width:900px}
+  .blankline .bl{display:inline-block;min-width:9ch;border-bottom:2px solid var(--accent)}
+  /* ---------- data tables ---------- */
+  .sched{border-collapse:collapse;font-family:var(--mono);font-size:.86rem;background:var(--chalk);
+    border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+  .sched caption{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;color:var(--accent);text-align:left;padding:.5rem .8rem .35rem}
+  .sched th,.sched td{padding:.3rem .8rem;text-align:right;border-bottom:1px solid var(--paper-line)}
+  .sched th{color:var(--grey);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.66rem}
+  .sched td:first-child,.sched th:first-child{text-align:left;color:var(--accent);font-weight:700}
+  .sched tbody tr:last-child td{border-bottom:none}
+  .sched tr.tot td{border-top:2px solid var(--paper-line);font-weight:700;color:var(--gold)}
+  .sched tr.tot td:first-child{color:var(--gold)}
+  .sched.gold{background:var(--gold-soft)}
+  .sched.gold caption,.sched.gold td:first-child{color:var(--gold)}
+  .sched.txt td{text-align:left}
+  .sched.txt td:first-child{white-space:nowrap}
+  .sched .yes{color:var(--gold);font-weight:700}
+  .sched .no{color:var(--red);font-weight:700}
+  .sched .foreign{color:var(--red)}
+  .schedrow{display:flex;gap:1.4rem;flex-wrap:wrap;align-items:flex-start}
+  .sched tr.hl td{background:var(--gold-soft);color:var(--gold);font-weight:700}
+  .sched tr.hl td:first-child{color:var(--gold)}
+  .sched tr{transition:background .18s}
+  /* ---------- two-card takeaway ---------- */
+  .pair2{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin-top:.8rem}
+  @media (max-width:900px){.pair2{grid-template-columns:1fr}}
+  .pcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;
+    padding:1.2rem 1.3rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.7rem}
+  .pcard .ptag{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .pcard.warn .ptag{color:var(--red)}
+  .pcard .verdictbig{font-family:var(--mono);font-size:1rem;font-weight:700;line-height:1.5;color:var(--accent)}
+  .pcard.warn .verdictbig{color:var(--red)}
+  .pcard p{font-size:1rem;line-height:1.5}
+  /* ---------- reflow at 320px (WCAG 1.4.10) ---------- */
+  @media (max-width:700px){
+    .models{grid-template-columns:1fr}
+    .chain{max-width:100%;overflow-wrap:anywhere}
+    .sched{font-size:.76rem}
+    .sched th,.sched td{padding:.25rem .45rem}
+    .schedrow{gap:.9rem}
+    /* a wide table scrolls inside its own box rather than widening the slide */
+    .sched{display:block;overflow-x:auto;max-width:100%}
+    .col,.two > *,.graphwrap > *,.condrow > *,.pair2 > *,.schedrow > *{min-width:0}
+    /* a button column beside a table is sized in ch and set not to shrink;
+       at phone widths it has to give way instead of pushing the slide wide */
+    .schedrow > .col{flex:1 1 auto;max-width:100% !important}
+    .btnrow .btn{max-width:100%;overflow-wrap:anywhere}
+  }
+</style>
+</head>
+<body>
+<div class="progress-track"><div class="progress-fill" id="prog"></div></div>
+<div class="deck" id="deck">
+
+
+  <!-- ═══════════ 1. TITLE ═══════════ -->
+  <section class="slide active title-slide" data-section="Discussion 10 · Opening">
+    <div class="eyebrow" id="titleEyebrow">ECON 002 &middot; Discussion Section</div>
+    <h1>Where money<br><span class="accent">comes from</span></h1>
+    <p class="lede" style="margin-top:1rem">Every deck so far has handed you an interest rate and asked what the economy did with it. Nobody asked where the rate came from. The answer runs through the least glamorous institution in the course &mdash; an ordinary commercial bank &mdash; and it starts with a fact that sounds like a trick and is not: banks make money.</p>
+    <p class="serif-note" style="margin-top:1.6rem">Work on your own paper. Write your answer down before any answer appears &mdash; your reasoning is the point, not a clean final line.</p>
+    <div class="signature">What money is &rarr; Banks make money &rarr; The Fed&rsquo;s levers &rarr; The price of money</div>
+  </section>
+
+  <!-- ══════════════ PART 1 · WHAT MONEY IS ══════════════ -->
+
+  <!-- ═══════════ 2. DIVIDER P1 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 10 · What Money Is">
+    <div class="eyebrow">Part 1 of 4</div>
+    <h1>What money is</h1>
+    <p class="lede">Money is less a substance than a job description. Three jobs, and anything that does all three is money &mdash; whatever it happens to be made of.</p>
+    <div class="sectrail">WHAT MONEY IS &rarr; BANKS MAKE MONEY &rarr; THE FED&rsquo;S LEVERS &rarr; THE PRICE OF MONEY</div>
+    <div class="through">Throughline: banks create money every time they lend, but they cannot create reserves. That is why the Fed controls the money supply, and why the money supply sets the interest rate.</div>
+  </section>
+
+  <!-- ═══════════ 3. Q1 ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · What Money Is">
+    <div class="eyebrow">Question 1 &middot; write before you look</div>
+    <h2>What a twenty dollar bill does</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:92ch">A gold bar is valuable. A house is valuable. A twenty dollar bill is worth about a tenth of a cent as paper, and yet you would rather be handed the twenty than a tenth of a cent of gold.</p>
+      <div class="prompt">
+        <span class="cue">Q1 &middot; two things, in your own words</span>
+        <p><strong>Write down two things a twenty dollar bill does that a gold bar and a house do not.</strong> Not two reasons it is convenient &mdash; two <em>jobs</em> it performs.</p>
+      </div>
+      <div class="btnrow">
+        <button class="btn" data-reveal="s3a">The three jobs</button>
+        <button class="btn" data-reveal="s3b">Why the first job matters most</button>
+      </div>
+      <div class="reveal reveal-hidden" id="s3a">
+        <span class="cue">Money has three jobs</span>
+        <p>A <strong>medium of exchange</strong>: what sellers generally accept and buyers generally use to pay for goods and services. A <strong>store of value</strong>: an asset that carries purchasing power from now into later. A <strong>unit of account</strong>: a consistent way of quoting prices, so that &ldquo;eight dollars&rdquo; means the same thing at every counter in the country.</p>
+        <p style="margin-top:.5rem">Measure the gold bar and the house against those three. Gold is a fine store of value and a poor medium of exchange &mdash; you cannot shave a flake off it at the register. A house is a store of value and nothing else. Neither one quotes a price for anything.</p>
+      </div>
+      <div class="reveal reveal-hidden" id="s3b">
+        <span class="cue">What the first job buys you</span>
+        <p>Without a medium of exchange you have to trade goods directly for goods. That is <strong>barter</strong>, and barter requires a <strong>double coincidence of wants</strong>: you must find somebody who has what you want <em>and</em> wants what you have. Not one condition. Two, at once, in the same person.</p>
+        <p style="margin-top:.5rem">Every hour spent hunting for that person is an hour not spent producing anything. What money removes is the search, and the property that lets it do so is <strong>liquidity</strong> &mdash; money is portable and it is accepted without an argument. That is not a small convenience. It is most of why an economy with money produces more than one without.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 4. Q2 ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · What Money Is">
+    <div class="eyebrow">Question 2 &middot; write before you look</div>
+    <h2>Why anyone takes the paper</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:92ch">You cannot eat it, wear it, or build with it, and no government office will trade it for gold. It is a rectangle of cotton and linen with ink on it.</p>
+      <div class="prompt">
+        <span class="cue">Q2 &middot; one sentence</span>
+        <p><strong>Write down why you are nevertheless willing to accept it.</strong> Push past &ldquo;because it is money&rdquo; &mdash; that is the thing being explained.</p>
+      </div>
+      <div class="btnrow">
+        <button class="btn" data-reveal="s4a">Two kinds of money</button>
+        <button class="btn" data-reveal="s4b">The catch that comes with the second kind</button>
+      </div>
+      <div class="reveal reveal-hidden" id="s4a">
+        <span class="cue">Commodity money and fiat money</span>
+        <p><strong>Commodity money</strong> has intrinsic value in some other use: gold, silver, copper, salt, grain, shells. If everybody stopped accepting it tomorrow it would still be worth something, because it is still salt.</p>
+        <p style="margin-top:.5rem"><strong>Fiat money</strong> has no other use &mdash; it is intrinsically worthless. It works for two reasons. It is <strong>legal tender</strong>, which means the government requires it to be accepted in settlement of debts. And, far more importantly, everyone expects everyone else to take it. Your twenty is valuable to you because you are confident it will be valuable to the next person. The belief is the backing.</p>
+      </div>
+      <div class="reveal reveal-hidden" id="s4b">
+        <span class="cue">Whoever decides how much exists is tempted</span>
+        <p>If the value of money does not come from what it is made of, then whoever controls how much of it exists can simply decide there should be more. Doing that quickly is <strong>currency debasement</strong>: the value of every dollar already in someone&rsquo;s pocket falls.</p>
+        <p style="margin-top:.5rem">You have already met the consequence under another name. This is inflation, arriving deliberately. And it is the reason the money supply in most countries is run by a <strong>partially independent central bank</strong> rather than by whoever is standing for reelection &mdash; the person with the most to gain from printing is rarely the person who should hold the switch.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 5. Q3 · SORT ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · What Money Is">
+    <div class="eyebrow">Question 3 &middot; sort them before you look</div>
+    <h2>Which of these are money?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1180px">
+      <div class="prompt">
+        <span class="cue">Q3 &middot; sort all five</span>
+        <p><strong>Write each of these under &ldquo;money&rdquo; or &ldquo;not money&rdquo;:</strong></p>
+        <ol>
+          <li>Cash in your wallet</li>
+          <li>The balance in your checking account</li>
+          <li>A certificate of deposit</li>
+          <li>Your house</li>
+          <li>The unused limit on your credit card</li>
+        </ol>
+        <p style="margin-top:.5rem">Where you are torn, write down what you are torn about. That sentence is the point of the question.</p>
+      </div>
+      <div class="btnrow">
+        <button class="btn" data-reveal="s5a">How the measures are actually drawn</button>
+        <button class="btn" data-reveal="s5b">Where the line really sits</button>
+      </div>
+      <div class="reveal-hidden" id="s5a">
+        <div class="schedrow">
+          <table class="sched txt">
+            <caption>Sorted by liquidity, most liquid first</caption>
+            <thead>
+              <tr><th scope="col">Asset</th><th scope="col">Counted in M1</th><th scope="col">Counted in M2</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Cash in your wallet</th><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+              <tr><th scope="row">Checking account balance</th><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+              <tr><th scope="row">Certificate of deposit</th><td class="no">No</td><td class="yes">Yes</td></tr>
+              <tr><th scope="row">Unused credit card limit</th><td class="no">No</td><td class="no">No</td></tr>
+              <tr><th scope="row">Your house</th><td class="no">No</td><td class="no">No</td></tr>
+            </tbody>
+          </table>
+          <div class="col" style="justify-content:flex-start;gap:.8rem;max-width:44ch">
+            <p class="lede"><strong>M1</strong> is transactions money: cash plus deposits. It is money you can spend without converting it into anything first.</p>
+            <p class="lede"><strong>M2</strong> is M1 plus <strong>near monies</strong> &mdash; close substitutes for transactions money, such as certificates of deposit and money market accounts.</p>
+          </div>
+        </div>
+      </div>
+      <div class="reveal reveal-hidden" id="s5b">
+        <span class="cue">There is no rule, and that is the honest answer</span>
+        <p>Broader measures than M2 exist, and at least one of them counts the <strong>unused credit on your credit cards</strong> as part of the money supply &mdash; on the grounds that you can walk into a store and spend it. Once you allow that, the house starts looking like a hard case too: it is spendable, just slowly.</p>
+        <p style="margin-top:.5rem">So there is <strong>no rule</strong> for deciding what is and is not money. There is only a judgment about how liquid something has to be before it counts, and different judgments give different measures. If you were torn on the certificate of deposit or the credit limit, you were torn about exactly the right thing.</p>
+        <p style="margin-top:.5rem">In this course, <strong>money always means M1</strong>. Every number for the rest of today is a number about M1.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 6. DEBT IN ONE SLIDE ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · What Money Is">
+    <div class="eyebrow">One slide, because Part 3 will need it</div>
+    <h2>Loans and bonds</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1150px">
+      <div class="models">
+        <div class="model">
+          <span class="tag">A loan</span>
+          <div class="eq" style="font-size:1.05rem;line-height:1.9">
+            principal<br>
+            interest rate<br>
+            length
+          </div>
+          <div class="body">Issued by a <strong>bank</strong> to a <strong>borrower</strong> &mdash; a car loan, a student loan, a mortgage. Three properties and no more: the <strong>principal</strong> is the amount borrowed, the <strong>interest rate</strong> is what the borrower pays for the use of it, and the <strong>length</strong> is how long they have.</div>
+        </div>
+        <div class="model warm">
+          <span class="tag">A bond &middot; the one we will use</span>
+          <div class="eq" style="font-size:1.05rem;line-height:1.9">
+            maturity: 10 years<br>
+            face value: $5,000<br>
+            coupon: $200 a year
+          </div>
+          <div class="body">Issued by a government or a corporation when the sum needed is <strong>larger</strong> than a bank loan would cover. Whoever holds this bond collects <strong>$200 every year for ten years</strong>, and then <strong>$5,000</strong> when it matures.</div>
+        </div>
+      </div>
+      <div class="btnrow">
+        <button class="btn" data-reveal="s6a">What the market does to it</button>
+      </div>
+      <div class="reveal reveal-hidden" id="s6a">
+        <span class="cue">The issuer names the terms; the market names the price</span>
+        <p>The issuer would like to sell this bond for its face value of <strong>$5,000</strong>. It does not get to decide. The bond goes into the bond market, and the market sets the <strong>price</strong>. If buyers will not pay $5,000 for a $200 coupon, the issuer has to <strong>raise the coupon</strong> to move it.</p>
+        <p style="margin-top:.5rem">That is the only bond arithmetic you need today: <strong>the coupon and the price move in opposite directions</strong>. A bond nobody wants is a bond that has to pay more.</p>
+        <p style="margin-top:.5rem">Bonds issued by the federal government are <strong>Treasury securities</strong>, and they are the ones the Fed buys and sells in Part 3. Corporations issue bonds on the same three terms; those are <strong>corporate bonds</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 2 · BANKS MAKE MONEY ══════════════ -->
+
+  <!-- ═══════════ 7. DIVIDER P2 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 10 · Banks Make Money">
+    <div class="eyebrow">Part 2 of 4</div>
+    <h1>Banks make money</h1>
+    <p class="lede">A bank performs <strong>financial intermediation</strong>: it transfers funds from savers to borrowers. Which makes a bank sound like a corridor money walks down. It is not a corridor. It is a place where money is manufactured.</p>
+    <div class="sectrail">WHAT MONEY IS &#10003; &rarr; BANKS MAKE MONEY &rarr; THE FED&rsquo;S LEVERS &rarr; THE PRICE OF MONEY</div>
+    <div class="through">Throughline: banks create money every time they lend, but they cannot create reserves. That is why the Fed controls the money supply, and why the money supply sets the interest rate.</div>
+  </section>
+
+  <!-- ═══════════ 8. THE BALANCE SHEET ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · Banks Make Money">
+    <div class="eyebrow">What a bank owns and what it owes</div>
+    <h2>The simplified balance sheet</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1180px">
+      <p class="lede" style="max-width:96ch">A bank is a business, so it keeps the same books as any other business: <strong>assets equal liabilities</strong>. What makes a bank strange is which items land on which side.</p>
+      <div class="schedrow">
+        <table class="sched">
+          <caption>One bank, the instant a deposit of 400 arrives and before it does anything</caption>
+          <thead>
+            <tr><th scope="col">Assets</th><th scope="col">Amount</th><th scope="col">Liabilities</th><th scope="col">Amount</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Reserves</th><td>400</td><td>Deposits</td><td>400</td></tr>
+            <tr><th scope="row">Loans</th><td>0</td><td>&mdash;</td><td>&mdash;</td></tr>
+            <tr class="tot"><th scope="row">Total assets</th><td>400</td><td>Total liabilities</td><td>400</td></tr>
+          </tbody>
+        </table>
+        <div class="col" style="justify-content:flex-start;gap:.8rem;max-width:46ch">
+          <p class="lede">The <strong>liabilities</strong> are the <strong>deposits</strong>. Your checking balance is money the bank <em>owes you</em>, which is why it sits on the side of things owed.</p>
+          <p class="lede">The <strong>assets</strong> are what the bank owns: its <strong>reserves</strong> &mdash; its own deposits in its account at the Fed, plus the cash in its vault &mdash; and its <strong>loans</strong>.</p>
+        </div>
+      </div>
+      <div class="btnrow">
+        <button class="btn" data-reveal="s8a">The one ratio that runs today</button>
+      </div>
+      <div class="reveal reveal-hidden" id="s8a">
+        <span class="cue">The reserve ratio</span>
+        <p>Regulation requires a bank to hold a certain <strong>percentage of its deposits</strong> as reserves. That percentage is the <strong>required reserve ratio</strong>, and the ratio a bank actually holds is written <strong>rr = R / D</strong>. Anything held above the requirement is <strong>excess reserves</strong>: excess reserves = actual reserves &minus; required reserves.</p>
+        <p style="margin-top:.5rem">Reserves are the part of a deposit the bank does <em>not</em> lend. Everything in the next six slides follows from that single sentence.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 9. Q4 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · Banks Make Money">
+    <div class="eyebrow">Question 4 &middot; predict &middot; commit before you compute</div>
+    <h2>One deposit of $400</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">An economy with many banks. The <strong>reserve ratio is 25%</strong>: every bank keeps a quarter of its deposits as reserves and lends out the rest. No bank holds excess reserves. And <strong>nobody holds cash</strong> &mdash; every dollar anyone receives goes straight into a bank account.</p>
+      <p class="lede" style="max-width:96ch">Somebody walks into Bank 1 and <strong>deposits $400</strong>. Nothing else enters this economy, ever.</p>
+      <div class="predict">
+        <span class="cue">Q4 &middot; a number, and one line saying why</span>
+        <p><strong>Write down how much money exists in this economy once everything has settled.</strong> Do not work through the rounds &mdash; commit to a number and to the sentence behind it. You will be held to both.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 10. THE CASCADE · T-ACCOUNTS ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · Banks Make Money">
+    <div class="eyebrow">Answer &middot; Question 4 &middot; one bank at a time</div>
+    <h2>Follow the $400</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1200px">
+      <p class="lede" style="max-width:96ch">Each bank keeps a quarter and lends three quarters. What it lends is spent, and what is spent is deposited &mdash; because nobody holds cash, it has to land somewhere.</p>
+      <div class="btnrow">
+        <button class="btn" data-reveal="cb1,cw2">Bank 1</button>
+        <span class="hid" id="cw2"><button class="btn" data-reveal="cb2,cw3">Bank 2</button></span>
+        <span class="hid" id="cw3"><button class="btn" data-reveal="cb3,cw4">Bank 3</button></span>
+        <span class="hid" id="cw4"><button class="btn ghost" data-reveal="cb4">And Bank 4, and Bank 5&hellip;</button></span>
+      </div>
+      <div class="schedrow">
+        <div class="reveal-hidden" id="cb1">
+          <table class="sched">
+            <caption>Bank 1 &middot; the deposit of 400 arrives</caption>
+            <thead>
+              <tr><th scope="col">Assets</th><th scope="col">Amount</th><th scope="col">Liabilities</th><th scope="col">Amount</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Reserves</th><td>100.00</td><td>Deposits</td><td>400.00</td></tr>
+              <tr><th scope="row">Loans</th><td>300.00</td><td>&mdash;</td><td>&mdash;</td></tr>
+              <tr class="tot"><th scope="row">Total assets</th><td>400.00</td><td>Total liabilities</td><td>400.00</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="reveal-hidden" id="cb2">
+          <table class="sched">
+            <caption>Bank 2 &middot; the 300 Bank 1 lent is spent and deposited here</caption>
+            <thead>
+              <tr><th scope="col">Assets</th><th scope="col">Amount</th><th scope="col">Liabilities</th><th scope="col">Amount</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Reserves</th><td>75.00</td><td>Deposits</td><td>300.00</td></tr>
+              <tr><th scope="row">Loans</th><td>225.00</td><td>&mdash;</td><td>&mdash;</td></tr>
+              <tr class="tot"><th scope="row">Total assets</th><td>300.00</td><td>Total liabilities</td><td>300.00</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="reveal-hidden" id="cb3">
+          <table class="sched">
+            <caption>Bank 3 &middot; the 225 Bank 2 lent arrives</caption>
+            <thead>
+              <tr><th scope="col">Assets</th><th scope="col">Amount</th><th scope="col">Liabilities</th><th scope="col">Amount</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Reserves</th><td>56.25</td><td>Deposits</td><td>225.00</td></tr>
+              <tr><th scope="row">Loans</th><td>168.75</td><td>&mdash;</td><td>&mdash;</td></tr>
+              <tr class="tot"><th scope="row">Total assets</th><td>225.00</td><td>Total liabilities</td><td>225.00</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="reveal reveal-hidden" id="cb4">
+        <span class="cue">Nothing stops this</span>
+        <p>Bank 3 lends <strong>168.75</strong>. It is spent, and it arrives at Bank 4 as a deposit of <strong>168.75</strong>, which keeps <strong>42.19</strong> and lends <strong>126.56</strong>. Which is spent, and arrives at Bank 5.</p>
+        <p style="margin-top:.5rem">Look down the deposit column as you go: <strong>400, 300, 225, 168.75, 126.56</strong>. Each one is three quarters of the one before it, because each bank keeps a quarter. The chain never terminates; it only gets small.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 11. Q5 · TOTAL DEPOSITS ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · Banks Make Money">
+    <div class="eyebrow">Question 5 &middot; compute</div>
+    <h2>Add up every deposit in the chain</h2>
+    <div class="titlerule"></div>
+    <div class="prompt" style="margin-bottom:.9rem">
+      <span class="cue">Q5 &middot; one number</span>
+      <p><strong>400 + 300 + 225 + 168.75 + &hellip; &nbsp;Write down what the deposits come to in total.</strong> Remember what money is: cash held (zero here) plus deposits.</p>
+    </div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="paneltitle">Deposits created, round by round</div>
+        <svg viewBox="0 0 470 320" role="img" aria-label="A bar chart of the deposits created in each round of bank lending, with a reserve ratio of 25 percent. The first bar is a deposit of 400, the second 300, the third 225, the fourth 168.75, and the bars keep shrinking by a quarter each round without ever reaching zero. A gold bracket beneath all the bars shows that the deposits sum to 1,600, four times the original 400 deposit.">
+          <line x1="60" y1="270" x2="455" y2="270" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="40" x2="60" y2="270" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="60" y1="60" x2="455" y2="60"/><line x1="60" y1="112.5" x2="455" y2="112.5"/>
+            <line x1="60" y1="165" x2="455" y2="165"/><line x1="60" y1="217.5" x2="455" y2="217.5"/>
+          </g>
+          <g font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">
+            <text x="54" y="64">400</text><text x="54" y="116.5">300</text>
+            <text x="54" y="169">200</text><text x="54" y="221.5">100</text>
+            <text x="54" y="274">0</text>
+          </g>
+          <text x="66" y="34" font-family="monospace" font-size="11" fill="#14243A" font-weight="700">deposit created that round ($)</text>
+          <rect id="grB1"  x="70"  y="60"    width="30" height="210"   fill="#1F4E79" opacity="0"/>
+          <rect id="grB2"  x="108" y="112.5" width="30" height="157.5" fill="#1F4E79" opacity="0"/>
+          <rect id="grB3"  x="146" y="151.9" width="30" height="118.1" fill="#1F4E79" opacity="0"/>
+          <rect id="grB4"  x="184" y="181.4" width="30" height="88.6"  fill="#1F4E79" opacity="0"/>
+          <rect id="grB5"  x="222" y="203.6" width="30" height="66.4"  fill="#1F4E79" opacity="0"/>
+          <rect id="grB6"  x="260" y="220.2" width="30" height="49.8"  fill="#1F4E79" opacity="0"/>
+          <rect id="grB7"  x="298" y="232.6" width="30" height="37.4"  fill="#1F4E79" opacity="0"/>
+          <rect id="grB8"  x="336" y="242.0" width="30" height="28.0"  fill="#1F4E79" opacity="0"/>
+          <rect id="grB9"  x="374" y="249.0" width="30" height="21.0"  fill="#1F4E79" opacity="0"/>
+          <rect id="grB10" x="412" y="254.2" width="30" height="15.8"  fill="#1F4E79" opacity="0"/>
+          <g font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79" text-anchor="middle">
+            <text id="grL1" x="85"  y="54"    opacity="0">400</text>
+            <text id="grL2" x="123" y="106.5" opacity="0">300</text>
+            <text id="grL3" x="161" y="145.9" opacity="0">225</text>
+            <text id="grL4" x="199" y="175.4" opacity="0">168.75</text>
+          </g>
+          <path id="grTot" d="M70,286 V294 H442 V286" stroke="#8A5900" stroke-width="2.5" fill="none" opacity="0"/>
+          <text id="grTotT" x="256" y="312" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" opacity="0">every deposit added together = 1,600</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <div><span class="lbl2">round</span> <span class="big" id="grN">0</span></div>
+          <div><span class="lbl2">deposit created</span> <span class="big" id="grThis">&mdash;</span></div>
+          <div><span class="lbl2">deposits so far</span> <span class="big" id="grCum">0</span></div>
+          <div style="margin-top:.4rem" id="grNote">Press play to add the rounds one at a time.</div>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="grPlay">Play the rounds</button>
+          <button class="btn ghost" id="grReset">Reset</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 12. THE MONEY MULTIPLIER ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · Banks Make Money">
+    <div class="eyebrow">The shortcut</div>
+    <h2>You never have to draw those again</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1150px">
+      <div class="models">
+        <div class="model">
+          <span class="tag">The money multiplier</span>
+          <div class="eq">m&#770; = 1 / rr = 1 / 0.25 = <span class="coef">4</span></div>
+          <div class="body">The multiple by which deposits can increase for every dollar of reserves. One number, and it replaces the entire chain of T-accounts.</div>
+        </div>
+        <div class="model warm">
+          <span class="tag">The money supply</span>
+          <div class="eq">M = m&#770; &times; R = 4 &times; 400 = <strong>1,600</strong></div>
+          <div class="body">Where <strong>R</strong> is the total reserves in the economy &mdash; here, the original 400 that walked in the door.</div>
+        </div>
+      </div>
+      <p class="lede" style="max-width:96ch">Same answer as the bars, reached without a single balance sheet. The chain converges to <strong>1,600</strong>, so <strong>1,200</strong> of money was created out of a deposit of 400.</p>
+      <div class="btnrow">
+        <button class="btn" data-reveal="s12a">Whose number is rr?</button>
+      </div>
+      <div class="reveal reveal-hidden" id="s12a">
+        <span class="cue">The reserve ratio belongs to the banks</span>
+        <p>The reserve ratio is <strong>chosen by the individual banks</strong>. The required reserve ratio is a <strong>floor</strong>: a bank may hold more than the requirement, never less. In this example we assumed banks hold exactly what is required, 25%, which is the only reason m&#770; came out to exactly 4.</p>
+        <p style="margin-top:.5rem">Hold on to that. In Part 3 the Fed changes the money supply by changing a number it does not control.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 13. THE PARALLEL ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · Banks Make Money">
+    <div class="eyebrow">You have done this arithmetic before</div>
+    <h2>The same machinery, an entirely different economy</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1200px">
+      <div class="schedrow">
+        <table class="sched">
+          <caption>Last discussion &middot; government purchases rise by 16</caption>
+          <thead>
+            <tr><th scope="col">Round</th><th scope="col">Added to spending</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">1</th><td>16</td></tr>
+            <tr><th scope="row">2</th><td>12</td></tr>
+            <tr><th scope="row">3</th><td>9</td></tr>
+            <tr><th scope="row">shrink factor</th><td>MPC = 0.75</td></tr>
+            <tr class="tot"><th scope="row">multiplier</th><td>1 / (1 &minus; MPC) = 4</td></tr>
+          </tbody>
+        </table>
+        <table class="sched gold">
+          <caption>Today &middot; a deposit of 400, reserve ratio 25%</caption>
+          <thead>
+            <tr><th scope="col">Round</th><th scope="col">Deposit created</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">1</th><td>400</td></tr>
+            <tr><th scope="row">2</th><td>300</td></tr>
+            <tr><th scope="row">3</th><td>225</td></tr>
+            <tr><th scope="row">shrink factor</th><td>1 &minus; rr = 0.75</td></tr>
+            <tr class="tot"><th scope="row">multiplier</th><td>1 / rr = 4</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="btnrow">
+        <button class="btn" data-reveal="s13a">Same sum, different economics</button>
+      </div>
+      <div class="reveal reveal-hidden" id="s13a">
+        <span class="cue">Do not let the arithmetic fool you</span>
+        <p>Both chains shrink by <strong>0.75</strong> each round and both multipliers come out to <strong>4</strong>. That is not luck with the numbers &mdash; it is the same sum. In one case the fraction surviving each round is the <strong>MPC</strong>, the share of income that gets re-spent. In the other it is <strong>1 &minus; rr</strong>, the share of a deposit that gets re-lent.</p>
+        <p style="margin-top:.5rem">What is being multiplied could hardly be more different. There, <strong>income was re-spent and output rose</strong> &mdash; a story about production. Here, <strong>deposits are re-lent and the money supply rises</strong> &mdash; a story about accounting entries, in which nothing is produced at all.</p>
+        <p style="margin-top:.5rem">The two share the shape of the sum and nothing else. Recognizing a familiar formula is not the same as understanding what it is doing.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 14. Q6 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · Banks Make Money">
+    <div class="eyebrow">Question 6 &middot; predict &middot; commit before you look</div>
+    <h2>And the reserves?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">All of that lending has now happened. Deposits stand at <strong>1,600</strong> where there were 400. Every bank in the chain is holding reserves against its own deposits: Bank 1 has 100, Bank 2 has 75, Bank 3 has 56.25, and so on down.</p>
+      <div class="predict">
+        <span class="cue">Q6 &middot; a number, and one line saying why</span>
+        <p><strong>Write down how many reserves exist in this economy now.</strong> One number for the whole banking system, and the sentence that gets you there.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 15. STILL 400 ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · Banks Make Money">
+    <div class="eyebrow">Answer &middot; Question 6</div>
+    <h2>Still 400</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1180px">
+      <div class="btnrow">
+        <button class="btn" data-reveal="s15a">Add them up</button>
+        <button class="btn" data-reveal="s15b">Why this is the whole unit</button>
+      </div>
+      <div class="reveal reveal-hidden" id="s15a">
+        <span class="cue">Not one new reserve was created</span>
+        <p><strong>100 + 75 + 56.25 + 42.19 + &hellip; = 400.</strong> Every bank holds a quarter of its deposits, so the reserve chain shrinks by the same 0.75 and sums to a quarter of 1,600 &mdash; which is exactly the 400 that walked in.</p>
+        <p style="margin-top:.5rem">Watch where each bank&rsquo;s reserves came from. Bank 1 kept 100 and <strong>sent 300 away</strong>. Bank 2 kept 75 of that 300 and <strong>sent 225 away</strong>. At no point did a reserve appear; reserves only ever <strong>moved from one bank to another</strong>. What grew was the column of deposits stacked on top of them.</p>
+      </div>
+      <div class="reveal reveal-hidden" id="s15b">
+        <span class="cue">Deposits multiply. Reserves do not.</span>
+        <p>Financial intermediation multiplies <strong>deposits</strong>. It never multiplies <strong>reserves</strong>. Banks create money every time they lend &mdash; a loan becomes somebody&rsquo;s deposit, and deposits are money &mdash; but no bank, however large, can manufacture a single reserve.</p>
+        <p style="margin-top:.5rem">So the quantity of reserves is fixed from <strong>outside the banking system</strong>. And whoever fixes it is, by way of the multiplier, deciding the size of the entire money supply. That is the Federal Reserve, and it is the only reason Part 3 exists.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 16. Q7 DIAGNOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · Banks Make Money">
+    <div class="eyebrow">Question 7 &middot; silent poll &middot; pick a number on paper</div>
+    <h2>One of these three is wrong</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:96ch">All three describe what a bank does with a deposit. <strong>Two of them are sound. One is not.</strong> Write down the number of the one that fails, and one line saying where its reasoning gives out.</p>
+    <div>
+      <div class="diag" id="diag7">
+        <button class="diag-opt" type="button"><span class="n">1</span><span class="s">A bank keeps a fraction of each deposit as reserves and lends out the rest, so no individual bank ever lends more than it received.</span></button>
+        <button class="diag-opt" type="button"><span class="n">2</span><span class="s">Once the whole chain has run, total reserves are exactly what they were at the start, even though total deposits have quadrupled.</span></button>
+        <button class="diag-opt" type="button" data-bad="true"><span class="n">3</span><span class="s">Banks just lend out the money you deposited, so lending moves money around without changing how much there is.</span></button>
+      </div>
+      <div class="btnrow"><button class="btn" data-diag-reveal="diag7">Show which one fails</button></div>
+      <div data-diag-note style="display:none">
+        <div class="reveal" style="margin-top:1.1rem;max-width:1020px">
+          <span class="cue">Right about the dollar, wrong about the total</span>
+          <p><strong>Sentence 3 fails</strong> &mdash; and notice how much of it is correct. A bank really does lend out money that was deposited with it. No bank prints anything, and sentence 1 says so in almost the same words without going wrong. The first half of sentence 3 is exactly right.</p>
+          <p style="margin-top:.5rem">The error is in what it concludes from that. Follow the 300 Bank 1 lends. The borrower spends it; it lands at Bank 2 as a deposit of 300. Now look at the two accounts: <strong>Bank 1&rsquo;s depositor still has 400</strong>, and the person who received the spending <strong>has 300</strong>. Deposits are money, so the money supply just grew by 300 &mdash; and nothing was taken away from anybody.</p>
+          <p style="margin-top:.5rem">That is what &ldquo;banks create money&rdquo; means. It is not a figure of speech and it needs no printing press. It needs only that a loan ends up as a deposit somewhere, which it must, since the borrower spent it and somebody received it.</p>
+          <p style="margin-top:.5rem">Sentence 2 is the check. Reserves ended at 400 and deposits ended at 1,600. Both statements are true at the same time, and they only sound contradictory if you believe sentence 3.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 17. PUNCHLINE ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · Banks Make Money">
+    <div class="eyebrow">Where Part 2 leaves us</div>
+    <h2>There are exactly two ways to change the money supply</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1150px">
+      <div class="chain">M = m&#770; &times; R &nbsp;&nbsp;where&nbsp;&nbsp; m&#770; = 1 / rr</div>
+      <p class="lede" style="max-width:96ch">There are two symbols on the right-hand side, so there are two ways in and no others. Anything that changes the money supply has to change one of them.</p>
+      <div class="models">
+        <div class="model">
+          <span class="tag">Lever one &middot; the quantity of reserves</span>
+          <div class="eq">M = m&#770; &times; <span class="coef">R</span></div>
+          <div class="body">Put more reserves into the banking system and every one of them gets multiplied on the way through. <strong>Banks cannot do this.</strong> Somebody outside the banking system has to.</div>
+        </div>
+        <div class="model warm">
+          <span class="tag">Lever two &middot; the multiplier</span>
+          <div class="eq">m&#770; = 1 / <strong>rr</strong></div>
+          <div class="body">Change the fraction banks keep and you change how far each reserve stretches. But <strong>rr is the banks&rsquo; choice</strong> &mdash; so this lever can only be pulled indirectly, by changing what banks want.</div>
+        </div>
+      </div>
+      <p class="lede" style="max-width:96ch">The Fed has one instrument for each. That is Part 3, and it is only two slides of new economics.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 3 · THE FED'S LEVERS ══════════════ -->
+
+  <!-- ═══════════ 18. DIVIDER P3 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 10 · The Fed&rsquo;s Levers">
+    <div class="eyebrow">Part 3 of 4</div>
+    <h1>The Fed&rsquo;s levers</h1>
+    <p class="lede">The <strong>Federal Reserve</strong> is the central bank of the United States, founded by act of Congress in 1913. It is <strong>independent</strong>: it does not take orders from the president or from Congress. Monetary policy is set by the <strong>Federal Open Market Committee</strong>, which sets goals for the money supply and for interest rates.</p>
+    <p class="lede" style="margin-top:.9rem">It is also the <strong>banks&rsquo; bank</strong> &mdash; the place banks hold their reserves, exactly as you hold your deposits at yours. And it is the <strong>lender of last resort</strong>: it lends to banks that cannot get funds anywhere else.</p>
+    <div class="sectrail">WHAT MONEY IS &#10003; &rarr; BANKS MAKE MONEY &#10003; &rarr; THE FED&rsquo;S LEVERS &rarr; THE PRICE OF MONEY</div>
+    <div class="through">Throughline: banks create money every time they lend, but they cannot create reserves. That is why the Fed controls the money supply, and why the money supply sets the interest rate.</div>
+  </section>
+
+  <!-- ═══════════ 19. THE ECONOMY FOR PART 3 ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Fed&rsquo;s Levers">
+    <div class="eyebrow">The numbers for the rest of this part</div>
+    <h2>R = 300, rr = 0.25</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <div class="calc">
+        <span class="lbl">m&#770;</span> = 1 / rr = 1 / 0.25 = <strong>4</strong><br>
+        <span class="lbl">M</span> = m&#770; &times; R = 4 &times; 300 = <strong>1,200</strong>
+      </div>
+      <p class="lede" style="max-width:96ch">Three numbers: reserves of <strong>300</strong>, a reserve ratio of <strong>0.25</strong>, a money supply of <strong>1,200</strong>. Hold them. Everything the Fed does for the rest of this part changes exactly one of the two on the right, and the interesting question each time is <em>which one</em>.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 20. Q8 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Fed&rsquo;s Levers">
+    <div class="eyebrow">Question 8 &middot; predict &middot; commit before you look</div>
+    <h2>The Fed buys $60 of Treasury bonds</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">The Fed goes into the bond market and buys <strong>$60 of Treasury securities from banks</strong>. The banks hand over the bonds. This is called an <strong>open market operation</strong>, and it is the older of the Fed&rsquo;s two instruments.</p>
+      <div class="predict">
+        <span class="cue">Q8 &middot; a direction, a number if you can, and one line of mechanism</span>
+        <p><strong>Write down what happens to the money supply</strong> &mdash; and be specific about how a bond purchase reaches it at all. What did the banks get in exchange?</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 21. OPEN MARKET OPERATIONS ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Fed&rsquo;s Levers">
+    <div class="eyebrow">Answer &middot; Question 8</div>
+    <h2>The money supply rises to 1,440</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1180px">
+      <div class="btnrow">
+        <button class="btn" data-reveal="s21a">How the Fed pays</button>
+        <button class="btn" data-reveal="s21b">Both directions</button>
+      </div>
+      <div class="reveal reveal-hidden" id="s21a">
+        <span class="cue">It pays by writing reserves</span>
+        <p>The Fed does not send a truck of cash. It <strong>credits the banks&rsquo; reserve accounts</strong> &mdash; the accounts those banks hold at the Fed. Reserves go from <strong>300 to 360</strong>. That is the entire mechanism, and it is why an open market operation is the cleanest lever the Fed has: it puts reserves in directly.</p>
+        <div class="calc" style="margin-top:.6rem">M = m&#770; &times; R = 4 &times; 360 = <strong>1,440</strong></div>
+        <p style="margin-top:.5rem">The Fed added <strong>60</strong> of reserves and the money supply rose by <strong>240</strong>, because every reserve it added went through the same lending chain you built in Part 2 and got multiplied by 4.</p>
+      </div>
+      <div class="reveal-hidden" id="s21b">
+        <div class="schedrow">
+          <table class="sched">
+            <caption>Open market operations &middot; rr stays 0.25, so m&#770; stays 4</caption>
+            <thead>
+              <tr><th scope="col">Action</th><th scope="col">R</th><th scope="col">m&#770;</th><th scope="col">M</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">No action</th><td>300</td><td>4</td><td>1,200</td></tr>
+              <tr><th scope="row">Purchase of 60</th><td>360</td><td>4</td><td>1,440</td></tr>
+              <tr><th scope="row">Sale of 60</th><td>240</td><td>4</td><td>960</td></tr>
+            </tbody>
+          </table>
+          <div class="col" style="justify-content:flex-start;gap:.8rem;max-width:46ch">
+            <p class="lede">An open market <strong>purchase</strong> is the Fed buying bonds from banks and paying in reserves, so reserves <strong>rise</strong>.</p>
+            <p class="lede">An open market <strong>sale</strong> is the Fed selling bonds to banks and taking reserves out in exchange, so reserves <strong>fall</strong> &mdash; to 240, and M falls to 960.</p>
+            <p class="lede">Read the m&#770; column. It never moves. <strong>Open market operations work on R and only on R.</strong></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 22. Q9 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Fed&rsquo;s Levers">
+    <div class="eyebrow">Question 9 &middot; predict &middot; commit before you look</div>
+    <h2>The Fed raises the interest it pays on reserves</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">Back to the starting economy: <strong>R = 300, rr = 0.25, M = 1,200</strong>. This time the Fed buys nothing and sells nothing.</p>
+      <p class="lede" style="max-width:96ch">Since October 2008 the Fed has <strong>paid banks interest on the reserves</strong> sitting in their accounts at the Fed &mdash; much as your bank pays you interest on a savings balance. Today it <strong>raises that rate</strong>. No bonds change hands. No reserves enter or leave the system.</p>
+      <div class="predict">
+        <span class="cue">Q9 &middot; a direction and one line of mechanism</span>
+        <p><strong>Write down what happens to the money supply.</strong> Be specific about which part of M = m&#770; &times; R moves &mdash; and about <em>who</em> moves it, given that the Fed has not touched R.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 23. INTEREST ON RESERVES ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Fed&rsquo;s Levers">
+    <div class="eyebrow">Answer &middot; Question 9</div>
+    <h2>The money supply falls to 600</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1180px">
+      <div class="chain">IOR&uarr; &rarr; reserves pay more, and are safer than lending &rarr; rr&uarr; &rarr; m&#770;&darr; &rarr; M&darr;</div>
+      <div class="btnrow">
+        <button class="btn" data-reveal="s23a">Work the numbers</button>
+        <button class="btn" data-reveal="s23b">Who is actually deciding</button>
+      </div>
+      <div class="reveal-hidden" id="s23a">
+        <div class="schedrow">
+          <table class="sched">
+            <caption>Interest on reserves &middot; R stays 300 throughout</caption>
+            <thead>
+              <tr><th scope="col">Action</th><th scope="col">rr</th><th scope="col">m&#770;</th><th scope="col">M</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">No action</th><td>0.25</td><td>4</td><td>1,200</td></tr>
+              <tr><th scope="row">IOR raised</th><td>0.50</td><td>2</td><td>600</td></tr>
+              <tr><th scope="row">IOR lowered</th><td>0.20</td><td>5</td><td>1,500</td></tr>
+            </tbody>
+          </table>
+          <div class="col" style="justify-content:flex-start;gap:.8rem;max-width:46ch">
+            <p class="lede">A bank with a deposit has two options: <strong>lend it</strong>, which is risky, or <strong>leave it at the Fed as reserves</strong>, which is safe. Paying interest on reserves puts a return on the safe option, so lending now has to clear a higher bar to be worth it.</p>
+            <p class="lede">Say rr rises from <strong>0.25 to 0.50</strong>. Then m&#770; = 1/0.50 = <strong>2</strong> and M = 2 &times; 300 = <strong>600</strong>. Lower the rate instead and rr falls to 0.20, m&#770; rises to <strong>5</strong>, and M rises to <strong>1,500</strong>.</p>
+            <p class="lede">Read the R column this time. <strong>It never moves.</strong> The money supply halved because each reserve now stretches half as far.</p>
+          </div>
+        </div>
+      </div>
+      <div class="reveal reveal-hidden" id="s23b">
+        <span class="cue">The Fed changed an incentive, not a rule</span>
+        <p>Notice what the Fed did <em>not</em> do. It did not order any bank to hold more reserves, and the <strong>required</strong> reserve ratio never entered the story &mdash; it is still whatever it was. The reserve ratio in m&#770; = 1/rr is <strong>the banks&rsquo; own choice</strong>, and the Fed has no authority to set it.</p>
+        <p style="margin-top:.5rem">What the Fed changed was the <strong>price of making that choice</strong>. Every bank then re-ran its own arithmetic, decided independently to hold more, and the money supply fell by half. Nobody was told to do anything.</p>
+        <p style="margin-top:.5rem">That is how most of monetary policy works. The Fed rarely commands. It makes one option pay better than another and lets the banking system arrive at the result on its own.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 24. BOTH LEVERS ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Fed&rsquo;s Levers">
+    <div class="eyebrow">Two instruments, one equation</div>
+    <h2>Everything the Fed does lands somewhere in M = m&#770; &times; R</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1150px">
+      <div class="models">
+        <div class="model">
+          <span class="tag">Open market operations &middot; moves R</span>
+          <div class="eq">M = m&#770; &times; <span class="coef">R</span></div>
+          <div class="body">Buying and selling Treasury securities changes the <strong>quantity of reserves</strong> directly.<br><br>Purchase &rarr; R&uarr; &rarr; M&uarr;<br>Sale &rarr; R&darr; &rarr; M&darr;</div>
+        </div>
+        <div class="model warm">
+          <span class="tag">Interest on reserves &middot; moves m&#770;</span>
+          <div class="eq">m&#770; = 1 / <strong>rr</strong></div>
+          <div class="body">Changing what reserves pay changes the <strong>ratio banks choose</strong>.<br><br>IOR&uarr; &rarr; rr&uarr; &rarr; m&#770;&darr; &rarr; M&darr;<br>IOR&darr; &rarr; rr&darr; &rarr; m&#770;&uarr; &rarr; M&uarr;</div>
+        </div>
+      </div>
+      <p class="footnote">Open market operations were the Fed&rsquo;s main tool before 2008; interest on reserves has been the main one since.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 4 · THE PRICE OF MONEY ══════════════ -->
+
+  <!-- ═══════════ 25. DIVIDER P4 · Q10 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 10 · The Price of Money">
+    <div class="eyebrow">Part 4 of 4</div>
+    <h1>The price of money</h1>
+    <p class="lede">You now know where the money supply comes from. The reason that was worth three parts is what comes next: <strong>the money supply sets the interest rate</strong> &mdash; the number every deck since the goods market has simply handed you.</p>
+    <p class="lede" style="margin-top:1.1rem"><strong>Question 10.</strong> Before the next slide, write down what an interest rate <em>actually is</em>. Not how it is quoted, and not what it does. What it is.</p>
+    <div class="sectrail">WHAT MONEY IS &#10003; &rarr; BANKS MAKE MONEY &#10003; &rarr; THE FED&rsquo;S LEVERS &#10003; &rarr; THE PRICE OF MONEY</div>
+    <div class="through">Throughline: banks create money every time they lend, but they cannot create reserves. That is why the Fed controls the money supply, and why the money supply sets the interest rate.</div>
+  </section>
+
+  <!-- ═══════════ 26. Q10 REVEAL ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Price of Money">
+    <div class="eyebrow">Answer &middot; Question 10</div>
+    <h2>It is the price of money</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">An interest rate is what you pay to have money now instead of later, and what you give up by holding money instead of lending it out. Strip away the quoting conventions and it is <strong>a price</strong> &mdash; the price of money.</p>
+      <div class="btnrow">
+        <button class="btn" data-reveal="s26a">Then what determines it</button>
+      </div>
+      <div class="reveal reveal-hidden" id="s26a">
+        <span class="cue">The apparatus you already own</span>
+        <p>If it is a price, it is determined the way every price in this course is determined: by <strong>supply and demand</strong>. Nothing new is required. This is the second discussion&rsquo;s machinery pointed at a different market.</p>
+        <p style="margin-top:.5rem">Two things about this particular market are unusual, and both are worth naming before the diagram appears. The <strong>supply curve will be vertical</strong>. And the quantity on the horizontal axis <strong>will not be dollars</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 27. REAL VS NOMINAL ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Price of Money">
+    <div class="eyebrow">What is actually on the axis</div>
+    <h2>Real money balances, M/P</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1150px">
+      <div class="models">
+        <div class="model">
+          <span class="tag">Nominal money</span>
+          <div class="eq">M</div>
+          <div class="body">The number of dollars you hold. Count the bills and the balance; that is the whole measure.</div>
+        </div>
+        <div class="model warm">
+          <span class="tag">Real money</span>
+          <div class="eq">M / P</div>
+          <div class="body">The quantity of goods and services those dollars will buy &mdash; nominal dollars divided by the price level.</div>
+        </div>
+      </div>
+      <div class="calc">
+        M = 1,200 and P = 2 &nbsp;&rarr;&nbsp; <span class="lbl">M/P = 600</span><br>
+        M = 1,200 and P = 3 &nbsp;&rarr;&nbsp; <span class="lbl">M/P = 400</span>
+      </div>
+      <p class="lede" style="max-width:96ch">Not one dollar went anywhere. The same 1,200 dollars sit in the same accounts, and they now command a third less. <strong>Real balances are what anybody actually cares about holding</strong>, so real balances are what goes on the horizontal axis.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 28. VERTICAL SUPPLY ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Price of Money">
+    <div class="eyebrow">The supply side</div>
+    <h2>Supply does not respond to the price</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="paneltitle">The supply of real money balances</div>
+        <svg viewBox="0 0 470 420" role="img" aria-label="A diagram with real money balances on the horizontal axis and the interest rate on the vertical axis. A single grey vertical line stands at 600 real balances and runs the full height of the diagram. Because the line is vertical, the quantity of real balances is the same at every interest rate, showing that the supply of money does not respond to its own price.">
+          <line x1="70" y1="20" x2="70" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="380" x2="440" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="308" x2="440" y2="308"/><line x1="70" y1="236" x2="440" y2="236"/>
+            <line x1="70" y1="164" x2="440" y2="164"/><line x1="70" y1="92" x2="440" y2="92"/>
+            <line x1="144" y1="20" x2="144" y2="380"/><line x1="218" y1="20" x2="218" y2="380"/>
+            <line x1="292" y1="20" x2="292" y2="380"/><line x1="366" y1="20" x2="366" y2="380"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="384">0</text><text x="62" y="312">2</text><text x="62" y="240">4</text>
+            <text x="62" y="168">6</text><text x="62" y="96">8</text><text x="62" y="24">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="399">0</text><text x="144" y="399">200</text><text x="218" y="399">400</text>
+            <text x="292" y="399">600</text><text x="366" y="399">800</text><text x="436" y="399">1000</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">interest rate (r), %</text>
+          <text x="440" y="414" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">real money balances (M/P)</text>
+          <line x1="292" y1="380" x2="292" y2="30" stroke="#5A5F66" stroke-width="3.5" stroke-linecap="round"/>
+          <text x="292" y="22" font-family="monospace" font-size="13" font-weight="700" fill="#5A5F66" text-anchor="middle">M/P = 600</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <p class="lede"><strong>M</strong> is set by Fed policy &mdash; you spent Part 3 on exactly how. <strong>P</strong> is determined in equilibrium, which this course takes up later and takes as given for now.</p>
+        <p class="lede">So <strong>M/P is a number handed to this market from outside it</strong>. A higher interest rate does not persuade the Fed to create reserves, and it does not persuade banks to conjure any either.</p>
+        <p class="lede">Quantity supplied therefore does not respond to the price, and the supply curve is <strong>vertical</strong>. Read the line across: at r = 2 and at r = 8, real balances are 600 either way.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 29. MONEY DEMAND · Q11 ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Price of Money">
+    <div class="eyebrow">Question 11 &middot; write before you look</div>
+    <h2>Money demand, L(r, Y)</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1180px">
+      <p class="lede" style="max-width:96ch">Money demand is <strong>not</strong> the demand for wealth &mdash; nobody has ever wanted less wealth, and a demand curve for it would be a strange object. Money demand is how much of your wealth you want to hold in <strong>liquid</strong> form, ready for transactions.</p>
+      <p class="lede" style="max-width:96ch">It rises with <strong>income</strong>: more income means more transactions to cover, so more money is wanted at any interest rate. That much is easy. The other argument is the interesting one.</p>
+      <div class="prompt">
+        <span class="cue">Q11 &middot; one sentence</span>
+        <p><strong>Write down why a higher interest rate makes people want to hold less money.</strong> You are holding the same wealth either way &mdash; so what exactly changed?</p>
+      </div>
+      <div class="btnrow">
+        <button class="btn" data-reveal="s29a">The answer, and where you have met it before</button>
+      </div>
+      <div class="reveal reveal-hidden" id="s29a">
+        <span class="cue">The interest rate is the opportunity cost of holding money</span>
+        <p>Cash in your pocket earns nothing. A checking balance earns close to nothing. <strong>Every dollar you hold as money is a dollar not earning the interest rate</strong> &mdash; so the interest rate is precisely what holding money costs you.</p>
+        <p style="margin-top:.5rem">When that cost rises, you hold less: less in checking, more in something that pays. Your wealth has not changed at all; only its composition has. That is the whole content of a downward-sloping money demand curve, and it is why we write demand as <strong>L(r, Y)</strong> &mdash; falling in r, rising in Y.</p>
+        <p style="margin-top:.5rem">You met <strong>opportunity cost</strong> in the first discussion, as the value of the next best thing given up. Here it is doing structural work: it is the entire reason this curve slopes down.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 30. EQUILIBRIUM ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Price of Money">
+    <div class="eyebrow">Putting the two sides together</div>
+    <h2>Where the interest rate comes from</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="paneltitle">The money market</div>
+        <div style="display:flex;gap:1.2rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;font-weight:700;margin-bottom:.5rem">
+          <span style="color:#5A5F66">&#9472;&#9472; M/P supply (vertical)</span>
+          <span style="color:#1F4E79">&#9472;&#9472; L(r, Y) money demand</span>
+        </div>
+        <svg viewBox="0 0 470 420" role="img" aria-label="The money market. Real money balances run along the horizontal axis and the interest rate up the vertical axis. A grey vertical supply line stands at 600 real balances. A blue downward-sloping money demand curve crosses it at point A, at an interest rate of 4 percent. The diagram shows that the equilibrium interest rate is set where the quantity of real balances people want to hold equals the fixed quantity that exists.">
+          <line x1="70" y1="20" x2="70" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="380" x2="440" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="308" x2="440" y2="308"/><line x1="70" y1="236" x2="440" y2="236"/>
+            <line x1="70" y1="164" x2="440" y2="164"/><line x1="70" y1="92" x2="440" y2="92"/>
+            <line x1="144" y1="20" x2="144" y2="380"/><line x1="218" y1="20" x2="218" y2="380"/>
+            <line x1="292" y1="20" x2="292" y2="380"/><line x1="366" y1="20" x2="366" y2="380"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="384">0</text><text x="62" y="312">2</text><text x="62" y="240">4</text>
+            <text x="62" y="168">6</text><text x="62" y="96">8</text><text x="62" y="24">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="399">0</text><text x="144" y="399">200</text><text x="218" y="399">400</text>
+            <text x="292" y="399">600</text><text x="366" y="399">800</text><text x="436" y="399">1000</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">interest rate (r), %</text>
+          <text x="440" y="414" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">real money balances (M/P)</text>
+          <line x1="70" y1="236" x2="292" y2="236" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <line x1="70" y1="20" x2="440" y2="380" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="398" y="338" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">L(r, Y)</text>
+          <line x1="292" y1="380" x2="292" y2="30" stroke="#5A5F66" stroke-width="3.5" stroke-linecap="round"/>
+          <text x="292" y="22" font-family="monospace" font-size="13" font-weight="700" fill="#5A5F66" text-anchor="middle">M/P = 600</text>
+          <circle cx="292" cy="236" r="7.5" fill="#1F4E79"/>
+          <text x="306" y="226" font-family="monospace" font-size="14" font-weight="700" fill="#1F4E79" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A &middot; r = 4</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <p class="lede">The interest rate settles where the real balances people <strong>want</strong> to hold equal the real balances that <strong>exist</strong>: r = 4 at M/P = 600.</p>
+        <div class="btnrow">
+          <button class="btn" data-reveal="s30a">Why nothing else can hold</button>
+        </div>
+        <div class="reveal reveal-hidden" id="s30a">
+          <span class="cue">What pushes it there</span>
+          <p>Above r = 4, people want to hold <strong>less</strong> money than exists. They try to lend the excess out, and competing to lend drives the rate <strong>down</strong>.</p>
+          <p style="margin-top:.5rem">Below r = 4, people want to hold <strong>more</strong> than exists. They sell other assets to get it, and competing for it bids the rate <strong>up</strong>.</p>
+          <p style="margin-top:.5rem">Only at r = 4 is nobody trying to change what they hold. Notice what did the adjusting: the quantity could not move, so the <strong>price</strong> had to.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 31. SHOCK 1 · PRICES RISE ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Price of Money">
+    <div class="eyebrow">Shock 1 of 3 &middot; predict before you press anything</div>
+    <h2>The price level rises, P: 2 &rarr; 3</h2>
+    <div class="titlerule"></div>
+    <div class="predict" style="margin-bottom:.8rem;max-width:1100px">
+      <span class="cue">Predict &middot; which curve, which way, and what happens to r</span>
+      <p><strong>The Fed does nothing. M stays at 1,200 and prices rise from 2 to 3.</strong> Write down which curve moves, in which direction, and where the interest rate ends up.</p>
+    </div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div style="display:flex;gap:1.2rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;font-weight:700;margin-bottom:.5rem">
+          <span style="color:#5A5F66">&#9472;&#9472; M/P supply (vertical)</span>
+          <span style="color:#1F4E79">&#9472;&#9472; L(r, Y) money demand</span>
+          <span class="hid" id="p1leg" style="color:#8A5900">&#9472; &#9472; M/P&prime; = 400 after P rises</span>
+        </div>
+        <svg viewBox="0 0 470 420" role="img" aria-label="The money market with a rise in the price level. Real money balances run along the horizontal axis and the interest rate up the vertical axis. A blue downward-sloping money demand curve crosses a grey vertical supply line at 600 real balances, at point A and an interest rate of 4 percent. When revealed, a gold dashed vertical line at 400 real balances shows the supply shifted left, labeled P up, and the new crossing at point B carries an interest rate of 6 percent. The diagram shows that a higher price level shrinks real balances and raises the interest rate, with money demand never moving.">
+          <defs>
+            <marker id="p1Head" markerUnits="userSpaceOnUse" markerWidth="15" markerHeight="15" refX="10" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#8A5900"/></marker>
+          </defs>
+          <line x1="70" y1="20" x2="70" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="380" x2="440" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="308" x2="440" y2="308"/><line x1="70" y1="236" x2="440" y2="236"/>
+            <line x1="70" y1="164" x2="440" y2="164"/><line x1="70" y1="92" x2="440" y2="92"/>
+            <line x1="144" y1="20" x2="144" y2="380"/><line x1="218" y1="20" x2="218" y2="380"/>
+            <line x1="292" y1="20" x2="292" y2="380"/><line x1="366" y1="20" x2="366" y2="380"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="384">0</text><text x="62" y="312">2</text><text x="62" y="240">4</text>
+            <text x="62" y="168">6</text><text x="62" y="96">8</text><text x="62" y="24">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="399">0</text><text x="144" y="399">200</text><text x="218" y="399">400</text>
+            <text x="292" y="399">600</text><text x="366" y="399">800</text><text x="436" y="399">1000</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">interest rate (r), %</text>
+          <text x="440" y="414" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">real money balances (M/P)</text>
+          <line x1="70" y1="236" x2="292" y2="236" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <line x1="70" y1="20" x2="440" y2="380" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="398" y="338" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">L(r, Y)</text>
+          <line x1="292" y1="380" x2="292" y2="30" stroke="#5A5F66" stroke-width="3.5" stroke-linecap="round"/>
+          <text x="292" y="22" font-family="monospace" font-size="13" font-weight="700" fill="#5A5F66" text-anchor="middle">M/P = 600</text>
+          <circle cx="292" cy="236" r="7.5" fill="#1F4E79"/>
+          <text x="306" y="226" font-family="monospace" font-size="14" font-weight="700" fill="#1F4E79" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A &middot; r = 4</text>
+          <line id="p1S2" x1="218" y1="380" x2="218" y2="30" stroke="#8A5900" stroke-width="3.5" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <text id="p1S2lab" x="218" y="52" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">M/P&prime; = 400</text>
+          <line id="p1Arr" x1="286" y1="352" x2="226" y2="352" stroke="#8A5900" stroke-width="3" marker-end="url(#p1Head)" opacity="0"/>
+          <text id="p1ArrLab" x="256" y="343" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">P&uarr;</text>
+          <g id="p1Bgd" opacity="0"><line x1="70" y1="164" x2="218" y2="164" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/></g>
+          <circle id="p1B" cx="218" cy="164" r="7" fill="#8A5900" opacity="0"/>
+          <text id="p1Bl" x="232" y="154" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">B &middot; r = 6</text>
+          <line id="p1Rarr" x1="100" y1="230" x2="100" y2="174" stroke="#8A5900" stroke-width="3" marker-end="url(#p1Head)" opacity="0"/>
+          <text id="p1Rlab" x="114" y="206" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">r&uarr;</text>
+          <circle id="p1Dot" cx="292" cy="236" r="6" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5" opacity="0"/>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <div><span class="lbl2">real balances M/P</span> <span class="big" id="p1Vv">600</span></div>
+          <div><span class="lbl2">interest rate r</span> <span class="big" id="p1Rv">4.0</span></div>
+          <div style="margin-top:.4rem" id="p1Note">Show the shift, then let the rate adjust.</div>
+        </div>
+        <div class="btnrow">
+          <button class="btn" data-reveal-svg="priceUp" data-reveal="p1leg,s31a">Show the shift</button>
+          <button class="btn" id="p1Play">Let the rate adjust</button>
+          <button class="btn ghost" id="p1Reset">Reset</button>
+        </div>
+        <div class="reveal reveal-hidden" id="s31a">
+          <span class="cue">P&uarr; &rarr; M/P&darr; &rarr; r&uarr;</span>
+          <p>The Fed changed nothing. Prices went from 2 to 3, so the same <strong>1,200 dollars are now only 400 of real balances</strong>. The supply line moves <strong>left</strong>.</p>
+          <p style="margin-top:.5rem">Money demand has not moved a millimeter &mdash; at every interest rate people want the same real balances they wanted before. So there is a shortage, and the only thing free to close it is the price. <strong>r rises from 4 to 6.</strong></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 32. SHOCK 2 · INCOME RISES ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Price of Money">
+    <div class="eyebrow">Shock 2 of 3 &middot; predict before you press anything</div>
+    <h2>Income rises, Y: Y&#8321; &rarr; Y&#8322;</h2>
+    <div class="titlerule"></div>
+    <div class="predict" style="margin-bottom:.8rem;max-width:1100px">
+      <span class="cue">Predict &middot; which curve, which way, and what happens to r</span>
+      <p><strong>Output rises. M is unchanged at 1,200 and P is unchanged at 2.</strong> Write down which curve moves, in which direction, and where the interest rate ends up &mdash; and, before you look, what quantity of real balances people end up holding.</p>
+    </div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div style="display:flex;gap:1.2rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;font-weight:700;margin-bottom:.5rem">
+          <span style="color:#5A5F66">&#9472;&#9472; M/P supply (vertical)</span>
+          <span style="color:#1F4E79">&#9472;&#9472; L(r, Y&#8321;) money demand</span>
+          <span class="hid" id="p2leg" style="color:#8A5900">&#9472; &#9472; L(r, Y&#8322;) after income rises</span>
+        </div>
+        <svg viewBox="0 0 470 420" role="img" aria-label="The money market with a rise in income. Real money balances run along the horizontal axis and the interest rate up the vertical axis. A blue downward-sloping money demand curve crosses a grey vertical supply line at 600 real balances, at point A and an interest rate of 4 percent. When revealed, a gold dashed demand curve lies to the right of the blue one, labeled Y up, and crosses the same unmoved supply line at point B, at an interest rate of 6 percent. Real balances are 600 at both points. The diagram shows that with supply fixed, higher income raises the interest rate and cannot raise the quantity of money held.">
+          <defs>
+            <marker id="p2Head" markerUnits="userSpaceOnUse" markerWidth="15" markerHeight="15" refX="10" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#8A5900"/></marker>
+          </defs>
+          <line x1="70" y1="20" x2="70" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="380" x2="440" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="308" x2="440" y2="308"/><line x1="70" y1="236" x2="440" y2="236"/>
+            <line x1="70" y1="164" x2="440" y2="164"/><line x1="70" y1="92" x2="440" y2="92"/>
+            <line x1="144" y1="20" x2="144" y2="380"/><line x1="218" y1="20" x2="218" y2="380"/>
+            <line x1="292" y1="20" x2="292" y2="380"/><line x1="366" y1="20" x2="366" y2="380"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="384">0</text><text x="62" y="312">2</text><text x="62" y="240">4</text>
+            <text x="62" y="168">6</text><text x="62" y="96">8</text><text x="62" y="24">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="399">0</text><text x="144" y="399">200</text><text x="218" y="399">400</text>
+            <text x="292" y="399">600</text><text x="366" y="399">800</text><text x="436" y="399">1000</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">interest rate (r), %</text>
+          <text x="440" y="414" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">real money balances (M/P)</text>
+          <line x1="70" y1="236" x2="292" y2="236" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <line x1="70" y1="20" x2="440" y2="380" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="398" y="338" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">L(r, Y&#8321;)</text>
+          <line x1="292" y1="380" x2="292" y2="30" stroke="#5A5F66" stroke-width="3.5" stroke-linecap="round"/>
+          <text x="292" y="22" font-family="monospace" font-size="13" font-weight="700" fill="#5A5F66" text-anchor="middle">M/P = 600</text>
+          <circle cx="292" cy="236" r="7.5" fill="#1F4E79"/>
+          <text x="278" y="256" font-family="monospace" font-size="14" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A &middot; r = 4</text>
+          <line id="p2D2" x1="144" y1="20" x2="440" y2="308" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <text id="p2D2lab" x="404" y="268" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">L(r, Y&#8322;)</text>
+          <line id="p2Arr" x1="187" y1="128" x2="249" y2="128" stroke="#8A5900" stroke-width="3" marker-end="url(#p2Head)" opacity="0"/>
+          <text id="p2ArrLab" x="218" y="119" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">Y&uarr;</text>
+          <g id="p2Bgd" opacity="0"><line x1="70" y1="164" x2="292" y2="164" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/></g>
+          <circle id="p2B" cx="292" cy="164" r="7" fill="#8A5900" opacity="0"/>
+          <text id="p2Bl" x="306" y="154" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">B &middot; r = 6</text>
+          <line id="p2Rarr" x1="100" y1="230" x2="100" y2="174" stroke="#8A5900" stroke-width="3" marker-end="url(#p2Head)" opacity="0"/>
+          <text id="p2Rlab" x="114" y="206" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">r&uarr;</text>
+          <circle id="p2Dot" cx="292" cy="236" r="6" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5" opacity="0"/>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <div><span class="lbl2">real balances M/P</span> <span class="big" id="p2Vv">600</span></div>
+          <div><span class="lbl2">interest rate r</span> <span class="big" id="p2Rv">4.0</span></div>
+          <div style="margin-top:.4rem" id="p2Note">Show the shift, then let the rate adjust.</div>
+        </div>
+        <div class="btnrow">
+          <button class="btn" data-reveal-svg="incomeUp" data-reveal="p2leg,s32a">Show the shift</button>
+          <button class="btn" id="p2Play">Let the rate adjust</button>
+          <button class="btn ghost" id="p2Reset">Reset</button>
+        </div>
+        <div class="reveal reveal-hidden" id="s32a">
+          <span class="cue">Y&uarr; &rarr; L&uarr; &rarr; r&uarr;</span>
+          <p>More income means more transactions to cover, so at <strong>every</strong> interest rate people want to hold more real balances. Demand shifts <strong>right</strong>.</p>
+          <p style="margin-top:.5rem">Now watch the quantity. The supply line is vertical and has not moved: there are still exactly <strong>600</strong> of real balances in existence, and there is no mechanism by which wanting more produces more. <strong>Nobody can end up holding more than 600.</strong></p>
+          <p style="margin-top:.5rem">So the entire adjustment falls on the rate. It climbs until people are content to hold 600 again &mdash; at <strong>r = 6</strong>. Compare this with the last shock: different curve, different reason, same destination.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 33. SHOCK 3 · THE FED RAISES M ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Price of Money">
+    <div class="eyebrow">Shock 3 of 3 &middot; predict before you press anything</div>
+    <h2>The Fed raises the money supply, M: 1,200 &rarr; 1,600</h2>
+    <div class="titlerule"></div>
+    <div class="predict" style="margin-bottom:.8rem;max-width:1100px">
+      <span class="cue">Predict &middot; which curve, which way, and what happens to r</span>
+      <p><strong>An open market purchase, or a cut in the interest paid on reserves &mdash; either instrument from Part 3.</strong> M rises from 1,200 to 1,600 and P stays at 2. Write down which curve moves and where the interest rate ends up.</p>
+    </div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div style="display:flex;gap:1.2rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;font-weight:700;margin-bottom:.5rem">
+          <span style="color:#5A5F66">&#9472;&#9472; M/P supply (vertical)</span>
+          <span style="color:#1F4E79">&#9472;&#9472; L(r, Y) money demand</span>
+          <span class="hid" id="p3leg" style="color:#8A5900">&#9472; &#9472; M&prime;/P = 800 after the Fed acts</span>
+        </div>
+        <svg viewBox="0 0 470 420" role="img" aria-label="The money market when the Fed raises the money supply. Real money balances run along the horizontal axis and the interest rate up the vertical axis. A blue downward-sloping money demand curve crosses a grey vertical supply line at 600 real balances, at point A and an interest rate of 4 percent. When revealed, a gold dashed vertical line at 800 real balances shows the supply shifted right, labeled M up, and the new crossing at point B carries an interest rate of 2 percent. The diagram shows that the Fed lowers the interest rate not by announcing it but by increasing the quantity of money.">
+          <defs>
+            <marker id="p3Head" markerUnits="userSpaceOnUse" markerWidth="15" markerHeight="15" refX="10" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 Z" fill="#8A5900"/></marker>
+          </defs>
+          <line x1="70" y1="20" x2="70" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="380" x2="440" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="308" x2="440" y2="308"/><line x1="70" y1="236" x2="440" y2="236"/>
+            <line x1="70" y1="164" x2="440" y2="164"/><line x1="70" y1="92" x2="440" y2="92"/>
+            <line x1="144" y1="20" x2="144" y2="380"/><line x1="218" y1="20" x2="218" y2="380"/>
+            <line x1="292" y1="20" x2="292" y2="380"/><line x1="366" y1="20" x2="366" y2="380"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="384">0</text><text x="62" y="312">2</text><text x="62" y="240">4</text>
+            <text x="62" y="168">6</text><text x="62" y="96">8</text><text x="62" y="24">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="399">0</text><text x="144" y="399">200</text><text x="218" y="399">400</text>
+            <text x="292" y="399">600</text><text x="366" y="399">800</text><text x="436" y="399">1000</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">interest rate (r), %</text>
+          <text x="440" y="414" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">real money balances (M/P)</text>
+          <line x1="70" y1="236" x2="292" y2="236" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <line x1="70" y1="20" x2="440" y2="380" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="398" y="338" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">L(r, Y)</text>
+          <line x1="292" y1="380" x2="292" y2="30" stroke="#5A5F66" stroke-width="3.5" stroke-linecap="round"/>
+          <text x="292" y="22" font-family="monospace" font-size="13" font-weight="700" fill="#5A5F66" text-anchor="middle">M/P = 600</text>
+          <circle cx="292" cy="236" r="7.5" fill="#1F4E79"/>
+          <text x="278" y="256" font-family="monospace" font-size="14" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A &middot; r = 4</text>
+          <line id="p3S2" x1="366" y1="380" x2="366" y2="30" stroke="#8A5900" stroke-width="3.5" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <text id="p3S2lab" x="384" y="22" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" opacity="0">M&prime;/P = 800</text>
+          <line id="p3Arr" x1="298" y1="352" x2="358" y2="352" stroke="#8A5900" stroke-width="3" marker-end="url(#p3Head)" opacity="0"/>
+          <text id="p3ArrLab" x="328" y="343" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">M&uarr;</text>
+          <g id="p3Bgd" opacity="0"><line x1="70" y1="308" x2="366" y2="308" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/></g>
+          <circle id="p3B" cx="366" cy="308" r="7" fill="#8A5900" opacity="0"/>
+          <text id="p3Bl" x="380" y="298" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">B &middot; r = 2</text>
+          <line id="p3Rarr" x1="100" y1="242" x2="100" y2="298" stroke="#8A5900" stroke-width="3" marker-end="url(#p3Head)" opacity="0"/>
+          <text id="p3Rlab" x="114" y="276" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">r&darr;</text>
+          <circle id="p3Dot" cx="292" cy="236" r="6" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5" opacity="0"/>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <div><span class="lbl2">real balances M/P</span> <span class="big" id="p3Vv">600</span></div>
+          <div><span class="lbl2">interest rate r</span> <span class="big" id="p3Rv">4.0</span></div>
+          <div style="margin-top:.4rem" id="p3Note">Show the shift, then let the rate adjust.</div>
+        </div>
+        <div class="btnrow">
+          <button class="btn" data-reveal-svg="moneyUp" data-reveal="p3leg,s33a">Show the shift</button>
+          <button class="btn" id="p3Play">Let the rate adjust</button>
+          <button class="btn ghost" id="p3Reset">Reset</button>
+        </div>
+        <div class="reveal reveal-hidden" id="s33a">
+          <span class="cue">M&uarr; &rarr; M/P&uarr; &rarr; r&darr;</span>
+          <p>With P still 2, a money supply of 1,600 is <strong>800</strong> of real balances. Supply shifts <strong>right</strong>. There are now more real balances in existence than anybody wanted to hold at 4, so the rate falls until people are willing to hold all of them &mdash; at <strong>r = 2</strong>.</p>
+          <p style="margin-top:.5rem">This is the sentence that joins the two halves of today. <strong>The Fed does not lower the interest rate by announcing a lower interest rate.</strong> It buys bonds, or it cuts what reserves pay; reserves change, the multiplier carries the change through the banking system, the money supply moves &mdash; and the rate is what gives way.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 34. THE INTEREST RATE RULE ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Price of Money">
+    <div class="eyebrow">Three results, written compactly</div>
+    <h2>r = cP + dY &minus; eM</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1180px">
+      <div class="schedrow">
+        <table class="sched txt">
+          <caption>The three shocks, and nothing else</caption>
+          <thead>
+            <tr><th scope="col">Shock</th><th scope="col">What moves</th><th scope="col">Effect on r</th><th scope="col">Sign in the rule</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">P rises</th><td>supply of M/P falls</td><td>r rises</td><td class="yes">positive (+cP)</td></tr>
+            <tr><th scope="row">Y rises</th><td>demand for M/P rises</td><td>r rises</td><td class="yes">positive (+dY)</td></tr>
+            <tr><th scope="row">M rises</th><td>supply of M/P rises</td><td>r falls</td><td class="no">negative (&minus;eM)</td></tr>
+          </tbody>
+        </table>
+        <div class="col" style="justify-content:flex-start;gap:.8rem;max-width:44ch">
+          <p class="lede">where <strong>c, d and e are positive constants</strong>. The minus sign in front of e is doing the work of the third diagram; the plus signs do the work of the first two.</p>
+          <p class="lede">The equation contains nothing the three diagrams did not already contain. It is those three diagrams with the pictures removed.</p>
+        </div>
+      </div>
+      <div class="btnrow">
+        <button class="btn" data-reveal="s34a">This is where r came from</button>
+      </div>
+      <div class="reveal reveal-hidden" id="s34a">
+        <span class="cue">The number you have been handed all quarter</span>
+        <p>Every deck since the goods market has taken the interest rate <strong>as given</strong>. When investment fell because r rose, nobody asked why r rose &mdash; it rose because the problem said so. This equation is the answer to the question nobody asked: r moved because something moved <strong>P</strong>, <strong>Y</strong>, or <strong>M</strong>.</p>
+        <p style="margin-top:.5rem">And notice the loop that just closed. <strong>Y is in this equation.</strong> But r is in the investment equation, and investment helps determine Y. So the money market is watching the goods market, and the goods market is watching the money market. Neither can be solved on its own any more.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 35. Q12 · THE DUAL MANDATE ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Price of Money">
+    <div class="eyebrow">Question 12 &middot; write before you look</div>
+    <h2>How does the Fed decide what rate to aim for?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1180px">
+      <p class="lede" style="max-width:96ch">You now know the Fed can move the money supply, and that the money supply moves the rate. That tells you what the Fed <em>can</em> do. It says nothing about what it should be aiming at.</p>
+      <div class="prompt">
+        <span class="cue">Q12 &middot; one sentence</span>
+        <p>At its next meeting the Fed will raise rates, cut them, or leave them alone. <strong>Write down what you think it is trying to achieve when it chooses.</strong></p>
+      </div>
+      <div class="btnrow">
+        <button class="btn" data-reveal="s35a">The mandate</button>
+        <button class="btn" data-reveal="s35b">The rule it produces</button>
+      </div>
+      <div class="reveal reveal-hidden" id="s35a">
+        <span class="cue">The dual mandate</span>
+        <p>The <strong>Federal Reserve Act of 1977</strong> requires the Fed to do two things: <strong>maintain stable prices</strong> and <strong>maximize employment</strong>. That is the entire brief. Every instrument in Part 3 is a means to those two ends and to nothing else.</p>
+        <p style="margin-top:.5rem">The two goals can <strong>conflict</strong>, and often do. Cooling inflation generally means raising rates; raising rates generally costs jobs. When they point in opposite directions the Fed cannot satisfy both, and has to choose. This course comes back to exactly that conflict.</p>
+      </div>
+      <div class="reveal reveal-hidden" id="s35b">
+        <span class="cue">Leaning against the wind</span>
+        <p>Fed policy is often described as <strong>leaning against the wind</strong>. When the economy runs hot, raise rates and cool it. When it runs cold, cut rates and warm it. Written as compactly as the last rule:</p>
+        <div class="chain warm" style="margin-top:.5rem">r = aY + bP + cZ</div>
+        <p style="margin-top:.6rem">Output above its normal level pushes the target <strong>up</strong>. Rising prices push the target <strong>up</strong>. <strong>Z</strong> is everything else &mdash; for instance, holding still to see how a fiscal or trade policy actually lands before moving at all.</p>
+        <p style="margin-top:.5rem">Set this beside the rule on the last slide and notice they are different objects. That one says what the interest rate <strong>is</strong>. This one says what the Fed <strong>wants it to be</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 36. SYNTHESIS ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Price of Money">
+    <div class="eyebrow">What today was</div>
+    <h2>The throughline</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1180px">
+      <p class="lede" style="max-width:92ch;font-size:1.25rem"><strong>Banks create money every time they lend, but they cannot create reserves. That is why the Fed controls the money supply, and why the money supply sets the interest rate.</strong></p>
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">Part 2 &middot; the fact</div>
+          <div class="cnote">A deposit of <strong>400</strong> became <strong>1,600</strong> of money, and not one new reserve appeared anywhere in the chain. Lending multiplies deposits. It cannot multiply reserves.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Part 3 &middot; the consequence</div>
+          <div class="cnote">Because reserves come from <strong>outside</strong> the banking system, the Fed controls them &mdash; directly through open market operations, and indirectly, through the multiplier, by changing what reserves pay.</div>
+        </div>
+        <div class="condcard warm">
+          <div class="ctitle">Part 4 &middot; the payoff</div>
+          <div class="cnote">Money is supplied <strong>vertically</strong> and demanded <strong>downward</strong>, so the quantity of money sets its price. That price is the interest rate every earlier deck simply handed you.</div>
+        </div>
+      </div>
+      <div class="chain">the Fed sets R &rarr; M = m&#770; &times; R &rarr; M/P &rarr; r</div>
+      <p class="lede" style="max-width:92ch">Read that chain right to left and you have the answer to a question this course has been dodging since the goods market. Read it left to right and you have monetary policy.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 37. CLOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 10 · The Price of Money">
+    <div class="eyebrow">Before you leave &middot; on your own paper</div>
+    <h2>Finish the sentence</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.3rem;max-width:1100px">
+      <p class="lede">Write it out in full, in your own words. A good answer says what a loan turns into, and where reserves have to come from.</p>
+      <div class="blankline">
+        Banks create money when <span class="bl"></span>, but they cannot create <span class="bl"></span>, because <span class="bl"></span>.
+      </div>
+      <p class="serif-note">If your sentence would still be true in an economy where every borrower kept the loan as cash under a mattress, it is not finished yet.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="chrome">
+  <span class="course" id="sectionLabel">ECON 002 &middot; Discussion 10</span>
+  <span class="navhint">
+    <button id="prevBtn" aria-label="Previous slide">&larr; prev</button>
+    <span aria-live="polite" aria-atomic="true">Slide <span id="cur">1</span> of <span id="tot">37</span></span>
+    <button id="nextBtn" aria-label="Next slide">next &rarr;</button>
+  </span>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* the one place the course string lives */
+  const COURSE = 'ECON 002';
+  const DECK_TITLE = 'Where Money Comes From';
+  document.title = COURSE + ' · ' + DECK_TITLE;
+  const eyebrow = document.getElementById('titleEyebrow');
+  if(eyebrow) eyebrow.textContent = COURSE + ' · Discussion Section · Unit 9';
+
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  /* slide element -> the reset() of every animation on it. Entering a slide
+     rewinds its animations, so nothing is already showing on arrival —
+     including on a second pass back through the deck. */
+  const slideResets=new Map();
+  function registerReset(el, fn){
+    const sl = el.closest && el.closest('.slide');
+    if(!sl) return;
+    if(!slideResets.has(sl)) slideResets.set(sl,[]);
+    slideResets.get(sl).push(fn);
+  }
+  const prog=document.getElementById('prog');
+  const cur=document.getElementById('cur');
+  document.getElementById('tot').textContent=slides.length;
+
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    prog.style.width=((i)/(slides.length-1)*100)+'%';
+    cur.textContent=i+1;
+    rewind(slides[i]);
+    const sec=slides[i].getAttribute('data-section');
+    const lbl=document.getElementById('sectionLabel');
+    if(lbl) lbl.textContent = sec ? (COURSE+' · '+sec) : (COURSE+' · Discussion');
+  }
+  function next(){show(i+1)}
+  function prev(){show(i-1)}
+
+  document.getElementById('nextBtn').onclick=next;
+  document.getElementById('prevBtn').onclick=prev;
+
+  /* guarded: Space must activate a focused control, not jump the slide */
+  window.addEventListener('keydown',e=>{
+    const t=e.target;
+    const onControl = t && t.closest && t.closest('button,a,input,select,textarea,[tabindex]');
+    if(e.key===' '||e.key==='Spacebar'){
+      if(onControl) return;               /* let the browser click the focused button */
+      e.preventDefault();next();return;
+    }
+    if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();next()}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}
+    else if(e.key.toLowerCase()==='f'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  /* ---- generic click-to-reveal: button[data-reveal="id"] or "id1,id2,id3"
+          A comma list lets one button uncover a block of text and a legend
+          entry at the same time, and it is also how the deposit cascade
+          hands the next bank's button to the screen only once the previous
+          bank is on it. */
+  document.querySelectorAll('[data-reveal]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      btn.getAttribute('data-reveal').split(',').forEach(id=>{
+        const t=document.getElementById(id.trim());
+        if(t) t.classList.add('shown');
+      });
+      btn.disabled=true;
+    });
+  });
+
+  /* ---- generic quick-check polls: button[data-poll-reveal="pollId"] ---- */
+  document.querySelectorAll('[data-poll-reveal]').forEach(btn=>{
+    const group=document.getElementById(btn.getAttribute('data-poll-reveal'));
+    if(!group) return;
+    const opts=[...group.querySelectorAll('.poll-opt')];
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    btn.addEventListener('click',()=>{
+      group.classList.add('revealed');
+      opts.forEach(o=>{ if(o.dataset.correct==='true') o.classList.add('correct'); });
+      btn.disabled=true;
+    });
+  });
+
+  /* ---- generic diagnose (flawed-argument) groups ---- */
+  document.querySelectorAll('.diag').forEach(group=>{
+    const opts=[...group.querySelectorAll('.diag-opt')];
+    const revealBtn=group.parentElement.querySelector('[data-diag-reveal]');
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    if(revealBtn){
+      revealBtn.addEventListener('click',()=>{
+        group.classList.add('revealed');
+        opts.forEach(o=>{if(o.dataset.bad==='true')o.classList.add('bad');});
+        revealBtn.disabled=true;
+        const note=group.parentElement.querySelector('[data-diag-note]');
+        if(note) note.style.display='block';
+      });
+    }
+  });
+
+  /* ---- static shift diagrams: button[data-reveal-svg="key"] ----
+     Every shift in the money market is registered here, so all three are
+     revealed by the same code: the new curve, its label, the arrow naming
+     the shock, and the dot that will ride to the new equilibrium. */
+  const svgShifts={
+    priceUp : ['p1S2','p1S2lab','p1Arr','p1ArrLab','p1Dot'],
+    incomeUp: ['p2D2','p2D2lab','p2Arr','p2ArrLab','p2Dot'],
+    moneyUp : ['p3S2','p3S2lab','p3Arr','p3ArrLab','p3Dot']
+  };
+  /* Entering a slide puts it back to its unrevealed state: uncovered text,
+     legend entries, polls, diagnose verdicts, marked-up SVGs and animations
+     all rewind, and their buttons come back — so a slide visited twice never
+     opens with its answer already showing. */
+  function rewind(sl){
+    if(!sl) return;
+    sl.querySelectorAll('.shown').forEach(e=>e.classList.remove('shown'));
+    sl.querySelectorAll('.revealed').forEach(g=>g.classList.remove('revealed'));
+    sl.querySelectorAll('.poll-opt.correct').forEach(o=>o.classList.remove('correct'));
+    sl.querySelectorAll('.diag-opt.bad').forEach(o=>o.classList.remove('bad'));
+    sl.querySelectorAll('.poll-opt,.diag-opt').forEach(o=>{o.style.outline='';});
+    sl.querySelectorAll('[data-diag-note]').forEach(n=>{n.style.display='none';});
+    sl.querySelectorAll('[data-reveal-svg]').forEach(b=>{
+      (svgShifts[b.getAttribute('data-reveal-svg')]||[]).forEach(id=>{
+        const el=document.getElementById(id); if(el) el.setAttribute('opacity',0);
+      });
+    });
+    sl.querySelectorAll('[data-reveal],[data-reveal-svg],[data-poll-reveal],[data-diag-reveal],[data-cond]')
+      .forEach(b=>{ b.disabled=false; });
+    (slideResets.get(sl)||[]).forEach(fn=>fn());
+  }
+
+  function revealShift(key){
+    (svgShifts[key]||[]).forEach(id=>{const el=document.getElementById(id); if(el) el.setAttribute('opacity',1);});
+  }
+  document.querySelectorAll('[data-reveal-svg]').forEach(btn=>{
+    const key=btn.getAttribute('data-reveal-svg');
+    btn.addEventListener('click',()=>{ revealShift(key); btn.disabled=true; });
+  });
+
+  /* ---- condition cards: button[data-cond="bodyId"] ---- */
+  document.querySelectorAll('[data-cond]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const body=document.getElementById(btn.getAttribute('data-cond'));
+      if(body){body.classList.add('shown');}
+      btn.disabled=true;
+    });
+  });
+
+  /* =====================================================================
+     ANIMATION SCAFFOLD
+     Four animations, of two deliberately different kinds. The deposit
+     cascade arrives in discrete rounds — one bank at a time, each lending
+     to the next — so it steps. An interest rate moving to a new
+     equilibrium is a continuous adjustment, so the three money market
+     shocks take the cosine sweep. All four carry reset(), finish() and a
+     reduced-motion branch.
+     ===================================================================== */
+  const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function ease(p){return p<1 ? (0.5-0.5*Math.cos(Math.PI*p)) : 1;}
+  const $ = id => document.getElementById(id);
+
+  function trim(v){
+    return (Math.round(v*100)/100).toString();
+  }
+
+  /* =====================================================================
+     Slide 11 · the deposit cascade with a reserve ratio of 25%. Each round
+     is 0.75 of the one before, so the deposits run 400, 300, 225, 168.75,
+     and the running total climbs toward 1,600. Discrete rounds, so this
+     steps. The fifth step stands for every remaining round at once.
+     ===================================================================== */
+  (function(){
+    if(!$('grPlay')) return;
+    const EACH=[400,300,225,168.75];
+    const CUM =[400,700,925,1093.75];
+    const bars=[]; for(let k=1;k<=10;k++){ const b=$('grB'+k); if(b) bars.push(b); }
+    const labs=[]; for(let k=1;k<=4;k++){ const t=$('grL'+k); if(t) labs.push(t); }
+    const tot=$('grTot'), totT=$('grTotT');
+    const $N=$('grN'), $T=$('grThis'), $C=$('grCum'), $n=$('grNote');
+    const bPlay=$('grPlay'), bReset=$('grReset');
+    let timer=null;
+
+    function setN(n){
+      const on = n>=5 ? 10 : n;
+      bars.forEach((b,k)=>b.setAttribute('opacity', k<on ? 1 : 0));
+      labs.forEach((t,k)=>t.setAttribute('opacity', k<Math.min(n,4) ? 1 : 0));
+      if(n>=5){
+        if(tot)  tot.setAttribute('opacity',1);
+        if(totT) totT.setAttribute('opacity',1);
+        $N.textContent='and on'; $T.textContent='→ 0'; $C.textContent='→ 1,600';
+      }else{
+        if(tot)  tot.setAttribute('opacity',0);
+        if(totT) totT.setAttribute('opacity',0);
+        $N.textContent = n;
+        $T.textContent = n ? trim(EACH[n-1]) : '—';
+        $C.textContent = n ? trim(CUM[n-1])  : '0';
+      }
+    }
+    function reset(){
+      if(timer){ clearTimeout(timer); timer=null; }
+      setN(0);
+      bPlay.disabled=false;
+      $n.textContent='Press play to add the rounds one at a time.';
+    }
+    function finish(){
+      if(timer){ clearTimeout(timer); timer=null; }
+      setN(5);
+      bPlay.disabled=true;
+      $n.textContent='The rounds never stop, but each one is three quarters of the last. Every deposit added together comes to 1,600 — four times the 400 that walked in the door.';
+    }
+    function play(){
+      reset(); bPlay.disabled=true;
+      if(REDUCED){ finish(); return; }        /* reduced-motion branch */
+      let n=0;
+      $n.textContent='Each bank keeps a quarter and lends three quarters, so each round is 0.75 of the one before it.';
+      (function stepRound(){
+        n++; setN(n);
+        if(n>=5){ finish(); return; }
+        timer=setTimeout(stepRound,760);
+      })();
+    }
+
+    bPlay.onclick=play;
+    bReset.addEventListener('click',reset);
+    registerReset(bPlay,reset);
+    reset();
+  })();
+
+  /* =====================================================================
+     Slides 31–33 · the three money market shocks. Plot geometry is shared:
+     real balances 0–1000 map to x = 70 + 0.37(M/P), and the interest rate
+     0–10 maps to y = 380 − 36r. Every shock moves the equilibrium from
+     (600, 4) to somewhere else, so one factory drives all three. The rate
+     adjusting is continuous, so these sweep.
+     ===================================================================== */
+  function moneyShock(prefix, key, v0, r0, v1, r1, endIds, explId, notes){
+    const bPlay=$(prefix+'Play');
+    if(!bPlay) return;
+    const bReset=$(prefix+'Reset');
+    const dot=$(prefix+'Dot');
+    const END=endIds.map($).filter(Boolean);
+    const $V=$(prefix+'Vv'), $R=$(prefix+'Rv'), $n=$(prefix+'Note');
+    const bShift=document.querySelector('[data-reveal-svg="'+key+'"]');
+    let raf;
+
+    function place(v,r){
+      dot.setAttribute('cx',(70+0.37*v).toFixed(1));
+      dot.setAttribute('cy',(380-36*r).toFixed(1));
+      $V.textContent=Math.round(v);
+      $R.textContent=r.toFixed(1);
+    }
+    function shows(o){ END.forEach(e=>e.setAttribute('opacity',o)); }
+
+    function reset(){
+      cancelAnimationFrame(raf);
+      place(v0,r0); shows(0);
+      bPlay.disabled=false;
+      $n.textContent=notes.start;
+    }
+    function finish(){
+      cancelAnimationFrame(raf);
+      place(v1,r1); shows(1);
+      bPlay.disabled=true;
+      $n.textContent=notes.end;
+    }
+    function play(){
+      reset();
+      /* the dot rides between the curves, so make sure the shift is drawn
+         and named before it starts moving */
+      revealShift(key);
+      const leg=$(prefix+'leg'); if(leg) leg.classList.add('shown');
+      const expl=$(explId);      if(expl) expl.classList.add('shown');
+      if(bShift) bShift.disabled=true;
+      bPlay.disabled=true;
+      if(REDUCED){ finish(); return; }        /* reduced-motion branch */
+      $n.textContent=notes.during;
+      const t0=performance.now();
+      (function step(now){
+        const p=Math.min(1,(now-t0)/2600), e=ease(p);
+        place(v0+(v1-v0)*e, r0+(r1-r0)*e);
+        if(p>=1) finish(); else raf=requestAnimationFrame(step);
+      })(t0);
+    }
+
+    bPlay.onclick=play;
+    bReset.addEventListener('click',reset);
+    registerReset(bPlay,reset);
+    reset();
+  }
+
+  moneyShock('p1','priceUp',600,4,400,6,
+    ['p1Bgd','p1B','p1Bl','p1Rarr','p1Rlab'],'s31a',{
+      start :'Show the shift, then let the rate adjust.',
+      during:'Real balances have shrunk to 400. People want to hold more money than exists, and the rate is climbing.',
+      end   :'r = 6 at M/P = 400. The same 1,200 dollars, a higher price level, and a higher interest rate.'
+    });
+
+  moneyShock('p2','incomeUp',600,4,600,6,
+    ['p2Bgd','p2B','p2Bl','p2Rarr','p2Rlab'],'s32a',{
+      start :'Show the shift, then let the rate adjust.',
+      during:'People want to hold more money at every rate, and there is no more to hold. The rate is climbing instead.',
+      end   :'r = 6 at M/P = 600. Watch the quantity: it never moved. Everything happened to the price.'
+    });
+
+  moneyShock('p3','moneyUp',600,4,800,2,
+    ['p3Bgd','p3B','p3Bl','p3Rarr','p3Rlab'],'s33a',{
+      start :'Show the shift, then let the rate adjust.',
+      during:'There are now more real balances than anyone wanted to hold at 4, and the rate is falling.',
+      end   :'r = 2 at M/P = 800. The Fed changed the quantity of money, and the interest rate is what gave way.'
+    });
+
+  show(0);
+})();
+</script>
+</body>
+</html>

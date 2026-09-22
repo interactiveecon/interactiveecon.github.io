@@ -1,0 +1,2203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECON 002 · Along It, or Move It?</title>
+<style>
+  :root{
+    --ink:#14243A;          /* near-navy ink */
+    --accent:#1F4E79;       /* deep blue (from worksheets) */
+    --accent-soft:#8FAADC;
+    --paper:#F6F4EE;        /* warm chalk-paper */
+    --paper-line:#E4E0D5;
+    --gold:#8A5900;
+    --gold-soft:#FBF1DC;
+    --red:#C0392B;
+    --grey:#5A5F66;
+    --chalk:#FbFaF7;
+    --shadow:0 8px 30px rgba(20,36,58,.10);
+    --mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Georgia','Iowan Old Style',serif;
+    color:var(--ink);
+    background:var(--paper);
+    overflow:hidden;
+  }
+  /* ---------- deck scaffold ---------- */
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;
+    padding:clamp(1.25rem,4vw,4.5rem) clamp(1.5rem,6vw,6rem);
+    /* extra bottom room so content never hides behind the fixed nav bar (~46px) */
+    padding-bottom:calc(46px + clamp(1rem,3vw,2rem));
+    /* if a slide is taller than the screen, scroll it instead of clipping/overlapping */
+    overflow-y:auto;overflow-x:hidden;
+    scroll-padding-bottom:46px;
+    opacity:0;
+    transition:opacity .38s ease;
+  }
+  .slide.active{display:flex;opacity:1;animation:rise .45s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide.active{animation:none}
+    .slide{transition:none}
+    *{transition-duration:.001ms !important;animation-duration:.001ms !important}
+  }
+  /* visible keyboard focus (WCAG 2.4.7) */
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+    outline:3px solid var(--accent);outline-offset:3px;border-radius:6px;
+  }
+  :focus:not(:focus-visible){outline:none}
+  /* ---------- typography ---------- */
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--grey);margin-bottom:1.1rem;font-weight:600;
+  }
+  h1{font-size:clamp(2.4rem,5.5vw,4.4rem);line-height:1.02;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3.2vw,2.4rem);line-height:1.1;font-weight:700;letter-spacing:-.01em;margin-bottom:.4rem}
+  .lede{font-size:clamp(1.05rem,1.7vw,1.35rem);line-height:1.5;color:var(--ink);max-width:52ch}
+  .muted{color:var(--grey)}
+  .serif-note{font-style:italic;color:var(--grey);font-size:1rem;line-height:1.5}
+  strong{font-weight:700}
+  .accent{color:var(--accent)}
+  .red{color:var(--red)}
+  .gold{color:var(--gold)}
+  /* title rule */
+  h2 + .titlerule{height:2px;background:linear-gradient(90deg,var(--accent-soft),transparent);
+    width:min(100%,640px);margin:.2rem 0 1.4rem}
+  /* ---------- model cards ---------- */
+  .models{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin:1.4rem 0;max-width:900px}
+  .model{
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;
+    padding:1.4rem 1.6rem;box-shadow:var(--shadow);position:relative;
+  }
+  .model .tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:.6rem;display:block}
+  .model .eq{font-family:var(--mono);font-size:1.35rem;color:var(--ink)}
+  .model .eq .coef{color:var(--red);font-weight:700}
+  .model.dim{opacity:.4;filter:saturate(.4)}
+  .model.hi{border-color:var(--accent);box-shadow:0 8px 30px rgba(31,78,121,.22)}
+  /* ---------- boxes ---------- */
+  .prompt,.reveal,.predict{
+    border-radius:10px;padding:1.05rem 1.3rem;max-width:820px;line-height:1.5;
+    font-family:'Georgia',serif;font-size:1.08rem;
+  }
+  .prompt{background:#EEF3FA;border-left:4px solid var(--accent)}
+  .reveal{background:var(--gold-soft);border-left:4px solid var(--gold)}
+  .cue{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;display:block;margin-bottom:.4rem}
+  .prompt .cue{color:var(--accent)}
+  .reveal .cue{color:var(--gold)}
+  .predict .cue{color:var(--red)}
+  .predict{background:#FBEEEC;border-left:4px solid var(--red)}
+  .prompt p,.reveal p,.predict p{margin:0;line-height:1.5}
+  .prompt .cue + p,.reveal .cue + p,.predict .cue + p{margin-top:.15rem}
+  /* chain / mono line */
+  .chain{
+    font-family:var(--mono);background:#EDF1F8;border:1px solid var(--accent-soft);
+    border-radius:8px;padding:.7rem 1rem;font-size:1.05rem;color:var(--accent);
+    display:inline-block;margin-top:.4rem
+  }
+  /* ---------- interactive graph panel ---------- */
+  .graphwrap{display:grid;grid-template-columns:1.15fr .85fr;gap:2rem;align-items:center;margin-top:.6rem;flex:1 0 auto}
+  @media (max-width:900px){.graphwrap{grid-template-columns:1fr}}
+  .panel{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;padding:1.2rem;box-shadow:var(--shadow)}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .controls{display:flex;flex-direction:column;gap:1.3rem}
+  .readout{font-family:var(--mono);font-size:.92rem;line-height:1.7;color:var(--ink);background:#EDF1F8;border-radius:8px;padding:.8rem 1rem}
+  .readout .big{font-size:1.25rem;color:var(--accent);font-weight:700}
+  .btn{
+    font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.7rem 1.2rem;cursor:pointer;
+    box-shadow:0 3px 10px rgba(31,78,121,.3);transition:transform .1s,background .2s;align-self:flex-start
+  }
+  .btn:hover{background:#173a5c;transform:translateY(-1px)}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
+  .btn.ghost:hover{background:#EEF3FA}
+  .btnrow{display:flex;gap:.7rem;flex-wrap:wrap}
+  /* ---------- poll ---------- */
+  .poll-opts{display:flex;flex-direction:column;gap:.8rem;max-width:760px;margin-top:1.1rem}
+  .poll-opt{
+    display:flex;align-items:stretch;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;
+    cursor:pointer;background:var(--chalk);transition:border-color .2s,transform .08s;position:relative;
+    width:100%;text-align:left;font:inherit;color:inherit;padding:0
+  }
+  .poll-opt:hover{border-color:var(--accent-soft)}
+  .poll-opt:active{transform:scale(.995)}
+  .poll-opt .num{background:var(--accent);color:#fff;font-family:var(--mono);font-weight:700;
+    display:flex;align-items:center;justify-content:center;padding:0 1.1rem;font-size:1.1rem;z-index:2}
+  .poll-opt .txt{padding:.9rem 1.1rem;line-height:1.4;z-index:2;font-size:1.02rem;font-family:'Georgia',serif}
+  .poll.revealed .poll-opt{opacity:.5;transition:opacity .4s}
+  .poll.revealed .poll-opt.correct{opacity:1;border-color:var(--gold);background:var(--gold-soft)}
+  .poll-opt.correct .num{background:var(--gold)}
+  .poll-opt.correct .txt::after{content:" ✓ correct";color:var(--gold);font-family:var(--mono);font-weight:700;font-size:.82rem}
+  .poll-hint{font-family:var(--mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-top:.9rem;font-weight:600}
+  /* ---------- footer / nav ---------- */
+  .chrome{position:fixed;bottom:0;left:0;right:0;height:46px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 1.4rem;font-family:var(--mono);font-size:.72rem;
+    letter-spacing:.08em;color:var(--grey);pointer-events:none;z-index:50}
+  .chrome .course{text-transform:uppercase}
+  .progress-track{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:60}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-soft));width:0;transition:width .35s ease}
+  .navhint{display:flex;gap:1.2rem;align-items:center;pointer-events:auto}
+  .navhint button{pointer-events:auto;background:none;border:none;color:var(--grey);cursor:pointer;font-family:var(--mono);font-size:.9rem;padding:.2rem .5rem;border-radius:5px}
+  .navhint button:hover{color:var(--accent);background:rgba(31,78,121,.08)}
+  .kbd{font-family:var(--mono);font-size:.66rem;border:1px solid var(--paper-line);border-radius:4px;padding:.1rem .35rem;color:var(--grey)}
+  /* content column helper */
+  .col{display:flex;flex-direction:column;gap:1.1rem;flex:1 0 auto;justify-content:center}
+  .grow{flex:1 0 auto}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+  @media (max-width:900px){.two{grid-template-columns:1fr}}
+  .calc{font-family:var(--mono);font-size:1.05rem;line-height:1.8}
+  .calc .lbl{color:var(--accent);font-weight:700}
+  .footnote{font-size:.92rem;color:var(--grey);font-style:italic}
+  .runsheet{display:grid;grid-template-columns:auto 1fr;gap:.35rem 1.1rem;font-family:var(--mono);font-size:.86rem;line-height:1.5;margin-top:.4rem}
+  .runsheet .rk{color:var(--accent);font-weight:700;white-space:nowrap}
+  /* title slide special */
+  .title-slide{justify-content:safe center}
+  .title-slide h1{margin:.6rem 0}
+  .signature{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:2rem}
+  /* ---------- section divider ---------- */
+  .divider{justify-content:safe center;background:linear-gradient(135deg,#1B3B5C,#14243A)}
+  .divider *{color:#F6F4EE}
+  .divider .eyebrow{color:#8FAADC}
+  .divider h1{font-size:clamp(2.2rem,5vw,4rem);color:#fff}
+  .divider .lede{color:#D6DEE9;max-width:46ch}
+  .divider .sectrail{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#8FAADC;margin-top:1.6rem}
+  .divider .through{font-family:var(--mono);font-size:.8rem;line-height:1.6;color:#D6DEE9;
+    border-left:3px solid #8FAADC;padding-left:.9rem;margin-top:1.4rem;max-width:56ch}
+  /* ---------- generic click-reveal ---------- */
+  .reveal-hidden{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .reveal-hidden.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* condition cards (3-across) */
+  .condrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem}
+  @media (max-width:900px){.condrow{grid-template-columns:1fr}}
+  .condcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.5rem}
+  .condcard .ctitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .condcard .cbtn{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:.55rem .8rem;cursor:pointer}
+  .condcard .cbtn:hover{background:#173a5c}
+  .condcard .cbody{opacity:0;max-height:0;overflow:hidden;transition:opacity .35s,max-height .45s}
+  .condcard .cbody.shown{opacity:1;max-height:none;overflow:visible;margin-top:.3rem}
+  .condcard svg{width:100%;height:auto}
+  .condcard .cnote{font-size:.9rem;line-height:1.45;color:var(--ink)}
+  .condcard .verdict{font-family:var(--mono);font-size:.78rem;font-weight:700;padding:.2rem 0}
+  .verdict.along{color:var(--accent)}
+  .verdict.shift{color:var(--gold)}
+  /* diagnose (numbered flawed-argument) list */
+  .diag{display:flex;flex-direction:column;gap:.7rem;max-width:860px;margin:1rem 0}
+  .diag-opt{display:flex;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;background:var(--chalk);width:100%;text-align:left;font:inherit;color:inherit;padding:0;cursor:pointer;transition:border-color .2s}
+  .diag-opt:hover{border-color:var(--accent-soft)}
+  .diag-opt .n{background:var(--grey);color:#fff;font-family:var(--mono);font-weight:700;display:flex;align-items:center;padding:0 1rem;font-size:1.05rem}
+  .diag-opt .s{padding:.85rem 1.1rem;line-height:1.45;font-family:'Georgia',serif;font-size:1.02rem}
+  .diag.revealed .diag-opt{opacity:.5}
+  .diag.revealed .diag-opt.bad{opacity:1;border-color:var(--red);background:#FBEEEC}
+  .diag-opt.bad .n{background:var(--red)}
+  .diag.revealed .diag-opt.bad .s::after{content:" ✗ the flaw";color:var(--red);font-family:var(--mono);font-weight:700;font-size:.8rem}
+  /* fill-in-the-blank close line */
+  .blankline{font-family:var(--mono);font-size:clamp(1.1rem,2.4vw,1.7rem);line-height:2;color:var(--ink);
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1.4rem 1.6rem;
+    box-shadow:var(--shadow);max-width:900px}
+  .blankline .bl{display:inline-block;min-width:9ch;border-bottom:2px solid var(--accent)}
+
+  /* ---------- schedule tables (new in Unit 2) ---------- */
+  .sched{border-collapse:collapse;font-family:var(--mono);font-size:.84rem;background:var(--chalk);
+    border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+  .sched caption{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;color:var(--accent);text-align:left;padding:.5rem .8rem .35rem}
+  .sched th,.sched td{padding:.26rem .8rem;text-align:right;border-bottom:1px solid var(--paper-line)}
+  .sched th{color:var(--grey);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.66rem}
+  .sched td:first-child,.sched th:first-child{text-align:left;color:var(--accent);font-weight:700}
+  .sched tr:last-child td{border-bottom:none}
+  .sched.supply caption,.sched.supply td:first-child{color:var(--red)}
+  .sched.gold{background:var(--gold-soft)}
+  .sched.gold caption,.sched.gold td:first-child{color:var(--gold)}
+  .schedrow{display:flex;gap:1.1rem;flex-wrap:wrap;align-items:flex-start}
+  /* ---------- two-card takeaway (transfer slide) ---------- */
+  .pair2{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin-top:.8rem}
+  @media (max-width:900px){.pair2{grid-template-columns:1fr}}
+  .pcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;
+    padding:1.2rem 1.3rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.7rem}
+  .pcard .ptag{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+  .pcard.dem .ptag{color:var(--accent)}
+  .pcard.sup .ptag{color:var(--red)}
+  .pcard .verdictbig{font-family:var(--mono);font-size:1rem;font-weight:700;line-height:1.5}
+  .pcard.dem .verdictbig{color:var(--accent)}
+  .pcard.sup .verdictbig{color:var(--red)}
+  .pcard svg{width:100%;height:auto}
+  /* ---------- schedule row highlight (stepper animations) ---------- */
+  .sched tr.hl td{background:var(--gold-soft);color:var(--gold);font-weight:700}
+  .sched tr.hl td:first-child{color:var(--gold)}
+  .sched tr{transition:background .18s}
+  /* ---------- reflow at 320px (WCAG 1.4.10) ---------- */
+  @media (max-width:700px){
+    .models{grid-template-columns:1fr}
+    .chain{max-width:100%;overflow-wrap:anywhere}
+    .sched{font-size:.78rem}
+  }
+</style>
+</head>
+<body>
+<div class="progress-track"><div class="progress-fill" id="prog"></div></div>
+<div class="deck" id="deck">
+
+  <!-- 1. TITLE -->
+  <section class="slide active title-slide" data-section="Discussion 3 · Opening">
+    <div class="eyebrow" id="titleEyebrow">ECON 002 · Discussion Section</div>
+    <h1>Along it,<br><span class="accent">or move it?</span></h1>
+    <p class="lede" style="margin-top:1rem">Supply and demand, on one good: a burrito at the campus taquer&iacute;a. Last time you sorted a move <em>along</em> a line from a move <em>of</em> the line. Today that idea gets names, equations, and a second curve to argue with.</p>
+    <p class="serif-note" style="margin-top:1.6rem">Work on your own paper. Write before each reveal — the point is your reasoning, not a clean final answer.</p>
+    <div class="signature">Demand &rarr; Supply &rarr; Equilibrium &rarr; Shocks</div>
+  </section>
+
+  <!-- 2. FOR THE TA -->
+  <section class="slide" data-section="Discussion 3 · Opening">
+    <div class="eyebrow">For the TA</div>
+    <h2>How to run this deck</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1100px">
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <p class="lede" style="max-width:56ch"><strong>Write first, reveal second.</strong> Every question gets <strong>1&ndash;2 minutes of silent writing</strong> before you press a button. Nothing reveals itself — the buttons are your cue system, and no answer is on screen when a slide loads.</p>
+        <p class="lede" style="max-width:56ch"><strong>This is a review unit.</strong> Parts 1 and 2 can move briskly; students have met demand and supply before. Parts 3 and 4 are where the discussion earns its time. If you must compress, thin <strong>Q2 and Q5</strong> — never the transfer slide or the closing diagnose.</p>
+        <p class="lede" style="max-width:56ch"><strong>Diagnose slides are silent polls.</strong> Numbered sentences, one subtly flawed. Fingers on the chest, not hands in the air — then reveal. The point is always <em>why the reasoning fails</em>, not that the conclusion is wrong.</p>
+        <div class="prompt">
+          <span class="cue">The throughline · say it out loud at each divider</span>
+          <p>A change in <strong>price</strong> moves you <strong>along</strong> a curve. A change in <strong>anything else</strong> moves the curve — and then the market finds a new meeting point.</p>
+        </div>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="predict">
+          <span class="cue">Protect these two payoffs</span>
+          <p><strong>Q7 (cook wages, Part 2)</strong> is the hinge. The flawed sentence gets the <em>right</em> answer — supply shifts left — for a broken reason: &ldquo;the taquer&iacute;a will charge more.&rdquo; A shift is about willingness to sell <em>at each given price</em>; the seller does not pick the price. This is the single most common wrong mental model in the unit.</p>
+          <p style="margin-top:.6rem"><strong>Slide 28 (transfer)</strong> is the only thing that survives the numbers: demand shifts move P and Q the <em>same</em> way, supply shifts move them <em>opposite</em> ways. Give it room.</p>
+        </div>
+        <div>
+          <div style="font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);font-weight:700;margin-bottom:.2rem">Timing budget · 75 minutes</div>
+          <div class="runsheet">
+            <span class="rk">Part 1</span><span>Demand (Q1&ndash;Q4) — <strong>17 min</strong></span>
+            <span class="rk">Part 2</span><span>Supply (Q5&ndash;Q7) — <strong>15 min</strong></span>
+            <span class="rk">Part 3</span><span>Equilibrium (Q8&ndash;Q10) — <strong>22 min</strong></span>
+            <span class="rk">Part 4</span><span>Shocks (Q11&ndash;Q12) — <strong>18 min</strong></span>
+            <span class="rk">Close</span><span>One written line — <strong>3 min</strong></span>
+          </div>
+        </div>
+        <p class="footnote">Navigation: <span class="kbd">&rarr;</span> <span class="kbd">space</span> next · <span class="kbd">&larr;</span> back · <span class="kbd">F</span> fullscreen. Questions run Q1&ndash;Q12 continuously; students number them on their own paper. Every animation has a <strong>Play</strong> and a <strong>Reset</strong> — you can run it twice.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 1 · DEMAND ══════════════ -->
+
+  <!-- 3. DIVIDER P1 -->
+  <section class="slide divider" data-section="Discussion 3 · Demand">
+    <div class="eyebrow">Part 1 of 4</div>
+    <h1>Demand</h1>
+    <p class="lede">Last time you sorted a movement along a line from a move of the line, with no vocabulary at all. Today the same idea gets <strong>names</strong>, an <strong>equation</strong>, and — in Part 3 — a second curve.</p>
+    <div class="sectrail">DEMAND &rarr; SUPPLY &rarr; EQUILIBRIUM &rarr; SHOCKS</div>
+    <div class="through">Throughline: a change in price moves you along a curve. A change in anything else moves the curve — and then the market finds a new meeting point.</div>
+  </section>
+
+  <!-- 4. Q1 · the big question, no reveal -->
+  <section class="slide" data-section="Discussion 3 · Demand">
+    <div class="eyebrow">Question 1 · write one sentence · no reveal on this slide</div>
+    <h2>What decides the price of a burrito?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:900px;gap:1.2rem">
+      <p class="lede">The taquer&iacute;a across from campus charges <strong>$6</strong> for a burrito. Not $3. Not $11. Six.</p>
+      <div class="prompt">
+        <span class="cue">Q1 · commit before we start</span>
+        <p>Write one sentence naming what you think <strong>sets that number</strong>. Then fold the paper over. We come back to it in Part 3 — and by then you will be able to point at the answer on a graph.</p>
+      </div>
+      <p class="serif-note">There is no reveal button on this slide, and that is deliberate. Everything between here and Part 3 exists to answer this one question.</p>
+    </div>
+  </section>
+
+  <!-- 5. SETUP · three views of one relationship -->
+  <section class="slide" data-section="Discussion 3 · Demand">
+    <div class="eyebrow">Setup · no question yet</div>
+    <h2>How much will you buy?</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:74ch">Three things decide it: the <strong>price of the burrito</strong>, your <strong>income</strong>, and the <strong>price of related goods</strong> — delivery fees, or the poke place next door. Hold the last two still and vary only the first. That gives you a schedule.</p>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="A demand curve for burritos. The horizontal axis is burritos per week from 0 to 16; the vertical axis is price per burrito from 0 to 12 dollars. A straight blue line falls from 10 dollars at zero burritos to 2 dollars at sixteen burritos, showing that the lower the price, the more burritos are wanted. Five labelled points A to E sit on the line, one for each row of the demand schedule.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90"  x2="430" y2="90"/> <line x1="70" y1="46"  x2="430" y2="46"/>
+            <line x1="114" y1="30" x2="114" y2="310"/><line x1="158" y1="30" x2="158" y2="310"/>
+            <line x1="202" y1="30" x2="202" y2="310"/><line x1="246" y1="30" x2="246" y2="310"/>
+            <line x1="290" y1="30" x2="290" y2="310"/><line x1="334" y1="30" x2="334" y2="310"/>
+            <line x1="378" y1="30" x2="378" y2="310"/><line x1="422" y1="30" x2="422" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$2</text><text x="62" y="226">$4</text>
+            <text x="62" y="182">$6</text><text x="62" y="138">$8</text><text x="62" y="94">$10</text>
+            <text x="62" y="50">$12</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="114" y="328">2</text><text x="158" y="328">4</text>
+            <text x="202" y="328">6</text><text x="246" y="328">8</text><text x="290" y="328">10</text>
+            <text x="334" y="328">12</text><text x="378" y="328">14</text><text x="422" y="328">16</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">price per burrito</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">burritos per week</text>
+          <line x1="70" y1="90" x2="422" y2="266" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="70"  cy="90"  r="5" fill="#1F4E79"/><text x="80" y="81" font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79" text-anchor="start">A</text>
+          <circle cx="158" cy="134" r="5" fill="#1F4E79"/><text x="168" y="125" font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79" text-anchor="start">B</text>
+          <circle cx="246" cy="178" r="5" fill="#1F4E79"/><text x="256" y="169" font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79" text-anchor="start">C</text>
+          <circle cx="334" cy="222" r="5" fill="#1F4E79"/><text x="344" y="213" font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79" text-anchor="start">D</text>
+          <circle cx="422" cy="266" r="5" fill="#1F4E79"/><text x="432" y="257" font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79" text-anchor="start">E</text>
+          <circle id="d5k0" cx="70" cy="90" r="11" fill="none" stroke="#8A5900" stroke-width="2.5" opacity="0"/><circle id="d5k1" cx="158" cy="134" r="11" fill="none" stroke="#8A5900" stroke-width="2.5" opacity="0"/><circle id="d5k2" cx="246" cy="178" r="11" fill="none" stroke="#8A5900" stroke-width="2.5" opacity="0"/><circle id="d5k3" cx="334" cy="222" r="11" fill="none" stroke="#8A5900" stroke-width="2.5" opacity="0"/><circle id="d5k4" cx="422" cy="266" r="11" fill="none" stroke="#8A5900" stroke-width="2.5" opacity="0"/>
+        </svg>
+      </div>
+      <div class="controls">
+        <table class="sched">
+          <caption>The demand schedule</caption>
+          <tr><th>Pt</th><th>Price</th><th>Q&#7496;</th></tr>
+          <tr id="d5r0"><td>A</td><td>$10</td><td>0</td></tr>
+          <tr id="d5r1"><td>B</td><td>$8</td><td>4</td></tr>
+          <tr id="d5r2"><td>C</td><td>$6</td><td>8</td></tr>
+          <tr id="d5r3"><td>D</td><td>$4</td><td>12</td></tr>
+          <tr id="d5r4"><td>E</td><td>$2</td><td>16</td></tr>
+        </table>
+        <div class="btnrow">
+          <button class="btn" id="d5play">&#9654; Walk the schedule</button>
+          <button class="btn ghost" id="d5reset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <span id="d5note" style="color:var(--grey)">Press play. Each row of the table is one dot on the curve.</span>
+        </div>
+        <div class="model hi">
+          <span class="tag">the same thing, written out</span>
+          <div class="eq">P = 10 &minus; <span class="coef">0.5</span>&middot;Q&#7496;</div>
+        </div>
+        <p class="serif-note">A table, a curve, an equation. <strong>Three views of one relationship</strong> — not three different facts.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Q2 · read it both directions (Discussion 1 skill) -->
+  <section class="slide" data-section="Discussion 3 · Demand">
+    <div class="eyebrow">Question 2 · read it both ways · last week's skill</div>
+    <h2>Enter from either axis</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="The burrito demand curve read in both directions. Read one starts at eight dollars on the vertical axis, travels right to the blue curve and drops to four burritos on the horizontal axis. Read two starts at twelve burritos on the horizontal axis, rises to the curve and travels left to four dollars. A demand curve can be entered from either axis.">
+          <defs><marker id="a2ah_h" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#8A5900"/></marker></defs><defs><marker id="a2bh_h" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#8A5900"/></marker></defs>
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90"  x2="430" y2="90"/> <line x1="70" y1="46"  x2="430" y2="46"/>
+            <line x1="114" y1="30" x2="114" y2="310"/><line x1="158" y1="30" x2="158" y2="310"/>
+            <line x1="202" y1="30" x2="202" y2="310"/><line x1="246" y1="30" x2="246" y2="310"/>
+            <line x1="290" y1="30" x2="290" y2="310"/><line x1="334" y1="30" x2="334" y2="310"/>
+            <line x1="378" y1="30" x2="378" y2="310"/><line x1="422" y1="30" x2="422" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$2</text><text x="62" y="226">$4</text>
+            <text x="62" y="182">$6</text><text x="62" y="138">$8</text><text x="62" y="94">$10</text>
+            <text x="62" y="50">$12</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="114" y="328">2</text><text x="158" y="328">4</text>
+            <text x="202" y="328">6</text><text x="246" y="328">8</text><text x="290" y="328">10</text>
+            <text x="334" y="328">12</text><text x="378" y="328">14</text><text x="422" y="328">16</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">price per burrito</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">burritos per week</text>
+          <line x1="70" y1="90" x2="422" y2="266" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="284" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">D</text>
+          <!-- read (a): $8 across to the curve, down to 4 -->
+          <rect id="a2abox" x="32" y="125" width="34" height="18" rx="4" fill="none" stroke="#8A5900" stroke-width="2" opacity="0"/><rect id="a2abox2" x="143" width="30" y="315" height="18" rx="4" fill="none" stroke="#8A5900" stroke-width="2" opacity="0"/>
+          <line id="a2ah" x1="70" y1="134" x2="70" y2="134" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4" opacity="0"/>
+          <line id="a2av" x1="158" y1="134" x2="158" y2="134" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4" opacity="0" marker-end="url(#a2ah_h)"/>
+          <circle id="a2adot" cx="70" cy="134" r="6" fill="#8A5900" opacity="0"/>
+          <!-- read (b): 12 up to the curve, left to $4 -->
+          <rect id="a2bbox2" x="32" y="213" width="34" height="18" rx="4" fill="none" stroke="#8A5900" stroke-width="2" opacity="0"/><rect id="a2bbox" x="319" width="30" y="315" height="18" rx="4" fill="none" stroke="#8A5900" stroke-width="2" opacity="0"/>
+          <line id="a2bv" x1="334" y1="310" x2="334" y2="310" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4" opacity="0"/>
+          <line id="a2bh" x1="334" y1="222" x2="334" y2="222" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4" opacity="0" marker-end="url(#a2bh_h)"/>
+          <circle id="a2bdot" cx="334" cy="310" r="6" fill="#8A5900" opacity="0"/>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="prompt">
+          <span class="cue">Q2 · write both before pressing anything</span>
+          <p><strong>(a)</strong> At <strong>$8</strong>, how many burritos a week?<br>
+          <strong>(b)</strong> You want <strong>12</strong> burritos. What price puts you there?</p>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="a2aplay">&#9654; Play (a)</button>
+          <button class="btn" id="a2bplay">&#9654; Play (b)</button>
+          <button class="btn ghost" id="a2reset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          (a) burritos at $8 &nbsp;&rarr;&nbsp; <span class="big" id="a2aq">?</span><br>
+          (b) price at 12 burritos &nbsp;&rarr;&nbsp; <span class="big" id="a2bp">?</span><br>
+          <span id="a2note" style="color:var(--grey)">Boxed number = where the read starts. The second box is where it lands.</span>
+        </div>
+        <button class="btn" data-reveal="q2arev">Reveal the reasoning</button>
+        <div class="reveal-hidden" id="q2arev">
+          <div class="reveal">
+            <span class="cue">Reveal · Q2</span>
+            <p><strong>(a) 4 burritos</strong> — from $8 go right to the curve, then down. Or 8 = 10 &minus; 0.5Q &rarr; Q = 4. <strong>(b) $4</strong> — from 12 go up to the curve, then left. Or P = 10 &minus; 0.5(12) = 4.</p>
+            <p style="margin-top:.6rem">One read starts on the vertical axis, the other on the horizontal. <strong>Same curve, same rule, opposite direction.</strong></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. THE DISTINCTION -->
+  <section class="slide" data-section="Discussion 3 · Demand">
+    <div class="eyebrow">The distinction · this is the whole unit</div>
+    <h2>Quantity demanded is a number. Demand is the relationship.</h2>
+    <div class="titlerule"></div>
+    <div class="models" style="max-width:1000px">
+      <div class="model">
+        <span class="tag">quantity demanded</span>
+        <div class="eq" style="font-size:1.1rem">8 burritos</div>
+        <p class="cnote" style="margin-top:.7rem;font-family:'Georgia',serif;font-size:1rem;line-height:1.5">One amount, at <strong>one</strong> price. It is a single dot: point C, the pair ($6, 8). Change the price and you get a different dot — a different <em>quantity demanded</em>.</p>
+      </div>
+      <div class="model hi">
+        <span class="tag">demand</span>
+        <div class="eq" style="font-size:1.1rem">P = 10 &minus; 0.5&middot;Q&#7496;</div>
+        <p class="cnote" style="margin-top:.7rem;font-family:'Georgia',serif;font-size:1rem;line-height:1.5">The <strong>whole list</strong> of price&ndash;quantity pairs at once. The curve is the relationship; the equation is the relationship. Neither one is any single point.</p>
+      </div>
+    </div>
+    <div class="chain" style="margin-top:1.2rem">price changes &rarr; new quantity demanded &rarr; <strong>same demand</strong></div>
+    <p class="serif-note" style="margin-top:1.1rem;max-width:76ch">Last week you did this without the words: the dot moved, the line did not. The words are new. The test is not.</p>
+  </section>
+
+  <!-- 8. Q3 · predict, then move along -->
+  <section class="slide" data-section="Discussion 3 · Demand">
+    <div class="eyebrow">Question 3 · predict first, then we play it</div>
+    <h2>The price rises to $8</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="A price rise from six to eight dollars shown on one unchanged burrito demand curve: the dot slides up and to the left from point C at eight burritos to point B at four burritos, leaving grey dashed guides behind at C. The curve itself never moves, so quantity demanded changed but demand did not.">
+          <defs><marker id="a3head" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#8A5900"/></marker></defs>
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90"  x2="430" y2="90"/> <line x1="70" y1="46"  x2="430" y2="46"/>
+            <line x1="114" y1="30" x2="114" y2="310"/><line x1="158" y1="30" x2="158" y2="310"/>
+            <line x1="202" y1="30" x2="202" y2="310"/><line x1="246" y1="30" x2="246" y2="310"/>
+            <line x1="290" y1="30" x2="290" y2="310"/><line x1="334" y1="30" x2="334" y2="310"/>
+            <line x1="378" y1="30" x2="378" y2="310"/><line x1="422" y1="30" x2="422" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$2</text><text x="62" y="226">$4</text>
+            <text x="62" y="182">$6</text><text x="62" y="138">$8</text><text x="62" y="94">$10</text>
+            <text x="62" y="50">$12</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="114" y="328">2</text><text x="158" y="328">4</text>
+            <text x="202" y="328">6</text><text x="246" y="328">8</text><text x="290" y="328">10</text>
+            <text x="334" y="328">12</text><text x="378" y="328">14</text><text x="422" y="328">16</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">price per burrito</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">burritos per week</text>
+          <line x1="70" y1="90" x2="422" y2="266" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="284" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">D</text>
+          <!-- grey trail left behind at C once the dot leaves -->
+          <line id="a3cgh" x1="70" y1="178" x2="246" y2="178" stroke="#8A8F96" stroke-width="1.3" stroke-dasharray="4 3" opacity="0"/>
+          <line id="a3cgv" x1="246" y1="310" x2="246" y2="178" stroke="#8A8F96" stroke-width="1.3" stroke-dasharray="4 3" opacity="0"/>
+          <circle cx="246" cy="178" r="5.5" fill="#14243A"/>
+          <text x="256" y="169" font-family="monospace" font-size="11" font-weight="700" fill="#14243A" text-anchor="start">C ($6, 8)</text>
+          <line id="a3h" x1="70" y1="178" x2="246" y2="178" stroke="#8A5900" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="a3v" x1="246" y1="310" x2="246" y2="178" stroke="#8A5900" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="a3arrow" x1="228" y1="166" x2="176" y2="140" stroke="#8A5900" stroke-width="2.2" opacity="0" marker-end="url(#a3head)"/>
+          <circle id="a3dot" cx="246" cy="178" r="6.5" fill="#8A5900" opacity="0"/>
+          <text id="a3btxt" x="168" y="125" font-family="monospace" font-size="11" font-weight="700" fill="#8A5900" text-anchor="start" opacity="0">B ($8, 4)</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="predict">
+          <span class="cue">Q3 · predict · write yes or no</span>
+          <p>The price of a burrito rises from <strong>$6 to $8</strong>. Does the <strong>curve move</strong>? Write yes or no, plus one reason, before anyone presses play.</p>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="a3play">&#9654; Play the price rise</button>
+          <button class="btn ghost" id="a3reset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          price &nbsp;&rarr;&nbsp; <span class="big" id="a3p">$6.00</span><br>
+          quantity demanded &nbsp;&rarr;&nbsp; <span class="big" id="a3q">8</span><br>
+          <span id="a3note" style="color:var(--grey)">Watch the curve, not the dot.</span>
+        </div>
+        <button class="btn" data-reveal="q3rev">Reveal the reasoning</button>
+        <div class="reveal-hidden" id="q3rev">
+          <div class="reveal">
+            <span class="cue">Reveal · Q3</span>
+            <p><strong>No — the curve does not move.</strong> Quantity demanded fell from 8 to 4. Demand did not change at all: the same equation, P = 10 &minus; 0.5Q, was true before and after. Price sits <em>on an axis</em>, so a price change has a height to slide to. That is a <strong>movement along</strong> the curve — and the grey guides show C is still sitting there on the same line.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. Q4 · income rises -> animated shift -->
+  <section class="slide" data-section="Discussion 3 · Demand">
+    <div class="eyebrow">Question 4 · write yes or no first</div>
+    <h2>Your income rises</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="An income rise animated as a shift of the whole burrito demand curve to the right, from P equals 10 minus half Q to P equals 12 minus half Q. At the unchanged price of six dollars the quantity demanded moves from eight burritos to twelve, which no point on the original curve could have shown.">
+          <defs><marker id="q4head" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#8A5900"/></marker></defs><defs><clipPath id="q4clip"><rect x="70" y="24" width="352" height="292"/></clipPath></defs>
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90"  x2="430" y2="90"/> <line x1="70" y1="46"  x2="430" y2="46"/>
+            <line x1="114" y1="30" x2="114" y2="310"/><line x1="158" y1="30" x2="158" y2="310"/>
+            <line x1="202" y1="30" x2="202" y2="310"/><line x1="246" y1="30" x2="246" y2="310"/>
+            <line x1="290" y1="30" x2="290" y2="310"/><line x1="334" y1="30" x2="334" y2="310"/>
+            <line x1="378" y1="30" x2="378" y2="310"/><line x1="422" y1="30" x2="422" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$2</text><text x="62" y="226">$4</text>
+            <text x="62" y="182">$6</text><text x="62" y="138">$8</text><text x="62" y="94">$10</text>
+            <text x="62" y="50">$12</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="114" y="328">2</text><text x="158" y="328">4</text>
+            <text x="202" y="328">6</text><text x="246" y="328">8</text><text x="290" y="328">10</text>
+            <text x="334" y="328">12</text><text x="378" y="328">14</text><text x="422" y="328">16</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">price per burrito</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">burritos per week</text>
+          <line x1="70" y1="90" x2="422" y2="266" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="284" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">D</text>
+          <line x1="70" y1="178" x2="246" y2="178" stroke="#14243A" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <line x1="246" y1="310" x2="246" y2="178" stroke="#14243A" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <circle cx="246" cy="178" r="5.5" fill="#14243A"/>
+          <text x="256" y="169" font-family="monospace" font-size="11" font-weight="700" fill="#14243A" text-anchor="start">($6, 8)</text>
+          <!-- the moving curve: starts on top of D, ends at D2 -->
+          <line id="q4d2" x1="-30" y1="40" x2="530" y2="320" clip-path="url(#q4clip)" stroke="#1F4E79" stroke-width="3" stroke-dasharray="9 5" opacity="0"/>
+          <text id="q4d2t" x="418" y="240" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end" opacity="0">D&#8322;</text>
+          <line id="q4arr" x1="138" y1="120" x2="210" y2="120" stroke="#8A5900" stroke-width="2.4" opacity="0" marker-end="url(#q4head)"/>
+          <line id="q4hg" x1="246" y1="178" x2="246" y2="178" stroke="#8A5900" stroke-width="1.6" stroke-dasharray="4 3" opacity="0"/>
+          <line id="q4vg" x1="246" y1="310" x2="246" y2="178" stroke="#8A5900" stroke-width="1.6" stroke-dasharray="4 3" opacity="0"/>
+          <circle id="q4dot" cx="246" cy="178" r="5.5" fill="#8A5900" opacity="0"/>
+          <text id="q4lab" x="344" y="169" font-family="monospace" font-size="11" font-weight="700" fill="#8A5900" text-anchor="start" opacity="0">($6, 12)</text>
+          <text id="q4fix" x="78" y="300" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700" opacity="0">the $6 guide never moved</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="prompt">
+          <span class="cue">Q4 · write yes or no</span>
+          <p>Your income rises. At the <strong>same $6</strong> you now want <strong>12</strong> burritos, not 8. Can <em>any</em> point on this curve show that? Write your answer before we look.</p>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="q4play">&#9654; Play the shift</button>
+          <button class="btn ghost" id="q4reset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          at $6, wanted &nbsp;&rarr;&nbsp; <span class="big" id="q4q">8</span><br>
+          <span id="q4note" style="color:var(--grey)">Hold the price at $6 and watch the whole curve travel.</span>
+        </div>
+        <div class="reveal-hidden" id="q4nums">
+        <div class="schedrow">
+          <table class="sched gold">
+            <caption>the new schedule</caption>
+            <tr><th>Price</th><th>Q&#7496;</th></tr>
+            <tr><td>$12</td><td>0</td></tr>
+            <tr><td>$10</td><td>4</td></tr>
+            <tr><td>$8</td><td>8</td></tr>
+            <tr><td>$6</td><td>12</td></tr>
+            <tr><td>$4</td><td>16</td></tr>
+          </table>
+          <div class="model" style="align-self:flex-start">
+            <span class="tag">D&#8322;</span>
+            <div class="eq">P = 12 &minus; <span class="coef">0.5</span>&middot;Q&#7496;</div>
+          </div>
+        </div>
+        </div>
+        <button class="btn" data-reveal="q4rev">Reveal the reasoning</button>
+        <div class="reveal-hidden" id="q4rev">
+          <div class="reveal">
+            <span class="cue">Reveal · Q4</span>
+            <p><strong>No — and here is the test.</strong> A curve gives each price exactly <em>one</em> partner, and the old curve already spent $6 on &ldquo;8 burritos.&rdquo; To also say &ldquo;$6 and 12&rdquo; you need a <strong>different curve</strong>. Notice what did not happen: income never appeared on either axis, so there was no height to slide to. <strong>Every price got a new partner</strong> — that is a change in demand, and the whole curve moved right.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. PUNCHLINE + CONDITION CARDS -->
+  <section class="slide" data-section="Discussion 3 · Demand">
+    <div class="eyebrow">Practice · commit to all three before revealing any</div>
+    <h2>Along it, or move it?</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:76ch">Same axes: <strong>price per burrito</strong> up the side, <strong>burritos per week</strong> across. For each change write <strong>A</strong> (movement along) or <strong>M</strong> (the curve moves), plus your one-word reason.</p>
+    <div class="condrow">
+
+      <div class="condcard">
+        <div class="ctitle">1 · Delivery fees drop</div>
+        <button type="button" class="cbtn" data-cond="cond1">Reveal</button>
+        <div class="cbody" id="cond1">
+          <svg viewBox="0 0 210 158" role="img" aria-label="A rightward shift of the demand curve: the whole blue line moves to a second position further right, so at the same price the quantity demanded is larger."><defs><marker id="mini1" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#8A5900"/></marker></defs><line x1="26" y1="12" x2="26" y2="140" stroke="#8A8F96" stroke-width="1.1"/><line x1="26" y1="140" x2="196" y2="140" stroke="#8A8F96" stroke-width="1.1"/><text x="20" y="18" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">P</text><text x="196" y="153" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">Q</text><line x1="36" y1="20" x2="140" y2="140" stroke="#1F4E79" stroke-width="2"/><text x="41" y="19" font-family="monospace" font-size="8" fill="#1F4E79" font-weight="700">D</text><line x1="86" y1="20" x2="190" y2="140" stroke="#1F4E79" stroke-width="2" stroke-dasharray="6 3"/><text x="91" y="19" font-family="monospace" font-size="8" fill="#1F4E79" font-weight="700">D₂</text><line x1="26" y1="70" x2="129.3" y2="70" stroke="#14243A" stroke-width=".8" stroke-dasharray="3 2"/><circle cx="79.3" cy="70" r="3.2" fill="#14243A"/><circle cx="129.3" cy="70" r="3.2" fill="#8A5900"/><text x="20" y="73" font-family="monospace" font-size="8" fill="#14243A" text-anchor="end">P</text><line x1="70" y1="52" x2="106" y2="52" stroke="#8A5900" stroke-width="1.6" marker-end="url(#mini1)"/></svg>
+          <div class="verdict shift">&rArr; the CURVE MOVES right</div>
+          <p class="cnote"><strong>A complement got cheaper.</strong> Delivery is something you buy <em>with</em> a burrito, so a cheaper delivery makes the whole package cheaper. At every price on the list you now want more. Delivery fees have no axis here — nowhere to slide to.</p>
+        </div>
+      </div>
+
+      <div class="condcard">
+        <div class="ctitle">2 · The poke place raises its prices</div>
+        <button type="button" class="cbtn" data-cond="cond2">Reveal</button>
+        <div class="cbody" id="cond2">
+          <svg viewBox="0 0 210 158" role="img" aria-label="A rightward shift of the demand curve: the whole blue line moves to a second position further right, so at the same price the quantity demanded is larger."><defs><marker id="mini2" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#8A5900"/></marker></defs><line x1="26" y1="12" x2="26" y2="140" stroke="#8A8F96" stroke-width="1.1"/><line x1="26" y1="140" x2="196" y2="140" stroke="#8A8F96" stroke-width="1.1"/><text x="20" y="18" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">P</text><text x="196" y="153" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">Q</text><line x1="36" y1="20" x2="140" y2="140" stroke="#1F4E79" stroke-width="2"/><text x="41" y="19" font-family="monospace" font-size="8" fill="#1F4E79" font-weight="700">D</text><line x1="86" y1="20" x2="190" y2="140" stroke="#1F4E79" stroke-width="2" stroke-dasharray="6 3"/><text x="91" y="19" font-family="monospace" font-size="8" fill="#1F4E79" font-weight="700">D₂</text><line x1="26" y1="70" x2="129.3" y2="70" stroke="#14243A" stroke-width=".8" stroke-dasharray="3 2"/><circle cx="79.3" cy="70" r="3.2" fill="#14243A"/><circle cx="129.3" cy="70" r="3.2" fill="#8A5900"/><text x="20" y="73" font-family="monospace" font-size="8" fill="#14243A" text-anchor="end">P</text><line x1="70" y1="52" x2="106" y2="52" stroke="#8A5900" stroke-width="1.6" marker-end="url(#mini2)"/></svg>
+          <div class="verdict shift">&rArr; the CURVE MOVES right</div>
+          <p class="cnote"><strong>A substitute got pricier.</strong> Poke is what you eat <em>instead</em>. When it costs more, burritos win more lunches — at every burrito price. The poke price is not on either axis, so again the whole curve moves.</p>
+        </div>
+      </div>
+
+      <div class="condcard">
+        <div class="ctitle">3 · Burritos go on sale</div>
+        <button type="button" class="cbtn" data-cond="cond3">Reveal</button>
+        <div class="cbody" id="cond3">
+          <svg viewBox="0 0 210 158" role="img" aria-label="A price fall shown as a movement along one unchanged demand curve: a single blue line with a dot sliding down and to the right along it."><defs><marker id="mini3" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#8A5900"/></marker></defs><line x1="26" y1="12" x2="26" y2="140" stroke="#8A8F96" stroke-width="1.1"/><line x1="26" y1="140" x2="196" y2="140" stroke="#8A8F96" stroke-width="1.1"/><text x="20" y="18" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">P</text><text x="196" y="153" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">Q</text><line x1="36" y1="20" x2="140" y2="140" stroke="#1F4E79" stroke-width="2"/><text x="34" y="132" font-family="monospace" font-size="8" fill="#1F4E79" font-weight="700">one curve</text><circle cx="72" cy="61.5" r="3.2" fill="#14243A"/><text x="78" y="56" font-family="monospace" font-size="8" font-weight="700" fill="#14243A">A</text><circle cx="106" cy="100.7" r="3.2" fill="#8A5900"/><text x="112" y="96" font-family="monospace" font-size="8" font-weight="700" fill="#8A5900">B</text><line x1="78" y1="68.5" x2="100" y2="93.9" stroke="#8A5900" stroke-width="1.6" marker-end="url(#mini3)"/></svg>
+          <div class="verdict along">&rarr; movement ALONG the curve</div>
+          <p class="cnote"><strong>This one is the burrito's own price.</strong> It sits on the vertical axis, so there is a height to slide to and the curve already has a partner waiting there. Quantity demanded rises; demand is unchanged.</p>
+        </div>
+      </div>
+
+    </div>
+    <div class="chain" style="margin-top:1.1rem">is the thing that changed <strong>on an axis</strong>? &nbsp;yes &rarr; along &nbsp;·&nbsp; no &rarr; the curve moves</div>
+  </section>
+
+  <!-- ══════════════ PART 2 · SUPPLY ══════════════ -->
+
+  <!-- 11. DIVIDER P2 -->
+  <section class="slide divider" data-section="Discussion 3 · Supply">
+    <div class="eyebrow">Part 2 of 4</div>
+    <h1>Supply</h1>
+    <p class="lede">Now cross the counter. Same axes, same two questions — but the person answering them is the one <em>making</em> the burrito, and the curve leans the other way.</p>
+    <div class="sectrail">DEMAND &#10003; &rarr; SUPPLY &rarr; EQUILIBRIUM &rarr; SHOCKS</div>
+    <div class="through">Throughline: a change in price moves you along a curve. A change in anything else moves the curve — and then the market finds a new meeting point.</div>
+  </section>
+
+  <!-- 12. SETUP · supply, three views -->
+  <section class="slide" data-section="Discussion 3 · Supply">
+    <div class="eyebrow">Setup · no question yet</div>
+    <h2>How much will they make?</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:76ch">Three things decide it: the <strong>price of the burrito</strong>, the <strong>cost of production</strong> — cook wages, avocado prices — and the <strong>technology</strong>, meaning a second grill line. Hold the last two still and vary only the price.</p>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="A supply curve for burritos. The horizontal axis is burritos per week from 0 to 16; the vertical axis is price per burrito from 0 to 12 dollars. A straight red line rises from 2 dollars at zero burritos to 10 dollars at sixteen burritos, showing that the higher the price, the more burritos the taqueria will make. Seven labelled points A to G sit on the line, one for each row of the supply schedule.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90"  x2="430" y2="90"/> <line x1="70" y1="46"  x2="430" y2="46"/>
+            <line x1="114" y1="30" x2="114" y2="310"/><line x1="158" y1="30" x2="158" y2="310"/>
+            <line x1="202" y1="30" x2="202" y2="310"/><line x1="246" y1="30" x2="246" y2="310"/>
+            <line x1="290" y1="30" x2="290" y2="310"/><line x1="334" y1="30" x2="334" y2="310"/>
+            <line x1="378" y1="30" x2="378" y2="310"/><line x1="422" y1="30" x2="422" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$2</text><text x="62" y="226">$4</text>
+            <text x="62" y="182">$6</text><text x="62" y="138">$8</text><text x="62" y="94">$10</text>
+            <text x="62" y="50">$12</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="114" y="328">2</text><text x="158" y="328">4</text>
+            <text x="202" y="328">6</text><text x="246" y="328">8</text><text x="290" y="328">10</text>
+            <text x="334" y="328">12</text><text x="378" y="328">14</text><text x="422" y="328">16</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">price per burrito</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">burritos per week</text>
+          <line x1="70" y1="266" x2="422" y2="90" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="82" font-family="monospace" font-size="13" fill="#C0392B" font-weight="700" text-anchor="end">S</text>
+          <circle cx="70"  cy="266" r="5" fill="#C0392B"/><text x="80" y="282" font-family="monospace" font-size="11" font-weight="700" fill="#C0392B" text-anchor="start">A</text>
+          <circle cx="114" cy="244" r="5" fill="#C0392B"/><text x="124" y="260" font-family="monospace" font-size="11" font-weight="700" fill="#C0392B" text-anchor="start">B</text>
+          <circle cx="158" cy="222" r="5" fill="#C0392B"/><text x="168" y="238" font-family="monospace" font-size="11" font-weight="700" fill="#C0392B" text-anchor="start">C</text>
+          <circle cx="202" cy="200" r="5" fill="#C0392B"/><text x="212" y="216" font-family="monospace" font-size="11" font-weight="700" fill="#C0392B" text-anchor="start">D</text>
+          <circle cx="246" cy="178" r="5" fill="#C0392B"/><text x="256" y="194" font-family="monospace" font-size="11" font-weight="700" fill="#C0392B" text-anchor="start">E</text>
+          <circle cx="290" cy="156" r="5" fill="#C0392B"/><text x="300" y="172" font-family="monospace" font-size="11" font-weight="700" fill="#C0392B" text-anchor="start">F</text>
+          <circle cx="334" cy="134" r="5" fill="#C0392B"/><text x="344" y="150" font-family="monospace" font-size="11" font-weight="700" fill="#C0392B" text-anchor="start">G</text>
+          <circle id="s12k0" cx="70" cy="266" r="11" fill="none" stroke="#8A5900" stroke-width="2.5" opacity="0"/><circle id="s12k1" cx="114" cy="244" r="11" fill="none" stroke="#8A5900" stroke-width="2.5" opacity="0"/><circle id="s12k2" cx="158" cy="222" r="11" fill="none" stroke="#8A5900" stroke-width="2.5" opacity="0"/><circle id="s12k3" cx="202" cy="200" r="11" fill="none" stroke="#8A5900" stroke-width="2.5" opacity="0"/><circle id="s12k4" cx="246" cy="178" r="11" fill="none" stroke="#8A5900" stroke-width="2.5" opacity="0"/><circle id="s12k5" cx="290" cy="156" r="11" fill="none" stroke="#8A5900" stroke-width="2.5" opacity="0"/><circle id="s12k6" cx="334" cy="134" r="11" fill="none" stroke="#8A5900" stroke-width="2.5" opacity="0"/>
+        </svg>
+      </div>
+      <div class="controls">
+        <table class="sched supply">
+          <caption>The supply schedule</caption>
+          <tr><th>Pt</th><th>Price</th><th>Q&#738;</th></tr>
+          <tr id="s12r0"><td>A</td><td>$2</td><td>0</td></tr>
+          <tr id="s12r1"><td>B</td><td>$3</td><td>2</td></tr>
+          <tr id="s12r2"><td>C</td><td>$4</td><td>4</td></tr>
+          <tr id="s12r3"><td>D</td><td>$5</td><td>6</td></tr>
+          <tr id="s12r4"><td>E</td><td>$6</td><td>8</td></tr>
+          <tr id="s12r5"><td>F</td><td>$7</td><td>10</td></tr>
+          <tr id="s12r6"><td>G</td><td>$8</td><td>12</td></tr>
+        </table>
+        <div class="btnrow">
+          <button class="btn" id="s12play">&#9654; Walk the schedule</button>
+          <button class="btn ghost" id="s12reset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <span id="s12note" style="color:var(--grey)">Press play. Each row of the table is one dot on the curve.</span>
+        </div>
+        <div class="model hi" style="border-color:#C0392B">
+          <span class="tag" style="color:#C0392B">the same thing, written out</span>
+          <div class="eq">P = 2 + <span class="coef">0.5</span>&middot;Q&#738;</div>
+        </div>
+        <p class="serif-note">Table, curve, equation — three views of one relationship, exactly as on the demand side. Only the tilt is different: <strong>higher price, more burritos offered</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13. Q5 · read it both ways, supply side -->
+  <section class="slide" data-section="Discussion 3 · Supply">
+    <div class="eyebrow">Question 5 · read it both ways · same skill, new curve</div>
+    <h2>Enter from either axis again</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="The burrito supply curve read in both directions. Read one starts at three dollars on the vertical axis, travels right to the red curve and drops to two burritos. Read two starts at eight burritos on the horizontal axis, rises to the curve and travels left to six dollars. A supply curve can be entered from either axis.">
+          <defs><marker id="q5ah_h" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#8A5900"/></marker></defs><defs><marker id="q5bh_h" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#8A5900"/></marker></defs>
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90"  x2="430" y2="90"/> <line x1="70" y1="46"  x2="430" y2="46"/>
+            <line x1="114" y1="30" x2="114" y2="310"/><line x1="158" y1="30" x2="158" y2="310"/>
+            <line x1="202" y1="30" x2="202" y2="310"/><line x1="246" y1="30" x2="246" y2="310"/>
+            <line x1="290" y1="30" x2="290" y2="310"/><line x1="334" y1="30" x2="334" y2="310"/>
+            <line x1="378" y1="30" x2="378" y2="310"/><line x1="422" y1="30" x2="422" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$2</text><text x="62" y="226">$4</text>
+            <text x="62" y="182">$6</text><text x="62" y="138">$8</text><text x="62" y="94">$10</text>
+            <text x="62" y="50">$12</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="114" y="328">2</text><text x="158" y="328">4</text>
+            <text x="202" y="328">6</text><text x="246" y="328">8</text><text x="290" y="328">10</text>
+            <text x="334" y="328">12</text><text x="378" y="328">14</text><text x="422" y="328">16</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">price per burrito</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">burritos per week</text>
+          <line x1="70" y1="266" x2="422" y2="90" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="82" font-family="monospace" font-size="13" fill="#C0392B" font-weight="700" text-anchor="end">S</text>
+          <!-- read (a): $3 across to the curve, down to 2 -->
+          <text id="q5a3" x="62" y="248" font-family="monospace" font-size="12" fill="#8A5900" font-weight="700" text-anchor="end" opacity="0">$3</text>
+          <rect id="q5abox" x="32" y="235" width="34" height="18" rx="4" fill="none" stroke="#8A5900" stroke-width="2" opacity="0"/><rect id="q5abox2" x="99" width="30" y="315" height="18" rx="4" fill="none" stroke="#8A5900" stroke-width="2" opacity="0"/>
+          <line id="q5ah" x1="70" y1="244" x2="70" y2="244" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4" opacity="0"/>
+          <line id="q5av" x1="114" y1="244" x2="114" y2="244" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4" opacity="0" marker-end="url(#q5ah_h)"/>
+          <circle id="q5ad" cx="70" cy="244" r="6" fill="#8A5900" opacity="0"/>
+          <text id="q5al" x="124" y="260" font-family="monospace" font-size="11" font-weight="700" fill="#8A5900" text-anchor="start" opacity="0">($3, 2)</text>
+          <!-- read (b): 8 burritos up to the curve, left to $6 -->
+          <rect id="q5bbox2" x="32" y="169" width="34" height="18" rx="4" fill="none" stroke="#8A5900" stroke-width="2" opacity="0"/><rect id="q5bbox" x="231" width="30" y="315" height="18" rx="4" fill="none" stroke="#8A5900" stroke-width="2" opacity="0"/>
+          <line id="q5bv" x1="246" y1="310" x2="246" y2="310" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4" opacity="0"/>
+          <line id="q5bh" x1="246" y1="178" x2="246" y2="178" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4" opacity="0" marker-end="url(#q5bh_h)"/>
+          <circle id="q5bd" cx="246" cy="310" r="6" fill="#8A5900" opacity="0"/>
+          <text id="q5bl" x="256" y="194" font-family="monospace" font-size="11" font-weight="700" fill="#8A5900" text-anchor="start" opacity="0">($6, 8)</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="prompt">
+          <span class="cue">Q5 · write both before pressing anything</span>
+          <p><strong>(a)</strong> At <strong>$3</strong>, how many burritos does the taquer&iacute;a offer?<br>
+          <strong>(b)</strong> They are willing to make <strong>8</strong>. What price does that take?</p>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="q5aplay">&#9654; Play (a)</button>
+          <button class="btn" id="q5bplay">&#9654; Play (b)</button>
+          <button class="btn ghost" id="q5reset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          (a) burritos at $3 &nbsp;&rarr;&nbsp; <span class="big" id="q5aq">?</span><br>
+          (b) price at 8 burritos &nbsp;&rarr;&nbsp; <span class="big" id="q5bp">?</span><br>
+          <span id="q5note" style="color:var(--grey)">Boxed number = where the read starts. The second box is where it lands.</span>
+        </div>
+        <button class="btn" data-reveal="q5rev">Reveal the reasoning</button>
+        <div class="reveal-hidden" id="q5rev">
+          <div class="reveal">
+            <span class="cue">Reveal · Q5</span>
+            <p><strong>(a) 2 burritos</strong> — point B, or 3 = 2 + 0.5Q &rarr; Q = 2. <strong>(b) $6</strong> — point E, or P = 2 + 0.5(8) = 6.</p>
+            <p style="margin-top:.6rem">Read (a) starts on the vertical axis; read (b) starts on the horizontal. <strong>The curve does not care which end you enter from</strong> — it is one relationship, and you can solve it for either letter.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14. THE DISTINCTION · mirrored -->
+  <section class="slide" data-section="Discussion 3 · Supply">
+    <div class="eyebrow">The distinction · mirrored</div>
+    <h2>Quantity supplied is a number. Supply is the relationship.</h2>
+    <div class="titlerule"></div>
+    <div class="models" style="max-width:1000px">
+      <div class="model">
+        <span class="tag" style="color:#C0392B">quantity supplied</span>
+        <div class="eq" style="font-size:1.1rem">8 burritos</div>
+        <p class="cnote" style="margin-top:.7rem;font-family:'Georgia',serif;font-size:1rem;line-height:1.5">One amount, at <strong>one</strong> price. Point E: the pair ($6, 8). A different price gives a different dot on the same curve.</p>
+      </div>
+      <div class="model hi" style="border-color:#C0392B">
+        <span class="tag" style="color:#C0392B">supply</span>
+        <div class="eq" style="font-size:1.1rem">P = 2 + 0.5&middot;Q&#738;</div>
+        <p class="cnote" style="margin-top:.7rem;font-family:'Georgia',serif;font-size:1rem;line-height:1.5">The <strong>whole list</strong> of price&ndash;quantity pairs the seller is willing to accept. The curve is the relationship; no single point is.</p>
+      </div>
+    </div>
+    <div class="chain" style="margin-top:1.2rem">price changes &rarr; new quantity supplied &rarr; <strong>same supply</strong></div>
+    <p class="serif-note" style="margin-top:1.1rem;max-width:78ch">Both sides run the same test, and it has nothing to do with buying or selling: <strong>did the thing that changed have an axis?</strong></p>
+  </section>
+
+  <!-- 15. Q6 · predict, then move along the supply curve -->
+  <section class="slide" data-section="Discussion 3 · Supply">
+    <div class="eyebrow">Question 6 · predict first, then we play it</div>
+    <h2>The price rises to $7</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="A price rise from six to seven dollars shown on one unchanged burrito supply curve: the dot slides up and to the right from point E at eight burritos to point F at ten burritos. The red curve never moves, so quantity supplied changed but supply did not.">
+          <defs><marker id="a6head" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#8A5900"/></marker></defs>
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90"  x2="430" y2="90"/> <line x1="70" y1="46"  x2="430" y2="46"/>
+            <line x1="114" y1="30" x2="114" y2="310"/><line x1="158" y1="30" x2="158" y2="310"/>
+            <line x1="202" y1="30" x2="202" y2="310"/><line x1="246" y1="30" x2="246" y2="310"/>
+            <line x1="290" y1="30" x2="290" y2="310"/><line x1="334" y1="30" x2="334" y2="310"/>
+            <line x1="378" y1="30" x2="378" y2="310"/><line x1="422" y1="30" x2="422" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$2</text><text x="62" y="226">$4</text>
+            <text x="62" y="182">$6</text><text x="62" y="138">$8</text><text x="62" y="94">$10</text>
+            <text x="62" y="50">$12</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="114" y="328">2</text><text x="158" y="328">4</text>
+            <text x="202" y="328">6</text><text x="246" y="328">8</text><text x="290" y="328">10</text>
+            <text x="334" y="328">12</text><text x="378" y="328">14</text><text x="422" y="328">16</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">price per burrito</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">burritos per week</text>
+          <line x1="70" y1="266" x2="422" y2="90" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="82" font-family="monospace" font-size="13" fill="#C0392B" font-weight="700" text-anchor="end">S</text>
+          <circle cx="246" cy="178" r="5.5" fill="#14243A"/>
+          <text x="235" y="182" font-family="monospace" font-size="11" font-weight="700" fill="#14243A" text-anchor="end">E ($6, 8)</text>
+          <line id="a6h" x1="70" y1="178" x2="246" y2="178" stroke="#8A5900" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="a6v" x1="246" y1="310" x2="246" y2="178" stroke="#8A5900" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="a6arrow" x1="258" y1="170" x2="282" y2="158" stroke="#8A5900" stroke-width="2.2" opacity="0" marker-end="url(#a6head)"/>
+          <circle id="a6dot" cx="246" cy="178" r="6.5" fill="#8A5900" opacity="0"/>
+          <text id="a6btxt" x="280" y="147" font-family="monospace" font-size="11" font-weight="700" fill="#8A5900" text-anchor="end" opacity="0">F ($7, 10)</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="predict">
+          <span class="cue">Q6 · predict · write yes or no</span>
+          <p>The price of a burrito rises from <strong>$6 to $7</strong>. Does the <strong>supply curve move</strong>? Write yes or no, plus one reason, before anyone presses play.</p>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="a6play">&#9654; Play the price rise</button>
+          <button class="btn ghost" id="a6reset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          price &nbsp;&rarr;&nbsp; <span class="big" id="a6p">$6.00</span><br>
+          quantity supplied &nbsp;&rarr;&nbsp; <span class="big" id="a6q">8</span><br>
+          <span id="a6note" style="color:var(--grey)">Watch the curve, not the dot.</span>
+        </div>
+        <button class="btn" data-reveal="q6rev">Reveal the reasoning</button>
+        <div class="reveal-hidden" id="q6rev">
+          <div class="reveal">
+            <span class="cue">Reveal · Q6</span>
+            <p><strong>No — the curve does not move.</strong> Quantity supplied rose from 8 to 10. Supply did not change: P = 2 + 0.5Q was true before and after. Price is on an axis, so there was a height to slide to. <strong>Movement along</strong> the curve — the exact mirror of Q3.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16. Q7 · DIAGNOSE · cook wages rise -->
+  <section class="slide" data-section="Discussion 3 · Supply">
+    <div class="eyebrow">Question 7 · silent poll · pick a number on your paper</div>
+    <h2>Cook wages go up. Which sentence is broken?</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:80ch">The taquer&iacute;a has to pay its cooks more. All three sentences below reach a defensible place. <strong>One of them gets there by reasoning that will fail you later.</strong> Find it.</p>
+    <div>
+      <div class="diag" id="diag7">
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">1</span><span class="s">At every price on the schedule, the taquer&iacute;a is now willing to make fewer burritos than before — so the whole supply curve sits to the left.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">2</span><span class="s">Wages are not price and are not quantity, so nothing on either axis moved — the change has to show up as a move of the curve itself.</span></button>
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">3</span><span class="s">Supply shifts left, because higher wages mean the taquer&iacute;a will charge more.</span></button>
+      </div>
+      <p class="poll-hint">Students pick a number on paper (or fingers on the chest). Then reveal.</p>
+      <button class="btn" data-diag-reveal="diag7" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem;max-width:940px">
+        <span class="cue">Reveal · Q7 · right answer, broken reasoning</span>
+        <p><strong>Sentence 3 lands on the correct conclusion — supply does shift left — and gets there the wrong way.</strong> A shift is a statement about willingness to sell <em>at each given price</em>. The price is held fixed while you ask the question; the seller does not get to pick it. Saying &ldquo;they will charge more&rdquo; smuggles in a price change, which is a <em>movement along</em> the curve, not a shift of it.</p>
+        <p style="margin-top:.7rem">Sentence 1 says it properly: at $6, at $8, at every price, fewer burritos. Sentence 2 gives the test — wages have no axis, so there is nowhere to slide to. <strong>Watch for this one all quarter.</strong> Any time an argument explains a shift by saying what the price will do, the reasoning has collapsed the two ideas back together.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 17. SUPPLY SHIFT · static reveal + punchline -->
+  <section class="slide" data-section="Discussion 3 · Supply">
+    <div class="eyebrow">Q7 continued · what the shift actually looks like</div>
+    <h2>Costs up, curve left</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="A rise in cook wages shown as a leftward shift of the whole burrito supply curve, from P equals 2 plus half Q to P equals 4 plus half Q. At the unchanged price of six dollars the quantity supplied falls from eight burritos to four, because the seller is willing to make less at every price.">
+          <defs><marker id="q7head" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#8A5900"/></marker></defs>
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90"  x2="430" y2="90"/> <line x1="70" y1="46"  x2="430" y2="46"/>
+            <line x1="114" y1="30" x2="114" y2="310"/><line x1="158" y1="30" x2="158" y2="310"/>
+            <line x1="202" y1="30" x2="202" y2="310"/><line x1="246" y1="30" x2="246" y2="310"/>
+            <line x1="290" y1="30" x2="290" y2="310"/><line x1="334" y1="30" x2="334" y2="310"/>
+            <line x1="378" y1="30" x2="378" y2="310"/><line x1="422" y1="30" x2="422" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$2</text><text x="62" y="226">$4</text>
+            <text x="62" y="182">$6</text><text x="62" y="138">$8</text><text x="62" y="94">$10</text>
+            <text x="62" y="50">$12</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="114" y="328">2</text><text x="158" y="328">4</text>
+            <text x="202" y="328">6</text><text x="246" y="328">8</text><text x="290" y="328">10</text>
+            <text x="334" y="328">12</text><text x="378" y="328">14</text><text x="422" y="328">16</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">price per burrito</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">burritos per week</text>
+          <line x1="70" y1="266" x2="422" y2="90" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="82" font-family="monospace" font-size="13" fill="#C0392B" font-weight="700" text-anchor="end">S</text>
+          <line x1="70" y1="178" x2="246" y2="178" stroke="#14243A" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <line x1="246" y1="310" x2="246" y2="178" stroke="#14243A" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <circle cx="246" cy="178" r="5.5" fill="#14243A"/>
+          <text x="256" y="192" font-family="monospace" font-size="11" font-weight="700" fill="#14243A">($6, 8)</text>
+          <!-- revealed -->
+          <line id="q7s2" x1="70" y1="222" x2="422" y2="46" stroke="#C0392B" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <text id="q7s2t" x="412" y="40" font-family="monospace" font-size="13" fill="#C0392B" font-weight="700" text-anchor="end" opacity="0">S&#8322;</text>
+          <line id="q7arr" x1="352" y1="120" x2="284" y2="120" stroke="#8A5900" stroke-width="2.4" opacity="0" marker-end="url(#q7head)"/>
+          <line id="q7hg" x1="158" y1="178" x2="246" y2="178" stroke="#8A5900" stroke-width="1.6" stroke-dasharray="4 3" opacity="0"/>
+          <line id="q7vg" x1="158" y1="310" x2="158" y2="178" stroke="#8A5900" stroke-width="1.6" stroke-dasharray="4 3" opacity="0"/>
+          <circle id="q7dot" cx="158" cy="178" r="5.5" fill="#8A5900" opacity="0"/>
+          <text id="q7lab" x="150" y="168" font-family="monospace" font-size="11" font-weight="700" fill="#8A5900" text-anchor="end" opacity="0">($6, 4)</text>
+          <text id="q7fix" x="430" y="300" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700" text-anchor="end" opacity="0">the $6 guide never moved</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <button class="btn" data-reveal-svg="q7shift" data-reveal="q7nums">&#9654; Show the shift</button>
+        <div class="reveal-hidden" id="q7nums">
+        <div class="readout">
+          at $6, before &nbsp;&rarr;&nbsp; <span class="big">8</span> burritos<br>
+          at $6, after &nbsp;&nbsp;&rarr;&nbsp; <span class="big">4</span> burritos<br>
+          <span style="color:var(--grey)">same price &middot; fewer burritos &middot; therefore a different curve</span>
+        </div>
+        <div class="model" style="border-color:#C0392B">
+          <span class="tag" style="color:#C0392B">S&#8322; · after the wage rise</span>
+          <div class="eq">P = 4 + <span class="coef">0.5</span>&middot;Q&#738;</div>
+        </div>
+        </div>
+        <button class="btn" data-reveal="q7pun">Reveal the rule</button>
+        <div class="reveal-hidden" id="q7pun">
+          <div class="reveal">
+            <span class="cue">The supply rule · mirror of Part 1</span>
+            <p><strong>Cost of production up &rarr; supply shifts left. Cost down &rarr; supply shifts right.</strong> Three things move that cost: <strong>input prices</strong> (cook wages, avocados), <strong>technology</strong> (a second grill line makes each burrito cheaper to produce), and the <strong>alternative uses of those inputs</strong> — if the same grill and the same hour could make something more valuable, making a burrito costs more. That last one is <em>opportunity cost</em>, back from Unit 1.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 3 · EQUILIBRIUM ══════════════ -->
+
+  <!-- 18. DIVIDER P3 -->
+  <section class="slide divider" data-section="Discussion 3 · Equilibrium">
+    <div class="eyebrow">Part 3 of 4</div>
+    <h1>Equilibrium</h1>
+    <p class="lede">Two curves, one pair of axes, one price. This is where Q1 gets answered — and the answer is not &ldquo;the taquer&iacute;a decided.&rdquo;</p>
+    <div class="sectrail">DEMAND &#10003; &rarr; SUPPLY &#10003; &rarr; EQUILIBRIUM &rarr; SHOCKS</div>
+    <div class="through">Throughline: a change in price moves you along a curve. A change in anything else moves the curve — and then the market finds a new meeting point.</div>
+  </section>
+
+  <!-- 19. Q8 · both curves, predict the settling point -->
+  <section class="slide" data-section="Discussion 3 · Equilibrium">
+    <div class="eyebrow">Question 8 · predict · write two numbers</div>
+    <h2>Both curves, one market</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="The burrito demand and supply curves drawn on the same axes for the first time. The blue demand curve falls from ten dollars to two dollars; the red supply curve rises from two dollars to ten dollars. They cross once, and no point is marked yet.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90"  x2="430" y2="90"/> <line x1="70" y1="46"  x2="430" y2="46"/>
+            <line x1="114" y1="30" x2="114" y2="310"/><line x1="158" y1="30" x2="158" y2="310"/>
+            <line x1="202" y1="30" x2="202" y2="310"/><line x1="246" y1="30" x2="246" y2="310"/>
+            <line x1="290" y1="30" x2="290" y2="310"/><line x1="334" y1="30" x2="334" y2="310"/>
+            <line x1="378" y1="30" x2="378" y2="310"/><line x1="422" y1="30" x2="422" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$2</text><text x="62" y="226">$4</text>
+            <text x="62" y="182">$6</text><text x="62" y="138">$8</text><text x="62" y="94">$10</text>
+            <text x="62" y="50">$12</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="114" y="328">2</text><text x="158" y="328">4</text>
+            <text x="202" y="328">6</text><text x="246" y="328">8</text><text x="290" y="328">10</text>
+            <text x="334" y="328">12</text><text x="378" y="328">14</text><text x="422" y="328">16</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">price per burrito</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">burritos per week</text>
+          <line x1="70" y1="90" x2="422" y2="266" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="284" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">D</text>
+          <line x1="70" y1="266" x2="422" y2="90" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="82" font-family="monospace" font-size="13" fill="#C0392B" font-weight="700" text-anchor="end">S</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="predict">
+          <span class="cue">Q8 · predict · no arithmetic needed</span>
+          <p>Here are both curves at once. <strong>Write the price and the quantity</strong> where you think this market settles. Read it off the picture — do not solve anything yet.</p>
+        </div>
+        <div class="models" style="grid-template-columns:1fr;gap:.8rem;margin:0">
+          <div class="model">
+            <span class="tag">demand · the buyers</span>
+            <div class="eq" style="font-size:1.05rem">P = 10 &minus; 0.5&middot;Q&#7496;</div>
+          </div>
+          <div class="model" style="border-color:#C0392B">
+            <span class="tag" style="color:#C0392B">supply · the seller</span>
+            <div class="eq" style="font-size:1.05rem">P = 2 + 0.5&middot;Q&#738;</div>
+          </div>
+        </div>
+        <p class="serif-note">Two relationships, one good. At most prices they disagree about how many burritos should change hands. There is exactly one price where they do not.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 20. THE ANSWER TO Q1 -->
+  <section class="slide" data-section="Discussion 3 · Equilibrium">
+    <div class="eyebrow">Reveal · Q8 · and the answer to Q1</div>
+    <h2>$6 and 8 burritos</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="The burrito market equilibrium. The blue demand curve and the red supply curve cross at eight burritos and six dollars; dashed guides run from the crossing point to six dollars on the vertical axis and eight burritos on the horizontal axis. Six dollars is the one price at which the quantity buyers want equals the quantity the seller offers.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90"  x2="430" y2="90"/> <line x1="70" y1="46"  x2="430" y2="46"/>
+            <line x1="114" y1="30" x2="114" y2="310"/><line x1="158" y1="30" x2="158" y2="310"/>
+            <line x1="202" y1="30" x2="202" y2="310"/><line x1="246" y1="30" x2="246" y2="310"/>
+            <line x1="290" y1="30" x2="290" y2="310"/><line x1="334" y1="30" x2="334" y2="310"/>
+            <line x1="378" y1="30" x2="378" y2="310"/><line x1="422" y1="30" x2="422" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$2</text><text x="62" y="226">$4</text>
+            <text x="62" y="182">$6</text><text x="62" y="138">$8</text><text x="62" y="94">$10</text>
+            <text x="62" y="50">$12</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="114" y="328">2</text><text x="158" y="328">4</text>
+            <text x="202" y="328">6</text><text x="246" y="328">8</text><text x="290" y="328">10</text>
+            <text x="334" y="328">12</text><text x="378" y="328">14</text><text x="422" y="328">16</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">price per burrito</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">burritos per week</text>
+          <line x1="70" y1="90" x2="422" y2="266" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="284" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">D</text>
+          <line x1="70" y1="266" x2="422" y2="90" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="82" font-family="monospace" font-size="13" fill="#C0392B" font-weight="700" text-anchor="end">S</text>
+          <line id="eqh" x1="70" y1="178" x2="246" y2="178" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4" opacity="0"/>
+          <line id="eqv" x1="246" y1="310" x2="246" y2="178" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4" opacity="0"/>
+          <circle id="eqdot" cx="246" cy="178" r="7" fill="#8A5900" opacity="0"/>
+          <text id="eqlab" x="246" y="164" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" text-anchor="middle" opacity="0">E</text>
+          <text id="eqp" x="78" y="171" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900" opacity="0">P* = $6</text>
+          <text id="eqq" x="254" y="302" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900" opacity="0">Q* = 8</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <button class="btn" data-reveal-svg="eqmark">&#9654; Mark the crossing</button>
+        <button class="btn" data-reveal="q8alg">Now do it with algebra</button>
+        <div class="reveal-hidden" id="q8alg">
+          <div class="reveal">
+            <span class="cue">The same answer, second way</span>
+            <div class="calc" style="margin-top:.3rem">
+              <span class="lbl">set them equal</span> &nbsp; 10 &minus; 0.5Q = 2 + 0.5Q<br>
+              <span class="lbl">gather Q</span> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 8 = Q<br>
+              <span class="lbl">put Q back in</span> &nbsp;&nbsp; P = 10 &minus; 0.5(8) = <strong>6</strong>
+            </div>
+            <p style="margin-top:.7rem">The crossing point and the one line of algebra are the <strong>same operation</strong>. &ldquo;Where do the curves meet&rdquo; and &ldquo;where do the two equations agree&rdquo; are one question.</p>
+          </div>
+        </div>
+        <button class="btn" data-reveal="q1back">Unfold your Q1 answer</button>
+        <div class="reveal-hidden" id="q1back">
+          <div class="reveal">
+            <span class="cue">Callback · Q1</span>
+            <p><strong>Nobody decided $6.</strong> Buyers brought one relationship, the seller brought another, and $6 is the only number both can live with. That is what &ldquo;the market sets the price&rdquo; means — not a decision, an <strong>intersection</strong>.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 21. Q9 · surplus at $8 -->
+  <section class="slide" data-section="Discussion 3 · Equilibrium">
+    <div class="eyebrow">Question 9 · predict first · then we play it</div>
+    <h2>The taquer&iacute;a posts $8</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="A surplus at a price of eight dollars: the seller offers twelve burritos while buyers want only four, a gap of eight shown as a gold bar between the curves with drop lines to the quantity axis. As the price falls the bar shrinks — grey markers stay behind recording a gap of 8 at eight dollars and 4 at seven dollars — until it closes to nothing at six dollars, the crossing point.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90"  x2="430" y2="90"/> <line x1="70" y1="46"  x2="430" y2="46"/>
+            <line x1="114" y1="30" x2="114" y2="310"/><line x1="158" y1="30" x2="158" y2="310"/>
+            <line x1="202" y1="30" x2="202" y2="310"/><line x1="246" y1="30" x2="246" y2="310"/>
+            <line x1="290" y1="30" x2="290" y2="310"/><line x1="334" y1="30" x2="334" y2="310"/>
+            <line x1="378" y1="30" x2="378" y2="310"/><line x1="422" y1="30" x2="422" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$2</text><text x="62" y="226">$4</text>
+            <text x="62" y="182">$6</text><text x="62" y="138">$8</text><text x="62" y="94">$10</text>
+            <text x="62" y="50">$12</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="114" y="328">2</text><text x="158" y="328">4</text>
+            <text x="202" y="328">6</text><text x="246" y="328">8</text><text x="290" y="328">10</text>
+            <text x="334" y="328">12</text><text x="378" y="328">14</text><text x="422" y="328">16</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">price per burrito</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">burritos per week</text>
+          <line x1="70" y1="90" x2="422" y2="266" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="284" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">D</text>
+          <line x1="70" y1="266" x2="422" y2="90" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="82" font-family="monospace" font-size="13" fill="#C0392B" font-weight="700" text-anchor="end">S</text>
+          <circle cx="246" cy="178" r="4.5" fill="#14243A" opacity=".45"/>
+          <line id="s9g8b" x1="158" y1="134" x2="334" y2="134" stroke="#8A8F96" stroke-width="5" stroke-linecap="round" opacity="0"/><line id="s9g8vl" x1="158" y1="134" x2="158" y2="310" stroke="#8A8F96" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/><line id="s9g8vr" x1="334" y1="134" x2="334" y2="310" stroke="#8A8F96" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/><text id="s9g8t" x="246" y="138" font-family="monospace" font-size="12" font-weight="700" fill="#3F454C" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">8</text><line id="s9g7b" x1="202" y1="156" x2="290" y2="156" stroke="#8A8F96" stroke-width="5" stroke-linecap="round" opacity="0"/><line id="s9g7vl" x1="202" y1="156" x2="202" y2="310" stroke="#8A8F96" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/><line id="s9g7vr" x1="290" y1="156" x2="290" y2="310" stroke="#8A8F96" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/><text id="s9g7t" x="246" y="160" font-family="monospace" font-size="12" font-weight="700" fill="#3F454C" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">4</text>
+          <line id="s9lvl" x1="70" y1="134" x2="430" y2="134" stroke="#8A5900" stroke-width="1.4" stroke-dasharray="5 4" opacity="0"/>
+          <line id="s9vd" x1="158" y1="134" x2="158" y2="310" stroke="#8A5900" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="s9vs" x1="334" y1="134" x2="334" y2="310" stroke="#8A5900" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="s9gap" x1="158" y1="134" x2="334" y2="134" stroke="#8A5900" stroke-width="8" stroke-linecap="round" opacity="0"/>
+          <circle id="s9dd" cx="158" cy="134" r="6" fill="#1F4E79" opacity="0"/>
+          <circle id="s9ds" cx="334" cy="134" r="6" fill="#C0392B" opacity="0"/>
+          <text id="s9lab" x="246" y="120" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900" text-anchor="middle" opacity="0">SURPLUS</text>
+          <text id="s9end" x="430" y="300" font-family="monospace" font-size="11" font-weight="700" fill="#5A5F66" text-anchor="end" opacity="0">gap closed at $6</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="predict">
+          <span class="cue">Q9 · predict · write a sentence</span>
+          <p>Suppose the price is <strong>$8</strong>, not $6. Write what happens — to the number of burritos buyers want, the number the taquer&iacute;a makes, and the price itself.</p>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="s9play">&#9654; Play it out</button>
+          <button class="btn ghost" id="s9reset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          price &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="s9p">$8.00</span><br>
+          offered &nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="s9qs">?</span> &nbsp;&nbsp;wanted &rarr; <span class="big" id="s9qd">?</span><br>
+          leftover &nbsp;&rarr;&nbsp; <span class="big" id="s9gapn">?</span><br>
+          <span id="s9note" style="color:var(--grey)">Press play and watch the gap. Grey bars mark where it has been.</span>
+        </div>
+        <button class="btn" data-reveal="q9rev">Reveal the reasoning</button>
+        <div class="reveal-hidden" id="q9rev">
+          <div class="reveal">
+            <span class="cue">Reveal · Q9</span>
+            <p>At $8 the taquer&iacute;a makes <strong>12</strong> and buyers want <strong>4</strong>. Eight burritos sit on the counter: a <strong>surplus of 8</strong>. Nobody has to be told what to do — unsold food is a reason to cut the price. By $7 the gap is already down to 4. As the price falls, quantity supplied slides <em>down</em> the red curve and quantity demanded slides <em>up</em> the blue one. Both moves are movements <strong>along</strong> unchanged curves. The gap closes at $6.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 22. Q10 · shortage at $4 -->
+  <section class="slide" data-section="Discussion 3 · Equilibrium">
+    <div class="eyebrow">Question 10 · predict first · then we play it</div>
+    <h2>Now the price is $4</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="A shortage at a price of four dollars: buyers want twelve burritos while the seller offers only four, a gap of eight shown as a gold bar between the curves with drop lines to the quantity axis. As the price rises the bar shrinks — grey markers stay behind recording a gap of 8 at four dollars and 4 at five dollars — until it closes to nothing at six dollars, the crossing point.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90"  x2="430" y2="90"/> <line x1="70" y1="46"  x2="430" y2="46"/>
+            <line x1="114" y1="30" x2="114" y2="310"/><line x1="158" y1="30" x2="158" y2="310"/>
+            <line x1="202" y1="30" x2="202" y2="310"/><line x1="246" y1="30" x2="246" y2="310"/>
+            <line x1="290" y1="30" x2="290" y2="310"/><line x1="334" y1="30" x2="334" y2="310"/>
+            <line x1="378" y1="30" x2="378" y2="310"/><line x1="422" y1="30" x2="422" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$2</text><text x="62" y="226">$4</text>
+            <text x="62" y="182">$6</text><text x="62" y="138">$8</text><text x="62" y="94">$10</text>
+            <text x="62" y="50">$12</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="114" y="328">2</text><text x="158" y="328">4</text>
+            <text x="202" y="328">6</text><text x="246" y="328">8</text><text x="290" y="328">10</text>
+            <text x="334" y="328">12</text><text x="378" y="328">14</text><text x="422" y="328">16</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">price per burrito</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">burritos per week</text>
+          <line x1="70" y1="90" x2="422" y2="266" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="284" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">D</text>
+          <line x1="70" y1="266" x2="422" y2="90" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="82" font-family="monospace" font-size="13" fill="#C0392B" font-weight="700" text-anchor="end">S</text>
+          <circle cx="246" cy="178" r="4.5" fill="#14243A" opacity=".45"/>
+          <line id="s10g4b" x1="158" y1="222" x2="334" y2="222" stroke="#8A8F96" stroke-width="5" stroke-linecap="round" opacity="0"/><line id="s10g4vl" x1="158" y1="222" x2="158" y2="310" stroke="#8A8F96" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/><line id="s10g4vr" x1="334" y1="222" x2="334" y2="310" stroke="#8A8F96" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/><text id="s10g4t" x="246" y="226" font-family="monospace" font-size="12" font-weight="700" fill="#3F454C" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">8</text><line id="s10g5b" x1="202" y1="200" x2="290" y2="200" stroke="#8A8F96" stroke-width="5" stroke-linecap="round" opacity="0"/><line id="s10g5vl" x1="202" y1="200" x2="202" y2="310" stroke="#8A8F96" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/><line id="s10g5vr" x1="290" y1="200" x2="290" y2="310" stroke="#8A8F96" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/><text id="s10g5t" x="246" y="204" font-family="monospace" font-size="12" font-weight="700" fill="#3F454C" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">4</text>
+          <line id="s10lvl" x1="70" y1="222" x2="430" y2="222" stroke="#8A5900" stroke-width="1.4" stroke-dasharray="5 4" opacity="0"/>
+          <line id="s10vd" x1="334" y1="222" x2="334" y2="310" stroke="#8A5900" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="s10vs" x1="158" y1="222" x2="158" y2="310" stroke="#8A5900" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="s10gap" x1="158" y1="222" x2="334" y2="222" stroke="#8A5900" stroke-width="8" stroke-linecap="round" opacity="0"/>
+          <circle id="s10dd" cx="334" cy="222" r="6" fill="#1F4E79" opacity="0"/>
+          <circle id="s10ds" cx="158" cy="222" r="6" fill="#C0392B" opacity="0"/>
+          <text id="s10lab" x="246" y="244" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900" text-anchor="middle" opacity="0">SHORTAGE</text>
+          <text id="s10end" x="430" y="300" font-family="monospace" font-size="11" font-weight="700" fill="#5A5F66" text-anchor="end" opacity="0">gap closed at $6</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="predict">
+          <span class="cue">Q10 · predict · write a sentence</span>
+          <p>Now the price is <strong>$4</strong>. Same three things: how many do buyers want, how many does the taquer&iacute;a make, and what happens to the price?</p>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="s10play">&#9654; Play it out</button>
+          <button class="btn ghost" id="s10reset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          price &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="s10p">$4.00</span><br>
+          wanted &nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="s10qd">?</span> &nbsp;&nbsp;offered &rarr; <span class="big" id="s10qs">?</span><br>
+          missing &nbsp;&rarr;&nbsp; <span class="big" id="s10gapn">?</span><br>
+          <span id="s10note" style="color:var(--grey)">Press play and watch the gap. Grey bars mark where it has been.</span>
+        </div>
+        <button class="btn" data-reveal="q10rev">Reveal the reasoning</button>
+        <div class="reveal-hidden" id="q10rev">
+          <div class="reveal">
+            <span class="cue">Reveal · Q10</span>
+            <p>At $4 buyers want <strong>12</strong> and the taquer&iacute;a makes <strong>4</strong>. Eight buyers leave without lunch: a <strong>shortage of 8</strong>. A line out the door is a reason to raise the price, and by $5 the gap is already down to 4. Quantity demanded slides <em>down</em> the blue curve, quantity supplied slides <em>up</em> the red one — again, movements along curves that never move. The gap closes at $6.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 23. PUNCHLINE · what equilibrium is -->
+  <section class="slide" data-section="Discussion 3 · Equilibrium">
+    <div class="eyebrow">The punchline · say this one slowly</div>
+    <h2>Nobody chose $6</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:900px;gap:1.2rem">
+      <p class="lede">$8 was not wrong because someone disapproved of it. It was <strong>unstable</strong>: it left eight burritos on the counter, and leftover burritos push the price down. $4 was unstable the other way: it left eight buyers in line, and a line pushes the price up.</p>
+      <div class="reveal" style="max-width:880px">
+        <span class="cue">Equilibrium</span>
+        <p>The one price that leaves <strong>no leftover pressure in either direction</strong>. Not the fairest price, not the price anyone wanted, not a decision at all — just the only number that does not push itself somewhere else.</p>
+      </div>
+      <div class="chain">surplus &rarr; price falls &rarr; gap shrinks &nbsp;·&nbsp; shortage &rarr; price rises &rarr; gap shrinks</div>
+      <p class="serif-note" style="max-width:78ch">And notice what did <em>not</em> happen in Q9 or Q10: neither curve moved. Nothing changed except the price, and price is on an axis. The whole adjustment was two dots sliding toward each other.</p>
+    </div>
+  </section>
+
+  <!-- 24. QUICK CHECK · direction of adjustment -->
+  <section class="slide" data-section="Discussion 3 · Equilibrium">
+    <div class="eyebrow">Quick check · commit before the reveal</div>
+    <h2>A surplus. Now which way does everything go?</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:80ch">The price is above equilibrium and burritos are going unsold. Pick the sentence that gets <strong>both</strong> directions right.</p>
+    <div>
+      <div class="poll" id="poll11">
+        <div class="poll-opts">
+          <button type="button" class="poll-opt" data-correct="true"><span class="num">1</span><span class="txt">The price falls, and quantity demanded rises as it falls.</span></button>
+          <button type="button" class="poll-opt" data-correct="false"><span class="num">2</span><span class="txt">The price rises to clear the leftover burritos, and quantity demanded falls.</span></button>
+          <button type="button" class="poll-opt" data-correct="false"><span class="num">3</span><span class="txt">The price falls, and quantity demanded falls along with it.</span></button>
+        </div>
+        <p class="poll-hint">Students commit on paper (or a show of fingers). Then reveal.</p>
+      </div>
+      <button class="btn" data-poll-reveal="poll11" style="margin-top:.4rem">Reveal the answer</button>
+      <button class="btn" data-reveal="poll11why" style="margin-top:.6rem">Reveal why 2 and 3 fail</button>
+      <div class="reveal-hidden" id="poll11why">
+      <div class="reveal" style="max-width:900px">
+        <span class="cue">Why 2 and 3 fail</span>
+        <p><strong>3</strong> has the price right and the quantity backwards — price and quantity demanded move in <em>opposite</em> directions along a demand curve; that is the whole shape of it. <strong>2</strong> treats the price as a tool for getting rid of stock, which is exactly the Q7 mistake: raising the price would make the surplus <em>worse</em>.</p>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 4 · SHOCKS ══════════════ -->
+
+  <!-- 25. DIVIDER P4 -->
+  <section class="slide divider" data-section="Discussion 3 · Shocks">
+    <div class="eyebrow">Part 4 of 4</div>
+    <h1>Changes in<br>equilibrium</h1>
+    <p class="lede">Move one curve and the meeting point moves with it. Everything from Parts 1 to 3 comes back at once: what shifts, which way, and where the two dots stop.</p>
+    <div class="sectrail">DEMAND &#10003; &rarr; SUPPLY &#10003; &rarr; EQUILIBRIUM &#10003; &rarr; SHOCKS</div>
+    <div class="through">Throughline: a change in price moves you along a curve. A change in anything else moves the curve — and then the market finds a new meeting point.</div>
+  </section>
+
+  <!-- 26. Q11 · incomes rise -->
+  <section class="slide" data-section="Discussion 3 · Shocks">
+    <div class="eyebrow">Question 11 · predict first · then two stages</div>
+    <h2>Incomes in town rise</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="A rise in incomes slides the whole burrito demand curve right to P equals 12 minus half Q. At the old price of six dollars, equilibrium A, buyers now want twelve burritos while the seller offers eight — an excess demand of four. The price then climbs, the gap shrinking through 2 at six dollars fifty, until the curves meet again at equilibrium B, seven dollars and ten burritos. Price and quantity both rise.">
+          <defs><marker id="q11head" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#8A5900"/></marker></defs><defs><clipPath id="q11clip"><rect x="70" y="24" width="352" height="292"/></clipPath></defs>
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90"  x2="430" y2="90"/> <line x1="70" y1="46"  x2="430" y2="46"/>
+            <line x1="114" y1="30" x2="114" y2="310"/><line x1="158" y1="30" x2="158" y2="310"/>
+            <line x1="202" y1="30" x2="202" y2="310"/><line x1="246" y1="30" x2="246" y2="310"/>
+            <line x1="290" y1="30" x2="290" y2="310"/><line x1="334" y1="30" x2="334" y2="310"/>
+            <line x1="378" y1="30" x2="378" y2="310"/><line x1="422" y1="30" x2="422" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$2</text><text x="62" y="226">$4</text>
+            <text x="62" y="182">$6</text><text x="62" y="138">$8</text><text x="62" y="94">$10</text>
+            <text x="62" y="50">$12</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="114" y="328">2</text><text x="158" y="328">4</text>
+            <text x="202" y="328">6</text><text x="246" y="328">8</text><text x="290" y="328">10</text>
+            <text x="334" y="328">12</text><text x="378" y="328">14</text><text x="422" y="328">16</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">price per burrito</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">burritos per week</text>
+          <line x1="70" y1="90" x2="422" y2="266" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="284" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">D</text>
+          <line x1="70" y1="266" x2="422" y2="90" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="82" font-family="monospace" font-size="13" fill="#C0392B" font-weight="700" text-anchor="end">S</text>
+          <circle cx="246" cy="178" r="5" fill="#14243A"/>
+          <text x="246" y="164" font-family="monospace" font-size="14" font-weight="700" fill="#14243A" text-anchor="middle">A</text>
+          <!-- stage 1 · the shift (animated: starts on top of D, ends at D2) -->
+          <line id="q11d2" x1="-30" y1="40" x2="530" y2="320" clip-path="url(#q11clip)" stroke="#1F4E79" stroke-width="3" stroke-dasharray="9 5" opacity="0"/>
+          <text id="q11d2t" x="418" y="240" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end" opacity="0">D&#8322;</text>
+          <line id="q11arr" x1="138" y1="120" x2="210" y2="120" stroke="#8A5900" stroke-width="2.4" opacity="0" marker-end="url(#q11head)"/>
+          <!-- stage 2 · the adjustment -->
+          <line id="q11g6b" x1="246" y1="178" x2="334" y2="178" stroke="#8A8F96" stroke-width="5" stroke-linecap="round" opacity="0"/><line id="q11g6vl" x1="246" y1="178" x2="246" y2="310" stroke="#8A8F96" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/><line id="q11g6vr" x1="334" y1="178" x2="334" y2="310" stroke="#8A8F96" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/><text id="q11g6t" x="268" y="182" font-family="monospace" font-size="12" font-weight="700" fill="#3F454C" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">4</text><line id="q11g65b" x1="268" y1="167" x2="312" y2="167" stroke="#8A8F96" stroke-width="5" stroke-linecap="round" opacity="0"/><line id="q11g65vl" x1="268" y1="167" x2="268" y2="310" stroke="#8A8F96" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/><line id="q11g65vr" x1="312" y1="167" x2="312" y2="310" stroke="#8A8F96" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/><text id="q11g65t" x="301" y="171" font-family="monospace" font-size="12" font-weight="700" fill="#3F454C" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">2</text>
+          <line id="q11lvl" x1="70" y1="178" x2="430" y2="178" stroke="#8A5900" stroke-width="1.4" stroke-dasharray="5 4" opacity="0"/>
+          <line id="q11vd" x1="334" y1="178" x2="334" y2="310" stroke="#8A5900" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="q11vs" x1="246" y1="178" x2="246" y2="310" stroke="#8A5900" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="q11gap" x1="246" y1="178" x2="334" y2="178" stroke="#8A5900" stroke-width="8" stroke-linecap="round" opacity="0"/>
+          <circle id="q11dd" cx="334" cy="178" r="6" fill="#1F4E79" opacity="0"/>
+          <circle id="q11ds" cx="246" cy="178" r="6" fill="#C0392B" opacity="0"/>
+          <text id="q11lab" x="290" y="164" font-family="monospace" font-size="11" font-weight="700" fill="#8A5900" text-anchor="middle" opacity="0">excess demand</text>
+          <text id="q11end" x="290" y="142" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" text-anchor="middle" opacity="0">B</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="predict">
+          <span class="cue">Q11 · predict · write two arrows</span>
+          <p>Incomes in town rise. Before anything moves on the screen, write what happens to the <strong>price</strong> and to the <strong>quantity</strong> traded — an up or a down arrow for each.</p>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="q11splay">&#9654; 1 &middot; Shift the curve</button>
+          <button class="btn" id="q11play">&#9654; 2 &middot; Let the price adjust</button>
+          <button class="btn ghost" id="q11reset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          price &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="q11p">$6.00</span><br>
+          wanted &nbsp;&rarr;&nbsp; <span class="big" id="q11qd">?</span> &nbsp;&nbsp;offered &rarr; <span class="big" id="q11qs">?</span><br>
+          gap &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="q11gapn">?</span><br>
+          <span id="q11note" style="color:var(--grey)">Shift the curve first, then let the price adjust.</span>
+        </div>
+        <button class="btn" data-reveal="q11rev">Reveal the reasoning</button>
+        <div class="reveal-hidden" id="q11rev">
+          <div class="reveal">
+            <span class="cue">Reveal · Q11</span>
+            <p>Income has no axis, so demand shifts right to <strong>P = 12 &minus; 0.5Q</strong>. Hold the old $6 for a second: buyers now want <strong>12</strong>, the taquer&iacute;a still offers <strong>8</strong> — an <strong>excess demand of 4</strong>. A line out the door pushes the price up, and as it climbs, quantity demanded slides down D&#8322; while quantity supplied slides up S. A moves to <strong>B: $7 and 10 burritos</strong>.</p>
+            <div class="chain" style="margin-top:.7rem">income&uarr; &rarr; D shifts right &rarr; excess demand at $6 &rarr; P&uarr; &rarr; P = $7, Q = 10</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 27. Q12 · cook wages fall -->
+  <section class="slide" data-section="Discussion 3 · Shocks">
+    <div class="eyebrow">Question 12 · predict first · then two stages</div>
+    <h2>Cook wages fall</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="A fall in cook wages slides the whole burrito supply curve right to P equals half Q. At the old price of six dollars, equilibrium A, the seller now offers twelve burritos while buyers still want eight — an excess supply of four. The price then falls, the gap shrinking through 2 at five dollars fifty, until the curves meet again at equilibrium B, five dollars and ten burritos. Price falls while quantity rises.">
+          <defs><marker id="q12head" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#8A5900"/></marker></defs><defs><clipPath id="q12clip"><rect x="70" y="24" width="352" height="292"/></clipPath></defs>
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90"  x2="430" y2="90"/> <line x1="70" y1="46"  x2="430" y2="46"/>
+            <line x1="114" y1="30" x2="114" y2="310"/><line x1="158" y1="30" x2="158" y2="310"/>
+            <line x1="202" y1="30" x2="202" y2="310"/><line x1="246" y1="30" x2="246" y2="310"/>
+            <line x1="290" y1="30" x2="290" y2="310"/><line x1="334" y1="30" x2="334" y2="310"/>
+            <line x1="378" y1="30" x2="378" y2="310"/><line x1="422" y1="30" x2="422" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$2</text><text x="62" y="226">$4</text>
+            <text x="62" y="182">$6</text><text x="62" y="138">$8</text><text x="62" y="94">$10</text>
+            <text x="62" y="50">$12</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="114" y="328">2</text><text x="158" y="328">4</text>
+            <text x="202" y="328">6</text><text x="246" y="328">8</text><text x="290" y="328">10</text>
+            <text x="334" y="328">12</text><text x="378" y="328">14</text><text x="422" y="328">16</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">price per burrito</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">burritos per week</text>
+          <line x1="70" y1="90" x2="422" y2="266" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="284" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">D</text>
+          <line x1="70" y1="266" x2="422" y2="90" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="82" font-family="monospace" font-size="13" fill="#C0392B" font-weight="700" text-anchor="end">S</text>
+          <circle cx="246" cy="178" r="5" fill="#14243A"/>
+          <text x="246" y="164" font-family="monospace" font-size="14" font-weight="700" fill="#14243A" text-anchor="middle">A</text>
+          <!-- stage 1 · the shift (animated: starts on top of S, ends at S2) -->
+          <line id="q12s2" x1="-30" y1="316" x2="530" y2="36" clip-path="url(#q12clip)" stroke="#C0392B" stroke-width="3" stroke-dasharray="9 5" opacity="0"/>
+          <text id="q12s2t" x="418" y="152" font-family="monospace" font-size="13" fill="#C0392B" font-weight="700" text-anchor="end" opacity="0">S&#8322;</text>
+          <line id="q12arr" x1="166" y1="222" x2="238" y2="222" stroke="#8A5900" stroke-width="2.4" opacity="0" marker-end="url(#q12head)"/>
+          <!-- stage 2 · the adjustment -->
+          <line id="q12g6b" x1="246" y1="178" x2="334" y2="178" stroke="#8A8F96" stroke-width="5" stroke-linecap="round" opacity="0"/><line id="q12g6vl" x1="246" y1="178" x2="246" y2="310" stroke="#8A8F96" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/><line id="q12g6vr" x1="334" y1="178" x2="334" y2="310" stroke="#8A8F96" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/><text id="q12g6t" x="310" y="182" font-family="monospace" font-size="12" font-weight="700" fill="#3F454C" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">4</text><line id="q12g55b" x1="268" y1="189" x2="312" y2="189" stroke="#8A8F96" stroke-width="5" stroke-linecap="round" opacity="0"/><line id="q12g55vl" x1="268" y1="189" x2="268" y2="310" stroke="#8A8F96" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/><line id="q12g55vr" x1="312" y1="189" x2="312" y2="310" stroke="#8A8F96" stroke-width="1.1" stroke-dasharray="4 3" opacity="0"/><text id="q12g55t" x="276" y="193" font-family="monospace" font-size="12" font-weight="700" fill="#3F454C" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">2</text>
+          <line id="q12lvl" x1="70" y1="178" x2="430" y2="178" stroke="#8A5900" stroke-width="1.4" stroke-dasharray="5 4" opacity="0"/>
+          <line id="q12vd" x1="246" y1="178" x2="246" y2="310" stroke="#8A5900" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="q12vs" x1="334" y1="178" x2="334" y2="310" stroke="#8A5900" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="q12gap" x1="246" y1="178" x2="334" y2="178" stroke="#8A5900" stroke-width="8" stroke-linecap="round" opacity="0"/>
+          <circle id="q12dd" cx="246" cy="178" r="6" fill="#1F4E79" opacity="0"/>
+          <circle id="q12ds" cx="334" cy="178" r="6" fill="#C0392B" opacity="0"/>
+          <text id="q12lab" x="290" y="164" font-family="monospace" font-size="11" font-weight="700" fill="#8A5900" text-anchor="middle" opacity="0">excess supply</text>
+          <text id="q12end" x="290" y="186" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" text-anchor="middle" opacity="0">B</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="predict">
+          <span class="cue">Q12 · predict · write two arrows</span>
+          <p>The taquer&iacute;a's cook wages <strong>fall</strong>. Again, before anything moves: what happens to the <strong>price</strong> and to the <strong>quantity</strong> traded?</p>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="q12splay">&#9654; 1 &middot; Shift the curve</button>
+          <button class="btn" id="q12play">&#9654; 2 &middot; Let the price adjust</button>
+          <button class="btn ghost" id="q12reset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          price &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="q12p">$6.00</span><br>
+          offered &nbsp;&rarr;&nbsp; <span class="big" id="q12qs">?</span> &nbsp;&nbsp;wanted &rarr; <span class="big" id="q12qd">?</span><br>
+          gap &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="q12gapn">?</span><br>
+          <span id="q12note" style="color:var(--grey)">Shift the curve first, then let the price adjust.</span>
+        </div>
+        <button class="btn" data-reveal="q12rev">Reveal the reasoning</button>
+        <div class="reveal-hidden" id="q12rev">
+          <div class="reveal">
+            <span class="cue">Reveal · Q12</span>
+            <p>Wages have no axis, so supply shifts right to <strong>P = 0.5Q</strong>. Hold the old $6: the taquer&iacute;a now offers <strong>12</strong>, buyers still want <strong>8</strong> — an <strong>excess supply of 4</strong>. Unsold burritos push the price down, quantity supplied slides down S&#8322; and quantity demanded slides up D. A moves to <strong>B: $5 and 10 burritos</strong>.</p>
+            <div class="chain" style="margin-top:.7rem">wages&darr; &rarr; S shifts right &rarr; excess supply at $6 &rarr; P&darr; &rarr; P = $5, Q = 10</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 28. TRANSFER · the takeaway that survives the numbers -->
+  <section class="slide" data-section="Discussion 3 · Shocks">
+    <div class="eyebrow">Transfer · the part that outlives the burritos</div>
+    <h2>Same direction, or opposite?</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:82ch">Q11 and Q12 both ended at <strong>10 burritos</strong>. They did not end at the same price, and the difference is not an accident of these numbers — it follows from <em>which curve moved</em>.</p>
+    <div class="pair2">
+      <div class="pcard dem">
+        <span class="ptag">Q11 · demand moved</span>
+        <svg viewBox="0 0 240 170" role="img" aria-label="A demand shift summary: the blue demand curve moves right along a fixed red supply curve, and the new crossing point is both higher and further right, so price and quantity both rise — they move in the same direction."><defs><marker id="mdem" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#8A5900"/></marker></defs><line x1="30" y1="14" x2="30" y2="146" stroke="#8A8F96" stroke-width="1.2"/><line x1="30" y1="146" x2="224" y2="146" stroke="#8A8F96" stroke-width="1.2"/><text x="24" y="20" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">P</text><text x="224" y="160" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">Q</text><line x1="40" y1="24" x2="150" y2="140" stroke="#1F4E79" stroke-width="2.2"/><text x="152" y="140" font-family="monospace" font-size="9" fill="#1F4E79" font-weight="700">D</text><line x1="40" y1="140" x2="150" y2="24" stroke="#C0392B" stroke-width="2.2"/><text x="152" y="26" font-family="monospace" font-size="9" fill="#C0392B" font-weight="700">S</text><circle cx="95" cy="82" r="3.4" fill="#14243A"/><line x1="30" y1="82" x2="95" y2="82" stroke="#14243A" stroke-width=".8" stroke-dasharray="3 2"/><line x1="95" y1="146" x2="95" y2="82" stroke="#14243A" stroke-width=".8" stroke-dasharray="3 2"/><line x1="80" y1="24" x2="190" y2="140" stroke="#1F4E79" stroke-width="2.2" stroke-dasharray="6 3"/><text x="192" y="140" font-family="monospace" font-size="9" fill="#1F4E79" font-weight="700">D₂</text><circle cx="115" cy="62" r="3.8" fill="#8A5900"/><line x1="30" y1="62" x2="115" y2="62" stroke="#8A5900" stroke-width="1" stroke-dasharray="3 2"/><line x1="115" y1="146" x2="115" y2="62" stroke="#8A5900" stroke-width="1" stroke-dasharray="3 2"/><line x1="26" y1="78" x2="26" y2="66" stroke="#8A5900" stroke-width="1.8" marker-end="url(#mdem)"/><line x1="99" y1="152" x2="111" y2="152" stroke="#8A5900" stroke-width="1.8" marker-end="url(#mdem)"/><text x="8" y="72" font-family="monospace" font-size="9" fill="#8A5900" font-weight="700">P&#8593;</text><text x="118" y="168" font-family="monospace" font-size="9" fill="#8A5900" font-weight="700">Q&#8593;</text></svg>
+        <div class="verdictbig">P: $6 &rarr; $7 &nbsp;&#8593;<br>Q: 8 &rarr; 10 &nbsp;&#8593;</div>
+        <p class="cnote">Buyers slid <em>up</em> the seller's unchanged supply curve. To get more burritos out of the same seller you have to offer more money — so <strong>price and quantity move together</strong>.</p>
+      </div>
+      <div class="pcard sup">
+        <span class="ptag">Q12 · supply moved</span>
+        <svg viewBox="0 0 240 170" role="img" aria-label="A supply shift summary: the red supply curve moves right along a fixed blue demand curve, and the new crossing point is lower and further right, so price falls while quantity rises — they move in opposite directions."><defs><marker id="msup" markerUnits="userSpaceOnUse" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#8A5900"/></marker></defs><line x1="30" y1="14" x2="30" y2="146" stroke="#8A8F96" stroke-width="1.2"/><line x1="30" y1="146" x2="224" y2="146" stroke="#8A8F96" stroke-width="1.2"/><text x="24" y="20" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">P</text><text x="224" y="160" font-family="monospace" font-size="9" fill="#5A5F66" text-anchor="end">Q</text><line x1="40" y1="24" x2="150" y2="140" stroke="#1F4E79" stroke-width="2.2"/><text x="152" y="140" font-family="monospace" font-size="9" fill="#1F4E79" font-weight="700">D</text><line x1="40" y1="140" x2="150" y2="24" stroke="#C0392B" stroke-width="2.2"/><text x="152" y="26" font-family="monospace" font-size="9" fill="#C0392B" font-weight="700">S</text><circle cx="95" cy="82" r="3.4" fill="#14243A"/><line x1="30" y1="82" x2="95" y2="82" stroke="#14243A" stroke-width=".8" stroke-dasharray="3 2"/><line x1="95" y1="146" x2="95" y2="82" stroke="#14243A" stroke-width=".8" stroke-dasharray="3 2"/><line x1="80" y1="140" x2="190" y2="24" stroke="#C0392B" stroke-width="2.2" stroke-dasharray="6 3"/><text x="192" y="26" font-family="monospace" font-size="9" fill="#C0392B" font-weight="700">S₂</text><circle cx="115" cy="102" r="3.8" fill="#8A5900"/><line x1="30" y1="102" x2="115" y2="102" stroke="#8A5900" stroke-width="1" stroke-dasharray="3 2"/><line x1="115" y1="146" x2="115" y2="102" stroke="#8A5900" stroke-width="1" stroke-dasharray="3 2"/><line x1="26" y1="86" x2="26" y2="98" stroke="#8A5900" stroke-width="1.8" marker-end="url(#msup)"/><line x1="99" y1="152" x2="111" y2="152" stroke="#8A5900" stroke-width="1.8" marker-end="url(#msup)"/><text x="8" y="96" font-family="monospace" font-size="9" fill="#8A5900" font-weight="700">P&#8595;</text><text x="118" y="168" font-family="monospace" font-size="9" fill="#8A5900" font-weight="700">Q&#8593;</text></svg>
+        <div class="verdictbig">P: $6 &rarr; $5 &nbsp;&#8595;<br>Q: 8 &rarr; 10 &nbsp;&#8593;</div>
+        <p class="cnote">The seller slid <em>down</em> the buyers' unchanged demand curve. To get buyers to take more burritos you have to charge less — so <strong>price and quantity move opposite ways</strong>.</p>
+      </div>
+    </div>
+    <div class="chain" style="margin-top:1.1rem"><strong>demand shifts</strong> &rarr; P and Q same direction &nbsp;&nbsp;·&nbsp;&nbsp; <strong>supply shifts</strong> &rarr; P and Q opposite directions</div>
+    <p class="serif-note" style="margin-top:.9rem;max-width:84ch">Run this backwards and it becomes a detective tool. Prices and quantities both up? Something moved <em>demand</em>. Quantity up but price down? Something moved <em>supply</em>. You can often tell which side of the market got hit without being told.</p>
+  </section>
+
+  <!-- 29. CLOSING DIAGNOSE · the Part 1 distinction under pressure -->
+  <section class="slide" data-section="Discussion 3 · Shocks">
+    <div class="eyebrow">Closing diagnose · silent poll · pick a number</div>
+    <h2>After the wage cut, which sentence is broken?</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:82ch">Cook wages fell. The price went from $6 to $5, and the taquer&iacute;a sold 10 burritos instead of 8. Three students describe what happened. <strong>All three describe it accurately. One of them explains it wrongly.</strong></p>
+    <div>
+      <div class="diag" id="diag12">
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">1</span><span class="s">Demand went up, since people bought more burritos than before.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">2</span><span class="s">Only supply shifted. Demand was the same relationship before and after; all that changed was which point on it we were reading.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">3</span><span class="s">The price fell to $5, and the demand schedule already said 10 burritos at $5 — so buyers slid down a curve that never moved.</span></button>
+      </div>
+      <p class="poll-hint">Students pick a number on paper (or fingers on the chest). Then reveal.</p>
+      <button class="btn" data-diag-reveal="diag12" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem;max-width:940px">
+        <span class="cue">Reveal · true observation, wrong name</span>
+        <p><strong>Sentence 1 is the flaw, and notice how little is wrong with it.</strong> People really did buy more burritos — 10 instead of 8. That part is simply true. What fails is the <em>name</em>: &ldquo;demand went up&rdquo; claims the whole relationship changed, and it did not. Nothing happened to incomes, to the poke place, to delivery fees. <strong>Quantity demanded rose; demand did not.</strong></p>
+        <p style="margin-top:.7rem">This is the Part 1 distinction coming back under pressure. It was easy when we asked it directly on slide 7. It is hard here, because the observation that tempts you — &ldquo;more burritos were bought&rdquo; — is genuinely correct. Ask the test instead: <strong>did anything on an axis change?</strong> The price did, and only the price. So it is a movement along.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 30. SYNTHESIS -->
+  <section class="slide" data-section="Discussion 3 · Shocks">
+    <div class="eyebrow">Synthesis · one sentence, four parts</div>
+    <h2>The whole hour, in one line</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:980px;gap:1.2rem">
+      <div class="reveal">
+        <span class="cue">The throughline</span>
+        <p style="font-size:1.15rem">A change in <strong>price</strong> moves you <strong>along</strong> a curve. A change in <strong>anything else</strong> moves the curve — and then the market finds a <strong>new meeting point</strong>.</p>
+      </div>
+      <div class="two" style="gap:1.6rem">
+        <div class="col" style="gap:.7rem;justify-content:flex-start">
+          <div class="chain">price&uarr; &rarr; Q&#7496;&darr; &rarr; <strong>same D</strong></div>
+          <div class="chain">price&uarr; &rarr; Q&#738;&uarr; &rarr; <strong>same S</strong></div>
+          <div class="chain">income&uarr; &rarr; <strong>D moves</strong> &rarr; P&uarr;, Q&uarr;</div>
+          <div class="chain">wages&darr; &rarr; <strong>S moves</strong> &rarr; P&darr;, Q&uarr;</div>
+        </div>
+        <div class="col" style="gap:.9rem;justify-content:flex-start">
+          <p class="lede" style="font-size:1.05rem">You have now used it four ways. Reading a curve from either axis (Q2, Q5). Telling a movement from a shift (Q3, Q4, Q6, Q7). Finding the one price with no leftover pressure (Q8&ndash;Q10). And moving a curve to move that price (Q11, Q12).</p>
+          <p class="serif-note">The only test you ever needed: <strong>is the thing that changed sitting on an axis?</strong> That question got you through last week&rsquo;s graphs and a taquer&iacute;a today, and it will get you through every diagram this quarter.</p>
+        </div>
+      </div>
+      <div class="signature">Demand &#10003; &rarr; Supply &#10003; &rarr; Equilibrium &#10003; &rarr; Shocks &#10003;</div>
+    </div>
+  </section>
+
+  <!-- 31. CLOSE -->
+  <section class="slide" data-section="Discussion 3 · Close">
+    <div class="eyebrow">Close · on your own paper</div>
+    <h2>Finish the sentence</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:980px;gap:1.3rem">
+      <p class="lede">In your own words — not mine. Hand it to nobody; you are writing it for yourself, for the midterm.</p>
+      <div class="blankline">
+        <span class="bl">&nbsp;</span> moves me <strong>along</strong> the curve;<br>
+        <span class="bl">&nbsp;</span> moves <strong>the curve</strong>,<br>
+        because <span class="bl">&nbsp;</span>.
+      </div>
+      <p class="serif-note">If your third blank uses the word &ldquo;axis,&rdquo; you have it.</p>
+      <div class="signature">Demand &rarr; Supply &rarr; Equilibrium &rarr; Shocks</div>
+    </div>
+  </section>
+</div>
+
+<div class="chrome">
+  <span class="course" id="sectionLabel">ECON 002 · Discussion 3</span>
+  <span class="navhint">
+    <button id="prevBtn" aria-label="Previous slide">&larr; prev</button>
+    <span aria-live="polite" aria-atomic="true">Slide <span id="cur">1</span> of <span id="tot">31</span></span>
+    <button id="nextBtn" aria-label="Next slide">next &rarr;</button>
+  </span>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* the one place the course string lives */
+  const COURSE = 'ECON 002';
+  const DECK_TITLE = 'Along It, or Move It?';
+  document.title = COURSE + ' · ' + DECK_TITLE;
+  const eyebrow = document.getElementById('titleEyebrow');
+  if(eyebrow) eyebrow.textContent = COURSE + ' · Discussion Section · Unit 2';
+
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  const prog=document.getElementById('prog');
+  const cur=document.getElementById('cur');
+  document.getElementById('tot').textContent=slides.length;
+
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    prog.style.width=((i)/(slides.length-1)*100)+'%';
+    cur.textContent=i+1;
+    const sec=slides[i].getAttribute('data-section');
+    const lbl=document.getElementById('sectionLabel');
+    if(lbl) lbl.textContent = sec ? (COURSE+' · '+sec) : (COURSE+' · Discussion');
+  }
+  function next(){show(i+1)}
+  function prev(){show(i-1)}
+
+  document.getElementById('nextBtn').onclick=next;
+  document.getElementById('prevBtn').onclick=prev;
+
+  /* guarded: Space must activate a focused control, not jump the slide */
+  window.addEventListener('keydown',e=>{
+    const t=e.target;
+    const onControl = t && t.closest && t.closest('button,a,input,select,textarea,[tabindex]');
+    if(e.key===' '||e.key==='Spacebar'){
+      if(onControl) return;               /* let the browser click the focused button */
+      e.preventDefault();next();return;
+    }
+    if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();next()}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}
+    else if(e.key.toLowerCase()==='f'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  /* ---- generic click-to-reveal: button[data-reveal="targetId"] ---- */
+  document.querySelectorAll('[data-reveal]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const t=document.getElementById(btn.getAttribute('data-reveal'));
+      if(t){t.classList.add('shown');}
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- generic quick-check polls: button[data-poll-reveal="pollId"] ---- */
+  document.querySelectorAll('[data-poll-reveal]').forEach(btn=>{
+    const group=document.getElementById(btn.getAttribute('data-poll-reveal'));
+    if(!group) return;
+    const opts=[...group.querySelectorAll('.poll-opt')];
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    btn.addEventListener('click',()=>{
+      group.classList.add('revealed');
+      opts.forEach(o=>{ if(o.dataset.correct==='true') o.classList.add('correct'); });
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- generic diagnose (flawed-argument) groups ---- */
+  document.querySelectorAll('.diag').forEach(group=>{
+    const opts=[...group.querySelectorAll('.diag-opt')];
+    const revealBtn=group.parentElement.querySelector('[data-diag-reveal]');
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    if(revealBtn){
+      revealBtn.addEventListener('click',()=>{
+        group.classList.add('revealed');
+        opts.forEach(o=>{if(o.dataset.bad==='true')o.classList.add('bad');});
+        revealBtn.style.display='none';
+        const note=group.parentElement.querySelector('[data-diag-note]');
+        if(note) note.style.display='block';
+      });
+    }
+  });
+
+  /* ---- static shift diagrams: button[data-reveal-svg="key"] ---- */
+  const svgShifts={
+    q4shift : ['q4d2','q4d2t','q4arr','q4hg','q4vg','q4dot','q4lab','q4fix'],
+    q5read  : ['q5ah','q5av','q5ad','q5al','q5bv','q5bh','q5bd','q5bl'],
+    q7shift : ['q7s2','q7s2t','q7arr','q7hg','q7vg','q7dot','q7lab','q7fix'],
+    eqmark  : ['eqh','eqv','eqdot','eqlab','eqp','eqq'],
+    q11shift: ['q11d2','q11d2t','q11arr'],   /* also driven by the stage-1 animation */
+    q12shift: ['q12s2','q12s2t','q12arr']    /* also driven by the stage-1 animation */
+  };
+  function revealShift(key){
+    (svgShifts[key]||[]).forEach(id=>{const el=document.getElementById(id); if(el) el.setAttribute('opacity',1);});
+  }
+  document.querySelectorAll('[data-reveal-svg]').forEach(btn=>{
+    const key=btn.getAttribute('data-reveal-svg');
+    btn.addEventListener('click',()=>{ revealShift(key); btn.style.display='none'; });
+  });
+
+  /* ---- condition cards: button[data-cond="bodyId"] ---- */
+  document.querySelectorAll('[data-cond]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const body=document.getElementById(btn.getAttribute('data-cond'));
+      if(body){body.classList.add('shown');}
+      btn.style.display='none';
+    });
+  });
+
+  /* =====================================================================
+     ANIMATION SCAFFOLD
+     Shared cosine ease over 2600ms. Every animation built through
+     makeAnim() gets its own reset(), finish() and reduced-motion branch.
+     ===================================================================== */
+  const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const DUR = 2600;
+  function ease(p){return p<1 ? (0.5-0.5*Math.cos(Math.PI*p)) : 1;}
+
+  /* plot geometry — price on the vertical axis, quantity on the horizontal */
+  const xQ = Q => 70 + 22*Q;
+  const yP = P => 310 - 22*P;
+  const $  = id => document.getElementById(id);
+  function money(P){ return '$' + P.toFixed(2); }
+  function qty(n){ return (Math.round(n*10)/10).toString(); }
+  /* A parallel shift is animated as a pure horizontal translation of a clipped
+     line — moving the endpoints vertically is the same shift mathematically but
+     reads on screen as the curve sliding straight up. SHIFT_PX = 4 burritos. */
+  const SHIFT_PX = 88;
+  function slideD(el,p){ seg(el, -30+SHIFT_PX*p, 40, 530+SHIFT_PX*p, 320); }   /* demand  */
+  function slideS(el,p){ seg(el, -30+SHIFT_PX*p, 316, 530+SHIFT_PX*p, 36); }   /* supply  */
+  function seg(el,x1,y1,x2,y2){ el.setAttribute('x1',x1);el.setAttribute('y1',y1);el.setAttribute('x2',x2);el.setAttribute('y2',y2); }
+  function dot(el,x,y){ el.setAttribute('cx',x);el.setAttribute('cy',y); }
+
+  function makeAnim(o){
+    const playBtn = $(o.play);
+    if(!playBtn) return;
+    const resetBtn = $(o.reset);
+    const shockEls = (o.shock||[]).map($).filter(Boolean);
+    const endEls   = (o.end||[]).map($).filter(Boolean);
+    /* afterEls appear only once the sweep is over — e.g. the arrow summarising a shift */
+    const afterEls = (o.after||[]).map($).filter(Boolean);
+    const endAt    = (o.endAt===undefined) ? 0.5 : o.endAt;
+    const dur      = o.dur || DUR;
+    /* marks = greyed-out historical states, uncovered as the sweep passes them */
+    const marks    = (o.marks||[]).map(m=>({at:m.at, els:m.ids.map($).filter(Boolean)}));
+    const allMarks = marks.reduce((a,m)=>a.concat(m.els),[]);
+    let raf;
+    function reset(){
+      cancelAnimationFrame(raf);
+      o.place(0);
+      shockEls.concat(endEls).concat(afterEls).concat(allMarks).forEach(e=>e.setAttribute('opacity',0));
+      if(o.onReset) o.onReset();
+    }
+    function finish(){
+      o.place(1);
+      shockEls.concat(endEls).concat(afterEls).concat(allMarks).forEach(e=>e.setAttribute('opacity',1));
+      if(o.onFinish) o.onFinish();
+    }
+    function play(){
+      reset();
+      if(o.onStart) o.onStart();
+      shockEls.forEach(e=>e.setAttribute('opacity',1));
+      if(REDUCED){ finish(); return; }          /* reduced-motion branch */
+      const t0=performance.now();
+      function step(now){
+        const p=Math.min(1,(now-t0)/dur), e=ease(p);
+        o.place(e);
+        marks.forEach(m=>{ if(e>=m.at) m.els.forEach(el=>el.setAttribute('opacity',1)); });
+        if(e>endAt) endEls.forEach(el=>el.setAttribute('opacity',1));
+        if(p>=1) finish(); else raf=requestAnimationFrame(step);
+      }
+      raf=requestAnimationFrame(step);
+    }
+    playBtn.onclick=play;
+    if(resetBtn) resetBtn.addEventListener('click',reset);   /* shared Reset buttons stack */
+    reset();
+  }
+
+  /* ---------------------------------------------------------------------
+     makeStepper — walks a schedule table one row at a time, highlighting
+     the row and ringing the matching dot on the curve. Same discipline as
+     makeAnim: its own reset(), finish() and reduced-motion branch.
+     --------------------------------------------------------------------- */
+  function makeStepper(o){
+    const playBtn=$(o.play);
+    if(!playBtn) return;
+    const resetBtn=$(o.reset);
+    const rows =o.rows.map($);
+    const rings=o.rings.map($);
+    const $n   =$(o.note);
+    const n    =rows.length;
+    let raf, last=-1;
+    function clear(){
+      rows.forEach(r=>r&&r.classList.remove('hl'));
+      rings.forEach(r=>r&&r.setAttribute('opacity',0));
+      last=-1;
+    }
+    function at(k){
+      if(k===last) return;
+      clear(); last=k;
+      if(rows[k])  rows[k].classList.add('hl');
+      if(rings[k]) rings[k].setAttribute('opacity',1);
+      if($n) $n.textContent=o.labels[k];
+    }
+    function reset(){
+      cancelAnimationFrame(raf);
+      clear();
+      if($n) $n.textContent=o.idle;
+    }
+    function finish(){
+      at(n-1);
+      if($n) $n.textContent=o.done;
+    }
+    function play(){
+      reset();
+      if(REDUCED){ finish(); return; }          /* reduced-motion branch */
+      const t0=performance.now(), stepMs=o.stepMs||850;
+      function tick(now){
+        const el=now-t0;
+        if(el >= stepMs*n){ finish(); return; }
+        at(Math.min(n-1, Math.floor(el/stepMs)));
+        raf=requestAnimationFrame(tick);
+      }
+      raf=requestAnimationFrame(tick);
+    }
+    playBtn.onclick=play;
+    if(resetBtn) resetBtn.onclick=reset;
+    reset();
+  }
+
+  /* One boxed axis-to-axis read: box the start tick, travel to the curve,
+     turn, land on the other axis, box the answer. Used on Q2 and Q5. */
+  function boxedRead(o){
+    const a=$(o.leg1), b=$(o.leg2), d=$(o.dot), $v=$(o.out);
+    if(!d) return;
+    const horizFirst = o.horizFirst;
+    makeAnim({
+      play:o.play, reset:o.reset,
+      shock:[o.dot, o.leg1, o.startBox].concat(o.extraShock||[]),
+      end:[o.leg2, o.endBox].concat(o.extraEnd||[]),
+      place:function(p){
+        if(p<=0.5){
+          const t=p/0.5;
+          if(horizFirst){
+            const x=o.x0+(o.xTurn-o.x0)*t;
+            dot(d,x,o.y0); seg(a,o.x0,o.y0,x,o.y0); seg(b,o.xTurn,o.y0,o.xTurn,o.y0);
+          }else{
+            const y=o.y0+(o.yTurn-o.y0)*t;
+            dot(d,o.x0,y); seg(a,o.x0,o.y0,o.x0,y); seg(b,o.x0,o.yTurn,o.x0,o.yTurn);
+          }
+          $v.textContent='?';
+        }else{
+          const t=(p-0.5)/0.5;
+          if(horizFirst){
+            const y=o.y0+(o.yEnd-o.y0)*t;
+            dot(d,o.xTurn,y); seg(a,o.x0,o.y0,o.xTurn,o.y0); seg(b,o.xTurn,o.y0,o.xTurn,y);
+          }else{
+            const x=o.x0+(o.xEnd-o.x0)*t;
+            dot(d,x,o.yTurn); seg(a,o.x0,o.y0,o.x0,o.yTurn); seg(b,o.x0,o.yTurn,x,o.yTurn);
+          }
+          $v.textContent=o.answer;
+        }
+      },
+      onReset:function(){ $v.textContent='?'; if(o.onReset) o.onReset(); },
+      onStart:function(){ if(o.note) $(o.note).textContent=o.running; },
+      onFinish:function(){ $v.textContent=o.answer; if(o.note) $(o.note).textContent=o.doneText; }
+    });
+  }
+
+  /* =====================================================================
+     Slide 5 · walk the demand schedule: highlight each row, ring its dot
+     ===================================================================== */
+  makeStepper({
+    play:'d5play', reset:'d5reset', note:'d5note',
+    rows:['d5r0','d5r1','d5r2','d5r3','d5r4'],
+    rings:['d5k0','d5k1','d5k2','d5k3','d5k4'],
+    labels:['Row A → ($10, 0) — too dear; you buy none.',
+            'Row B → ($8, 4) — four burritos a week.',
+            'Row C → ($6, 8) — the row we keep coming back to.',
+            'Row D → ($4, 12) — cheaper, so more.',
+            'Row E → ($2, 16) — sixteen a week.'],
+    idle:'Press play. Each row of the table is one dot on the curve.',
+    done:'Five rows, five dots, one line. The table and the curve say the same thing.'
+  });
+
+  /* =====================================================================
+     Q2 · the same curve read from either axis, with the start and the
+     answer boxed on their axes
+     (a) $8 -> right to D -> down to 4      (b) 12 -> up to D -> left to $4
+     ===================================================================== */
+  boxedRead({
+    play:'a2aplay', reset:'a2reset', dot:'a2adot', leg1:'a2ah', leg2:'a2av',
+    startBox:'a2abox', endBox:'a2abox2', out:'a2aq', note:'a2note',
+    horizFirst:true, x0:70, y0:yP(8), xTurn:xQ(4), yEnd:310, answer:'4',
+    running:'Across from the boxed $8 to the curve, then straight down …',
+    doneText:'$8 lands on 4 burritos — the boxed number on the quantity axis.'
+  });
+  boxedRead({
+    play:'a2bplay', reset:'a2reset', dot:'a2bdot', leg1:'a2bv', leg2:'a2bh',
+    startBox:'a2bbox', endBox:'a2bbox2', out:'a2bp', note:'a2note',
+    horizFirst:false, x0:xQ(12), y0:310, yTurn:yP(4), xEnd:70, answer:'$4',
+    running:'Up from the boxed 12 to the curve, then straight left …',
+    doneText:'12 burritos takes a price of $4 — the boxed number on the price axis.'
+  });
+
+  /* =====================================================================
+     Q3 · price $6 -> $8, the dot slides ALONG an unchanged demand curve
+     D: Q = 20 - 2P
+     ===================================================================== */
+  (function(){
+    if(!$('a3play')) return;
+    const d=$('a3dot'), h=$('a3h'), v=$('a3v'), $p=$('a3p'), $q=$('a3q'), $n=$('a3note');
+    makeAnim({
+      play:'a3play', reset:'a3reset',
+      shock:['a3dot','a3h','a3v','a3arrow','a3cgh','a3cgv'], end:['a3btxt'], endAt:0.9,
+      place:function(p){
+        const P=6+2*p, Q=20-2*P, x=xQ(Q), y=yP(P);
+        dot(d,x,y); seg(h,70,y,x,y); seg(v,x,310,x,y);
+        $p.textContent=money(P); $q.textContent=qty(Q);
+      },
+      onReset:function(){ $p.textContent='$6.00'; $q.textContent='8'; $n.textContent='Watch the curve, not the dot.'; },
+      onStart:function(){ $n.textContent='Sliding up the same curve …'; },
+      onFinish:function(){ $p.textContent='$8.00'; $q.textContent='4';
+        $n.textContent='The dot moved. The curve did not — C is still sitting there in grey.'; }
+    });
+  })();
+
+  /* =====================================================================
+     Q4 · income rises · the whole demand curve slides right to 12 - 0.5Q
+     while the price is pinned at $6 and the quantity runs 8 -> 12
+     ===================================================================== */
+  (function(){
+    if(!$('q4play')) return;
+    const d2=$('q4d2'), dot_=$('q4dot'), hg=$('q4hg'), vg=$('q4vg'),
+          $q=$('q4q'), $n=$('q4note');
+    makeAnim({
+      play:'q4play', reset:'q4reset', dur:3400,
+      shock:['q4d2','q4dot','q4hg','q4vg'], end:['q4d2t','q4lab','q4fix'], after:['q4arr'], endAt:0.93,
+      place:function(p){
+        slideD(d2, p);              /* the whole curve travels right by 4 burritos */
+        const Q=8+4*p, x=xQ(Q), y=yP(6);
+        dot(dot_,x,y); seg(hg,246,y,x,y); seg(vg,x,310,x,y);
+        $q.textContent=qty(Q);
+      },
+      onReset:function(){ $q.textContent='8';
+        $n.textContent='Hold the price at $6 and watch the whole curve travel.'; },
+      onStart:function(){ const t=$('q4nums'); if(t) t.classList.add('shown');
+        $n.textContent='Every price is getting a new partner …'; },
+      onFinish:function(){ $q.textContent='12';
+        $n.textContent='Same $6, new curve, 12 burritos. No point on the old curve could say that.'; }
+    });
+  })();
+
+  /* =====================================================================
+     Slide 12 · walk the supply schedule: highlight each row, ring its dot
+     ===================================================================== */
+  makeStepper({
+    play:'s12play', reset:'s12reset', note:'s12note',
+    rows:['s12r0','s12r1','s12r2','s12r3','s12r4','s12r5','s12r6'],
+    rings:['s12k0','s12k1','s12k2','s12k3','s12k4','s12k5','s12k6'],
+    labels:['Row A → ($2, 0) — not worth firing up the grill.',
+            'Row B → ($3, 2) — two burritos.',
+            'Row C → ($4, 4) — four.',
+            'Row D → ($5, 6) — six.',
+            'Row E → ($6, 8) — the row we keep coming back to.',
+            'Row F → ($7, 10) — ten.',
+            'Row G → ($8, 12) — twelve a week.'],
+    idle:'Press play. Each row of the table is one dot on the curve.',
+    done:'Seven rows, seven dots, one line. The table and the curve say the same thing.'
+  });
+
+  /* =====================================================================
+     Q5 · the supply curve read from either axis, start and answer boxed
+     (a) $3 -> right to S -> down to 2      (b) 8 -> up to S -> left to $6
+     ===================================================================== */
+  boxedRead({
+    play:'q5aplay', reset:'q5reset', dot:'q5ad', leg1:'q5ah', leg2:'q5av',
+    startBox:'q5abox', endBox:'q5abox2', out:'q5aq', note:'q5note',
+    extraShock:['q5a3'], extraEnd:['q5al'],
+    horizFirst:true, x0:70, y0:yP(3), xTurn:xQ(2), yEnd:310, answer:'2',
+    running:'Across from the boxed $3 to the curve, then straight down …',
+    doneText:'$3 lands on 2 burritos — the boxed number on the quantity axis.'
+  });
+  boxedRead({
+    play:'q5bplay', reset:'q5reset', dot:'q5bd', leg1:'q5bv', leg2:'q5bh',
+    startBox:'q5bbox', endBox:'q5bbox2', out:'q5bp', note:'q5note',
+    extraEnd:['q5bl'],
+    horizFirst:false, x0:xQ(8), y0:310, yTurn:yP(6), xEnd:70, answer:'$6',
+    running:'Up from the boxed 8 to the curve, then straight left …',
+    doneText:'8 burritos takes a price of $6 — the boxed number on the price axis.'
+  });
+
+  /* =====================================================================
+     Q6 · price $6 -> $7, the dot slides ALONG an unchanged supply curve
+     S: Q = 2P - 4
+     ===================================================================== */
+  (function(){
+    if(!$('a6play')) return;
+    const d=$('a6dot'), h=$('a6h'), v=$('a6v'), $p=$('a6p'), $q=$('a6q'), $n=$('a6note');
+    makeAnim({
+      play:'a6play', reset:'a6reset',
+      shock:['a6dot','a6h','a6v','a6arrow'], end:['a6btxt'], endAt:0.9,
+      place:function(p){
+        const P=6+p, Q=2*P-4, x=xQ(Q), y=yP(P);
+        dot(d,x,y); seg(h,70,y,x,y); seg(v,x,310,x,y);
+        $p.textContent=money(P); $q.textContent=qty(Q);
+      },
+      onReset:function(){ $p.textContent='$6.00'; $q.textContent='8'; $n.textContent='Watch the curve, not the dot.'; },
+      onStart:function(){ $n.textContent='Sliding up the same curve …'; },
+      onFinish:function(){ $p.textContent='$7.00'; $q.textContent='10'; $n.textContent='The dot moved. The curve did not.'; }
+    });
+  })();
+
+  /* =====================================================================
+     Q9 · surplus at $8 closing as the price falls to $6
+     Qd = 20 - 2P ; Qs = 2P - 4 ; gap = Qs - Qd
+     ===================================================================== */
+  (function(){
+    if(!$('s9play')) return;
+    const gap=$('s9gap'), lvl=$('s9lvl'), dd=$('s9dd'), ds=$('s9ds'), lab=$('s9lab'),
+          $p=$('s9p'), $qs=$('s9qs'), $qd=$('s9qd'), $g=$('s9gapn'), $n=$('s9note');
+    const vd=$('s9vd'), vs=$('s9vs');
+    makeAnim({
+      play:'s9play', reset:'s9reset', dur:5200,
+      shock:['s9gap','s9lvl','s9dd','s9ds','s9lab','s9vd','s9vs'], end:['s9end'], endAt:0.97,
+      marks:[{at:0.001, ids:['s9g8b','s9g8vl','s9g8vr','s9g8t']},
+             {at:0.5,   ids:['s9g7b','s9g7vl','s9g7vr','s9g7t']}],
+      place:function(p){
+        const P=8-2*p, Qd=20-2*P, Qs=2*P-4, y=yP(P), xd=xQ(Qd), xs=xQ(Qs);
+        seg(gap,xd,y,xs,y); seg(lvl,70,y,430,y);
+        seg(vd,xd,y,xd,310); seg(vs,xs,y,xs,310);
+        dot(dd,xd,y); dot(ds,xs,y);
+        lab.setAttribute('x',(xd+xs)/2); lab.setAttribute('y',y-14);
+        $p.textContent=money(P); $qs.textContent=qty(Qs); $qd.textContent=qty(Qd); $g.textContent=qty(Qs-Qd);
+      },
+      onReset:function(){ $p.textContent='$8.00'; $qs.textContent='?'; $qd.textContent='?'; $g.textContent='?';
+        $n.textContent='Press play and watch the gap. Grey bars mark where it has been.'; },
+      onStart:function(){ $n.textContent='Unsold burritos — the price is pushed down …'; },
+      onFinish:function(){ lab.setAttribute('opacity',0);
+        $p.textContent='$6.00'; $qs.textContent='8'; $qd.textContent='8'; $g.textContent='0';
+        $n.textContent='Both dots met at $6. Neither curve moved.'; }
+    });
+  })();
+
+  /* =====================================================================
+     Q10 · shortage at $4 closing as the price rises to $6
+     gap = Qd - Qs
+     ===================================================================== */
+  (function(){
+    if(!$('s10play')) return;
+    const gap=$('s10gap'), lvl=$('s10lvl'), dd=$('s10dd'), ds=$('s10ds'), lab=$('s10lab'),
+          $p=$('s10p'), $qs=$('s10qs'), $qd=$('s10qd'), $g=$('s10gapn'), $n=$('s10note');
+    const vd=$('s10vd'), vs=$('s10vs');
+    makeAnim({
+      play:'s10play', reset:'s10reset', dur:5200,
+      shock:['s10gap','s10lvl','s10dd','s10ds','s10lab','s10vd','s10vs'], end:['s10end'], endAt:0.97,
+      marks:[{at:0.001, ids:['s10g4b','s10g4vl','s10g4vr','s10g4t']},
+             {at:0.5,   ids:['s10g5b','s10g5vl','s10g5vr','s10g5t']}],
+      place:function(p){
+        const P=4+2*p, Qd=20-2*P, Qs=2*P-4, y=yP(P), xd=xQ(Qd), xs=xQ(Qs);
+        seg(gap,xs,y,xd,y); seg(lvl,70,y,430,y);
+        seg(vd,xd,y,xd,310); seg(vs,xs,y,xs,310);
+        dot(dd,xd,y); dot(ds,xs,y);
+        lab.setAttribute('x',(xd+xs)/2); lab.setAttribute('y',y+22);
+        $p.textContent=money(P); $qd.textContent=qty(Qd); $qs.textContent=qty(Qs); $g.textContent=qty(Qd-Qs);
+      },
+      onReset:function(){ $p.textContent='$4.00'; $qd.textContent='?'; $qs.textContent='?'; $g.textContent='?';
+        $n.textContent='Press play and watch the gap. Grey bars mark where it has been.'; },
+      onStart:function(){ $n.textContent='A line out the door — the price is pushed up …'; },
+      onFinish:function(){ lab.setAttribute('opacity',0);
+        $p.textContent='$6.00'; $qd.textContent='8'; $qs.textContent='8'; $g.textContent='0';
+        $n.textContent='Both dots met at $6. Neither curve moved.'; }
+    });
+  })();
+
+  /* =====================================================================
+     Q11 · incomes rise · D shifts to P = 12 - 0.5Q, price climbs $6 -> $7
+     Qd2 = 24 - 2P ; Qs = 2P - 4 ; new equilibrium ($7, 10)
+     ===================================================================== */
+  (function(){
+    if(!$('q11play')) return;
+    const gap=$('q11gap'), lvl=$('q11lvl'), dd=$('q11dd'), ds=$('q11ds'), lab=$('q11lab'),
+          $p=$('q11p'), $qd=$('q11qd'), $qs=$('q11qs'), $g=$('q11gapn'), $n=$('q11note');
+    const vd=$('q11vd'), vs=$('q11vs'), d2=$('q11d2');
+    /* stage 1 — the curve itself slides right from D to D2 */
+    const shiftD = p => slideD(d2, p);
+    makeAnim({
+      play:'q11splay', reset:'q11reset', dur:3400,
+      shock:['q11d2'], end:['q11d2t'], after:['q11arr'], endAt:0.93,
+      place:shiftD,
+      onReset:function(){ $n.textContent='Shift the curve first, then let the price adjust.'; },
+      onStart:function(){ $n.textContent='Richer buyers want more at every price …'; },
+      onFinish:function(){ $n.textContent='D₂ = 12 − 0.5Q. Now the old $6 no longer clears the market.'; }
+    });
+    /* stage 2 — the price climbs until the gap closes */
+    makeAnim({
+      play:'q11play', reset:'q11reset', dur:5200,
+      shock:['q11gap','q11lvl','q11dd','q11ds','q11lab','q11vd','q11vs'], end:['q11end'], endAt:0.97,
+      marks:[{at:0.001, ids:['q11g6b','q11g6vl','q11g6vr','q11g6t']},
+             {at:0.5,   ids:['q11g65b','q11g65vl','q11g65vr','q11g65t']}],
+      place:function(p){
+        const P=6+p, Qd=24-2*P, Qs=2*P-4, y=yP(P), xd=xQ(Qd), xs=xQ(Qs);
+        seg(gap,xs,y,xd,y); seg(lvl,70,y,430,y);
+        seg(vd,xd,y,xd,310); seg(vs,xs,y,xs,310);
+        dot(dd,xd,y); dot(ds,xs,y);
+        lab.setAttribute('x',(xd+xs)/2); lab.setAttribute('y',y-14);
+        $p.textContent=money(P); $qd.textContent=qty(Qd); $qs.textContent=qty(Qs); $g.textContent=qty(Qd-Qs);
+      },
+      onReset:function(){ $p.textContent='$6.00'; $qd.textContent='?'; $qs.textContent='?'; $g.textContent='?';
+        $n.textContent='Shift the curve first, then let the price adjust.'; },
+      onStart:function(){ shiftD(1); revealShift('q11shift');   /* in case stage 1 was skipped */
+        $n.textContent='Excess demand at the old $6 — the price climbs …'; },
+      onFinish:function(){ lab.setAttribute('opacity',0);
+        $p.textContent='$7.00'; $qd.textContent='10'; $qs.textContent='10'; $g.textContent='0';
+        $n.textContent='A → B: $7 and 10 burritos. Price up, quantity up.'; }
+    });
+  })();
+
+  /* =====================================================================
+     Q12 · cook wages fall · S shifts to P = 0.5Q, price falls $6 -> $5
+     Qs2 = 2P ; Qd = 20 - 2P ; new equilibrium ($5, 10)
+     ===================================================================== */
+  (function(){
+    if(!$('q12play')) return;
+    const gap=$('q12gap'), lvl=$('q12lvl'), dd=$('q12dd'), ds=$('q12ds'), lab=$('q12lab'),
+          $p=$('q12p'), $qs=$('q12qs'), $qd=$('q12qd'), $g=$('q12gapn'), $n=$('q12note');
+    const vd=$('q12vd'), vs=$('q12vs'), s2=$('q12s2');
+    /* stage 1 — the curve itself slides right from S to S2 */
+    const shiftS = p => slideS(s2, p);
+    makeAnim({
+      play:'q12splay', reset:'q12reset', dur:3400,
+      shock:['q12s2'], end:['q12s2t'], after:['q12arr'], endAt:0.93,
+      place:shiftS,
+      onReset:function(){ $n.textContent='Shift the curve first, then let the price adjust.'; },
+      onStart:function(){ $n.textContent='Cheaper cooks — more burritos at every price …'; },
+      onFinish:function(){ $n.textContent='S₂ = 0.5Q. Now the old $6 no longer clears the market.'; }
+    });
+    /* stage 2 — the price falls until the gap closes */
+    makeAnim({
+      play:'q12play', reset:'q12reset', dur:5200,
+      shock:['q12gap','q12lvl','q12dd','q12ds','q12lab','q12vd','q12vs'], end:['q12end'], endAt:0.97,
+      marks:[{at:0.001, ids:['q12g6b','q12g6vl','q12g6vr','q12g6t']},
+             {at:0.5,   ids:['q12g55b','q12g55vl','q12g55vr','q12g55t']}],
+      place:function(p){
+        const P=6-p, Qs=2*P, Qd=20-2*P, y=yP(P), xs=xQ(Qs), xd=xQ(Qd);
+        seg(gap,xd,y,xs,y); seg(lvl,70,y,430,y);
+        seg(vd,xd,y,xd,310); seg(vs,xs,y,xs,310);
+        dot(dd,xd,y); dot(ds,xs,y);
+        lab.setAttribute('x',(xd+xs)/2); lab.setAttribute('y',y-14);
+        $p.textContent=money(P); $qs.textContent=qty(Qs); $qd.textContent=qty(Qd); $g.textContent=qty(Qs-Qd);
+      },
+      onReset:function(){ $p.textContent='$6.00'; $qs.textContent='?'; $qd.textContent='?'; $g.textContent='?';
+        $n.textContent='Shift the curve first, then let the price adjust.'; },
+      onStart:function(){ shiftS(1); revealShift('q12shift');   /* in case stage 1 was skipped */
+        $n.textContent='Excess supply at the old $6 — the price falls …'; },
+      onFinish:function(){ lab.setAttribute('opacity',0);
+        $p.textContent='$5.00'; $qs.textContent='10'; $qd.textContent='10'; $g.textContent='0';
+        $n.textContent='A → B: $5 and 10 burritos. Price down, quantity up.'; }
+    });
+  })();
+
+  show(0);
+})();
+</script>
+
+</body>
+</html>

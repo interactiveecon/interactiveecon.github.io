@@ -1,0 +1,2017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECON 002 · Two Markets, One Curve</title>
+<style>
+  :root{
+    --ink:#14243A;          /* near-navy ink */
+    --accent:#1F4E79;       /* deep blue (from worksheets) */
+    --accent-soft:#8FAADC;
+    --paper:#F6F4EE;        /* warm chalk-paper */
+    --paper-line:#E4E0D5;
+    --gold:#8A5900;
+    --gold-soft:#FBF1DC;
+    --red:#C0392B;
+    --grey:#5A5F66;
+    --chalk:#FbFaF7;
+    --shadow:0 8px 30px rgba(20,36,58,.10);
+    --mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Georgia','Iowan Old Style',serif;
+    color:var(--ink);
+    background:var(--paper);
+    overflow:hidden;
+  }
+  /* ---------- deck scaffold ---------- */
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;
+    padding:clamp(1.25rem,4vw,4.5rem) clamp(1.5rem,6vw,6rem);
+    /* extra bottom room so content never hides behind the fixed nav bar (~46px) */
+    padding-bottom:calc(46px + clamp(1rem,3vw,2rem));
+    /* if a slide is taller than the screen, scroll it instead of clipping/overlapping */
+    overflow-y:auto;overflow-x:hidden;
+    scroll-padding-bottom:46px;
+    opacity:0;
+    transition:opacity .38s ease;
+  }
+  .slide.active{display:flex;opacity:1;animation:rise .45s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide.active{animation:none}
+    .slide{transition:none}
+    *{transition-duration:.001ms !important;animation-duration:.001ms !important}
+  }
+  /* visible keyboard focus (WCAG 2.4.7) */
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+    outline:3px solid var(--accent);outline-offset:3px;border-radius:6px;
+  }
+  :focus:not(:focus-visible){outline:none}
+  /* ---------- typography ---------- */
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--grey);margin-bottom:1.1rem;font-weight:600;
+  }
+  h1{font-size:clamp(2.4rem,5.5vw,4.4rem);line-height:1.02;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3.2vw,2.4rem);line-height:1.1;font-weight:700;letter-spacing:-.01em;margin-bottom:.4rem}
+  .lede{font-size:clamp(1.05rem,1.7vw,1.35rem);line-height:1.5;color:var(--ink);max-width:52ch}
+  .muted{color:var(--grey)}
+  .serif-note{font-style:italic;color:var(--grey);font-size:1rem;line-height:1.5}
+  strong{font-weight:700}
+  .accent{color:var(--accent)}
+  .red{color:var(--red)}
+  .gold{color:var(--gold)}
+  /* title rule */
+  h2 + .titlerule{height:2px;background:linear-gradient(90deg,var(--accent-soft),transparent);
+    width:min(100%,640px);margin:.2rem 0 1.4rem}
+  /* ---------- model cards ---------- */
+  .models{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin:1.4rem 0;max-width:900px}
+  .model{
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;
+    padding:1.4rem 1.6rem;box-shadow:var(--shadow);position:relative;
+  }
+  .model .tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:.6rem;display:block}
+  .model .eq{font-family:var(--mono);font-size:1.35rem;color:var(--ink)}
+  .model .eq .coef{color:var(--red);font-weight:700}
+  .model.dim{opacity:.4;filter:saturate(.4)}
+  .model.hi{border-color:var(--accent);box-shadow:0 8px 30px rgba(31,78,121,.22)}
+  .model .body{font-size:1rem;line-height:1.5;margin-top:.7rem}
+  .model.warm{background:var(--gold-soft);border-color:#E2CFA4}
+  .model.warm .tag{color:var(--gold)}
+  /* ---------- boxes ---------- */
+  .prompt,.reveal,.predict{
+    border-radius:10px;padding:1.05rem 1.3rem;max-width:820px;line-height:1.5;
+    font-family:'Georgia',serif;font-size:1.08rem;
+  }
+  .prompt{background:#EEF3FA;border-left:4px solid var(--accent)}
+  .reveal{background:var(--gold-soft);border-left:4px solid var(--gold)}
+  .cue{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;display:block;margin-bottom:.4rem}
+  .prompt .cue{color:var(--accent)}
+  .reveal .cue{color:var(--gold)}
+  .predict .cue{color:var(--red)}
+  .predict{background:#FBEEEC;border-left:4px solid var(--red)}
+  .prompt p,.reveal p,.predict p{margin:0;line-height:1.5}
+  .prompt .cue + p,.reveal .cue + p,.predict .cue + p{margin-top:.15rem}
+  .prompt ol,.predict ol,.reveal ol{margin:.5rem 0 0 1.3rem;line-height:1.6}
+  .prompt li,.predict li,.reveal li{margin-bottom:.25rem}
+  /* chain / mono line */
+  .chain{
+    font-family:var(--mono);background:#EDF1F8;border:1px solid var(--accent-soft);
+    border-radius:8px;padding:.7rem 1rem;font-size:1.05rem;color:var(--accent);
+    display:inline-block;margin-top:.4rem
+  }
+  .chain.warm{background:var(--gold-soft);border-color:#E2CFA4;color:var(--gold)}
+  /* ---------- interactive graph panel ---------- */
+  .graphwrap{display:grid;grid-template-columns:1.15fr .85fr;gap:2rem;align-items:center;margin-top:.6rem;flex:1 0 auto}
+  @media (max-width:900px){.graphwrap{grid-template-columns:1fr}}
+  .panel{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;padding:1.2rem;box-shadow:var(--shadow)}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .controls{display:flex;flex-direction:column;gap:1.3rem}
+  .readout{font-family:var(--mono);font-size:.92rem;line-height:1.7;color:var(--ink);background:#EDF1F8;border-radius:8px;padding:.8rem 1rem}
+  .readout .big{font-size:1.25rem;color:var(--accent);font-weight:700}
+  .readout .lbl2{color:var(--grey)}
+  .btn{
+    font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.7rem 1.2rem;cursor:pointer;
+    box-shadow:0 3px 10px rgba(31,78,121,.3);transition:transform .1s,background .2s;align-self:flex-start
+  }
+  .btn:hover{background:#173a5c;transform:translateY(-1px)}
+  /* a spent reveal button stays in place — hiding it slid the row under the
+     cursor, so a second click landed on the next answer (disabled controls
+     are exempt from the contrast minimum) */
+  .btn:disabled,.btn.ghost:disabled{opacity:.38;cursor:default;transform:none;box-shadow:none}
+  .btn:disabled:hover{background:var(--accent);transform:none}
+  .btn.ghost:disabled:hover{background:transparent}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
+  .btn.ghost:hover{background:#EEF3FA}
+  .btnrow{display:flex;gap:.7rem;flex-wrap:wrap}
+  /* ---------- poll ---------- */
+  .poll-opts{display:flex;flex-direction:column;gap:.8rem;max-width:860px;margin-top:1.1rem}
+  .poll-opt{
+    display:flex;align-items:stretch;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;
+    cursor:pointer;background:var(--chalk);transition:border-color .2s,transform .08s;position:relative;
+    width:100%;text-align:left;font:inherit;color:inherit;padding:0
+  }
+  .poll-opt:hover{border-color:var(--accent-soft)}
+  .poll-opt:active{transform:scale(.995)}
+  .poll-opt .num{background:var(--accent);color:#fff;font-family:var(--mono);font-weight:700;
+    display:flex;align-items:center;justify-content:center;padding:0 1.1rem;font-size:1.1rem;z-index:2}
+  .poll-opt .txt{padding:.9rem 1.1rem;line-height:1.4;z-index:2;font-size:1.02rem;font-family:'Georgia',serif}
+  .poll.revealed .poll-opt{opacity:.5;transition:opacity .4s}
+  .poll.revealed .poll-opt.correct{opacity:1;border-color:var(--gold);background:var(--gold-soft)}
+  .poll-opt.correct .num{background:var(--gold)}
+  .poll-opt.correct .txt::after{content:" ✓ correct";color:var(--gold);font-family:var(--mono);font-weight:700;font-size:.82rem}
+  .poll-hint{font-family:var(--mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-top:.9rem;font-weight:600}
+  /* ---------- footer / nav ---------- */
+  .chrome{position:fixed;bottom:0;left:0;right:0;height:46px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 1.4rem;font-family:var(--mono);font-size:.72rem;
+    letter-spacing:.08em;color:var(--grey);pointer-events:none;z-index:50}
+  .chrome .course{text-transform:uppercase}
+  .progress-track{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:60}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-soft));width:0;transition:width .35s ease}
+  .navhint{display:flex;gap:1.2rem;align-items:center;pointer-events:auto}
+  .navhint button{pointer-events:auto;background:none;border:none;color:var(--grey);cursor:pointer;font-family:var(--mono);font-size:.9rem;padding:.2rem .5rem;border-radius:5px}
+  .navhint button:hover{color:var(--accent);background:rgba(31,78,121,.08)}
+  .kbd{font-family:var(--mono);font-size:.66rem;border:1px solid var(--paper-line);border-radius:4px;padding:.1rem .35rem;color:var(--grey)}
+  /* content column helper */
+  .col{display:flex;flex-direction:column;gap:1.1rem;flex:1 0 auto;justify-content:center}
+  .grow{flex:1 0 auto}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+  @media (max-width:900px){.two{grid-template-columns:1fr}}
+  .calc{font-family:var(--mono);font-size:1.05rem;line-height:1.8}
+  .calc .lbl{color:var(--accent);font-weight:700}
+  .footnote{font-size:.92rem;color:var(--grey);font-style:italic}
+  /* two graphs above, readout + buttons below */
+  .ctrlrow{display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;align-items:start;margin-top:1rem}
+  @media (max-width:900px){.ctrlrow{grid-template-columns:1fr}}
+  .paneltitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;
+    font-weight:700;color:var(--accent);margin-bottom:.5rem}
+  .runsheet{display:grid;grid-template-columns:auto 1fr;gap:.35rem 1.1rem;font-family:var(--mono);font-size:.86rem;line-height:1.5;margin-top:.4rem}
+  .runsheet .rk{color:var(--accent);font-weight:700;white-space:nowrap}
+  /* title slide special */
+  .title-slide{justify-content:safe center}
+  .title-slide h1{margin:.6rem 0}
+  .signature{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:2rem}
+  /* ---------- section divider ---------- */
+  .divider{justify-content:safe center;background:linear-gradient(135deg,#1B3B5C,#14243A)}
+  .divider *{color:#F6F4EE}
+  .divider .eyebrow{color:#8FAADC}
+  .divider h1{font-size:clamp(2.2rem,5vw,4rem);color:#fff}
+  .divider .lede{color:#D6DEE9;max-width:52ch}
+  .divider .sectrail{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#8FAADC;margin-top:1.6rem}
+  .divider .through{font-family:var(--mono);font-size:.8rem;line-height:1.6;color:#D6DEE9;
+    border-left:3px solid #8FAADC;padding-left:.9rem;margin-top:1.4rem;max-width:60ch}
+  /* ---------- generic click-reveal ---------- */
+  .reveal-hidden{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .reveal-hidden.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* cell-level hide: keeps the table's layout, but the value is neither seen
+     nor read out by a screen reader until its reveal button is pressed */
+  .hid{visibility:hidden}
+  .hid.shown{visibility:visible}
+  /* condition cards (3-across; override grid-template-columns for 2) */
+  .condrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem}
+  @media (max-width:900px){.condrow{grid-template-columns:1fr !important}}
+  .condcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.5rem}
+  .condcard .ctitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .condcard .cbtn{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:.55rem .8rem;cursor:pointer;align-self:flex-start}
+  .condcard .cbtn:hover{background:#173a5c}
+  .condcard .cbody{opacity:0;max-height:0;overflow:hidden;transition:opacity .35s,max-height .45s}
+  .condcard .cbody.shown{opacity:1;max-height:none;overflow:visible;margin-top:.3rem}
+  .condcard .cnote{font-size:.95rem;line-height:1.5;color:var(--ink)}
+  .condcard ul{margin:.2rem 0 0 1.1rem;font-size:.95rem;line-height:1.55}
+  .condcard li{margin-bottom:.3rem}
+  .condcard .big{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--accent)}
+  .condcard.warm{background:var(--gold-soft);border-color:#E2CFA4}
+  .condcard.warm .ctitle,.condcard.warm .big{color:var(--gold)}
+  /* diagnose (numbered flawed-argument) list */
+  .diag{display:flex;flex-direction:column;gap:.7rem;max-width:920px;margin:1rem 0}
+  .diag-opt{display:flex;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;background:var(--chalk);width:100%;text-align:left;font:inherit;color:inherit;padding:0;cursor:pointer;transition:border-color .2s}
+  .diag-opt:hover{border-color:var(--accent-soft)}
+  .diag-opt .n{background:var(--grey);color:#fff;font-family:var(--mono);font-weight:700;display:flex;align-items:center;padding:0 1rem;font-size:1.05rem}
+  .diag-opt .s{padding:.85rem 1.1rem;line-height:1.45;font-family:'Georgia',serif;font-size:1.02rem}
+  .diag.revealed .diag-opt{opacity:.5}
+  .diag.revealed .diag-opt.bad{opacity:1;border-color:var(--red);background:#FBEEEC}
+  .diag-opt.bad .n{background:var(--red)}
+  .diag.revealed .diag-opt.bad .s::after{content:" ✗ the flaw";color:var(--red);font-family:var(--mono);font-weight:700;font-size:.8rem}
+  /* fill-in-the-blank close line */
+  .blankline{font-family:var(--mono);font-size:clamp(1.1rem,2.4vw,1.7rem);line-height:2;color:var(--ink);
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1.4rem 1.6rem;
+    box-shadow:var(--shadow);max-width:900px}
+  .blankline .bl{display:inline-block;min-width:9ch;border-bottom:2px solid var(--accent)}
+  /* ---------- data tables ---------- */
+  .sched{border-collapse:collapse;font-family:var(--mono);font-size:.86rem;background:var(--chalk);
+    border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+  .sched caption{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;color:var(--accent);text-align:left;padding:.5rem .8rem .35rem}
+  .sched th,.sched td{padding:.3rem .8rem;text-align:right;border-bottom:1px solid var(--paper-line)}
+  .sched th{color:var(--grey);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.66rem}
+  .sched td:first-child,.sched th:first-child{text-align:left;color:var(--accent);font-weight:700}
+  .sched tbody tr:last-child td{border-bottom:none}
+  .sched tr.tot td{border-top:2px solid var(--paper-line);font-weight:700;color:var(--gold)}
+  .sched tr.tot td:first-child{color:var(--gold)}
+  .sched.gold{background:var(--gold-soft)}
+  .sched.gold caption,.sched.gold td:first-child{color:var(--gold)}
+  .sched.txt td{text-align:left}
+  .sched.txt td:first-child{white-space:nowrap}
+  .sched .yes{color:var(--gold);font-weight:700}
+  .sched .no{color:var(--red);font-weight:700}
+  .sched .foreign{color:var(--red)}
+  .schedrow{display:flex;gap:1.4rem;flex-wrap:wrap;align-items:flex-start}
+  .sched tr.hl td{background:var(--gold-soft);color:var(--gold);font-weight:700}
+  .sched tr.hl td:first-child{color:var(--gold)}
+  .sched tr{transition:background .18s}
+  /* ---------- two-card takeaway ---------- */
+  .pair2{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin-top:.8rem}
+  @media (max-width:900px){.pair2{grid-template-columns:1fr}}
+  .pcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;
+    padding:1.2rem 1.3rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.7rem}
+  .pcard .ptag{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .pcard.warn .ptag{color:var(--red)}
+  .pcard .verdictbig{font-family:var(--mono);font-size:1rem;font-weight:700;line-height:1.5;color:var(--accent)}
+  .pcard.warn .verdictbig{color:var(--red)}
+  .pcard p{font-size:1rem;line-height:1.5}
+  /* ---------- reflow at 320px (WCAG 1.4.10) ---------- */
+  @media (max-width:700px){
+    .models{grid-template-columns:1fr}
+    .chain{max-width:100%;overflow-wrap:anywhere}
+    .sched{font-size:.76rem}
+    .sched th,.sched td{padding:.25rem .45rem}
+    .schedrow{gap:.9rem}
+    /* a wide table scrolls inside its own box rather than widening the slide */
+    .sched{display:block;overflow-x:auto;max-width:100%}
+    .col,.two > *,.graphwrap > *,.condrow > *,.pair2 > *,.schedrow > *{min-width:0}
+    /* a button column beside a table is sized in ch and set not to shrink;
+       at phone widths it has to give way instead of pushing the slide wide */
+    .schedrow > .col{flex:1 1 auto;max-width:100% !important}
+    .btnrow .btn{max-width:100%;overflow-wrap:anywhere}
+  }
+
+  /* ---------- additions for this unit ---------- */
+  /* an equation pill on a dark divider needs its own ground */
+  .divider .chain{background:rgba(143,170,220,.16);border-color:#8FAADC;color:#EAF0F8}
+  /* a card or chain that belongs to the money market / IR curve, so that IS
+     and IR never have to be told apart by position alone */
+  .model.hot{background:#FBEEEC;border-color:#E7C3BD}
+  .model.hot .tag{color:#A5291B}
+  .chain.hot{background:#FBEEEC;border-color:#E7B0A8;color:#A5291B}
+  .condcard.hot{background:#FBEEEC;border-color:#E7C3BD}
+  .condcard.hot .ctitle,.condcard.hot .big{color:#A5291B}
+  .condrow.four{grid-template-columns:repeat(4,1fr)}
+  @media (max-width:1100px){.condrow.four{grid-template-columns:1fr 1fr}}
+  /* the IS-IR diagram sits directly above its AD diagram so the same output
+     value is at the same horizontal position in both, one above the other */
+  .stackwrap{display:grid;grid-template-columns:minmax(0,460px) minmax(0,1fr);
+    gap:1.6rem;align-items:start;margin-top:.6rem}
+  @media (max-width:900px){.stackwrap{grid-template-columns:1fr}}
+  .stack{display:flex;flex-direction:column;gap:.7rem;min-width:0}
+  /* two such stacks side by side, one per case */
+  .cases{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin-top:.6rem;align-items:start}
+  @media (max-width:900px){.cases{grid-template-columns:1fr}}
+  .caselabel{font-family:var(--mono);font-size:.74rem;letter-spacing:.12em;
+    text-transform:uppercase;font-weight:700;color:var(--ink);
+    border-bottom:1px solid var(--paper-line);padding-bottom:.5rem;min-height:2.9em}
+  .stack .panel{padding:.85rem .95rem}
+  .stack .paneltitle{margin-bottom:.35rem}
+  .cases .stack{max-width:430px;margin:0 auto}
+  .two .paneltitle{min-height:2.4em}
+</style>
+</head>
+<body>
+<div class="progress-track"><div class="progress-fill" id="prog"></div></div>
+<div class="deck" id="deck">
+
+  <!-- ═══════════ 1. TITLE ═══════════ -->
+  <section class="slide active title-slide" data-section="Discussion 11 · Opening">
+    <div class="eyebrow" id="titleEyebrow">ECON 002 &middot; Discussion Section</div>
+    <h1>Two markets,<br><span class="accent">one curve</span></h1>
+    <p class="lede" style="margin-top:1rem">You have built two curves in two different decks and never once put them on the same page. Today they go on the same page, and what falls out of that is the curve the rest of the course is built on. Nobody assumes the aggregate demand curve. It gets traced out, one price level at a time.</p>
+    <p class="serif-note" style="margin-top:1.6rem">Work on your own paper. Write your answer down before any answer appears &mdash; your reasoning is the point, not a clean final line.</p>
+  </section>
+
+  <!-- ══════════════ PART 1 · TWO CURVES ══════════════ -->
+
+  <!-- ═══════════ 2. DIVIDER P1 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 11 · Two Curves">
+    <div class="eyebrow">Part 1 of 4</div>
+    <h1>Two curves, one diagram</h1>
+    <p class="lede">The <strong>IS curve</strong> gives the equilibrium level of output in the goods market for a given interest rate. You built it by asking what a change in the interest rate does to planned expenditure, and it slopes <strong>down</strong>.</p>
+    <p class="lede" style="margin-top:1rem">The <strong>IR curve</strong> gives the interest rate for a given price level, level of output, and money supply. You built it out of the money market, and it slopes <strong>up</strong> in output.</p>
+    <div class="chain" style="margin-top:1.1rem">r = cP + dY &minus; eM</div>
+    <div class="sectrail">TWO CURVES &rarr; DERIVING AD &rarr; POLICY SHIFTS AD &rarr; SAME OUTPUT, DIFFERENT RATES</div>
+    <div class="through">Throughline: the aggregate demand curve is not assumed, it is traced out. Every point on it is the goods market and the money market in equilibrium at the same time &mdash; which is why fiscal and monetary policy move output the same way but the interest rate opposite ways.</div>
+  </section>
+
+  <!-- ═══════════ 3. Q1 ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Two Curves">
+    <div class="eyebrow">Question 1 &middot; write before you look</div>
+    <h2>Why does the IR curve slope up?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1100px">
+      <div class="prompt">
+        <span class="cue">Question 1 &middot; on your own paper</span>
+        <p>The IR curve says that when output is higher, the interest rate is higher. Write down <strong>why</strong> &mdash; not the equation, the mechanism.</p>
+        <ol>
+          <li>Which market are you standing in?</li>
+          <li>What does higher output do to that market?</li>
+          <li>What is fixed, and what is therefore left free to adjust?</li>
+        </ol>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="s3a">Show the reasoning</button></div>
+      <div class="reveal reveal-hidden" id="s3a">
+        <span class="cue">Y&uarr; &rarr; money demand&uarr; &rarr; r&uarr;</span>
+        <p>Higher income means more transactions to cover, so at <strong>every</strong> interest rate people want to hold more real money balances. Money demand shifts right.</p>
+        <p style="margin-top:.5rem">But the supply of real balances is <strong>fixed</strong>: M is set by the Fed and P is given. Wanting more real balances does not produce more of them. So the only thing free to move is the price of holding money, and it rises until people are content to hold exactly what exists.</p>
+        <p style="margin-top:.5rem">This is the money market diagram from the last deck, read a different way. There you fixed output and asked what the interest rate was. Here you let output vary and write down the answer at each level. That collection of answers <strong>is</strong> the IR curve.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 4. THE TWO CURVES TOGETHER ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Two Curves">
+    <div class="eyebrow">Both curves at once</div>
+    <h2>Where the economy actually sits</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="paneltitle">IS &ndash; IR diagram &middot; vertical axis: interest rate</div>
+        <div style="display:flex;gap:1.2rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;font-weight:700;margin-bottom:.5rem">
+          <span style="color:#1F4E79">&#9472;&#9472; IS, the goods market</span>
+          <span style="color:#C0392B">&#9472;&#9472; IR, the money market</span>
+        </div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The IS and IR curves drawn on one diagram. Output runs along the horizontal axis from 180 to 380 and the interest rate runs up the vertical axis from 0 to 10 percent. A blue downward-sloping IS curve and a red upward-sloping IR curve cross at point A, where output is 280 and the interest rate is 5 percent. Dashed guide lines drop from point A to both axes. The diagram shows that the two curves together pin down output and the interest rate at the same time.">
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="160" x2="430" y2="160"/><line x1="70" y1="120" x2="430" y2="120"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">0</text><text x="62" y="202.7">3</text><text x="62" y="162.7">5</text><text x="62" y="122.7">7</text><text x="62" y="62.7">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">interest rate (r), %</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="70" y1="160" x2="250" y2="160" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <line x1="250" y1="260" x2="250" y2="160" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <line x1="79" y1="96.7" x2="421" y2="223.3" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="214.7" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IS</text>
+          <line x1="79" y1="223.3" x2="421" y2="96.7" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="90.7" font-family="monospace" font-size="13" font-weight="700" fill="#C0392B" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IR (P = 100)</text>
+          <circle cx="250" cy="160" r="7.5" fill="#1F4E79"/>
+          <text fill="#1F4E79" x="267" y="165" text-anchor="start" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="readout">
+          <div><span class="lbl2">point A &middot; output Y</span> <span class="big">280</span></div>
+          <div><span class="lbl2">point A &middot; interest rate r</span> <span class="big">5.0%</span></div>
+          <div style="margin-top:.5rem">price level P = 100<br>money supply M = 1,200</div>
+        </div>
+        <p class="lede">280 is not a new number. It is the <strong>same equilibrium output you found in the goods market deck</strong>, where planned expenditure met the forty-five degree line.</p>
+        <p class="lede">What is new is the second axis. The diagram now hands you the interest rate as well &mdash; and it hands you both at the same time, from the same crossing.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 5. Q2 ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Two Curves">
+    <div class="eyebrow">Question 2 &middot; write before you look</div>
+    <h2>What is special about point A?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1100px">
+      <div class="prompt">
+        <span class="cue">Question 2 &middot; on your own paper</span>
+        <p>Point A is one point out of the thousands on that diagram. Write down what is true at A that is <strong>not</strong> true anywhere else on the page.</p>
+        <p style="margin-top:.5rem">Then write down what would be wrong with a point that sat on the IS curve but off the IR curve.</p>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="s5a">Show the answer</button></div>
+      <div class="reveal reveal-hidden" id="s5a">
+        <span class="cue">Two markets, both clearing, at once</span>
+        <p>A is the only point where the <strong>goods market and the money market are both in equilibrium at the same time</strong>. Every other point on the page fails at least one of them.</p>
+        <p style="margin-top:.5rem"><strong>On IS but off IR:</strong> firms are content. Planned expenditure equals output, so no warehouse is filling and none is emptying. But the money market is not clearing &mdash; at that interest rate people want to hold a different quantity of real balances than exists, so the rate is still moving. And once the rate moves, output will have to move too.</p>
+        <p style="margin-top:.5rem"><strong>On IR but off IS:</strong> the reverse. The money market clears at that rate, but planned expenditure does not equal output, so inventories are moving and firms are changing production.</p>
+        <p style="margin-top:.5rem">Only where the two curves cross is nothing pushing anything anywhere. That is the whole reason for drawing them together.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 6. WHICH SHOCK MOVES WHICH CURVE ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Two Curves">
+    <div class="eyebrow">The test you have used all term</div>
+    <h2>Output and the interest rate are the axes</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">If a variable sits on an axis, a change in it moves you <strong>along</strong> a curve. If it does not, it <strong>shifts</strong> one. That test settled the question in the supply and demand deck, in the goods market deck, in the deck on government spending and taxes, and in the money deck, and it settles it here.</p>
+      <p class="lede" style="max-width:96ch">Output and the interest rate are the two axes of this diagram. So <strong>everything else</strong> &mdash; G, T, P, M &mdash; has to shift something. The only question left is which curve it reaches first.</p>
+      <div class="models">
+        <div class="model">
+          <span class="tag">Shifts IS &middot; the goods market</span>
+          <div class="eq">C &nbsp; I &nbsp; G &nbsp; T</div>
+          <div class="body">Every piece of <strong>planned expenditure</strong> lives on this side: consumption, investment, government purchases and taxes. Planned expenditure is what the IS curve is made of, so a change in any of them moves IS &mdash; and leaves IR exactly where it was.</div>
+        </div>
+        <div class="model hot">
+          <span class="tag">Shifts IR &middot; the money market</span>
+          <div class="eq">P &nbsp; M</div>
+          <div class="body">The price level and the money supply act on <strong>real balances, M/P</strong>. Real balances are what the IR curve is made of, so a change in either one moves IR &mdash; and leaves IS exactly where it was.</div>
+        </div>
+      </div>
+      <p class="footnote">One catch worth writing down. Investment moving <em>because the interest rate moved</em> is a movement <strong>along</strong> IS, not a shift of it &mdash; the interest rate is on an axis. Investment shifts IS only when something else moves it at an unchanged interest rate, such as a change in what firms expect to sell.</p>
+      <p class="footnote">Nothing in this unit shifts both curves at once. Every shock in the next three parts moves exactly one of them.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 7. Q3 QUICK CHECK ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Two Curves">
+    <div class="eyebrow">Question 3 &middot; quick check &middot; write all four before you press anything</div>
+    <h2>IS-shifter or IR-shifter?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1250px">
+      <div class="prompt">
+        <span class="cue">Question 3 &middot; four shocks, four answers</span>
+        <p>For each one write down which curve moves, and one word for why: <strong>goods</strong> or <strong>money</strong>. Do all four first, then check them one at a time.</p>
+      </div>
+      <div class="condrow four">
+        <div class="condcard">
+          <div class="ctitle">Shock 1</div>
+          <div class="cnote">A cut in taxes</div>
+          <button class="cbtn" data-cond="c3a">Which curve?</button>
+          <div class="cbody" id="c3a">
+            <div class="big">IS</div>
+            <div class="cnote">Lower taxes raise disposable income, so consumption and planned expenditure rise. <strong>Goods market.</strong></div>
+          </div>
+        </div>
+        <div class="condcard hot">
+          <div class="ctitle">Shock 2</div>
+          <div class="cnote">The Fed sells bonds</div>
+          <button class="cbtn" data-cond="c3b">Which curve?</button>
+          <div class="cbody" id="c3b">
+            <div class="big">IR</div>
+            <div class="cnote">Selling bonds pulls reserves out of the banking system, so M falls and real balances fall with it. <strong>Money market.</strong></div>
+          </div>
+        </div>
+        <div class="condcard hot">
+          <div class="ctitle">Shock 3</div>
+          <div class="cnote">A rise in the price level</div>
+          <button class="cbtn" data-cond="c3c">Which curve?</button>
+          <div class="cbody" id="c3c">
+            <div class="big">IR</div>
+            <div class="cnote">The Fed changed nothing, but the same M buys less, so real balances fall. <strong>Money market.</strong></div>
+          </div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Shock 4</div>
+          <div class="cnote">An increase in government purchases</div>
+          <button class="cbtn" data-cond="c3d">Which curve?</button>
+          <div class="cbody" id="c3d">
+            <div class="big">IS</div>
+            <div class="cnote">G is a component of planned expenditure, so it lands on the goods market directly. <strong>Goods market.</strong></div>
+          </div>
+        </div>
+      </div>
+      <p class="footnote">Two of these four raise output and two lower it &mdash; but that is a different question from the one asked. Which curve a shock reaches is a separate fact from which way it pushes.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 2 · DERIVING AD ══════════════ -->
+
+  <!-- ═══════════ 8. DIVIDER P2 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 11 · Deriving AD">
+    <div class="eyebrow">Part 2 of 4</div>
+    <h1>Where the AD curve comes from</h1>
+    <p class="lede">The price level has been sitting quietly inside the IR equation the whole time. Now change it and watch what the diagram does. Do that three times, write down where it lands each time, and you have drawn a curve nobody assumed.</p>
+    <div class="sectrail">TWO CURVES &#10003; &rarr; DERIVING AD &rarr; POLICY SHIFTS AD &rarr; SAME OUTPUT, DIFFERENT RATES</div>
+    <div class="through">Throughline: the aggregate demand curve is not assumed, it is traced out. Every point on it is the goods market and the money market in equilibrium at the same time &mdash; which is why fiscal and monetary policy move output the same way but the interest rate opposite ways.</div>
+  </section>
+
+  <!-- ═══════════ 9. Q4 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Deriving AD">
+    <div class="eyebrow">Question 4 &middot; predict before you compute anything</div>
+    <h2>The price level rises: P: 100 &rarr; 120</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1100px">
+      <div class="predict">
+        <span class="cue">Predict &middot; on your own paper</span>
+        <p><strong>Nothing else changes.</strong> The Fed has not moved the money supply &mdash; M is still 1,200. Government purchases and taxes are exactly where they were. Only the price level is higher.</p>
+        <p style="margin-top:.5rem">Write down which curve moves and in which direction, then what happens to <strong>output</strong> and to <strong>the interest rate</strong>. Then write the chain of steps that gets you there, one arrow at a time.</p>
+      </div>
+      <p class="lede" style="max-width:96ch">You already own every link in that chain. Real balances came from the money deck. What a higher interest rate does to investment, and what unsold goods do to production, came from the goods market deck. Nothing here is new &mdash; only the order.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 10. THE CHAIN, LINK BY LINK ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Deriving AD">
+    <div class="eyebrow">Question 4 &middot; the answer, one link at a time</div>
+    <h2>A higher price level, link by link</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="paneltitle">IS &ndash; IR diagram &middot; vertical axis: interest rate</div>
+        <div style="display:flex;gap:1.2rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;font-weight:700;margin-bottom:.5rem">
+          <span style="color:#1F4E79">&#9472;&#9472; IS</span>
+          <span style="color:#C0392B">&#9472;&#9472; IR (P = 100)</span>
+          <span class="hid" id="leg10" style="color:#8A5900">&#9472; &#9472; IR (P = 120)</span>
+        </div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The IS and IR diagram with a rise in the price level. Output runs along the horizontal axis and the interest rate up the vertical axis. A blue downward-sloping IS curve crosses a red upward-sloping IR curve at point A, where output is 280 and the interest rate is 5 percent. When revealed, a gold dashed IR curve for a price level of 120 lies above the red one, marked by an upward arrow labeled P up, and it crosses the unmoved IS curve at point B, where output is 220 and the interest rate is 7 percent. The diagram shows that a higher price level raises the interest rate and lowers output, with the goods market curve never moving.">
+          <defs>
+            <marker id="h10" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="9.5" refY="4.5" orient="auto"><path d="M0,0 L9.5,4.5 L0,9 Z" fill="#8A5900"/></marker>
+          </defs>
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="160" x2="430" y2="160"/><line x1="70" y1="120" x2="430" y2="120"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">0</text><text x="62" y="202.7">3</text><text x="62" y="162.7">5</text><text x="62" y="122.7">7</text><text x="62" y="62.7">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">interest rate (r), %</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="70" y1="160" x2="250" y2="160" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <line x1="250" y1="260" x2="250" y2="160" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <line x1="79" y1="96.7" x2="421" y2="223.3" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="214.7" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IS</text>
+          <line x1="79" y1="223.3" x2="421" y2="96.7" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="90.7" font-family="monospace" font-size="13" font-weight="700" fill="#C0392B" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IR (P = 100)</text>
+          <circle cx="250" cy="160" r="7.5" fill="#1F4E79"/>
+          <text fill="#1F4E79" x="250" y="146" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A</text>
+          <line id="uS2" x1="79" y1="143.3" x2="403" y2="23.3" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <text id="uS2lab" x="300" y="53.3" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">IR (P = 120)</text>
+          <line id="uArr" x1="110" y1="205" x2="110" y2="138" stroke="#8A5900" stroke-width="3" marker-end="url(#h10)" opacity="0"/>
+          <text id="uArrLab" x="122" y="176" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="start" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">P&uarr;</text>
+          <line id="uGdR" x1="70" y1="120" x2="142" y2="120" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4" opacity="0"/>
+          <line id="uGdY" x1="142" y1="260" x2="142" y2="120" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4" opacity="0"/>
+          <line id="uSlide" x1="238" y1="156" x2="154" y2="125" stroke="#8A5900" stroke-width="3.5" stroke-linecap="round" marker-end="url(#h10)" opacity="0"/>
+          <text id="uSlideLab" x="196" y="170" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">along IS</text>
+          <circle id="uB" cx="142" cy="120" r="7" fill="#8A5900" opacity="0"/>
+          <text id="uBl" fill="#8A5900" opacity="0" x="142" y="106" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">B</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <p class="lede">Press each link only after you have written your own. Every press moves the diagram as well.</p>
+        <div class="btnrow">
+          <button class="btn" data-reveal-svg="pUp1" data-reveal="k1,w2,leg10">P&uarr; &rarr; M/P&darr;</button>
+          <span class="hid" id="w2"><button class="btn" data-reveal-svg="pUp2" data-reveal="k2,w3">&rarr; r&uarr;</button></span>
+          <span class="hid" id="w3"><button class="btn" data-reveal-svg="pUp3" data-reveal="k3,w4">&rarr; I&darr; &rarr; PE&darr;</button></span>
+          <span class="hid" id="w4"><button class="btn" data-reveal-svg="pUp4" data-reveal="k4,s10a">&rarr; U.I.&uarr; &rarr; Y&darr;</button></span>
+        </div>
+        <div class="reveal reveal-hidden" id="k1"><span class="cue">P&uarr; &rarr; M/P&darr;</span><p>The Fed did nothing. But the same 1,200 dollars now buys fewer goods, so <strong>real balances fall</strong>.</p></div>
+        <div class="reveal reveal-hidden" id="k2"><span class="cue">&rarr; r&uarr;</span><p>The real money supply has shrunk and money demand has not moved, so people want to hold more real balances than exist. The rate climbs until they are content to hold what there is &mdash; on the diagram, up to <strong>7%</strong>.</p></div>
+        <div class="reveal reveal-hidden" id="k3"><span class="cue">&rarr; I&darr; &rarr; PE&darr;</span><p>Borrowing is dearer, so firms undertake fewer investment projects and planned expenditure falls below what is being produced. IS has not moved &mdash; the economy is traveling <strong>along</strong> it, from A toward B.</p></div>
+        <div class="reveal reveal-hidden" id="k4"><span class="cue">&rarr; U.I.&uarr; &rarr; Y&darr;</span><p>Goods that were made are not bought. <strong>Unplanned inventories rise</strong>, and firms respond to the filling warehouse by cutting production &mdash; down to <strong>220</strong>.</p></div>
+        <div class="reveal reveal-hidden" id="s10a">
+          <span class="cue">IR shifts up &middot; the new equilibrium is B</span>
+          <p>The IR curve shifts <strong>up</strong>: at every level of output, the interest rate the money market now requires is higher. The IS curve has not moved a millimeter &mdash; nothing happened in the goods market.</p>
+          <p style="margin-top:.5rem">The new crossing is <strong>point B: Y = 220, r = 7%</strong>. Output fell by 60 and the interest rate rose by 2 percentage points.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 11. Q5 PREDICT · P FALLS ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Deriving AD">
+    <div class="eyebrow">Question 5 &middot; predict, then check</div>
+    <h2>The price level falls instead: P: 100 &rarr; 80</h2>
+    <div class="titlerule"></div>
+    <div class="predict" style="margin-bottom:.8rem;max-width:1150px">
+      <span class="cue">Predict &middot; on your own paper</span>
+      <p>Same starting point, opposite move. <strong>M is still 1,200, G and T are untouched, and the price level falls to 80.</strong> Write down which way IR goes this time, where output and the interest rate end up, and the chain that takes you there &mdash; every arrow reverses.</p>
+    </div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="paneltitle">IS &ndash; IR diagram &middot; vertical axis: interest rate</div>
+        <div style="display:flex;gap:1.2rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;font-weight:700;margin-bottom:.5rem">
+          <span style="color:#1F4E79">&#9472;&#9472; IS</span>
+          <span style="color:#C0392B">&#9472;&#9472; IR (P = 100)</span>
+          <span class="hid" id="leg11" style="color:#8A5900">&#9472; &#9472; IR (P = 80)</span>
+        </div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The IS and IR diagram with a fall in the price level. Output runs along the horizontal axis and the interest rate up the vertical axis. A blue downward-sloping IS curve crosses a red upward-sloping IR curve at point A, where output is 280 and the interest rate is 5 percent. When revealed, a gold dashed IR curve for a price level of 80 lies below the red one, marked by a downward arrow labeled P down, and it crosses the unmoved IS curve at point C, where output is 340 and the interest rate is 3 percent. The diagram shows that a lower price level lowers the interest rate and raises output, the mirror image of a price level increase.">
+          <defs>
+            <marker id="h11" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="9.5" refY="4.5" orient="auto"><path d="M0,0 L9.5,4.5 L0,9 Z" fill="#8A5900"/></marker>
+          </defs>
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="160" x2="430" y2="160"/><line x1="70" y1="120" x2="430" y2="120"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">0</text><text x="62" y="202.7">3</text><text x="62" y="162.7">5</text><text x="62" y="122.7">7</text><text x="62" y="62.7">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">interest rate (r), %</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="70" y1="160" x2="250" y2="160" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <line x1="250" y1="260" x2="250" y2="160" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <line x1="79" y1="96.7" x2="421" y2="223.3" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="214.7" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IS</text>
+          <line x1="79" y1="223.3" x2="421" y2="96.7" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="90.7" font-family="monospace" font-size="13" font-weight="700" fill="#C0392B" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IR (P = 100)</text>
+          <circle cx="250" cy="160" r="7.5" fill="#1F4E79"/>
+          <text fill="#1F4E79" x="250" y="146" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A</text>
+          <line id="dS2" x1="205" y1="256.7" x2="421" y2="176.7" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <text id="dS2lab" x="300" y="214"  font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">IR (P = 80)</text>
+          <line id="dArr" x1="392" y1="114.7" x2="392" y2="181.3" stroke="#8A5900" stroke-width="3" marker-end="url(#h11)" opacity="0"/>
+          <text id="dArrLab" x="406" y="148" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="start" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">P&darr;</text>
+          <g id="dGd" opacity="0">
+            <line x1="70" y1="200" x2="358" y2="200" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+            <line x1="358" y1="260" x2="358" y2="200" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+          </g>
+          <circle id="dC" cx="358" cy="200" r="7" fill="#8A5900" opacity="0"/>
+          <text id="dCl" fill="#8A5900" opacity="0" x="358" y="186" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">C</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="btnrow"><button class="btn" data-reveal-svg="pDn" data-reveal="s11a,leg11">Show the shift</button></div>
+        <div class="reveal reveal-hidden" id="s11a">
+          <span class="cue">P&darr; &rarr; M/P&uarr; &rarr; r&darr; &rarr; I&uarr; &rarr; PE&uarr; &rarr; U.I.&darr; &rarr; Y&uarr;</span>
+          <p>The IR curve shifts <strong>down</strong>, and the new crossing is <strong>point C: Y = 340, r = 3%</strong>. Output rose by 60 and the interest rate fell by 2 percentage points &mdash; the exact mirror of point B.</p>
+          <p style="margin-top:.5rem">Notice what did the work. The money supply never changed. What changed is what that money is <strong>worth in goods</strong>, and that alone was enough to move output by 60 and the interest rate by 2.</p>
+          <p style="margin-top:.5rem">Three runs of the same diagram, three different price levels, three different answers. That is not a coincidence to be noted and set aside. It is a relationship, and the next slide asks you to draw it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 12. Q6 · PLOT IT, THEN THE AD CURVE ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Deriving AD">
+    <div class="eyebrow">Question 6 &middot; plot it on your own paper before you press anything</div>
+    <h2>Three price levels, three output levels</h2>
+    <div class="titlerule"></div>
+    <div class="two">
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <p class="lede">You have now run the same diagram three times. Each run fixed a price level and handed back an equilibrium. Line the three answers up:</p>
+        <table class="sched">
+          <caption>Equilibrium output and interest rate at three price levels</caption>
+          <thead>
+            <tr><th scope="col">Price level P</th><th scope="col">IR curve</th><th scope="col">Output Y</th><th scope="col">Interest rate r</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>80</td><td>shifts down</td><td>340</td><td>3%</td></tr>
+            <tr class="hl"><td>100</td><td>baseline</td><td>280</td><td>5%</td></tr>
+            <tr><td>120</td><td>shifts up</td><td>220</td><td>7%</td></tr>
+          </tbody>
+        </table>
+        <div class="prompt">
+          <span class="cue">Question 6 &middot; draw it</span>
+          <p>Draw a <strong>fresh</strong> pair of axes. Output on the horizontal axis, and the <strong>price level</strong> on the vertical axis &mdash; the vertical axis is not the interest rate this time.</p>
+          <p style="margin-top:.5rem">Plot the three pairs <strong>(340, 80)</strong>, <strong>(280, 100)</strong> and <strong>(220, 120)</strong>, draw the line through them, and write one sentence saying what that line is.</p>
+        </div>
+        <div class="btnrow"><button class="btn" data-reveal-svg="adDraw" data-reveal="s13a">Plot the points and draw the line</button></div>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="panel">
+          <div class="paneltitle">New diagram &middot; horizontal axis: output &middot; vertical axis: price level</div>
+          <svg viewBox="0 0 470 300" role="img" aria-label="A fresh pair of axes for plotting, which fills in when revealed. Output runs along the horizontal axis from 180 to 380 and the price level up the vertical axis from 60 to 140. On load the grid is empty. When revealed, three points appear: point C at output 340 and price level 80, point A at output 280 and price level 100, and point B at output 220 and price level 120, with a blue downward-sloping line labeled AD drawn through all three. The diagram shows that the aggregate demand curve is the collection of equilibrium output levels read off the IS and IR diagram at each price level.">
+            <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+            <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+            <g stroke="#E4E0D5" stroke-width="1">
+              <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="140" x2="430" y2="140"/><line x1="70" y1="80" x2="430" y2="80"/>
+              <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+            </g>
+            <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+              <text x="62" y="262.7">60</text><text x="62" y="202.7">80</text><text x="62" y="142.7">100</text><text x="62" y="82.7">120</text><text x="62" y="22.7">140</text>
+            </g>
+            <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+              <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+            </g>
+            <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">price level (P)</text>
+            <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+            <g id="adPts" opacity="0">
+              <circle cx="142" cy="80" r="7" fill="#1F4E79"/>
+              <text x="154" y="74.7" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">B &middot; (220, 120)</text>
+              <circle cx="250" cy="140" r="7" fill="#1F4E79"/>
+              <text x="262" y="134.7" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A &middot; (280, 100)</text>
+              <circle cx="358" cy="200" r="7" fill="#1F4E79"/>
+              <text x="348" y="212" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">C &middot; (340, 80)</text>
+            </g>
+            <line id="adLine" x1="88" y1="50" x2="412" y2="230" stroke="#1F4E79" stroke-width="3" stroke-linecap="round" opacity="0"/>
+            <text id="adLab" x="410" y="241.3" font-family="monospace" font-size="14" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">AD</text>
+          </svg>
+        </div>
+        <div class="reveal reveal-hidden" id="s13a">
+          <span class="cue">That line is the aggregate demand curve</span>
+          <p>The <strong>aggregate demand curve</strong> gives the level of output demanded at each price level. It runs through (340, 80), (280, 100) and (220, 120), and it <strong>slopes down</strong>.</p>
+          <p style="margin-top:.5rem">Nobody assumed that slope, and nobody drew it from a definition. It came out of running the IS-IR diagram three times and writing down where it landed. <strong>That is the entire derivation.</strong></p>
+          <p style="margin-top:.5rem">Which also means the curve could have come out some other way. If the links in that chain worked differently, this line would have a different slope &mdash; or no slope at all. The next slide is about which link is doing the work.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <!-- ═══════════ 14. WHY IT SLOPES DOWN ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Deriving AD">
+    <div class="eyebrow">The slope &mdash; and the reason that is not the reason</div>
+    <h2>Why aggregate demand slopes down</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1200px">
+      <div class="pair2">
+        <div class="pcard warn">
+          <div class="ptag">&#10007; The familiar reason, which fails here</div>
+          <div class="verdictbig">there is nothing to switch to</div>
+          <p>A single market&rsquo;s demand curve slopes down partly because buyers <strong>switch to something else</strong> when the price rises. If pears get more expensive and apples do not, you buy apples instead.</p>
+          <p>That reason cannot do any work for aggregate demand. AD covers <strong>all goods at once</strong>. When the price level rises, the apples rise too, and so does everything else on the shelf. There is nothing left to substitute toward, so the substitution channel is simply not available.</p>
+        </div>
+        <div class="pcard">
+          <div class="ptag">&#10003; The reason it actually slopes down</div>
+          <div class="verdictbig">it runs through real balances</div>
+          <p>A higher price level shrinks <strong>real money balances</strong>, which raises <strong>the interest rate</strong>, which cuts <strong>investment</strong>, which cuts <strong>planned expenditure</strong>, which cuts <strong>output</strong>.</p>
+          <p>Every link there is a link you built in an earlier deck. Nothing in the argument is about anyone deciding to buy less because their money does not stretch as far.</p>
+        </div>
+      </div>
+      <div class="chain">P&uarr; &rarr; M/P&darr; &rarr; r&uarr; &rarr; I&darr; &rarr; PE&darr; &rarr; U.I.&uarr; &rarr; Y&darr;</div>
+      <p class="lede" style="max-width:96ch">The slope of AD is that whole chain compressed into a single line on a graph. Anything that breaks a link in the chain changes the slope &mdash; and if the interest rate had no grip on investment, the chain would break in the middle and AD would come out vertical.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 15. WHAT A POINT ON AD MEANS ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Deriving AD">
+    <div class="eyebrow">The sentence to carry out of Part 2</div>
+    <h2>Every point on AD is a whole IS-IR diagram</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:110ch">A point on AD is the <strong>equilibrium output in the goods market</strong> and the <strong>equilibrium interest rate in the money market</strong>, for that price level. Two markets, cleared, packed into one dot.</p>
+    <div class="stackwrap">
+      <div class="stack">
+      <div class="panel">
+        <div class="paneltitle">IS &ndash; IR diagram &middot; vertical axis: interest rate</div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The IS and IR diagram run three times. Output runs along the horizontal axis and the interest rate up the vertical axis. One blue downward-sloping IS curve is crossed by three IR curves, one for each price level: a gold dashed curve for a price level of 120 crossing at point B where output is 220 and the rate is 7 percent, a red curve for a price level of 100 crossing at point A where output is 280 and the rate is 5 percent, and a gold dashed curve for a price level of 80 crossing at point C where output is 340 and the rate is 3 percent. The diagram shows the three equilibria that become the three points of the aggregate demand curve.">
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="160" x2="430" y2="160"/><line x1="70" y1="120" x2="430" y2="120"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">0</text><text x="62" y="202.7">3</text><text x="62" y="162.7">5</text><text x="62" y="122.7">7</text><text x="62" y="62.7">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">interest rate (r), %</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="79" y1="96.7" x2="421" y2="223.3" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="214.7" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IS</text>
+          <line x1="79" y1="143.3" x2="403" y2="23.3" stroke="#8A5900" stroke-width="2.6" stroke-dasharray="9 5" stroke-linecap="round"/>
+          <text x="300" y="52" font-family="monospace" font-size="12.5" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IR (P = 120)</text>
+          <line x1="79" y1="223.3" x2="421" y2="96.7" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="90.7" font-family="monospace" font-size="12.5" font-weight="700" fill="#C0392B" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IR (P = 100)</text>
+          <line x1="205" y1="256.7" x2="421" y2="176.7" stroke="#8A5900" stroke-width="2.6" stroke-dasharray="9 5" stroke-linecap="round"/>
+          <text x="424" y="172" font-family="monospace" font-size="12.5" font-weight="700" fill="#8A5900" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IR (P = 80)</text>
+          <circle cx="142" cy="120" r="7" fill="#8A5900"/>
+          <text x="150" y="106.7" font-family="monospace" font-size="12.5" font-weight="700" fill="#8A5900" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">B &middot; 220, 7%</text>
+          <circle cx="250" cy="160" r="7.5" fill="#1F4E79"/>
+          <text x="240" y="154" font-family="monospace" font-size="12.5" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A &middot; 280, 5%</text>
+          <circle cx="358" cy="200" r="7" fill="#8A5900"/>
+          <text x="350" y="221.3" font-family="monospace" font-size="12.5" font-weight="700" fill="#8A5900" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">C &middot; 340, 3%</text>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="paneltitle">AD diagram &middot; vertical axis: price level</div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The aggregate demand curve holding the same three equilibria. Output runs along the horizontal axis and the price level up the vertical axis, with output at the same horizontal positions as on the IS and IR diagram above it. Point B sits at output 220 and price level 120, point A at output 280 and price level 100, and point C at output 340 and price level 80, all on a blue downward-sloping line labeled AD. The interest rate appears nowhere on this diagram even though it is different at every one of the three points.">
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="140" x2="430" y2="140"/><line x1="70" y1="80" x2="430" y2="80"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">60</text><text x="62" y="202.7">80</text><text x="62" y="142.7">100</text><text x="62" y="82.7">120</text><text x="62" y="22.7">140</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">price level (P)</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="88" y1="50" x2="412" y2="230" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="410" y="241.3" font-family="monospace" font-size="14" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">AD</text>
+          <circle cx="142" cy="80" r="7" fill="#1F4E79"/>
+          <text x="154" y="74.7" font-family="monospace" font-size="12.5" font-weight="700" fill="#1F4E79" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">B &middot; (220, 120)</text>
+          <circle cx="250" cy="140" r="7.5" fill="#1F4E79"/>
+          <text x="262" y="134.7" font-family="monospace" font-size="12.5" font-weight="700" fill="#1F4E79" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A &middot; (280, 100)</text>
+          <circle cx="358" cy="200" r="7" fill="#1F4E79"/>
+          <text x="348" y="212" font-family="monospace" font-size="12.5" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">C &middot; (340, 80)</text>
+        </svg>
+      </div>
+    </div>
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+      <table class="sched txt">
+        <caption>What each point on the aggregate demand curve is made of</caption>
+        <thead>
+          <tr><th scope="col">Price level</th><th scope="col">Where IR crosses IS</th><th scope="col">Point on AD</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>P = 80</td><td>Y = 340 and r = 3%</td><td>(340, 80)</td></tr>
+          <tr><td>P = 100</td><td>Y = 280 and r = 5%</td><td>(280, 100)</td></tr>
+          <tr><td>P = 120</td><td>Y = 220 and r = 7%</td><td>(220, 120)</td></tr>
+        </tbody>
+      </table>
+      <p class="lede">The interest rate does not appear anywhere on the AD diagram. It has not gone away. It is <strong>inside</strong> every point, and it is different at every one of them.</p>
+      <p class="lede">Read the two diagrams down a column rather than across. Pick any output on the bottom axis and it is the same output on both &mdash; the crossing above, and the point on AD below it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 16. Q7 DIAGNOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Deriving AD">
+    <div class="eyebrow">Question 7 &middot; silent poll &middot; pick a number on your own paper</div>
+    <h2>One of these three is wrong</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:98ch">All three sentences agree that the aggregate demand curve slopes down. <strong>Two of them give a sound reason. One does not.</strong> Write down the number of the one that fails, and one line saying where its reasoning gives out.</p>
+    <div>
+      <div class="diag" id="diag7">
+        <button class="diag-opt" type="button" data-bad="true"><span class="n">1</span><span class="s">The aggregate demand curve slopes down because when prices go up people can afford less, so they buy less &mdash; the same reason any demand curve slopes down.</span></button>
+        <button class="diag-opt" type="button"><span class="n">2</span><span class="s">A point on the AD curve is an equilibrium in two markets at once, so moving along AD means the interest rate is changing as well.</span></button>
+        <button class="diag-opt" type="button"><span class="n">3</span><span class="s">If the interest rate had no effect on investment, a change in the price level would leave output exactly where it was, and AD would come out vertical.</span></button>
+      </div>
+      <div class="btnrow"><button class="btn" data-diag-reveal="diag7">Show which one fails</button></div>
+      <div data-diag-note style="display:none">
+        <div class="reveal" style="margin-top:1.1rem;max-width:1040px">
+          <span class="cue">Right conclusion, wrong mechanism</span>
+          <p><strong>Sentence 1 fails</strong> &mdash; and notice that its conclusion is correct. AD really does slope down. What is wrong is the reason, and the reason is the part you will be asked to use for the rest of the course.</p>
+          <p style="margin-top:.5rem">A single market&rsquo;s demand curve slopes down in large part because of <strong>substitution</strong>: if pears get more expensive and apples do not, you buy apples. Aggregate demand is every good at once, so when the price level rises the apples rise too. There is nothing left to substitute toward, and that channel is not available here at all.</p>
+          <p style="margin-top:.5rem">The channel that <em>is</em> available runs through money: a higher price level shrinks real balances, raises the interest rate, and cuts investment. That is what pulls output down.</p>
+          <p style="margin-top:.5rem">Sentence 3 is the check on this, and it is worth keeping. Cut the link from r to I and the entire slope disappears &mdash; which could not be true if sentence 1 were the explanation. Sentence 2 says the same thing from the other direction: the reason you can move along AD at all is that something is happening to the interest rate at every step.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 3 · POLICY SHIFTS AD ══════════════ -->
+
+  <!-- ═══════════ 17. DIVIDER P3 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 11 · Policy Shifts AD">
+    <div class="eyebrow">Part 3 of 4</div>
+    <h1>Policy shifts the curve</h1>
+    <p class="lede">Two labels, and they mean exactly what they say. <strong>Expansionary</strong> policy aims to raise output. <strong>Contractionary</strong> policy aims to lower it. Each comes in a fiscal version and a monetary version.</p>
+    <p class="lede" style="margin-top:1rem">Part 2 held policy still and moved the price level. Part 3 does the opposite: the price level stays at 100 the whole way through, and policy moves instead.</p>
+    <div class="sectrail">TWO CURVES &#10003; &rarr; DERIVING AD &#10003; &rarr; POLICY SHIFTS AD &rarr; SAME OUTPUT, DIFFERENT RATES</div>
+    <div class="through">Throughline: the aggregate demand curve is not assumed, it is traced out. Every point on it is the goods market and the money market in equilibrium at the same time &mdash; which is why fiscal and monetary policy move output the same way but the interest rate opposite ways.</div>
+  </section>
+
+  <!-- ═══════════ 18. Q8 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Policy Shifts AD">
+    <div class="eyebrow">Question 8 &middot; predict before you look</div>
+    <h2>Government purchases rise, and the price level stays at 100</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1100px">
+      <div class="predict">
+        <span class="cue">Predict &middot; on your own paper</span>
+        <p><strong>G rises.</strong> The price level does not move &mdash; it is still 100 &mdash; and the Fed has not touched the money supply.</p>
+        <p style="margin-top:.5rem">Write down which curve moves and in which direction, then where <strong>output</strong> and <strong>the interest rate</strong> end up. Write the chain of arrows out in full before you turn the page.</p>
+      </div>
+      <p class="lede" style="max-width:96ch">Your chain will start the way it started when we did government spending and taxes. What is new is that it does not stop when output moves. Ask yourself what higher output does to the market that sets the interest rate &mdash; you answered that in Question 1.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 19. IS SHIFTS RIGHT ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Policy Shifts AD">
+    <div class="eyebrow">Question 8 &middot; the answer</div>
+    <h2>IS shifts right: output and the interest rate both rise</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="paneltitle">IS &ndash; IR diagram &middot; vertical axis: interest rate</div>
+        <div style="display:flex;gap:1.2rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;font-weight:700;margin-bottom:.5rem">
+          <span style="color:#1F4E79">&#9472;&#9472; IS</span>
+          <span style="color:#C0392B">&#9472;&#9472; IR (P = 100)</span>
+          <span class="hid" id="leg19" style="color:#8A5900">&#9472; &#9472; IS&prime; after G rises</span>
+        </div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The IS and IR diagram with an increase in government purchases. Output runs along the horizontal axis and the interest rate up the vertical axis. A blue downward-sloping IS curve crosses a red upward-sloping IR curve at point A, where output is 280 and the interest rate is 5 percent. When revealed, a gold dashed IS curve lies to the right of the blue one, marked by a rightward arrow labeled G up, and it crosses the unmoved red IR curve at point B, where output is 340 and the interest rate is 7 percent. The diagram shows that expansionary fiscal policy raises both output and the interest rate.">
+          <defs>
+            <marker id="h19" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="9.5" refY="4.5" orient="auto"><path d="M0,0 L9.5,4.5 L0,9 Z" fill="#8A5900"/></marker>
+          </defs>
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="160" x2="430" y2="160"/><line x1="70" y1="120" x2="430" y2="120"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">0</text><text x="62" y="202.7">3</text><text x="62" y="162.7">5</text><text x="62" y="122.7">7</text><text x="62" y="62.7">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">interest rate (r), %</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="70" y1="160" x2="250" y2="160" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <line x1="250" y1="260" x2="250" y2="160" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <line x1="79" y1="96.7" x2="421" y2="223.3" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="214.7" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IS</text>
+          <line x1="79" y1="223.3" x2="421" y2="96.7" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="90.7" font-family="monospace" font-size="13" font-weight="700" fill="#C0392B" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IR (P = 100)</text>
+          <circle cx="250" cy="160" r="7.5" fill="#1F4E79"/>
+          <text fill="#1F4E79" x="250" y="146" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A</text>
+          <line id="gS2" x1="93" y1="22" x2="421" y2="143.3" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <text id="gS2lab" x="424" y="137.3" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">IS&prime;</text>
+          <line id="gArr" x1="116" y1="106.7" x2="312" y2="106.7" stroke="#8A5900" stroke-width="3" marker-end="url(#h19)" opacity="0"/>
+          <text id="gArrLab" x="214" y="100.7" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">G&uarr;</text>
+          <g id="gGd" opacity="0">
+            <line x1="70" y1="120" x2="358" y2="120" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+            <line x1="358" y1="260" x2="358" y2="120" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+          </g>
+          <circle id="gB" cx="358" cy="120" r="7" fill="#8A5900" opacity="0"/>
+          <text id="gBl" fill="#8A5900" opacity="0" x="358" y="106" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">B</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="btnrow"><button class="btn" data-reveal-svg="gUp" data-reveal="s19a,leg19">Show the shift</button></div>
+        <div class="reveal reveal-hidden" id="s19a">
+          <span class="cue">G&uarr; &rarr; PE&uarr; &rarr; U.I.&darr; &rarr; Y&uarr; &rarr; money demand&uarr; &rarr; r&uarr;</span>
+          <p>Higher government purchases raise planned expenditure at every interest rate, so the <strong>IS curve shifts right</strong>. IR has not moved: the money supply is the same and so is the price level.</p>
+          <p style="margin-top:.5rem">The new crossing is <strong>Y = 340, r = 7%</strong>. Both went up.</p>
+          <p style="margin-top:.5rem">The second half of that chain is the part the government spending and taxes deck could not show you. Output rose; more output means more transactions to cover, so money demand rose; and with real balances fixed, the interest rate had to climb to keep the money market clearing. <strong>The interest rate rose because output did.</strong></p>
+          <p style="margin-top:.5rem">Look at how far the gold curve moved compared with how far the equilibrium moved. IS shifted right by 120 of output, and output rose by only 60. The rise in the interest rate cut investment, and that took back half of it on the way.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 20. Q9 · BOTH DIAGRAMS AT ONCE ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Policy Shifts AD">
+    <div class="eyebrow">Question 9 &middot; write before you press anything</div>
+    <h2>The price level never moved. So what happens to AD?</h2>
+    <div class="titlerule"></div>
+    <div class="prompt" style="max-width:1200px">
+      <span class="cue">Question 9 &middot; on your own paper</span>
+      <p>Output went from 280 to 340 and the price level stayed at <strong>100</strong> the whole time. Write down what that does to the aggregate demand curve &mdash; and say whether it is a <strong>movement along</strong> the curve or a <strong>shift</strong> of it, and how you know.</p>
+    </div>
+    <div class="stackwrap">
+      <div class="stack">
+      <div class="panel">
+        <div class="paneltitle">IS &ndash; IR diagram &middot; vertical axis: interest rate</div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;font-family:var(--mono);font-size:.7rem;font-weight:700;margin-bottom:.4rem">
+          <span style="color:#1F4E79">&#9472;&#9472; IS</span><span style="color:#C0392B">&#9472;&#9472; IR</span>
+          <span class="hid" id="q9leg1" style="color:#8A5900">&#9472; &#9472; IS&prime;</span>
+        </div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The IS and IR diagram during an increase in government purchases, animated. Output runs along the horizontal axis and the interest rate up the vertical axis. A gold IS curve slides rightward away from the blue original while a gold dot rides up along the unmoved red IR curve, from point A at output 280 and an interest rate of 5 percent to point B at output 340 and an interest rate of 7 percent. The horizontal move of the dot is the same horizontal move made by the dot on the aggregate demand diagram directly below it.">
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="160" x2="430" y2="160"/><line x1="70" y1="120" x2="430" y2="120"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">0</text><text x="62" y="202.7">3</text><text x="62" y="162.7">5</text><text x="62" y="122.7">7</text><text x="62" y="62.7">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">interest rate (r), %</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="79" y1="96.7" x2="421" y2="223.3" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="214.7" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IS</text>
+          <line x1="79" y1="223.3" x2="421" y2="96.7" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="90.7" font-family="monospace" font-size="13" font-weight="700" fill="#C0392B" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IR (P = 100)</text>
+          <line id="q9IS" opacity="0" x1="79" y1="96.7" x2="421" y2="223.3" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round"/>
+          <g id="q9E1" opacity="0">
+            <line x1="70" y1="120" x2="358" y2="120" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+            <line x1="358" y1="260" x2="358" y2="120" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+            <text fill="#8A5900" x="358" y="106" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">B</text>
+          </g>
+          <circle cx="250" cy="160" r="7.5" fill="#1F4E79"/>
+          <text fill="#1F4E79" x="250" y="146" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A</text>
+          <circle id="q9D1" opacity="0" cx="250" cy="160" r="6.5" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="paneltitle">AD diagram &middot; vertical axis: price level</div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;font-family:var(--mono);font-size:.7rem;font-weight:700;margin-bottom:.4rem">
+          <span style="color:#1F4E79">&#9472;&#9472; AD</span>
+          <span class="hid" id="q9leg2" style="color:#8A5900">&#9472; &#9472; AD&prime;</span>
+        </div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The aggregate demand diagram during an increase in government purchases, animated. Output runs along the horizontal axis at the same positions as the IS and IR diagram directly above it, and the price level runs up the vertical axis. A gold aggregate demand curve slides rightward away from the blue original while a gold dot moves horizontally along the price level of 100, from point A at output 280 to point B at output 340. The price level never changes, so the whole curve moves rather than the point sliding along it.">
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="140" x2="430" y2="140"/><line x1="70" y1="80" x2="430" y2="80"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">60</text><text x="62" y="202.7">80</text><text x="62" y="142.7">100</text><text x="62" y="82.7">120</text><text x="62" y="22.7">140</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">price level (P)</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="79" y1="44.7" x2="421" y2="235.3" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="245.3" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">AD</text>
+          <line id="q9AD" opacity="0" x1="79" y1="44.7" x2="421" y2="235.3" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round"/>
+          <g id="q9E2" opacity="0">
+            <line x1="358" y1="260" x2="358" y2="140" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+            <text fill="#8A5900" x="358" y="126" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">B</text>
+          </g>
+          <line x1="70" y1="140" x2="250" y2="140" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <circle cx="250" cy="140" r="7.5" fill="#1F4E79"/>
+          <text fill="#1F4E79" x="250" y="126" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A</text>
+          <circle id="q9D2" opacity="0" cx="250" cy="140" r="6.5" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5"/>
+        </svg>
+      </div>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+      <div class="col" style="justify-content:flex-start;gap:.8rem">
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <div><span class="lbl2">output Y</span> <span class="big" id="q9Y">280</span> &nbsp; <span class="lbl2">interest rate r</span> <span class="big" id="q9R">5.0%</span></div>
+          <div><span class="lbl2">price level P</span> <span class="big">100</span> &nbsp; <span class="lbl2">held fixed throughout</span></div>
+          <div style="margin-top:.4rem" id="q9Note">Press play to move both diagrams at the same time.</div>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="q9Play">Play the shift</button>
+          <button class="btn ghost" id="q9Reset">Reset</button>
+        </div>
+      </div>
+      <div class="reveal reveal-hidden" id="s20a">
+        <span class="cue">At P = 100 the economy now produces 340, not 280</span>
+        <p>The AD curve is a list of output-and-price-level pairs. It used to say that at a price level of 100 this economy produces 280. That is no longer true &mdash; it produces 340, at the same price level of 100.</p>
+        <p style="margin-top:.5rem">So the curve itself has to move. <strong>AD shifts right.</strong> And it has to be a shift rather than a movement along, by the same test as always: <strong>G is not on either axis of the AD diagram</strong>.</p>
+        <p style="margin-top:.5rem">Watch the two dots and look straight down the page. The horizontal move on the upper diagram is the horizontal move on the lower one &mdash; the same 60 of output, ending on the same 340, read once as an equilibrium in two markets and once as a point on a curve.</p>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 21. CONTRACTIONARY FISCAL ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Policy Shifts AD">
+    <div class="eyebrow">Contractionary fiscal policy</div>
+    <h2>Higher taxes or lower purchases: the same steps in reverse</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:100ch">Contractionary fiscal policy lowers planned expenditure &mdash; by cutting government purchases directly, or by raising taxes, which cuts disposable income and then consumption. The price level is still 100 and the Fed has still done nothing.</p>
+    <div class="chain hot" style="margin:.6rem 0">T&uarr; &rarr; C&darr; &rarr; PE&darr; &rarr; U.I.&uarr; &rarr; Y&darr; &rarr; money demand&darr; &rarr; r&darr;</div>
+    <div class="stackwrap">
+      <div class="stack">
+      <div class="panel">
+        <div class="paneltitle">IS &ndash; IR diagram &middot; vertical axis: interest rate</div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The IS and IR diagram with contractionary fiscal policy. Output runs along the horizontal axis and the interest rate up the vertical axis. A blue downward-sloping IS curve crosses a red upward-sloping IR curve at point A, where output is 280 and the interest rate is 5 percent. When revealed, a gold dashed IS curve lies to the left of the blue one, marked by a leftward arrow labeled taxes up or purchases down, and it crosses the unmoved red IR curve at point B, where output is 220 and the interest rate is 3 percent. The diagram shows that contractionary fiscal policy lowers both output and the interest rate.">
+          <defs><marker id="h21" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="9.5" refY="4.5" orient="auto"><path d="M0,0 L9.5,4.5 L0,9 Z" fill="#8A5900"/></marker></defs>
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="160" x2="430" y2="160"/><line x1="70" y1="120" x2="430" y2="120"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">0</text><text x="62" y="202.7">3</text><text x="62" y="162.7">5</text><text x="62" y="122.7">7</text><text x="62" y="62.7">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">interest rate (r), %</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="79" y1="96.7" x2="421" y2="223.3" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="214.7" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IS</text>
+          <line x1="79" y1="223.3" x2="421" y2="96.7" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="90.7" font-family="monospace" font-size="13" font-weight="700" fill="#C0392B" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IR (P = 100)</text>
+          <circle cx="250" cy="160" r="7.5" fill="#1F4E79"/>
+          <text fill="#1F4E79" x="250" y="146" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A</text>
+          <line id="cfIS" x1="79" y1="176.7" x2="295" y2="256.7" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <text id="cfISlab" x="302" y="252" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">IS&prime;</text>
+          <line id="cfArr" x1="402" y1="220" x2="206" y2="220" stroke="#8A5900" stroke-width="3" marker-end="url(#h21)" opacity="0"/>
+          <text id="cfArrLab" x="304" y="214" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">T&uarr; or G&darr;</text>
+          <g id="cfGd" opacity="0">
+            <line x1="70" y1="200" x2="142" y2="200" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+            <line x1="142" y1="260" x2="142" y2="200" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+          </g>
+          <circle id="cfPt" cx="142" cy="200" r="7" fill="#8A5900" opacity="0"/>
+          <text id="cfPtLab" fill="#8A5900" opacity="0" x="142" y="186" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">B</text>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="paneltitle">AD diagram &middot; vertical axis: price level</div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The aggregate demand diagram with contractionary fiscal policy. Output runs along the horizontal axis at the same positions as the IS and IR diagram directly above it, and the price level up the vertical axis. When revealed, a gold dashed aggregate demand curve lies to the left of the blue one, marked by a leftward arrow, and at the unchanged price level of 100 the new point B sits at an output of 220 instead of 280. The diagram shows that a policy that lowers output at an unchanged price level shifts the whole curve left.">
+          <defs><marker id="h21b" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="9.5" refY="4.5" orient="auto"><path d="M0,0 L9.5,4.5 L0,9 Z" fill="#8A5900"/></marker></defs>
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="140" x2="430" y2="140"/><line x1="70" y1="80" x2="430" y2="80"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">60</text><text x="62" y="202.7">80</text><text x="62" y="142.7">100</text><text x="62" y="82.7">120</text><text x="62" y="22.7">140</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">price level (P)</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="79" y1="44.7" x2="421" y2="235.3" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="245.3" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">AD</text>
+          <line x1="70" y1="140" x2="250" y2="140" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <circle cx="250" cy="140" r="7.5" fill="#1F4E79"/>
+          <text fill="#1F4E79" x="250" y="126" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A</text>
+          <line id="cfAD" x1="79" y1="105.3" x2="347" y2="254" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <text id="cfADlab" x="354" y="249.3" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">AD&prime;</text>
+          <line id="cfADarr" x1="348" y1="200" x2="259" y2="200" stroke="#8A5900" stroke-width="3" marker-end="url(#h21b)" opacity="0"/>
+          <text id="cfADarrLab" x="303" y="194" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">AD shifts left</text>
+          <g id="cfADgd" opacity="0"><line x1="142" y1="260" x2="142" y2="140" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/></g>
+          <circle id="cfADpt" cx="142" cy="140" r="7" fill="#8A5900" opacity="0"/>
+          <text id="cfADptLab" fill="#8A5900" opacity="0" x="142" y="126" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">B</text>
+        </svg>
+      </div>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+      <div class="btnrow"><button class="btn" data-reveal-svg="fDn" data-reveal="s21a">Show both shifts</button></div>
+      <div class="reveal reveal-hidden" id="s21a">
+        <span class="cue">IS shifts left &middot; AD shifts left</span>
+        <p>The IS curve shifts <strong>left</strong> and the new crossing is <strong>Y = 220, r = 3%</strong>. Both fell. Lower output means fewer transactions, so money demand fell, and with real balances fixed the interest rate had to fall with it.</p>
+        <p style="margin-top:.5rem">The price level is still 100, and at a price level of 100 the economy now produces 220 rather than 280. So <strong>AD shifts left</strong> &mdash; by exactly the 60 the equilibrium moved.</p>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 22. Q10 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Policy Shifts AD">
+    <div class="eyebrow">Question 10 &middot; predict before you look</div>
+    <h2>The Fed increases the money supply, and the price level stays at 100</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1100px">
+      <div class="predict">
+        <span class="cue">Predict &middot; on your own paper</span>
+        <p><strong>M rises.</strong> The price level is still 100. Government purchases and taxes have not moved.</p>
+        <p style="margin-top:.5rem">Write down which curve moves and in which direction, where <strong>output</strong> and <strong>the interest rate</strong> end up, and what happens to <strong>AD</strong>.</p>
+      </div>
+      <p class="lede" style="max-width:96ch">Then put this answer next to the one you wrote for Question 8. Of the two numbers you just predicted, one will match what you wrote there and one will not. Circle the one you expect to differ before you turn the page.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 23. EXPANSIONARY MONETARY ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Policy Shifts AD">
+    <div class="eyebrow">Question 10 &middot; the answer</div>
+    <h2>The Fed raises the money supply: IR shifts down</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:100ch"><strong>Expansionary monetary policy</strong> aims to raise output. An increase in the money supply is one example; quantitative easing is another.</p>
+    <div class="chain" style="margin:.6rem 0">M&uarr; &rarr; M/P&uarr; &rarr; r&darr; &rarr; I&uarr; &rarr; PE&uarr; &rarr; U.I.&darr; &rarr; Y&uarr;</div>
+    <div class="stackwrap">
+      <div class="stack">
+      <div class="panel">
+        <div class="paneltitle">IS &ndash; IR diagram &middot; vertical axis: interest rate</div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The IS and IR diagram with an increase in the money supply. Output runs along the horizontal axis and the interest rate up the vertical axis. A blue downward-sloping IS curve crosses a red upward-sloping IR curve at point A, where output is 280 and the interest rate is 5 percent. When revealed, a gold dashed IR curve lies below the red one, marked by a downward arrow labeled M up, and it crosses the unmoved blue IS curve at point C, where output is 340 and the interest rate is 3 percent. The diagram shows that expansionary monetary policy raises output while lowering the interest rate.">
+          <defs><marker id="h23" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="9.5" refY="4.5" orient="auto"><path d="M0,0 L9.5,4.5 L0,9 Z" fill="#8A5900"/></marker></defs>
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="160" x2="430" y2="160"/><line x1="70" y1="120" x2="430" y2="120"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">0</text><text x="62" y="202.7">3</text><text x="62" y="162.7">5</text><text x="62" y="122.7">7</text><text x="62" y="62.7">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">interest rate (r), %</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="79" y1="96.7" x2="421" y2="223.3" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="214.7" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IS</text>
+          <line x1="79" y1="223.3" x2="421" y2="96.7" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="90.7" font-family="monospace" font-size="13" font-weight="700" fill="#C0392B" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IR (M = 1,200)</text>
+          <circle cx="250" cy="160" r="7.5" fill="#1F4E79"/>
+          <text fill="#1F4E79" x="250" y="146" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A</text>
+          <line id="emIR" x1="205" y1="256.7" x2="421" y2="176.7" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <text id="emIRlab" x="300" y="214"  font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">IR&prime;</text>
+          <line id="emArr" x1="392" y1="114.7" x2="392" y2="181.3" stroke="#8A5900" stroke-width="3" marker-end="url(#h23)" opacity="0"/>
+          <text id="emArrLab" x="406" y="148" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">M&uarr;</text>
+          <g id="emGd" opacity="0">
+            <line x1="70" y1="200" x2="358" y2="200" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+            <line x1="358" y1="260" x2="358" y2="200" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+          </g>
+          <circle id="emPt" cx="358" cy="200" r="7" fill="#8A5900" opacity="0"/>
+          <text id="emPtLab" fill="#8A5900" opacity="0" x="358" y="186" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">C</text>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="paneltitle">AD diagram &middot; vertical axis: price level</div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The aggregate demand diagram with an increase in the money supply. Output runs along the horizontal axis at the same positions as the IS and IR diagram directly above it, and the price level up the vertical axis. When revealed, a gold dashed aggregate demand curve lies to the right of the blue one, marked by a rightward arrow, and at the unchanged price level of 100 the new point C sits at an output of 340 instead of 280. The diagram shows that the money supply is not on either axis, so a change in it shifts the whole curve.">
+          <defs><marker id="h23b" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="9.5" refY="4.5" orient="auto"><path d="M0,0 L9.5,4.5 L0,9 Z" fill="#8A5900"/></marker></defs>
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="140" x2="430" y2="140"/><line x1="70" y1="80" x2="430" y2="80"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">60</text><text x="62" y="202.7">80</text><text x="62" y="142.7">100</text><text x="62" y="82.7">120</text><text x="62" y="22.7">140</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">price level (P)</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="79" y1="44.7" x2="421" y2="235.3" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="245.3" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">AD</text>
+          <line x1="70" y1="140" x2="250" y2="140" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <circle cx="250" cy="140" r="7.5" fill="#1F4E79"/>
+          <text fill="#1F4E79" x="250" y="126" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A</text>
+          <line id="emAD" x1="153" y1="26" x2="421" y2="175.3" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <text id="emADlab" x="424" y="170.7" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">AD&prime;</text>
+          <line id="emADarr" x1="152" y1="80" x2="241" y2="80" stroke="#8A5900" stroke-width="3" marker-end="url(#h23b)" opacity="0"/>
+          <text id="emADarrLab" x="196" y="74" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">AD shifts right</text>
+          <g id="emADgd" opacity="0"><line x1="358" y1="260" x2="358" y2="140" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/></g>
+          <circle id="emADpt" cx="358" cy="140" r="7" fill="#8A5900" opacity="0"/>
+          <text id="emADptLab" fill="#8A5900" opacity="0" x="358" y="126" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">C</text>
+        </svg>
+      </div>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+      <div class="btnrow"><button class="btn" data-reveal-svg="mUp" data-reveal="s23a">Show both shifts</button></div>
+      <div class="reveal reveal-hidden" id="s23a">
+        <span class="cue">IR shifts down &middot; AD shifts right</span>
+        <p>More money at an unchanged price level means more real balances. Nobody wanted to hold that much at 5%, so the rate falls until they do. The IR curve shifts <strong>down</strong>, and the new crossing is <strong>Y = 340, r = 3%</strong>. The IS curve never moved &mdash; nothing happened in the goods market.</p>
+        <p style="margin-top:.5rem">The price level is still 100, and at a price level of 100 the economy now produces 340. So <strong>AD shifts right</strong>. It is a shift and not a movement along, for the usual reason: <strong>M is not on either axis of the AD diagram.</strong></p>
+        <p style="margin-top:.5rem">Compare the two dots on the upper panel with the two on Question 9. Output went to 340 both times. The interest rate did not.</p>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 24. CONTRACTIONARY MONETARY ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Policy Shifts AD">
+    <div class="eyebrow">Contractionary monetary policy</div>
+    <h2>The Fed reduces the money supply</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:100ch"><strong>Contractionary monetary policy</strong> aims to lower output. A decrease in the money supply is the example to hold on to.</p>
+    <div class="chain hot" style="margin:.6rem 0">M&darr; &rarr; M/P&darr; &rarr; r&uarr; &rarr; I&darr; &rarr; PE&darr; &rarr; U.I.&uarr; &rarr; Y&darr;</div>
+    <div class="stackwrap">
+      <div class="stack">
+      <div class="panel">
+        <div class="paneltitle">IS &ndash; IR diagram &middot; vertical axis: interest rate</div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The IS and IR diagram with a decrease in the money supply. Output runs along the horizontal axis and the interest rate up the vertical axis. A blue downward-sloping IS curve crosses a red upward-sloping IR curve at point A, where output is 280 and the interest rate is 5 percent. When revealed, a gold dashed IR curve lies above the red one, marked by an upward arrow labeled M down, and it crosses the unmoved blue IS curve at point B, where output is 220 and the interest rate is 7 percent. The diagram shows that contractionary monetary policy lowers output while raising the interest rate.">
+          <defs><marker id="h24" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="9.5" refY="4.5" orient="auto"><path d="M0,0 L9.5,4.5 L0,9 Z" fill="#8A5900"/></marker></defs>
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="160" x2="430" y2="160"/><line x1="70" y1="120" x2="430" y2="120"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">0</text><text x="62" y="202.7">3</text><text x="62" y="162.7">5</text><text x="62" y="122.7">7</text><text x="62" y="62.7">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">interest rate (r), %</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="79" y1="96.7" x2="421" y2="223.3" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="214.7" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IS</text>
+          <line x1="79" y1="223.3" x2="421" y2="96.7" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="90.7" font-family="monospace" font-size="13" font-weight="700" fill="#C0392B" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IR (M = 1,200)</text>
+          <circle cx="250" cy="160" r="7.5" fill="#1F4E79"/>
+          <text fill="#1F4E79" x="250" y="146" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A</text>
+          <line id="cmIR" x1="79" y1="143.3" x2="403" y2="23.3" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <text id="cmIRlab" x="300" y="52" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">IR&prime;</text>
+          <line id="cmArr" x1="200" y1="173.3" x2="200" y2="104" stroke="#8A5900" stroke-width="3" marker-end="url(#h24)" opacity="0"/>
+          <text id="cmArrLab" x="214" y="140" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">M&darr;</text>
+          <g id="cmGd" opacity="0">
+            <line x1="70" y1="120" x2="142" y2="120" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+            <line x1="142" y1="260" x2="142" y2="120" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+          </g>
+          <circle id="cmPt" cx="142" cy="120" r="7" fill="#8A5900" opacity="0"/>
+          <text id="cmPtLab" fill="#8A5900" opacity="0" x="142" y="106" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">B</text>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="paneltitle">AD diagram &middot; vertical axis: price level</div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The aggregate demand diagram with a decrease in the money supply. Output runs along the horizontal axis at the same positions as the IS and IR diagram directly above it, and the price level up the vertical axis. When revealed, a gold dashed aggregate demand curve lies to the left of the blue one, marked by a leftward arrow, and at the unchanged price level of 100 the new point B sits at an output of 220 instead of 280. The diagram shows that contractionary monetary policy shifts the whole aggregate demand curve left.">
+          <defs><marker id="h24b" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" refX="9.5" refY="4.5" orient="auto"><path d="M0,0 L9.5,4.5 L0,9 Z" fill="#8A5900"/></marker></defs>
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="140" x2="430" y2="140"/><line x1="70" y1="80" x2="430" y2="80"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">60</text><text x="62" y="202.7">80</text><text x="62" y="142.7">100</text><text x="62" y="82.7">120</text><text x="62" y="22.7">140</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">price level (P)</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="79" y1="44.7" x2="421" y2="235.3" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="245.3" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">AD</text>
+          <line x1="70" y1="140" x2="250" y2="140" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <circle cx="250" cy="140" r="7.5" fill="#1F4E79"/>
+          <text fill="#1F4E79" x="250" y="126" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A</text>
+          <line id="cmAD" x1="79" y1="105.3" x2="347" y2="254" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <text id="cmADlab" x="354" y="249.3" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">AD&prime;</text>
+          <line id="cmADarr" x1="348" y1="200" x2="259" y2="200" stroke="#8A5900" stroke-width="3" marker-end="url(#h24b)" opacity="0"/>
+          <text id="cmADarrLab" x="303" y="194" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">AD shifts left</text>
+          <g id="cmADgd" opacity="0"><line x1="142" y1="260" x2="142" y2="140" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/></g>
+          <circle id="cmADpt" cx="142" cy="140" r="7" fill="#8A5900" opacity="0"/>
+          <text id="cmADptLab" fill="#8A5900" opacity="0" x="142" y="126" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">B</text>
+        </svg>
+      </div>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+      <div class="btnrow"><button class="btn" data-reveal-svg="mDn" data-reveal="s24a">Show both shifts</button></div>
+      <div class="reveal reveal-hidden" id="s24a">
+        <span class="cue">IR shifts up &middot; AD shifts left</span>
+        <p>Fewer real balances than people want to hold at 5%, so the rate climbs. The IR curve shifts <strong>up</strong> and the new crossing is <strong>Y = 220, r = 7%</strong>.</p>
+        <p style="margin-top:.5rem">At the unchanged price level of 100 the economy now produces 220, so <strong>AD shifts left</strong>.</p>
+        <p style="margin-top:.5rem">That is all four cases. Two policies, two directions each, and one thing worth noticing before Part 4: <strong>you have now seen output land on 340 twice and on 220 twice &mdash; and the interest rate be different every single time.</strong></p>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 4 · SAME OUTPUT, DIFFERENT RATES ══════════════ -->
+
+  <!-- ═══════════ 25. DIVIDER P4 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 11 · Same Output, Different Rates">
+    <div class="eyebrow">Part 4 of 4</div>
+    <h1>Same output, different interest rates</h1>
+    <p class="lede">Two policies. One raises output by raising spending; the other raises it by lowering the cost of borrowing. Put their results side by side and one column is identical while the other is reversed.</p>
+    <div class="sectrail">TWO CURVES &#10003; &rarr; DERIVING AD &#10003; &rarr; POLICY SHIFTS AD &#10003; &rarr; SAME OUTPUT, DIFFERENT RATES</div>
+    <div class="through">Throughline: the aggregate demand curve is not assumed, it is traced out. Every point on it is the goods market and the money market in equilibrium at the same time &mdash; which is why fiscal and monetary policy move output the same way but the interest rate opposite ways.</div>
+  </section>
+
+  <!-- ═══════════ 26. THE COMPARISON TABLE ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Same Output, Different Rates">
+    <div class="eyebrow">Two expansionary policies, one column at a time</div>
+    <h2>Reveal the output column first</h2>
+    <div class="titlerule"></div>
+    <div class="schedrow" style="margin-top:.6rem">
+      <table class="sched">
+        <caption>Two expansionary policies, starting from point A, with the price level held at 100</caption>
+        <thead>
+          <tr><th scope="col">Policy</th><th scope="col">Output</th><th scope="col">Interest rate</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>No policy change &middot; point A</td><td>280</td><td>5%</td></tr>
+          <tr><td>Expansionary fiscal &middot; G&uarr; or T&darr;</td><td><span class="hid" id="t1">340</span></td><td><span class="hid" id="t3">7%</span></td></tr>
+          <tr><td>Expansionary monetary &middot; M&uarr;</td><td><span class="hid" id="t2">340</span></td><td><span class="hid" id="t4">3%</span></td></tr>
+        </tbody>
+      </table>
+      <div class="col" style="justify-content:flex-start;gap:.8rem;max-width:46ch">
+        <div class="btnrow">
+          <button class="btn" data-reveal="t1,t2">Output column</button>
+          <button class="btn" data-reveal="t3,t4">Interest rate column</button>
+        </div>
+        <div class="btnrow"><button class="btn ghost" data-reveal="s26a">What the two columns say</button></div>
+      </div>
+    </div>
+    <div class="reveal reveal-hidden" id="s26a" style="max-width:1050px">
+      <span class="cue">Identical in one column, reversed in the other</span>
+      <p><strong>Output: identical.</strong> Both policies take the economy from 280 to 340. Both therefore shift the aggregate demand curve right, and by the same amount &mdash; if you had only the AD diagram in front of you, you could not tell which policy had been used.</p>
+      <p style="margin-top:.5rem"><strong>The interest rate: opposite.</strong> Fiscal policy pushes it up to 7%. Monetary policy pulls it down to 3%. Four percentage points apart, from two policies that did the same thing to output.</p>
+      <p style="margin-top:.5rem">That is not a quirk of the numbers chosen. It is a fact about how each policy reaches the economy, and the next question is to say what that fact is.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 27. Q11 ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Same Output, Different Rates">
+    <div class="eyebrow">Question 11 &middot; write before you look</div>
+    <h2>Same effect on output, opposite effect on the rate. Why?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1100px">
+      <div class="prompt">
+        <span class="cue">Question 11 &middot; on your own paper</span>
+        <p>Write down why two policies that do the same thing to output do <strong>opposite</strong> things to the interest rate.</p>
+        <p style="margin-top:.5rem">A full answer is two chains, not one sentence. Write both out, and mark on each one <strong>where the interest rate appears</strong> &mdash; near the beginning or near the end.</p>
+      </div>
+      <p class="lede" style="max-width:96ch">Both chains start with a policy and finish with output at 340. What differs is the route, and the position of one link along it.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 28. THE TWO CHAINS ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Same Output, Different Rates">
+    <div class="eyebrow">Question 11 &middot; the answer</div>
+    <h2>They enter through different doors</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1200px">
+      <div class="btnrow"><button class="btn" data-reveal="s28a">Show both chains</button></div>
+      <div class="reveal-hidden" id="s28a">
+        <div class="pair2">
+          <div class="pcard">
+            <div class="ptag">Expansionary fiscal &middot; enters at spending</div>
+            <div class="chain">G&uarr; &rarr; PE&uarr; &rarr; Y&uarr; &rarr; money demand&uarr; &rarr; r&uarr;</div>
+            <p><strong>Spending rises first.</strong> Output climbs because somebody bought more, and only then does the money market notice: higher output means more transactions, more money demand, and with real balances fixed, a higher interest rate.</p>
+            <p>The interest rate is the <strong>last</strong> link. It is dragged up behind output.</p>
+          </div>
+          <div class="pcard warn">
+            <div class="ptag">Expansionary monetary &middot; enters at the rate</div>
+            <div class="chain hot">M&uarr; &rarr; M/P&uarr; &rarr; r&darr; &rarr; I&uarr; &rarr; PE&uarr; &rarr; Y&uarr;</div>
+            <p><strong>The interest rate falls first.</strong> Nothing has been bought yet. The rate falls because there are more real balances than anyone wanted to hold, and only then does cheaper borrowing pull investment, spending and output up behind it.</p>
+            <p>The interest rate is the <strong>second</strong> link. Output is dragged up behind it.</p>
+          </div>
+        </div>
+        <div class="reveal" style="margin-top:1.1rem;max-width:1100px">
+          <span class="cue">One sentence for both</span>
+          <p><strong>Fiscal policy pushes output, and the interest rate follows. Monetary policy pulls the interest rate, and output follows.</strong></p>
+          <p style="margin-top:.5rem">Which is why the rate has to move in opposite directions. In the fiscal chain the rate is a <em>consequence</em> of output rising, so it rises. In the monetary chain the rate is the <em>cause</em> of output rising, so it has to fall in order for output to rise at all.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 29. IDENTICAL ON THE LEFT, DIFFERENT ON THE RIGHT ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Same Output, Different Rates">
+    <div class="eyebrow">The same move on one diagram, two different moves on the other</div>
+    <h2>A lower price level and a bigger money supply are not the same thing</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:104ch">A fall in the price level to 80 and an increase in the money supply do the <strong>identical</strong> thing to the IS-IR diagram: IR shifts down, output goes to 340, the rate goes to 3%. On the AD diagram they could hardly be more different.</p>
+    <div class="cases">
+      <div class="stack">
+      <div class="caselabel">Case 1 &middot; the price level falls to 80</div>
+      <div class="panel">
+        <div class="paneltitle">IS &ndash; IR diagram &middot; vertical axis: interest rate</div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The IS and IR diagram for a fall in the price level. Output runs along the horizontal axis and the interest rate up the vertical axis. A gold IR curve slides down away from the red original while a gold dot rides down along the unmoved blue IS curve, from point A at output 280 and an interest rate of 5 percent to point C at output 340 and an interest rate of 3 percent.">
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="160" x2="430" y2="160"/><line x1="70" y1="120" x2="430" y2="120"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">0</text><text x="62" y="202.7">3</text><text x="62" y="162.7">5</text><text x="62" y="122.7">7</text><text x="62" y="62.7">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">interest rate (r), %</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="79" y1="96.7" x2="421" y2="223.3" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="214.7" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IS</text>
+          <line x1="79" y1="223.3" x2="421" y2="96.7" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="90.7" font-family="monospace" font-size="13" font-weight="700" fill="#C0392B" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IR</text>
+          <line id="r1IR" opacity="0" x1="79" y1="223.3" x2="421" y2="96.7" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round"/>
+          <g id="r1E1" opacity="0">
+            <line x1="70" y1="200" x2="358" y2="200" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+            <line x1="358" y1="260" x2="358" y2="200" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+            <text fill="#8A5900" x="358" y="186" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">C</text>
+          </g>
+          <circle cx="250" cy="160" r="7.5" fill="#1F4E79"/>
+          <text fill="#1F4E79" x="250" y="146" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A</text>
+          <circle id="r1D1" opacity="0" cx="250" cy="160" r="6.5" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="paneltitle">AD diagram &middot; vertical axis: price level &middot; curve does not move</div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The aggregate demand diagram for a fall in the price level. Output runs along the horizontal axis and the price level up the vertical axis. The blue aggregate demand curve never moves. A gold dot slides down along it from point A at output 280 and price level 100 to point C at output 340 and price level 80. This is a movement along the curve, because the price level is on the vertical axis.">
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="140" x2="430" y2="140"/><line x1="70" y1="80" x2="430" y2="80"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">60</text><text x="62" y="202.7">80</text><text x="62" y="142.7">100</text><text x="62" y="82.7">120</text><text x="62" y="22.7">140</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">price level (P)</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="79" y1="44.7" x2="421" y2="235.3" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="245.3" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">AD, unmoved</text>
+          <g id="r1E2" opacity="0">
+            <line x1="70" y1="200" x2="358" y2="200" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+            <line x1="358" y1="260" x2="358" y2="200" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+            <text fill="#8A5900" x="358" y="186" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">C</text>
+          </g>
+          <line x1="70" y1="140" x2="250" y2="140" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <circle cx="250" cy="140" r="7.5" fill="#1F4E79"/>
+          <text fill="#1F4E79" x="250" y="126" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A</text>
+          <circle id="r1D2" opacity="0" cx="250" cy="140" r="6.5" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5"/>
+        </svg>
+      </div>
+      </div>
+      <div class="stack">
+      <div class="caselabel">Case 2 &middot; the money supply rises, the price level stays at 100</div>
+      <div class="panel">
+        <div class="paneltitle">IS &ndash; IR diagram &middot; vertical axis: interest rate</div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The IS and IR diagram for an increase in the money supply. Output runs along the horizontal axis and the interest rate up the vertical axis. This panel behaves exactly like the one in the case beside it: a gold IR curve slides down away from the red original while a gold dot rides down the unmoved blue IS curve, from point A at output 280 and an interest rate of 5 percent to point C at output 340 and an interest rate of 3 percent. The aggregate demand diagram for this case sits directly below it.">
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="160" x2="430" y2="160"/><line x1="70" y1="120" x2="430" y2="120"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">0</text><text x="62" y="202.7">3</text><text x="62" y="162.7">5</text><text x="62" y="122.7">7</text><text x="62" y="62.7">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">interest rate (r), %</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="79" y1="96.7" x2="421" y2="223.3" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="214.7" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IS</text>
+          <line x1="79" y1="223.3" x2="421" y2="96.7" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="90.7" font-family="monospace" font-size="13" font-weight="700" fill="#C0392B" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">IR</text>
+          <line id="r2IR" opacity="0" x1="79" y1="223.3" x2="421" y2="96.7" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round"/>
+          <g id="r2E1" opacity="0">
+            <line x1="70" y1="200" x2="358" y2="200" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+            <line x1="358" y1="260" x2="358" y2="200" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+            <text fill="#8A5900" x="358" y="186" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">C</text>
+          </g>
+          <circle cx="250" cy="160" r="7.5" fill="#1F4E79"/>
+          <text fill="#1F4E79" x="250" y="146" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A</text>
+          <circle id="r2D1" opacity="0" cx="250" cy="160" r="6.5" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="paneltitle">AD diagram &middot; vertical axis: price level &middot; whole curve moves</div>
+        <svg viewBox="0 0 470 300" role="img" aria-label="The aggregate demand diagram for an increase in the money supply. Output runs along the horizontal axis and the price level up the vertical axis. A gold aggregate demand curve slides rightward away from the blue original while a gold dot moves horizontally along the price level of 100, from point A at output 280 to point C at output 340. This is a shift of the curve, because the money supply is on neither axis.">
+          <line x1="70" y1="20" x2="70" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="260" x2="430" y2="260" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="200" x2="430" y2="200"/><line x1="70" y1="140" x2="430" y2="140"/><line x1="70" y1="80" x2="430" y2="80"/>
+            <line x1="142" y1="20" x2="142" y2="260"/><line x1="250" y1="20" x2="250" y2="260"/><line x1="358" y1="20" x2="358" y2="260"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="262.7">60</text><text x="62" y="202.7">80</text><text x="62" y="142.7">100</text><text x="62" y="82.7">120</text><text x="62" y="22.7">140</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="279">180</text><text x="142" y="279">220</text><text x="250" y="279">280</text><text x="358" y="279">340</text><text x="430" y="279">380</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12.5" fill="#14243A" font-weight="700">price level (P)</text>
+          <text x="430" y="295" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">output (Y)</text>
+          <line x1="79" y1="44.7" x2="421" y2="235.3" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="418" y="245.3" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">AD</text>
+          <line id="r2AD" opacity="0" x1="79" y1="44.7" x2="421" y2="235.3" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round"/>
+          <g id="r2E2" opacity="0">
+            <line x1="358" y1="260" x2="358" y2="140" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/>
+            <text fill="#8A5900" x="358" y="126" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">C</text>
+          </g>
+          <line x1="70" y1="140" x2="250" y2="140" stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4"/>
+          <circle cx="250" cy="140" r="7.5" fill="#1F4E79"/>
+          <text fill="#1F4E79" x="250" y="126" text-anchor="middle" font-family="monospace" font-size="15" font-weight="700" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A</text>
+          <circle id="r2D2" opacity="0" cx="250" cy="140" r="6.5" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5"/>
+        </svg>
+      </div>
+      </div>
+    </div>
+    <div class="ctrlrow">
+      <div class="col" style="justify-content:flex-start;gap:.8rem">
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <div><span class="lbl2">output Y</span> <span class="big" id="q29Y">280</span> &nbsp; <span class="lbl2">interest rate r</span> <span class="big" id="q29R">5.0%</span></div>
+          <div><span class="lbl2">price level, case 1</span> <span class="big" id="q29P1">100</span> &nbsp; <span class="lbl2">case 2</span> <span class="big" id="q29P2">100</span></div>
+          <div style="margin-top:.4rem" id="q29Note">Press play to run both cases at once.</div>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="q29Play">Play both cases</button>
+          <button class="btn ghost" id="q29Reset">Reset</button>
+        </div>
+      </div>
+      <div class="reveal reveal-hidden" id="s29a">
+        <span class="cue">Identical on top, opposite kinds of change underneath</span>
+        <p>Both cases did exactly the same thing to the IS-IR diagram on top. On the AD diagram below it, case 1 is a <strong>movement along</strong> an unmoved curve and case 2 is a <strong>shift</strong> of the whole curve.</p>
+        <p style="margin-top:.5rem">The reason is the test you have used all term. <strong>The price level is on the AD axis; the money supply is not.</strong> A variable on an axis moves you along the curve. A variable that is not on an axis moves the curve.</p>
+        <p style="margin-top:.5rem">Which is also why the IS-IR diagram alone cannot tell you which of the two happened. It shows the equilibrium, not what moved the price level to get there.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 30. Q12 DIAGNOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Same Output, Different Rates">
+    <div class="eyebrow">Question 12 &middot; silent poll &middot; pick a number on your own paper</div>
+    <h2>One of these three is wrong</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:98ch">All three compare the two expansionary policies you have just run. <strong>Two of them are sound. One is not.</strong> Write down the number of the one that fails, and one line saying what it leaves out.</p>
+    <div>
+      <div class="diag" id="diag12">
+        <button class="diag-opt" type="button"><span class="n">1</span><span class="s">Both policies shift AD right by the same amount here, so from the AD diagram alone you could not tell which one was used.</span></button>
+        <button class="diag-opt" type="button"><span class="n">2</span><span class="s">The two policies leave the economy producing the same total, but with different amounts of investment inside that total.</span></button>
+        <button class="diag-opt" type="button" data-bad="true"><span class="n">3</span><span class="s">Expansionary fiscal and expansionary monetary policy are interchangeable, since both raise output by the same amount.</span></button>
+      </div>
+      <div class="btnrow"><button class="btn" data-diag-reveal="diag12">Show which one fails</button></div>
+      <div data-diag-note style="display:none">
+        <div class="reveal" style="margin-top:1.1rem;max-width:1040px">
+          <span class="cue">Same destination, different composition</span>
+          <p><strong>Sentence 3 fails</strong> &mdash; and the half it gets right is the half you just proved. Output really does land on 340 either way, and on that score the two policies really are equal here.</p>
+          <p style="margin-top:.5rem">What differs is the interest rate, and therefore <strong>investment</strong>. Fiscal policy took the rate from 5% up to 7%, so investment ends up <em>lower</em> than it was at point A: the expansion happened even though investment was pushed back, because government purchases more than made up the difference. Monetary policy took the rate down to 3%, so investment ends up <em>higher</em> than at point A: the expansion happened <em>through</em> investment.</p>
+          <p style="margin-top:.5rem">Same output, different composition underneath. Two economies both producing 340 &mdash; one with more government purchases and less investment, the other with more investment &mdash; are not the same economy, and they will not have the same stock of factories and equipment a decade later.</p>
+          <p style="margin-top:.5rem">Sentence 1 is true for exactly the reason sentence 3 is false: the AD diagram hides the interest rate. Sentence 2 says what it is hiding.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 31. BIG PICTURE ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Same Output, Different Rates">
+    <div class="eyebrow">The whole unit on one page</div>
+    <h2>Both policies reach the economy through aggregate demand</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1200px">
+      <p class="lede" style="max-width:98ch">Neither policy touches output directly. Both of them move a curve, the curves settle at a new crossing, and the aggregate demand curve records the result at the going price level. Everything in this unit is in the table below.</p>
+      <table class="sched">
+        <caption>All four policies, starting from point A, with the price level held at 100</caption>
+        <thead>
+          <tr><th scope="col">Policy</th><th scope="col">Curve that moves</th><th scope="col">Output</th><th scope="col">Interest rate</th><th scope="col">AD</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Expansionary fiscal</td><td>IS shifts right</td><td>340</td><td>7%</td><td>shifts right</td></tr>
+          <tr><td>Contractionary fiscal</td><td>IS shifts left</td><td>220</td><td>3%</td><td>shifts left</td></tr>
+          <tr><td>Expansionary monetary</td><td>IR shifts down</td><td>340</td><td>3%</td><td>shifts right</td></tr>
+          <tr><td>Contractionary monetary</td><td>IR shifts up</td><td>220</td><td>7%</td><td>shifts left</td></tr>
+        </tbody>
+      </table>
+      <div class="pair2">
+        <div class="pcard">
+          <div class="ptag">The output column</div>
+          <div class="verdictbig">expansionary up, contractionary down</div>
+          <p>Read down it and the labels do exactly what the words say. Expansionary policy of either kind raises output and shifts AD right; contractionary policy of either kind lowers output and shifts AD left.</p>
+        </div>
+        <div class="pcard warn">
+          <div class="ptag">The interest rate column</div>
+          <div class="verdictbig">fiscal and monetary run opposite</div>
+          <p>Read down it and the pattern breaks. The two expansions sit at 7% and 3%; the two contractions sit at 3% and 7%. Fiscal policy drags the rate along behind output; monetary policy moves the rate first and output follows.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 32. SYNTHESIS AND CLOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 11 · Same Output, Different Rates">
+    <div class="eyebrow">Before you leave &middot; on your own paper</div>
+    <h2>Finish the sentence</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.3rem;max-width:1150px">
+      <p class="lede" style="max-width:98ch">The aggregate demand curve was never assumed. It was <strong>traced out</strong> &mdash; three price levels, three runs of the IS-IR diagram, three answers written down and plotted. Every point on it is the goods market and the money market in equilibrium at the same time, which is exactly why fiscal and monetary policy move output the same way and the interest rate opposite ways: the interest rate is hidden inside every point, and the two policies reach it from different sides.</p>
+      <p class="lede">Write it out in full, in your own words. A good answer names what differs and says which link of the chain makes it differ.</p>
+      <div class="blankline">
+        Expansionary fiscal and monetary policy both raise output, but <span class="bl"></span>, because <span class="bl"></span>.
+      </div>
+      <p class="serif-note">If your sentence would still be true in an economy where the interest rate had no effect on investment, it is not finished yet.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="chrome">
+  <span class="course" id="sectionLabel">ECON 002 &middot; Discussion 11</span>
+  <span class="navhint">
+    <button id="prevBtn" aria-label="Previous slide">&larr; prev</button>
+    <span aria-live="polite" aria-atomic="true">Slide <span id="cur">1</span> of <span id="tot">32</span></span>
+    <button id="nextBtn" aria-label="Next slide">next &rarr;</button>
+  </span>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* the one place the course string lives */
+  const COURSE = 'ECON 002';
+  const DECK_TITLE = 'Two Markets, One Curve';
+  document.title = COURSE + ' · ' + DECK_TITLE;
+  const eyebrow = document.getElementById('titleEyebrow');
+  if(eyebrow) eyebrow.textContent = COURSE + ' · Discussion Section · Unit 10';
+
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  /* slide element -> the reset() of every animation on it. Entering a slide
+     rewinds its animations, so nothing is already showing on arrival —
+     including on a second pass back through the deck. */
+  const slideResets=new Map();
+  function registerReset(el, fn){
+    const sl = el.closest && el.closest('.slide');
+    if(!sl) return;
+    if(!slideResets.has(sl)) slideResets.set(sl,[]);
+    slideResets.get(sl).push(fn);
+  }
+  const prog=document.getElementById('prog');
+  const cur=document.getElementById('cur');
+  document.getElementById('tot').textContent=slides.length;
+
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    prog.style.width=((i)/(slides.length-1)*100)+'%';
+    cur.textContent=i+1;
+    rewind(slides[i]);
+    const sec=slides[i].getAttribute('data-section');
+    const lbl=document.getElementById('sectionLabel');
+    if(lbl) lbl.textContent = sec ? (COURSE+' · '+sec) : (COURSE+' · Discussion');
+  }
+  function next(){show(i+1)}
+  function prev(){show(i-1)}
+
+  document.getElementById('nextBtn').onclick=next;
+  document.getElementById('prevBtn').onclick=prev;
+
+  /* guarded: Space must activate a focused control, not jump the slide */
+  window.addEventListener('keydown',e=>{
+    const t=e.target;
+    const onControl = t && t.closest && t.closest('button,a,input,select,textarea,[tabindex]');
+    if(e.key===' '||e.key==='Spacebar'){
+      if(onControl) return;               /* let the browser click the focused button */
+      e.preventDefault();next();return;
+    }
+    if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();next()}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}
+    else if(e.key.toLowerCase()==='f'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  /* ---- generic click-to-reveal: button[data-reveal="id"] or "id1,id2,id3"
+          A comma list lets one button uncover a block of text and a legend
+          entry at the same time, and it is also how the chain on the price
+          level slide hands the next link's button to the screen only once
+          the previous link is on it. */
+  document.querySelectorAll('[data-reveal]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      btn.getAttribute('data-reveal').split(',').forEach(id=>{
+        const t=document.getElementById(id.trim());
+        if(t) t.classList.add('shown');
+      });
+      btn.disabled=true;
+    });
+  });
+
+  /* ---- generic quick-check polls: button[data-poll-reveal="pollId"] ---- */
+  document.querySelectorAll('[data-poll-reveal]').forEach(btn=>{
+    const group=document.getElementById(btn.getAttribute('data-poll-reveal'));
+    if(!group) return;
+    const opts=[...group.querySelectorAll('.poll-opt')];
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    btn.addEventListener('click',()=>{
+      group.classList.add('revealed');
+      opts.forEach(o=>{ if(o.dataset.correct==='true') o.classList.add('correct'); });
+      btn.disabled=true;
+    });
+  });
+
+  /* ---- generic diagnose (flawed-argument) groups ---- */
+  document.querySelectorAll('.diag').forEach(group=>{
+    const opts=[...group.querySelectorAll('.diag-opt')];
+    const revealBtn=group.parentElement.querySelector('[data-diag-reveal]');
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    if(revealBtn){
+      revealBtn.addEventListener('click',()=>{
+        group.classList.add('revealed');
+        opts.forEach(o=>{if(o.dataset.bad==='true')o.classList.add('bad');});
+        revealBtn.disabled=true;
+        const note=group.parentElement.querySelector('[data-diag-note]');
+        if(note) note.style.display='block';
+      });
+    }
+  });
+
+  /* ---- static shift diagrams: button[data-reveal-svg="key"] ----
+     Every IS shift, IR shift and AD shift in the deck is registered here, so
+     one piece of code reveals all of them: the new curve, its label, the
+     arrow naming the shock, the guides, and the new equilibrium point. The
+     fiscal and monetary keys carry elements from two diagrams at once, which
+     is how a single press moves the IS-IR panel and the AD panel together. */
+  const svgShifts={
+    pUp1  : ['uS2','uS2lab','uArr','uArrLab'],
+    pUp2  : ['uB','uBl','uGdR'],
+    pUp3  : ['uSlide','uSlideLab'],
+    pUp4  : ['uGdY'],
+    pDn   : ['dS2','dS2lab','dArr','dArrLab','dGd','dC','dCl'],
+    adDraw: ['adPts','adLine','adLab'],
+    gUp   : ['gS2','gS2lab','gArr','gArrLab','gGd','gB','gBl'],
+    fDn   : ['cfIS','cfISlab','cfArr','cfArrLab','cfGd','cfPt','cfPtLab',
+             'cfAD','cfADlab','cfADarr','cfADarrLab','cfADgd','cfADpt','cfADptLab'],
+    mUp   : ['emIR','emIRlab','emArr','emArrLab','emGd','emPt','emPtLab',
+             'emAD','emADlab','emADarr','emADarrLab','emADgd','emADpt','emADptLab'],
+    mDn   : ['cmIR','cmIRlab','cmArr','cmArrLab','cmGd','cmPt','cmPtLab',
+             'cmAD','cmADlab','cmADarr','cmADarrLab','cmADgd','cmADpt','cmADptLab']
+  };
+  /* Entering a slide puts it back to its unrevealed state: uncovered text,
+     legend entries, table cells, diagnose verdicts, marked-up SVGs and
+     animations all rewind, and their buttons come back — so a slide visited
+     twice never opens with its answer already showing. */
+  function rewind(sl){
+    if(!sl) return;
+    sl.querySelectorAll('.shown').forEach(e=>e.classList.remove('shown'));
+    sl.querySelectorAll('.revealed').forEach(g=>g.classList.remove('revealed'));
+    sl.querySelectorAll('.poll-opt.correct').forEach(o=>o.classList.remove('correct'));
+    sl.querySelectorAll('.diag-opt.bad').forEach(o=>o.classList.remove('bad'));
+    sl.querySelectorAll('.poll-opt,.diag-opt').forEach(o=>{o.style.outline='';});
+    sl.querySelectorAll('[data-diag-note]').forEach(n=>{n.style.display='none';});
+    sl.querySelectorAll('[data-reveal-svg]').forEach(b=>{
+      (svgShifts[b.getAttribute('data-reveal-svg')]||[]).forEach(id=>{
+        const el=document.getElementById(id); if(el) el.setAttribute('opacity',0);
+      });
+    });
+    sl.querySelectorAll('[data-reveal],[data-reveal-svg],[data-poll-reveal],[data-diag-reveal],[data-cond]')
+      .forEach(b=>{ b.disabled=false; });
+    (slideResets.get(sl)||[]).forEach(fn=>fn());
+  }
+
+  function revealShift(key){
+    (svgShifts[key]||[]).forEach(id=>{const el=document.getElementById(id); if(el) el.setAttribute('opacity',1);});
+  }
+  document.querySelectorAll('[data-reveal-svg]').forEach(btn=>{
+    const key=btn.getAttribute('data-reveal-svg');
+    btn.addEventListener('click',()=>{ revealShift(key); btn.disabled=true; });
+  });
+
+  /* ---- condition cards: button[data-cond="bodyId"] ---- */
+  document.querySelectorAll('[data-cond]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const body=document.getElementById(btn.getAttribute('data-cond'));
+      if(body){body.classList.add('shown');}
+      btn.disabled=true;
+    });
+  });
+
+  /* =====================================================================
+     SHARED GEOMETRY
+     Every diagram in the deck uses the same horizontal axis, so the same
+     output value sits at the same horizontal position on the IS-IR panel
+     and on the AD panel stacked under it. Only the vertical axis differs: the
+     interest rate runs 0 to 12 on IS-IR, the price level runs 60 to 140
+     on AD.
+     ===================================================================== */
+  const $ = id => document.getElementById(id);
+  function px(Y){ return 70 + 1.8*(Y-180); }      /* output, 180 to 380 */
+  function pyR(r){ return 260 - 20*r; }           /* interest rate, 0 to 12 */
+  function pyP(P){ return 260 - 3*(P-60); }       /* price level, 60 to 140 */
+
+  /* Draw a straight line given in economics units (value = b + m*Y) and clip
+     it to the plot box, so a shifted curve never runs off the panel. */
+  function seg(el, m, b, yfn, vlo, vhi){
+    if(!el) return;
+    let Y1=185, Y2=375;
+    const val = Y => b + m*Y, Yat = v => (v-b)/m;
+    let v1=val(Y1), v2=val(Y2);
+    if(v1>vhi){ v1=vhi; Y1=Yat(vhi); } else if(v1<vlo){ v1=vlo; Y1=Yat(vlo); }
+    if(v2>vhi){ v2=vhi; Y2=Yat(vhi); } else if(v2<vlo){ v2=vlo; Y2=Yat(vlo); }
+    el.setAttribute('x1', px(Y1).toFixed(1)); el.setAttribute('y1', yfn(v1).toFixed(1));
+    el.setAttribute('x2', px(Y2).toFixed(1)); el.setAttribute('y2', yfn(v2).toFixed(1));
+  }
+  function dot(el, x, y){ if(el){ el.setAttribute('cx', x.toFixed(1)); el.setAttribute('cy', y.toFixed(1)); } }
+
+  /* intercepts of the three baseline curves, in economics units */
+  const IS_B = 5 + 280/30;      /* r = IS_B − Y/30  passes through (280, 5) */
+  const IR_B = 5 - 280/30;      /* r = IR_B + Y/30  passes through (280, 5) */
+  const AD_B = 100 + 280/3;     /* P = AD_B − Y/3   passes through (280, 100) */
+
+  const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function ease(p){ return p<1 ? (0.5-0.5*Math.cos(Math.PI*p)) : 1; }
+
+  /* =====================================================================
+     Slide 20 · expansionary fiscal policy on both diagrams at once. IS
+     slides right while the equilibrium rides up the unmoved IR curve, and
+     on the AD panel the whole curve slides right while its dot travels
+     horizontally along the unchanged price level of 100. A curve shifting
+     is a continuous adjustment, so this sweeps with the cosine ease.
+     ===================================================================== */
+  (function(){
+    const bPlay=$('q9Play'); if(!bPlay) return;
+    const bReset=$('q9Reset'), $Y=$('q9Y'), $R=$('q9R'), $n=$('q9Note');
+    let raf;
+
+    function place(e){
+      seg($('q9IS'), -1/30, IS_B + 4*e, pyR, 0.2, 11.8);
+      seg($('q9AD'), -1/3,  AD_B + 20*e, pyP, 62, 138);
+      const Y = 280 + 60*e, r = 5 + 2*e;
+      dot($('q9D1'), px(Y), pyR(r));
+      dot($('q9D2'), px(Y), pyP(100));
+      $Y.textContent = Math.round(Y);
+      $R.textContent = r.toFixed(1) + '%';
+    }
+    function ends(o){ ['q9E1','q9E2'].forEach(id=>{ const el=$(id); if(el) el.setAttribute('opacity',o); }); }
+    /* the sliding curves start on top of the originals, so they stay hidden
+       until play — otherwise gold would cover the blue IS and AD at rest */
+    function movers(o){ ['q9IS','q9AD','q9D1','q9D2'].forEach(id=>{ const el=$(id); if(el) el.setAttribute('opacity',o); }); }
+
+    function reset(){
+      cancelAnimationFrame(raf);
+      place(0); ends(0); movers(0);
+      bPlay.disabled=false;
+      $n.textContent='Press play to move both diagrams at the same time.';
+    }
+    function finish(){
+      cancelAnimationFrame(raf);
+      place(1); ends(1); movers(1);
+      bPlay.disabled=true;
+      $n.textContent='Y = 340 and r = 7%, at the same price level of 100. Both curves ended up 60 of output to the right of where the equilibrium started.';
+    }
+    function play(){
+      reset(); movers(1);
+      ['q9leg1','q9leg2','s20a'].forEach(id=>{ const el=$(id); if(el) el.classList.add('shown'); });
+      bPlay.disabled=true;
+      if(REDUCED){ finish(); return; }          /* reduced-motion branch */
+      $n.textContent='IS is sliding right; the equilibrium is riding up the IR curve, and AD below is carrying the same move.';
+      const t0=performance.now();
+      (function step(now){
+        const p=Math.min(1,(now-t0)/2600);
+        place(ease(p));
+        if(p>=1) finish(); else raf=requestAnimationFrame(step);
+      })(t0);
+    }
+
+    bPlay.onclick=play;
+    bReset.addEventListener('click',reset);
+    registerReset(bPlay,reset);
+    reset();
+  })();
+
+  /* =====================================================================
+     Slide 29 · the two rows run together. Both IS-IR panels do exactly the
+     same thing, which is the point; the two AD panels do not. In case
+     1 the dot slides down an unmoved AD curve as the price level falls to
+     80. In case 2 the price level never moves and the curve itself
+     travels right. Both are continuous, so both sweep.
+     ===================================================================== */
+  (function(){
+    const bPlay=$('q29Play'); if(!bPlay) return;
+    const bReset=$('q29Reset');
+    const $Y=$('q29Y'), $R=$('q29R'), $P1=$('q29P1'), $P2=$('q29P2'), $n=$('q29Note');
+    let raf;
+
+    function place(e){
+      const Y = 280 + 60*e, r = 5 - 2*e, P1 = 100 - 20*e;
+      seg($('r1IR'), 1/30, IR_B - 4*e, pyR, 0.2, 11.8);
+      seg($('r2IR'), 1/30, IR_B - 4*e, pyR, 0.2, 11.8);
+      seg($('r2AD'), -1/3, AD_B + 20*e, pyP, 62, 138);
+      dot($('r1D1'), px(Y), pyR(r));
+      dot($('r2D1'), px(Y), pyR(r));
+      dot($('r1D2'), px(Y), pyP(P1));
+      dot($('r2D2'), px(Y), pyP(100));
+      $Y.textContent = Math.round(Y);
+      $R.textContent = r.toFixed(1) + '%';
+      $P1.textContent = Math.round(P1);
+      $P2.textContent = '100';
+    }
+    function ends(o){ ['r1E1','r1E2','r2E1','r2E2'].forEach(id=>{ const el=$(id); if(el) el.setAttribute('opacity',o); }); }
+    /* same reason as the slide before: the sliding curves start where the
+       originals are, so they wait until play to appear */
+    function movers(o){ ['r1IR','r2IR','r2AD','r1D1','r1D2','r2D1','r2D2'].forEach(id=>{ const el=$(id); if(el) el.setAttribute('opacity',o); }); }
+
+    function reset(){
+      cancelAnimationFrame(raf);
+      place(0); ends(0); movers(0);
+      bPlay.disabled=false;
+      $n.textContent='Press play to run both cases at once.';
+    }
+    function finish(){
+      cancelAnimationFrame(raf);
+      place(1); ends(1); movers(1);
+      bPlay.disabled=true;
+      $n.textContent='Both cases land on Y = 340 and r = 3%. On the AD diagram case 1 moved along the curve and case 2 moved the curve.';
+    }
+    function play(){
+      reset(); movers(1);
+      const expl=$('s29a'); if(expl) expl.classList.add('shown');
+      bPlay.disabled=true;
+      if(REDUCED){ finish(); return; }          /* reduced-motion branch */
+      $n.textContent='Watch the two lower panels. One dot is leaving its curve behind; the other is taking the curve with it.';
+      const t0=performance.now();
+      (function step(now){
+        const p=Math.min(1,(now-t0)/2600);
+        place(ease(p));
+        if(p>=1) finish(); else raf=requestAnimationFrame(step);
+      })(t0);
+    }
+
+    bPlay.onclick=play;
+    bReset.addEventListener('click',reset);
+    registerReset(bPlay,reset);
+    reset();
+  })();
+
+  show(0);
+})();
+</script>
+</body>
+</html>

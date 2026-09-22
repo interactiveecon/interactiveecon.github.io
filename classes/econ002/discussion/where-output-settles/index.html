@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECON 002 · Where Output Settles</title>
+<style>
+  :root{
+    --ink:#14243A;          /* near-navy ink */
+    --accent:#1F4E79;       /* deep blue (from worksheets) */
+    --accent-soft:#8FAADC;
+    --paper:#F6F4EE;        /* warm chalk-paper */
+    --paper-line:#E4E0D5;
+    --gold:#8A5900;
+    --gold-soft:#FBF1DC;
+    --red:#C0392B;
+    --grey:#5A5F66;
+    --chalk:#FbFaF7;
+    --shadow:0 8px 30px rgba(20,36,58,.10);
+    --mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Georgia','Iowan Old Style',serif;
+    color:var(--ink);
+    background:var(--paper);
+    overflow:hidden;
+  }
+  /* ---------- deck scaffold ---------- */
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;
+    padding:clamp(1.25rem,4vw,4.5rem) clamp(1.5rem,6vw,6rem);
+    /* extra bottom room so content never hides behind the fixed nav bar (~46px) */
+    padding-bottom:calc(46px + clamp(1rem,3vw,2rem));
+    /* if a slide is taller than the screen, scroll it instead of clipping/overlapping */
+    overflow-y:auto;overflow-x:hidden;
+    scroll-padding-bottom:46px;
+    opacity:0;
+    transition:opacity .38s ease;
+  }
+  .slide.active{display:flex;opacity:1;animation:rise .45s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide.active{animation:none}
+    .slide{transition:none}
+    *{transition-duration:.001ms !important;animation-duration:.001ms !important}
+  }
+  /* visible keyboard focus (WCAG 2.4.7) */
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+    outline:3px solid var(--accent);outline-offset:3px;border-radius:6px;
+  }
+  :focus:not(:focus-visible){outline:none}
+  /* ---------- typography ---------- */
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--grey);margin-bottom:1.1rem;font-weight:600;
+  }
+  h1{font-size:clamp(2.4rem,5.5vw,4.4rem);line-height:1.02;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3.2vw,2.4rem);line-height:1.1;font-weight:700;letter-spacing:-.01em;margin-bottom:.4rem}
+  .lede{font-size:clamp(1.05rem,1.7vw,1.35rem);line-height:1.5;color:var(--ink);max-width:52ch}
+  .muted{color:var(--grey)}
+  .serif-note{font-style:italic;color:var(--grey);font-size:1rem;line-height:1.5}
+  strong{font-weight:700}
+  .accent{color:var(--accent)}
+  .red{color:var(--red)}
+  .gold{color:var(--gold)}
+  /* title rule */
+  h2 + .titlerule{height:2px;background:linear-gradient(90deg,var(--accent-soft),transparent);
+    width:min(100%,640px);margin:.2rem 0 1.4rem}
+  /* ---------- model cards ---------- */
+  .models{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin:1.4rem 0;max-width:900px}
+  .model{
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;
+    padding:1.4rem 1.6rem;box-shadow:var(--shadow);position:relative;
+  }
+  .model .tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:.6rem;display:block}
+  .model .eq{font-family:var(--mono);font-size:1.35rem;color:var(--ink)}
+  .model .eq .coef{color:var(--red);font-weight:700}
+  .model.dim{opacity:.4;filter:saturate(.4)}
+  .model.hi{border-color:var(--accent);box-shadow:0 8px 30px rgba(31,78,121,.22)}
+  .model .body{font-size:1rem;line-height:1.5;margin-top:.7rem}
+  .model.warm{background:var(--gold-soft);border-color:#E2CFA4}
+  .model.warm .tag{color:var(--gold)}
+  /* ---------- boxes ---------- */
+  .prompt,.reveal,.predict{
+    border-radius:10px;padding:1.05rem 1.3rem;max-width:820px;line-height:1.5;
+    font-family:'Georgia',serif;font-size:1.08rem;
+  }
+  .prompt{background:#EEF3FA;border-left:4px solid var(--accent)}
+  .reveal{background:var(--gold-soft);border-left:4px solid var(--gold)}
+  .cue{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;display:block;margin-bottom:.4rem}
+  .prompt .cue{color:var(--accent)}
+  .reveal .cue{color:var(--gold)}
+  .predict .cue{color:var(--red)}
+  .predict{background:#FBEEEC;border-left:4px solid var(--red)}
+  .prompt p,.reveal p,.predict p{margin:0;line-height:1.5}
+  .prompt .cue + p,.reveal .cue + p,.predict .cue + p{margin-top:.15rem}
+  .prompt ol,.predict ol,.reveal ol{margin:.5rem 0 0 1.3rem;line-height:1.6}
+  .prompt li,.predict li,.reveal li{margin-bottom:.25rem}
+  /* chain / mono line */
+  .chain{
+    font-family:var(--mono);background:#EDF1F8;border:1px solid var(--accent-soft);
+    border-radius:8px;padding:.7rem 1rem;font-size:1.05rem;color:var(--accent);
+    display:inline-block;margin-top:.4rem
+  }
+  .chain.warm{background:var(--gold-soft);border-color:#E2CFA4;color:var(--gold)}
+  /* ---------- interactive graph panel ---------- */
+  .graphwrap{display:grid;grid-template-columns:1.15fr .85fr;gap:2rem;align-items:center;margin-top:.6rem;flex:1 0 auto}
+  @media (max-width:900px){.graphwrap{grid-template-columns:1fr}}
+  .panel{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;padding:1.2rem;box-shadow:var(--shadow)}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .controls{display:flex;flex-direction:column;gap:1.3rem}
+  .readout{font-family:var(--mono);font-size:.92rem;line-height:1.7;color:var(--ink);background:#EDF1F8;border-radius:8px;padding:.8rem 1rem}
+  .readout .big{font-size:1.25rem;color:var(--accent);font-weight:700}
+  .readout .lbl2{color:var(--grey)}
+  .btn{
+    font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.7rem 1.2rem;cursor:pointer;
+    box-shadow:0 3px 10px rgba(31,78,121,.3);transition:transform .1s,background .2s;align-self:flex-start
+  }
+  .btn:hover{background:#173a5c;transform:translateY(-1px)}
+  /* a spent reveal button stays in place — hiding it slid the row under the
+     cursor, so a second click landed on the next answer (disabled controls
+     are exempt from the contrast minimum) */
+  .btn:disabled,.btn.ghost:disabled{opacity:.38;cursor:default;transform:none;box-shadow:none}
+  .btn:disabled:hover{background:var(--accent);transform:none}
+  .btn.ghost:disabled:hover{background:transparent}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
+  .btn.ghost:hover{background:#EEF3FA}
+  .btnrow{display:flex;gap:.7rem;flex-wrap:wrap}
+  /* ---------- poll ---------- */
+  .poll-opts{display:flex;flex-direction:column;gap:.8rem;max-width:860px;margin-top:1.1rem}
+  .poll-opt{
+    display:flex;align-items:stretch;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;
+    cursor:pointer;background:var(--chalk);transition:border-color .2s,transform .08s;position:relative;
+    width:100%;text-align:left;font:inherit;color:inherit;padding:0
+  }
+  .poll-opt:hover{border-color:var(--accent-soft)}
+  .poll-opt:active{transform:scale(.995)}
+  .poll-opt .num{background:var(--accent);color:#fff;font-family:var(--mono);font-weight:700;
+    display:flex;align-items:center;justify-content:center;padding:0 1.1rem;font-size:1.1rem;z-index:2}
+  .poll-opt .txt{padding:.9rem 1.1rem;line-height:1.4;z-index:2;font-size:1.02rem;font-family:'Georgia',serif}
+  .poll.revealed .poll-opt{opacity:.5;transition:opacity .4s}
+  .poll.revealed .poll-opt.correct{opacity:1;border-color:var(--gold);background:var(--gold-soft)}
+  .poll-opt.correct .num{background:var(--gold)}
+  .poll-opt.correct .txt::after{content:" ✓ correct";color:var(--gold);font-family:var(--mono);font-weight:700;font-size:.82rem}
+  .poll-hint{font-family:var(--mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-top:.9rem;font-weight:600}
+  /* ---------- footer / nav ---------- */
+  .chrome{position:fixed;bottom:0;left:0;right:0;height:46px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 1.4rem;font-family:var(--mono);font-size:.72rem;
+    letter-spacing:.08em;color:var(--grey);pointer-events:none;z-index:50}
+  .chrome .course{text-transform:uppercase}
+  .progress-track{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:60}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-soft));width:0;transition:width .35s ease}
+  .navhint{display:flex;gap:1.2rem;align-items:center;pointer-events:auto}
+  .navhint button{pointer-events:auto;background:none;border:none;color:var(--grey);cursor:pointer;font-family:var(--mono);font-size:.9rem;padding:.2rem .5rem;border-radius:5px}
+  .navhint button:hover{color:var(--accent);background:rgba(31,78,121,.08)}
+  .kbd{font-family:var(--mono);font-size:.66rem;border:1px solid var(--paper-line);border-radius:4px;padding:.1rem .35rem;color:var(--grey)}
+  /* content column helper */
+  .col{display:flex;flex-direction:column;gap:1.1rem;flex:1 0 auto;justify-content:center}
+  .grow{flex:1 0 auto}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+  @media (max-width:900px){.two{grid-template-columns:1fr}}
+  .calc{font-family:var(--mono);font-size:1.05rem;line-height:1.8}
+  .calc .lbl{color:var(--accent);font-weight:700}
+  .footnote{font-size:.92rem;color:var(--grey);font-style:italic}
+  /* two graphs above, readout + buttons below */
+  .ctrlrow{display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;align-items:start;margin-top:1rem}
+  @media (max-width:900px){.ctrlrow{grid-template-columns:1fr}}
+  .paneltitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;
+    font-weight:700;color:var(--accent);margin-bottom:.5rem}
+  .runsheet{display:grid;grid-template-columns:auto 1fr;gap:.35rem 1.1rem;font-family:var(--mono);font-size:.86rem;line-height:1.5;margin-top:.4rem}
+  .runsheet .rk{color:var(--accent);font-weight:700;white-space:nowrap}
+  /* title slide special */
+  .title-slide{justify-content:safe center}
+  .title-slide h1{margin:.6rem 0}
+  .signature{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:2rem}
+  /* ---------- section divider ---------- */
+  .divider{justify-content:safe center;background:linear-gradient(135deg,#1B3B5C,#14243A)}
+  .divider *{color:#F6F4EE}
+  .divider .eyebrow{color:#8FAADC}
+  .divider h1{font-size:clamp(2.2rem,5vw,4rem);color:#fff}
+  .divider .lede{color:#D6DEE9;max-width:52ch}
+  .divider .sectrail{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#8FAADC;margin-top:1.6rem}
+  .divider .through{font-family:var(--mono);font-size:.8rem;line-height:1.6;color:#D6DEE9;
+    border-left:3px solid #8FAADC;padding-left:.9rem;margin-top:1.4rem;max-width:60ch}
+  /* ---------- generic click-reveal ---------- */
+  .reveal-hidden{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .reveal-hidden.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* cell-level hide: keeps the table's layout, but the value is neither seen
+     nor read out by a screen reader until its reveal button is pressed */
+  .hid{visibility:hidden}
+  .hid.shown{visibility:visible}
+  /* condition cards (3-across; override grid-template-columns for 2) */
+  .condrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem}
+  @media (max-width:900px){.condrow{grid-template-columns:1fr !important}}
+  .condcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.5rem}
+  .condcard .ctitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .condcard .cbtn{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:.55rem .8rem;cursor:pointer;align-self:flex-start}
+  .condcard .cbtn:hover{background:#173a5c}
+  .condcard .cbody{opacity:0;max-height:0;overflow:hidden;transition:opacity .35s,max-height .45s}
+  .condcard .cbody.shown{opacity:1;max-height:none;overflow:visible;margin-top:.3rem}
+  .condcard .cnote{font-size:.95rem;line-height:1.5;color:var(--ink)}
+  .condcard ul{margin:.2rem 0 0 1.1rem;font-size:.95rem;line-height:1.55}
+  .condcard li{margin-bottom:.3rem}
+  .condcard .big{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--accent)}
+  .condcard.warm{background:var(--gold-soft);border-color:#E2CFA4}
+  .condcard.warm .ctitle,.condcard.warm .big{color:var(--gold)}
+  /* diagnose (numbered flawed-argument) list */
+  .diag{display:flex;flex-direction:column;gap:.7rem;max-width:920px;margin:1rem 0}
+  .diag-opt{display:flex;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;background:var(--chalk);width:100%;text-align:left;font:inherit;color:inherit;padding:0;cursor:pointer;transition:border-color .2s}
+  .diag-opt:hover{border-color:var(--accent-soft)}
+  .diag-opt .n{background:var(--grey);color:#fff;font-family:var(--mono);font-weight:700;display:flex;align-items:center;padding:0 1rem;font-size:1.05rem}
+  .diag-opt .s{padding:.85rem 1.1rem;line-height:1.45;font-family:'Georgia',serif;font-size:1.02rem}
+  .diag.revealed .diag-opt{opacity:.5}
+  .diag.revealed .diag-opt.bad{opacity:1;border-color:var(--red);background:#FBEEEC}
+  .diag-opt.bad .n{background:var(--red)}
+  .diag.revealed .diag-opt.bad .s::after{content:" ✗ the flaw";color:var(--red);font-family:var(--mono);font-weight:700;font-size:.8rem}
+  /* fill-in-the-blank close line */
+  .blankline{font-family:var(--mono);font-size:clamp(1.1rem,2.4vw,1.7rem);line-height:2;color:var(--ink);
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1.4rem 1.6rem;
+    box-shadow:var(--shadow);max-width:900px}
+  .blankline .bl{display:inline-block;min-width:9ch;border-bottom:2px solid var(--accent)}
+  /* ---------- data tables ---------- */
+  .sched{border-collapse:collapse;font-family:var(--mono);font-size:.86rem;background:var(--chalk);
+    border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+  .sched caption{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;color:var(--accent);text-align:left;padding:.5rem .8rem .35rem}
+  .sched th,.sched td{padding:.3rem .8rem;text-align:right;border-bottom:1px solid var(--paper-line)}
+  .sched th{color:var(--grey);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.66rem}
+  .sched td:first-child,.sched th:first-child{text-align:left;color:var(--accent);font-weight:700}
+  .sched tbody tr:last-child td{border-bottom:none}
+  .sched tr.tot td{border-top:2px solid var(--paper-line);font-weight:700;color:var(--gold)}
+  .sched tr.tot td:first-child{color:var(--gold)}
+  .sched.gold{background:var(--gold-soft)}
+  .sched.gold caption,.sched.gold td:first-child{color:var(--gold)}
+  .sched.txt td{text-align:left}
+  .sched.txt td:first-child{white-space:nowrap}
+  .sched .yes{color:var(--gold);font-weight:700}
+  .sched .no{color:var(--red);font-weight:700}
+  .sched .foreign{color:var(--red)}
+  .schedrow{display:flex;gap:1.4rem;flex-wrap:wrap;align-items:flex-start}
+  .sched tr.hl td{background:var(--gold-soft);color:var(--gold);font-weight:700}
+  .sched tr.hl td:first-child{color:var(--gold)}
+  .sched tr{transition:background .18s}
+  /* ---------- two-card takeaway ---------- */
+  .pair2{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin-top:.8rem}
+  @media (max-width:900px){.pair2{grid-template-columns:1fr}}
+  .pcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;
+    padding:1.2rem 1.3rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.7rem}
+  .pcard .ptag{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .pcard.warn .ptag{color:var(--red)}
+  .pcard .verdictbig{font-family:var(--mono);font-size:1rem;font-weight:700;line-height:1.5;color:var(--accent)}
+  .pcard.warn .verdictbig{color:var(--red)}
+  .pcard p{font-size:1rem;line-height:1.5}
+  /* ---------- reflow at 320px (WCAG 1.4.10) ---------- */
+  @media (max-width:700px){
+    .models{grid-template-columns:1fr}
+    .chain{max-width:100%;overflow-wrap:anywhere}
+    .sched{font-size:.76rem}
+    .sched th,.sched td{padding:.25rem .45rem}
+    .schedrow{gap:.9rem}
+    /* a wide table scrolls inside its own box rather than widening the slide */
+    .sched{display:block;overflow-x:auto;max-width:100%}
+    .col,.two > *,.graphwrap > *,.condrow > *,.pair2 > *,.schedrow > *{min-width:0}
+    /* a button column beside a table is sized in ch and set not to shrink;
+       at phone widths it has to give way instead of pushing the slide wide */
+    .schedrow > .col{flex:1 1 auto;max-width:100% !important}
+    .btnrow .btn{max-width:100%;overflow-wrap:anywhere}
+  }
+</style>
+</head>
+<body>
+<div class="progress-track"><div class="progress-fill" id="prog"></div></div>
+<div class="deck" id="deck">
+
+  <!-- ═══════════ 1. TITLE ═══════════ -->
+  <section class="slide active title-slide" data-section="Discussion 8 · Opening">
+    <div class="eyebrow" id="titleEyebrow">ECON 002 &middot; Discussion Section</div>
+    <h1>Where output<br><span class="accent">settles</span></h1>
+    <p class="lede" style="margin-top:1rem">Last time we asked what an economy is capable of producing. Today we ask what it actually produces: what determines each piece of spending, why unsold goods on a shelf are the signal that moves output, and why a small change in investment moves output by four times as much.</p>
+    <p class="serif-note" style="margin-top:1.6rem">Work on your own paper. Write your answer down before any answer appears &mdash; your reasoning is the point, not a clean final line.</p>
+    <div class="signature">The pieces &rarr; Equilibrium &rarr; The multiplier &rarr; The IS curve</div>
+  </section>
+
+  <!-- ══════════════ PART 1 · THE PIECES ══════════════ -->
+
+  <!-- ═══════════ 2. DIVIDER P1 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 8 · The Pieces">
+    <div class="eyebrow">Part 1 of 4</div>
+    <h1>The pieces</h1>
+    <p class="lede">An earlier unit split GDP into C, I, G and NX so the accounting would add up. That was bookkeeping. This part asks a harder question about the same four letters: what makes each one the size it is?</p>
+    <div class="sectrail">THE PIECES &rarr; EQUILIBRIUM &rarr; THE MULTIPLIER &rarr; THE IS CURVE</div>
+    <div class="through">Throughline: output settles where what gets produced equals what people plan to spend. Inventories are the signal that pushes it there, and they are why a small shock moves output by more than the shock itself.</div>
+  </section>
+
+  <!-- ═══════════ 3. Q1 PROMPT ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The Pieces">
+    <div class="eyebrow">Question 1 &middot; write &middot; commit on paper</div>
+    <h2>From counting the pieces to explaining them</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">When we measured GDP, C, I, G and NX were just bins. Every dollar of final spending went into exactly one of them, and the four bins added to the total. Nothing in that exercise said how big any bin would be &mdash; only that they summed correctly.</p>
+      <p class="lede" style="max-width:92ch">Now we want the sizes. Start with the biggest bin, consumption, which is roughly two thirds of United States GDP.</p>
+      <div class="prompt">
+        <span class="cue">Q1 &middot; write it down before the next slide</span>
+        <p>A household decides how much to spend this year. <strong>Write down what that decision depends on.</strong> List everything you can think of, then underline the one you think matters most.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 4. Q1 REVEAL ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The Pieces">
+    <div class="eyebrow">Answer &middot; Question 1</div>
+    <h2>Households spend out of what is left after taxes</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:92ch">Households earn income <strong>Y</strong> from their work and from what they own, and they hand some of it to the government as taxes <strong>T</strong>. What is left is <strong>disposable income</strong>, written <strong>Y &minus; T</strong>. That is the number a household actually gets to allocate, so that is what consumption is built on.</p>
+      <div class="models">
+        <div class="model">
+          <span class="tag">The consumption function</span>
+          <div class="eq">C = C<sub>0</sub> + MPC &times; (Y &minus; T)</div>
+          <div class="body">Two parts. <strong>C<sub>0</sub></strong> is what gets consumed even with no disposable income at all &mdash; rent still has to be paid. The second part is the share of disposable income that gets spent.</div>
+        </div>
+        <div class="model warm">
+          <span class="tag">Marginal propensity to consume</span>
+          <div class="eq">MPC = &Delta;C &divide; &Delta;Y</div>
+          <div class="body">The amount consumption changes when disposable income rises by one dollar. It is the <strong>slope</strong> of the consumption function, and it sits between 0 and 1: some of an extra dollar gets spent, the rest does not.</div>
+        </div>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="q1a">What else consumption depends on</button></div>
+      <div class="reveal reveal-hidden" id="q1a">
+        <span class="cue">Held aside, not denied</span>
+        <p>Your list almost certainly included <strong>wealth</strong>, the <strong>interest rate</strong>, and <strong>expectations about the future</strong>, and all three genuinely matter. The model holds them fixed so that one relationship &mdash; consumption against disposable income &mdash; can be traced cleanly. Holding something aside is not the same as claiming it does nothing.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 5. Q2 COMPUTE ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The Pieces">
+    <div class="eyebrow">Question 2 &middot; compute &middot; two numbers</div>
+    <h2>An extra hundred dollars arrives</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">Take an economy where <strong>MPC = 0.75</strong>. Disposable income rises by <strong>100</strong>.</p>
+      <div class="prompt">
+        <span class="cue">Q2 &middot; write both numbers before pressing</span>
+        <p>Write down <strong>how much more gets consumed</strong>, and <strong>how much more gets saved</strong>. One line of arithmetic each.</p>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="q2a">Show the answer</button></div>
+      <div class="reveal reveal-hidden" id="q2a">
+        <span class="cue">Answer &middot; Question 2</span>
+        <p><strong>&Delta;C = MPC &times; &Delta;(Y &minus; T) = 0.75 &times; 100 = 75.</strong> The other <strong>25</strong> is saved, because a dollar of disposable income has nowhere else to go: it is either spent or it is not.</p>
+        <p style="margin-top:.6rem">That gives the companion to the MPC. Saving is whatever income is not consumed, so the <strong>marginal propensity to save</strong> is the leftover share:</p>
+        <div class="chain warm">MPS = 1 &minus; MPC = 1 &minus; 0.75 = 0.25</div>
+        <p style="margin-top:.6rem">Hold on to the 0.75. Every number in the second half of this discussion comes out of it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 6. Q3 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The Pieces">
+    <div class="eyebrow">Question 3 &middot; predict &middot; commit before you see the answer</div>
+    <h2>Why would a higher interest rate mean less investment?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch"><strong>Investment</strong> is the purchase of new capital: a firm buying ovens, delivery vans or a warehouse, and a household buying a newly built house. It is about fifteen percent of United States GDP, and it is far and away the most volatile of the four pieces.</p>
+      <p class="lede" style="max-width:92ch">Investment depends on the <strong>real interest rate r</strong>, and it depends on it <em>negatively</em>: when r goes up, investment goes down.</p>
+      <div class="predict">
+        <span class="cue">Q3 &middot; predict &middot; the reasoning, not the label</span>
+        <p><strong>Write down why.</strong> A firm that already has the cash in the bank is not borrowing anything &mdash; so make sure your explanation still works for that firm.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 7. Q3 REVEAL · INVESTMENT SCHEDULE ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The Pieces">
+    <div class="eyebrow">Answer &middot; Question 3</div>
+    <h2>The interest rate is the bar a project has to clear</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="gap:1.6rem;align-items:start">
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <p class="lede" style="max-width:60ch">Investing takes money, and there are only two places it comes from.</p>
+        <div class="condrow" style="grid-template-columns:1fr 1fr">
+          <div class="condcard">
+            <div class="ctitle">Borrow it</div>
+            <div class="cnote">Then r is the <strong>cost of borrowing</strong>. It is on the invoice.</div>
+          </div>
+          <div class="condcard">
+            <div class="ctitle">Use your own</div>
+            <div class="cnote">Then r is the <strong>opportunity cost</strong>: what that money would have earned sitting somewhere else instead. Same number, same bite &mdash; the first discussion's point, that the cost of a choice is the option given up.</div>
+          </div>
+        </div>
+        <div class="btnrow"><button class="btn" data-reveal-svg="irBand" data-reveal="q3a">Apply it to one project</button></div>
+        <div class="reveal reveal-hidden" id="q3a">
+          <span class="cue">One project, read off the graph</span>
+          <p>Take a project that returns <strong>6% a year</strong>. At <strong>r = 5</strong> it clears the bar &mdash; 6 beats 5 &mdash; so it is one of the projects inside the <strong>I = 20</strong> being invested at point A. At <strong>r = 7</strong> it does not clear &mdash; 6 loses to 7 &mdash; so it is gone. The money does better elsewhere, and that is true whether the firm borrowed it or already had it.</p>
+          <p style="margin-top:.5rem">Every project returning between 5% and 7% dies the same way. On the graph that is the shaded band, and its width is exactly the drop from <strong>I = 20 to I = 4</strong>: <strong>16 of investment stops clearing the bar.</strong></p>
+          <p style="margin-top:.5rem">High-return projects are rare and low-return projects are common, which is why the schedule slopes down: <strong>the higher r goes, the fewer projects survive, and the less gets invested.</strong></p>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="paneltitle">Planned investment against the real interest rate</div>
+        <svg viewBox="0 0 480 370" role="img" aria-label="Planned investment plotted with investment on the horizontal axis and the real interest rate on the vertical axis. The blue investment schedule slopes downward from left to right, so higher interest rates go with lower investment. Two points are marked with dashed guide lines: at an interest rate of five, investment is twenty; at an interest rate of seven, investment is only four. A revealed band between those two rates highlights the sixteen of projects that stop being profitable, and a marker shows one project returning six percent that clears the bar at five but not at seven. The diagram shows that raising the interest rate cuts planned investment, here from twenty to four.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="455" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="275" x2="445" y2="275"/><line x1="70" y1="240" x2="445" y2="240"/>
+            <line x1="70" y1="205" x2="445" y2="205"/><line x1="70" y1="170" x2="445" y2="170"/>
+            <line x1="70" y1="135" x2="445" y2="135"/><line x1="70" y1="100" x2="445" y2="100"/>
+            <line x1="70" y1="65" x2="445" y2="65"/><line x1="70" y1="30" x2="445" y2="30"/>
+            <line x1="131.7" y1="30" x2="131.7" y2="310"/><line x1="193.3" y1="30" x2="193.3" y2="310"/>
+            <line x1="255" y1="30" x2="255" y2="310"/><line x1="316.7" y1="30" x2="316.7" y2="310"/>
+            <line x1="378.3" y1="30" x2="378.3" y2="310"/><line x1="440" y1="30" x2="440" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">0</text><text x="62" y="244">2</text><text x="62" y="174">4</text>
+            <text x="62" y="139">5</text><text x="62" y="104">6</text><text x="62" y="69">7</text><text x="62" y="34">8</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="193.3" y="328">20</text><text x="316.7" y="328">40</text><text x="440" y="328">60</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">real interest rate (r)</text>
+          <text x="455" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">planned investment (I), $bn</text>
+          <line x1="70" y1="47.5" x2="440" y2="310" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="446" y="48" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">I = 60 &minus; 8r</text>
+          <g stroke="#5A5F66" stroke-width="1.6" stroke-dasharray="5 4">
+            <line x1="70" y1="135" x2="193.3" y2="135"/><line x1="193.3" y1="135" x2="193.3" y2="310"/>
+            <line x1="70" y1="65" x2="94.7" y2="65"/><line x1="94.7" y1="65" x2="94.7" y2="310"/>
+          </g>
+          <circle cx="193.3" cy="135" r="6" fill="#1F4E79"/>
+          <text x="203" y="130" font-family="monospace" font-size="12" font-weight="700" fill="#1F4E79">r = 5, I = 20</text>
+          <circle cx="94.7" cy="65" r="6" fill="#C0392B"/>
+          <text x="104" y="60" font-family="monospace" font-size="12" font-weight="700" fill="#C0392B">r = 7, I = 4</text>
+          <rect id="irBandR" x="94.7" y="65" width="98.6" height="70" fill="#C0392B" fill-opacity=".13" opacity="0"/>
+          <circle id="irBandD" cx="144" cy="100" r="5.5" fill="#8A5900" opacity="0"/>
+          <text id="irBandT" x="153" y="96" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900" opacity="0">a 6% project</text>
+          <path id="irBandB" d="M94.7,286 H193.3 M94.7,280 V292 M193.3,280 V292" stroke="#8A5900" stroke-width="2.5" fill="none" opacity="0"/>
+          <text id="irBandL" x="144" y="262" font-family="monospace" font-size="12.5" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0"><tspan x="144" dy="0" xml:space="preserve">16 projects stop </tspan><tspan x="144" dy="15">being profitable</tspan></text>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 8. G AND T ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The Pieces">
+    <div class="eyebrow">The third piece</div>
+    <h2>Government purchases and taxes are handed to us</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:92ch">Consumption and investment each get a rule. <strong>G</strong> and <strong>T</strong> do not. Explaining how a legislature settles on a budget is a different subject, so the model simply takes both as given:</p>
+      <div class="chain">G = G&#772; &nbsp;&nbsp;&nbsp; T = T&#772;</div>
+      <p class="lede" style="max-width:92ch"><strong>Fixed here means determined outside the model, not unchanging.</strong> G and T move all the time; we just are not going to explain the moves. When one of them changes, we take the new value as given too and work out what follows.</p>
+      <div class="condrow" style="grid-template-columns:1fr 1fr">
+        <div class="condcard">
+          <div class="ctitle">Transfers are not purchases</div>
+          <div class="cnote">Social Security, unemployment insurance and stimulus checks buy the government nothing. Households spend them, so those dollars land in <strong>C</strong>, not G &mdash; which makes a transfer work like a <strong>negative tax</strong>.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">The budget deficit</div>
+          <div class="cnote">The gap between what the government spends and what it takes in: <strong>G &minus; T</strong>. If G &gt; T it borrows and the debt grows; if G &lt; T it runs a surplus and pays debt down.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 9. Q4 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The Pieces">
+    <div class="eyebrow">Question 4 &middot; predict &middot; commit before you see the answer</div>
+    <h2>The furniture that did not sell</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">A furniture maker went into the year <strong>planning to invest 30</strong> &mdash; new saws, a second truck. That was the plan, made in advance.</p>
+      <p class="lede" style="max-width:92ch">The year happens. The firm <strong>produced 200</strong> of furniture and <strong>sold 180</strong>. The other 20 is sitting in the warehouse.</p>
+      <div class="predict">
+        <span class="cue">Q4 &middot; predict &middot; one number and a sentence</span>
+        <p><strong>Write down what the firm's investment actually turned out to be this year</strong> &mdash; and one line saying why it is not 30.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 10. Q4 REVEAL ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The Pieces">
+    <div class="eyebrow">Answer &middot; Question 4</div>
+    <h2>Actual investment includes what nobody planned</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1180px">
+      <div class="schedrow">
+        <table class="sched">
+          <caption>The furniture maker &middot; planned investment 30 either way</caption>
+          <thead>
+            <tr><th scope="col">Scenario</th><th scope="col">Produced</th><th scope="col">Sold</th><th scope="col">Unplanned &Delta; inventory</th><th scope="col">Actual investment I&#7491;</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Overestimates sales</td><td>200</td><td>180</td><td><span class="hid" id="f1a">+20</span></td><td><span class="hid" id="f1b">50</span></td></tr>
+            <tr><td>Underestimates sales</td><td>200</td><td>230</td><td><span class="hid" id="f2a">&minus;30</span></td><td><span class="hid" id="f2b">0</span></td></tr>
+          </tbody>
+        </table>
+        <div class="col" style="justify-content:flex-start;gap:.8rem;max-width:34ch;flex:0 1 auto">
+          <div class="btnrow"><button class="btn" data-reveal="f1a,f1b,q4a">Fill the first row</button></div>
+          <div class="btnrow"><button class="btn" data-reveal="f2a,f2b,q4b">Now the other way</button></div>
+        </div>
+      </div>
+      <div class="reveal reveal-hidden" id="q4a">
+        <span class="cue">Answer &middot; Question 4</span>
+        <p>The 20 units of unsold furniture did not vanish. They were produced, and they are now <strong>inventory the firm is holding</strong> &mdash; which is capital it owns. So its investment is <strong>30 planned plus 20 unplanned = 50</strong>, even though nobody in the firm ever chose the extra 20.</p>
+      </div>
+      <div class="reveal reveal-hidden" id="q4b">
+        <span class="cue">And it runs the other way too</span>
+        <p>Sell 230 out of 200 produced and the extra 30 comes off the shelves: the unplanned change is <strong>&minus;30</strong>, so actual investment is <strong>30 &minus; 30 = 0</strong>. The saws still got bought; the inventory drawdown cancels them out.</p>
+        <div class="chain warm" style="margin-top:.7rem">actual investment = planned investment + unplanned change in inventory</div>
+        <p style="margin-top:.7rem">This is the same accounting rule you met when we measured GDP: <strong>unsold output still counts as investment</strong>, because it was produced this year and somebody &mdash; the firm itself &mdash; is holding it. The rule does not ask whether the firm wanted to.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 11. PE VS AE ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The Pieces">
+    <div class="eyebrow">Two totals that are almost the same</div>
+    <h2>What people plan to spend, and what gets spent</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <div class="models">
+        <div class="model hi">
+          <span class="tag">Planned aggregate expenditure</span>
+          <div class="eq">PE = C + I + G</div>
+          <div class="body">What the economy <strong>intends</strong> to buy this period, using <strong>planned</strong> investment. This is a statement about decisions, and it can turn out to be wrong.</div>
+        </div>
+        <div class="model">
+          <span class="tag">Actual aggregate expenditure</span>
+          <div class="eq">AE = C + I&#7491; + G</div>
+          <div class="body">What the economy <strong>ends up</strong> buying, using <strong>actual</strong> investment. This is the accounting identity &mdash; it is what the GDP statistician records, and it cannot be wrong.</div>
+        </div>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="p11a">What separates them</button></div>
+      <div class="reveal reveal-hidden" id="p11a">
+        <span class="cue">One term, and only one</span>
+        <p>Line the two up. C is the same in both. G is the same in both. <strong>The entire difference between planned and actual expenditure is the difference between planned and actual investment &mdash; which is the unplanned change in inventory.</strong></p>
+        <p style="margin-top:.5rem">And notice what the rule does <em>not</em> say. <strong>Planned investment always happens in full.</strong> The furniture maker bought every one of its planned 30 of saws and trucks; nothing got canceled, and nothing was scaled back. I&#7491; is I <em>plus</em> something, never I minus something &mdash; the unplanned inventory change is bolted on top of a plan that was carried out to the letter.</p>
+        <p style="margin-top:.5rem">That unplanned piece has a name we will use from here on: <strong>unplanned inventory investment, written U.I.</strong> So I&#7491; = I + U.I., and PE and AE differ by U.I. and by nothing else.</p>
+        <p style="margin-top:.5rem">So inventories are not a footnote. They are the one place where a plan that did not work out shows up in the numbers, and for the rest of this discussion they are the thing doing all the work.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 2 · EQUILIBRIUM ══════════════ -->
+
+  <!-- ═══════════ 12. DIVIDER P2 + THE ECONOMY ═══════════ -->
+  <section class="slide divider" data-section="Discussion 8 · Equilibrium">
+    <div class="eyebrow">Part 2 of 4</div>
+    <h1>Where output settles</h1>
+    <p class="lede">Here is the economy we will use for the rest of the discussion. Every number after this comes out of these five lines. All figures are billions of dollars.</p>
+    <div style="font-family:var(--mono);font-size:1.05rem;line-height:2;background:rgba(255,255,255,.07);border-left:3px solid #8FAADC;border-radius:8px;padding:.9rem 1.2rem;margin-top:1.1rem;max-width:34ch">
+      C = 25 + 0.75(Y &minus; T)<br>
+      I = 60 &minus; 8r<br>
+      G = 40<br>
+      T = 20<br>
+      r = 5
+    </div>
+    <p class="lede" style="margin-top:1rem">The interest rate is given, so investment is already pinned down: <strong>I = 60 &minus; 8 &times; 5 = 20</strong>. Consumption is not, because it depends on Y &mdash; and Y is exactly what we are trying to find.</p>
+    <div class="sectrail">THE PIECES &check; &rarr; EQUILIBRIUM &rarr; THE MULTIPLIER &rarr; THE IS CURVE</div>
+    <div class="through">Throughline: output settles where what gets produced equals what people plan to spend. Inventories are the signal that pushes it there, and they are why a small shock moves output by more than the shock itself.</div>
+  </section>
+
+  <!-- ═══════════ 13. Q5 COMPUTE ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · Equilibrium">
+    <div class="eyebrow">Question 5 &middot; compute &middot; two numbers</div>
+    <h2>Suppose firms produce 200</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">Nothing says 200 is right. It is a guess, and we are going to test it. If firms produce 200, then income is 200, because every dollar produced is a dollar of somebody's income.</p>
+      <div class="prompt">
+        <span class="cue">Q5 &middot; work it out on paper first</span>
+        <p>With <strong>Y = 200</strong>: compute <strong>C</strong>, then compute <strong>PE = C + I + G</strong>. Then write down whether PE is bigger or smaller than 200, and by how much.</p>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="q5a">Show the consumption line</button><button class="btn" data-reveal="q5b">Show PE</button></div>
+      <div class="reveal reveal-hidden" id="q5a">
+        <span class="cue">Consumption</span>
+        <div class="calc"><span class="lbl">C</span> = 25 + 0.75(200 &minus; 20) = 25 + 0.75 &times; 180 = 25 + 135 = <strong>160</strong></div>
+      </div>
+      <div class="reveal reveal-hidden" id="q5b">
+        <span class="cue">Answer &middot; Question 5</span>
+        <div class="calc"><span class="lbl">PE</span> = C + I + G = 160 + 20 + 40 = <strong>220</strong></div>
+        <p style="margin-top:.6rem">Firms made <strong>200</strong>. Buyers plan to spend <strong>220</strong>. <strong>PE exceeds Y by 20.</strong></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 14. WHAT FOLLOWS FROM Y=200 ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · Equilibrium">
+    <div class="eyebrow">Follow the goods</div>
+    <h2>Twenty units have to come from somewhere</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:92ch">Buyers want 220 and only 200 was made this period. The extra 20 does not appear out of nothing, and buyers do not simply go home empty-handed. <strong>It comes off the shelves.</strong></p>
+      <div class="btnrow"><button class="btn" data-reveal="p14a">What firms see, and what they do</button></div>
+      <div class="reveal reveal-hidden" id="p14a">
+        <span class="cue">The signal</span>
+        <p>Inventories <strong>fall unexpectedly by 20</strong>. Nobody planned that drawdown, so by the rule from Q4 it goes straight into actual investment: I&#7491; is 20 <em>below</em> planned I.</p>
+        <p style="margin-top:.5rem">Now think about what that looks like from inside a firm. The warehouse is emptying faster than expected and the stockroom keeps running short. No survey told the firm that national planned expenditure is 220 &mdash; <strong>the empty shelf is the whole message</strong>. So it does the obvious thing and <strong>produces more</strong>.</p>
+        <div class="chain warm" style="margin-top:.7rem">Y &lt; PE &rarr; U.I.&darr; &rarr; firms produce more &rarr; Y&uarr;</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 15. Q6 COMPUTE ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · Equilibrium">
+    <div class="eyebrow">Question 6 &middot; compute &middot; then say what happens</div>
+    <h2>Now try 360</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">Same economy, same interest rate, same everything &mdash; only the guess changes. Suppose firms produce <strong>Y = 360</strong>.</p>
+      <div class="prompt">
+        <span class="cue">Q6 &middot; compute PE, then finish the story</span>
+        <p>Work out <strong>PE</strong>. Then write down <strong>what happens to inventories</strong> and <strong>what firms do next</strong> &mdash; in that order, because the second follows from the first.</p>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="q6a">Show PE</button><button class="btn" data-reveal="q6b">Show what follows</button></div>
+      <div class="reveal reveal-hidden" id="q6a">
+        <span class="cue">Answer &middot; Question 6</span>
+        <div class="calc"><span class="lbl">C</span> = 25 + 0.75(360 &minus; 20) = 25 + 255 = 280<br>
+        <span class="lbl">PE</span> = 280 + 20 + 40 = <strong>340</strong></div>
+      </div>
+      <div class="reveal reveal-hidden" id="q6b">
+        <span class="cue">And what follows</span>
+        <p>Firms made <strong>360</strong> and buyers plan to spend <strong>340</strong>. <strong>Y exceeds PE by 20</strong>, so 20 units get made and not bought: inventories <strong>rise unexpectedly by 20</strong>, and firms respond by <strong>producing less</strong>.</p>
+        <div class="chain warm" style="margin-top:.7rem">Y &gt; PE &rarr; U.I.&uarr; &rarr; firms produce less &rarr; Y&darr;</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 16. Q7 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · Equilibrium">
+    <div class="eyebrow">Question 7 &middot; predict &middot; commit before you see the answer</div>
+    <h2>So where does it stop?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">From 200, firms produce more. From 360, they produce less. Both guesses set off a change, which means neither can be where output ends up.</p>
+      <div class="predict">
+        <span class="cue">Q7 &middot; predict &middot; a number and the test you used</span>
+        <p><strong>Write down the one output level where firms have no reason to change production</strong> &mdash; and write down the condition that makes it that level. Guess the number if you have to, but get the condition right.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 17. Q7 REVEAL ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · Equilibrium">
+    <div class="eyebrow">Answer &middot; Question 7</div>
+    <h2>Two hundred and eighty</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <div class="schedrow">
+        <table class="sched">
+          <caption>Testing three output levels at r = 5</caption>
+          <thead>
+            <tr><th scope="col">Output Y</th><th scope="col">Planned expenditure PE</th><th scope="col">Y &minus; PE</th><th scope="col">What happens</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>200</td><td>220</td><td>&minus;20</td><td style="text-align:left">Inventories fall unexpectedly; firms produce more</td></tr>
+            <tr class="hl"><td>280</td><td><span class="hid" id="e1">280</span></td><td><span class="hid" id="e2">0</span></td><td style="text-align:left"><span class="hid" id="e3">Nothing; production stays put</span></td></tr>
+            <tr><td>360</td><td>340</td><td>+20</td><td style="text-align:left">Inventories rise unexpectedly; firms produce less</td></tr>
+          </tbody>
+        </table>
+        <div class="col" style="justify-content:flex-start;gap:.8rem;max-width:30ch;flex:0 1 auto">
+          <div class="btnrow"><button class="btn" data-reveal="e1,e2,e3,q7a">Fill the middle row</button></div>
+        </div>
+      </div>
+      <div class="reveal reveal-hidden" id="q7a">
+        <span class="cue">Answer &middot; Question 7</span>
+        <div class="calc"><span class="lbl">C</span> = 25 + 0.75(280 &minus; 20) = 25 + 195 = 220<br>
+        <span class="lbl">PE</span> = 220 + 20 + 40 = <strong>280</strong></div>
+        <p style="margin-top:.6rem">At <strong>Y = 280</strong>, planned expenditure is 280 as well, so <strong>the unplanned change in inventory is exactly zero</strong>. Actual investment equals planned investment. No warehouse is filling and none is emptying, so no firm is getting a signal to do anything differently.</p>
+        <p style="margin-top:.5rem">The condition is the point, not the number: <strong>Y = PE</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 18. THE 45-DEGREE DIAGRAM · ANIMATED ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · Equilibrium">
+    <div class="eyebrow">The same three numbers, drawn</div>
+    <h2>The 45-degree diagram</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="paneltitle">Planned expenditure against aggregate income</div>
+        <div style="display:flex;gap:1.2rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;font-weight:700;margin-bottom:.5rem">
+          <span style="color:#5A5F66">&#9472;&#9472; 45&deg; line: Y = PE</span>
+          <span style="color:#1F4E79">&#9472;&#9472; PE = 70 + 0.75Y</span>
+        </div>
+        <svg viewBox="0 0 470 420" role="img" aria-label="A 45-degree diagram with aggregate income on the horizontal axis and planned aggregate expenditure on the vertical axis. A neutral grey 45-degree line marks every point where planned expenditure equals income. A blue planned expenditure line, equal to seventy plus three quarters of income, is flatter and crosses the 45-degree line at an income of 280. A labeled vertical segment between the two lines measures the gap between planned expenditure and output, and it shrinks to zero as output moves to 280. The diagram shows that output settles where the two lines cross.">
+          <line x1="70" y1="20" x2="70" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="380" x2="440" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="335" x2="440" y2="335"/><line x1="70" y1="290" x2="440" y2="290"/>
+            <line x1="70" y1="245" x2="440" y2="245"/><line x1="70" y1="200" x2="440" y2="200"/>
+            <line x1="70" y1="155" x2="440" y2="155"/><line x1="70" y1="110" x2="440" y2="110"/>
+            <line x1="70" y1="65" x2="440" y2="65"/><line x1="70" y1="20" x2="440" y2="20"/>
+            <line x1="115" y1="20" x2="115" y2="380"/><line x1="160" y1="20" x2="160" y2="380"/>
+            <line x1="205" y1="20" x2="205" y2="380"/><line x1="250" y1="20" x2="250" y2="380"/>
+            <line x1="295" y1="20" x2="295" y2="380"/><line x1="340" y1="20" x2="340" y2="380"/>
+            <line x1="385" y1="20" x2="385" y2="380"/><line x1="430" y1="20" x2="430" y2="380"/>
+          </g>
+          <g stroke="#1F4E79" stroke-width="2">
+            <line x1="250" y1="380" x2="250" y2="387"/><line x1="322" y1="380" x2="322" y2="387"/><line x1="394" y1="380" x2="394" y2="387"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="384">0</text><text x="62" y="294">100</text><text x="62" y="204">200</text>
+            <text x="62" y="132">280</text><text x="62" y="24">400</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="399">0</text><text x="160" y="399">100</text>
+            <text x="250" y="399" fill="#1F4E79" font-weight="700">200</text>
+            <text x="322" y="399" fill="#1F4E79" font-weight="700">280</text>
+            <text x="394" y="399" fill="#1F4E79" font-weight="700">360</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">planned expenditure (PE), $bn</text>
+          <text x="440" y="414" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">aggregate income (Y), $bn</text>
+          <line x1="70" y1="380" x2="430" y2="20" stroke="#5A5F66" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="70" y1="317" x2="430" y2="47" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <line id="eqGH" x1="70" y1="128" x2="322" y2="128" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4" opacity="0"/>
+          <line id="eqGV" x1="322" y1="128" x2="322" y2="380" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4" opacity="0"/>
+          <circle id="eqE" cx="322" cy="128" r="7" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5" opacity="0"/>
+          <text id="eqEl" x="313" y="116" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="end" opacity="0">E &middot; Y = PE = 280</text>
+          <line id="eqGap" x1="250" y1="200" x2="250" y2="182" stroke="#8A5900" stroke-width="3.5" stroke-linecap="round"/>
+          <text id="eqGapT" x="260" y="195" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900">PE &minus; Y = +20</text>
+          <circle id="eqDot45" cx="250" cy="200" r="4.5" fill="#5A5F66"/>
+          <circle id="eqDotPE" cx="250" cy="182" r="7" fill="#1F4E79" stroke="#FbFaF7" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <div><span class="lbl2">output produced Y</span> <span class="big" id="eqYv">200</span></div>
+          <div><span class="lbl2">planned expenditure PE</span> <span class="big" id="eqPEv">220</span></div>
+          <div><span class="lbl2">gap PE &minus; Y</span> <span class="big" id="eqGapv">+20</span></div>
+          <div style="margin-top:.4rem" id="eqNote">Press a button to let firms react to the inventory signal.</div>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="eqLow">Adjust up from 200</button>
+          <button class="btn" id="eqHigh">Adjust down from 360</button>
+          <button class="btn ghost" id="eqReset">Reset</button>
+        </div>
+        <p class="footnote">The vertical segment between the two lines <em>is</em> the unplanned inventory change, with its sign written on it. Wherever the segment has length, firms are changing production. It has zero length in exactly one place.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 19. SOLVE IT ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · Equilibrium">
+    <div class="eyebrow">The same answer without guessing</div>
+    <h2>Four lines of algebra</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="gap:2rem;align-items:start">
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <p class="lede">Testing 200, then 360, then 280 works, but it is a slow way to find a number. The equilibrium condition <strong>Y = PE</strong> is one equation in one unknown, so just solve it.</p>
+        <div class="btnrow"><button class="btn" data-reveal="p19a">Build the PE equation</button><button class="btn" data-reveal="p19b">Solve for Y</button></div>
+        <div class="reveal reveal-hidden" id="p19a">
+          <span class="cue">Collect everything into one line</span>
+          <div class="calc">
+            PE = C + I + G<br>
+            PE = 25 + 0.75(Y &minus; 20) + 20 + 40<br>
+            PE = 25 + 0.75Y &minus; 15 + 20 + 40<br>
+            PE = <strong>70 + 0.75Y</strong>
+          </div>
+          <p style="margin-top:.5rem">The <strong>70</strong> is the intercept: everything that does not depend on Y. The <strong>0.75</strong> is the slope, and it is just the MPC.</p>
+        </div>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <div class="reveal reveal-hidden" id="p19b">
+          <span class="cue">Answer</span>
+          <div class="calc">
+            Y = PE<br>
+            Y = 70 + 0.75Y<br>
+            Y &minus; 0.75Y = 70<br>
+            0.25Y = 70<br>
+            Y = 70 &divide; 0.25 = <strong>280</strong>
+          </div>
+          <p style="margin-top:.6rem">Same 280. The diagram and the algebra are not two results &mdash; <strong>they are the same sentence written twice.</strong> "Where the two lines cross" and "where Y = 70 + 0.75Y" say precisely the same thing about the same economy.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 20. PUNCHLINE ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · Equilibrium">
+    <div class="eyebrow">The punchline of Part 2</div>
+    <h2>Nobody is aiming for 280</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:92ch">No firm in this economy knows what 280 is. No firm is trying to hit it. There is no meeting where output gets set. <strong>280 is simply the only level at which nothing is pushing output anywhere else.</strong></p>
+      <div class="btnrow"><button class="btn" data-reveal="p20a">Where you have seen this before</button></div>
+      <div class="reveal reveal-hidden" id="p20a">
+        <span class="cue">The same shape as the burrito market</span>
+        <p>In the supply and demand discussion, equilibrium was not the price anyone wanted. It was the price at which the <strong>shortage or surplus</strong> that pushes price around had gone to zero. Nobody chose it; it was what was left when the pressure stopped.</p>
+        <p style="margin-top:.5rem">Here the structure is identical, with one substitution. <strong>Inventories play the role that price played.</strong> A surplus of goods used to bid the price down; now unsold goods pile up in a warehouse and firms cut production. Same logic, different adjusting variable.</p>
+        <div class="chain" style="margin-top:.7rem">shortage / surplus &rarr; price moves &nbsp;&nbsp;|&nbsp;&nbsp; inventory falls / rises &rarr; output moves</div>
+        <p style="margin-top:.7rem">And notice what that buys you: you never have to memorize which way output goes. Ask what happens to inventories, and the direction falls out.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 21. WHAT MOVES THE PE LINE ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · Equilibrium">
+    <div class="eyebrow">Before we shock it</div>
+    <h2>What moves the planned expenditure line</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:96ch">The line is <strong>PE = 70 + 0.75Y</strong>. Only two things about it can change: where it starts and how steep it is. Press each card once you have predicted its answer.</p>
+    <div class="condrow">
+      <div class="condcard">
+        <div class="ctitle">Government purchases G&uarr;</div>
+        <button class="cbtn" data-cond="c21a">Show</button>
+        <div class="cbody" id="c21a">
+          <div class="big">intercept &uarr;</div>
+          <div class="cnote">G sits in the intercept directly, dollar for dollar. More G at every level of income, so <strong>the whole line shifts up</strong>.</div>
+        </div>
+      </div>
+      <div class="condcard">
+        <div class="ctitle">Taxes T&uarr;</div>
+        <button class="cbtn" data-cond="c21b">Show</button>
+        <div class="cbody" id="c21b">
+          <div class="big">intercept &darr;</div>
+          <div class="cnote">Higher taxes cut disposable income, which cuts consumption, which cuts planned spending at every level of income. <strong>The line shifts down</strong> &mdash; but by 0.75 of the tax rise, not all of it.</div>
+        </div>
+      </div>
+      <div class="condcard">
+        <div class="ctitle">Interest rate r&uarr;</div>
+        <button class="cbtn" data-cond="c21c">Show</button>
+        <div class="cbody" id="c21c">
+          <div class="big">intercept &darr;</div>
+          <div class="cnote">Higher r means fewer projects clear the bar, so investment falls, so the intercept falls. <strong>The line shifts down.</strong> This is the one Part 3 uses.</div>
+        </div>
+      </div>
+    </div>
+    <div class="btnrow" style="margin-top:1.1rem"><button class="btn" data-reveal="p21a">And the slope?</button></div>
+    <div class="reveal reveal-hidden" id="p21a" style="max-width:1050px">
+      <span class="cue">The slope is the MPC</span>
+      <p>The only thing that changes the steepness is the <strong>marginal propensity to consume</strong>. A larger MPC means each extra dollar of income pulls more extra spending along behind it, so <strong>the line is steeper</strong>. Hold on to that &mdash; Q9 turns on it.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 3 · THE MULTIPLIER ══════════════ -->
+
+  <!-- ═══════════ 22. DIVIDER P3 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 8 · The Multiplier">
+    <div class="eyebrow">Part 3 of 4</div>
+    <h1>The multiplier</h1>
+    <p class="lede">We now have a working economy and a rule for where it settles. Time to hit it with something and watch where it settles instead. The size of the answer is the surprise.</p>
+    <div class="sectrail">THE PIECES &check; &rarr; EQUILIBRIUM &check; &rarr; THE MULTIPLIER &rarr; THE IS CURVE</div>
+    <div class="through">Throughline: output settles where what gets produced equals what people plan to spend. Inventories are the signal that pushes it there, and they are why a small shock moves output by more than the shock itself.</div>
+  </section>
+
+  <!-- ═══════════ 23. Q8 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The Multiplier">
+    <div class="eyebrow">Question 8 &middot; predict &middot; commit before you see the answer</div>
+    <h2>The interest rate goes from 5 to 7</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">Everything else in the economy is untouched. C is still 25 + 0.75(Y &minus; T), G is still 40, T is still 20. Only <strong>r</strong> moves, from <strong>5</strong> to <strong>7</strong>.</p>
+      <div class="calc" style="max-width:60ch">
+        I at r = 5: &nbsp;60 &minus; 8 &times; 5 = <strong>20</strong><br>
+        I at r = 7: &nbsp;60 &minus; 8 &times; 7 = <strong>4</strong><br>
+        <span class="lbl">&Delta;I</span> = 4 &minus; 20 = <strong>&minus;16</strong>
+      </div>
+      <div class="predict">
+        <span class="cue">Q8 &middot; predict &middot; a number, and say what makes you think so</span>
+        <p>Investment fell by <strong>16</strong>. <strong>Write down how much you think equilibrium output falls by</strong>, and one line of reasoning. Do not compute it &mdash; guess, and commit to the guess.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 24. Q8 REVEAL ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The Multiplier">
+    <div class="eyebrow">Answer &middot; Question 8</div>
+    <h2>Output falls by 64</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:92ch">Run the same algebra with the new investment number and the new equilibrium drops straight out.</p>
+      <div class="btnrow"><button class="btn" data-reveal="q8a">Solve it again at r = 7</button><button class="btn" data-reveal="q8b">Compare the two</button></div>
+      <div class="reveal reveal-hidden" id="q8a">
+        <span class="cue">The new equilibrium</span>
+        <div class="calc">
+          PE = 25 + 0.75(Y &minus; 20) + 4 + 40 = <strong>54 + 0.75Y</strong><br>
+          Y = 54 + 0.75Y &nbsp;&rarr;&nbsp; 0.25Y = 54 &nbsp;&rarr;&nbsp; Y = <strong>216</strong>
+        </div>
+      </div>
+      <div class="reveal reveal-hidden" id="q8b">
+        <span class="cue">The size of it</span>
+        <div class="calc">&Delta;I = &minus;16 &nbsp;&nbsp;&nbsp; &Delta;Y = 216 &minus; 280 = <strong>&minus;64</strong></div>
+        <p style="margin-top:.6rem">Investment fell by 16 and output fell by <strong>64</strong> &mdash; <strong>four times the size of the shock</strong>. Nothing else was touched. No second shock arrived.</p>
+        <p style="margin-top:.5rem">Which raises the only interesting question in Part 3: <strong>where did the other 48 come from?</strong></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 25. WALK THE ROUNDS ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The Multiplier">
+    <div class="eyebrow">One round at a time</div>
+    <h2>Where the other 48 comes from</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:96ch">Follow the shock through the economy the slow way. Before each button, write down what you think the next line says.</p>
+    <div class="col" style="justify-content:flex-start;gap:.9rem;max-width:1150px">
+      <div class="btnrow">
+        <button class="btn" data-reveal="r1">Round 1</button>
+        <button class="btn" data-reveal="r2">Round 2</button>
+        <button class="btn" data-reveal="r3">Round 3</button>
+        <button class="btn" data-reveal="r4">Round 4</button>
+      </div>
+      <div class="reveal reveal-hidden" id="r1">
+        <span class="cue">Round 1 &middot; &minus;16</span>
+        <p>Investment drops by 16, so planned expenditure drops by <strong>16</strong> at the current output. Firms are still making 280 while buyers now plan to spend 264, so <strong>inventories pile up by 16</strong> and firms cut output by <strong>16</strong>.</p>
+      </div>
+      <div class="reveal reveal-hidden" id="r2">
+        <span class="cue">Round 2 &middot; &minus;12</span>
+        <p>Here is the step that does the damage. <strong>That cut in output is somebody's lost income</strong> &mdash; hours not worked, orders not placed. Income falls by 16, so consumption falls by <strong>0.75 &times; 16 = 12</strong>. Planned expenditure falls again, inventories pile up again, and firms cut output by another <strong>12</strong>.</p>
+      </div>
+      <div class="reveal reveal-hidden" id="r3">
+        <span class="cue">Round 3 &middot; &minus;9</span>
+        <p>The 12 was income too. Consumption falls by <strong>0.75 &times; 12 = 9</strong>, inventories pile up, output falls another <strong>9</strong>. The mechanism has not changed once since round 1 &mdash; it is the same three steps on a smaller number.</p>
+      </div>
+      <div class="reveal reveal-hidden" id="r4">
+        <span class="cue">Round 4 &middot; &minus;6.75</span>
+        <p>Consumption falls by <strong>0.75 &times; 9 = 6.75</strong>, and output falls by <strong>6.75</strong>. Each round is three quarters of the one before, because the MPC is 0.75 and that is exactly what an MPC of 0.75 means: <strong>three quarters of any income change comes back as a spending change.</strong></p>
+        <div class="chain warm" style="margin-top:.7rem">&minus;16 &rarr; &minus;12 &rarr; &minus;9 &rarr; &minus;6.75 &rarr; &hellip;</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 26. THE SUM AND THE FORMULA · STEPPED ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The Multiplier">
+    <div class="eyebrow">Adding the rounds up</div>
+    <h2>The rounds never stop, and the total is finite</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="paneltitle">Cumulative fall in output after each round</div>
+        <svg viewBox="0 0 480 300" role="img" aria-label="A bar chart of the running total fall in output as the multiplier rounds accumulate. Round one takes output down sixteen, round two adds twelve more, round three nine, round four six and three quarters, and later rounds add less and less. The bars climb toward but never pass a gold dashed line at minus sixty-four. The chart shows that infinitely many shrinking rounds add to a finite total.">
+          <line x1="60" y1="40" x2="60" y2="255" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="50" x2="460" y2="50" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="60" y1="107.1" x2="455" y2="107.1"/><line x1="60" y1="164.3" x2="455" y2="164.3"/>
+            <line x1="60" y1="221.4" x2="455" y2="221.4"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="54" y="54">0</text><text x="54" y="111">&minus;20</text><text x="54" y="168">&minus;40</text><text x="54" y="225">&minus;60</text>
+          </g>
+          <text x="66" y="34" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">cumulative change in output, $bn</text>
+          <text x="460" y="292" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">rounds of the multiplier</text>
+          <g font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">
+            <text x="88.5" y="272">1</text><text x="125.5" y="272">2</text><text x="162.5" y="272">3</text>
+            <text x="199.5" y="272">4</text><text x="236.5" y="272">5</text><text x="273.5" y="272">6</text>
+            <text x="310.5" y="272">7</text><text x="347.5" y="272">8</text><text x="384.5" y="272">9</text><text x="421.5" y="272">10</text>
+          </g>
+          <g fill="#C0392B">
+            <rect id="mrB1" x="75.5" y="50" width="26" height="45.7" opacity="0"/>
+            <rect id="mrB2" x="112.5" y="50" width="26" height="80.0" opacity="0"/>
+            <rect id="mrB3" x="149.5" y="50" width="26" height="105.7" opacity="0"/>
+            <rect id="mrB4" x="186.5" y="50" width="26" height="125.0" opacity="0"/>
+            <rect id="mrB5" x="223.5" y="50" width="26" height="139.5" opacity="0"/>
+            <rect id="mrB6" x="260.5" y="50" width="26" height="150.3" opacity="0"/>
+            <rect id="mrB7" x="297.5" y="50" width="26" height="158.5" opacity="0"/>
+            <rect id="mrB8" x="334.5" y="50" width="26" height="164.6" opacity="0"/>
+            <rect id="mrB9" x="371.5" y="50" width="26" height="169.1" opacity="0"/>
+            <rect id="mrB10" x="408.5" y="50" width="26" height="172.6" opacity="0"/>
+          </g>
+          <line id="mrTot" x1="60" y1="232.9" x2="455" y2="232.9" stroke="#8A5900" stroke-width="2.5" stroke-dasharray="8 5" opacity="0"/>
+          <text id="mrTotT" x="455" y="248" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900" text-anchor="end" opacity="0">total &Delta;Y = &minus;64</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <div><span class="lbl2">rounds so far</span> <span class="big" id="mrN">0</span></div>
+          <div><span class="lbl2">this round</span> <span class="big" id="mrThis">&mdash;</span></div>
+          <div><span class="lbl2">running total &Delta;Y</span> <span class="big" id="mrCum">0</span></div>
+          <div style="margin-top:.4rem" id="mrNote">Press play to add the rounds one at a time.</div>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="mrPlay">Play the rounds</button>
+          <button class="btn ghost" id="mrReset">Reset</button>
+        </div>
+        <div class="btnrow"><button class="btn" data-reveal="p26a">The formula</button></div>
+        <div class="reveal reveal-hidden" id="p26a">
+          <span class="cue">The investment multiplier</span>
+          <div class="calc">&minus;16 &minus; 12 &minus; 9 &minus; 6.75 &minus; &hellip; = <strong>&minus;64</strong></div>
+          <div class="chain warm" style="margin-top:.6rem;padding:.9rem 1rem">&Delta;Y = <span style="display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.2;margin:0 .15em"><span style="border-bottom:1.6px solid currentColor;padding:0 .4em">1</span><span style="padding:0 .4em">1 &minus; MPC</span></span> &times; &Delta;I</div>
+          <div class="calc" style="margin-top:.7rem">&Delta;Y = <span style="display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.2;margin:0 .15em"><span style="border-bottom:1.6px solid currentColor;padding:0 .4em">1</span><span style="padding:0 .4em">1 &minus; 0.75</span></span> &times; (&minus;16) = <span style="display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.2;margin:0 .15em"><span style="border-bottom:1.6px solid currentColor;padding:0 .4em">1</span><span style="padding:0 .4em">0.25</span></span> &times; (&minus;16) = 4 &times; (&minus;16) = <strong>&minus;64</strong></div>
+          <p style="margin-top:.6rem">The fraction is the whole multiplier: <strong>1 over the share of a dollar that does <em>not</em> come back as spending</strong>. Here only 0.25 of each dollar leaks out, so the number on the bottom is small and the multiplier is large. This is the same &minus;64 we already got by solving the model twice.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 27. Q9 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The Multiplier">
+    <div class="eyebrow">Question 9 &middot; predict &middot; commit before you see the answer</div>
+    <h2>Change the MPC and nothing else</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">Same fall in investment, &minus;16. Same G, same T, same everything &mdash; except households now spend <strong>half</strong> of each extra dollar instead of three quarters. <strong>MPC = 0.5.</strong></p>
+      <div class="predict">
+        <span class="cue">Q9 &middot; predict &middot; bigger or smaller, then say why</span>
+        <p>Is the multiplier <strong>bigger</strong> or <strong>smaller</strong> than 4? Write down your answer and, more importantly, the sentence about the rounds that justifies it.</p>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="q9a">Show the answer</button></div>
+      <div class="reveal reveal-hidden" id="q9a">
+        <span class="cue">Answer &middot; Question 9</span>
+        <div class="calc">multiplier = <span style="display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.2;margin:0 .15em"><span style="border-bottom:1.6px solid currentColor;padding:0 .4em">1</span><span style="padding:0 .4em">1 &minus; 0.5</span></span> = <span style="display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.2;margin:0 .15em"><span style="border-bottom:1.6px solid currentColor;padding:0 .4em">1</span><span style="padding:0 .4em">0.5</span></span> = <strong>2</strong> &nbsp;&nbsp;&nbsp; &Delta;Y = 2 &times; (&minus;16) = <strong>&minus;32</strong></div>
+        <p style="margin-top:.6rem"><strong>Smaller.</strong> Output falls by only 32 instead of 64. Watch the rounds to see why: they now go <strong>&minus;16, &minus;8, &minus;4, &minus;2</strong> instead of &minus;16, &minus;12, &minus;9, &minus;6.75. Each round is halved instead of merely trimmed by a quarter, so the sequence dies out fast and the total stays small.</p>
+        <p style="margin-top:.5rem">In words: <strong>a larger MPC means more of each dollar of lost income turns into lost spending</strong>, so the rounds decay more slowly and there are more of them worth counting. The multiplier is a statement about how much of an income change comes back around.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 28. Q10 DIAGNOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The Multiplier">
+    <div class="eyebrow">Question 10 &middot; silent poll &middot; pick a number on paper</div>
+    <h2>One of these three is wrong</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:96ch">All three sentences are about the fall in investment we just traced. <strong>Two of them are sound. One is not.</strong> Write down the number of the one that fails, and one line saying where its reasoning gives out.</p>
+    <div>
+      <div class="diag" id="diag10">
+        <button class="diag-opt" type="button"><span class="n">1</span><span class="s">Output falls by more than 16 because the firms that cut production employ people, and those people then buy less.</span></button>
+        <button class="diag-opt" type="button" data-bad="true"><span class="n">2</span><span class="s">Investment fell by 16, so output falls by 16.</span></button>
+        <button class="diag-opt" type="button"><span class="n">3</span><span class="s">If households saved every dollar of any income change, the fall in output would stop at 16.</span></button>
+      </div>
+      <div class="btnrow"><button class="btn" data-diag-reveal="diag10">Show which one fails</button></div>
+      <div data-diag-note style="display:none">
+        <div class="reveal" style="margin-top:1.1rem;max-width:1000px">
+          <span class="cue">Right for one round, then it stops reading</span>
+          <p><strong>Sentence 2 fails.</strong> Notice that it is not a careless sentence &mdash; it is <em>exactly right about round 1</em>. Planned expenditure did fall by 16, inventories did pile up by 16, and firms did cut output by 16. Everything in it happened.</p>
+          <p style="margin-top:.5rem">What it misses is what that cut <em>is</em>. <strong>The 16 units of output firms stopped producing were 16 units of somebody's income.</strong> Wages not paid, orders not placed, hours not scheduled. Sentence 2 treats a cut in production as an event with no consequences, when in this model production and income are the same number seen from two sides.</p>
+          <p style="margin-top:.5rem">Once that lands, round 2 is unavoidable: 16 less income means 0.75 &times; 16 = 12 less consumption, which is a fresh gap between output and planned spending, which sets off round 3. <strong>The first cut is what triggers every round after it.</strong> Stopping at 16 is not a small underestimate &mdash; it misses three quarters of the answer.</p>
+          <p style="margin-top:.5rem">Sentence 3 is the useful check on this. If the MPC were 0, no income change would come back as spending, the rounds would never start, and 16 would be the whole story. That the real answer is 64 is entirely a statement about the MPC.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 29. CONFIRM ON THE DIAGRAM ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The Multiplier">
+    <div class="eyebrow">The same 64, drawn</div>
+    <h2>A small vertical drop, a large horizontal move</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="paneltitle">Planned expenditure against aggregate income</div>
+        <div style="display:flex;gap:1.2rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;font-weight:700;margin-bottom:.5rem">
+          <span style="color:#5A5F66">&#9472;&#9472; 45&deg; line: Y = PE</span>
+          <span style="color:#1F4E79">&#9472;&#9472; PE = 70 + 0.75Y</span>
+          <span class="hid" id="shPE2leg" style="color:#8A5900">&#9472; &#9472; PE&prime; = 54 + 0.75Y</span>
+        </div>
+        <svg viewBox="0 0 470 420" role="img" aria-label="The same 45-degree diagram, with aggregate income on the horizontal axis and planned aggregate expenditure on the vertical axis. The original blue planned expenditure line crosses the neutral 45-degree line at point A, an income of 280. A revealed gold dashed line lies sixteen below it and crosses at point B, an income of 216. A short bracket marks the drop of sixteen between the two lines and a much longer horizontal arrow marks the fall of sixty-four in equilibrium output. The diagram shows that a small vertical shift produces a much larger horizontal move.">
+          <defs>
+            <marker id="shIhead" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#8A5900"/></marker>
+          </defs>
+          <line x1="70" y1="20" x2="70" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="380" x2="440" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="335" x2="440" y2="335"/><line x1="70" y1="290" x2="440" y2="290"/>
+            <line x1="70" y1="245" x2="440" y2="245"/><line x1="70" y1="200" x2="440" y2="200"/>
+            <line x1="70" y1="155" x2="440" y2="155"/><line x1="70" y1="110" x2="440" y2="110"/>
+            <line x1="70" y1="65" x2="440" y2="65"/><line x1="70" y1="20" x2="440" y2="20"/>
+            <line x1="115" y1="20" x2="115" y2="380"/><line x1="160" y1="20" x2="160" y2="380"/>
+            <line x1="205" y1="20" x2="205" y2="380"/><line x1="250" y1="20" x2="250" y2="380"/>
+            <line x1="295" y1="20" x2="295" y2="380"/><line x1="340" y1="20" x2="340" y2="380"/>
+            <line x1="385" y1="20" x2="385" y2="380"/><line x1="430" y1="20" x2="430" y2="380"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="384">0</text><text x="62" y="294">100</text><text x="62" y="204">200</text>
+            <text x="62" y="132">280</text><text x="62" y="24">400</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="399">0</text><text x="160" y="399">100</text>
+            <text x="264.4" y="399" fill="#8A5900" font-weight="700">216</text>
+            <text x="322" y="399" fill="#1F4E79" font-weight="700">280</text><text x="430" y="399">400</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">planned expenditure (PE), $bn</text>
+          <text x="440" y="414" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">aggregate income (Y), $bn</text>
+          <line x1="70" y1="380" x2="430" y2="20" stroke="#5A5F66" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="70" y1="317" x2="430" y2="47" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <g stroke="#1F4E79" stroke-width="1.8" stroke-dasharray="5 4">
+            <line x1="70" y1="128" x2="322" y2="128"/><line x1="322" y1="128" x2="322" y2="380"/>
+          </g>
+          <circle cx="322" cy="128" r="7" fill="#1F4E79"/>
+          <text x="313" y="116" font-family="monospace" font-size="14" font-weight="700" fill="#1F4E79" text-anchor="end">A</text>
+          <line id="shPE2" x1="70" y1="331.4" x2="430" y2="61.4" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <g id="shBgd" opacity="0"><line x1="70" y1="185.6" x2="264.4" y2="185.6" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/><line x1="264.4" y1="185.6" x2="264.4" y2="380" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/></g>
+          <circle id="shB" cx="264.4" cy="185.6" r="7" fill="#8A5900" opacity="0"/>
+          <text id="shBl" x="238" y="180" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" opacity="0">B</text>
+          <path id="shIarr" d="M192,219.5 H208 M200,219.5 V233.9 M192,233.9 H208" stroke="#8A5900" stroke-width="3" fill="none" opacity="0"/>
+          <line id="shIlead" x1="200" y1="233.9" x2="200" y2="316" stroke="#8A5900" stroke-width="1.6" stroke-dasharray="4 3" opacity="0"/>
+          <text id="shIlab" x="200" y="332" font-family="monospace" font-size="15" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">&Delta;I = &minus;16</text>
+          <path id="shYcap" d="M322,346 V358 M264.4,346 V358" stroke="#8A5900" stroke-width="3" fill="none" opacity="0"/>
+          <line id="shYarr" x1="322" y1="352" x2="266" y2="352" stroke="#8A5900" stroke-width="3" marker-end="url(#shIhead)" opacity="0"/>
+          <text id="shYlab" x="293" y="341" font-family="monospace" font-size="15" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">&Delta;Y = &minus;64</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <p class="lede" style="max-width:44ch">The rise in r knocks 16 off the intercept, so the whole line drops by 16 &mdash; and by nothing more. Every round after the first is the diagram sliding down to the new crossing point.</p>
+        <div class="btnrow"><button class="btn" data-reveal-svg="peShift" data-reveal="p29a,shPE2leg">Show the shift</button></div>
+        <div class="reveal reveal-hidden" id="p29a">
+          <span class="cue">Read the two arrows</span>
+          <p>The <strong>vertical</strong> bracket is the shock: the line moved down by <strong>16</strong>, and that is the whole of it. The <strong>horizontal</strong> arrow underneath is the answer: equilibrium output moved left by <strong>64</strong>, from A to B. Put a ruler on them &mdash; the second is four times the first.</p>
+          <p style="margin-top:.5rem">The gap between those two arrows is the multiplier, and the geometry explains it. Because the PE line is flatter than the 45-degree line, a small drop in the line has to travel a long way left before the two lines meet again. <strong>The steeper the PE line &mdash; the larger the MPC &mdash; the longer that trip.</strong></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 4 · THE IS CURVE ══════════════ -->
+
+  <!-- ═══════════ 30. DIVIDER P4 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 8 · The IS Curve">
+    <div class="eyebrow">Part 4 of 4</div>
+    <h1>The IS curve</h1>
+    <p class="lede">We have solved this economy twice, at two different interest rates, and got two different answers. Two answers is enough to draw something.</p>
+    <div style="font-family:var(--mono);font-size:1.05rem;line-height:2;background:rgba(255,255,255,.07);border-left:3px solid #8FAADC;border-radius:8px;padding:.9rem 1.2rem;margin-top:1.1rem;max-width:34ch">
+      r = 5 &nbsp;&rarr;&nbsp; Y = 280<br>
+      r = 7 &nbsp;&rarr;&nbsp; Y = 216
+    </div>
+    <div class="sectrail">THE PIECES &check; &rarr; EQUILIBRIUM &check; &rarr; THE MULTIPLIER &check; &rarr; THE IS CURVE</div>
+    <div class="through">Throughline: output settles where what gets produced equals what people plan to spend. Inventories are the signal that pushes it there, and they are why a small shock moves output by more than the shock itself.</div>
+  </section>
+
+  <!-- ═══════════ 31. PLOT THE TWO POINTS ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The IS Curve">
+    <div class="eyebrow">A third pair of axes &mdash; read them carefully</div>
+    <h2>Two answers, plotted</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="paneltitle">The interest rate against equilibrium output</div>
+        <svg viewBox="0 0 480 370" role="img" aria-label="Equilibrium output on the horizontal axis and the interest rate on the vertical axis. Point A is marked at an output of 280 and an interest rate of five. Point B is marked at an output of 216 and an interest rate of seven. A straight blue line labeled IS passes through both points and slopes downward from left to right. The diagram shows that a higher interest rate goes with a lower equilibrium level of output in the goods market.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="455" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="254" x2="450" y2="254"/><line x1="70" y1="198" x2="450" y2="198"/>
+            <line x1="70" y1="142" x2="450" y2="142"/><line x1="70" y1="86" x2="450" y2="86"/>
+            <line x1="70" y1="30" x2="450" y2="30"/>
+            <line x1="116.25" y1="30" x2="116.25" y2="310"/><line x1="162.5" y1="30" x2="162.5" y2="310"/>
+            <line x1="208.75" y1="30" x2="208.75" y2="310"/><line x1="255" y1="30" x2="255" y2="310"/>
+            <line x1="301.25" y1="30" x2="301.25" y2="310"/><line x1="347.5" y1="30" x2="347.5" y2="310"/>
+            <line x1="393.75" y1="30" x2="393.75" y2="310"/><line x1="440" y1="30" x2="440" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">0</text><text x="62" y="258">2</text><text x="62" y="202">4</text>
+            <text x="62" y="174" fill="#1F4E79" font-weight="700">5</text><text x="62" y="146">6</text>
+            <text x="62" y="118" fill="#C0392B" font-weight="700">7</text><text x="62" y="90">8</text><text x="62" y="34">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="162.5" y="328">100</text>
+            <text x="269.8" y="328" fill="#C0392B" font-weight="700">216</text>
+            <text x="329" y="328" fill="#1F4E79" font-weight="700">280</text><text x="440" y="328">400</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">interest rate (r)</text>
+          <text x="455" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">equilibrium output (Y), $bn</text>
+          <line x1="208.75" y1="56.25" x2="421.5" y2="257.5" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="448" y="272" font-family="monospace" font-size="14" fill="#1F4E79" font-weight="700" text-anchor="end">IS</text>
+          <g stroke="#1F4E79" stroke-width="1.6" stroke-dasharray="5 4">
+            <line x1="70" y1="170" x2="329" y2="170"/><line x1="329" y1="170" x2="329" y2="310"/>
+          </g>
+          <g stroke="#C0392B" stroke-width="1.6" stroke-dasharray="5 4">
+            <line x1="70" y1="114" x2="269.8" y2="114"/><line x1="269.8" y1="114" x2="269.8" y2="310"/>
+          </g>
+          <circle cx="329" cy="170" r="7" fill="#1F4E79"/>
+          <text x="339" y="165" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79">A (280, 5)</text>
+          <circle cx="269.8" cy="114" r="7" fill="#C0392B"/>
+          <text x="262" y="134" font-family="monospace" font-size="13" font-weight="700" fill="#C0392B" text-anchor="end">B (216, 7)</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <p class="lede" style="max-width:44ch"><strong>These are new axes.</strong> Output is now on the horizontal axis and the <strong>interest rate</strong> is on the vertical. Planned expenditure appears nowhere. Do not carry over the reading habits from the 45-degree diagram.</p>
+        <div class="btnrow"><button class="btn" data-reveal="p31a">Name the line</button></div>
+        <div class="reveal reveal-hidden" id="p31a">
+          <span class="cue">The IS curve</span>
+          <p>Point <strong>A</strong> is the answer we solved for at r = 5. Point <strong>B</strong> is the answer we solved for at r = 7. Nothing else went into either one.</p>
+          <p style="margin-top:.5rem">Now imagine doing that for every interest rate in between, and for the ones above and below. Each one gives an equilibrium output; string them together and you get the line through A and B. That line is the <strong>IS curve</strong>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 32. Q11 PROMPT ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The IS Curve">
+    <div class="eyebrow">Question 11 &middot; write &middot; commit on paper</div>
+    <h2>What is a single point on this line?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">Point A sits at (280, 5). Somebody hands you that pair of numbers with no other context.</p>
+      <div class="prompt">
+        <span class="cue">Q11 &middot; a full sentence, not a phrase</span>
+        <p><strong>Write down what that point tells you about the economy.</strong> Then answer a second question: at point A, is anything in the goods market out of balance?</p>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="q11a">Show the answer</button></div>
+      <div class="reveal reveal-hidden" id="q11a">
+        <span class="cue">Answer &middot; Question 11</span>
+        <p>Point A says: <strong>if the interest rate is 5, the goods market settles at an output of 280.</strong> That is a complete answer to the whole of Parts 2 and 3, compressed into one dot &mdash; the entire 45-degree diagram, solved, at that one interest rate.</p>
+        <p style="margin-top:.5rem">So nothing at A is out of balance. <strong>Every point on the IS curve already has Y = PE.</strong> The unplanned inventory change is zero everywhere along it. The curve is a collection of finished equilibria, not a menu of pressures.</p>
+        <p style="margin-top:.5rem">Two things it is <em>not</em>. It is <strong>not a demand curve</strong> &mdash; the vertical axis is an interest rate, not a price, and the horizontal axis is equilibrium output, not a quantity demanded. And a point <em>off</em> the curve is not a shortage or a surplus in the ordinary sense; it is simply an output level that is not the equilibrium for that interest rate, and inventories would be moving it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 33. WHY IT SLOPES DOWN ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The IS Curve">
+    <div class="eyebrow">The whole discussion in one line</div>
+    <h2>Why the IS curve slopes downward</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1150px">
+      <p class="lede" style="max-width:92ch">The slope is not a new fact. It is every mechanism from Parts 1, 2 and 3, in order, with nothing added.</p>
+      <div class="chain" style="font-size:1.1rem">r&darr; &rarr; I&uarr; &rarr; PE&uarr; &rarr; PE &gt; Y &rarr; U.I.&darr; &rarr; firms produce more &rarr; Y&uarr;</div>
+      <div class="btnrow"><button class="btn" data-reveal="p33a">Where each link came from</button></div>
+      <div class="reveal reveal-hidden" id="p33a">
+        <span class="cue">Four links, four earlier slides</span>
+        <p><strong>r&darr; &rarr; I&uarr;</strong> is Q3: more projects clear the bar. <strong>I&uarr; &rarr; PE&uarr;</strong> is the definition of planned expenditure. <strong>PE &gt; Y &rarr; U.I.&darr; &rarr; firms produce more</strong> is Q5 and Q6 &mdash; U.I. is the unplanned inventory investment from Part 1, and it goes negative here because buyers are taking goods off the shelves. And how far output rises is Part 3: <strong>four times the change in investment</strong>, because the rounds keep going.</p>
+        <p style="margin-top:.5rem">Read the chain backwards and it works too: a higher interest rate cuts investment, planned spending falls short of output, goods pile up, firms cut back. <strong>Lower r, higher Y. Higher r, lower Y.</strong> The curve slopes down.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 34. Q12 PROMPT ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The IS Curve">
+    <div class="eyebrow">Question 12 &middot; write &middot; commit on paper</div>
+    <h2>One shock, two pictures, two different-looking answers</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">The interest rate rises from 5 to 7. That is a single event. But look at what it did in each of our two diagrams:</p>
+      <div class="pair2">
+        <div class="pcard">
+          <div class="ptag">On the 45-degree diagram</div>
+          <div class="verdictbig">the PE line shifted down</div>
+          <p>The whole line dropped by 16, from PE = 70 + 0.75Y to PE&prime; = 54 + 0.75Y, and the crossing point moved from A to B.</p>
+        </div>
+        <div class="pcard warn">
+          <div class="ptag">On the IS diagram</div>
+          <div class="verdictbig">we moved along the curve</div>
+          <p>No line moved at all. We slid from point A up and to the left to point B, on one unchanged IS curve.</p>
+        </div>
+      </div>
+      <div class="prompt">
+        <span class="cue">Q12 &middot; write the rule, not just the observation</span>
+        <p><strong>Write down why the same shock is a shift in one picture and a movement in the other.</strong> The answer is a rule you can apply to any diagram, and you have used it before.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 35. Q12 REVEAL ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The IS Curve">
+    <div class="eyebrow">Answer &middot; Question 12</div>
+    <h2>Look at what is written on the axes</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:.85rem;max-width:1220px">
+      <p class="lede" style="max-width:112ch">Both pictures hold the <em>same</em> two states &mdash; <strong class="accent">A</strong> at r = 5, Y = 280 and <strong class="red">B</strong> at r = 7, Y = 216.</p>
+      <div class="two" style="gap:1.3rem;align-items:start">
+
+        <div style="display:flex;flex-direction:column;gap:.7rem;min-width:0">
+          <div class="panel">
+            <div class="paneltitle">45-degree diagram &middot; axes are Y and PE</div>
+            <svg viewBox="0 0 420 270" role="img" aria-label="A small 45-degree diagram with aggregate income on the horizontal axis and planned expenditure on the vertical axis. The blue planned expenditure line crosses the 45-degree line at blue point A, an income of 280. A gold dashed line sixteen below it crosses at red point B, an income of 216. Two lines appear, because the interest rate is on neither axis of this diagram and so it moved the whole line.">
+              <line x1="70" y1="20" x2="70" y2="240" stroke="#8A8F96" stroke-width="1.4"/>
+              <line x1="70" y1="240" x2="288" y2="240" stroke="#8A8F96" stroke-width="1.4"/>
+              <text x="75" y="16" font-family="monospace" font-size="10" fill="#14243A" font-weight="700">planned expenditure (PE)</text>
+              <text x="285" y="264" font-family="monospace" font-size="10" fill="#14243A" font-weight="700" text-anchor="end">aggregate income (Y)</text>
+              <line x1="70" y1="240" x2="285" y2="25" stroke="#5A5F66" stroke-width="2"/>
+              <line x1="70" y1="202.4" x2="285" y2="41.1" stroke="#1F4E79" stroke-width="2.6"/>
+              <line x1="70" y1="211" x2="285" y2="49.7" stroke="#8A5900" stroke-width="2.6" stroke-dasharray="7 4"/>
+              <g font-family="monospace" font-size="10" font-weight="700">
+                <text x="292" y="29" fill="#5A5F66">45&deg;: Y = PE</text>
+                <text x="292" y="45" fill="#1F4E79">PE = 70 + 0.75Y</text>
+                <text x="292" y="61" fill="#8A5900">PE&prime; = 54 + 0.75Y</text>
+              </g>
+              <g stroke="#5A5F66" stroke-width="1.3" stroke-dasharray="4 3">
+                <line x1="220.5" y1="89.5" x2="220.5" y2="240"/><line x1="186.1" y1="123.9" x2="186.1" y2="240"/>
+              </g>
+              <g font-family="monospace" font-size="9.5" font-weight="700" text-anchor="middle">
+                <text x="186.1" y="254" fill="#C0392B">216</text><text x="220.5" y="254" fill="#1F4E79">280</text>
+              </g>
+              <circle cx="220.5" cy="89.5" r="6" fill="#1F4E79"/>
+              <text x="229" y="93" font-family="monospace" font-size="14" font-weight="700" fill="#1F4E79" stroke="#FbFaF7" stroke-width="3" paint-order="stroke">A</text>
+              <circle cx="186.1" cy="123.9" r="6" fill="#C0392B"/>
+              <text x="170" y="127" font-family="monospace" font-size="14" font-weight="700" fill="#C0392B" stroke="#FbFaF7" stroke-width="3" paint-order="stroke">B</text>
+            </svg>
+            <div style="border-top:1px solid var(--paper-line);margin-top:.7rem;padding-top:.7rem">
+              <div class="ptag" style="font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--red)">The line moved</div>
+              <div class="verdictbig" style="font-family:var(--mono);font-size:1rem;font-weight:700;line-height:1.5;color:var(--red)">r is on neither axis</div>
+              <p style="font-size:1rem;line-height:1.5;margin-top:.4rem">r has nowhere to sit as a point, so it re-prices spending at <em>every</em> income at once &mdash; a <strong>shift of the whole line</strong>. Hence two lines.</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:.7rem;min-width:0">
+          <div class="panel">
+            <div class="paneltitle">IS diagram &middot; axes are Y and r</div>
+            <svg viewBox="0 0 420 270" role="img" aria-label="A small IS diagram with equilibrium output on the horizontal axis and the interest rate on the vertical axis. A single downward-sloping blue IS curve carries both points: blue point A at an output of 280 and a rate of five, and red point B at an output of 216 and a rate of seven. Only one line appears, because the interest rate is on an axis here, so the same shock is a movement along the curve.">
+              <line x1="70" y1="20" x2="70" y2="240" stroke="#8A8F96" stroke-width="1.4"/>
+              <line x1="70" y1="240" x2="288" y2="240" stroke="#8A8F96" stroke-width="1.4"/>
+              <text x="75" y="16" font-family="monospace" font-size="10" fill="#14243A" font-weight="700">interest rate (r)</text>
+              <text x="285" y="264" font-family="monospace" font-size="10" fill="#14243A" font-weight="700" text-anchor="end">equilibrium output (Y)</text>
+              <line x1="150" y1="44.4" x2="272" y2="196.9" stroke="#1F4E79" stroke-width="2.6"/>
+              <text x="278" y="202" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700">IS</text>
+              <g stroke="#1F4E79" stroke-width="1.3" stroke-dasharray="4 3">
+                <line x1="70" y1="132.5" x2="220.5" y2="132.5"/><line x1="220.5" y1="132.5" x2="220.5" y2="240"/>
+              </g>
+              <g stroke="#C0392B" stroke-width="1.3" stroke-dasharray="4 3">
+                <line x1="70" y1="89.5" x2="186.1" y2="89.5"/><line x1="186.1" y1="89.5" x2="186.1" y2="240"/>
+              </g>
+              <g font-family="monospace" font-size="10" font-weight="700" text-anchor="end">
+                <text x="64" y="136.5" fill="#1F4E79">5</text><text x="64" y="93.5" fill="#C0392B">7</text>
+              </g>
+              <g font-family="monospace" font-size="9.5" font-weight="700" text-anchor="middle">
+                <text x="186.1" y="254" fill="#C0392B">216</text><text x="220.5" y="254" fill="#1F4E79">280</text>
+              </g>
+              <circle cx="220.5" cy="132.5" r="6" fill="#1F4E79"/>
+              <text x="229" y="136" font-family="monospace" font-size="14" font-weight="700" fill="#1F4E79" stroke="#FbFaF7" stroke-width="3" paint-order="stroke">A</text>
+              <circle cx="186.1" cy="89.5" r="6" fill="#C0392B"/>
+              <text x="170" y="93" font-family="monospace" font-size="14" font-weight="700" fill="#C0392B" stroke="#FbFaF7" stroke-width="3" paint-order="stroke">B</text>
+            </svg>
+            <div style="border-top:1px solid var(--paper-line);margin-top:.7rem;padding-top:.7rem">
+              <div class="ptag" style="font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--accent)">Nothing moved</div>
+              <div class="verdictbig" style="font-family:var(--mono);font-size:1rem;font-weight:700;line-height:1.5;color:var(--accent)">r is on the vertical axis</div>
+              <p style="font-size:1rem;line-height:1.5;margin-top:.4rem">r has a home. Changing it just says which height to stand at, and the curve hands you the output. A <strong>movement along the curve</strong> &mdash; hence one line.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+      <div style="display:flex;gap:1rem;align-items:center;flex-wrap:wrap">
+        <div class="chain" style="margin-top:0">on an axis? &rarr; move ALONG &nbsp;&nbsp;|&nbsp;&nbsp; not on an axis? &rarr; the whole curve MOVES</div>
+        <button class="btn" data-reveal="p35a">You have run this test before</button>
+      </div>
+      <div class="reveal reveal-hidden" id="p35a">
+        <span class="cue">The same test, a fourth time</span>
+        <p>Not a new rule, and not an IS-curve rule. It is the same test you ran on your very first graph, again on the burrito market's demand and supply curves, and again on aggregate supply last week. <strong>Same question, same procedure, new pair of axes.</strong></p>
+        <p style="margin-top:.5rem">So the diagram decides the answer, not the shock. <strong>A and B are the same two states in both pictures</strong> &mdash; two lines on the left, one on the right &mdash; and both descriptions are completely correct.</p>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════ 37. SYNTHESIS ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The IS Curve">
+    <div class="eyebrow">The throughline</div>
+    <h2>What you can now do</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <div class="chain warm" style="font-size:1.05rem;line-height:1.7;max-width:88ch;display:block">Output settles where what gets produced equals what people plan to spend. Inventories are the signal that pushes it there, and they are why a small shock moves output by more than the shock itself.</div>
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">The condition</div>
+          <div class="cnote"><strong>Y = PE.</strong> Not because anyone aims for it, but because it is the only level where the unplanned inventory change is zero and no firm has a reason to move.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">The mechanism</div>
+          <div class="cnote"><strong>Inventories.</strong> They are what a firm actually observes, and they carry the message that planned spending and production disagree. Ask what happens to them and the direction of output follows.</div>
+        </div>
+        <div class="condcard warm">
+          <div class="ctitle">The size</div>
+          <div class="cnote"><strong>The multiplier.</strong> Cutting production cuts income, which cuts consumption, which cuts production again. With MPC = 0.75 that turns a shock of 16 into a fall of 64.</div>
+        </div>
+      </div>
+      <p class="lede" style="max-width:96ch">And the IS curve is all of that, at every interest rate at once, drawn as a single line. Every point on it is a solved goods market. <strong>Nothing on it is out of balance</strong> &mdash; which is exactly why it will be useful the moment we put a second market beside it.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 38. CLOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 8 · The IS Curve">
+    <div class="eyebrow">Before you leave &middot; on your own paper</div>
+    <h2>Finish the sentence</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.3rem;max-width:1100px">
+      <p class="lede">Write it out in full, in your own words. A good answer mentions income and gets there in more than one step.</p>
+      <div class="blankline">
+        Output falls by more than the fall in investment because <span class="bl"></span>.
+      </div>
+      <p class="serif-note">If your sentence would still be true with an MPC of zero, it is not finished yet.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="chrome">
+  <span class="course" id="sectionLabel">ECON 002 &middot; Discussion 8</span>
+  <span class="navhint">
+    <button id="prevBtn" aria-label="Previous slide">&larr; prev</button>
+    <span aria-live="polite" aria-atomic="true">Slide <span id="cur">1</span> of <span id="tot">37</span></span>
+    <button id="nextBtn" aria-label="Next slide">next &rarr;</button>
+  </span>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* the one place the course string lives */
+  const COURSE = 'ECON 002';
+  const DECK_TITLE = 'Where Output Settles';
+  document.title = COURSE + ' · ' + DECK_TITLE;
+  const eyebrow = document.getElementById('titleEyebrow');
+  if(eyebrow) eyebrow.textContent = COURSE + ' · Discussion Section · Unit 7';
+
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  /* slide element -> the reset() of every animation on it. Entering a slide
+     rewinds its animations, so nothing is already showing on arrival —
+     including on a second pass back through the deck. */
+  const slideResets=new Map();
+  function registerReset(el, fn){
+    const sl = el.closest && el.closest('.slide');
+    if(!sl) return;
+    if(!slideResets.has(sl)) slideResets.set(sl,[]);
+    slideResets.get(sl).push(fn);
+  }
+  const prog=document.getElementById('prog');
+  const cur=document.getElementById('cur');
+  document.getElementById('tot').textContent=slides.length;
+
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    prog.style.width=((i)/(slides.length-1)*100)+'%';
+    cur.textContent=i+1;
+    rewind(slides[i]);
+    const sec=slides[i].getAttribute('data-section');
+    const lbl=document.getElementById('sectionLabel');
+    if(lbl) lbl.textContent = sec ? (COURSE+' · '+sec) : (COURSE+' · Discussion');
+  }
+  function next(){show(i+1)}
+  function prev(){show(i-1)}
+
+  document.getElementById('nextBtn').onclick=next;
+  document.getElementById('prevBtn').onclick=prev;
+
+  /* guarded: Space must activate a focused control, not jump the slide */
+  window.addEventListener('keydown',e=>{
+    const t=e.target;
+    const onControl = t && t.closest && t.closest('button,a,input,select,textarea,[tabindex]');
+    if(e.key===' '||e.key==='Spacebar'){
+      if(onControl) return;               /* let the browser click the focused button */
+      e.preventDefault();next();return;
+    }
+    if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();next()}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}
+    else if(e.key.toLowerCase()==='f'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  /* ---- generic click-to-reveal: button[data-reveal="id"] or "id1,id2,id3"
+          A comma list lets one button uncover several table cells at once,
+          which is how the furniture table stays empty until it is computed. */
+  document.querySelectorAll('[data-reveal]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      btn.getAttribute('data-reveal').split(',').forEach(id=>{
+        const t=document.getElementById(id.trim());
+        if(t) t.classList.add('shown');
+      });
+      btn.disabled=true;
+    });
+  });
+
+  /* ---- generic quick-check polls: button[data-poll-reveal="pollId"] ---- */
+  document.querySelectorAll('[data-poll-reveal]').forEach(btn=>{
+    const group=document.getElementById(btn.getAttribute('data-poll-reveal'));
+    if(!group) return;
+    const opts=[...group.querySelectorAll('.poll-opt')];
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    btn.addEventListener('click',()=>{
+      group.classList.add('revealed');
+      opts.forEach(o=>{ if(o.dataset.correct==='true') o.classList.add('correct'); });
+      btn.disabled=true;
+    });
+  });
+
+  /* ---- generic diagnose (flawed-argument) groups ---- */
+  document.querySelectorAll('.diag').forEach(group=>{
+    const opts=[...group.querySelectorAll('.diag-opt')];
+    const revealBtn=group.parentElement.querySelector('[data-diag-reveal]');
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    if(revealBtn){
+      revealBtn.addEventListener('click',()=>{
+        group.classList.add('revealed');
+        opts.forEach(o=>{if(o.dataset.bad==='true')o.classList.add('bad');});
+        revealBtn.disabled=true;
+        const note=group.parentElement.querySelector('[data-diag-note]');
+        if(note) note.style.display='block';
+      });
+    }
+  });
+
+  /* ---- static shift diagrams: button[data-reveal-svg="key"] ---- */
+  const svgShifts={
+    irBand  : ['irBandR','irBandD','irBandT','irBandB','irBandL'],
+    peShift : ['shPE2','shBgd','shB','shBl',
+               'shIarr','shIlead','shIlab','shYcap','shYarr','shYlab']
+  };
+  /* Entering a slide puts it back to its unrevealed state: uncovered text,
+     table cells, polls, diagnose verdicts, marked-up SVGs and animations all
+     rewind, and their buttons come back — so a slide visited twice never
+     opens with its answer already showing. */
+  function rewind(sl){
+    if(!sl) return;
+    sl.querySelectorAll('.shown').forEach(e=>e.classList.remove('shown'));
+    sl.querySelectorAll('.revealed').forEach(g=>g.classList.remove('revealed'));
+    sl.querySelectorAll('.poll-opt.correct').forEach(o=>o.classList.remove('correct'));
+    sl.querySelectorAll('.diag-opt.bad').forEach(o=>o.classList.remove('bad'));
+    sl.querySelectorAll('.poll-opt,.diag-opt').forEach(o=>{o.style.outline='';});
+    sl.querySelectorAll('[data-diag-note]').forEach(n=>{n.style.display='none';});
+    sl.querySelectorAll('[data-reveal-svg]').forEach(b=>{
+      (svgShifts[b.getAttribute('data-reveal-svg')]||[]).forEach(id=>{
+        const el=document.getElementById(id); if(el) el.setAttribute('opacity',0);
+      });
+    });
+    sl.querySelectorAll('[data-reveal],[data-reveal-svg],[data-poll-reveal],[data-diag-reveal],[data-cond]')
+      .forEach(b=>{ b.disabled=false; });
+    (slideResets.get(sl)||[]).forEach(fn=>fn());
+  }
+
+  function revealShift(key){
+    (svgShifts[key]||[]).forEach(id=>{const el=document.getElementById(id); if(el) el.setAttribute('opacity',1);});
+  }
+  document.querySelectorAll('[data-reveal-svg]').forEach(btn=>{
+    const key=btn.getAttribute('data-reveal-svg');
+    btn.addEventListener('click',()=>{ revealShift(key); btn.disabled=true; });
+  });
+
+  /* ---- condition cards: button[data-cond="bodyId"] ---- */
+  document.querySelectorAll('[data-cond]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const body=document.getElementById(btn.getAttribute('data-cond'));
+      if(body){body.classList.add('shown');}
+      btn.disabled=true;
+    });
+  });
+
+  /* =====================================================================
+     ANIMATION SCAFFOLD
+     Two animations, and they are deliberately different in kind. Output
+     adjusting toward equilibrium is a continuous process, so it takes the
+     shared cosine sweep. The multiplier arrives in discrete rounds, so it
+     steps one bar at a time. Both carry reset(), finish() and a
+     reduced-motion branch.
+     ===================================================================== */
+  const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function ease(p){return p<1 ? (0.5-0.5*Math.cos(Math.PI*p)) : 1;}
+  const $ = id => document.getElementById(id);
+
+  /* signed value with its sign spelled out, so the gap is never read from
+     color or position alone */
+  function signed(v){
+    if(Math.abs(v)<0.05) return '0';
+    return (v>0 ? '+' : '−') + Math.abs(v).toFixed(1).replace(/\.0$/,'');
+  }
+  function trim(v){
+    return (Math.round(v*100)/100).toString();
+  }
+
+  /* =====================================================================
+     Slide 18 · output adjusting toward equilibrium on the 45-degree
+     diagram. Plot geometry: x = 70 + 0.9·Y, y = 380 − 0.9·PE, with both
+     axes running 0 to 400, so the 45-degree line really is at 45 degrees.
+     ===================================================================== */
+  (function(){
+    if(!$('eqLow')) return;
+    const xY = Y => 70 + 0.9*Y;
+    const yV = v => 380 - 0.9*v;
+    const gap  = $('eqGap'),  gapT = $('eqGapT');
+    const d45  = $('eqDot45'), dPE = $('eqDotPE');
+    const END  = ['eqGH','eqGV','eqE','eqEl'].map($).filter(Boolean);
+    const $Y=$('eqYv'), $PE=$('eqPEv'), $G=$('eqGapv'), $n=$('eqNote');
+    const bLow=$('eqLow'), bHigh=$('eqHigh'), bReset=$('eqReset');
+    let raf;
+
+    function place(Y){
+      const PE = 70 + 0.75*Y, g = PE - Y;
+      const x = xY(Y), yTop = yV(Y), yPE = yV(PE);
+      gap.setAttribute('x1',x.toFixed(1)); gap.setAttribute('x2',x.toFixed(1));
+      gap.setAttribute('y1',yTop.toFixed(1)); gap.setAttribute('y2',yPE.toFixed(1));
+      gapT.setAttribute('x',(x+10).toFixed(1));
+      gapT.setAttribute('y',((yTop+yPE)/2+4).toFixed(1));
+      gapT.textContent = 'PE − Y = ' + signed(g);
+      d45.setAttribute('cx',x.toFixed(1)); d45.setAttribute('cy',yTop.toFixed(1));
+      dPE.setAttribute('cx',x.toFixed(1)); dPE.setAttribute('cy',yPE.toFixed(1));
+      $Y.textContent  = Math.round(Y);
+      $PE.textContent = Math.round(PE);
+      $G.textContent  = signed(g);
+    }
+    function shows(v){ END.forEach(e=>e.setAttribute('opacity',v)); }
+
+    function reset(){
+      cancelAnimationFrame(raf);
+      place(200); shows(0);
+      bLow.disabled=false; bHigh.disabled=false;
+      $n.textContent='Press a button to let firms react to the inventory signal.';
+    }
+    function finish(){
+      cancelAnimationFrame(raf);
+      place(280); shows(1);
+      bLow.disabled=true; bHigh.disabled=true;
+      $n.textContent='Y = PE = 280. The gap is zero, so no firm is getting a signal to change anything.';
+    }
+    function leg(from,to){
+      cancelAnimationFrame(raf);
+      place(from);
+      if(REDUCED){ finish(); return; }        /* reduced-motion branch */
+      const t0=performance.now();
+      function step(now){
+        const p=Math.min(1,(now-t0)/2800), e=ease(p);
+        place(from + (to-from)*e);
+        if(p>=1) finish(); else raf=requestAnimationFrame(step);
+      }
+      raf=requestAnimationFrame(step);
+    }
+
+    bLow.onclick=function(){
+      reset(); bLow.disabled=true; bHigh.disabled=true;
+      $n.textContent='Inventories are falling short, so firms are producing more.';
+      leg(200,280);
+    };
+    bHigh.onclick=function(){
+      reset(); bLow.disabled=true; bHigh.disabled=true;
+      $n.textContent='Inventories are piling up, so firms are producing less.';
+      leg(360,280);
+    };
+    bReset.addEventListener('click',reset);
+    registerReset(bLow,reset);
+    reset();
+  })();
+
+  /* =====================================================================
+     Slide 26 · the multiplier rounds. Each round is 0.75 of the one
+     before, so the running total is 16, 28, 37, 43.75, … climbing toward
+     64. Discrete rounds, so this steps rather than sweeps.
+     ===================================================================== */
+  (function(){
+    if(!$('mrPlay')) return;
+    const EACH=[16,12,9,6.75,5.0625,3.796875,2.84765625,2.13574219,1.60180664,1.20135498];
+    const CUM =[16,28,37,43.75,48.8125,52.609375,55.45703125,57.59277344,59.19458008,60.39593506];
+    const bars=[]; for(let k=1;k<=10;k++){ const b=$('mrB'+k); if(b) bars.push(b); }
+    const tot=$('mrTot'), totT=$('mrTotT');
+    const $N=$('mrN'), $T=$('mrThis'), $C=$('mrCum'), $n=$('mrNote');
+    const bPlay=$('mrPlay'), bReset=$('mrReset');
+    let timer=null;
+
+    function setN(n){
+      bars.forEach((b,k)=>b.setAttribute('opacity', k<n ? 1 : 0));
+      $N.textContent = n;
+      $T.textContent = n ? '−' + trim(EACH[n-1]) : '—';
+      $C.textContent = n ? '−' + trim(CUM[n-1])  : '0';
+    }
+    function reset(){
+      if(timer){ clearTimeout(timer); timer=null; }
+      setN(0);
+      if(tot)  tot.setAttribute('opacity',0);
+      if(totT) totT.setAttribute('opacity',0);
+      bPlay.disabled=false;
+      $n.textContent='Press play to add the rounds one at a time.';
+    }
+    function finish(){
+      if(timer){ clearTimeout(timer); timer=null; }
+      setN(10);
+      if(tot)  tot.setAttribute('opacity',1);
+      if(totT) totT.setAttribute('opacity',1);
+      bPlay.disabled=true;
+      $n.textContent='Ten rounds have taken output down 60.4. The rounds never stop, but each is three quarters of the last, and the running total closes in on −64.';
+    }
+    function play(){
+      reset(); bPlay.disabled=true;
+      if(REDUCED){ finish(); return; }        /* reduced-motion branch */
+      let n=0;
+      $n.textContent='Each round is three quarters of the one before it.';
+      (function stepRound(){
+        n++; setN(n);
+        if(n>=10){ finish(); return; }
+        timer=setTimeout(stepRound,560);
+      })();
+    }
+
+    bPlay.onclick=play;
+    bReset.addEventListener('click',reset);
+    registerReset(bPlay,reset);
+    reset();
+  })();
+
+  show(0);
+})();
+</script>
+</body>
+</html>

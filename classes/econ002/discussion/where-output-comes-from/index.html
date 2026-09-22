@@ -1,0 +1,1911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECON 002 · Where Output Comes From</title>
+<style>
+  :root{
+    --ink:#14243A;          /* near-navy ink */
+    --accent:#1F4E79;       /* deep blue (from worksheets) */
+    --accent-soft:#8FAADC;
+    --paper:#F6F4EE;        /* warm chalk-paper */
+    --paper-line:#E4E0D5;
+    --gold:#8A5900;
+    --gold-soft:#FBF1DC;
+    --red:#C0392B;
+    --grey:#5A5F66;
+    --chalk:#FbFaF7;
+    --shadow:0 8px 30px rgba(20,36,58,.10);
+    --mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Georgia','Iowan Old Style',serif;
+    color:var(--ink);
+    background:var(--paper);
+    overflow:hidden;
+  }
+  /* ---------- deck scaffold ---------- */
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;
+    padding:clamp(1.25rem,4vw,4.5rem) clamp(1.5rem,6vw,6rem);
+    /* extra bottom room so content never hides behind the fixed nav bar (~46px) */
+    padding-bottom:calc(46px + clamp(1rem,3vw,2rem));
+    /* if a slide is taller than the screen, scroll it instead of clipping/overlapping */
+    overflow-y:auto;overflow-x:hidden;
+    scroll-padding-bottom:46px;
+    opacity:0;
+    transition:opacity .38s ease;
+  }
+  .slide.active{display:flex;opacity:1;animation:rise .45s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide.active{animation:none}
+    .slide{transition:none}
+    *{transition-duration:.001ms !important;animation-duration:.001ms !important}
+  }
+  /* visible keyboard focus (WCAG 2.4.7) */
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+    outline:3px solid var(--accent);outline-offset:3px;border-radius:6px;
+  }
+  :focus:not(:focus-visible){outline:none}
+  /* ---------- typography ---------- */
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--grey);margin-bottom:1.1rem;font-weight:600;
+  }
+  h1{font-size:clamp(2.4rem,5.5vw,4.4rem);line-height:1.02;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3.2vw,2.4rem);line-height:1.1;font-weight:700;letter-spacing:-.01em;margin-bottom:.4rem}
+  .lede{font-size:clamp(1.05rem,1.7vw,1.35rem);line-height:1.5;color:var(--ink);max-width:52ch}
+  .muted{color:var(--grey)}
+  .serif-note{font-style:italic;color:var(--grey);font-size:1rem;line-height:1.5}
+  strong{font-weight:700}
+  .accent{color:var(--accent)}
+  .red{color:var(--red)}
+  .gold{color:var(--gold)}
+  /* title rule */
+  h2 + .titlerule{height:2px;background:linear-gradient(90deg,var(--accent-soft),transparent);
+    width:min(100%,640px);margin:.2rem 0 1.4rem}
+  /* ---------- model cards ---------- */
+  .models{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin:1.4rem 0;max-width:900px}
+  .model{
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;
+    padding:1.4rem 1.6rem;box-shadow:var(--shadow);position:relative;
+  }
+  .model .tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:.6rem;display:block}
+  .model .eq{font-family:var(--mono);font-size:1.35rem;color:var(--ink)}
+  .model .eq .coef{color:var(--red);font-weight:700}
+  .model.dim{opacity:.4;filter:saturate(.4)}
+  .model.hi{border-color:var(--accent);box-shadow:0 8px 30px rgba(31,78,121,.22)}
+  .model .body{font-size:1rem;line-height:1.5;margin-top:.7rem}
+  .model.warm{background:var(--gold-soft);border-color:#E2CFA4}
+  .model.warm .tag{color:var(--gold)}
+  /* ---------- boxes ---------- */
+  .prompt,.reveal,.predict{
+    border-radius:10px;padding:1.05rem 1.3rem;max-width:820px;line-height:1.5;
+    font-family:'Georgia',serif;font-size:1.08rem;
+  }
+  .prompt{background:#EEF3FA;border-left:4px solid var(--accent)}
+  .reveal{background:var(--gold-soft);border-left:4px solid var(--gold)}
+  .cue{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;display:block;margin-bottom:.4rem}
+  .prompt .cue{color:var(--accent)}
+  .reveal .cue{color:var(--gold)}
+  .predict .cue{color:var(--red)}
+  .predict{background:#FBEEEC;border-left:4px solid var(--red)}
+  .prompt p,.reveal p,.predict p{margin:0;line-height:1.5}
+  .prompt .cue + p,.reveal .cue + p,.predict .cue + p{margin-top:.15rem}
+  .prompt ol,.predict ol,.reveal ol{margin:.5rem 0 0 1.3rem;line-height:1.6}
+  .prompt li,.predict li,.reveal li{margin-bottom:.25rem}
+  /* chain / mono line */
+  .chain{
+    font-family:var(--mono);background:#EDF1F8;border:1px solid var(--accent-soft);
+    border-radius:8px;padding:.7rem 1rem;font-size:1.05rem;color:var(--accent);
+    display:inline-block;margin-top:.4rem
+  }
+  .chain.warm{background:var(--gold-soft);border-color:#E2CFA4;color:var(--gold)}
+  /* ---------- interactive graph panel ---------- */
+  .graphwrap{display:grid;grid-template-columns:1.15fr .85fr;gap:2rem;align-items:center;margin-top:.6rem;flex:1 0 auto}
+  @media (max-width:900px){.graphwrap{grid-template-columns:1fr}}
+  .panel{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;padding:1.2rem;box-shadow:var(--shadow)}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  /* a graph never grows tall enough to make a slide scroll when projected;
+     the viewBox keeps its proportions and just centers in the space */
+  .panel svg{max-height:37vh}
+  .controls{display:flex;flex-direction:column;gap:1.3rem}
+  .readout{font-family:var(--mono);font-size:.92rem;line-height:1.7;color:var(--ink);background:#EDF1F8;border-radius:8px;padding:.8rem 1rem}
+  .readout .big{font-size:1.25rem;color:var(--accent);font-weight:700}
+  .readout .lbl2{color:var(--grey)}
+  .btn{
+    font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.7rem 1.2rem;cursor:pointer;
+    box-shadow:0 3px 10px rgba(31,78,121,.3);transition:transform .1s,background .2s;align-self:flex-start
+  }
+  .btn:hover{background:#173a5c;transform:translateY(-1px)}
+  /* a spent reveal button stays in place — hiding it slid the row under the
+     cursor, so a second click landed on the next answer (disabled controls
+     are exempt from the contrast minimum) */
+  .btn:disabled,.btn.ghost:disabled{opacity:.38;cursor:default;transform:none;box-shadow:none}
+  .btn:disabled:hover{background:var(--accent);transform:none}
+  .btn.ghost:disabled:hover{background:transparent}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
+  .btn.ghost:hover{background:#EEF3FA}
+  .btnrow{display:flex;gap:.7rem;flex-wrap:wrap}
+  /* ---------- poll ---------- */
+  .poll-opts{display:flex;flex-direction:column;gap:.8rem;max-width:860px;margin-top:1.1rem}
+  .poll-opt{
+    display:flex;align-items:stretch;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;
+    cursor:pointer;background:var(--chalk);transition:border-color .2s,transform .08s;position:relative;
+    width:100%;text-align:left;font:inherit;color:inherit;padding:0
+  }
+  .poll-opt:hover{border-color:var(--accent-soft)}
+  .poll-opt:active{transform:scale(.995)}
+  .poll-opt .num{background:var(--accent);color:#fff;font-family:var(--mono);font-weight:700;
+    display:flex;align-items:center;justify-content:center;padding:0 1.1rem;font-size:1.1rem;z-index:2}
+  .poll-opt .txt{padding:.9rem 1.1rem;line-height:1.4;z-index:2;font-size:1.02rem;font-family:'Georgia',serif}
+  .poll.revealed .poll-opt{opacity:.5;transition:opacity .4s}
+  .poll.revealed .poll-opt.correct{opacity:1;border-color:var(--gold);background:var(--gold-soft)}
+  .poll-opt.correct .num{background:var(--gold)}
+  .poll-opt.correct .txt::after{content:" ✓ correct";color:var(--gold);font-family:var(--mono);font-weight:700;font-size:.82rem}
+  .poll-hint{font-family:var(--mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-top:.9rem;font-weight:600}
+  /* ---------- footer / nav ---------- */
+  .chrome{position:fixed;bottom:0;left:0;right:0;height:46px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 1.4rem;font-family:var(--mono);font-size:.72rem;
+    letter-spacing:.08em;color:var(--grey);pointer-events:none;z-index:50}
+  .chrome .course{text-transform:uppercase}
+  .progress-track{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:60}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-soft));width:0;transition:width .35s ease}
+  .navhint{display:flex;gap:1.2rem;align-items:center;pointer-events:auto}
+  .navhint button{pointer-events:auto;background:none;border:none;color:var(--grey);cursor:pointer;font-family:var(--mono);font-size:.9rem;padding:.2rem .5rem;border-radius:5px}
+  .navhint button:hover{color:var(--accent);background:rgba(31,78,121,.08)}
+  .kbd{font-family:var(--mono);font-size:.66rem;border:1px solid var(--paper-line);border-radius:4px;padding:.1rem .35rem;color:var(--grey)}
+  /* content column helper */
+  .col{display:flex;flex-direction:column;gap:1.1rem;flex:1 0 auto;justify-content:center}
+  .grow{flex:1 0 auto}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+  @media (max-width:900px){.two{grid-template-columns:1fr}}
+  .calc{font-family:var(--mono);font-size:1.05rem;line-height:1.8}
+  .calc .lbl{color:var(--accent);font-weight:700}
+  .footnote{font-size:.92rem;color:var(--grey);font-style:italic}
+  /* two graphs above, readout + buttons below */
+  .ctrlrow{display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;align-items:start;margin-top:1rem}
+  .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;align-items:start}
+  @media (max-width:900px){.three{grid-template-columns:1fr}}
+  @media (max-width:900px){.ctrlrow{grid-template-columns:1fr}}
+  .paneltitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;
+    font-weight:700;color:var(--accent);margin-bottom:.5rem}
+  .runsheet{display:grid;grid-template-columns:auto 1fr;gap:.35rem 1.1rem;font-family:var(--mono);font-size:.86rem;line-height:1.5;margin-top:.4rem}
+  .runsheet .rk{color:var(--accent);font-weight:700;white-space:nowrap}
+  /* title slide special */
+  .title-slide{justify-content:safe center}
+  .title-slide h1{margin:.6rem 0}
+  .signature{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:2rem}
+  /* ---------- section divider ---------- */
+  .divider{justify-content:safe center;background:linear-gradient(135deg,#1B3B5C,#14243A)}
+  .divider *{color:#F6F4EE}
+  .divider .eyebrow{color:#8FAADC}
+  .divider h1{font-size:clamp(2.2rem,5vw,4rem);color:#fff}
+  .divider .lede{color:#D6DEE9;max-width:52ch}
+  .divider .sectrail{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#8FAADC;margin-top:1.6rem}
+  .divider .through{font-family:var(--mono);font-size:.8rem;line-height:1.6;color:#D6DEE9;
+    border-left:3px solid #8FAADC;padding-left:.9rem;margin-top:1.4rem;max-width:60ch}
+  /* ---------- generic click-reveal ---------- */
+  .reveal-hidden{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .reveal-hidden.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* cell-level hide: keeps the table's layout, but the value is neither seen
+     nor read out by a screen reader until its reveal button is pressed */
+  .hid{visibility:hidden}
+  .hid.shown{visibility:visible}
+  /* condition cards (3-across; override grid-template-columns for 2) */
+  .condrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem}
+  @media (max-width:900px){.condrow{grid-template-columns:1fr !important}}
+  .condcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.5rem}
+  .condcard .ctitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .condcard .cbtn{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:.55rem .8rem;cursor:pointer;align-self:flex-start}
+  .condcard .cbtn:hover{background:#173a5c}
+  .condcard .cbody{opacity:0;max-height:0;overflow:hidden;transition:opacity .35s,max-height .45s}
+  .condcard .cbody.shown{opacity:1;max-height:none;overflow:visible;margin-top:.3rem}
+  .condcard .cnote{font-size:.95rem;line-height:1.5;color:var(--ink)}
+  .condcard ul{margin:.2rem 0 0 1.1rem;font-size:.95rem;line-height:1.55}
+  .condcard li{margin-bottom:.3rem}
+  .condcard .big{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--accent)}
+  .condcard.warm{background:var(--gold-soft);border-color:#E2CFA4}
+  .condcard.warm .ctitle,.condcard.warm .big{color:var(--gold)}
+  /* diagnose (numbered flawed-argument) list */
+  .diag{display:flex;flex-direction:column;gap:.7rem;max-width:920px;margin:1rem 0}
+  .diag-opt{display:flex;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;background:var(--chalk);width:100%;text-align:left;font:inherit;color:inherit;padding:0;cursor:pointer;transition:border-color .2s}
+  .diag-opt:hover{border-color:var(--accent-soft)}
+  .diag-opt .n{background:var(--grey);color:#fff;font-family:var(--mono);font-weight:700;display:flex;align-items:center;padding:0 1rem;font-size:1.05rem}
+  .diag-opt .s{padding:.85rem 1.1rem;line-height:1.45;font-family:'Georgia',serif;font-size:1.02rem}
+  .diag.revealed .diag-opt{opacity:.5}
+  .diag.revealed .diag-opt.bad{opacity:1;border-color:var(--red);background:#FBEEEC}
+  .diag-opt.bad .n{background:var(--red)}
+  .diag.revealed .diag-opt.bad .s::after{content:" ✗ the flaw";color:var(--red);font-family:var(--mono);font-weight:700;font-size:.8rem}
+  /* fill-in-the-blank close line */
+  .blankline{font-family:var(--mono);font-size:clamp(1.1rem,2.4vw,1.7rem);line-height:2;color:var(--ink);
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1.4rem 1.6rem;
+    box-shadow:var(--shadow);max-width:900px}
+  .blankline .bl{display:inline-block;min-width:9ch;border-bottom:2px solid var(--accent)}
+  /* ---------- data tables ---------- */
+  .sched{border-collapse:collapse;font-family:var(--mono);font-size:.86rem;background:var(--chalk);
+    border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+  .sched caption{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;color:var(--accent);text-align:left;padding:.5rem .8rem .35rem}
+  .sched th,.sched td{padding:.3rem .8rem;text-align:right;border-bottom:1px solid var(--paper-line)}
+  .sched th{color:var(--grey);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.66rem}
+  .sched td:first-child,.sched th:first-child{text-align:left;color:var(--accent);font-weight:700}
+  .sched tbody tr:last-child td{border-bottom:none}
+  .sched tr.tot td{border-top:2px solid var(--paper-line);font-weight:700;color:var(--gold)}
+  .sched tr.tot td:first-child{color:var(--gold)}
+  .sched.gold{background:var(--gold-soft)}
+  .sched.gold caption,.sched.gold td:first-child{color:var(--gold)}
+  .sched.txt td{text-align:left}
+  .sched.txt td:first-child{white-space:nowrap}
+  .sched .yes{color:var(--gold);font-weight:700}
+  .sched .no{color:var(--red);font-weight:700}
+  .sched .foreign{color:var(--red)}
+  .schedrow{display:flex;gap:1.4rem;flex-wrap:wrap;align-items:flex-start}
+  .sched tr.hl td{background:var(--gold-soft);color:var(--gold);font-weight:700}
+  .sched tr.hl td:first-child{color:var(--gold)}
+  .sched tr{transition:background .18s}
+  /* ---------- two-card takeaway ---------- */
+  .pair2{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin-top:.8rem}
+  @media (max-width:900px){.pair2{grid-template-columns:1fr}}
+  .pcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;
+    padding:1.2rem 1.3rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.7rem}
+  .pcard .ptag{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .pcard.warn .ptag{color:var(--red)}
+  .pcard .verdictbig{font-family:var(--mono);font-size:1rem;font-weight:700;line-height:1.5;color:var(--accent)}
+  .pcard.warn .verdictbig{color:var(--red)}
+  .pcard p{font-size:1rem;line-height:1.5}
+  /* ---------- reflow at 320px (WCAG 1.4.10) ---------- */
+  @media (max-width:700px){
+    .models{grid-template-columns:1fr}
+    .chain{max-width:100%;overflow-wrap:anywhere}
+    .sched{font-size:.76rem}
+    .sched th,.sched td{padding:.25rem .45rem}
+    .schedrow{gap:.9rem}
+    /* a wide table scrolls inside its own box rather than widening the slide */
+    .sched{display:block;overflow-x:auto;max-width:100%}
+    .col,.two > *,.graphwrap > *,.condrow > *,.pair2 > *,.schedrow > *{min-width:0}
+    /* a button column beside a table is sized in ch and set not to shrink;
+       at phone widths it has to give way instead of pushing the slide wide */
+    .schedrow > .col{flex:1 1 auto;max-width:100% !important}
+    .btnrow .btn{max-width:100%;overflow-wrap:anywhere}
+  }
+</style>
+</head>
+<body>
+<div class="progress-track"><div class="progress-fill" id="prog"></div></div>
+<div class="deck" id="deck">
+
+  <!-- ═══════════ 1. TITLE ═══════════ -->
+  <section class="slide active title-slide" data-section="Discussion 7 · Opening">
+    <div class="eyebrow" id="titleEyebrow">ECON 002 &middot; Discussion Section</div>
+    <h1>Where output<br><span class="accent">comes from</span></h1>
+    <p class="lede" style="margin-top:1rem">Today we stop measuring output and start building it: the two inputs and the recipe that turn them into goods, why the next worker never adds as much as the last, what that says about who gets paid what, and why higher prices raise output for a while and then stop.</p>
+    <p class="serif-note" style="margin-top:1.6rem">Work on your own paper. Write your answer down before any answer appears &mdash; your reasoning is the point, not a clean final line.</p>
+    <div class="signature">The recipe &rarr; One more &rarr; Who gets paid &rarr; Aggregate supply</div>
+  </section>
+
+  <!-- ══════════════ PART 1 · THE RECIPE ══════════════ -->
+
+  <!-- ═══════════ 2. DIVIDER P1 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 7 · The Recipe">
+    <div class="eyebrow">Part 1 of 4</div>
+    <h1>The recipe</h1>
+    <p class="lede">Every unit so far has counted output after the fact. This one asks the prior question: what does an economy actually need in order to make anything at all?</p>
+    <div class="sectrail">THE RECIPE &rarr; ONE MORE &rarr; WHO GETS PAID &rarr; AGGREGATE SUPPLY</div>
+    <div class="through">Throughline: output comes from capital, labor, and the recipe that combines them. Almost everything else in this unit follows from one fact &mdash; each extra worker adds less than the one before.</div>
+  </section>
+
+  <!-- ═══════════ 3. Q1 PROMPT ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · The Recipe">
+    <div class="eyebrow">Question 1 &middot; write &middot; commit on paper</div>
+    <h2>A different question about GDP</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">Two units ago we measured GDP and split it into the categories people spend on: consumption, investment, government purchases, net exports. That told us where output <em>went</em>. It said nothing about where it <em>came from</em>, or about how much an economy is capable of producing in the first place.</p>
+      <div class="prompt">
+        <span class="cue">Q1 &middot; write it down before the next slide</span>
+        <p>An economy is going to produce something &mdash; bread, haircuts, software, anything. <strong>Write down what it needs in order to produce.</strong> List as many things as you can, then circle the two you think are the most basic.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 4. Q1 REVEAL ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · The Recipe">
+    <div class="eyebrow">Answer &middot; Question 1</div>
+    <h2>Two inputs, and a recipe for combining them</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:92ch">Almost every list collapses into two <strong>factors of production</strong>. Everything else is either one of these two wearing a different name, or a statement about how well they are combined.</p>
+      <div class="models">
+        <div class="model">
+          <span class="tag">Capital &middot; K</span>
+          <div class="eq">K</div>
+          <div class="body">The tools workers use. An accountant's computer, a carpenter's hammer, a professor's projector, a bakery's ovens. Capital does not get used up in an afternoon &mdash; it sits there and gets used again.</div>
+        </div>
+        <div class="model">
+          <span class="tag">Labor &middot; L</span>
+          <div class="eq">L</div>
+          <div class="body">The time people spend working. Not the people themselves and not their paychecks &mdash; the hours. A bakery with six bakers on shift is using six units of labor.</div>
+        </div>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="q1a">How the two get combined</button></div>
+      <div class="reveal reveal-hidden" id="q1a">
+        <span class="cue">The production function</span>
+        <p>The two factors are combined by a <strong>production function</strong>, written</p>
+        <div class="chain" style="margin:.6rem 0">Y = F(K, L)</div>
+        <p>where <strong>F is the technology available</strong> &mdash; the recipe. A recipe tells you how to combine flour and an oven into bread; a production function tells you how to combine capital and labor into output. Better technology is simply a better recipe: <strong>more output from exactly the same inputs</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 5. Q2 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · The Recipe">
+    <div class="eyebrow">Question 2 &middot; predict &middot; commit before you see the answer</div>
+    <h2>The bakery we will use all day</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">One economy for the whole discussion: <strong>a bakery</strong>. Its capital is ovens, its labor is bakers, and its output is loaves of bread. Right now it runs <strong>2 ovens with 3 bakers</strong> and turns out <strong>60 loaves</strong> a day.</p>
+      <div class="predict">
+        <span class="cue">Q2 &middot; predict &middot; a number, then a sentence</span>
+        <p>The owner opens a second, identical location: <strong>4 ovens and 6 bakers</strong> in total. <strong>Write down how many loaves a day the bakery now produces</strong>, and one sentence saying why you picked that number.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 6. Q2 REVEAL · CRS ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · The Recipe">
+    <div class="eyebrow">Answer &middot; Question 2</div>
+    <h2>Double everything, double the output</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <div class="schedrow">
+        <table class="sched">
+          <caption>Q2 &mdash; doubling both factors at once</caption>
+          <thead>
+            <tr><th scope="col">Bakery</th><th scope="col">Ovens (K)</th><th scope="col">Bakers (L)</th><th scope="col">Loaves (Y)</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">One location</th><td>2</td><td>3</td><td>60</td></tr>
+            <tr><th scope="row">Two locations</th><td>4</td><td>6</td><td><span class="hid" id="q2v">120</span></td></tr>
+          </tbody>
+        </table>
+        <div class="col" style="justify-content:flex-start;gap:.7rem;max-width:32ch;flex:0 0 auto">
+          <button class="btn" data-reveal="q2v,q2a">Show the answer</button>
+        </div>
+      </div>
+      <div class="reveal reveal-hidden" id="q2a">
+        <span class="cue">Constant returns to scale</span>
+        <p><strong>120 loaves.</strong> Nothing is being shared and nothing is being stretched &mdash; the second location is a copy of the first, so it bakes what the first bakes. Raise every factor by the same proportion and output rises by that same proportion:</p>
+        <div class="chain" style="margin:.6rem 0">zY = F(zK, zL)</div>
+        <p><strong>This is an assumption we make in this course, not a law of nature.</strong> It is a reasonable one for a bakery you can simply build another of. Hold on to how much work the phrase &ldquo;every factor&rdquo; is doing &mdash; Part 2 is what happens when you raise only one of them.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 2 · ONE MORE ══════════════ -->
+
+  <!-- ═══════════ 7. DIVIDER P2 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 7 · One More">
+    <div class="eyebrow">Part 2 of 4</div>
+    <h1>One more</h1>
+    <p class="lede">Doubling everything is the easy case. The interesting case &mdash; and the one the rest of macroeconomics is built on &mdash; is what happens when you add just one thing and leave the rest alone.</p>
+    <div class="sectrail">THE RECIPE &#10003; &rarr; ONE MORE &rarr; WHO GETS PAID &rarr; AGGREGATE SUPPLY</div>
+    <div class="through">Throughline: output comes from capital, labor, and the recipe that combines them. Almost everything else in this unit follows from one fact &mdash; each extra worker adds less than the one before.</div>
+  </section>
+
+  <!-- ═══════════ 8. Q3 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · One More">
+    <div class="eyebrow">Question 3 &middot; predict &middot; commit before you see the answer</div>
+    <h2>Now hold the ovens still</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">Back to <strong>one location with 2 ovens</strong>, and this time the ovens stay at 2 no matter what. The owner hires bakers one at a time: a first, then a second, then a third, and so on.</p>
+      <div class="predict">
+        <span class="cue">Q3 &middot; predict &middot; yes or no, plus a reason</span>
+        <p>Does each new baker add <strong>the same number of loaves</strong> as the baker before? Commit to <strong>yes</strong> or <strong>no</strong> on paper, and write the reason underneath. The reason is the part that matters.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 9. Q3 REVEAL · MPL TABLE ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · One More">
+    <div class="eyebrow">Answer &middot; Question 3</div>
+    <h2>Each baker adds less than the one before</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <div class="schedrow">
+        <table class="sched">
+          <caption>Q3 &mdash; 2 ovens fixed, bakers added one at a time</caption>
+          <thead>
+            <tr><th scope="col">Bakers (L)</th><th scope="col">Loaves this baker adds (MP<sub>L</sub>)</th><th scope="col">Total loaves (Y)</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">1</th><td><span class="hid" id="m1">24</span></td><td><span class="hid" id="t1">24</span></td></tr>
+            <tr><th scope="row">2</th><td><span class="hid" id="m2">20</span></td><td><span class="hid" id="t2">44</span></td></tr>
+            <tr><th scope="row">3</th><td><span class="hid" id="m3">16</span></td><td><span class="hid" id="t3">60</span></td></tr>
+            <tr><th scope="row">4</th><td><span class="hid" id="m4">12</span></td><td><span class="hid" id="t4">72</span></td></tr>
+            <tr><th scope="row">5</th><td><span class="hid" id="m5">8</span></td><td><span class="hid" id="t5">80</span></td></tr>
+            <tr><th scope="row">6</th><td><span class="hid" id="m6">4</span></td><td><span class="hid" id="t6">84</span></td></tr>
+          </tbody>
+        </table>
+        <div class="col" style="justify-content:flex-start;gap:.5rem;max-width:26ch;flex:0 0 auto">
+          <button class="btn" data-reveal="m1,t1">Baker 1</button>
+          <button class="btn" data-reveal="m2,t2">Baker 2</button>
+          <button class="btn" data-reveal="m3,t3">Baker 3</button>
+          <button class="btn" data-reveal="m4,t4">Baker 4</button>
+          <button class="btn" data-reveal="m5,t5">Baker 5</button>
+          <button class="btn" data-reveal="m6,t6">Baker 6</button>
+        </div>
+      </div>
+      <div class="btnrow"><button class="btn ghost" data-reveal="q3a">What that column is called</button></div>
+      <div class="reveal reveal-hidden" id="q3a">
+        <span class="cue">Marginal product of labor</span>
+        <p>The middle column is the <strong>marginal product of labor</strong>: the extra output the firm gets from one more unit of labor, <strong>holding capital fixed</strong>.</p>
+        <div class="chain" style="margin:.6rem 0">MP<sub>L</sub> = &Delta;Y / &Delta;L</div>
+        <p>It falls all the way down: 24, 20, 16, 12, 8, 4. That pattern has its own name &mdash; <strong>diminishing marginal product of labor</strong>. Holding capital fixed, more labor means a lower marginal product for each additional unit.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 10. TWO PANELS: TOTAL AND MARGINAL ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · One More">
+    <div class="eyebrow">The same six numbers, drawn two ways</div>
+    <h2>Total output, and the marginal product</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:96ch;margin-bottom:.5rem">Both panels put <strong>bakers on the horizontal axis</strong>. The left panel plots the running total of loaves; the right plots what each new baker adds.</p>
+    <div class="two" style="gap:1.4rem">
+      <div class="panel">
+        <svg viewBox="0 0 420 340" role="img" aria-label="Total loaves against the number of bakers, with the ovens fixed at two. A blue curve rises from zero through 24, 44, 60, 72, 80 and 84 loaves as bakers go from one to six. The curve always rises, but it gets flatter with every baker, showing that total output keeps growing while it grows more and more slowly.">
+          <line x1="60" y1="30" x2="60" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="290" x2="400" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="60" y1="232.2" x2="392" y2="232.2"/><line x1="60" y1="174.4" x2="392" y2="174.4"/>
+            <line x1="60" y1="116.7" x2="392" y2="116.7"/><line x1="60" y1="58.9" x2="392" y2="58.9"/>
+            <line x1="115" y1="30" x2="115" y2="290"/><line x1="170" y1="30" x2="170" y2="290"/>
+            <line x1="225" y1="30" x2="225" y2="290"/><line x1="280" y1="30" x2="280" y2="290"/>
+            <line x1="335" y1="30" x2="335" y2="290"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="52" y="294">0</text><text x="52" y="236">20</text><text x="52" y="178">40</text>
+            <text x="52" y="121">60</text><text x="52" y="63">80</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="60" y="308">0</text><text x="115" y="308">1</text><text x="170" y="308">2</text>
+            <text x="225" y="308">3</text><text x="280" y="308">4</text><text x="335" y="308">5</text><text x="390" y="308">6</text>
+          </g>
+          <text x="66" y="24" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">total loaves (Y)</text>
+          <text x="400" y="330" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">bakers (L)</text>
+          <polyline points="60,290 115,220.7 170,162.9 225,116.7 280,82 335,58.9 390,47.3" fill="none" stroke="#1F4E79" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+          <g fill="#1F4E79">
+            <circle cx="115" cy="220.7" r="5"/><circle cx="170" cy="162.9" r="5"/><circle cx="225" cy="116.7" r="5"/>
+            <circle cx="280" cy="82" r="5"/><circle cx="335" cy="58.9" r="5"/><circle cx="390" cy="47.3" r="5"/>
+          </g>
+          <g font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79" text-anchor="middle">
+            <text x="115" y="211">24</text><text x="170" y="153">44</text><text x="225" y="107">60</text>
+            <text x="280" y="72">72</text><text x="335" y="49">80</text><text x="378" y="38">84</text>
+          </g>
+        </svg>
+      </div>
+      <div class="panel">
+        <svg viewBox="0 0 420 340" role="img" aria-label="The marginal product of labor against the number of bakers, with the ovens fixed at two. A blue line falls in a straight line from 24 loaves for the first baker to 4 loaves for the sixth, passing through 20, 16, 12 and 8. Every point is above zero, so each baker still adds loaves, but each adds fewer than the baker before.">
+          <line x1="60" y1="30" x2="60" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="290" x2="400" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="60" y1="252.9" x2="392" y2="252.9"/><line x1="60" y1="215.7" x2="392" y2="215.7"/>
+            <line x1="60" y1="178.6" x2="392" y2="178.6"/><line x1="60" y1="141.4" x2="392" y2="141.4"/>
+            <line x1="60" y1="104.3" x2="392" y2="104.3"/><line x1="60" y1="67.1" x2="392" y2="67.1"/>
+            <line x1="115" y1="30" x2="115" y2="290"/><line x1="170" y1="30" x2="170" y2="290"/>
+            <line x1="225" y1="30" x2="225" y2="290"/><line x1="280" y1="30" x2="280" y2="290"/>
+            <line x1="335" y1="30" x2="335" y2="290"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="52" y="294">0</text><text x="52" y="257">4</text><text x="52" y="220">8</text>
+            <text x="52" y="183">12</text><text x="52" y="146">16</text><text x="52" y="108">20</text><text x="52" y="71">24</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="60" y="308">0</text><text x="115" y="308">1</text><text x="170" y="308">2</text>
+            <text x="225" y="308">3</text><text x="280" y="308">4</text><text x="335" y="308">5</text><text x="390" y="308">6</text>
+          </g>
+          <text x="66" y="24" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">loaves added (MPL)</text>
+          <text x="400" y="330" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">bakers (L)</text>
+          <line x1="115" y1="67.1" x2="390" y2="252.9" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <g fill="#1F4E79">
+            <circle cx="115" cy="67.1" r="5"/><circle cx="170" cy="104.3" r="5"/><circle cx="225" cy="141.4" r="5"/>
+            <circle cx="280" cy="178.6" r="5"/><circle cx="335" cy="215.7" r="5"/><circle cx="390" cy="252.9" r="5"/>
+          </g>
+          <g font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79" text-anchor="middle">
+            <text x="126" y="59">24</text><text x="181" y="96">20</text><text x="236" y="133">16</text>
+            <text x="291" y="171">12</text><text x="346" y="208">8</text><text x="390" y="241">4</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <div class="btnrow" style="margin-top:1rem"><button class="btn" data-reveal="p10a">These are the same information</button></div>
+    <div class="reveal reveal-hidden" id="p10a" style="max-width:1150px">
+      <span class="cue">One column, two pictures</span>
+      <p>Nothing new is in the right panel. <strong>The marginal curve just reports how steep the total curve is.</strong> Where the left panel climbs fastest &mdash; the very first baker &mdash; the right panel sits highest. Where the left panel is nearly flat, at the sixth baker, the right panel is nearly on the floor. That is the same relationship between a total and a margin you used in the very first lecture, when you weighed the benefit of one more hour of study against its cost.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 11. Q4 DIAGNOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · One More">
+    <div class="eyebrow">Question 4 &middot; silent poll &middot; pick a number on paper</div>
+    <h2>One of these three is wrong</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:96ch">All three sentences are about the table you just filled in. <strong>Two of them are sound. One is not.</strong> Write down the number of the one you think fails, and one line saying what goes wrong in it.</p>
+    <div>
+      <div class="diag" id="diag4">
+        <button class="diag-opt" type="button"><span class="n">1</span><span class="s">Adding a fourth baker still raises total output, but by less than the third baker added.</span></button>
+        <button class="diag-opt" type="button" data-bad="true"><span class="n">2</span><span class="s">Diminishing marginal product means that as the bakery hires more workers, it eventually produces fewer loaves.</span></button>
+        <button class="diag-opt" type="button"><span class="n">3</span><span class="s">The marginal product falls because the number of ovens is not rising along with the number of bakers.</span></button>
+      </div>
+      <div class="btnrow"><button class="btn" data-diag-reveal="diag4">Show which one fails</button></div>
+      <div data-diag-note style="display:none">
+        <div class="reveal" style="margin-top:1.1rem;max-width:1000px">
+          <span class="cue">Adding less is not the same as subtracting</span>
+          <p><strong>Sentence 2 fails.</strong> It slides from a falling <em>marginal</em> column to a falling <em>total</em> column, and those are different columns. Look back at the table: the marginal product falls the whole way &mdash; 24, 20, 16, 12, 8, 4 &mdash; and the total rises the whole way, 24, 44, 60, 72, 80, 84. <strong>Six bakers make 84 loaves, which is more than the 60 that three bakers make</strong>, not fewer.</p>
+          <p>Every number in the marginal column is still positive. Each baker adds something; each just adds less than the one before. Output would only fall if the marginal product went negative &mdash; if a baker got so far in the way that the shop turned out fewer loaves with them there.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 12. MPK + THE PUNCHLINE ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · One More">
+    <div class="eyebrow">The same story for the other factor</div>
+    <h2>Capital diminishes too &mdash; and for the same reason</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">Turn the experiment around. Fix the bakers and add <strong>ovens</strong> one at a time instead. The first oven is transformative. The second helps a lot. The fifth sits half empty, because there are only so many bakers to load it.</p>
+      <div class="models">
+        <div class="model">
+          <span class="tag">Marginal product of capital &middot; MP<sub>K</sub></span>
+          <div class="eq">MP<sub>K</sub> = &Delta;Y / &Delta;K</div>
+          <div class="body">The extra output from one more unit of capital, holding <strong>labor</strong> fixed. It falls as capital rises, exactly as MP<sub>L</sub> falls as labor rises.</div>
+        </div>
+        <div class="model">
+          <span class="tag">Marginal product of labor &middot; MP<sub>L</sub></span>
+          <div class="eq">MP<sub>L</sub> = &Delta;Y / &Delta;L</div>
+          <div class="body">The extra output from one more unit of labor, holding <strong>capital</strong> fixed. 24, 20, 16, 12, 8, 4 in our bakery.</div>
+        </div>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="p12a">So where does the diminishing come from?</button></div>
+      <div class="reveal reveal-hidden" id="p12a">
+        <span class="cue">It comes from the factor you held still</span>
+        <p>Both stories have the same shape because both have the same cause: <strong>something is being held fixed.</strong> Three bakers sharing two ovens spend part of the day waiting for an oven, reaching around each other for the same bench, lining up for the same mixer. The fourth baker walks into a shop that is already crowded, so she finds less to do that adds a loaf.</p>
+        <p><strong>There is nothing wrong with the workers.</strong> The fourth baker is not lazier or less skilled than the first &mdash; swap them and nothing changes. She adds less because of what she was given to work with, not because of who she is.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 3 · WHO GETS PAID WHAT ══════════════ -->
+
+  <!-- ═══════════ 13. DIVIDER P3 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 7 · Who Gets Paid">
+    <div class="eyebrow">Part 3 of 4</div>
+    <h1>Who gets paid<br>what</h1>
+    <p class="lede">Capital and labor are doing all the producing. Part 3 asks what each one takes home &mdash; and the answer turns out to be written in the table you just built.</p>
+    <div class="sectrail">THE RECIPE &#10003; &rarr; ONE MORE &#10003; &rarr; WHO GETS PAID &rarr; AGGREGATE SUPPLY</div>
+    <div class="through">Throughline: output comes from capital, labor, and the recipe that combines them. Almost everything else in this unit follows from one fact &mdash; each extra worker adds less than the one before.</div>
+  </section>
+
+  <!-- ═══════════ 14. PROFIT ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Who Gets Paid">
+    <div class="eyebrow">What the firm is actually trying to do</div>
+    <h2>One goal: the largest possible profit</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">A firm hires capital and labor for one reason, and it is not to be generous or to be stingy. It hires whatever combination leaves it with <strong>the most profit</strong>. Profit is what comes in minus what goes out, and there are exactly three pieces.</p>
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">Money in &middot; revenue</div>
+          <div class="big">P &times; Y</div>
+          <div class="cnote">The firm sells <strong>Y</strong> units of output at a price of <strong>P</strong> each.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Money out &middot; labor</div>
+          <div class="big">W &times; L</div>
+          <div class="cnote">It hires <strong>L</strong> workers at a wage of <strong>W</strong> each.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Money out &middot; capital</div>
+          <div class="big">R &times; K</div>
+          <div class="cnote">It rents <strong>K</strong> units of capital at a rental rate of <strong>R</strong> each.</div>
+        </div>
+      </div>
+      <div class="chain" style="margin-top:.4rem">&Pi; = PY &minus; WL &minus; RK</div>
+      <p class="footnote" style="max-width:90ch">Note which letters are prices and which are quantities. P, W and R are prices &mdash; the price of a loaf, the price of an hour of work, the price of an oven for a day. Y, L and K are quantities.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 15. Q5 PROMPT + REVEAL ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Who Gets Paid">
+    <div class="eyebrow">Question 5 &middot; write &middot; commit before pressing the button</div>
+    <h2>What changes when one more worker walks in?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <div class="prompt">
+        <span class="cue">Q5 &middot; write it down</span>
+        <p>The firm is deciding whether to hire <strong>one more worker</strong>. Two lines on your paper:</p>
+        <ol>
+          <li>What changes on the <strong>revenue</strong> side, and by how much?</li>
+          <li>What changes on the <strong>cost</strong> side, and by how much?</li>
+        </ol>
+        <p style="margin-top:.5rem">Write each as an expression in the letters from the profit equation, not as a sentence.</p>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="q5a">Show both sides</button></div>
+      <div class="reveal reveal-hidden" id="q5a">
+        <span class="cue">Answer &middot; Question 5</span>
+        <p><strong>Revenue changes by P &times; MP<sub>L</sub>.</strong> One more worker raises production by MP<sub>L</sub> loaves &mdash; that is exactly what MP<sub>L</sub> means &mdash; and every one of those loaves sells for P. So the extra loaves bring in P &times; MP<sub>L</sub> dollars.</p>
+        <p><strong>Cost changes by W.</strong> One more worker is paid one more wage. The ovens are unchanged, so RK does not move.</p>
+        <div class="chain" style="margin-top:.6rem">hire one more &rarr; revenue +(P &times; MP<sub>L</sub>) &rarr; cost +W</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 16. Q6 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Who Gets Paid">
+    <div class="eyebrow">Question 6 &middot; predict &middot; commit before you see the answer</div>
+    <h2>Put numbers on it</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">The bakery sells each loaf for <strong>P = $0.50</strong>. It can hire as many bakers as it likes at the going wage of <strong>W = $8</strong> a day. The ovens are still fixed at 2, so the marginal product column is the one you already built: 24, 20, 16, 12, 8, 4.</p>
+      <div class="predict">
+        <span class="cue">Q6 &middot; predict &middot; yes or no, with the numbers</span>
+        <p>Start from zero bakers. <strong>Should the bakery hire the first one?</strong> Commit to yes or no &mdash; and show the two dollar figures you compared to get there.</p>
+      </div>
+      <div class="panel" style="max-width:620px;width:100%">
+        <div class="paneltitle">For reference &middot; loaves each baker adds</div>
+        <svg viewBox="0 0 420 340" role="img" aria-label="The marginal product of labor, for reference. Bakers run along the horizontal axis and the loaves each new baker adds run up the vertical axis, with the ovens fixed at two. A blue line falls in a straight line from 24 loaves for the first baker through 20, 16, 12 and 8 to 4 loaves for the sixth, so every baker still adds loaves but each adds fewer than the baker before.">
+          <line x1="60" y1="30" x2="60" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="290" x2="400" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="60" y1="252.9" x2="392" y2="252.9"/><line x1="60" y1="215.7" x2="392" y2="215.7"/>
+            <line x1="60" y1="178.6" x2="392" y2="178.6"/><line x1="60" y1="141.4" x2="392" y2="141.4"/>
+            <line x1="60" y1="104.3" x2="392" y2="104.3"/><line x1="60" y1="67.1" x2="392" y2="67.1"/>
+            <line x1="115" y1="30" x2="115" y2="290"/><line x1="170" y1="30" x2="170" y2="290"/>
+            <line x1="225" y1="30" x2="225" y2="290"/><line x1="280" y1="30" x2="280" y2="290"/>
+            <line x1="335" y1="30" x2="335" y2="290"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="52" y="294">0</text><text x="52" y="257">4</text><text x="52" y="220">8</text>
+            <text x="52" y="183">12</text><text x="52" y="146">16</text><text x="52" y="108">20</text><text x="52" y="71">24</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="60" y="308">0</text><text x="115" y="308">1</text><text x="170" y="308">2</text>
+            <text x="225" y="308">3</text><text x="280" y="308">4</text><text x="335" y="308">5</text><text x="390" y="308">6</text>
+          </g>
+          <text x="66" y="24" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">loaves added (MPL)</text>
+          <text x="400" y="330" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">bakers (L)</text>
+          <line x1="115" y1="67.1" x2="390" y2="252.9" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <g fill="#1F4E79">
+            <circle cx="115" cy="67.1" r="5"/><circle cx="170" cy="104.3" r="5"/><circle cx="225" cy="141.4" r="5"/>
+            <circle cx="280" cy="178.6" r="5"/><circle cx="335" cy="215.7" r="5"/><circle cx="390" cy="252.9" r="5"/>
+          </g>
+          <g font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79" text-anchor="middle">
+            <text x="126" y="59">24</text><text x="181" y="96">20</text><text x="236" y="133">16</text>
+            <text x="291" y="171">12</text><text x="346" y="208">8</text><text x="390" y="241">4</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 17. Q6 REVEAL · P×MPL COLUMN ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Who Gets Paid">
+    <div class="eyebrow">Answer &middot; Question 6</div>
+    <h2>Each baker brings in less than the last</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">Take the marginal product column and multiply every entry by <strong>P = $0.50</strong>. That turns loaves into dollars, which is the only way to compare it with a wage.</p>
+      <div class="schedrow">
+        <table class="sched">
+          <caption>Q6 &mdash; revenue added by each baker, against a wage of $8</caption>
+          <thead>
+            <tr><th scope="col">Baker</th><th scope="col">MP<sub>L</sub></th><th scope="col">P &times; MP<sub>L</sub></th><th scope="col">Wage (W)</th><th scope="col">Verdict</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">1</th><td>24</td><td><span class="hid" id="r1">$12.00</span></td><td>$8.00</td><td><span class="hid yes" id="v1">&uarr; adds $4.00 of profit</span></td></tr>
+            <tr><th scope="row">2</th><td>20</td><td><span class="hid" id="r2">$10.00</span></td><td>$8.00</td><td><span class="hid yes" id="v2">&uarr; adds $2.00 of profit</span></td></tr>
+            <tr><th scope="row">3</th><td>16</td><td><span class="hid" id="r3">$8.00</span></td><td>$8.00</td><td><span class="hid" id="v3">= adds exactly $0</span></td></tr>
+            <tr><th scope="row">4</th><td>12</td><td><span class="hid" id="r4">$6.00</span></td><td>$8.00</td><td><span class="hid no" id="v4">&darr; loses $2.00</span></td></tr>
+            <tr><th scope="row">5</th><td>8</td><td><span class="hid" id="r5">$4.00</span></td><td>$8.00</td><td><span class="hid no" id="v5">&darr; loses $4.00</span></td></tr>
+            <tr><th scope="row">6</th><td>4</td><td><span class="hid" id="r6">$2.00</span></td><td>$8.00</td><td><span class="hid no" id="v6">&darr; loses $6.00</span></td></tr>
+          </tbody>
+        </table>
+        <div class="col" style="justify-content:flex-start;gap:.5rem;max-width:28ch;flex:0 0 auto">
+          <button class="btn" data-reveal="r1,v1,r2,v2">Bakers 1 and 2</button>
+          <button class="btn" data-reveal="r3,v3">Baker 3</button>
+          <button class="btn" data-reveal="r4,v4">Baker 4</button>
+          <button class="btn" data-reveal="r5,v5,r6,v6">Bakers 5 and 6</button>
+        </div>
+      </div>
+      <div class="btnrow"><button class="btn ghost" data-reveal="q6a">Read the column back</button></div>
+      <div class="reveal reveal-hidden" id="q6a">
+        <span class="cue">Answer &middot; Question 6</span>
+        <p><strong>Yes, hire the first baker.</strong> She brings in $12.00 and costs $8.00, so profit rises by $4.00. The second is worth hiring too, at $10.00 against $8.00. <strong>The third brings in exactly $8.00 and costs exactly $8.00.</strong> The fourth would bring in $6.00 against a wage of $8.00, so hiring her would <em>lower</em> profit by $2.00.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 18. THE OPTIMUM AND THE RULE ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Who Gets Paid">
+    <div class="eyebrow">The stopping point</div>
+    <h2>Three bakers, 60 loaves</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="The revenue each baker adds, plotted against the number of bakers, with the wage drawn across it. A blue line falls from twelve dollars for the first baker to two dollars for the sixth. A flat red line sits at the eight dollar wage. The two lines cross at the third baker, where the revenue she adds and the wage she costs are both eight dollars. To the left of that crossing the blue line is above the red one, so those bakers add profit; to the right it is below, so those bakers would lose money.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="450" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="270" x2="440" y2="270"/><line x1="70" y1="230" x2="440" y2="230"/>
+            <line x1="70" y1="190" x2="440" y2="190"/><line x1="70" y1="110" x2="440" y2="110"/>
+            <line x1="70" y1="70" x2="440" y2="70"/><line x1="70" y1="30" x2="440" y2="30"/>
+            <line x1="130" y1="30" x2="130" y2="310"/><line x1="190" y1="30" x2="190" y2="310"/>
+            <line x1="250" y1="30" x2="250" y2="310"/><line x1="310" y1="30" x2="310" y2="310"/>
+            <line x1="370" y1="30" x2="370" y2="310"/><line x1="430" y1="30" x2="430" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="274">$2</text><text x="62" y="234">$4</text>
+            <text x="62" y="194">$6</text><text x="62" y="154">$8</text><text x="62" y="114">$10</text>
+            <text x="62" y="74">$12</text><text x="62" y="34">$14</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="130" y="328">1</text><text x="190" y="328">2</text>
+            <text x="250" y="328">3</text><text x="310" y="328">4</text><text x="370" y="328">5</text><text x="430" y="328">6</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">dollars per baker per day</text>
+          <text x="450" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">bakers (L)</text>
+          <line x1="70" y1="150" x2="442" y2="150" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="446" y="146" font-family="monospace" font-size="13" fill="#C0392B" font-weight="700" text-anchor="end">W = $8</text>
+          <line x1="130" y1="70" x2="430" y2="270" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="428" y="290" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">P &#215; MPL</text>
+          <g fill="#1F4E79">
+            <circle cx="130" cy="70" r="5"/><circle cx="190" cy="110" r="5"/><circle cx="250" cy="150" r="5"/>
+            <circle cx="310" cy="190" r="5"/><circle cx="370" cy="230" r="5"/><circle cx="430" cy="270" r="5"/>
+          </g>
+          <line id="p18v" x1="250" y1="150" x2="250" y2="310" stroke="#8A5900" stroke-width="2.5" stroke-dasharray="5 4" opacity="0"/>
+          <circle id="p18d" cx="250" cy="150" r="10" fill="none" stroke="#8A5900" stroke-width="3" opacity="0"/>
+          <text id="p18t" x="262" y="140" font-family="monospace" font-size="13" fill="#8A5900" font-weight="700" opacity="0">stop here</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="btnrow"><button class="btn" data-reveal-svg="p18mark" data-reveal="p18a">Mark the stopping point</button></div>
+        <div class="reveal reveal-hidden" id="p18a">
+          <span class="cue">The hiring rule</span>
+          <p>Keep hiring while <strong>P &times; MP<sub>L</sub> &gt; W</strong>. Stop when <strong>P &times; MP<sub>L</sub> = W</strong>. The optimum is <strong>3 bakers, producing 60 loaves.</strong></p>
+          <p style="margin-top:.6rem">The break-even worker is what marks the optimum &mdash; not the most profitable worker, the last one who does not lose money. This is the same shape as the decisions in the first lecture: study one more hour while the benefit of the hour beats its cost, and stop at the hour where the two are equal.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 19. MPL = W/P ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Who Gets Paid">
+    <div class="eyebrow">The result this whole part was built for</div>
+    <h2>Divide both sides by P</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">The stopping condition was <strong>P &times; MP<sub>L</sub> = W</strong>. Divide both sides by the price level and it turns into something with a name.</p>
+      <div class="chain" style="font-size:1.3rem">MP<sub>L</sub> = W / P</div>
+      <div class="models">
+        <div class="model">
+          <span class="tag">W / P &middot; the real wage</span>
+          <div class="eq">$8 / $0.50 = 16</div>
+          <div class="body"><strong>What a worker's pay actually buys</strong>, measured in goods &mdash; here, 16 loaves a day. Not the number printed on the check. A wage of $8 means one thing when bread is $0.50 and something else entirely when bread is $1.00.</div>
+        </div>
+        <div class="model">
+          <span class="tag">MP<sub>L</sub> &middot; the productivity</span>
+          <div class="eq">16 loaves</div>
+          <div class="body"><strong>What the last worker hired actually produces</strong>, measured in the same goods. At three bakers, the third one adds 16 loaves a day.</div>
+        </div>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="p19a">What the equation says</button></div>
+      <div class="reveal reveal-hidden" id="p19a">
+        <span class="cue">Labor is paid its productivity</span>
+        <p>Both sides are measured in loaves, and in equilibrium they are equal. <strong>A worker is paid, in goods, exactly what that worker produces in goods.</strong> Not what the owner feels like paying, and not what the worker deserves in some broader sense &mdash; what the last worker hired adds to output.</p>
+        <p style="margin-top:.5rem">The implication is blunt and worth stating directly: <strong>to be paid more, you have to produce more.</strong> A raise has to come from a higher MP<sub>L</sub> &mdash; better tools, a better recipe, more skill.</p>
+        <p style="margin-top:.5rem">The identical argument run for ovens instead of bakers gives <strong>MP<sub>K</sub> = R / P</strong>. Capital is paid its productivity too.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 20. Q7 DIAGNOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Who Gets Paid">
+    <div class="eyebrow">Question 7 &middot; silent poll &middot; pick a number on paper</div>
+    <h2>One of these three is wrong</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:96ch">Every sentence below reaches a conclusion the table supports. <strong>In one of them the reasoning does not hold up anyway.</strong> Write down which, and what is wrong with it.</p>
+    <div>
+      <div class="diag" id="diag7">
+        <button class="diag-opt" type="button"><span class="n">1</span><span class="s">Hire the third baker: she adds $8 of revenue and costs $8, so profit is unchanged and the bakery has reached its best size.</span></button>
+        <button class="diag-opt" type="button"><span class="n">2</span><span class="s">Do not hire the fourth baker: she adds $6 of revenue against a wage of $8, so profit would fall by $2.</span></button>
+        <button class="diag-opt" type="button" data-bad="true"><span class="n">3</span><span class="s">The third baker is worth hiring because she brings in $8 of revenue.</span></button>
+      </div>
+      <div class="btnrow"><button class="btn" data-diag-reveal="diag7">Show which one fails</button></div>
+      <div data-diag-note style="display:none">
+        <div class="reveal" style="margin-top:1.1rem;max-width:1000px">
+          <span class="cue">Right answer, wrong reasoning</span>
+          <p><strong>Sentence 3 fails</strong> &mdash; and notice that its conclusion is correct. The third baker <em>is</em> the last one to hire. But the reason given is only half of a comparison. <strong>She also costs $8.</strong> Bringing in $8 is not what makes her worth hiring; it is what makes her the last one.</p>
+          <p>Run the sentence's logic on the fourth baker and it breaks immediately: she brings in $6, which is a positive number, so by that reasoning she is worth hiring too. She is not. <strong>Revenue added is never a verdict on its own</strong> &mdash; it only becomes one when it is set against the wage.</p>
+          <p>That the third baker adds exactly zero profit is precisely why she marks the stopping point rather than a bargain. Hire one more and profit falls; hire one fewer and you gave up a worker who was still adding something.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 4 · AGGREGATE SUPPLY ══════════════ -->
+
+  <!-- ═══════════ 21. DIVIDER P4 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 7 · Aggregate Supply">
+    <div class="eyebrow">Part 4 of 4</div>
+    <h1>From one bakery<br>to the whole economy</h1>
+    <p class="lede"><strong>Aggregate supply</strong> is the relationship between total output and the price level. We already have every piece of it &mdash; the last part is just putting three facts next to each other.</p>
+    <div class="sectrail">THE RECIPE &#10003; &rarr; ONE MORE &#10003; &rarr; WHO GETS PAID &#10003; &rarr; AGGREGATE SUPPLY</div>
+    <div class="through">Throughline: output comes from capital, labor, and the recipe that combines them. Almost everything else in this unit follows from one fact &mdash; each extra worker adds less than the one before.</div>
+  </section>
+
+  <!-- ═══════════ 22. THE THREE FACTS ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Aggregate Supply">
+    <div class="eyebrow">Nothing new from here &mdash; only assembly</div>
+    <h2>Three facts you already have</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">From Part 2</div>
+          <div class="cnote">More labor drives the marginal product down, because the ovens do not multiply along with the bakers.</div>
+          <div class="chain" style="margin-top:.5rem">L&uarr; &rarr; MP<sub>L</sub>&darr;</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">From Part 3 &middot; arithmetic</div>
+          <div class="cnote">A higher price level shrinks the real wage, as long as the nominal wage sits still. The same $8 buys fewer loaves.</div>
+          <div class="chain" style="margin-top:.5rem">P&uarr; &rarr; W/P&darr;</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">From Part 3 &middot; the rule</div>
+          <div class="cnote">Firms hire up to the point where the real wage and the marginal product are equal, and no further.</div>
+          <div class="chain" style="margin-top:.5rem">W/P = MP<sub>L</sub></div>
+        </div>
+      </div>
+      <p class="lede" style="max-width:96ch">Read them in order and a question forms on its own. If a higher price level pushes the real wage down, the third fact is broken &mdash; the real wage is no longer equal to the marginal product. Something has to move to repair it. The first fact says what.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 23. Q8 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Aggregate Supply">
+    <div class="eyebrow">Question 8 &middot; predict &middot; commit before you see the answer</div>
+    <h2>The price level doubles</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">In the short run, <strong>nominal wages are slow to adjust</strong> &mdash; contracts are signed, pay is reviewed once a year, nobody renegotiates on a Tuesday. So take a price level that doubles from <strong>$0.50 to $1.00</strong> a loaf while the wage stays put at <strong>$8</strong>.</p>
+      <div class="predict">
+        <span class="cue">Q8 &middot; predict &middot; two answers and the reasoning between them</span>
+        <p>Write down what happens to <strong>employment</strong> and to <strong>output</strong>. Do not stop at up or down &mdash; get to the actual numbers of bakers and loaves, and write the steps that take you there.</p>
+      </div>
+      <p class="footnote">The bakery table has not changed: 24, 20, 16, 12, 8, 4 loaves added, and totals of 24, 44, 60, 72, 80, 84.</p>
+      <div class="panel" style="max-width:620px;width:100%">
+        <div class="paneltitle">For reference &middot; loaves each baker adds</div>
+        <svg viewBox="0 0 420 340" role="img" aria-label="The marginal product of labor, for reference. Bakers run along the horizontal axis and the loaves each new baker adds run up the vertical axis, with the ovens fixed at two. A blue line falls in a straight line from 24 loaves for the first baker through 20, 16, 12 and 8 to 4 loaves for the sixth, so every baker still adds loaves but each adds fewer than the baker before.">
+          <line x1="60" y1="30" x2="60" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="290" x2="400" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="60" y1="252.9" x2="392" y2="252.9"/><line x1="60" y1="215.7" x2="392" y2="215.7"/>
+            <line x1="60" y1="178.6" x2="392" y2="178.6"/><line x1="60" y1="141.4" x2="392" y2="141.4"/>
+            <line x1="60" y1="104.3" x2="392" y2="104.3"/><line x1="60" y1="67.1" x2="392" y2="67.1"/>
+            <line x1="115" y1="30" x2="115" y2="290"/><line x1="170" y1="30" x2="170" y2="290"/>
+            <line x1="225" y1="30" x2="225" y2="290"/><line x1="280" y1="30" x2="280" y2="290"/>
+            <line x1="335" y1="30" x2="335" y2="290"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="52" y="294">0</text><text x="52" y="257">4</text><text x="52" y="220">8</text>
+            <text x="52" y="183">12</text><text x="52" y="146">16</text><text x="52" y="108">20</text><text x="52" y="71">24</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="60" y="308">0</text><text x="115" y="308">1</text><text x="170" y="308">2</text>
+            <text x="225" y="308">3</text><text x="280" y="308">4</text><text x="335" y="308">5</text><text x="390" y="308">6</text>
+          </g>
+          <text x="66" y="24" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">loaves added (MPL)</text>
+          <text x="400" y="330" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">bakers (L)</text>
+          <line x1="115" y1="67.1" x2="390" y2="252.9" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <g fill="#1F4E79">
+            <circle cx="115" cy="67.1" r="5"/><circle cx="170" cy="104.3" r="5"/><circle cx="225" cy="141.4" r="5"/>
+            <circle cx="280" cy="178.6" r="5"/><circle cx="335" cy="215.7" r="5"/><circle cx="390" cy="252.9" r="5"/>
+          </g>
+          <g font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79" text-anchor="middle">
+            <text x="126" y="59">24</text><text x="181" y="96">20</text><text x="236" y="133">16</text>
+            <text x="291" y="171">12</text><text x="346" y="208">8</text><text x="390" y="241">4</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 24. Q8 REVEAL · THE CHAIN ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Aggregate Supply">
+    <div class="eyebrow">Answer &middot; Question 8 &middot; one link at a time</div>
+    <h2>Higher prices make workers cheaper</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:.9rem;max-width:1150px">
+      <div class="btnrow">
+        <button class="btn" data-reveal="c1">Link 1</button>
+        <button class="btn" data-reveal="c2">Link 2</button>
+        <button class="btn" data-reveal="c3">Link 3</button>
+        <button class="btn" data-reveal="c4">Link 4</button>
+      </div>
+      <div class="reveal-hidden" id="c1">
+        <div class="chain">P&uarr; from $0.50 to $1.00 &rarr; W/P&darr; from 16 to 8</div>
+        <p style="margin-top:.4rem;font-size:1.02rem;line-height:1.5">The wage is still $8, but a loaf now costs $1.00 instead of $0.50, so that $8 buys 8 loaves instead of 16. <strong>In real terms the bakers just got cheaper</strong>, without anyone cutting anyone's pay.</p>
+      </div>
+      <div class="reveal-hidden" id="c2">
+        <div class="chain">W/P = 8 &lt; MP<sub>L</sub> = 16 &rarr; not in equilibrium</div>
+        <p style="margin-top:.4rem;font-size:1.02rem;line-height:1.5">At three bakers the third one still adds 16 loaves, but now costs the equivalent of only 8. The hiring rule is violated, and violated in the direction that says <strong>hire more</strong>.</p>
+      </div>
+      <div class="reveal-hidden" id="c3">
+        <div class="chain">hire more &rarr; L&uarr; from 3 to 5 &rarr; MP<sub>L</sub>&darr; from 16 to 8</div>
+        <p style="margin-top:.4rem;font-size:1.02rem;line-height:1.5">Adding bakers pushes the marginal product back down &mdash; the fourth adds 12, the fifth adds 8. At the fifth baker MP<sub>L</sub> = 8, which is exactly the new real wage, and the rule holds again.</p>
+      </div>
+      <div class="reveal-hidden" id="c4">
+        <div class="chain warm">L&uarr; &rarr; Y&uarr; from 60 to 80 loaves</div>
+        <p style="margin-top:.4rem;font-size:1.02rem;line-height:1.5">Five bakers produce 80 loaves where three produced 60. <strong>A higher price level produced more output</strong> &mdash; not because anyone wanted more bread, and not because the recipe improved, but because the wage stood still while prices moved.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 25. SRAS ANIMATION A → B ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Aggregate Supply">
+    <div class="eyebrow">The same two points, on a new pair of axes</div>
+    <h2>Plotting it: the short-run aggregate supply curve</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:120ch;margin-bottom:.3rem">Read the three panels left to right and they are the chain itself: the real wage sets the hiring, the hiring makes loaves, and those loaves against the price level are one point on the curve. <strong>On the right, output is on the horizontal axis and the price level is on the vertical</strong> &mdash; the reverse of the supply-and-demand picture.</p>
+    <div class="three">
+      <div class="panel">
+        <div class="paneltitle">Marginal product &middot; where hiring stops</div>
+        <svg viewBox="0 0 420 340" role="img" aria-label="The marginal product of labor with the real wage drawn across it. Bakers run along the horizontal axis and loaves added run up the vertical axis. A blue line falls from 24 loaves for the first baker to 4 for the sixth. A red horizontal line marks the real wage, starting at 16 loaves where it meets the blue line at three bakers, point A. As the price level rises the red line falls to 8 loaves and a gold marker slides down the blue line to five bakers, point B. The panel shows that a cheaper real wage is what pulls hiring along the curve.">
+          <line x1="60" y1="30" x2="60" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="290" x2="400" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="60" y1="252.9" x2="392" y2="252.9"/><line x1="60" y1="215.7" x2="392" y2="215.7"/>
+            <line x1="60" y1="178.6" x2="392" y2="178.6"/><line x1="60" y1="141.4" x2="392" y2="141.4"/>
+            <line x1="60" y1="104.3" x2="392" y2="104.3"/><line x1="60" y1="67.1" x2="392" y2="67.1"/>
+            <line x1="115" y1="30" x2="115" y2="290"/><line x1="170" y1="30" x2="170" y2="290"/>
+            <line x1="225" y1="30" x2="225" y2="290"/><line x1="280" y1="30" x2="280" y2="290"/>
+            <line x1="335" y1="30" x2="335" y2="290"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="52" y="294">0</text><text x="52" y="257">4</text><text x="52" y="220">8</text>
+            <text x="52" y="183">12</text><text x="52" y="146">16</text><text x="52" y="108">20</text><text x="52" y="71">24</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="60" y="308">0</text><text x="115" y="308">1</text><text x="170" y="308">2</text>
+            <text x="225" y="308">3</text><text x="280" y="308">4</text><text x="335" y="308">5</text><text x="390" y="308">6</text>
+          </g>
+          <text x="66" y="24" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">loaves added (MPL)</text>
+          <text x="400" y="330" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">bakers (L)</text>
+          <line x1="115" y1="67.1" x2="390" y2="252.9" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <g fill="#1F4E79">
+            <circle cx="115" cy="67.1" r="5"/><circle cx="170" cy="104.3" r="5"/><circle cx="225" cy="141.4" r="5"/>
+            <circle cx="280" cy="178.6" r="5"/><circle cx="335" cy="215.7" r="5"/><circle cx="390" cy="252.9" r="5"/>
+          </g>
+          <g font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79" text-anchor="middle">
+            <text x="126" y="59">24</text><text x="181" y="96">20</text><text x="236" y="133">16</text>
+            <text x="291" y="171">12</text><text x="346" y="208">8</text><text x="390" y="241">4</text>
+          </g>
+          <line id="srWline" x1="60" y1="141.4" x2="400" y2="141.4" stroke="#C0392B" stroke-width="2.5"/>
+          <text id="srWlab" x="64" y="135.4" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700">real wage W/P</text>
+          <line id="srMguide" x1="225" y1="141.4" x2="225" y2="290" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4"/>
+          <text x="205" y="158" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79">A</text>
+          <text id="srMlabB" x="315" y="233" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" opacity="0">B</text>
+          <circle id="srMdot" cx="225" cy="141.4" r="7.5" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="paneltitle">Production function &middot; what those bakers make</div>
+        <svg viewBox="0 0 420 340" role="img" aria-label="The production function, the link between hiring and output. Bakers run along the horizontal axis and total loaves run up the vertical axis, with the ovens fixed at two. A blue curve rises from zero through 24, 44, 60, 72, 80 and 84 loaves, flattening as it climbs. A gold marker starts at three bakers and 60 loaves, point A, and slides up the curve to five bakers and 80 loaves, point B, with dashed guides marking the output it reaches. This is the step that turns extra hiring into extra output.">
+          <line x1="60" y1="30" x2="60" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="290" x2="400" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="60" y1="232.2" x2="392" y2="232.2"/><line x1="60" y1="174.4" x2="392" y2="174.4"/>
+            <line x1="60" y1="116.7" x2="392" y2="116.7"/><line x1="60" y1="58.9" x2="392" y2="58.9"/>
+            <line x1="115" y1="30" x2="115" y2="290"/><line x1="170" y1="30" x2="170" y2="290"/>
+            <line x1="225" y1="30" x2="225" y2="290"/><line x1="280" y1="30" x2="280" y2="290"/>
+            <line x1="335" y1="30" x2="335" y2="290"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="52" y="294">0</text><text x="52" y="236">20</text><text x="52" y="178">40</text>
+            <text x="52" y="121">60</text><text x="52" y="63">80</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="60" y="308">0</text><text x="115" y="308">1</text><text x="170" y="308">2</text>
+            <text x="225" y="308">3</text><text x="280" y="308">4</text><text x="335" y="308">5</text><text x="390" y="308">6</text>
+          </g>
+          <text x="66" y="24" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">total loaves (Y)</text>
+          <text x="400" y="330" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">bakers (L)</text>
+          <polyline points="60,290 115,220.7 170,162.9 225,116.7 280,82 335,58.9 390,47.3" fill="none" stroke="#1F4E79" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+          <g fill="#1F4E79">
+            <circle cx="115" cy="220.7" r="5"/><circle cx="170" cy="162.9" r="5"/><circle cx="225" cy="116.7" r="5"/>
+            <circle cx="280" cy="82" r="5"/><circle cx="335" cy="58.9" r="5"/><circle cx="390" cy="47.3" r="5"/>
+          </g>
+          <line id="srPgH" x1="60" y1="116.7" x2="225" y2="116.7" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4"/>
+          <line id="srPgV" x1="225" y1="116.7" x2="225" y2="290" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4"/>
+          <text x="235" y="134" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79">A</text>
+          <text id="srPlabB" x="345" y="76" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" opacity="0">B</text>
+          <circle id="srPdot" cx="225" cy="116.7" r="7.5" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="paneltitle">Aggregate supply &middot; output against the price level</div>
+        <svg viewBox="0 0 480 370" role="img" aria-label="Short-run aggregate supply, with loaves of output on the horizontal axis and the price level on the vertical axis. An upward sloping blue curve passes through point A at sixty loaves and fifty cents and point B at eighty loaves and one dollar. An animated dot travels up the curve from A to B, showing that when the nominal wage is fixed, a higher price level goes with more output. The curve gets steeper as it rises, because each extra baker adds fewer loaves than the last.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="450" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="254" x2="440" y2="254"/><line x1="70" y1="198" x2="440" y2="198"/>
+            <line x1="70" y1="142" x2="440" y2="142"/><line x1="70" y1="86" x2="440" y2="86"/>
+            <line x1="70" y1="30" x2="440" y2="30"/>
+            <line x1="142" y1="30" x2="142" y2="310"/><line x1="214" y1="30" x2="214" y2="310"/>
+            <line x1="286" y1="30" x2="286" y2="310"/><line x1="358" y1="30" x2="358" y2="310"/>
+            <line x1="430" y1="30" x2="430" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="258">$0.25</text><text x="62" y="202">$0.50</text>
+            <text x="62" y="146">$0.75</text><text x="62" y="90">$1.00</text><text x="62" y="34">$1.25</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="142" y="328">20</text><text x="214" y="328">40</text>
+            <text x="286" y="328">60</text><text x="358" y="328">80</text><text x="430" y="328">100</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">price level (P)</text>
+          <text x="450" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">output, loaves (Y)</text>
+          <polyline points="228.4,220.4 259.0,210.4 286.0,198.0 309.4,182.0 329.2,160.7 345.4,130.8 358.0,86.0 364.4,41.2"
+                    fill="none" stroke="#1F4E79" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+          <text x="382" y="52" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700">SRAS</text>
+          <circle cx="286" cy="198" r="5.5" fill="#1F4E79"/>
+          <text x="296" y="215" font-family="monospace" font-size="14" font-weight="700" fill="#1F4E79">A</text>
+          <line id="srGH" x1="70" y1="86" x2="358" y2="86" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4" opacity="0"/>
+          <line id="srGV" x1="358" y1="86" x2="358" y2="310" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4" opacity="0"/>
+          <circle id="srBdot" cx="358" cy="86" r="5.5" fill="#8A5900" opacity="0"/>
+          <text id="srBlab" x="366" y="78" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" opacity="0">B</text>
+          <circle id="srDot" cx="286" cy="198" r="8" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
+    <div class="ctrlrow">
+      <div class="controls">
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <div><span class="lbl2">price level</span> <span class="big" id="srP">$0.50</span></div>
+          <div><span class="lbl2">nominal wage</span> <span class="big">$8</span> <span class="lbl2">(fixed)</span></div>
+          <div><span class="lbl2">real wage W/P</span> <span class="big" id="srRW">16</span> <span class="lbl2">loaves</span></div>
+          <div><span class="lbl2">bakers</span> <span class="big" id="srL">3</span> &nbsp; <span class="lbl2">loaves</span> <span class="big" id="srY">60</span></div>
+          <div style="margin-top:.4rem" id="srNote">Point A. Press play to raise the price level.</div>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="srPlay">Play the price rise</button>
+          <button class="btn ghost" id="srReset">Reset</button>
+        </div>
+      </div>
+      <p class="footnote">Left: the real wage line falls to 8 and hiring walks out to five bakers. Middle: those five bakers make 80 loaves instead of 60. Right: 80 loaves at $1.00 is point B. The aggregate supply curve steepens as it climbs, because each extra baker adds fewer loaves than the last.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 26. Q9 PREDICT + STATIC SHIFT ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Aggregate Supply">
+    <div class="eyebrow">Question 9 &middot; predict, then reveal</div>
+    <h2>Now the wage moves instead</h2>
+    <div class="titlerule"></div>
+    <div class="three">
+      <div class="panel">
+        <div class="paneltitle">Marginal product &middot; where hiring stops</div>
+        <svg viewBox="0 0 420 340" role="img" aria-label="The marginal product of labor with two real wage lines. Bakers run along the horizontal axis and loaves added run up the vertical axis, with a blue line falling from 24 loaves for the first baker to 4 for the sixth. A solid red line marks the original real wage of 16 loaves, meeting the blue line at three bakers, point A. A revealed dashed red line sits higher at a real wage of 20 loaves and meets the blue line at two bakers, point D, with an arrow between them. A dearer real wage moves hiring back down the curve.">
+          <defs>
+            <marker id="mArrHead" markerUnits="userSpaceOnUse" markerWidth="17" markerHeight="17" refX="12" refY="5.5" orient="auto"><path d="M0,0 L12,5.5 L0,11 Z" fill="#8A5900"/></marker>
+          </defs>
+          <line x1="60" y1="30" x2="60" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="290" x2="400" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="60" y1="252.9" x2="392" y2="252.9"/><line x1="60" y1="215.7" x2="392" y2="215.7"/>
+            <line x1="60" y1="178.6" x2="392" y2="178.6"/><line x1="60" y1="141.4" x2="392" y2="141.4"/>
+            <line x1="60" y1="104.3" x2="392" y2="104.3"/><line x1="60" y1="67.1" x2="392" y2="67.1"/>
+            <line x1="115" y1="30" x2="115" y2="290"/><line x1="170" y1="30" x2="170" y2="290"/>
+            <line x1="225" y1="30" x2="225" y2="290"/><line x1="280" y1="30" x2="280" y2="290"/>
+            <line x1="335" y1="30" x2="335" y2="290"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="52" y="294">0</text><text x="52" y="257">4</text><text x="52" y="220">8</text>
+            <text x="52" y="183">12</text><text x="52" y="146">16</text><text x="52" y="108">20</text><text x="52" y="71">24</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="60" y="308">0</text><text x="115" y="308">1</text><text x="170" y="308">2</text>
+            <text x="225" y="308">3</text><text x="280" y="308">4</text><text x="335" y="308">5</text><text x="390" y="308">6</text>
+          </g>
+          <text x="66" y="24" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">loaves added (MPL)</text>
+          <text x="400" y="330" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">bakers (L)</text>
+          <line x1="115" y1="67.1" x2="390" y2="252.9" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <g fill="#1F4E79">
+            <circle cx="115" cy="67.1" r="5"/><circle cx="170" cy="104.3" r="5"/><circle cx="225" cy="141.4" r="5"/>
+            <circle cx="280" cy="178.6" r="5"/><circle cx="335" cy="215.7" r="5"/><circle cx="390" cy="252.9" r="5"/>
+          </g>
+          <g font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79" text-anchor="middle">
+            <text x="126" y="59">24</text><text x="181" y="96">20</text><text x="236" y="133">16</text>
+            <text x="291" y="171">12</text><text x="346" y="208">8</text><text x="390" y="241">4</text>
+          </g>
+          <line x1="60" y1="141.4" x2="400" y2="141.4" stroke="#C0392B" stroke-width="2.5"/>
+          <text x="396" y="135.4" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700" text-anchor="end">W/P = 16</text>
+          <circle cx="225" cy="141.4" r="7.5" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5"/>
+          <text x="205" y="158" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79">A</text>
+          <line id="shMwline" x1="60" y1="104.3" x2="400" y2="104.3" stroke="#C0392B" stroke-width="2.5" stroke-dasharray="8 5" opacity="0"/>
+          <text id="shMwlab" x="396" y="98.3" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700" text-anchor="end" opacity="0">W/P = 20</text>
+          <line id="shMarr" x1="217" y1="137" x2="179" y2="112" stroke="#8A5900" stroke-width="3" marker-end="url(#mArrHead)" opacity="0"/>
+          <circle id="shMdot" cx="170" cy="104.3" r="7.5" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5" opacity="0"/>
+          <text id="shMlab" x="150" y="121" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" opacity="0">D</text>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="paneltitle">Production function &middot; what those bakers make</div>
+        <svg viewBox="0 0 420 340" role="img" aria-label="The production function, the link between hiring and output. Bakers run along the horizontal axis and total loaves run up the vertical axis, with the ovens fixed at two. A blue curve rises from zero through 24, 44, 60, 72, 80 and 84 loaves, flattening as it climbs. A gold marker sits at three bakers and 60 loaves, point A. A revealed second marker sits lower on the curve at two bakers and 44 loaves, point D, with an arrow between them. Losing a baker to the higher wage costs the bakery 16 loaves.">
+          <defs>
+            <marker id="pArrHead" markerUnits="userSpaceOnUse" markerWidth="17" markerHeight="17" refX="12" refY="5.5" orient="auto"><path d="M0,0 L12,5.5 L0,11 Z" fill="#8A5900"/></marker>
+          </defs>
+          <line x1="60" y1="30" x2="60" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="290" x2="400" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="60" y1="232.2" x2="392" y2="232.2"/><line x1="60" y1="174.4" x2="392" y2="174.4"/>
+            <line x1="60" y1="116.7" x2="392" y2="116.7"/><line x1="60" y1="58.9" x2="392" y2="58.9"/>
+            <line x1="115" y1="30" x2="115" y2="290"/><line x1="170" y1="30" x2="170" y2="290"/>
+            <line x1="225" y1="30" x2="225" y2="290"/><line x1="280" y1="30" x2="280" y2="290"/>
+            <line x1="335" y1="30" x2="335" y2="290"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="52" y="294">0</text><text x="52" y="236">20</text><text x="52" y="178">40</text>
+            <text x="52" y="121">60</text><text x="52" y="63">80</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="60" y="308">0</text><text x="115" y="308">1</text><text x="170" y="308">2</text>
+            <text x="225" y="308">3</text><text x="280" y="308">4</text><text x="335" y="308">5</text><text x="390" y="308">6</text>
+          </g>
+          <text x="66" y="24" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">total loaves (Y)</text>
+          <text x="400" y="330" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">bakers (L)</text>
+          <polyline points="60,290 115,220.7 170,162.9 225,116.7 280,82 335,58.9 390,47.3" fill="none" stroke="#1F4E79" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+          <g fill="#1F4E79">
+            <circle cx="115" cy="220.7" r="5"/><circle cx="170" cy="162.9" r="5"/><circle cx="225" cy="116.7" r="5"/>
+            <circle cx="280" cy="82" r="5"/><circle cx="335" cy="58.9" r="5"/><circle cx="390" cy="47.3" r="5"/>
+          </g>
+          <line x1="60" y1="116.7" x2="225" y2="116.7" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4"/>
+          <line x1="225" y1="116.7" x2="225" y2="290" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4"/>
+          <circle cx="225" cy="116.7" r="7.5" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5"/>
+          <text x="235" y="134" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79">A</text>
+          <line id="shPgH" x1="60" y1="162.9" x2="170" y2="162.9" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4" opacity="0"/>
+          <line id="shPgV" x1="170" y1="162.9" x2="170" y2="290" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4" opacity="0"/>
+          <line id="shParr" x1="217" y1="123" x2="179" y2="156" stroke="#8A5900" stroke-width="3" marker-end="url(#pArrHead)" opacity="0"/>
+          <circle id="shPdot" cx="170" cy="162.9" r="7.5" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5" opacity="0"/>
+          <text id="shPlab" x="180" y="180" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" opacity="0">D</text>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="paneltitle">Aggregate supply &middot; output against the price level</div>
+        <svg viewBox="0 0 480 370" role="img" aria-label="Two short-run aggregate supply curves with output on the horizontal axis and the price level on the vertical axis. The original blue curve passes through point A at sixty loaves and fifty cents. A revealed gold curve lies to its left and passes through point D at forty-four loaves and the same fifty cents. An arrow points from A to D. The diagram shows that a rise in the nominal wage from eight to ten dollars shifts the whole curve left, so the economy makes less at every price level.">
+          <defs>
+            <marker id="shArrHead" markerUnits="userSpaceOnUse" markerWidth="17" markerHeight="17" refX="12" refY="5.5" orient="auto"><path d="M0,0 L12,5.5 L0,11 Z" fill="#8A5900"/></marker>
+          </defs>
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="450" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="254" x2="440" y2="254"/><line x1="70" y1="198" x2="440" y2="198"/>
+            <line x1="70" y1="142" x2="440" y2="142"/><line x1="70" y1="86" x2="440" y2="86"/>
+            <line x1="70" y1="30" x2="440" y2="30"/>
+            <line x1="142" y1="30" x2="142" y2="310"/><line x1="214" y1="30" x2="214" y2="310"/>
+            <line x1="286" y1="30" x2="286" y2="310"/><line x1="358" y1="30" x2="358" y2="310"/>
+            <line x1="430" y1="30" x2="430" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="258">$0.25</text><text x="62" y="202">$0.50</text>
+            <text x="62" y="146">$0.75</text><text x="62" y="90">$1.00</text><text x="62" y="34">$1.25</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="142" y="328">20</text><text x="214" y="328">40</text>
+            <text x="286" y="328">60</text><text x="358" y="328">80</text><text x="430" y="328">100</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">price level (P)</text>
+          <text x="450" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">output, loaves (Y)</text>
+          <polyline points="228.4,220.4 259.0,210.4 286.0,198.0 309.4,182.0 329.2,160.7 345.4,130.8 358.0,86.0 364.4,41.2"
+                    fill="none" stroke="#1F4E79" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+          <text x="378" y="52" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700">SRAS &middot; W = $8</text>
+          <circle cx="286" cy="198" r="5.5" fill="#1F4E79"/>
+          <text x="293" y="214" font-family="monospace" font-size="14" font-weight="700" fill="#1F4E79">A</text>
+          <polyline id="sh2" points="194.2,208.2 228.4,198.0 259.0,185.6 286.0,170.0 309.4,150.0 329.2,123.3 345.4,86.0 353.4,55.5"
+                    fill="none" stroke="#8A5900" stroke-width="3" stroke-dasharray="8 5" stroke-linejoin="round" stroke-linecap="round" opacity="0"/>
+          <text id="sh2t" x="330" y="46" font-family="monospace" font-size="13" fill="#8A5900" font-weight="700" text-anchor="end" opacity="0">SRAS &middot; W = $10</text>
+          <line id="shArr" x1="278" y1="198" x2="240" y2="198" stroke="#8A5900" stroke-width="3" marker-end="url(#shArrHead)" opacity="0"/>
+          <circle id="shD" cx="228.4" cy="198" r="5.5" fill="#8A5900" opacity="0"/>
+          <text id="shDl" x="206" y="192" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" opacity="0">D</text>
+          <line id="shGV" x1="228.4" y1="198" x2="228.4" y2="310" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4" opacity="0"/>
+        </svg>
+      </div>
+    </div>
+    <div class="ctrlrow">
+      <div class="controls">
+        <div class="predict">
+          <span class="cue">Q9 &middot; predict &middot; write before pressing</span>
+          <p>The price level is back at <strong>$0.50</strong> and stays there. The bakers negotiate the nominal wage up from <strong>$8 to $10</strong>. Write down the real wage, the number of bakers, and the output.</p>
+        </div>
+        <div class="btnrow"><button class="btn" data-reveal-svg="srasShift" data-reveal="q9a">Show the shift</button></div>
+        <div class="reveal reveal-hidden" id="q9a">
+          <span class="cue">Answer &middot; Question 9</span>
+          <p>The real wage rises to <strong>$10 &divide; $0.50 = 20</strong> loaves. Now W/P = 20 is <em>above</em> the third baker's MP<sub>L</sub> of 16, so she is no longer worth keeping. Employment falls to <strong>2 bakers</strong>, where MP<sub>L</sub> = 20 and the rule holds again, and output falls from 60 to <strong>44 loaves</strong>.</p>
+          <p style="margin-top:.5rem">The same thing happens at every price level, so <strong>the whole SRAS curve shifts left</strong>. Point A moves to point D.</p>
+        </div>
+      </div>
+      <p class="footnote">Left: the real wage line moves <em>up</em> to 20 loaves, so hiring backs down the curve to two bakers. Middle: two bakers make only 44 loaves instead of 60. Right: less output at the very same $0.50 is the whole aggregate supply curve moving left, from A to D.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 27. SHIFT VS MOVEMENT ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Aggregate Supply">
+    <div class="eyebrow">The same test, for the third unit in a row</div>
+    <h2>Along the curve, or the whole curve?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">You met this test with demand curves, and again with supply curves. It has not changed. <strong>Look at what is written on the axes.</strong></p>
+      <div class="pair2">
+        <div class="pcard">
+          <div class="ptag">On an axis &rarr; move along the curve</div>
+          <div class="verdictbig">The price level, P</div>
+          <p><strong>P is written on the vertical axis.</strong> So a change in the price level cannot move the curve &mdash; it just tells you which point on the curve you are standing at. That was Q8: prices doubled and we slid from A up to B along one unchanged SRAS.</p>
+        </div>
+        <div class="pcard warn">
+          <div class="ptag">Not on an axis &rarr; shift the whole curve</div>
+          <div class="verdictbig">The nominal wage, W</div>
+          <p><strong>W appears on neither axis.</strong> So a change in the nominal wage has nowhere to show up as a point, and it re-prices output at <em>every</em> price level at once. That was Q9: the wage rose and the entire curve moved left.</p>
+        </div>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="p27a">The test in one line</button></div>
+      <div class="reveal reveal-hidden" id="p27a">
+        <p>If the thing that changed is measured on one of the two axes, <strong>you move along the curve</strong>. If it is anything else, <strong>the curve moves.</strong> Same question you asked of the burrito market; same answer procedure; new pair of axes.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 28. Q10 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Aggregate Supply">
+    <div class="eyebrow">Question 10 &middot; predict &middot; commit before you see the answer</div>
+    <h2>Give the wage time to catch up</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">Everything so far assumed the nominal wage could not move. <strong>In the long run it can.</strong> Contracts come up for renewal, and workers who have watched their real wage get cut do something about it.</p>
+      <p class="lede" style="max-width:92ch">So run Q8 again and then keep going. The price level doubles from $0.50 to <strong>$1.00</strong>. The bakery hires up to 5 and makes 80 loaves. Then the bakers, whose real wage has been halved from 16 loaves to 8, negotiate the nominal wage up from $8 to <strong>$16</strong>.</p>
+      <div class="predict">
+        <span class="cue">Q10 &middot; predict &middot; two numbers and the reasoning</span>
+        <p>Write down where <strong>employment</strong> and <strong>output</strong> finally end up once the wage has adjusted &mdash; and say what the real wage is at that point.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 29. Q10 REVEAL · LRAS ANIMATION ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Aggregate Supply">
+    <div class="eyebrow">Answer &middot; Question 10 &middot; A to B to C</div>
+    <h2>All the way up, then all the way back</h2>
+    <div class="titlerule"></div>
+    <div class="three">
+      <div class="panel">
+        <div class="paneltitle">Marginal product &middot; where hiring stops</div>
+        <svg viewBox="0 0 420 340" role="img" aria-label="The marginal product of labor with the real wage drawn across it. Bakers run along the horizontal axis and loaves added run up the vertical axis, with a blue line falling from 24 loaves for the first baker to 4 for the sixth. A red horizontal line marks the real wage. In the short run it falls from 16 loaves to 8 and a gold marker slides down the blue line from three bakers to five. In the long run it rises back to 16 and the marker returns to three bakers, exactly where it began, which is why the doubling of prices left output unchanged.">
+          <line x1="60" y1="30" x2="60" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="290" x2="400" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="60" y1="252.9" x2="392" y2="252.9"/><line x1="60" y1="215.7" x2="392" y2="215.7"/>
+            <line x1="60" y1="178.6" x2="392" y2="178.6"/><line x1="60" y1="141.4" x2="392" y2="141.4"/>
+            <line x1="60" y1="104.3" x2="392" y2="104.3"/><line x1="60" y1="67.1" x2="392" y2="67.1"/>
+            <line x1="115" y1="30" x2="115" y2="290"/><line x1="170" y1="30" x2="170" y2="290"/>
+            <line x1="225" y1="30" x2="225" y2="290"/><line x1="280" y1="30" x2="280" y2="290"/>
+            <line x1="335" y1="30" x2="335" y2="290"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="52" y="294">0</text><text x="52" y="257">4</text><text x="52" y="220">8</text>
+            <text x="52" y="183">12</text><text x="52" y="146">16</text><text x="52" y="108">20</text><text x="52" y="71">24</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="60" y="308">0</text><text x="115" y="308">1</text><text x="170" y="308">2</text>
+            <text x="225" y="308">3</text><text x="280" y="308">4</text><text x="335" y="308">5</text><text x="390" y="308">6</text>
+          </g>
+          <text x="66" y="24" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">loaves added (MPL)</text>
+          <text x="400" y="330" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">bakers (L)</text>
+          <line x1="115" y1="67.1" x2="390" y2="252.9" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <g fill="#1F4E79">
+            <circle cx="115" cy="67.1" r="5"/><circle cx="170" cy="104.3" r="5"/><circle cx="225" cy="141.4" r="5"/>
+            <circle cx="280" cy="178.6" r="5"/><circle cx="335" cy="215.7" r="5"/><circle cx="390" cy="252.9" r="5"/>
+          </g>
+          <g font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79" text-anchor="middle">
+            <text x="126" y="59">24</text><text x="181" y="96">20</text><text x="236" y="133">16</text>
+            <text x="291" y="171">12</text><text x="346" y="208">8</text><text x="390" y="241">4</text>
+          </g>
+          <line id="lrWline" x1="60" y1="141.4" x2="400" y2="141.4" stroke="#C0392B" stroke-width="2.5"/>
+          <text id="lrWlab" x="64" y="135.4" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700">real wage W/P</text>
+          <line id="lrMguide" x1="225" y1="141.4" x2="225" y2="290" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4"/>
+          <text x="205" y="158" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79">A</text>
+          <text id="lrMlabB" x="315" y="233" font-family="monospace" font-size="13" font-weight="700" fill="#C0392B" opacity="0">B</text>
+          <text id="lrMlabC" x="225" y="120" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" opacity="0">C</text>
+          <circle id="lrMdot" cx="225" cy="141.4" r="7.5" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="paneltitle">Production function &middot; what those bakers make</div>
+        <svg viewBox="0 0 420 340" role="img" aria-label="The production function, the link between hiring and output. Bakers run along the horizontal axis and total loaves run up the vertical axis, with the ovens fixed at two. A blue curve rises from zero through 24, 44, 60, 72, 80 and 84 loaves, flattening as it climbs. In the short run a gold marker slides up the curve from three bakers and 60 loaves to five bakers and 80 loaves. In the long run it slides back down to three bakers and 60 loaves, returning output to exactly where it began.">
+          <line x1="60" y1="30" x2="60" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="290" x2="400" y2="290" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="60" y1="232.2" x2="392" y2="232.2"/><line x1="60" y1="174.4" x2="392" y2="174.4"/>
+            <line x1="60" y1="116.7" x2="392" y2="116.7"/><line x1="60" y1="58.9" x2="392" y2="58.9"/>
+            <line x1="115" y1="30" x2="115" y2="290"/><line x1="170" y1="30" x2="170" y2="290"/>
+            <line x1="225" y1="30" x2="225" y2="290"/><line x1="280" y1="30" x2="280" y2="290"/>
+            <line x1="335" y1="30" x2="335" y2="290"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="52" y="294">0</text><text x="52" y="236">20</text><text x="52" y="178">40</text>
+            <text x="52" y="121">60</text><text x="52" y="63">80</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="60" y="308">0</text><text x="115" y="308">1</text><text x="170" y="308">2</text>
+            <text x="225" y="308">3</text><text x="280" y="308">4</text><text x="335" y="308">5</text><text x="390" y="308">6</text>
+          </g>
+          <text x="66" y="24" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">total loaves (Y)</text>
+          <text x="400" y="330" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">bakers (L)</text>
+          <polyline points="60,290 115,220.7 170,162.9 225,116.7 280,82 335,58.9 390,47.3" fill="none" stroke="#1F4E79" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+          <g fill="#1F4E79">
+            <circle cx="115" cy="220.7" r="5"/><circle cx="170" cy="162.9" r="5"/><circle cx="225" cy="116.7" r="5"/>
+            <circle cx="280" cy="82" r="5"/><circle cx="335" cy="58.9" r="5"/><circle cx="390" cy="47.3" r="5"/>
+          </g>
+          <line id="lrPgH" x1="60" y1="116.7" x2="225" y2="116.7" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4"/>
+          <line id="lrPgV" x1="225" y1="116.7" x2="225" y2="290" stroke="#8A5900" stroke-width="2" stroke-dasharray="5 4"/>
+          <text x="235" y="134" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79">A</text>
+          <text id="lrPlabB" x="345" y="76" font-family="monospace" font-size="13" font-weight="700" fill="#C0392B" opacity="0">B</text>
+          <text id="lrPlabC" x="225" y="100" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" opacity="0">C</text>
+          <circle id="lrPdot" cx="225" cy="116.7" r="7.5" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="paneltitle">Aggregate supply &middot; output against the price level</div>
+        <svg viewBox="0 0 480 385" role="img" aria-label="The long run adjustment, with output on the horizontal axis and the price level on the vertical axis. A dot travels up the blue short-run curve from point A at sixty loaves and fifty cents to point B at eighty loaves and one dollar, then travels left along the one dollar line to point C at sixty loaves. A gold vertical line is drawn through points A and C at sixty loaves, which is the long-run aggregate supply curve. Because C sits directly above A, the doubling of the price level left output exactly where it started.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="450" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="254" x2="440" y2="254"/><line x1="70" y1="198" x2="440" y2="198"/>
+            <line x1="70" y1="142" x2="440" y2="142"/><line x1="70" y1="86" x2="440" y2="86"/>
+            <line x1="70" y1="30" x2="440" y2="30"/>
+            <line x1="142" y1="30" x2="142" y2="310"/><line x1="214" y1="30" x2="214" y2="310"/>
+            <line x1="286" y1="30" x2="286" y2="310"/><line x1="358" y1="30" x2="358" y2="310"/>
+            <line x1="430" y1="30" x2="430" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="258">$0.25</text><text x="62" y="202">$0.50</text>
+            <text x="62" y="146">$0.75</text><text x="62" y="90">$1.00</text><text x="62" y="34">$1.25</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="142" y="328">20</text><text x="214" y="328">40</text>
+            <text x="286" y="328">60</text><text x="358" y="328">80</text><text x="430" y="328">100</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">price level (P)</text>
+          <text x="450" y="375" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">output, loaves (Y)</text>
+          <line id="lrLras" x1="286" y1="310" x2="286" y2="34" stroke="#8A5900" stroke-width="3.5" opacity="0"/>
+          <text id="lrLrast" x="292" y="46" font-family="monospace" font-size="13" fill="#8A5900" font-weight="700" opacity="0">LRAS</text>
+          <polyline points="228.4,220.4 259.0,210.4 286.0,198.0 309.4,182.0 329.2,160.7 345.4,130.8 358.0,86.0 364.4,41.2"
+                    fill="none" stroke="#1F4E79" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+          <text x="376" y="60" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">SRAS &middot; W=$8</text>
+          <polyline id="lrS3" points="194.2,147.1 228.4,130.8 259.0,110.9 286.0,86.0 309.4,54.0 317.8,38.5"
+                    fill="none" stroke="#1F4E79" stroke-width="3" stroke-dasharray="8 5" stroke-linejoin="round" stroke-linecap="round" opacity="0"/>
+          <text id="lrS3t" x="190" y="141" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" text-anchor="end" opacity="0">SRAS &middot; W=$16</text>
+          <circle cx="286" cy="198" r="5.5" fill="#1F4E79"/>
+          <text x="293" y="214" font-family="monospace" font-size="14" font-weight="700" fill="#1F4E79">A</text>
+          <circle id="lrBdot" cx="358" cy="86" r="5.5" fill="#C0392B" opacity="0"/>
+          <text id="lrBlab" x="366" y="80" font-family="monospace" font-size="14" font-weight="700" fill="#C0392B" opacity="0">B</text>
+          <circle id="lrCdot" cx="286" cy="86" r="5.5" fill="#8A5900" opacity="0"/>
+          <text id="lrClab" x="264" y="80" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" opacity="0">C</text>
+          <text id="lrYbar" x="286" y="347" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" opacity="0">&#562; = 60</text>
+          <circle id="lrDot" cx="286" cy="198" r="8" fill="#C0392B"/>
+        </svg>
+      </div>
+    </div>
+    <div class="ctrlrow">
+      <div class="controls">
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <div><span class="lbl2">price level</span> <span class="big" id="lrP">$0.50</span></div>
+          <div><span class="lbl2">nominal wage</span> <span class="big" id="lrW">$8</span></div>
+          <div><span class="lbl2">real wage W/P</span> <span class="big" id="lrRW">16</span> <span class="lbl2">loaves</span></div>
+          <div><span class="lbl2">bakers</span> <span class="big" id="lrL">3</span> &nbsp; <span class="lbl2">loaves</span> <span class="big" id="lrY">60</span></div>
+          <div style="margin-top:.4rem" id="lrNote">Point A. Press play for the full adjustment.</div>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="lrShort">1 &middot; Short run: prices rise</button>
+          <button class="btn" id="lrLong" disabled>2 &middot; Long run: the wage catches up</button>
+          <button class="btn ghost" id="lrReset">Reset</button>
+        </div>
+      </div>
+      <div class="controls">
+        <div class="btnrow"><button class="btn ghost" data-reveal="q10a">What just happened</button></div>
+        <div class="reveal reveal-hidden" id="q10a">
+          <span class="cue">Answer &middot; Question 10</span>
+          <p>The real wage returns to <strong>$16 &divide; $1.00 = 16</strong> loaves &mdash; exactly what it was at the start. Employment returns to <strong>3 bakers</strong> and output returns to <strong>60 loaves</strong>. <strong>Point C sits directly above point A.</strong></p>
+          <p style="margin-top:.5rem">The price level doubled and, once the wage caught up, produced no extra output at all. Every point where the wage has fully adjusted lies on the same vertical line, and that line is the <strong>long-run aggregate supply curve</strong>.</p>
+        </div>
+        <p class="footnote">The first two panels are the whole argument. The real wage line falls and hiring walks out to five bakers, so output climbs to 80; then the line rises back to exactly where it started, hiring walks all the way home, and output settles back on 60. The price level is the only thing that ended up different.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 30. Q11 DIAGNOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Aggregate Supply">
+    <div class="eyebrow">Question 11 &middot; silent poll &middot; pick a number on paper</div>
+    <h2>One of these three is wrong</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:96ch">All three sentences end at the right conclusion. <strong>One of them gets there by reasoning that does not survive contact with the numbers.</strong> Write down which, and where it goes off.</p>
+    <div>
+      <div class="diag" id="diag11">
+        <button class="diag-opt" type="button" data-bad="true"><span class="n">1</span><span class="s">In the long run higher prices cannot raise output, because everything costs firms more so they cannot afford to expand.</span></button>
+        <button class="diag-opt" type="button"><span class="n">2</span><span class="s">In the long run higher prices cannot raise output, because the nominal wage rises in the same proportion and leaves the real wage where it started.</span></button>
+        <button class="diag-opt" type="button"><span class="n">3</span><span class="s">In the long run higher prices cannot raise output, because at a real wage of 16 loaves the third baker is still the last one worth hiring.</span></button>
+      </div>
+      <div class="btnrow"><button class="btn" data-diag-reveal="diag11">Show which one fails</button></div>
+      <div data-diag-note style="display:none">
+        <div class="reveal" style="margin-top:1.1rem;max-width:1000px">
+          <span class="cue">Right answer, wrong reasoning</span>
+          <p><strong>Sentence 1 fails.</strong> Output is unchanged because <strong>the real wage came back to where it started</strong> &mdash; 16 loaves before, 16 loaves after &mdash; so the bakery faces the identical hiring problem it faced at the beginning and reaches the identical answer, 3 bakers. It is not that costs rose in some general sense and squeezed the firm.</p>
+          <p>Check it against the numbers. Revenue per loaf doubled from $0.50 to $1.00 at the same time the wage doubled from $8 to $16. <strong>Nothing got squeezed.</strong> Both sides of every comparison were multiplied by two, which is exactly why every comparison came out the same way it did before.</p>
+          <p>Sentence 1 also proves too much. If firms simply could not afford to expand when costs rose, output would have to <em>fall</em> &mdash; and it does not. It sits at 60.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 31. Q12 QUICK CHECK + POTENTIAL OUTPUT ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Aggregate Supply">
+    <div class="eyebrow">Question 12 &middot; quick check &middot; pick one</div>
+    <h2>So what separates the short run from the long run?</h2>
+    <div class="titlerule"></div>
+    <div class="poll" id="poll12">
+      <p class="lede" style="max-width:96ch">The price level doubles from $0.50 to $1.00. In which case does the bakery end up back at <strong>60 loaves</strong>?</p>
+      <div class="poll-opts">
+        <button class="poll-opt" type="button"><span class="num">1</span><span class="txt">In both the short run and the long run, since the recipe and the ovens never changed.</span></button>
+        <button class="poll-opt" type="button"><span class="num">2</span><span class="txt">Once firms decide prices have risen far enough that expanding is no longer worth the trouble.</span></button>
+        <button class="poll-opt" type="button" data-correct="true"><span class="num">3</span><span class="txt">Once the nominal wage has had time to rise in the same proportion, so the real wage is back where it started.</span></button>
+      </div>
+      <div class="poll-hint">Commit on paper, then the answer.</div>
+    </div>
+    <div class="btnrow" style="margin-top:1rem"><button class="btn" data-poll-reveal="poll12" data-reveal="p31a">Show the answer</button></div>
+    <div class="reveal reveal-hidden" id="p31a" style="max-width:1050px">
+      <span class="cue">Potential output</span>
+      <p><strong>The entire difference between the short run and the long run is whether the nominal wage has adjusted yet.</strong> That is the whole distinction. Same bakery, same ovens, same table of marginal products, same hiring rule &mdash; the only question is whether W has caught up with P.</p>
+      <p style="margin-top:.5rem">The 60 loaves the bakery returns to has a name: <strong>&#562; = 60</strong> is <strong>potential output</strong>, also called the natural rate of output. It is the level produced once the labor market has settled &mdash; which is the same state you met in the unemployment unit as the <strong>natural rate of unemployment</strong>. Not a ceiling the economy can never pass, and not a happy outcome by definition. Just the level it comes back to.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 32. SYNTHESIS ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Aggregate Supply">
+    <div class="eyebrow">The whole discussion in one line</div>
+    <h2>It all came from one column</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <div class="chain warm" style="font-size:1.1rem;line-height:1.6;max-width:92ch;display:block">Output comes from capital, labor, and the recipe that combines them. Almost everything else in this unit follows from one fact: each extra worker adds less than the one before.</div>
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">Why wages are what they are</div>
+          <div class="cnote">Because MP<sub>L</sub> falls, the firm eventually reaches a worker who adds exactly her wage &mdash; and stops. That gives <strong>MP<sub>L</sub> = W/P</strong>: labor is paid its productivity.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Why SRAS slopes up</div>
+          <div class="cnote">A higher P cuts the real wage while W sits still, so firms hire. But each new hire adds less, so it takes ever larger price increases to buy more output &mdash; an upward, steepening curve.</div>
+        </div>
+        <div class="condcard warm">
+          <div class="ctitle">Why LRAS is vertical</div>
+          <div class="cnote">When W finally rises in step with P, the real wage is back where it began, so the hiring problem is unchanged and output returns to <strong>&#562; = 60</strong>, whatever the price level.</div>
+        </div>
+      </div>
+      <p class="lede" style="max-width:96ch">Take away diminishing marginal product and none of the three survives. Every worker would add the same, so there would be no last worth hiring, no stopping point to set the wage, and no reason for the amount produced to depend on the price level at all.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 33. CLOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 7 · Aggregate Supply">
+    <div class="eyebrow">Before you leave &middot; on your own paper</div>
+    <h2>Finish the sentence</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.3rem;max-width:1100px">
+      <p class="lede">Write it out in full, in your own words. Both blanks are about the real wage.</p>
+      <div class="blankline">
+        Higher prices raise output in the short run because <span class="bl"></span>, but not in the long run because <span class="bl"></span>.
+      </div>
+      <p class="serif-note">If you can fill both blanks without looking back at the bakery table, you have the unit.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="chrome">
+  <span class="course" id="sectionLabel">ECON 002 &middot; Discussion 7</span>
+  <span class="navhint">
+    <button id="prevBtn" aria-label="Previous slide">&larr; prev</button>
+    <span aria-live="polite" aria-atomic="true">Slide <span id="cur">1</span> of <span id="tot">33</span></span>
+    <button id="nextBtn" aria-label="Next slide">next &rarr;</button>
+  </span>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* the one place the course string lives */
+  const COURSE = 'ECON 002';
+  const DECK_TITLE = 'Where Output Comes From';
+  document.title = COURSE + ' · ' + DECK_TITLE;
+  const eyebrow = document.getElementById('titleEyebrow');
+  if(eyebrow) eyebrow.textContent = COURSE + ' · Discussion Section · Unit 6';
+
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  /* slide element -> the reset() of every animation on it. Entering a slide
+     rewinds its animations, so nothing is already showing on arrival —
+     including on a second pass back through the deck. */
+  const slideResets=new Map();
+  function registerReset(el, fn){
+    const sl = el.closest && el.closest('.slide');
+    if(!sl) return;
+    if(!slideResets.has(sl)) slideResets.set(sl,[]);
+    slideResets.get(sl).push(fn);
+  }
+  const prog=document.getElementById('prog');
+  const cur=document.getElementById('cur');
+  document.getElementById('tot').textContent=slides.length;
+
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    prog.style.width=((i)/(slides.length-1)*100)+'%';
+    cur.textContent=i+1;
+    rewind(slides[i]);
+    const sec=slides[i].getAttribute('data-section');
+    const lbl=document.getElementById('sectionLabel');
+    if(lbl) lbl.textContent = sec ? (COURSE+' · '+sec) : (COURSE+' · Discussion');
+  }
+  function next(){show(i+1)}
+  function prev(){show(i-1)}
+
+  document.getElementById('nextBtn').onclick=next;
+  document.getElementById('prevBtn').onclick=prev;
+
+  /* guarded: Space must activate a focused control, not jump the slide */
+  window.addEventListener('keydown',e=>{
+    const t=e.target;
+    const onControl = t && t.closest && t.closest('button,a,input,select,textarea,[tabindex]');
+    if(e.key===' '||e.key==='Spacebar'){
+      if(onControl) return;               /* let the browser click the focused button */
+      e.preventDefault();next();return;
+    }
+    if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();next()}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}
+    else if(e.key.toLowerCase()==='f'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  /* ---- generic click-to-reveal: button[data-reveal="id"] or "id1,id2,id3"
+          A comma list lets one button uncover several table cells at once,
+          which is how the bakery tables stay empty until they are computed. */
+  document.querySelectorAll('[data-reveal]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      btn.getAttribute('data-reveal').split(',').forEach(id=>{
+        const t=document.getElementById(id.trim());
+        if(t) t.classList.add('shown');
+      });
+      btn.disabled=true;
+    });
+  });
+
+  /* ---- generic quick-check polls: button[data-poll-reveal="pollId"] ---- */
+  document.querySelectorAll('[data-poll-reveal]').forEach(btn=>{
+    const group=document.getElementById(btn.getAttribute('data-poll-reveal'));
+    if(!group) return;
+    const opts=[...group.querySelectorAll('.poll-opt')];
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    btn.addEventListener('click',()=>{
+      group.classList.add('revealed');
+      opts.forEach(o=>{ if(o.dataset.correct==='true') o.classList.add('correct'); });
+      btn.disabled=true;
+    });
+  });
+
+  /* ---- generic diagnose (flawed-argument) groups ---- */
+  document.querySelectorAll('.diag').forEach(group=>{
+    const opts=[...group.querySelectorAll('.diag-opt')];
+    const revealBtn=group.parentElement.querySelector('[data-diag-reveal]');
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    if(revealBtn){
+      revealBtn.addEventListener('click',()=>{
+        group.classList.add('revealed');
+        opts.forEach(o=>{if(o.dataset.bad==='true')o.classList.add('bad');});
+        revealBtn.disabled=true;
+        const note=group.parentElement.querySelector('[data-diag-note]');
+        if(note) note.style.display='block';
+      });
+    }
+  });
+
+  /* ---- static shift diagrams: button[data-reveal-svg="key"] ---- */
+  const svgShifts={
+    p18mark   : ['p18v','p18d','p18t'],
+    srasShift : ['sh2','sh2t','shArr','shD','shDl','shGV',
+                 'shMwline','shMwlab','shMarr','shMdot','shMlab',
+                 'shPgH','shPgV','shParr','shPdot','shPlab']
+  };
+  /* Entering a slide puts it back to its unrevealed state: uncovered text,
+     table cells, polls, diagnose verdicts, marked-up SVGs and animations all
+     rewind, and their buttons come back — so a slide visited twice never
+     opens with its answer already showing. */
+  function rewind(sl){
+    if(!sl) return;
+    sl.querySelectorAll('.shown').forEach(e=>e.classList.remove('shown'));
+    sl.querySelectorAll('.revealed').forEach(g=>g.classList.remove('revealed'));
+    sl.querySelectorAll('.poll-opt.correct').forEach(o=>o.classList.remove('correct'));
+    sl.querySelectorAll('.diag-opt.bad').forEach(o=>o.classList.remove('bad'));
+    sl.querySelectorAll('.poll-opt,.diag-opt').forEach(o=>{o.style.outline='';});
+    sl.querySelectorAll('[data-diag-note]').forEach(n=>{n.style.display='none';});
+    sl.querySelectorAll('[data-reveal-svg]').forEach(b=>{
+      (svgShifts[b.getAttribute('data-reveal-svg')]||[]).forEach(id=>{
+        const el=document.getElementById(id); if(el) el.setAttribute('opacity',0);
+      });
+    });
+    sl.querySelectorAll('[data-reveal],[data-reveal-svg],[data-poll-reveal],[data-diag-reveal],[data-cond]')
+      .forEach(b=>{ b.disabled=false; });
+    (slideResets.get(sl)||[]).forEach(fn=>fn());
+  }
+
+  function revealShift(key){
+    (svgShifts[key]||[]).forEach(id=>{const el=document.getElementById(id); if(el) el.setAttribute('opacity',1);});
+  }
+  document.querySelectorAll('[data-reveal-svg]').forEach(btn=>{
+    const key=btn.getAttribute('data-reveal-svg');
+    btn.addEventListener('click',()=>{ revealShift(key); btn.disabled=true; });
+  });
+
+  /* ---- condition cards: button[data-cond="bodyId"] ---- */
+  document.querySelectorAll('[data-cond]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const body=document.getElementById(btn.getAttribute('data-cond'));
+      if(body){body.classList.add('shown');}
+      btn.disabled=true;
+    });
+  });
+
+  /* =====================================================================
+     ANIMATION SCAFFOLD
+     Both animations here ride a dot along fixed curves, so both take the
+     shared cosine sweep. `stages` fades in an annotation once the sweep
+     passes a point. reset(), finish() and a reduced-motion branch, as
+     every animation in these decks has.
+     ===================================================================== */
+  const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const DUR = 2600;
+  function ease(p){return p<1 ? (0.5-0.5*Math.cos(Math.PI*p)) : 1;}
+  const $ = id => document.getElementById(id);
+
+  function makeAnim(o){
+    const playBtn = $(o.play);
+    if(!playBtn) return;
+    const resetBtn = $(o.reset);
+    const shockEls = (o.shock||[]).map($).filter(Boolean);
+    const endEls   = (o.end||[]).map($).filter(Boolean);
+    const stages   = (o.stages||[]).map(s=>({at:s.at, els:(s.ids||[]).map($).filter(Boolean)}));
+    const endAt    = (o.endAt===undefined) ? 0.5 : o.endAt;
+    const dur      = o.dur || DUR;
+    let raf;
+    function stageEls(){ return stages.reduce((a,s)=>a.concat(s.els),[]); }
+    function reset(){
+      cancelAnimationFrame(raf);
+      o.place(0);
+      shockEls.concat(endEls,stageEls()).forEach(e=>e.setAttribute('opacity',0));
+      if(o.onReset) o.onReset();
+    }
+    function finish(){
+      o.place(1);
+      shockEls.concat(endEls,stageEls()).forEach(e=>e.setAttribute('opacity',1));
+      if(o.onFinish) o.onFinish();
+    }
+    function play(){
+      reset();
+      if(o.onStart) o.onStart();
+      shockEls.forEach(e=>e.setAttribute('opacity',1));
+      if(REDUCED){ finish(); return; }          /* reduced-motion branch */
+      const t0=performance.now();
+      function step(now){
+        const p=Math.min(1,(now-t0)/dur), e=ease(p);
+        o.place(e);
+        stages.forEach(s=>{ if(e>=s.at) s.els.forEach(el=>el.setAttribute('opacity',1)); });
+        if(e>endAt) endEls.forEach(el=>el.setAttribute('opacity',1));
+        if(p>=1) finish(); else raf=requestAnimationFrame(step);
+      }
+      raf=requestAnimationFrame(step);
+    }
+    playBtn.onclick=play;
+    if(resetBtn) resetBtn.addEventListener('click',reset);
+    registerReset(playBtn, reset);
+    reset();
+  }
+
+  /* ---------------------------------------------------------------------
+     The bakery, in three lines of arithmetic. Worker number n adds
+     28 − 4n loaves, which reproduces the table exactly: 24, 20, 16, 12,
+     8, 4. Summing that gives the totals, 26L − 2L²: 24, 44, 60, 72, 80, 84.
+     Plot geometry: x = 70 + Y·3.6 (0 to 100 loaves), y = 310 − P·224
+     (a price level of $0 to $1.25).
+     --------------------------------------------------------------------- */
+  const totalY = L => 26*L - 2*L*L;         /* total loaves from L bakers   */
+  const mpl    = L => 28 - 4*L;             /* loaves the Lth baker adds    */
+  const xY     = Y => 70 + Y*3.6;
+  const yP     = P => 310 - P*224;
+  /* the marginal-product panel: bakers across, loaves added up (0 to 28) */
+  const xL     = L => 60 + 55*L;
+  const yM     = M => 290 - M*(260/28);
+  /* the production panel shares the bakers axis; loaves run 0 to 90 */
+  const yYp    = Y => 290 - Y*(260/90);
+  const hires  = L => { const n=Math.round(L); return [n, totalY(n)]; };
+  const money  = v => '$' + v.toFixed(2);
+
+  /* =====================================================================
+     Slide 25 · a move ALONG one SRAS curve. The nominal wage is pinned at
+     $8, so the price level alone sets the real wage, and the real wage
+     alone sets how many bakers are worth hiring. The dot walks from
+     A (60 loaves, $0.50) to B (80 loaves, $1.00).
+     ===================================================================== */
+  (function(){
+    if(!$('srPlay')) return;
+    const dot=$('srDot'), $P=$('srP'), $RW=$('srRW'), $L=$('srL'), $Y=$('srY'), $n=$('srNote');
+    const mdot=$('srMdot'), wline=$('srWline'), wlab=$('srWlab'), mguide=$('srMguide');
+    const pdot=$('srPdot'), pgH=$('srPgH'), pgV=$('srPgV');
+    function place(p){
+      const L = 3 + 2*p;
+      const M = mpl(L);                     /* the real wage the firm is at */
+      const P = 8 / M;                      /* W/P = MPL, with W fixed at 8 */
+      const Y = totalY(L);
+      dot.setAttribute('cx', xY(Y).toFixed(1));
+      dot.setAttribute('cy', yP(P).toFixed(1));
+      /* the identical state, read off the marginal-product panel: the real
+         wage line falls to M and hiring walks out to where the curve meets it */
+      const mx = xL(L), my = yM(M);
+      mdot.setAttribute('cx', mx.toFixed(1)); mdot.setAttribute('cy', my.toFixed(1));
+      wline.setAttribute('y1', my.toFixed(1)); wline.setAttribute('y2', my.toFixed(1));
+      wlab.setAttribute('y', (my-6).toFixed(1));
+      mguide.setAttribute('x1', mx.toFixed(1)); mguide.setAttribute('x2', mx.toFixed(1));
+      mguide.setAttribute('y1', my.toFixed(1));
+      /* and the middle step: those bakers turned into loaves */
+      const px = xL(L), py = yYp(Y);
+      pdot.setAttribute('cx', px.toFixed(1)); pdot.setAttribute('cy', py.toFixed(1));
+      pgH.setAttribute('x2', px.toFixed(1)); pgH.setAttribute('y1', py.toFixed(1)); pgH.setAttribute('y2', py.toFixed(1));
+      pgV.setAttribute('x1', px.toFixed(1)); pgV.setAttribute('x2', px.toFixed(1)); pgV.setAttribute('y1', py.toFixed(1));
+      const h = hires(L);
+      $P.textContent  = money(P);
+      $RW.textContent = M.toFixed(1);
+      $L.textContent  = h[0];
+      $Y.textContent  = h[1];
+      if(p>0 && p<1) $n.textContent = 'The real wage is falling, so bakers keep getting hired.';
+    }
+    makeAnim({
+      play:'srPlay', reset:'srReset', dur:3200, endAt:0.985,
+      end:['srGH','srGV','srBdot','srBlab','srMlabB','srPlabB'],
+      place:place,
+      onReset:function(){ $n.textContent='Point A. Press play to raise the price level.'; },
+      onFinish:function(){ $n.textContent='Point B. Prices doubled, the real wage halved, and output went 60 to 80.'; }
+    });
+  })();
+
+  /* =====================================================================
+     Slide 29 · the full adjustment, in two legs.
+     Leg 1 (first half) repeats slide 25: W stays at $8 and the dot climbs
+     SRAS from A to B. Leg 2 (second half) holds the price level at $1.00
+     and lets the nominal wage climb from $8 to $16, which walks the dot
+     back left to C. C lands directly above A, and the vertical line
+     through them is LRAS.
+     ===================================================================== */
+  (function(){
+    if(!$('lrShort')) return;
+    const dot=$('lrDot');
+    const mdot=$('lrMdot'), wline=$('lrWline'), wlab=$('lrWlab'), mguide=$('lrMguide');
+    const pdot=$('lrPdot'), pgH=$('lrPgH'), pgV=$('lrPgV');
+    const $P=$('lrP'), $W=$('lrW'), $RW=$('lrRW'), $L=$('lrL'), $Y=$('lrY'), $n=$('lrNote');
+    const bShort=$('lrShort'), bLong=$('lrLong'), bReset=$('lrReset');
+    /* what each leg uncovers when it lands */
+    const AT_B=['lrBdot','lrBlab','lrMlabB','lrPlabB'].map($).filter(Boolean);
+    const AT_C=['lrCdot','lrClab','lrMlabC','lrPlabC','lrLras','lrLrast','lrYbar','lrS3','lrS3t'].map($).filter(Boolean);
+    let raf;
+
+    /* One path, parametrized 0..1. The first half is the short run — prices
+       rise while the wage is stuck at $8. The second half is the long run —
+       the price level holds at $1.00 while the wage climbs to $16. */
+    function place(p){
+      let L, P, W;
+      if(p<=0.5){ L = 3 + 2*(p/0.5); W = 8; P = W / mpl(L); }
+      else      { W = 8 + 8*((p-0.5)/0.5); P = 1; L = (28 - W/P) / 4; }
+      const Y = totalY(L), M = mpl(L);
+      dot.setAttribute('cx', xY(Y).toFixed(1));
+      dot.setAttribute('cy', yP(P).toFixed(1));
+      const mx = xL(L), my = yM(M);
+      mdot.setAttribute('cx', mx.toFixed(1)); mdot.setAttribute('cy', my.toFixed(1));
+      wline.setAttribute('y1', my.toFixed(1)); wline.setAttribute('y2', my.toFixed(1));
+      wlab.setAttribute('y', (my-6).toFixed(1));
+      mguide.setAttribute('x1', mx.toFixed(1)); mguide.setAttribute('x2', mx.toFixed(1));
+      mguide.setAttribute('y1', my.toFixed(1));
+      /* and the middle step: those bakers turned into loaves */
+      const px = xL(L), py = yYp(Y);
+      pdot.setAttribute('cx', px.toFixed(1)); pdot.setAttribute('cy', py.toFixed(1));
+      pgH.setAttribute('x2', px.toFixed(1)); pgH.setAttribute('y1', py.toFixed(1)); pgH.setAttribute('y2', py.toFixed(1));
+      pgV.setAttribute('x1', px.toFixed(1)); pgV.setAttribute('x2', px.toFixed(1)); pgV.setAttribute('y1', py.toFixed(1));
+      const h = hires(L);
+      $P.textContent  = money(P);
+      $W.textContent  = '$' + (Math.round(W*10)/10).toString().replace(/\.0$/,'');
+      $RW.textContent = (W/P).toFixed(1);
+      $L.textContent  = h[0];
+      $Y.textContent  = h[1];
+    }
+    function show(els,v){ els.forEach(e=>e.setAttribute('opacity',v)); }
+
+    function reset(){
+      cancelAnimationFrame(raf);
+      place(0); show(AT_B,0); show(AT_C,0);
+      bShort.disabled=false; bLong.disabled=true;
+      $n.textContent='Point A. Start with the short run.';
+    }
+    function finish(){                       /* jump straight to the end state */
+      cancelAnimationFrame(raf);
+      place(1); show(AT_B,1); show(AT_C,1);
+      bShort.disabled=true; bLong.disabled=true;
+      $n.textContent='Point C, directly above A. The price level doubled and output is back at 60.';
+    }
+    function leg(from,to,onDone){
+      cancelAnimationFrame(raf);
+      if(REDUCED){ place(to); onDone(); return; }   /* reduced-motion branch */
+      const t0=performance.now();
+      function step(now){
+        const p=Math.min(1,(now-t0)/2400), e=ease(p);
+        place(from + (to-from)*e);
+        if(p>=1){ place(to); onDone(); } else raf=requestAnimationFrame(step);
+      }
+      raf=requestAnimationFrame(step);
+    }
+
+    bShort.onclick=function(){
+      reset(); bShort.disabled=true;
+      $n.textContent='Short run: prices rising, the wage stuck at $8.';
+      leg(0,0.5,function(){
+        show(AT_B,1); bLong.disabled=false;
+        $n.textContent='Point B. The wage has not moved, so the real wage halved and output rose to 80.';
+      });
+    };
+    bLong.onclick=function(){
+      bLong.disabled=true;
+      $n.textContent='Long run: the wage catching up to the new price level.';
+      leg(0.5,1,function(){ show(AT_C,1); finish(); });
+    };
+    bReset.addEventListener('click',reset);
+    registerReset(bShort,reset);
+    reset();
+  })();
+
+  show(0);
+})();
+</script>
+</body>
+</html>

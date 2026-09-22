@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECON 002 · Reading a Graph</title>
+<style>
+  :root{
+    --ink:#14243A;          /* near-navy ink */
+    --accent:#1F4E79;       /* deep blue (from worksheets) */
+    --accent-soft:#8FAADC;
+    --paper:#F6F4EE;        /* warm chalk-paper */
+    --paper-line:#E4E0D5;
+    --gold:#8A5900;
+    --gold-soft:#FBF1DC;
+    --red:#C0392B;
+    --grey:#5A5F66;
+    --chalk:#FbFaF7;
+    --shadow:0 8px 30px rgba(20,36,58,.10);
+    --mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Georgia','Iowan Old Style',serif;
+    color:var(--ink);
+    background:var(--paper);
+    overflow:hidden;
+  }
+  /* ---------- deck scaffold ---------- */
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;
+    padding:clamp(1.25rem,4vw,4.5rem) clamp(1.5rem,6vw,6rem);
+    /* extra bottom room so content never hides behind the fixed nav bar (~46px) */
+    padding-bottom:calc(46px + clamp(1rem,3vw,2rem));
+    /* if a slide is taller than the screen, scroll it instead of clipping/overlapping */
+    overflow-y:auto;overflow-x:hidden;
+    scroll-padding-bottom:46px;
+    opacity:0;
+    transition:opacity .38s ease;
+  }
+  .slide.active{display:flex;opacity:1;animation:rise .45s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide.active{animation:none}
+    .slide{transition:none}
+    *{transition-duration:.001ms !important;animation-duration:.001ms !important}
+  }
+  /* visible keyboard focus (WCAG 2.4.7) */
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+    outline:3px solid var(--accent);outline-offset:3px;border-radius:6px;
+  }
+  :focus:not(:focus-visible){outline:none}
+  /* ---------- typography ---------- */
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--grey);margin-bottom:1.1rem;font-weight:600;
+  }
+  h1{font-size:clamp(2.4rem,5.5vw,4.4rem);line-height:1.02;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3.2vw,2.4rem);line-height:1.1;font-weight:700;letter-spacing:-.01em;margin-bottom:.4rem}
+  .lede{font-size:clamp(1.05rem,1.7vw,1.35rem);line-height:1.5;color:var(--ink);max-width:52ch}
+  .muted{color:var(--grey)}
+  .serif-note{font-style:italic;color:var(--grey);font-size:1rem;line-height:1.5}
+  strong{font-weight:700}
+  .accent{color:var(--accent)}
+  .red{color:var(--red)}
+  .gold{color:var(--gold)}
+  /* title rule */
+  h2 + .titlerule{height:2px;background:linear-gradient(90deg,var(--accent-soft),transparent);
+    width:min(100%,640px);margin:.2rem 0 1.4rem}
+  /* ---------- model cards ---------- */
+  .models{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin:1.4rem 0;max-width:900px}
+  .model{
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;
+    padding:1.4rem 1.6rem;box-shadow:var(--shadow);position:relative;
+  }
+  .model .tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:.6rem;display:block}
+  .model .eq{font-family:var(--mono);font-size:1.35rem;color:var(--ink)}
+  .model .eq .coef{color:var(--red);font-weight:700}
+  .model.dim{opacity:.4;filter:saturate(.4)}
+  .model.hi{border-color:var(--accent);box-shadow:0 8px 30px rgba(31,78,121,.22)}
+  /* ---------- boxes ---------- */
+  .prompt,.reveal,.predict{
+    border-radius:10px;padding:1.05rem 1.3rem;max-width:820px;line-height:1.5;
+    font-family:'Georgia',serif;font-size:1.08rem;
+  }
+  .prompt{background:#EEF3FA;border-left:4px solid var(--accent)}
+  .reveal{background:var(--gold-soft);border-left:4px solid var(--gold)}
+  .cue{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;display:block;margin-bottom:.4rem}
+  .prompt .cue{color:var(--accent)}
+  .reveal .cue{color:var(--gold)}
+  .predict .cue{color:var(--red)}
+  .predict{background:#FBEEEC;border-left:4px solid var(--red)}
+  .prompt p,.reveal p,.predict p{margin:0;line-height:1.5}
+  .prompt .cue + p,.reveal .cue + p,.predict .cue + p{margin-top:.15rem}
+  /* chain / mono line */
+  .chain{
+    font-family:var(--mono);background:#EDF1F8;border:1px solid var(--accent-soft);
+    border-radius:8px;padding:.7rem 1rem;font-size:1.05rem;color:var(--accent);
+    display:inline-block;margin-top:.4rem
+  }
+  /* ---------- interactive graph panel ---------- */
+  .graphwrap{display:grid;grid-template-columns:1.15fr .85fr;gap:2rem;align-items:center;margin-top:.6rem;flex:1 0 auto}
+  @media (max-width:900px){.graphwrap{grid-template-columns:1fr}}
+  .panel{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;padding:1.2rem;box-shadow:var(--shadow)}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .controls{display:flex;flex-direction:column;gap:1.3rem}
+  .readout{font-family:var(--mono);font-size:.92rem;line-height:1.7;color:var(--ink);background:#EDF1F8;border-radius:8px;padding:.8rem 1rem}
+  .readout .big{font-size:1.25rem;color:var(--accent);font-weight:700}
+  .btn{
+    font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.7rem 1.2rem;cursor:pointer;
+    box-shadow:0 3px 10px rgba(31,78,121,.3);transition:transform .1s,background .2s;align-self:flex-start
+  }
+  .btn:hover{background:#173a5c;transform:translateY(-1px)}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
+  .btn.ghost:hover{background:#EEF3FA}
+  .btnrow{display:flex;gap:.7rem;flex-wrap:wrap}
+  /* ---------- poll ---------- */
+  .poll-opts{display:flex;flex-direction:column;gap:.8rem;max-width:760px;margin-top:1.1rem}
+  .poll-opt{
+    display:flex;align-items:stretch;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;
+    cursor:pointer;background:var(--chalk);transition:border-color .2s,transform .08s;position:relative;
+    width:100%;text-align:left;font:inherit;color:inherit;padding:0
+  }
+  .poll-opt:hover{border-color:var(--accent-soft)}
+  .poll-opt:active{transform:scale(.995)}
+  .poll-opt .num{background:var(--accent);color:#fff;font-family:var(--mono);font-weight:700;
+    display:flex;align-items:center;justify-content:center;padding:0 1.1rem;font-size:1.1rem;z-index:2}
+  .poll-opt .txt{padding:.9rem 1.1rem;line-height:1.4;z-index:2;font-size:1.02rem;font-family:'Georgia',serif}
+  .poll.revealed .poll-opt{opacity:.5;transition:opacity .4s}
+  .poll.revealed .poll-opt.correct{opacity:1;border-color:var(--gold);background:var(--gold-soft)}
+  .poll-opt.correct .num{background:var(--gold)}
+  .poll-opt.correct .txt::after{content:" ✓ correct";color:var(--gold);font-family:var(--mono);font-weight:700;font-size:.82rem}
+  .poll-hint{font-family:var(--mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-top:.9rem;font-weight:600}
+  /* ---------- footer / nav ---------- */
+  .chrome{position:fixed;bottom:0;left:0;right:0;height:46px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 1.4rem;font-family:var(--mono);font-size:.72rem;
+    letter-spacing:.08em;color:var(--grey);pointer-events:none;z-index:50}
+  .chrome .course{text-transform:uppercase}
+  .progress-track{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:60}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-soft));width:0;transition:width .35s ease}
+  .navhint{display:flex;gap:1.2rem;align-items:center;pointer-events:auto}
+  .navhint button{pointer-events:auto;background:none;border:none;color:var(--grey);cursor:pointer;font-family:var(--mono);font-size:.9rem;padding:.2rem .5rem;border-radius:5px}
+  .navhint button:hover{color:var(--accent);background:rgba(31,78,121,.08)}
+  .kbd{font-family:var(--mono);font-size:.66rem;border:1px solid var(--paper-line);border-radius:4px;padding:.1rem .35rem;color:var(--grey)}
+  /* content column helper */
+  .col{display:flex;flex-direction:column;gap:1.1rem;flex:1 0 auto;justify-content:center}
+  .grow{flex:1 0 auto}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+  @media (max-width:900px){.two{grid-template-columns:1fr}}
+  .calc{font-family:var(--mono);font-size:1.05rem;line-height:1.8}
+  .calc .lbl{color:var(--accent);font-weight:700}
+  .footnote{font-size:.92rem;color:var(--grey);font-style:italic}
+  .runsheet{display:grid;grid-template-columns:auto 1fr;gap:.35rem 1.1rem;font-family:var(--mono);font-size:.86rem;line-height:1.5;margin-top:.4rem}
+  .runsheet .rk{color:var(--accent);font-weight:700;white-space:nowrap}
+  /* title slide special */
+  .title-slide{justify-content:safe center}
+  .title-slide h1{margin:.6rem 0}
+  .signature{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:2rem}
+  /* ---------- section divider ---------- */
+  .divider{justify-content:safe center;background:linear-gradient(135deg,#1B3B5C,#14243A)}
+  .divider *{color:#F6F4EE}
+  .divider .eyebrow{color:#8FAADC}
+  .divider h1{font-size:clamp(2.2rem,5vw,4rem);color:#fff}
+  .divider .lede{color:#D6DEE9;max-width:46ch}
+  .divider .sectrail{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#8FAADC;margin-top:1.6rem}
+  .divider .through{font-family:var(--mono);font-size:.8rem;line-height:1.6;color:#D6DEE9;
+    border-left:3px solid #8FAADC;padding-left:.9rem;margin-top:1.4rem;max-width:56ch}
+  /* ---------- generic click-reveal ---------- */
+  .reveal-hidden{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .reveal-hidden.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* condition cards (3-across) */
+  .condrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem}
+  @media (max-width:900px){.condrow{grid-template-columns:1fr}}
+  .condcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.5rem}
+  .condcard .ctitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .condcard .cbtn{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:.55rem .8rem;cursor:pointer}
+  .condcard .cbtn:hover{background:#173a5c}
+  .condcard .cbody{opacity:0;max-height:0;overflow:hidden;transition:opacity .35s,max-height .45s}
+  .condcard .cbody.shown{opacity:1;max-height:none;overflow:visible;margin-top:.3rem}
+  .condcard svg{width:100%;height:auto}
+  .condcard .cnote{font-size:.9rem;line-height:1.45;color:var(--ink)}
+  .condcard .verdict{font-family:var(--mono);font-size:.78rem;font-weight:700;padding:.2rem 0}
+  .verdict.along{color:var(--accent)}
+  .verdict.shift{color:var(--gold)}
+  /* diagnose (numbered flawed-argument) list */
+  .diag{display:flex;flex-direction:column;gap:.7rem;max-width:860px;margin:1rem 0}
+  .diag-opt{display:flex;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;background:var(--chalk);width:100%;text-align:left;font:inherit;color:inherit;padding:0;cursor:pointer;transition:border-color .2s}
+  .diag-opt:hover{border-color:var(--accent-soft)}
+  .diag-opt .n{background:var(--grey);color:#fff;font-family:var(--mono);font-weight:700;display:flex;align-items:center;padding:0 1rem;font-size:1.05rem}
+  .diag-opt .s{padding:.85rem 1.1rem;line-height:1.45;font-family:'Georgia',serif;font-size:1.02rem}
+  .diag.revealed .diag-opt{opacity:.5}
+  .diag.revealed .diag-opt.bad{opacity:1;border-color:var(--red);background:#FBEEEC}
+  .diag-opt.bad .n{background:var(--red)}
+  .diag.revealed .diag-opt.bad .s::after{content:" ✗ the flaw";color:var(--red);font-family:var(--mono);font-weight:700;font-size:.8rem}
+  /* fill-in-the-blank close line */
+  .blankline{font-family:var(--mono);font-size:clamp(1.1rem,2.4vw,1.7rem);line-height:2;color:var(--ink);
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1.4rem 1.6rem;
+    box-shadow:var(--shadow);max-width:900px}
+  .blankline .bl{display:inline-block;min-width:9ch;border-bottom:2px solid var(--accent)}
+</style>
+</head>
+<body>
+<div class="progress-track"><div class="progress-fill" id="prog"></div></div>
+<div class="deck" id="deck">
+
+  <!-- 1. TITLE -->
+  <section class="slide active title-slide" data-section="Discussion 1 · Opening">
+    <div class="eyebrow" id="titleEyebrow">ECON 002 · Discussion Section · Week 1</div>
+    <h1>Reading a<br><span class="accent">Graph</span></h1>
+    <p class="lede" style="margin-top:1rem">No economics today. One skill: getting a number off a graph, in either direction — and telling a move <em>along</em> a line from a move <em>of</em> the line.</p>
+    <p class="serif-note" style="margin-top:1.6rem">Work on your own paper. Write before each reveal — the point is your reasoning, not a clean final answer.</p>
+    <div class="signature">Pairs → Along vs Shift → Transfer</div>
+  </section>
+
+  <!-- 2. FOR THE TA -->
+  <section class="slide" data-section="Discussion 1 · Opening">
+    <div class="eyebrow">For the TA</div>
+    <h2>How to run this deck</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1100px">
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <p class="lede" style="max-width:56ch"><strong>Write first, reveal second.</strong> Every question gets <strong>1–2 minutes of silent writing</strong> before you press a button. Nothing on this deck reveals itself — the buttons are your cue system, and no answer is on screen when a slide loads.</p>
+        <p class="lede" style="max-width:56ch"><strong>Do not fill the silence.</strong> The pause is the lesson. If nobody writes for thirty seconds, wait anyway.</p>
+        <p class="lede" style="max-width:56ch"><strong>Diagnose slides are silent polls.</strong> Three numbered sentences, one subtly flawed. Fingers on the chest, not hands in the air — then reveal. The point is always <em>why the reasoning fails</em>, not that the sentence is wrong.</p>
+        <div class="prompt">
+          <span class="cue">The throughline · say it out loud at each divider</span>
+          <p>A point is a pair. Ask two questions: <strong>which pair am I reading</strong>, and <strong>did the rule change?</strong></p>
+        </div>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="predict">
+          <span class="cue">Protect this payoff</span>
+          <p>Slide 8 (Q3, "you have $28") is the hinge of the whole hour. Students arrive believing a graph is read left-to-right because x is the input. Q3 runs the read <em>backwards</em> — start on the vertical axis, finish on the horizontal. <strong>Do not preview it</strong> during Q2, and do not rush it. A student who still thinks graphs only run one way cannot do Part 2 either.</p>
+        </div>
+        <div>
+          <div style="font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);font-weight:700;margin-bottom:.2rem">Timing budget · 50 minutes</div>
+          <div class="runsheet">
+            <span class="rk">Part 1</span><span>A point is a pair (Q1–Q4) — <strong>20 min</strong></span>
+            <span class="rk">Part 2</span><span>Along it, or move it? (Q5–Q6) — <strong>18 min</strong></span>
+            <span class="rk">Part 3</span><span>Test it (Q7–Q8) — <strong>9 min</strong></span>
+            <span class="rk">Close</span><span>One written line — <strong>3 min</strong></span>
+          </div>
+        </div>
+        <p class="footnote">Navigation: <span class="kbd">→</span> <span class="kbd">space</span> next · <span class="kbd">←</span> back · <span class="kbd">F</span> fullscreen. Questions run Q1–Q8 continuously; students number them on their own paper. Every animation has a <strong>Play</strong> and a <strong>Reset</strong> — you can run it twice.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 1 ══════════════ -->
+
+  <!-- 3. DIVIDER P1 -->
+  <section class="slide divider" data-section="Discussion 1 · Pairs">
+    <div class="eyebrow">Part 1 of 3</div>
+    <h1>A point<br>is a pair</h1>
+    <p class="lede">One dot on a graph is never one fact. It is always two facts, locked together, and you can enter from either side.</p>
+    <div class="sectrail">PAIRS → ALONG vs SHIFT → TRANSFER</div>
+    <div class="through">Throughline: a point is a pair. Ask two questions — which pair am I reading, and did the rule change?</div>
+  </section>
+
+  <!-- 4. WARM-UP: the gas graph, axes only -->
+  <section class="slide" data-section="Discussion 1 · Pairs">
+    <div class="eyebrow">Warm-up · no question yet</div>
+    <h2>Gas is $4.00 a gallon</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="A gas pump graph. The horizontal axis is gallons pumped, from 0 to 12. The vertical axis is dollars paid, from 0 to 48. A straight blue line rises from the origin, showing that every gallon adds 4 dollars.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="450" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="440" y2="266"/><line x1="70" y1="222" x2="440" y2="222"/>
+            <line x1="70" y1="178" x2="440" y2="178"/><line x1="70" y1="134" x2="440" y2="134"/>
+            <line x1="70" y1="90"  x2="440" y2="90"/> <line x1="70" y1="46"  x2="440" y2="46"/>
+            <line x1="130" y1="30" x2="130" y2="310"/><line x1="190" y1="30" x2="190" y2="310"/>
+            <line x1="250" y1="30" x2="250" y2="310"/><line x1="310" y1="30" x2="310" y2="310"/>
+            <line x1="370" y1="30" x2="370" y2="310"/><line x1="430" y1="30" x2="430" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">0</text><text x="62" y="270">8</text><text x="62" y="226">16</text>
+            <text x="62" y="182">24</text><text x="62" y="138">32</text><text x="62" y="94">40</text>
+            <text x="62" y="50">48</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="130" y="328">2</text><text x="190" y="328">4</text>
+            <text x="250" y="328">6</text><text x="310" y="328">8</text><text x="370" y="328">10</text>
+            <text x="430" y="328">12</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700">dollars paid</text>
+          <text x="450" y="350" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">gallons pumped</text>
+          <line x1="70" y1="310" x2="430" y2="46" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="404" y="40" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">$4.00 / gallon</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <p class="lede">Before anything else, name the two axes out loud.</p>
+        <div class="readout">
+          across &nbsp;→&nbsp; <strong>gallons pumped</strong> (0 to 12)<br>
+          up &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;→&nbsp; <strong>dollars paid</strong> (0 to 48)<br>
+          the line &nbsp;→&nbsp; the pump's rule: <span class="big">$4</span> per gallon
+        </div>
+        <p class="serif-note">The line is not a fact about you. It is the <em>rule</em> the pump is running. Every dot sitting on it is one possible fill-up.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Q1 · one point, two facts -->
+  <section class="slide" data-section="Discussion 1 · Pairs">
+    <div class="eyebrow">Question 1 · write a full sentence</div>
+    <h2>What does this dot tell you?</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="The same gas graph with one point marked at 5 gallons and 20 dollars. Dashed guide lines run from the point down to 5 on the horizontal axis and left to 20 on the vertical axis, showing that the single point carries both numbers at once.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="450" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="440" y2="266"/><line x1="70" y1="222" x2="440" y2="222"/>
+            <line x1="70" y1="178" x2="440" y2="178"/><line x1="70" y1="134" x2="440" y2="134"/>
+            <line x1="70" y1="90"  x2="440" y2="90"/> <line x1="70" y1="46"  x2="440" y2="46"/>
+            <line x1="130" y1="30" x2="130" y2="310"/><line x1="190" y1="30" x2="190" y2="310"/>
+            <line x1="250" y1="30" x2="250" y2="310"/><line x1="310" y1="30" x2="310" y2="310"/>
+            <line x1="370" y1="30" x2="370" y2="310"/><line x1="430" y1="30" x2="430" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">0</text><text x="62" y="270">8</text><text x="62" y="226">16</text>
+            <text x="62" y="182">24</text><text x="62" y="138">32</text><text x="62" y="94">40</text>
+            <text x="62" y="50">48</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="130" y="328">2</text><text x="190" y="328">4</text>
+            <text x="250" y="328">6</text><text x="310" y="328">8</text><text x="370" y="328">10</text>
+            <text x="430" y="328">12</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700">dollars paid</text>
+          <text x="450" y="350" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">gallons pumped</text>
+          <line x1="70" y1="310" x2="430" y2="46" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <line x1="70" y1="200" x2="220" y2="200" stroke="#14243A" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <line x1="220" y1="310" x2="220" y2="200" stroke="#14243A" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <text x="62" y="204" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">20</text>
+          <text x="220" y="345" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="middle">5</text>
+          <circle cx="220" cy="200" r="6" fill="#14243A"/>
+          <text x="220" y="186" font-family="monospace" font-size="13" font-weight="700" fill="#14243A" text-anchor="middle">P</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="prompt">
+          <span class="cue">Question 1 (write)</span>
+          <p>Write <strong>one complete sentence</strong> saying what the dot <strong>P</strong> tells you. Not a number — a sentence, with both axis names in it.</p>
+        </div>
+        <button class="btn" data-reveal="q1rev">Reveal</button>
+        <div class="reveal-hidden" id="q1rev">
+          <div class="reveal">
+            <span class="cue">Reveal · Q1</span>
+            <p>"If you pump <strong>5 gallons</strong>, you pay <strong>$20</strong>." One dot carries <strong>two facts at once</strong> — never one. It is a <em>pair</em>: (5 gallons, $20). Drop straight down and the pair's first number is on the horizontal axis; slide straight left and its second number is on the vertical axis. A dot with only one number attached to it is not a point on a graph.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Q2 PREDICT -->
+  <section class="slide" data-section="Discussion 1 · Pairs">
+    <div class="eyebrow">Commit before you look</div>
+    <h2>Predict</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:860px">
+      <p class="lede">You pull into the station and pump <strong>8 gallons</strong>. Same pump, same rule: $4.00 a gallon.</p>
+      <div class="predict">
+        <span class="cue">Question 2 (predict)</span>
+        <p>Write down the number you will pay — <strong>before</strong> you look at the graph. Then, in a few words, write <em>which axis you started from</em> to get it.</p>
+      </div>
+      <p class="footnote">The number is easy. The second half is the part that matters — we are about to reverse it.</p>
+    </div>
+  </section>
+
+  <!-- 7. Q2 ANIMATION -->
+  <section class="slide" data-section="Discussion 1 · Pairs">
+    <div class="eyebrow">Question 2 · read it off</div>
+    <h2>Start at 8 gallons. Go up, then left.</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="An animated gas graph. A dot starts at 8 on the horizontal gallons axis, rises straight up to the four-dollar-per-gallon line, then travels straight left to the vertical axis, landing at 32 dollars. Pumping 8 gallons costs 32 dollars.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="450" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="440" y2="266"/><line x1="70" y1="222" x2="440" y2="222"/>
+            <line x1="70" y1="178" x2="440" y2="178"/><line x1="70" y1="134" x2="440" y2="134"/>
+            <line x1="70" y1="90"  x2="440" y2="90"/> <line x1="70" y1="46"  x2="440" y2="46"/>
+            <line x1="130" y1="30" x2="130" y2="310"/><line x1="190" y1="30" x2="190" y2="310"/>
+            <line x1="250" y1="30" x2="250" y2="310"/><line x1="310" y1="30" x2="310" y2="310"/>
+            <line x1="370" y1="30" x2="370" y2="310"/><line x1="430" y1="30" x2="430" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">0</text><text x="62" y="270">8</text><text x="62" y="226">16</text>
+            <text x="62" y="182">24</text><text x="62" y="138">32</text><text x="62" y="94">40</text>
+            <text x="62" y="50">48</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="130" y="328">2</text><text x="190" y="328">4</text>
+            <text x="250" y="328">6</text><text x="310" y="328">8</text><text x="370" y="328">10</text>
+            <text x="430" y="328">12</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700">dollars paid</text>
+          <text x="450" y="350" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">gallons pumped</text>
+          <line x1="70" y1="310" x2="430" y2="46" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <!-- start marker on the horizontal axis (appears on play) -->
+          <text id="g2start" x="302" y="300" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700" text-anchor="end" opacity="0">8 gallons · you know this</text>
+          <!-- travelling guides -->
+          <line id="g2v" x1="310" y1="310" x2="310" y2="310" stroke="#C0392B" stroke-width="1.6" stroke-dasharray="5 3" opacity="0"/>
+          <line id="g2h" x1="310" y1="134" x2="310" y2="134" stroke="#C0392B" stroke-width="1.6" stroke-dasharray="5 3" opacity="0"/>
+          <circle id="g2dot" cx="310" cy="310" r="7" fill="#C0392B" opacity="0"/>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="btnrow">
+          <button class="btn" id="g2play">▶ Read it off</button>
+          <button class="btn ghost" id="g2reset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          gallons: <span class="big" id="g2g">8.0</span><br>
+          dollars: <span class="big" id="g2d">?</span><br>
+          <span id="g2note">Press play. Up to the line first, then left.</span>
+        </div>
+        <p class="serif-note">You knew the horizontal number and the graph handed you the vertical one. Most students expect this direction. Hold onto how it felt.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. Q3 PREDICT -->
+  <section class="slide" data-section="Discussion 1 · Pairs">
+    <div class="eyebrow">Commit before you look</div>
+    <h2>Predict — and notice this one feels different</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:860px">
+      <p class="lede">Now you walk in with <strong>exactly $28</strong> in your pocket. Same pump. Same line. Nothing about the rule has changed.</p>
+      <div class="predict">
+        <span class="cue">Question 3 (predict)</span>
+        <p>How many gallons do you get? Write the number — and then write <strong>which axis you started from this time</strong>.</p>
+      </div>
+      <p class="footnote">If your hand wanted to start on the horizontal axis again, that is the habit we are here to break. Write it down anyway.</p>
+    </div>
+  </section>
+
+  <!-- 9. Q3 ANIMATION — the hinge slide -->
+  <section class="slide" data-section="Discussion 1 · Pairs">
+    <div class="eyebrow">Question 3 · the same graph, read backwards</div>
+    <h2>Start at $28. Go right, then down.</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="The same gas graph read in the opposite direction. A dot starts at 28 dollars on the vertical axis, travels straight right to the four-dollar-per-gallon line, then drops straight down to the horizontal axis, landing at 7 gallons. Twenty-eight dollars buys 7 gallons.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="450" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="440" y2="266"/><line x1="70" y1="222" x2="440" y2="222"/>
+            <line x1="70" y1="178" x2="440" y2="178"/><line x1="70" y1="134" x2="440" y2="134"/>
+            <line x1="70" y1="90"  x2="440" y2="90"/> <line x1="70" y1="46"  x2="440" y2="46"/>
+            <line x1="130" y1="30" x2="130" y2="310"/><line x1="190" y1="30" x2="190" y2="310"/>
+            <line x1="250" y1="30" x2="250" y2="310"/><line x1="310" y1="30" x2="310" y2="310"/>
+            <line x1="370" y1="30" x2="370" y2="310"/><line x1="430" y1="30" x2="430" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">0</text><text x="62" y="270">8</text><text x="62" y="226">16</text>
+            <text x="62" y="182">24</text><text x="62" y="138">32</text><text x="62" y="94">40</text>
+            <text x="62" y="50">48</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="130" y="328">2</text><text x="190" y="328">4</text>
+            <text x="250" y="328">6</text><text x="310" y="328">8</text><text x="370" y="328">10</text>
+            <text x="430" y="328">12</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700">dollars paid</text>
+          <text x="450" y="350" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">gallons pumped</text>
+          <line x1="70" y1="310" x2="430" y2="46" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <!-- start marker on the vertical axis (appears on play) -->
+          <text id="g3start" x="62" y="160" font-family="monospace" font-size="14" fill="#C0392B" font-weight="700" text-anchor="end" opacity="0">$28</text>
+          <line id="g3h" x1="70" y1="156" x2="70" y2="156" stroke="#C0392B" stroke-width="1.6" stroke-dasharray="5 3" opacity="0"/>
+          <line id="g3v" x1="280" y1="156" x2="280" y2="156" stroke="#C0392B" stroke-width="1.6" stroke-dasharray="5 3" opacity="0"/>
+          <text id="g3xlab" x="280" y="345" font-family="monospace" font-size="14" fill="#C0392B" font-weight="700" text-anchor="middle" opacity="0">7 gallons</text>
+          <circle id="g3dot" cx="70" cy="156" r="7" fill="#C0392B" opacity="0"/>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="btnrow">
+          <button class="btn" id="g3play">▶ Read it off</button>
+          <button class="btn ghost" id="g3reset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          dollars: <span class="big" id="g3d">$28.00</span><br>
+          gallons: <span class="big" id="g3g">?</span><br>
+          <span id="g3note">Press play. Right to the line first, then down.</span>
+        </div>
+        <div class="prompt">
+          <span class="cue">Say this out loud</span>
+          <p>Nothing on the graph changed between Q2 and Q3. The line is identical. Only the axis you <strong>entered from</strong> changed.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. PUNCHLINE Part 1 -->
+  <section class="slide" data-section="Discussion 1 · Pairs">
+    <div class="eyebrow">The punchline of Part 1</div>
+    <h2>The graph has no input side</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:900px;gap:1.1rem">
+      <p class="lede">In your math classes, <span style="font-family:var(--mono)">y = f(x)</span> had a direction built into it: x went in, y came out. You read left to right because that is how the machine ran.</p>
+      <p class="lede">A graph is not that machine. A graph is a <strong>list of pairs</strong> that happen to lie on a line.</p>
+      <div class="chain">know gallons → line → get dollars &nbsp;&nbsp;|&nbsp;&nbsp; know dollars → line → get gallons</div>
+      <div class="reveal" style="margin-top:.6rem">
+        <span class="cue">The rule</span>
+        <p><strong>You choose which axis you know, and the graph hands you the partner.</strong> Neither axis is the "input." This is not a special trick for economics — it was always true, and economics is just the first class that makes you use it in both directions.</p>
+      </div>
+      <p class="serif-note">Next quarter you will see graphs with <em>price</em> up the side and be asked to read price → quantity. That is exactly Q3. If Q3 made sense, that will too.</p>
+    </div>
+  </section>
+
+  <!-- 11. Q4 QUICK-CHECK POLL -->
+  <section class="slide" data-section="Discussion 1 · Pairs">
+    <div class="eyebrow">Question 4 · quick check · new graph</div>
+    <h2>Does the skill travel?</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 420 300" role="img" aria-label="A phone plan graph. The horizontal axis is gigabytes used, from 0 to 8. The vertical axis is the monthly bill in dollars, from 0 to 55. A blue line starts at 15 dollars when zero gigabytes are used and rises by 5 dollars for each additional gigabyte.">
+          <line x1="60" y1="30" x2="60" y2="250" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="250" x2="400" y2="250" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="60" y1="214" x2="390" y2="214"/><line x1="60" y1="178" x2="390" y2="178"/>
+            <line x1="60" y1="142" x2="390" y2="142"/><line x1="60" y1="106" x2="390" y2="106"/>
+            <line x1="60" y1="70"  x2="390" y2="70"/>
+            <line x1="140" y1="30" x2="140" y2="250"/><line x1="220" y1="30" x2="220" y2="250"/>
+            <line x1="300" y1="30" x2="300" y2="250"/><line x1="380" y1="30" x2="380" y2="250"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="52" y="254">0</text><text x="52" y="218">10</text><text x="52" y="182">20</text>
+            <text x="52" y="146">30</text><text x="52" y="110">40</text><text x="52" y="74">50</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="60" y="268">0</text><text x="140" y="268">2</text><text x="220" y="268">4</text>
+            <text x="300" y="268">6</text><text x="380" y="268">8</text>
+          </g>
+          <text x="66" y="24" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">monthly bill ($)</text>
+          <text x="400" y="288" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" text-anchor="end">gigabytes used</text>
+          <line x1="60" y1="196" x2="380" y2="52" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <line x1="58" y1="196" x2="68" y2="196" stroke="#1F4E79" stroke-width="2.4"/>
+          <text x="52" y="200" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" text-anchor="end">15</text>
+          <text x="330" y="46" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" text-anchor="end">+ $5 per GB</text>
+          <line id="ph35v" x1="220" y1="250" x2="220" y2="124" stroke="#C0392B" stroke-width="1.6" stroke-dasharray="5 3" opacity="0"/>
+          <line id="ph35h" x1="60" y1="124" x2="220" y2="124" stroke="#C0392B" stroke-width="1.6" stroke-dasharray="5 3" opacity="0"/>
+          <circle id="ph35dot" cx="220" cy="124" r="6" fill="#C0392B" opacity="0"/>
+          <line id="ph35tick" x1="58" y1="124" x2="68" y2="124" stroke="#C0392B" stroke-width="2.4" opacity="0"/>
+          <text id="ph35lab" x="52" y="128" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700" text-anchor="end" opacity="0">35</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="prompt">
+          <span class="cue">Question 4 (commit, then reveal)</span>
+          <p>Different graph, different story, same skill. This plan charges a <strong>$15 base every month</strong>, plus <strong>$5 for each gigabyte</strong> you use. You use <strong>4 GB</strong> this month. <strong>What is your bill?</strong> Pick a number 1–3 on your paper.</p>
+        </div>
+        <div class="poll" id="poll4">
+          <div class="poll-opts">
+            <button type="button" class="poll-opt" data-correct="false"><span class="num">1</span><span class="txt">$20 — four gigabytes at $5 each.</span></button>
+            <button type="button" class="poll-opt" data-correct="true"><span class="num">2</span><span class="txt">$35 — go up from 4 on the horizontal axis to the line, then left to the vertical axis.</span></button>
+            <button type="button" class="poll-opt" data-correct="false"><span class="num">3</span><span class="txt">About 4 — I went across from 35 on the vertical axis and read the horizontal axis.</span></button>
+          </div>
+          <p class="poll-hint">Students commit on paper (or a show of fingers). Then reveal.</p>
+        </div>
+        <button class="btn" data-poll-reveal="poll4" data-reveal-svg="phone35" style="margin-top:.4rem">Reveal the answer</button>
+        <p class="footnote">Option 1 forgets that the line does not start at zero. Option 3 does the reading correctly but <strong>reports the wrong axis</strong> — it answers "how many gigabytes," when the question asked for dollars.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 2 ══════════════ -->
+
+  <!-- 12. DIVIDER P2 -->
+  <section class="slide divider" data-section="Discussion 1 · Along vs Shift">
+    <div class="eyebrow">Part 2 of 3</div>
+    <h1>Along it,<br>or move it?</h1>
+    <p class="lede">Something changes and the numbers change with it. Two completely different things could have happened, and telling them apart is the whole job.</p>
+    <div class="sectrail">PAIRS ✓ → ALONG vs SHIFT → TRANSFER</div>
+    <div class="through">Throughline: a point is a pair. Ask two questions — which pair am I reading, and did the rule change?</div>
+  </section>
+
+  <!-- 13. THE PIZZA GRAPH -->
+  <section class="slide" data-section="Discussion 1 · Along vs Shift">
+    <div class="eyebrow">A new rule · and a warning about the axes</div>
+    <h2>Your pizza habit</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="A pizza graph. Price per slice runs up the vertical axis from 0 to 5 dollars; slices bought per week runs across the horizontal axis from 0 to 14. A downward-sloping blue line passes through four marked points: 4 dollars and 2 slices, 3 dollars and 4 slices, 2 dollars and 6 slices, and 1 dollar and 8 slices.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="450" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="258" x2="440" y2="258"/><line x1="70" y1="206" x2="440" y2="206"/>
+            <line x1="70" y1="154" x2="440" y2="154"/><line x1="70" y1="102" x2="440" y2="102"/>
+            <line x1="70" y1="50"  x2="440" y2="50"/>
+            <line x1="118" y1="30" x2="118" y2="310"/><line x1="166" y1="30" x2="166" y2="310"/>
+            <line x1="214" y1="30" x2="214" y2="310"/><line x1="262" y1="30" x2="262" y2="310"/>
+            <line x1="310" y1="30" x2="310" y2="310"/><line x1="358" y1="30" x2="358" y2="310"/>
+            <line x1="406" y1="30" x2="406" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="262">$1</text><text x="62" y="210">$2</text>
+            <text x="62" y="158">$3</text><text x="62" y="106">$4</text><text x="62" y="54">$5</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="118" y="328">2</text><text x="166" y="328">4</text>
+            <text x="214" y="328">6</text><text x="262" y="328">8</text><text x="310" y="328">10</text>
+            <text x="358" y="328">12</text><text x="406" y="328">14</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700">price per slice</text>
+          <text x="450" y="350" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">slices per week</text>
+          <line x1="70" y1="50" x2="310" y2="310" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="86" y="64" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700">your buying rule</text>
+          <g fill="#14243A">
+            <circle cx="118" cy="102" r="5.5"/><circle cx="166" cy="154" r="5.5"/>
+            <circle cx="214" cy="206" r="5.5"/><circle cx="262" cy="258" r="5.5"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#14243A" font-weight="700">
+            <text x="128" y="98">($4, 2)</text><text x="176" y="150">($3, 4)</text>
+            <text x="224" y="202">($2, 6)</text><text x="272" y="254">($1, 8)</text>
+          </g>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="prompt">
+          <span class="cue">Read the axes first — they are not what you expect</span>
+          <p>Economics puts <strong>price up the vertical axis</strong> and <strong>quantity across the horizontal axis</strong>. It has done this for a hundred and fifty years and it is not going to stop. Price is the thing you are usually <em>given</em> — so you will constantly be reading from the vertical axis across, exactly like Q3.</p>
+        </div>
+        <div class="readout">
+          $4 → 2 slices &nbsp;·&nbsp; $3 → 4 slices<br>
+          $2 → 6 slices &nbsp;·&nbsp; $1 → 8 slices<br>
+          <span style="color:var(--grey)">four pairs, one line, one rule</span>
+        </div>
+        <p class="serif-note">This is why Part 1 mattered. Nobody hands you a quantity and asks for a price.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14. Q5 PREDICT -->
+  <section class="slide" data-section="Discussion 1 · Along vs Shift">
+    <div class="eyebrow">Commit before you look</div>
+    <h2>Predict</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:860px">
+      <p class="lede">The pizza place drops the price from <strong>$3</strong> to <strong>$2</strong> a slice. You start buying more.</p>
+      <div class="predict">
+        <span class="cue">Question 5 (predict)</span>
+        <p>Where does that show up on the graph? Write one of these two, and say why:<br>
+        <strong>(a)</strong> the dot moves to a different spot <em>on the same line</em>, or<br>
+        <strong>(b)</strong> the whole line moves to a new position.</p>
+      </div>
+      <p class="footnote">Commit to a letter. Do not hedge — you will get to defend it in a moment.</p>
+    </div>
+  </section>
+
+  <!-- 15. Q5 ANIMATION -->
+  <section class="slide" data-section="Discussion 1 · Along vs Shift">
+    <div class="eyebrow">Question 5 · watch the dot, watch the line</div>
+    <h2>Price $3 → $2</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="An animated pizza graph. As the price per slice falls from 3 dollars to 2 dollars, a dot slides down along the unchanged blue line from 4 slices to 6 slices. The line itself never moves.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="450" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="258" x2="440" y2="258"/><line x1="70" y1="206" x2="440" y2="206"/>
+            <line x1="70" y1="154" x2="440" y2="154"/><line x1="70" y1="102" x2="440" y2="102"/>
+            <line x1="70" y1="50"  x2="440" y2="50"/>
+            <line x1="118" y1="30" x2="118" y2="310"/><line x1="166" y1="30" x2="166" y2="310"/>
+            <line x1="214" y1="30" x2="214" y2="310"/><line x1="262" y1="30" x2="262" y2="310"/>
+            <line x1="310" y1="30" x2="310" y2="310"/><line x1="358" y1="30" x2="358" y2="310"/>
+            <line x1="406" y1="30" x2="406" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="262">$1</text><text x="62" y="210">$2</text>
+            <text x="62" y="158">$3</text><text x="62" y="106">$4</text><text x="62" y="54">$5</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="118" y="328">2</text><text x="166" y="328">4</text>
+            <text x="214" y="328">6</text><text x="262" y="328">8</text><text x="310" y="328">10</text>
+            <text x="358" y="328">12</text><text x="406" y="328">14</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700">price per slice</text>
+          <text x="450" y="350" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">slices per week</text>
+          <line x1="70" y1="50" x2="310" y2="310" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="86" y="64" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700">your buying rule — unchanged</text>
+          <!-- start point A, always visible -->
+          <circle cx="166" cy="154" r="5" fill="#14243A"/>
+          <text x="176" y="146" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">A ($3, 4)</text>
+          <!-- travelling guides + dot -->
+          <line id="p5ah" x1="70" y1="154" x2="166" y2="154" stroke="#5A5F66" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="p5av" x1="166" y1="310" x2="166" y2="154" stroke="#5A5F66" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="p5h" x1="70" y1="154" x2="166" y2="154" stroke="#C0392B" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="p5v" x1="166" y1="310" x2="166" y2="154" stroke="#C0392B" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <circle id="p5dot" cx="166" cy="154" r="7" fill="#C0392B" opacity="0"/>
+          <!-- end label -->
+          <text id="p5btxt" x="224" y="198" font-family="monospace" font-size="12" font-weight="700" fill="#C0392B" opacity="0">B ($2, 6)</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="btnrow">
+          <button class="btn" id="p5play">▶ Drop the price</button>
+          <button class="btn ghost" id="p5reset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          price: <span class="big" id="p5p">$3.00</span><br>
+          slices: <span class="big" id="p5q">4.0</span><br>
+          <span id="p5note">Press play and watch the line, not the dot.</span>
+        </div>
+        <button class="btn" data-reveal="q5rev">Reveal · Q5</button>
+        <div class="reveal-hidden" id="q5rev">
+          <div class="reveal">
+            <span class="cue">Reveal · Q5</span>
+            <p><strong>(a) — the dot moves along the same line.</strong> Price has its own axis. So a change in price is just <em>a different height on the axis you already have</em>, and its partner is waiting on the line. Nothing about your buying rule changed: at $3 you still want 4, and you can go back and check. The line never moved.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 16. Q6 PROMPT -->
+  <section class="slide" data-section="Discussion 1 · Along vs Shift">
+    <div class="eyebrow">Question 6 · write yes or no, then why</div>
+    <h2>You get a raise</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:900px;gap:1.1rem">
+      <p class="lede">Your hours at work go up and you have more money each week. Price has <strong>not</strong> changed — pizza is still <strong>$3</strong> a slice. But now you buy <strong>8 slices</strong> instead of 4.</p>
+      <div class="prompt">
+        <span class="cue">Question 6 (write)</span>
+        <p>Look back at the four pairs on your line: ($4, 2) ($3, 4) ($2, 6) ($1, 8).<br>
+        Can <strong>any</strong> point on that existing line show "$3 and 8 slices"? Write <strong>yes</strong> or <strong>no</strong> — and then write the reason in one sentence.</p>
+      </div>
+      <div class="readout" style="max-width:820px">
+        the line already says: &nbsp; $3 → <strong>4</strong> slices<br>
+        the new fact says: &nbsp;&nbsp;&nbsp;&nbsp; $3 → <strong>8</strong> slices
+      </div>
+      <p class="serif-note">Two different partners for the same $3. Both cannot sit on one line. Write your reason before the next slide.</p>
+    </div>
+  </section>
+
+  <!-- 17. Q6 SHIFT REVEAL -->
+  <section class="slide" data-section="Discussion 1 · Along vs Shift">
+    <div class="eyebrow">Question 6 · reveal</div>
+    <h2>The line itself has to move</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="The pizza graph with a shift. The original blue buying line passes through 3 dollars and 4 slices at point A. After the raise, a second red line lies to the right of it, and at the same 3 dollar price the new point B sits at 8 slices. The rule itself moved; the price never changed.">
+          <defs>
+            <marker id="shArrHead" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C0392B"/></marker>
+            <marker id="shAxHead" markerWidth="8" markerHeight="8" refX="5" refY="3" orient="auto"><path d="M0,0 L5,3 L0,6 Z" fill="#5A5F66"/></marker>
+          </defs>
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="450" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="258" x2="440" y2="258"/><line x1="70" y1="206" x2="440" y2="206"/>
+            <line x1="70" y1="154" x2="440" y2="154"/><line x1="70" y1="102" x2="440" y2="102"/>
+            <line x1="70" y1="50"  x2="440" y2="50"/>
+            <line x1="118" y1="30" x2="118" y2="310"/><line x1="166" y1="30" x2="166" y2="310"/>
+            <line x1="214" y1="30" x2="214" y2="310"/><line x1="262" y1="30" x2="262" y2="310"/>
+            <line x1="310" y1="30" x2="310" y2="310"/><line x1="358" y1="30" x2="358" y2="310"/>
+            <line x1="406" y1="30" x2="406" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="262">$1</text><text x="62" y="210">$2</text>
+            <text x="62" y="158">$3</text><text x="62" y="106">$4</text><text x="62" y="54">$5</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="118" y="328">2</text><text x="166" y="328">4</text>
+            <text x="214" y="328">6</text><text x="262" y="328">8</text><text x="310" y="328">10</text>
+            <text x="358" y="328">12</text><text x="406" y="328">14</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700">price per slice</text>
+          <text x="450" y="350" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">slices per week</text>
+          <!-- original rule -->
+          <line x1="70" y1="50" x2="310" y2="310" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="86" y="64" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">old rule</text>
+          <!-- point A guides (always visible) -->
+          <line x1="70" y1="154" x2="166" y2="154" stroke="#14243A" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <line x1="166" y1="310" x2="166" y2="154" stroke="#14243A" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <circle cx="166" cy="154" r="5.5" fill="#14243A"/>
+          <text x="166" y="143" font-family="monospace" font-size="12" font-weight="700" fill="#14243A" text-anchor="middle">A</text>
+          <text x="166" y="345" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="middle">4</text>
+          <!-- revealed: new rule -->
+          <line id="shD2" x1="166" y1="50" x2="406" y2="310" stroke="#C0392B" stroke-width="3" stroke-linecap="round" opacity="0"/>
+          <text id="shD2t" x="184" y="64" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700" opacity="0">new rule</text>
+          <line id="shArrow" x1="142" y1="120" x2="222" y2="120" stroke="#C0392B" stroke-width="2.2" opacity="0" marker-end="url(#shArrHead)"/>
+          <line id="shBhg" x1="166" y1="154" x2="262" y2="154" stroke="#C0392B" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="shBvg" x1="262" y1="310" x2="262" y2="154" stroke="#C0392B" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <circle id="shB" cx="262" cy="154" r="5.5" fill="#C0392B" opacity="0"/>
+          <text id="shBt" x="262" y="143" font-family="monospace" font-size="12" font-weight="700" fill="#C0392B" text-anchor="middle" opacity="0">B</text>
+          <text id="shQ2" x="262" y="345" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700" text-anchor="middle" opacity="0">8</text>
+          <line id="shQarr" x1="172" y1="296" x2="254" y2="296" stroke="#5A5F66" stroke-width="1.4" opacity="0" marker-end="url(#shAxHead)"/>
+          <text id="shPfix" x="434" y="100" font-family="monospace" font-size="11" fill="#5A5F66" font-weight="700" text-anchor="end" opacity="0">the $3 guide never moved</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <button class="btn" data-reveal-svg="pizzashift">▶ Show the shift</button>
+        <div class="readout">
+          A = ($3, <strong>4</strong>) &nbsp;on the old rule<br>
+          B = ($3, <strong>8</strong>) &nbsp;on the new rule<br>
+          <span style="color:var(--grey)">same price · different partner · therefore a different line</span>
+        </div>
+        <button class="btn" data-reveal="q6rev">Reveal the reasoning</button>
+        <div class="reveal-hidden" id="q6rev">
+          <div class="reveal">
+            <span class="cue">Reveal · Q6</span>
+            <p><strong>No — and here is the test.</strong> A line can give each price exactly <em>one</em> partner. The old line already spent $3 on "4 slices." To also say "$3 and 8," you need a <strong>different line</strong>. Notice what did <em>not</em> happen: your income never appeared on either axis, so there was no height to slide to. When the thing that changed has nowhere to sit on the graph, the graph has to move.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 18. THE RULE -->
+  <section class="slide" data-section="Discussion 1 · Along vs Shift">
+    <div class="eyebrow">The punchline of Part 2</div>
+    <h2>One question tells you which it is</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:920px;gap:1.1rem">
+      <div class="prompt" style="font-size:1.2rem">
+        <span class="cue">Run this test every single time</span>
+        <p><strong>Did the thing that changed have its own axis?</strong></p>
+      </div>
+      <div class="two" style="max-width:900px">
+        <div class="model hi">
+          <span class="tag">Yes — it is on an axis</span>
+          <div class="calc" style="font-size:.98rem">
+            you already have a height for it<br>
+            → <strong>slide along the line</strong><br>
+            → the rule is unchanged<br>
+            <span class="lbl">e.g. price fell $3 → $2</span>
+          </div>
+        </div>
+        <div class="model hi">
+          <span class="tag">No — it is nowhere on the graph</span>
+          <div class="calc" style="font-size:.98rem">
+            there is no height to slide to<br>
+            → <strong>the whole line moves</strong><br>
+            → the rule itself changed<br>
+            <span class="lbl">e.g. you got a raise</span>
+          </div>
+        </div>
+      </div>
+      <div class="chain">on an axis? → move ALONG &nbsp;&nbsp;|&nbsp;&nbsp; not on an axis? → the LINE MOVES</div>
+      <p class="serif-note">You do not need to know any economics to run this test. You only need to know what the two axes are labelled — which is why naming the axes is always step one.</p>
+    </div>
+  </section>
+
+  <!-- 19. CONDITION CARDS -->
+  <section class="slide" data-section="Discussion 1 · Along vs Shift">
+    <div class="eyebrow">Practice · commit to all three before revealing any</div>
+    <h2>Along, or move it?</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:70ch">Same pizza graph: <strong>price per slice</strong> up the side, <strong>slices per week</strong> across. For each change, write A (along) or M (the line moves), plus your one-word reason.</p>
+    <div class="condrow">
+
+      <div class="condcard">
+        <div class="ctitle">1 · The price of a slice falls</div>
+        <button type="button" class="cbtn" data-cond="cond1">Reveal</button>
+        <div class="cbody" id="cond1">
+          <svg viewBox="0 0 210 158" role="img" aria-label="A price fall shown as a movement along one unchanged line: a single line with a dot sliding down and to the right along it.">
+            <defs><marker id="mini1" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#C0392B"/></marker></defs>
+            <line x1="26" y1="12" x2="26" y2="140" stroke="#8A8F96" stroke-width="1.1"/>
+            <line x1="26" y1="140" x2="196" y2="140" stroke="#8A8F96" stroke-width="1.1"/>
+            <text x="20" y="18" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">P</text>
+            <text x="196" y="153" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">Q</text>
+            <line x1="36" y1="20" x2="140" y2="140" stroke="#1F4E79" stroke-width="2"/>
+            <text x="138" y="132" font-family="monospace" font-size="8" fill="#1F4E79" font-weight="700" text-anchor="end">one line</text>
+            <circle cx="72" cy="61.5" r="3.2" fill="#14243A"/>
+            <text x="78" y="56" font-family="monospace" font-size="8" font-weight="700" fill="#14243A">A</text>
+            <circle cx="98" cy="91.5" r="3.2" fill="#C0392B"/>
+            <text x="104" y="86" font-family="monospace" font-size="8" font-weight="700" fill="#C0392B">B</text>
+            <line x1="78" y1="68.5" x2="92" y2="84.6" stroke="#C0392B" stroke-width="1.6" marker-end="url(#mini1)"/>
+          </svg>
+          <div class="verdict along">→ movement ALONG the line</div>
+          <p class="cnote"><strong>Price is on an axis.</strong> A lower price is just a lower height on the vertical axis, and the line already has a partner waiting there. The rule never changed.</p>
+        </div>
+      </div>
+
+      <div class="condcard">
+        <div class="ctitle">2 · Your income rises</div>
+        <button type="button" class="cbtn" data-cond="cond2">Reveal</button>
+        <div class="cbody" id="cond2">
+          <svg viewBox="0 0 210 158" role="img" aria-label="An income rise shown as a shift: the whole line moves to the right to a second position, so at the same price the quantity is larger.">
+            <defs><marker id="mini2" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#C0392B"/></marker></defs>
+            <line x1="26" y1="12" x2="26" y2="140" stroke="#8A8F96" stroke-width="1.1"/>
+            <line x1="26" y1="140" x2="196" y2="140" stroke="#8A8F96" stroke-width="1.1"/>
+            <text x="20" y="18" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">P</text>
+            <text x="196" y="153" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">Q</text>
+            <line x1="36" y1="20" x2="140" y2="140" stroke="#1F4E79" stroke-width="2"/>
+            <text x="41" y="19" font-family="monospace" font-size="8" fill="#1F4E79" font-weight="700">old</text>
+            <line x1="86" y1="20" x2="190" y2="140" stroke="#C0392B" stroke-width="2"/>
+            <text x="91" y="19" font-family="monospace" font-size="8" fill="#C0392B" font-weight="700">new</text>
+            <line x1="26" y1="70" x2="129.3" y2="70" stroke="#14243A" stroke-width=".8" stroke-dasharray="3 2"/>
+            <circle cx="79.3" cy="70" r="3.2" fill="#14243A"/>
+            <circle cx="129.3" cy="70" r="3.2" fill="#C0392B"/>
+            <text x="20" y="73" font-family="monospace" font-size="8" fill="#14243A" text-anchor="end">P</text>
+            <line x1="70" y1="52" x2="106" y2="52" stroke="#C0392B" stroke-width="1.6" marker-end="url(#mini2)"/>
+          </svg>
+          <div class="verdict shift">⇒ the whole LINE MOVES</div>
+          <p class="cnote"><strong>Income has no axis.</strong> There is no height on this graph that means "richer," so there is nowhere to slide to. Every price now gets a new partner — the rule itself changed.</p>
+        </div>
+      </div>
+
+      <div class="condcard">
+        <div class="ctitle">3 · Your roommate starts bringing pizza home</div>
+        <button type="button" class="cbtn" data-cond="cond3">Reveal</button>
+        <div class="cbody" id="cond3">
+          <svg viewBox="0 0 210 158" role="img" aria-label="Free pizza at home shown as a shift the other way: the whole line moves to the left to a second position, so at the same price you buy fewer slices yourself.">
+            <defs><marker id="mini3" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#C0392B"/></marker></defs>
+            <line x1="26" y1="12" x2="26" y2="140" stroke="#8A8F96" stroke-width="1.1"/>
+            <line x1="26" y1="140" x2="196" y2="140" stroke="#8A8F96" stroke-width="1.1"/>
+            <text x="20" y="18" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">P</text>
+            <text x="196" y="153" font-family="monospace" font-size="8" fill="#5A5F66" text-anchor="end">Q</text>
+            <line x1="86" y1="20" x2="190" y2="140" stroke="#1F4E79" stroke-width="2"/>
+            <text x="91" y="19" font-family="monospace" font-size="8" fill="#1F4E79" font-weight="700">old</text>
+            <line x1="36" y1="20" x2="140" y2="140" stroke="#C0392B" stroke-width="2"/>
+            <text x="41" y="19" font-family="monospace" font-size="8" fill="#C0392B" font-weight="700">new</text>
+            <line x1="26" y1="70" x2="129.3" y2="70" stroke="#14243A" stroke-width=".8" stroke-dasharray="3 2"/>
+            <circle cx="129.3" cy="70" r="3.2" fill="#14243A"/>
+            <circle cx="79.3" cy="70" r="3.2" fill="#C0392B"/>
+            <text x="20" y="73" font-family="monospace" font-size="8" fill="#14243A" text-anchor="end">P</text>
+            <line x1="107" y1="52" x2="72" y2="52" stroke="#C0392B" stroke-width="1.6" marker-end="url(#mini3)"/>
+          </svg>
+          <div class="verdict shift">&#8658; the whole LINE MOVES</div>
+          <p class="cnote"><strong>Your roommate has no axis.</strong> Free pizza in the kitchen sits nowhere on this graph, so there is nothing to slide to. At every price you now buy fewer slices yourself &mdash; a new line, pointing the other way.</p>
+        </div>
+      </div>
+
+    </div>
+    <p class="footnote" style="margin-top:.9rem">Cards 2 and 3 move the line in <em>opposite</em> directions — and the test never had to know that. It asks one thing: was the change on an axis? <strong>Which way</strong> the line goes is a separate question, and an easier one.</p>
+  </section>
+
+  <!-- ══════════════ PART 3 ══════════════ -->
+
+  <!-- 20. DIVIDER P3 -->
+  <section class="slide divider" data-section="Discussion 1 · Transfer">
+    <div class="eyebrow">Part 3 of 3</div>
+    <h1>Test it</h1>
+    <p class="lede">A skill you can only use on pizza is not a skill. Two checks: catch a bad argument, then survive a graph you have never seen.</p>
+    <div class="sectrail">PAIRS ✓ → ALONG vs SHIFT ✓ → TRANSFER</div>
+    <div class="through">Throughline: a point is a pair. Ask two questions — which pair am I reading, and did the rule change?</div>
+  </section>
+
+  <!-- 21. Q7 DIAGNOSE -->
+  <section class="slide" data-section="Discussion 1 · Transfer">
+    <div class="eyebrow">Question 7 · diagnose · silent poll</div>
+    <h2>Find the flawed sentence</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:72ch">All three sentences are about the pizza graph, where the price fell from $3 to $2 and you went from 4 slices to 6. <strong>All three end up in the right place.</strong> One of them gets there by bad reasoning. Pick a number on your paper.</p>
+    <div>
+      <div class="diag" id="diag7">
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">1</span><span class="s">The price fell from $3 to $2, and reading across from $2 on the vertical axis gives 6 slices instead of 4.</span></button>
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">2</span><span class="s">You ended up buying 6 slices instead of 4, so your buying rule must have changed.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">3</span><span class="s">Both ($3, 4) and ($2, 6) were already sitting on the line before the price ever moved.</span></button>
+      </div>
+      <p class="poll-hint">Students pick a number on paper (or fingers on the chest). Then reveal.</p>
+      <button class="btn" data-diag-reveal="diag7" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem;max-width:900px">
+        <span class="cue">Why sentence 2 fails</span>
+        <p><strong>The conclusion is right and the reasoning is wrong</strong> — which is exactly the dangerous kind. "6 slices" is true; you can read it off the graph. But <em>"your buying rule must have changed"</em> is a claim about the <strong>line</strong>, and you can test it in five seconds. If the rule had changed, then at <strong>$3</strong> you would now want something other than 4 slices. Go look: at $3 the line still says 4. Nothing about it moved.</p>
+        <p style="margin-top:.6rem">Price has its own axis, so a price change never needs a new line — it just sends you to a different height on the line you already have. Sentence 2 gets the right number by moving something that never moved. Do that on Thursday's graph and the number comes out wrong.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 22. Q8 TRANSFER -->
+  <section class="slide" data-section="Discussion 1 · Transfer">
+    <div class="eyebrow">Question 8 · a graph you have never seen</div>
+    <h2>A graph from somebody else&rsquo;s class</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="A study graph. Hours studied runs across the horizontal axis from 0 to 12; exam score runs up the vertical axis from 0 to 100. A blue line shows a score of 40 plus 5 points for every hour studied, and point A marks 2 hours and a score of 50. On the first reveal, point B appears at 6 hours and a score of 70 on that same unchanged line. On the second reveal a red line appears 10 points higher everywhere, and point C marks 6 hours and a score of 80 on the new line, at the same number of hours as B but a different score.">
+          <defs>
+            <marker id="q8ah" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C0392B"/></marker>
+          </defs>
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="450" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="258" x2="440" y2="258"/><line x1="70" y1="206" x2="440" y2="206"/>
+            <line x1="70" y1="154" x2="440" y2="154"/><line x1="70" y1="102" x2="440" y2="102"/>
+            <line x1="70" y1="50"  x2="440" y2="50"/>
+            <line x1="130" y1="30" x2="130" y2="310"/><line x1="190" y1="30" x2="190" y2="310"/>
+            <line x1="250" y1="30" x2="250" y2="310"/><line x1="310" y1="30" x2="310" y2="310"/>
+            <line x1="370" y1="30" x2="370" y2="310"/><line x1="430" y1="30" x2="430" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">0</text><text x="62" y="262">20</text><text x="62" y="210">40</text>
+            <text x="62" y="158">60</text><text x="62" y="106">80</text><text x="62" y="54">100</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="130" y="328">2</text><text x="190" y="328">4</text>
+            <text x="250" y="328">6</text><text x="310" y="328">8</text><text x="370" y="328">10</text>
+            <text x="430" y="328">12</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700">exam score</text>
+          <text x="450" y="350" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">hours studied</text>
+          <!-- the rule you are given -->
+          <line x1="70" y1="206" x2="430" y2="50" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <line x1="86" y1="46" x2="106" y2="46" stroke="#1F4E79" stroke-width="3"/>
+          <text x="112" y="50" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">on 4 hrs of sleep</text>
+          <!-- point A, given -->
+          <line x1="70" y1="180" x2="130" y2="180" stroke="#14243A" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <line x1="130" y1="310" x2="130" y2="180" stroke="#14243A" stroke-width="1.1" stroke-dasharray="4 3"/>
+          <circle cx="130" cy="180" r="5.5" fill="#14243A"/>
+          <text x="138" y="172" font-family="monospace" font-size="13" font-weight="700" fill="#14243A">A</text>
+          <text x="62" y="184" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">50</text>
+          <!-- change 1: along the same line -->
+          <line id="q8bh" x1="70" y1="128" x2="250" y2="128" stroke="#1F4E79" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="q8bv" x1="250" y1="310" x2="250" y2="128" stroke="#1F4E79" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <circle id="q8bdot" cx="250" cy="128" r="5.5" fill="#1F4E79" opacity="0"/>
+          <text id="q8blab" x="258" y="120" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" opacity="0">B</text>
+          <text id="q8by" x="62" y="132" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700" text-anchor="end" opacity="0">70</text>
+          <text id="q8bnote" x="270" y="152" font-family="monospace" font-size="11" fill="#1F4E79" font-weight="700" opacity="0">B is on the same line</text>
+          <!-- change 2: a different line -->
+          <line id="q8new" x1="70" y1="180" x2="370" y2="50" stroke="#C0392B" stroke-width="3" stroke-linecap="round" opacity="0"/>
+          <line id="q8leg2" x1="86" y1="66" x2="106" y2="66" stroke="#C0392B" stroke-width="3" opacity="0"/>
+          <text id="q8leg2t" x="112" y="70" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700" opacity="0">on 8 hrs of sleep</text>
+          <line id="q8ch" x1="70" y1="102" x2="250" y2="102" stroke="#C0392B" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <circle id="q8cdot" cx="250" cy="102" r="5.5" fill="#C0392B" opacity="0"/>
+          <text id="q8clab" x="258" y="95" font-family="monospace" font-size="13" font-weight="700" fill="#C0392B" opacity="0">C</text>
+          <line id="q8bc" x1="250" y1="122" x2="250" y2="108" stroke="#C0392B" stroke-width="1.8" stroke-dasharray="4 3" opacity="0"/>
+          <line id="q8arr" x1="280" y1="113" x2="280" y2="91" stroke="#C0392B" stroke-width="2.2" opacity="0" marker-end="url(#q8ah)"/>
+          <text id="q8cnote" x="270" y="172" font-family="monospace" font-size="11" fill="#C0392B" font-weight="700" opacity="0">C is on a different line</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="prompt">
+          <span class="cue">Question 8 (write, before any button)</span>
+          <p>Nobody has taught you this graph. Use only the two questions. Two things change, one after the other — for each, write <strong>along</strong> or <strong>the line moves</strong>, and name the reason.<br>
+          <strong>Change 1:</strong> you study <strong>6 hours</strong> instead of 2.<br>
+          <strong>Change 2:</strong> you sleep <strong>8 hours</strong> the night before instead of 4, and every amount of studying is now worth 10 more points.</p>
+        </div>
+        <div class="readout">
+          the rule you are handed:<br>
+          <strong>40 points, plus 5 more for every hour you study</strong><br>
+          <span style="color:var(--grey)">A = (2 hours, score 50)</span>
+        </div>
+        <div class="btnrow">
+          <button class="btn" data-reveal-svg="q8along">▶ Change 1</button>
+          <button class="btn" data-reveal-svg="q8shift">▶ Change 2</button>
+          <button class="btn" data-reveal="q8rev">Reveal the reasoning</button>
+        </div>
+        <div class="reveal-hidden" id="q8rev">
+          <div class="reveal">
+            <span class="cue">Reveal · Q8</span>
+            <p><strong>Change 1 — along.</strong> Hours studied has its own axis. Six hours is just a different height on the axis you already have, and the line had a partner waiting there: 70. <strong>B sits on the very same line as A.</strong></p>
+            <p style="margin-top:.6rem"><strong>Change 2 — the line moves.</strong> Sleep is on neither axis. There is no height on this graph that means "rested," so there was nowhere to slide to — and every number of hours now earns a different score, which takes a whole new line.</p>
+            <p style="margin-top:.6rem">The tell is B and C: <strong>same 6 hours, different score.</strong> One value of the horizontal axis cannot have two partners on one line. And you sorted all of that on a graph nobody explained to you.</p>
+          </div>
+        </div>
+        <p class="footnote">Gas, phone bills, pizza, exams. Every graph you meet for the rest of the course answers to the same two questions.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 23. SYNTHESIS -->
+  <section class="slide" data-section="Discussion 1 · Transfer">
+    <div class="eyebrow">Synthesis</div>
+    <h2>Everything today, in two questions</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:940px;gap:1.1rem">
+      <div class="prompt" style="font-size:1.22rem;max-width:900px">
+        <span class="cue">The throughline</span>
+        <p><strong>A point is a pair.</strong> Ask two questions: <strong>which pair am I reading</strong>, and <strong>did the rule change?</strong></p>
+      </div>
+      <div class="two" style="max-width:940px">
+        <div class="model hi">
+          <span class="tag">Question one · which pair?</span>
+          <div class="calc" style="font-size:.98rem">
+            name both axes<br>
+            pick the one you know<br>
+            go to the line, then to the other axis<br>
+            <span class="lbl">works in either direction</span>
+          </div>
+        </div>
+        <div class="model hi">
+          <span class="tag">Question two · did the rule change?</span>
+          <div class="calc" style="font-size:.98rem">
+            was the change on an axis?<br>
+            yes → slide ALONG the line<br>
+            no &nbsp;→ the whole LINE MOVES<br>
+            <span class="lbl">works on graphs you've never seen</span>
+          </div>
+        </div>
+      </div>
+      <div class="chain">name the axes → which pair? → did the rule change?</div>
+      <p class="serif-note">Gas pump, phone bill, pizza, and a study graph you had never seen. Four graphs, one procedure. That is the whole hour.</p>
+    </div>
+  </section>
+
+  <!-- 24. CLOSE -->
+  <section class="slide" data-section="Discussion 1 · Transfer">
+    <div class="eyebrow">Close · on your own paper</div>
+    <h2>Finish the sentence</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:960px;gap:1.3rem">
+      <p class="lede">In your own words — not mine. Hand it to nobody; you are writing it for yourself next week.</p>
+      <div class="blankline">
+        The line itself moves when <span class="bl">&nbsp;</span><br>
+        because <span class="bl">&nbsp;</span>.
+      </div>
+      <p class="serif-note">If your second blank uses the word "axis," you have it.</p>
+      <div class="signature">Pairs ✓ → Along vs Shift ✓ → Transfer ✓</div>
+    </div>
+  </section>
+
+</div>
+
+<div class="chrome">
+  <span class="course" id="sectionLabel">ECON 002 · Discussion 1</span>
+  <span class="navhint">
+    <button id="prevBtn" aria-label="Previous slide">← prev</button>
+    <span aria-live="polite" aria-atomic="true">Slide <span id="cur">1</span> of <span id="tot">24</span></span>
+    <button id="nextBtn" aria-label="Next slide">next →</button>
+  </span>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* the one place the course string lives */
+  const COURSE = 'ECON 002';
+  const DECK_TITLE = 'Reading a Graph';
+  document.title = COURSE + ' · ' + DECK_TITLE;
+  const eyebrow = document.getElementById('titleEyebrow');
+  if(eyebrow) eyebrow.textContent = COURSE + ' · Discussion Section · Week 1';
+
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  const prog=document.getElementById('prog');
+  const cur=document.getElementById('cur');
+  document.getElementById('tot').textContent=slides.length;
+
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    prog.style.width=((i)/(slides.length-1)*100)+'%';
+    cur.textContent=i+1;
+    const sec=slides[i].getAttribute('data-section');
+    const lbl=document.getElementById('sectionLabel');
+    if(lbl) lbl.textContent = sec ? (COURSE+' · '+sec) : (COURSE+' · Discussion');
+  }
+  function next(){show(i+1)}
+  function prev(){show(i-1)}
+
+  document.getElementById('nextBtn').onclick=next;
+  document.getElementById('prevBtn').onclick=prev;
+
+  /* guarded: Space must activate a focused control, not jump the slide */
+  window.addEventListener('keydown',e=>{
+    const t=e.target;
+    const onControl = t && t.closest && t.closest('button,a,input,select,textarea,[tabindex]');
+    if(e.key===' '||e.key==='Spacebar'){
+      if(onControl) return;               /* let the browser click the focused button */
+      e.preventDefault();next();return;
+    }
+    if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();next()}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}
+    else if(e.key.toLowerCase()==='f'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  /* ---- generic click-to-reveal: button[data-reveal="targetId"] ---- */
+  document.querySelectorAll('[data-reveal]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const t=document.getElementById(btn.getAttribute('data-reveal'));
+      if(t){t.classList.add('shown');}
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- generic quick-check polls: button[data-poll-reveal="pollId"] ---- */
+  document.querySelectorAll('[data-poll-reveal]').forEach(btn=>{
+    const group=document.getElementById(btn.getAttribute('data-poll-reveal'));
+    if(!group) return;
+    const opts=[...group.querySelectorAll('.poll-opt')];
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    btn.addEventListener('click',()=>{
+      group.classList.add('revealed');
+      opts.forEach(o=>{ if(o.dataset.correct==='true') o.classList.add('correct'); });
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- generic diagnose (flawed-argument) groups ---- */
+  document.querySelectorAll('.diag').forEach(group=>{
+    const opts=[...group.querySelectorAll('.diag-opt')];
+    const revealBtn=group.parentElement.querySelector('[data-diag-reveal]');
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    if(revealBtn){
+      revealBtn.addEventListener('click',()=>{
+        group.classList.add('revealed');
+        opts.forEach(o=>{if(o.dataset.bad==='true')o.classList.add('bad');});
+        revealBtn.style.display='none';
+        const note=group.parentElement.querySelector('[data-diag-note]');
+        if(note) note.style.display='block';
+      });
+    }
+  });
+
+  /* ---- static shift diagrams: button[data-reveal-svg="key"] ---- */
+  const svgShifts={
+    phone35:['ph35h','ph35v','ph35dot','ph35tick','ph35lab'],
+    pizzashift:['shD2','shD2t','shArrow','shBhg','shBvg','shB','shBt','shQ2','shQarr','shPfix'],
+    q8along:['q8bh','q8bv','q8bdot','q8blab','q8by','q8bnote'],
+    q8shift:['q8new','q8leg2','q8leg2t','q8ch','q8cdot','q8clab','q8bc','q8arr','q8cnote']
+  };
+  document.querySelectorAll('[data-reveal-svg]').forEach(btn=>{
+    const key=btn.getAttribute('data-reveal-svg');
+    btn.addEventListener('click',()=>{
+      (svgShifts[key]||[]).forEach(id=>{const el=document.getElementById(id); if(el) el.setAttribute('opacity',1);});
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- condition cards: button[data-cond="bodyId"] ---- */
+  document.querySelectorAll('[data-cond]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const body=document.getElementById(btn.getAttribute('data-cond'));
+      if(body){body.classList.add('shown');}
+      btn.style.display='none';
+    });
+  });
+
+  const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const DUR = 2600;
+  function ease(p){return p<1 ? (0.5-0.5*Math.cos(Math.PI*p)) : 1;}
+
+  /* =====================================================================
+     Q2 · gas pump · know gallons (8) → up to the line → left to dollars
+     geometry: x = 70 + 30·gallons ; y = 310 − 5.5·dollars
+     ===================================================================== */
+  const g2play=document.getElementById('g2play');
+  if(g2play){
+    const dot=document.getElementById('g2dot'),
+          v=document.getElementById('g2v'), h=document.getElementById('g2h'),
+          start=document.getElementById('g2start'),
+          $d=document.getElementById('g2d'), $note=document.getElementById('g2note'),
+          reset_=document.getElementById('g2reset');
+    const X=310, Y0=310, YLINE=134, XAXIS=70;   /* 8 gallons, $32 */
+    let raf;
+    /* p in [0,1]: first half rises, second half travels left */
+    function place(p){
+      if(p<=0.5){
+        const t=p/0.5, y=Y0-(Y0-YLINE)*t;
+        dot.setAttribute('cx',X); dot.setAttribute('cy',y);
+        v.setAttribute('x1',X); v.setAttribute('x2',X);
+        v.setAttribute('y1',Y0); v.setAttribute('y2',y);
+        h.setAttribute('x1',X); h.setAttribute('x2',X);
+        h.setAttribute('y1',YLINE); h.setAttribute('y2',YLINE);
+        $d.textContent='?';
+        $note.textContent='Rising to the line — the dollars are not known yet.';
+      }else{
+        const t=(p-0.5)/0.5, x=X-(X-XAXIS)*t;
+        dot.setAttribute('cx',x); dot.setAttribute('cy',YLINE);
+        v.setAttribute('x1',X); v.setAttribute('x2',X);
+        v.setAttribute('y1',Y0); v.setAttribute('y2',YLINE);
+        h.setAttribute('x1',X); h.setAttribute('x2',x);
+        h.setAttribute('y1',YLINE); h.setAttribute('y2',YLINE);
+        $d.textContent='$32.00';
+        $note.textContent='On the line — now carry it left to the dollars axis.';
+      }
+    }
+    const shockEls=[dot,v,start];
+    const endEls=[h];
+    function reset(){
+      cancelAnimationFrame(raf);
+      place(0);
+      [...shockEls,...endEls].forEach(e=>e.setAttribute('opacity',0));
+      $d.textContent='?';
+      $note.textContent='Press play. Up to the line first, then left.';
+    }
+    function finish(){
+      place(1);
+      [...shockEls,...endEls].forEach(e=>e.setAttribute('opacity',1));
+      $d.textContent='$32.00';
+      $note.textContent='8 gallons at $4.00 a gallon → $32.00.';
+    }
+    function play(){
+      reset();
+      shockEls.forEach(e=>e.setAttribute('opacity',1));
+      if(REDUCED){finish();return;}
+      const t0=performance.now();
+      function step(now){
+        const p=Math.min(1,(now-t0)/DUR), e=ease(p);
+        place(e);
+        if(e>0.5) endEls.forEach(el=>el.setAttribute('opacity',1));
+        if(p>=1) finish(); else raf=requestAnimationFrame(step);
+      }
+      raf=requestAnimationFrame(step);
+    }
+    g2play.onclick=play; reset_.onclick=reset; reset();
+  }
+
+  /* =====================================================================
+     Q3 · gas pump · know dollars ($28) → right to the line → down to gallons
+     ===================================================================== */
+  const g3play=document.getElementById('g3play');
+  if(g3play){
+    const dot=document.getElementById('g3dot'),
+          h=document.getElementById('g3h'), v=document.getElementById('g3v'),
+          start=document.getElementById('g3start'), xlab=document.getElementById('g3xlab'),
+          $g=document.getElementById('g3g'), $note=document.getElementById('g3note'),
+          reset_=document.getElementById('g3reset');
+    const Y=156, X0=70, XLINE=280, XAXIS=310;   /* $28, 7 gallons */
+    let raf;
+    function place(p){
+      if(p<=0.5){
+        const t=p/0.5, x=X0+(XLINE-X0)*t;
+        dot.setAttribute('cx',x); dot.setAttribute('cy',Y);
+        h.setAttribute('x1',X0); h.setAttribute('x2',x);
+        h.setAttribute('y1',Y);  h.setAttribute('y2',Y);
+        v.setAttribute('x1',XLINE); v.setAttribute('x2',XLINE);
+        v.setAttribute('y1',Y);     v.setAttribute('y2',Y);
+        $g.textContent='?';
+        $note.textContent='Sliding right to the line — the gallons are not known yet.';
+      }else{
+        const t=(p-0.5)/0.5, y=Y+(XAXIS-Y)*t;
+        dot.setAttribute('cx',XLINE); dot.setAttribute('cy',y);
+        h.setAttribute('x1',X0); h.setAttribute('x2',XLINE);
+        h.setAttribute('y1',Y);  h.setAttribute('y2',Y);
+        v.setAttribute('x1',XLINE); v.setAttribute('x2',XLINE);
+        v.setAttribute('y1',Y);     v.setAttribute('y2',y);
+        $g.textContent='7.0';
+        $note.textContent='On the line — now drop down to the gallons axis.';
+      }
+    }
+    const shockEls=[dot,h,start];
+    const endEls=[v,xlab];
+    function reset(){
+      cancelAnimationFrame(raf);
+      place(0);
+      [...shockEls,...endEls].forEach(e=>e.setAttribute('opacity',0));
+      $g.textContent='?';
+      $note.textContent='Press play. Right to the line first, then down.';
+    }
+    function finish(){
+      place(1);
+      [...shockEls,...endEls].forEach(e=>e.setAttribute('opacity',1));
+      $g.textContent='7.0';
+      $note.textContent='$28.00 at $4.00 a gallon → 7 gallons.';
+    }
+    function play(){
+      reset();
+      shockEls.forEach(e=>e.setAttribute('opacity',1));
+      if(REDUCED){finish();return;}
+      const t0=performance.now();
+      function step(now){
+        const p=Math.min(1,(now-t0)/DUR), e=ease(p);
+        place(e);
+        if(e>0.5) endEls.forEach(el=>el.setAttribute('opacity',1));
+        if(p>=1) finish(); else raf=requestAnimationFrame(step);
+      }
+      raf=requestAnimationFrame(step);
+    }
+    g3play.onclick=play; reset_.onclick=reset; reset();
+  }
+
+  /* =====================================================================
+     Q5 · pizza · price $3 → $2, dot slides ALONG the fixed line
+     Q = 10 − 2P ; x = 70 + 24·Q ; y = 310 − 52·P
+     ===================================================================== */
+  const p5play=document.getElementById('p5play');
+  if(p5play){
+    const dot=document.getElementById('p5dot'),
+          h=document.getElementById('p5h'), v=document.getElementById('p5v'),
+          ah=document.getElementById('p5ah'), av=document.getElementById('p5av'),
+          btxt=document.getElementById('p5btxt'),
+          $p=document.getElementById('p5p'), $q=document.getElementById('p5q'),
+          $note=document.getElementById('p5note'), reset_=document.getElementById('p5reset');
+    const xOf=Q=>70+24*Q, yOf=P=>310-52*P;
+    let raf;
+    function place(P){
+      const Q=10-2*P, x=xOf(Q), y=yOf(P);
+      dot.setAttribute('cx',x); dot.setAttribute('cy',y);
+      h.setAttribute('x1',70); h.setAttribute('x2',x);
+      h.setAttribute('y1',y);  h.setAttribute('y2',y);
+      v.setAttribute('x1',x);  v.setAttribute('x2',x);
+      v.setAttribute('y1',310);v.setAttribute('y2',y);
+      $p.textContent='$'+P.toFixed(2);
+      $q.textContent=Q.toFixed(1);
+    }
+    const shockEls=[dot,h,v,ah,av];
+    const endEls=[btxt];
+    function reset(){
+      cancelAnimationFrame(raf);
+      place(3);
+      [...shockEls,...endEls].forEach(e=>e.setAttribute('opacity',0));
+      $note.textContent='Press play and watch the line, not the dot.';
+    }
+    function finish(){
+      place(2);
+      [...shockEls,...endEls].forEach(e=>e.setAttribute('opacity',1));
+      $note.textContent='The dot moved. The line did not.';
+    }
+    function play(){
+      reset();
+      shockEls.forEach(e=>e.setAttribute('opacity',1));
+      $note.textContent='Sliding down the same line …';
+      if(REDUCED){finish();return;}
+      const t0=performance.now();
+      function step(now){
+        const p=Math.min(1,(now-t0)/DUR), e=ease(p);
+        place(3-1*e);
+        if(p>=1) finish(); else raf=requestAnimationFrame(step);
+      }
+      raf=requestAnimationFrame(step);
+    }
+    p5play.onclick=play; reset_.onclick=reset; reset();
+  }
+
+  show(0);
+})();
+</script>
+</body>
+</html>

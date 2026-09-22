@@ -532,8 +532,32 @@ grouped into `<section class="section">` blocks by topic:
 
 | Course   | File                                  |
 |----------|---------------------------------------|
+| ECON 002  | `/classes/econ002/labs/index.html`   |
 | ECON 104A | `/classes/econ104a/labs/index.html`  |
 | ECON 104B | `/classes/econ104b/labs/index.html`  |
+
+**ECON 002 differs from the 104 courses in three ways — match the page you
+are editing, not the template above:**
+
+- Its lab tiles use `<div class="tile-title">` rather than `<h3>`, and
+  absolute hrefs ending in `/index.html` rather than relative
+  trailing-slash paths. Follow the existing page.
+- Sections are grouped by syllabus **unit** (`Unit 1 - Introduction`,
+  `Unit 2 - Supply and Demand`, …), not by topic name.
+- The course hub at `/classes/econ002/index.html` carries large
+  `.choice-card` links, one per kind of resource: Practice Labs
+  (`labs/`), Accessible Lecture Notes (`notes/`) and Dynamic Lecture
+  Slides (`slides/`). It is a router, not a catalogue — do **not** add
+  per-unit cards to it.
+- Per-unit cards go on the matching index, all three of which use the
+  `.deck-card` grid markup borrowed from
+  `/classes/econ002/discussion/index.html`:
+  `notes/index.html` (one card per unit's notes),
+  `slides/index.html` (one card per unit's projection deck, linking to
+  `../notes/unit-NN/deck.html` where the decks live beside their notes),
+  and `discussion/index.html`. Units that are not built yet are
+  `.deck-card.locked` `<div>`s rather than `<a>`s.
+- Lab tiles still go on `labs/index.html` in its own `.tile` markup.
 
 **Every time a new lab is created, add a tile for it to the matching
 course's labs homepage in the same pass.** Do not leave this for later.

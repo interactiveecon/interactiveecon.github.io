@@ -1,0 +1,1804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECON 002 · What GDP Actually Counts</title>
+<style>
+  :root{
+    --ink:#14243A;          /* near-navy ink */
+    --accent:#1F4E79;       /* deep blue (from worksheets) */
+    --accent-soft:#8FAADC;
+    --paper:#F6F4EE;        /* warm chalk-paper */
+    --paper-line:#E4E0D5;
+    --gold:#8A5900;
+    --gold-soft:#FBF1DC;
+    --red:#C0392B;
+    --grey:#5A5F66;
+    --chalk:#FbFaF7;
+    --shadow:0 8px 30px rgba(20,36,58,.10);
+    --mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Georgia','Iowan Old Style',serif;
+    color:var(--ink);
+    background:var(--paper);
+    overflow:hidden;
+  }
+  /* ---------- deck scaffold ---------- */
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;
+    padding:clamp(1.25rem,4vw,4.5rem) clamp(1.5rem,6vw,6rem);
+    /* extra bottom room so content never hides behind the fixed nav bar (~46px) */
+    padding-bottom:calc(46px + clamp(1rem,3vw,2rem));
+    /* if a slide is taller than the screen, scroll it instead of clipping/overlapping */
+    overflow-y:auto;overflow-x:hidden;
+    scroll-padding-bottom:46px;
+    opacity:0;
+    transition:opacity .38s ease;
+  }
+  .slide.active{display:flex;opacity:1;animation:rise .45s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide.active{animation:none}
+    .slide{transition:none}
+    *{transition-duration:.001ms !important;animation-duration:.001ms !important}
+  }
+  /* visible keyboard focus (WCAG 2.4.7) */
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+    outline:3px solid var(--accent);outline-offset:3px;border-radius:6px;
+  }
+  :focus:not(:focus-visible){outline:none}
+  /* ---------- typography ---------- */
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--grey);margin-bottom:1.1rem;font-weight:600;
+  }
+  h1{font-size:clamp(2.4rem,5.5vw,4.4rem);line-height:1.02;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3.2vw,2.4rem);line-height:1.1;font-weight:700;letter-spacing:-.01em;margin-bottom:.4rem}
+  .lede{font-size:clamp(1.05rem,1.7vw,1.35rem);line-height:1.5;color:var(--ink);max-width:52ch}
+  .muted{color:var(--grey)}
+  .serif-note{font-style:italic;color:var(--grey);font-size:1rem;line-height:1.5}
+  strong{font-weight:700}
+  .accent{color:var(--accent)}
+  .red{color:var(--red)}
+  .gold{color:var(--gold)}
+  /* title rule */
+  h2 + .titlerule{height:2px;background:linear-gradient(90deg,var(--accent-soft),transparent);
+    width:min(100%,640px);margin:.2rem 0 1.4rem}
+  /* ---------- model cards ---------- */
+  .models{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin:1.4rem 0;max-width:900px}
+  .model{
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;
+    padding:1.4rem 1.6rem;box-shadow:var(--shadow);position:relative;
+  }
+  .model .tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:.6rem;display:block}
+  .model .eq{font-family:var(--mono);font-size:1.35rem;color:var(--ink)}
+  .model .eq .coef{color:var(--red);font-weight:700}
+  .model.dim{opacity:.4;filter:saturate(.4)}
+  .model.hi{border-color:var(--accent);box-shadow:0 8px 30px rgba(31,78,121,.22)}
+  .model .body{font-size:1rem;line-height:1.5;margin-top:.7rem}
+  .model.warm{background:var(--gold-soft);border-color:#E2CFA4}
+  .model.warm .tag{color:var(--gold)}
+  /* ---------- boxes ---------- */
+  .prompt,.reveal,.predict{
+    border-radius:10px;padding:1.05rem 1.3rem;max-width:820px;line-height:1.5;
+    font-family:'Georgia',serif;font-size:1.08rem;
+  }
+  .prompt{background:#EEF3FA;border-left:4px solid var(--accent)}
+  .reveal{background:var(--gold-soft);border-left:4px solid var(--gold)}
+  .cue{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;display:block;margin-bottom:.4rem}
+  .prompt .cue{color:var(--accent)}
+  .reveal .cue{color:var(--gold)}
+  .predict .cue{color:var(--red)}
+  .predict{background:#FBEEEC;border-left:4px solid var(--red)}
+  .prompt p,.reveal p,.predict p{margin:0;line-height:1.5}
+  .prompt .cue + p,.reveal .cue + p,.predict .cue + p{margin-top:.15rem}
+  .prompt ol,.predict ol,.reveal ol{margin:.5rem 0 0 1.3rem;line-height:1.6}
+  .prompt li,.predict li,.reveal li{margin-bottom:.25rem}
+  /* chain / mono line */
+  .chain{
+    font-family:var(--mono);background:#EDF1F8;border:1px solid var(--accent-soft);
+    border-radius:8px;padding:.7rem 1rem;font-size:1.05rem;color:var(--accent);
+    display:inline-block;margin-top:.4rem
+  }
+  .chain.warm{background:var(--gold-soft);border-color:#E2CFA4;color:var(--gold)}
+  /* ---------- interactive graph panel ---------- */
+  .graphwrap{display:grid;grid-template-columns:1.15fr .85fr;gap:2rem;align-items:center;margin-top:.6rem;flex:1 0 auto}
+  @media (max-width:900px){.graphwrap{grid-template-columns:1fr}}
+  .panel{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;padding:1.2rem;box-shadow:var(--shadow)}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .controls{display:flex;flex-direction:column;gap:1.3rem}
+  .readout{font-family:var(--mono);font-size:.92rem;line-height:1.7;color:var(--ink);background:#EDF1F8;border-radius:8px;padding:.8rem 1rem}
+  .readout .big{font-size:1.25rem;color:var(--accent);font-weight:700}
+  .readout .lbl2{color:var(--grey)}
+  .btn{
+    font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.7rem 1.2rem;cursor:pointer;
+    box-shadow:0 3px 10px rgba(31,78,121,.3);transition:transform .1s,background .2s;align-self:flex-start
+  }
+  .btn:hover{background:#173a5c;transform:translateY(-1px)}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
+  .btn.ghost:hover{background:#EEF3FA}
+  .btnrow{display:flex;gap:.7rem;flex-wrap:wrap}
+  /* ---------- poll ---------- */
+  .poll-opts{display:flex;flex-direction:column;gap:.8rem;max-width:860px;margin-top:1.1rem}
+  .poll-opt{
+    display:flex;align-items:stretch;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;
+    cursor:pointer;background:var(--chalk);transition:border-color .2s,transform .08s;position:relative;
+    width:100%;text-align:left;font:inherit;color:inherit;padding:0
+  }
+  .poll-opt:hover{border-color:var(--accent-soft)}
+  .poll-opt:active{transform:scale(.995)}
+  .poll-opt .num{background:var(--accent);color:#fff;font-family:var(--mono);font-weight:700;
+    display:flex;align-items:center;justify-content:center;padding:0 1.1rem;font-size:1.1rem;z-index:2}
+  .poll-opt .txt{padding:.9rem 1.1rem;line-height:1.4;z-index:2;font-size:1.02rem;font-family:'Georgia',serif}
+  .poll.revealed .poll-opt{opacity:.5;transition:opacity .4s}
+  .poll.revealed .poll-opt.correct{opacity:1;border-color:var(--gold);background:var(--gold-soft)}
+  .poll-opt.correct .num{background:var(--gold)}
+  .poll-opt.correct .txt::after{content:" ✓ correct";color:var(--gold);font-family:var(--mono);font-weight:700;font-size:.82rem}
+  .poll-hint{font-family:var(--mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-top:.9rem;font-weight:600}
+  /* ---------- footer / nav ---------- */
+  .chrome{position:fixed;bottom:0;left:0;right:0;height:46px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 1.4rem;font-family:var(--mono);font-size:.72rem;
+    letter-spacing:.08em;color:var(--grey);pointer-events:none;z-index:50}
+  .chrome .course{text-transform:uppercase}
+  .progress-track{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:60}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-soft));width:0;transition:width .35s ease}
+  .navhint{display:flex;gap:1.2rem;align-items:center;pointer-events:auto}
+  .navhint button{pointer-events:auto;background:none;border:none;color:var(--grey);cursor:pointer;font-family:var(--mono);font-size:.9rem;padding:.2rem .5rem;border-radius:5px}
+  .navhint button:hover{color:var(--accent);background:rgba(31,78,121,.08)}
+  .kbd{font-family:var(--mono);font-size:.66rem;border:1px solid var(--paper-line);border-radius:4px;padding:.1rem .35rem;color:var(--grey)}
+  /* content column helper */
+  .col{display:flex;flex-direction:column;gap:1.1rem;flex:1 0 auto;justify-content:center}
+  .grow{flex:1 0 auto}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+  @media (max-width:900px){.two{grid-template-columns:1fr}}
+  .calc{font-family:var(--mono);font-size:1.05rem;line-height:1.8}
+  .calc .lbl{color:var(--accent);font-weight:700}
+  .footnote{font-size:.92rem;color:var(--grey);font-style:italic}
+  .runsheet{display:grid;grid-template-columns:auto 1fr;gap:.35rem 1.1rem;font-family:var(--mono);font-size:.86rem;line-height:1.5;margin-top:.4rem}
+  .runsheet .rk{color:var(--accent);font-weight:700;white-space:nowrap}
+  /* title slide special */
+  .title-slide{justify-content:safe center}
+  .title-slide h1{margin:.6rem 0}
+  .signature{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:2rem}
+  /* ---------- section divider ---------- */
+  .divider{justify-content:safe center;background:linear-gradient(135deg,#1B3B5C,#14243A)}
+  .divider *{color:#F6F4EE}
+  .divider .eyebrow{color:#8FAADC}
+  .divider h1{font-size:clamp(2.2rem,5vw,4rem);color:#fff}
+  .divider .lede{color:#D6DEE9;max-width:52ch}
+  .divider .sectrail{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#8FAADC;margin-top:1.6rem}
+  .divider .through{font-family:var(--mono);font-size:.8rem;line-height:1.6;color:#D6DEE9;
+    border-left:3px solid #8FAADC;padding-left:.9rem;margin-top:1.4rem;max-width:60ch}
+  /* ---------- generic click-reveal ---------- */
+  .reveal-hidden{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .reveal-hidden.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* cell-level hide: keeps the table's layout, but the value is neither seen
+     nor read out by a screen reader until the TA presses the reveal button */
+  .hid{visibility:hidden}
+  .hid.shown{visibility:visible}
+  /* condition cards (3-across; override grid-template-columns for 2) */
+  .condrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem}
+  @media (max-width:900px){.condrow{grid-template-columns:1fr !important}}
+  .condcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.5rem}
+  .condcard .ctitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .condcard .cbtn{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:.55rem .8rem;cursor:pointer;align-self:flex-start}
+  .condcard .cbtn:hover{background:#173a5c}
+  .condcard .cbody{opacity:0;max-height:0;overflow:hidden;transition:opacity .35s,max-height .45s}
+  .condcard .cbody.shown{opacity:1;max-height:none;overflow:visible;margin-top:.3rem}
+  .condcard .cnote{font-size:.95rem;line-height:1.5;color:var(--ink)}
+  .condcard ul{margin:.2rem 0 0 1.1rem;font-size:.95rem;line-height:1.55}
+  .condcard li{margin-bottom:.3rem}
+  .condcard .big{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--accent)}
+  .condcard.warm{background:var(--gold-soft);border-color:#E2CFA4}
+  .condcard.warm .ctitle,.condcard.warm .big{color:var(--gold)}
+  /* diagnose (numbered flawed-argument) list */
+  .diag{display:flex;flex-direction:column;gap:.7rem;max-width:920px;margin:1rem 0}
+  .diag-opt{display:flex;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;background:var(--chalk);width:100%;text-align:left;font:inherit;color:inherit;padding:0;cursor:pointer;transition:border-color .2s}
+  .diag-opt:hover{border-color:var(--accent-soft)}
+  .diag-opt .n{background:var(--grey);color:#fff;font-family:var(--mono);font-weight:700;display:flex;align-items:center;padding:0 1rem;font-size:1.05rem}
+  .diag-opt .s{padding:.85rem 1.1rem;line-height:1.45;font-family:'Georgia',serif;font-size:1.02rem}
+  .diag.revealed .diag-opt{opacity:.5}
+  .diag.revealed .diag-opt.bad{opacity:1;border-color:var(--red);background:#FBEEEC}
+  .diag-opt.bad .n{background:var(--red)}
+  .diag.revealed .diag-opt.bad .s::after{content:" ✗ the flaw";color:var(--red);font-family:var(--mono);font-weight:700;font-size:.8rem}
+  /* fill-in-the-blank close line */
+  .blankline{font-family:var(--mono);font-size:clamp(1.1rem,2.4vw,1.7rem);line-height:2;color:var(--ink);
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1.4rem 1.6rem;
+    box-shadow:var(--shadow);max-width:900px}
+  .blankline .bl{display:inline-block;min-width:9ch;border-bottom:2px solid var(--accent)}
+  /* ---------- data tables ---------- */
+  .sched{border-collapse:collapse;font-family:var(--mono);font-size:.86rem;background:var(--chalk);
+    border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+  .sched caption{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;color:var(--accent);text-align:left;padding:.5rem .8rem .35rem}
+  .sched th,.sched td{padding:.3rem .8rem;text-align:right;border-bottom:1px solid var(--paper-line)}
+  .sched th{color:var(--grey);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.66rem}
+  .sched td:first-child,.sched th:first-child{text-align:left;color:var(--accent);font-weight:700}
+  .sched tbody tr:last-child td{border-bottom:none}
+  .sched tr.tot td{border-top:2px solid var(--paper-line);font-weight:700;color:var(--gold)}
+  .sched tr.tot td:first-child{color:var(--gold)}
+  .sched.gold{background:var(--gold-soft)}
+  .sched.gold caption,.sched.gold td:first-child{color:var(--gold)}
+  .sched.txt td{text-align:left}
+  .sched.txt td:first-child{white-space:nowrap}
+  .sched .yes{color:var(--gold);font-weight:700}
+  .sched .no{color:var(--red);font-weight:700}
+  .sched .foreign{color:var(--red)}
+  .schedrow{display:flex;gap:1.4rem;flex-wrap:wrap;align-items:flex-start}
+  .sched tr.hl td{background:var(--gold-soft);color:var(--gold);font-weight:700}
+  .sched tr.hl td:first-child{color:var(--gold)}
+  .sched tr{transition:background .18s}
+  /* ---------- two-card takeaway ---------- */
+  .pair2{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin-top:.8rem}
+  @media (max-width:900px){.pair2{grid-template-columns:1fr}}
+  .pcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;
+    padding:1.2rem 1.3rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.7rem}
+  .pcard .ptag{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .pcard.warn .ptag{color:var(--red)}
+  .pcard .verdictbig{font-family:var(--mono);font-size:1rem;font-weight:700;line-height:1.5;color:var(--accent)}
+  .pcard.warn .verdictbig{color:var(--red)}
+  .pcard p{font-size:1rem;line-height:1.5}
+  /* ---------- reflow at 320px (WCAG 1.4.10) ---------- */
+  @media (max-width:700px){
+    .models{grid-template-columns:1fr}
+    .chain{max-width:100%;overflow-wrap:anywhere}
+    .sched{font-size:.76rem}
+    .sched th,.sched td{padding:.25rem .45rem}
+    .schedrow{gap:.9rem}
+    /* a wide table scrolls inside its own box rather than widening the slide */
+    .sched{display:block;overflow-x:auto;max-width:100%}
+    .col,.two > *,.graphwrap > *,.condrow > *,.pair2 > *{min-width:0}
+  }
+</style>
+</head>
+<body>
+<div class="progress-track"><div class="progress-fill" id="prog"></div></div>
+<div class="deck" id="deck">
+
+  <!-- ═══════════ 1. TITLE ═══════════ -->
+  <section class="slide active title-slide" data-section="Discussion 4 · Opening">
+    <div class="eyebrow" id="titleEyebrow">ECON 002 · Discussion Section</div>
+    <h1>What GDP<br><span class="accent">actually counts</span></h1>
+    <p class="lede" style="margin-top:1rem">One number stands for everything an economy made in a year. Today we take it apart: what gets in, what does not, why prices show up at all &mdash; and why the bikes nobody bought still count.</p>
+    <p class="serif-note" style="margin-top:1.6rem">Work on your own paper. Write before each reveal &mdash; the point is your reasoning, not a clean final answer.</p>
+    <div class="signature">What counts &rarr; Prices &rarr; Inventories &rarr; Three views</div>
+  </section>
+
+  <!-- ═══════════ 2. FOR THE TA ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Opening">
+    <div class="eyebrow">For the TA</div>
+    <h2>How to run this deck</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1150px">
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <p class="lede" style="max-width:58ch"><strong>Write first, reveal second.</strong> Every question gets <strong>1&ndash;2 minutes of silent writing</strong> before you press a button. Nothing reveals itself &mdash; no answer and no filled-in table is on screen when a slide loads.</p>
+        <p class="lede" style="max-width:58ch"><strong>This deck is deliberately unbalanced.</strong> Parts 2 and 3 <em>are</em> the discussion. Part 1 clears ground and Part 4&rsquo;s definitions can be read briskly. If you run long, compress Part 1 to the definition and its reveal, drop the GNP poll, and trim the growth-rate slide &mdash; never the &ldquo;prices rose, nothing was produced&rdquo; pair, never the bicycle sequence, never the two routes in Part 4.</p>
+        <p class="lede" style="max-width:58ch"><strong>Diagnose slides are silent polls.</strong> Numbered sentences, one subtly flawed. Fingers on the chest, not hands in the air &mdash; then reveal. The point is always <em>why the reasoning fails</em>, not that the conclusion is wrong.</p>
+        <div class="prompt">
+          <span class="cue">The throughline &middot; say it out loud at each divider</span>
+          <p>GDP is a measure of <strong>production</strong>. Prices, sales, spending and income are all <strong>machinery</strong> for getting at production, which we cannot observe directly.</p>
+        </div>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="predict">
+          <span class="cue">Protect these three payoffs</span>
+          <p><strong>Q5 (prices rise, nothing extra is made).</strong> Measured GDP climbs 12% with not one additional cup or laptop. Sit on it. Every fix that follows exists because of this failure.</p>
+          <p style="margin-top:.6rem"><strong>Q9 and Q10 (the bicycles).</strong> Same production, 4,000, under two completely different sales figures. Once students see that sales overstate in one year and understate in the next, the change in inventories stops being a bookkeeping oddity and becomes the hinge of the whole expenditure approach.</p>
+          <p style="margin-top:.6rem"><strong>Q11 and Q12 (the two routes).</strong> Subtracting imports is not a penalty on trade. This economy runs a trade deficit of 50 and still produces 1,000.</p>
+        </div>
+        <div>
+          <div style="font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);font-weight:700;margin-bottom:.2rem">Timing budget &middot; 75 minutes</div>
+          <div class="runsheet">
+            <span class="rk">Part 1</span><span>What counts (Q1&ndash;Q3) &mdash; <strong>10 min</strong></span>
+            <span class="rk">Part 2</span><span>Prices (Q4&ndash;Q7) &mdash; <strong>25 min</strong></span>
+            <span class="rk">Part 3</span><span>Inventories (Q8&ndash;Q10) &mdash; <strong>20 min</strong></span>
+            <span class="rk">Part 4</span><span>Three views (Q11&ndash;Q12) &mdash; <strong>17 min</strong></span>
+            <span class="rk">Close</span><span>One written line &mdash; <strong>3 min</strong></span>
+          </div>
+        </div>
+        <p class="footnote">Navigation: <span class="kbd">&rarr;</span> <span class="kbd">space</span> next &middot; <span class="kbd">&larr;</span> back &middot; <span class="kbd">F</span> fullscreen. Questions run Q1&ndash;Q12 continuously; students number them on their own paper. The two animations have a <strong>Play</strong> and a <strong>Reset</strong> &mdash; you can run them twice.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 1 · WHAT COUNTS ══════════════ -->
+
+  <!-- ═══════════ 3. DIVIDER P1 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 4 · What Counts">
+    <div class="eyebrow">Part 1 of 4</div>
+    <h1>What are we<br>even counting?</h1>
+    <p class="lede">Before any arithmetic: a definition with three moving parts, and four transactions that will sort themselves onto opposite sides of it.</p>
+    <div class="sectrail">WHAT COUNTS &rarr; PRICES &rarr; INVENTORIES &rarr; THREE VIEWS</div>
+    <div class="through">Throughline: GDP is a measure of production. Prices, sales, spending and income are all machinery for getting at production, which we cannot observe directly.</div>
+  </section>
+
+  <!-- ═══════════ 4. Q1 · the definition, unpacked ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · What Counts">
+    <div class="eyebrow">Question 1 &middot; write before you turn the page &middot; no reveal on this slide</div>
+    <h2>Three words are doing all the work</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <p class="lede" style="max-width:88ch"><strong>Gross Domestic Product</strong> is the total market value of all <strong class="accent">final</strong> goods and services produced <strong class="accent">within a given period</strong> by factors of production <strong class="accent">located within a country</strong>.</p>
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">Final</div>
+          <div class="cnote">Produced for use, not for resale by another firm. A good bought by a firm to make something else is an <strong>intermediate</strong> good.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Within a given period</div>
+          <div class="cnote">A year, a quarter. GDP is a <strong>flow</strong> over an interval, never a stock at a moment.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Located within a country</div>
+          <div class="cnote">Where the production physically happens. Not who owns the factory, not who holds the passport.</div>
+        </div>
+      </div>
+      <div class="prompt">
+        <span class="cue">Q1 &middot; commit on paper</span>
+        <p>Four things happen this year. Write down which ones belong in <strong>this year&rsquo;s</strong> GDP, and beside each a few words for why.</p>
+        <ol>
+          <li>Ana sells her 2019 Civic to Ben for <strong>$9,000</strong>.</li>
+          <li>Ben buys <strong>100 shares</strong> of stock for $4,000.</li>
+          <li>Priya buys a <strong>new bicycle</strong> for $600.</li>
+          <li>The used-car dealer takes a <strong>$500 commission</strong> for handling Ana&rsquo;s sale.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 5. Q1 REVEAL ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · What Counts">
+    <div class="eyebrow">Reveal &middot; Q1</div>
+    <h2>Ask one question: was something produced this year?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1100px">
+      <table class="sched txt">
+        <caption>Q1 &mdash; which transactions enter this year&rsquo;s GDP</caption>
+        <thead>
+          <tr><th scope="col">Transaction</th><th scope="col">In GDP?</th><th scope="col">Why</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Used Civic, $9,000</td><td><span class="hid no" id="q1a">&#10007; No</span></td><td><span class="hid" id="q1b">Counted in 2019, when it was built. Counting it now is double counting.</span></td></tr>
+          <tr><td>100 shares, $4,000</td><td><span class="hid no" id="q1c">&#10007; No</span></td><td><span class="hid" id="q1d">Paper changing hands. No new good, no new service.</span></td></tr>
+          <tr><td>New bicycle, $600</td><td><span class="hid yes" id="q1e">&#10003; Yes</span></td><td><span class="hid" id="q1f">A final good, produced this year, sold to its user.</span></td></tr>
+          <tr><td>Dealer&rsquo;s commission, $500</td><td><span class="hid yes" id="q1g">&#10003; Yes</span></td><td><span class="hid" id="q1h">The <strong>service</strong> of arranging the sale was produced this year.</span></td></tr>
+        </tbody>
+      </table>
+      <button class="btn" data-reveal="q1a,q1b,q1c,q1d,q1e,q1f,q1g,q1h,q1note">Reveal the four verdicts</button>
+      <div class="reveal-hidden" id="q1note">
+        <div class="reveal" style="max-width:96ch">
+          <span class="cue">Reveal &middot; the trap, and why it is a trap</span>
+          <p>Transactions 1 and 4 are <strong>the same sale</strong>, and they land on opposite sides. The car itself was produced in 2019 and is already inside 2019&rsquo;s GDP; moving it from Ana to Ben adds no production to this year. But the dealer&rsquo;s $500 buys something that did not exist last week &mdash; the work of finding a buyer, checking the title, writing the contract. <strong>That service was produced this year, so it counts.</strong></p>
+          <p style="margin-top:.7rem">Same logic on the stock. The $4,000 is not payment for output; it is a claim changing hands. But if Ben paid a broker $30, <em>that</em> $30 is in GDP. The rule is never &ldquo;did money move.&rdquo; It is always: <strong>was something produced, this year, that was not there before?</strong></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 6. Q2 QUICK CHECK · intermediate vs final ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · What Counts">
+    <div class="eyebrow">Question 2 &middot; quick check &middot; commit before the reveal</div>
+    <h2>A sack of flour</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:86ch">The mill sells a 50&nbsp;lb sack of flour to a bakery. It sells an identical sack to you, for your kitchen. Pick the sentence that gets the classification right.</p>
+    <div>
+      <div class="poll" id="poll2">
+        <div class="poll-opts">
+          <button type="button" class="poll-opt" data-correct="false"><span class="num">1</span><span class="txt">Flour is an intermediate good, so neither sack belongs in GDP.</span></button>
+          <button type="button" class="poll-opt" data-correct="true"><span class="num">2</span><span class="txt">The sack sold to the bakery is intermediate; the sack sold to you is final. What decides it is the <strong>use</strong>, not the good.</span></button>
+          <button type="button" class="poll-opt" data-correct="false"><span class="num">3</span><span class="txt">Both sacks are final goods, because in both cases someone paid full price for finished flour.</span></button>
+        </div>
+        <p class="poll-hint">Students commit on paper (or a show of fingers). Then reveal.</p>
+      </div>
+      <button class="btn" data-poll-reveal="poll2" data-reveal="q2note" style="margin-top:.4rem">Reveal the answer</button>
+      <div class="reveal-hidden" id="q2note">
+        <div class="reveal" style="max-width:96ch">
+          <span class="cue">Reveal &middot; Q2</span>
+          <p><strong>Sentence 2.</strong> &ldquo;Intermediate&rdquo; is not a property of flour. It is a description of what happens next. The bakery&rsquo;s sack is going to reappear inside the price of a loaf, so counting it now would count that flour twice. Your sack reappears in nothing &mdash; it ends its life in your kitchen &mdash; so this is the only chance to count it.</p>
+          <p style="margin-top:.7rem">The same physical object, the same price, two different answers. Whenever you are asked &ldquo;is this final?&rdquo; the honest reply is a question back: <strong>final for whom, and what happens to it next?</strong></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 7. GDP vs GNP + Q3 ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · What Counts">
+    <div class="eyebrow">Question 3 &middot; poll &middot; then we move on</div>
+    <h2>Where it happens, or whose it is</h2>
+    <div class="titlerule"></div>
+    <div class="models" style="max-width:1000px;margin:.6rem 0 1rem">
+      <div class="model hi">
+        <span class="tag">GDP &middot; a place</span>
+        <div class="eq" style="font-size:1.05rem">produced <strong>inside the borders</strong></div>
+        <div class="body">Everything made on U.S. soil, whoever owns the plant and whoever works in it.</div>
+      </div>
+      <div class="model">
+        <span class="tag">GNP &middot; a nationality</span>
+        <div class="eq" style="font-size:1.05rem">produced by <strong>the nation&rsquo;s factors</strong></div>
+        <div class="body">Everything made by the country&rsquo;s own factors of production, wherever on earth they happen to be standing.</div>
+      </div>
+    </div>
+    <div class="chain">GNP = GDP + factor payments received from abroad &minus; factor payments made abroad</div>
+    <div style="margin-top:1.2rem">
+      <div class="poll" id="poll3">
+        <div class="poll-opts">
+          <button type="button" class="poll-opt" data-correct="true"><span class="num">1</span><span class="txt">The Honda plant in Ohio is in U.S. <strong>GDP</strong> but not U.S. GNP. The American teaching English in Seoul is in U.S. <strong>GNP</strong> but not U.S. GDP.</span></button>
+          <button type="button" class="poll-opt" data-correct="false"><span class="num">2</span><span class="txt">The Honda plant is in U.S. GNP but not GDP; the teacher in Seoul is in U.S. GDP but not GNP.</span></button>
+          <button type="button" class="poll-opt" data-correct="false"><span class="num">3</span><span class="txt">Both are in both, since an American is involved in each case.</span></button>
+        </div>
+        <p class="poll-hint">Students commit on paper (or a show of fingers). Then reveal.</p>
+      </div>
+      <button class="btn" data-poll-reveal="poll3" data-reveal="q3note" style="margin-top:.4rem">Reveal the answer</button>
+      <div class="reveal-hidden" id="q3note">
+        <div class="reveal" style="max-width:96ch">
+          <span class="cue">Reveal &middot; Q3</span>
+          <p><strong>Sentence 1.</strong> The cars are built in Ohio, so that production happened <em>here</em> &mdash; U.S. GDP. The profits flow to Japanese owners, so they are a factor payment made abroad and drop out of U.S. GNP. The teacher&rsquo;s lessons are produced <em>in Korea</em>, so they are Korean GDP; the wages come home to an American factor, so they are U.S. GNP.</p>
+          <p style="margin-top:.7rem"><strong>GDP asks where. GNP asks whose.</strong> For the United States the gap between them is small &mdash; well under one percent of the total &mdash; which is why every model in this course, and everything after today, uses GDP.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 2 · PRICES ══════════════ -->
+
+  <!-- ═══════════ 8. DIVIDER P2 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 4 · Prices">
+    <div class="eyebrow">Part 2 of 4</div>
+    <h1>Why prices?<br>Why <span style="color:#8FAADC">fixed</span> prices?</h1>
+    <p class="lede">Prices are not what GDP is about. They are how we add a cup of coffee to a laptop. And once you see why they are there, you can see why they have to be held still.</p>
+    <div class="sectrail">WHAT COUNTS &#10003; &rarr; PRICES &rarr; INVENTORIES &rarr; THREE VIEWS</div>
+    <div class="through">Throughline: GDP is a measure of production. Prices, sales, spending and income are all machinery for getting at production, which we cannot observe directly.</div>
+  </section>
+
+  <!-- ═══════════ 9. ONE GOOD · no prices needed ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Prices">
+    <div class="eyebrow">Setup &middot; no question yet</div>
+    <h2>An economy that makes one thing</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:88ch">Three roasters, one product: cups of coffee, sold by the day. How much did this economy produce?</p>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 520 265" role="img" aria-label="Three coffee roasters and their daily production, drawn as horizontal bars. Bell Tower Roasting makes 200 cups, Second Street Coffee makes 120 cups, and Kettle and Company makes 80 cups. A fourth, longer bar shows the economy's total of 400 cups, which is simply the three bars laid end to end. No prices appear anywhere in the picture.">
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="124" y="58">Bell Tower</text>
+            <text x="124" y="103">Second Street</text>
+            <text x="124" y="148">Kettle &amp; Co</text>
+          </g>
+          <rect x="130" y="40" width="150" height="26" rx="3" fill="#1F4E79"/>
+          <rect x="130" y="85" width="90"  height="26" rx="3" fill="#1F4E79"/>
+          <rect x="130" y="130" width="60" height="26" rx="3" fill="#1F4E79"/>
+          <g font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79">
+            <text x="290" y="59">200</text>
+            <text x="230" y="104">120</text>
+            <text x="200" y="149">80</text>
+          </g>
+          <rect id="r9k0" x="126" y="36"  width="230" height="34" rx="6" fill="none" stroke="#8A5900" stroke-width="2.5" opacity="0"/>
+          <rect id="r9k1" x="126" y="81"  width="170" height="34" rx="6" fill="none" stroke="#8A5900" stroke-width="2.5" opacity="0"/>
+          <rect id="r9k2" x="126" y="126" width="140" height="34" rx="6" fill="none" stroke="#8A5900" stroke-width="2.5" opacity="0"/>
+          <line x1="130" y1="176" x2="490" y2="176" stroke="#E4E0D5" stroke-width="1.5"/>
+          <g id="r9g3" opacity="0">
+            <text x="124" y="208" font-family="monospace" font-size="12" fill="#8A5900" text-anchor="end" font-weight="700">TOTAL</text>
+            <rect x="130" y="190" width="300" height="26" rx="3" fill="#8A5900"/>
+            <text x="466" y="209" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900">400</text>
+            <rect x="126" y="186" width="330" height="34" rx="6" fill="none" stroke="#8A5900" stroke-width="2.5"/>
+          </g>
+          <text x="130" y="248" font-family="monospace" font-size="12" fill="#5A5F66">cups per day &mdash; and not one price on this slide</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <table class="sched">
+          <caption>Production in a single-good economy</caption>
+          <thead><tr><th scope="col">Firm</th><th scope="col">Cups per day</th></tr></thead>
+          <tbody>
+            <tr id="r9r0"><td>Bell Tower Roasting</td><td>200</td></tr>
+            <tr id="r9r1"><td>Second Street Coffee</td><td>120</td></tr>
+            <tr id="r9r2"><td>Kettle &amp; Co</td><td>80</td></tr>
+            <tr id="r9r3" class="tot"><td>Total production</td><td><span class="hid" id="r9tot">400</span></td></tr>
+          </tbody>
+        </table>
+        <div class="btnrow">
+          <button class="btn" id="r9play">&#9654; Add them up</button>
+          <button class="btn ghost" id="r9reset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <span id="r9note" style="color:var(--grey)">Press play. Watch what the arithmetic needs &mdash; and what it does not.</span>
+        </div>
+        <p class="serif-note">Total production is <strong>400 cups</strong>. Notice what we never needed: a price. With one good, counting <em>is</em> measuring.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 10. Q4 PREDICT · can you add cups to laptops? ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Prices">
+    <div class="eyebrow">Question 4 &middot; predict &middot; commit before we compute</div>
+    <h2>Now the economy makes laptops too</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1000px">
+      <p class="lede" style="max-width:86ch">Same year. Alongside the <strong>400 cups of coffee</strong>, a factory in the same economy turns out <strong>20 laptops</strong>.</p>
+      <div class="predict">
+        <span class="cue">Q4 &middot; write yes or no, then one sentence of why</span>
+        <p>Is this economy&rsquo;s total production <strong>400 + 20 = 420</strong>?</p>
+        <p style="margin-top:.6rem">Do not hedge. Commit to yes or no on paper, and say what the number 420 would mean if you handed it to somebody.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 11. REVEAL Q4 · prices as a translation device ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Prices">
+    <div class="eyebrow">Reveal &middot; Q4 &middot; where prices come in</div>
+    <h2>420 what?</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1150px;gap:2.2rem">
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <table class="sched">
+          <caption>2025 &mdash; converting two goods into one number</caption>
+          <thead><tr><th scope="col">Good</th><th scope="col">Quantity</th><th scope="col">Price</th><th scope="col">Value</th></tr></thead>
+          <tbody>
+            <tr><td>Coffee (cups)</td><td>400</td><td>$5</td><td><span class="hid" id="v25a">$2,000</span></td></tr>
+            <tr><td>Laptops</td><td>20</td><td>$900</td><td><span class="hid" id="v25b">$18,000</span></td></tr>
+            <tr class="tot"><td>GDP 2025</td><td></td><td></td><td><span class="hid" id="v25c">$20,000</span></td></tr>
+          </tbody>
+        </table>
+        <button class="btn" data-reveal="q4rev,v25a,v25b,v25c,q4pun">Reveal the reasoning</button>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <div class="reveal-hidden" id="q4rev">
+          <div class="reveal">
+            <span class="cue">Reveal &middot; Q4</span>
+            <p><strong>No.</strong> 420 is not a quantity of anything. Cups and laptops are measured in different units, and adding numbers whose units differ produces a number with no meaning &mdash; the same mistake as saying you own 3 shoes plus 2 hours.</p>
+            <p style="margin-top:.7rem">So we need one common unit. Economies already have one lying around: <strong>value</strong>. Multiply each quantity by its price and every good is expressed in dollars, and dollars can be added.</p>
+          </div>
+        </div>
+        <div class="reveal-hidden" id="q4pun">
+          <div>
+            <div class="chain warm">400 cups + 20 laptops &rarr; <strong>?</strong> &nbsp;&nbsp; 400&times;$5 + 20&times;$900 &rarr; <strong>$20,000</strong></div>
+            <p class="lede" style="margin-top:1rem;max-width:52ch"><strong>Prices are a translation device, not the thing we care about.</strong> They are here to make two unlike goods addable. Nobody wants to know the economy&rsquo;s dollars; we want to know its cups and laptops.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 12. Q5 PREDICT · prices rise, nothing else ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Prices">
+    <div class="eyebrow">Question 5 &middot; predict &middot; this is the hinge of Part 2</div>
+    <h2>A year passes. Nothing is built differently.</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1150px;gap:2.2rem">
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <table class="sched">
+          <caption>2026 &mdash; same quantities, new prices</caption>
+          <thead><tr><th scope="col">Good</th><th scope="col">Quantity</th><th scope="col">Price 2025</th><th scope="col">Price 2026</th></tr></thead>
+          <tbody>
+            <tr><td>Coffee (cups)</td><td>400</td><td>$5</td><td>$6</td></tr>
+            <tr><td>Laptops</td><td>20</td><td>$900</td><td>$1,000</td></tr>
+          </tbody>
+        </table>
+        <p class="serif-note">The quantity column has not moved. The same 400 cups. The same 20 laptops. Every worker did exactly what they did last year.</p>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <div class="predict">
+          <span class="cue">Q5 &middot; write the number down before anybody says it</span>
+          <p>Does <strong>measured GDP</strong> change in 2026?</p>
+          <p style="margin-top:.6rem">If you say no, write &ldquo;no&rdquo; and why. If you say yes, write the actual figure you think it becomes.</p>
+        </div>
+        <p class="lede" style="max-width:52ch">Then answer the harder half: <strong>did this economy have a better year?</strong></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 13. REVEAL Q5 · 12% out of nothing ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Prices">
+    <div class="eyebrow">Reveal &middot; Q5 &middot; sit on this one</div>
+    <h2>Up 12%, and not one extra cup</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1150px;gap:2.2rem">
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <table class="sched">
+          <caption>2026 valued at 2026 prices</caption>
+          <thead><tr><th scope="col">Good</th><th scope="col">Quantity</th><th scope="col">Price</th><th scope="col">Value</th></tr></thead>
+          <tbody>
+            <tr><td>Coffee (cups)</td><td>400</td><td>$6</td><td><span class="hid" id="v26a">$2,400</span></td></tr>
+            <tr><td>Laptops</td><td>20</td><td>$1,000</td><td><span class="hid" id="v26b">$20,000</span></td></tr>
+            <tr class="tot"><td>Measured GDP 2026</td><td></td><td></td><td><span class="hid" id="v26c">$22,400</span></td></tr>
+          </tbody>
+        </table>
+        <button class="btn" data-reveal="v26a,v26b,v26c,q5rev">Reveal the total</button>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <div class="reveal-hidden" id="q5rev">
+          <div class="col" style="gap:1rem">
+            <div class="chain warm">$20,000 &rarr; $22,400 &nbsp;=&nbsp; <strong>+12%</strong></div>
+            <div class="reveal">
+              <span class="cue">Reveal &middot; Q5 &middot; the failure that motivates everything else</span>
+              <p>Measured GDP rose <strong>12%</strong>. Production rose <strong>0%</strong>. Not one additional cup was poured; not one additional laptop was assembled. Nobody worked an extra hour.</p>
+              <p style="margin-top:.7rem">And notice <em>why</em> the measure did this. It is not a bug in the arithmetic &mdash; the arithmetic is correct. It is that we let the translation device change between the two years. We asked &ldquo;how much was produced?&rdquo; and answered with a number that also moves when nothing but the prices move.</p>
+            </div>
+            <p class="serif-note">Every single thing in the rest of this part exists to fix this one problem.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 14. THE FIX · nominal vs real ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Prices">
+    <div class="eyebrow">The fix &middot; two versions of the same sum</div>
+    <h2>Hold the prices still</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:88ch">If the trouble is that prices moved, the repair is obvious: <strong>stop letting them move.</strong> Pick one year&rsquo;s prices, call it the base year, and use those same prices every time.</p>
+    <div class="models" style="max-width:1000px">
+      <div class="model">
+        <span class="tag">Nominal GDP</span>
+        <div class="eq" style="font-size:1.02rem">this year&rsquo;s quantities<br>&times; <strong>this year&rsquo;s</strong> prices</div>
+        <div class="body">Every year valued at <strong>that year&rsquo;s own prices</strong>. Moves when quantities move &mdash; and also when prices move.</div>
+      </div>
+      <div class="model hi">
+        <span class="tag">Real GDP</span>
+        <div class="eq" style="font-size:1.02rem">this year&rsquo;s quantities<br>&times; <strong>base-year</strong> prices</div>
+        <div class="body">Every year valued at <strong>one fixed set of prices</strong>. The only thing left that can move it is the quantity column.</div>
+      </div>
+    </div>
+    <div class="col" style="justify-content:flex-start;gap:.9rem;max-width:90ch">
+      <div class="chain">base year &rarr; the year whose prices we borrow &rarr; here, <strong>2025</strong></div>
+      <p class="lede" style="max-width:80ch">One consequence worth writing down: <strong>in the base year, nominal and real GDP are identical.</strong> Not approximately &mdash; exactly. They are the same quantities multiplied by the same prices. Real GDP only starts to differ from nominal once you walk away from the base year.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 15. Q6 COMPUTE ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Prices">
+    <div class="eyebrow">Question 6 &middot; compute &middot; quick, then straight on</div>
+    <h2>Now let both columns move</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <p class="lede" style="max-width:88ch">This time the economy really does produce more <em>and</em> prices rise. Base year is <strong>2025</strong>.</p>
+      <div class="schedrow">
+        <table class="sched">
+          <caption>The economy, two years</caption>
+          <thead><tr><th scope="col">Good</th><th scope="col">Q 2025</th><th scope="col">P 2025</th><th scope="col">Q 2026</th><th scope="col">P 2026</th></tr></thead>
+          <tbody>
+            <tr><td>Coffee (cups)</td><td>400</td><td>$5</td><td>500</td><td>$6</td></tr>
+            <tr><td>Laptops</td><td>20</td><td>$900</td><td>25</td><td>$1,000</td></tr>
+          </tbody>
+        </table>
+        <table class="sched gold">
+          <caption>What you are computing</caption>
+          <thead><tr><th scope="col">Year</th><th scope="col">Nominal GDP</th><th scope="col">Real GDP (2025 prices)</th></tr></thead>
+          <tbody>
+            <tr><td>2025</td><td><span class="hid" id="g25n">$20,000</span></td><td><span class="hid" id="g25r">$20,000</span></td></tr>
+            <tr><td>2026</td><td><span class="hid" id="g26n">$28,000</span></td><td><span class="hid" id="g26r">$25,000</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="prompt">
+        <span class="cue">Q6 &middot; two numbers, on paper</span>
+        <p>Compute <strong>nominal GDP in 2026</strong> and <strong>real GDP in 2026</strong> in 2025 prices. Then say in one sentence what is different about the price you used in each.</p>
+      </div>
+      <button class="btn" data-reveal="g25n,g25r,g26n,g26r,q6rev">Reveal the four figures</button>
+      <div class="reveal-hidden" id="q6rev">
+        <div class="reveal" style="max-width:100ch">
+          <span class="cue">Reveal &middot; Q6</span>
+          <p><strong>Nominal 2026:</strong> 500&times;$6 + 25&times;$1,000 = $3,000 + $25,000 = <strong>$28,000</strong>. &nbsp;
+             <strong>Real 2026:</strong> 500&times;<span class="accent">$5</span> + 25&times;<span class="accent">$900</span> = $2,500 + $22,500 = <strong>$25,000</strong>.</p>
+          <p style="margin-top:.7rem">The quantity column is identical in both calculations &mdash; 500 and 25 either way. The <em>only</em> difference is which price list you reached for. And look at 2025: $20,000 in both columns, because in the base year there is nothing to hold still.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 16. GROWTH RATES ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Prices">
+    <div class="eyebrow">Which one gets the name?</div>
+    <h2>40% or 25%</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1150px;gap:2.2rem">
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <table class="sched">
+          <caption>Growth from 2025 to 2026</caption>
+          <thead><tr><th scope="col">Measure</th><th scope="col">2025</th><th scope="col">2026</th><th scope="col">Growth</th></tr></thead>
+          <tbody>
+            <tr><td>Nominal GDP</td><td>$20,000</td><td>$28,000</td><td><span class="hid" id="gr1">+40%</span></td></tr>
+            <tr><td>Real GDP</td><td>$20,000</td><td>$25,000</td><td><span class="hid" id="gr2">+25%</span></td></tr>
+          </tbody>
+        </table>
+        <div class="prompt">
+          <span class="cue">Write one sentence</span>
+          <p>Both are real arithmetic on real data. <strong>Which one deserves to be called &ldquo;economic growth,&rdquo; and why?</strong></p>
+        </div>
+        <button class="btn" data-reveal="gr1,gr2,grRev">Reveal both rates</button>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <div class="reveal-hidden" id="grRev">
+          <div class="reveal">
+            <span class="cue">Reveal &middot; the answer and the reason</span>
+            <p><strong>Real growth, 25%.</strong> Not because 40% is a miscalculation &mdash; it is perfectly correct as a statement about dollars &mdash; but because 40% answers a question nobody asked. It mixes together &ldquo;we made more things&rdquo; and &ldquo;things got more expensive,&rdquo; and reports one number for both.</p>
+            <p style="margin-top:.7rem">Real GDP prices both years the same way, so the only surviving explanation for a change is that <strong>the quantities changed</strong>. That is the question we were asking from the start: <em>how much did this economy produce?</em></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 17. Q7 DIAGNOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Prices">
+    <div class="eyebrow">Question 7 &middot; diagnose &middot; silent poll, then reveal</div>
+    <h2>All three sentences use the same true numbers</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:90ch">Nominal GDP went from $20,000 to $28,000. Real GDP went from $20,000 to $25,000. <strong>One of these three sentences reasons badly.</strong> Find it, and be ready to say what is wrong with the reasoning rather than the number.</p>
+    <div>
+      <div class="diag" id="diag7">
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">1</span><span class="s">Nominal GDP grew 40%, so the economy produced 40% more.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">2</span><span class="s">Real GDP grew 25%, and since both years are priced at 2025 prices, that whole 25% is extra cups and laptops.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">3</span><span class="s">Nominal grew 40% and real grew 25%; the gap between them is the part of the increase that came from prices, not production.</span></button>
+      </div>
+      <p class="poll-hint">Students pick a number on paper (or fingers on the chest). Then reveal.</p>
+      <button class="btn" data-diag-reveal="diag7" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem;max-width:100ch">
+        <span class="cue">Reveal &middot; a true premise with a false conclusion bolted on</span>
+        <p><strong>Sentence 1, and notice how little of it is wrong.</strong> &ldquo;Nominal GDP grew 40%&rdquo; is simply <em>true</em>. We computed it: $20,000 to $28,000 is exactly 40%. There is no error in the measurement.</p>
+        <p style="margin-top:.7rem">The error is the word <strong>so</strong>. Nominal GDP is a sum of prices times quantities, and between 2025 and 2026 <em>both</em> factors moved. A 40% rise in that sum is consistent with any number of production stories &mdash; including the Q5 story, where production did not rise at all. Real GDP, which holds prices at 2025, says the production part was <strong>25%</strong>. The remaining gap is price.</p>
+        <p style="margin-top:.7rem">This is the habit to build: <em>separate what a number measured from what you concluded about it.</em> Sentence 1 gets the measurement right and the inference wrong, which is far more dangerous than getting the arithmetic wrong &mdash; nobody checks a conclusion that starts from a correct figure.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 18. KEY RESULT · Part 2 close ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Prices">
+    <div class="eyebrow">Key result &middot; copy this into your notes</div>
+    <h2>Why prices, and why fixed</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.3rem;max-width:1000px">
+      <div class="reveal" style="font-size:1.18rem;max-width:88ch">
+        <span class="cue">The two-sentence version</span>
+        <p>We use <strong>prices</strong> because goods have different values and cannot otherwise be added together. We <strong>fix</strong> those prices because prices change over time, and we want a measure that captures changes in <strong>production only</strong>.</p>
+      </div>
+      <div class="pair2">
+        <div class="pcard">
+          <span class="ptag">Prices arrive because</span>
+          <div class="verdictbig">cups + laptops has no answer</div>
+          <p>With one good, counting is enough &mdash; 400 cups. With two goods you need a common unit, and value is the one every good already has.</p>
+        </div>
+        <div class="pcard warn">
+          <span class="ptag">Prices get frozen because</span>
+          <div class="verdictbig">otherwise the ruler moves</div>
+          <p>A measuring device that changes length between measurements cannot tell you whether the thing you measured changed. Fixing prices holds the ruler still.</p>
+        </div>
+      </div>
+      <p class="serif-note">From here on, whenever this course says &ldquo;GDP&rdquo; or &ldquo;output&rdquo; or &ldquo;Y&rdquo; with no adjective in front, it means <strong>real</strong> GDP.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 3 · INVENTORIES ══════════════ -->
+
+  <!-- ═══════════ 19. DIVIDER P3 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 4 · Inventories">
+    <div class="eyebrow">Part 3 of 4</div>
+    <h1>Produced isn&rsquo;t sold</h1>
+    <p class="lede">Nobody at the statistical agency watches a factory floor. They see receipts. So the real question is how you get from a pile of sales back to the production that lies underneath it.</p>
+    <div class="sectrail">WHAT COUNTS &#10003; &rarr; PRICES &#10003; &rarr; INVENTORIES &rarr; THREE VIEWS</div>
+    <div class="through">Throughline: GDP is a measure of production. Prices, sales, spending and income are all machinery for getting at production, which we cannot observe directly.</div>
+  </section>
+
+  <!-- ═══════════ 20. Q8 · the bread chain ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Inventories">
+    <div class="eyebrow">Question 8 &middot; commit before the next slide &middot; no reveal here</div>
+    <h2>One loaf of bread, four receipts</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1150px;gap:2.2rem">
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <table class="sched">
+          <caption>Every sale on the way to one $3.50 loaf</caption>
+          <thead><tr><th scope="col">Stage of production</th><th scope="col">Value of sales</th></tr></thead>
+          <tbody>
+            <tr><td>Wheat farmer</td><td>$0.40</td></tr>
+            <tr><td>Miller</td><td>$0.90</td></tr>
+            <tr><td>Baker</td><td>$2.10</td></tr>
+            <tr><td>Grocery store</td><td>$3.50</td></tr>
+          </tbody>
+        </table>
+        <p class="serif-note">Four real transactions. Four real invoices. Every one of them is somebody genuinely selling something to somebody else.</p>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <div class="prompt">
+          <span class="cue">Q8 &middot; write the number, then the verdict</span>
+          <p>If we add up <strong>every sale</strong> in this chain, do we get the loaf&rsquo;s contribution to this economy&rsquo;s production?</p>
+          <p style="margin-top:.6rem">Work out the sum first. Write it down. <em>Then</em> decide whether it is the right answer, and if it is not, say what went wrong.</p>
+        </div>
+        <div class="chain">$0.40 &rarr; $0.90 &rarr; $2.10 &rarr; $3.50 &nbsp; = &nbsp; <strong>?</strong></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 21. REVEAL Q8 · value added ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Inventories">
+    <div class="eyebrow">Reveal &middot; Q8</div>
+    <h2>$6.90 for a $3.50 loaf</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1150px;gap:2.2rem">
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <table class="sched">
+          <caption>Value added at each stage</caption>
+          <thead><tr><th scope="col">Stage</th><th scope="col">Value of sales</th><th scope="col">Value added</th></tr></thead>
+          <tbody>
+            <tr><td>Wheat farmer</td><td>$0.40</td><td><span class="hid" id="va1">$0.40</span></td></tr>
+            <tr><td>Miller</td><td>$0.90</td><td><span class="hid" id="va2">$0.50</span></td></tr>
+            <tr><td>Baker</td><td>$2.10</td><td><span class="hid" id="va3">$1.20</span></td></tr>
+            <tr><td>Grocery store</td><td>$3.50</td><td><span class="hid" id="va4">$1.40</span></td></tr>
+            <tr class="tot"><td>Total</td><td><span class="hid" id="va5">$6.90</span></td><td><span class="hid" id="va6">$3.50</span></td></tr>
+          </tbody>
+        </table>
+        <button class="btn" data-reveal="va1,va2,va3,va4,va5,va6,q8rev,q8routes">Reveal both columns</button>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <div class="reveal-hidden" id="q8rev">
+          <div class="reveal">
+            <span class="cue">Reveal &middot; Q8</span>
+            <p><strong>Adding every sale gives $6.90</strong> &mdash; for a loaf of bread that a shopper can buy for <strong>$3.50</strong>. The economy did not produce $6.90 of anything.</p>
+            <p style="margin-top:.7rem">The farmer&rsquo;s 40 cents of wheat gets counted four separate times: once when the farmer sells it, again inside the miller&rsquo;s $0.90, again inside the baker&rsquo;s $2.10, again inside the grocer&rsquo;s $3.50. Every intermediate stage drags the earlier stages along with it.</p>
+          </div>
+        </div>
+        <div class="reveal-hidden" id="q8routes">
+          <div class="pair2" style="margin-top:0">
+            <div class="pcard">
+              <span class="ptag">Route 1</span>
+              <div class="verdictbig">sum the value added</div>
+              <p>$0.40 + $0.50 + $1.20 + $1.40 = <strong>$3.50</strong>. Each stage contributes only what it added on top of what it bought.</p>
+            </div>
+            <div class="pcard">
+              <span class="ptag">Route 2</span>
+              <div class="verdictbig">take the final sale</div>
+              <p>Just <strong>$3.50</strong>. Every earlier stage is already folded into the price a shopper pays.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 22. PUNCHLINE · already inside the price ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Inventories">
+    <div class="eyebrow">Punchline &middot; the sentence students usually get wrong</div>
+    <h2>Intermediate goods are not unimportant</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.3rem;max-width:1050px">
+      <p class="lede" style="max-width:84ch">Ask a room why intermediate goods are excluded from GDP and somebody will say &ldquo;because they don&rsquo;t really count&rdquo; or &ldquo;because they aren&rsquo;t finished.&rdquo; Both are wrong, and the second is worse, because it sounds right.</p>
+      <div class="reveal" style="font-size:1.15rem;max-width:88ch">
+        <span class="cue">Say it this way instead</span>
+        <p>Intermediate goods are excluded <strong>not because their value does not matter</strong>, but because <strong>their value is already inside the final price.</strong></p>
+      </div>
+      <div class="col" style="gap:.6rem">
+        <div class="chain">$3.50 loaf &nbsp;=&nbsp; $0.40 wheat + $0.50 milling + $1.20 baking + $1.40 retailing</div>
+        <p class="lede" style="max-width:84ch">The wheat is in there. The milling is in there. The grocer&rsquo;s shelf space and cashier are in there. Counting them again does not honor them &mdash; it just says the same production twice.</p>
+      </div>
+      <p class="serif-note">Value added: <em>the difference between what a good is worth leaving a stage and what it cost entering that stage.</em> Add those differences up and nothing is missed and nothing is doubled.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 23. Q9 PREDICT · sells 4,300 ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Inventories">
+    <div class="eyebrow">Question 9 &middot; predict &middot; commit before the reveal</div>
+    <h2>The bicycle company&rsquo;s books, 2026</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1150px;gap:2.2rem">
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <table class="sched">
+          <caption>What the company&rsquo;s records show for 2026</caption>
+          <thead><tr><th scope="col">Item</th><th scope="col">Bicycles</th></tr></thead>
+          <tbody>
+            <tr><td>In the warehouse on Jan 1</td><td>500</td></tr>
+            <tr><td>Built during 2026</td><td>4,000</td></tr>
+            <tr><td>Sold during 2026</td><td>4,300</td></tr>
+          </tbody>
+        </table>
+        <p class="serif-note">The 500 bikes on the shelf in January were built in <strong>2025</strong>.</p>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <div class="predict">
+          <span class="cue">Q9 &middot; yes or no, and name the gap</span>
+          <p>A statistician who only sees receipts records <strong>4,300</strong> bikes. Is 4,300 this economy&rsquo;s <strong>2026 production</strong> of bicycles?</p>
+          <p style="margin-top:.6rem">If not, say exactly where the extra 300 came from &mdash; and which year&rsquo;s GDP they already sit in.</p>
+        </div>
+        <p class="lede" style="max-width:52ch">Careful: this is not a trick about the arithmetic. It is a question about <strong>what a sale is evidence of</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 24. REVEAL Q9 ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Inventories">
+    <div class="eyebrow">Reveal &middot; Q9</div>
+    <h2>Final sales <span class="red">overstates</span></h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1150px;gap:2.2rem">
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <table class="sched">
+          <caption>Selling out of inventory</caption>
+          <thead><tr><th scope="col">Item</th><th scope="col">Bicycles</th></tr></thead>
+          <tbody>
+            <tr><td>Start-of-year inventory</td><td>500</td></tr>
+            <tr><td>Produced in 2026</td><td>4,000</td></tr>
+            <tr><td>Sold in 2026</td><td>4,300</td></tr>
+            <tr><td>End-of-year inventory</td><td><span class="hid" id="b9end">200</span></td></tr>
+            <tr class="tot"><td>Change in inventories</td><td><span class="hid" id="b9d">&minus;300</span></td></tr>
+          </tbody>
+        </table>
+        <button class="btn" data-reveal="b9end,b9d,q9rev">Reveal the reasoning</button>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <div class="reveal-hidden" id="q9rev">
+          <div class="col" style="gap:1rem">
+            <div class="reveal">
+              <span class="cue">Reveal &middot; Q9</span>
+              <p><strong>2026 production is 4,000.</strong> Only 4,000 bikes were built by 2026 labor, with 2026 steel, in 2026. That is the number the definition asks for.</p>
+              <p style="margin-top:.7rem">The other 300 came off the shelf. They were built in 2025 and were counted in <strong>2025&rsquo;s</strong> GDP &mdash; on the day they were produced, not the day they were sold. Counting them again now would be exactly the used-car mistake from Q1, wearing different clothes.</p>
+            </div>
+            <div class="chain warm">sold 4,300 &nbsp;&gt;&nbsp; produced 4,000 &nbsp;&rarr;&nbsp; <strong>sales overstate production</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 25. Q10 PREDICT + REVEAL · sells 3,600 ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Inventories">
+    <div class="eyebrow">Question 10 &middot; predict &middot; same factory, different year</div>
+    <h2>Now nobody buys</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1150px;gap:2.2rem">
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <table class="sched">
+          <caption>Building inventory</caption>
+          <thead><tr><th scope="col">Item</th><th scope="col">Bicycles</th></tr></thead>
+          <tbody>
+            <tr><td>Start-of-year inventory</td><td>500</td></tr>
+            <tr><td>Produced in 2026</td><td>4,000</td></tr>
+            <tr><td>Sold in 2026</td><td>3,600</td></tr>
+            <tr><td>End-of-year inventory</td><td><span class="hid" id="b10end">900</span></td></tr>
+            <tr class="tot"><td>Change in inventories</td><td><span class="hid" id="b10d">+400</span></td></tr>
+          </tbody>
+        </table>
+        <div class="predict">
+          <span class="cue">Q10 &middot; commit, then press</span>
+          <p>Same 4,000 bikes off the line. This time only <strong>3,600</strong> sell. What is 2026 production?</p>
+        </div>
+        <button class="btn" data-reveal="b10end,b10d,q10rev">Reveal the reasoning</button>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <div class="reveal-hidden" id="q10rev">
+          <div class="col" style="gap:1rem">
+            <div class="reveal">
+              <span class="cue">Reveal &middot; Q10</span>
+              <p><strong>Still 4,000.</strong> The same factory, the same year, the same workers, the same steel. Production is a fact about what was made, and it does not consult the sales ledger.</p>
+              <p style="margin-top:.7rem">The 400 bikes that nobody wanted were still <em>produced in 2026</em>. They are sitting in a warehouse right now, and if we recorded only the 3,600 that sold, 2026 would look like a worse year than it was &mdash; and then 2027 would look better than it is, when those 400 finally move.</p>
+            </div>
+            <div class="chain warm">sold 3,600 &nbsp;&lt;&nbsp; produced 4,000 &nbsp;&rarr;&nbsp; <strong>sales understate production</strong></div>
+            <p class="serif-note">Two years, two sales figures 700 bikes apart, one production number. Sales alone cannot tell you which year you are in.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 26. THE FORMULA + STEPPED SALES-vs-PRODUCTION ANIMATION ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Inventories">
+    <div class="eyebrow">The repair &middot; step it through both scenarios</div>
+    <h2>GDP = final sales + change in inventories</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:92ch">Two bars, same scale. The top one is <strong>what sold</strong> &mdash; all a statistician can see. The bottom one is <strong>what 2026 actually built</strong>. Watch where they fail to line up: that gap <em>is</em> the change in inventories.</p>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 620 285" role="img" aria-label="Two horizontal bars drawn to the same scale, comparing bicycles sold with bicycles produced in 2026. In the first scenario the sold bar runs to 4,300 and overshoots a dashed line at 4,000; the overshooting 300 is marked in red as bikes built in 2025. In the second scenario the sold bar stops short at 3,600 while the production bar reaches 4,000, the last 400 marked in gold as bikes built in 2026 that never sold. Either way production is 4,000, and the mismatch between the two bars is the change in inventories.">
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="120" y1="56" x2="120" y2="205"/>
+            <line x1="215" y1="56" x2="215" y2="205"/>
+            <line x1="310" y1="56" x2="310" y2="205"/>
+            <line x1="405" y1="56" x2="405" y2="205"/>
+          </g>
+          <g font-family="monospace" font-size="10.5" fill="#5A5F66" text-anchor="middle">
+            <text x="120" y="222">0</text>
+            <text x="215" y="222">1,000</text>
+            <text x="310" y="222">2,000</text>
+            <text x="405" y="222">3,000</text>
+          </g>
+
+          <!-- the anchor: 4,000 bikes actually built in 2026 -->
+          <g id="mark4k" opacity="0">
+            <line x1="500" y1="40" x2="500" y2="212" stroke="#8A5900" stroke-width="2" stroke-dasharray="6 4"/>
+            <text x="500" y="32" text-anchor="middle" font-family="monospace" font-size="11" font-weight="700" fill="#8A5900">4,000 built in 2026</text>
+          </g>
+
+          <!-- SCENARIO A · sells 4,300 -->
+          <g id="sAsold" opacity="0">
+            <text x="120" y="62" font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79">RECEIPTS &middot; 4,300 SOLD IN 2026</text>
+            <rect x="120" y="70" width="408.5" height="34" rx="2" fill="#1F4E79"/>
+            <text x="300" y="92" text-anchor="middle" font-family="monospace" font-size="12" font-weight="700" fill="#FbFaF7">4,300 sold</text>
+          </g>
+          <g id="sAsplit" opacity="0">
+            <rect x="500" y="70" width="28.5" height="34" fill="#C0392B"/>
+            <text x="534" y="92" font-family="monospace" font-size="10.5" font-weight="700" fill="#C0392B">300 built in 2025</text>
+          </g>
+          <g id="sAprod" opacity="0">
+            <text x="120" y="152" font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79">2026 PRODUCTION &middot; 4,000</text>
+            <rect x="120" y="160" width="380" height="34" rx="2" fill="#1F4E79"/>
+            <text x="300" y="182" text-anchor="middle" font-family="monospace" font-size="12" font-weight="700" fill="#FbFaF7">4,000 built</text>
+          </g>
+          <text id="sAeq" opacity="0" x="120" y="252" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900">4,300 sold + (&minus;300) inventories = 4,000 produced</text>
+
+          <!-- SCENARIO B · sells 3,600 -->
+          <g id="sBsold" opacity="0">
+            <text x="120" y="62" font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79">RECEIPTS &middot; 3,600 SOLD IN 2026</text>
+            <rect x="120" y="70" width="342" height="34" rx="2" fill="#1F4E79"/>
+            <text x="291" y="92" text-anchor="middle" font-family="monospace" font-size="12" font-weight="700" fill="#FbFaF7">3,600 sold</text>
+          </g>
+          <g id="sBprod" opacity="0">
+            <text x="120" y="152" font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79">2026 PRODUCTION &middot; 4,000</text>
+            <rect x="120" y="160" width="342" height="34" rx="2" fill="#1F4E79"/>
+            <rect x="462" y="160" width="38" height="34" fill="#8A5900"/>
+            <text x="291" y="182" text-anchor="middle" font-family="monospace" font-size="12" font-weight="700" fill="#FbFaF7">3,600 sold</text>
+            <text x="506" y="182" font-family="monospace" font-size="10.5" font-weight="700" fill="#8A5900">400 never sold</text>
+          </g>
+          <text id="sBeq" opacity="0" x="120" y="252" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900">3,600 sold + 400 inventories = 4,000 produced</text>
+
+          <text x="120" y="272" font-family="monospace" font-size="10.5" fill="#5A5F66">bicycles &mdash; both bars drawn to the same scale</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <span class="lbl2">start inventory</span> &nbsp;<span class="big" id="ivStart">&mdash;</span><br>
+          <span class="lbl2">produced</span> &nbsp;<span class="big" id="ivProd">&mdash;</span><br>
+          <span class="lbl2">sold</span> &nbsp;<span class="big" id="ivSold">&mdash;</span><br>
+          <span class="lbl2">end inventory</span> &nbsp;<span class="big" id="ivEnd">&mdash;</span><br>
+          <span class="lbl2">&Delta; inventories</span> &nbsp;<span class="big" id="ivDelta">&mdash;</span><br>
+          <span class="lbl2">final sales + &Delta; inv</span> &nbsp;<span class="big" id="ivGdp">&mdash;</span>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="ivAplay">&#9654; Step A &middot; sells 4,300</button>
+          <button class="btn" id="ivBplay">&#9654; Step B &middot; sells 3,600</button>
+          <button class="btn ghost" id="ivReset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <span id="ivNote" style="color:var(--grey)">Press a scenario. Three steps, one at a time &mdash; nothing slides.</span>
+        </div>
+        <p class="serif-note">The sold bar overshoots the dashed line in one year and falls short of it in the other. The production bar lands on <strong>4,000</strong> both times.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 27. PUNCHLINE · unsold output was still produced ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Inventories">
+    <div class="eyebrow">Punchline &middot; and the hinge into Part 4</div>
+    <h2>Unsold output was still produced</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.3rem;max-width:1050px">
+      <div class="reveal" style="font-size:1.15rem;max-width:88ch">
+        <span class="cue">Hold on to this one</span>
+        <p>A bicycle that nobody bought is <strong>not a bicycle that was never made.</strong> The steel was bought, the workers were paid, the bike exists. It belongs to the year it was built, whatever the sales ledger says.</p>
+      </div>
+      <div class="pair2">
+        <div class="pcard warn">
+          <span class="ptag">Sold more than built</span>
+          <div class="verdictbig">&Delta; inv &lt; 0 &nbsp;&rarr;&nbsp; subtract</div>
+          <p>Some of what sold this year was produced last year. Take it back out.</p>
+        </div>
+        <div class="pcard">
+          <span class="ptag">Built more than sold</span>
+          <div class="verdictbig">&Delta; inv &gt; 0 &nbsp;&rarr;&nbsp; add</div>
+          <p>Some of what was produced this year is still on a shelf. Put it back in.</p>
+        </div>
+      </div>
+      <p class="lede" style="max-width:88ch">Now a warning about where this goes. In Part 4 we are going to measure production by adding up what everybody <strong>spent</strong> &mdash; and nobody spent anything on those 400 unsold bikes. So the accounts do something that looks like a dodge and is not: they treat the firm as having <strong>bought its own unsold inventory</strong>, and file it under investment.</p>
+      <p class="serif-note">That is the hinge. Remember the 400 bikes; they turn up again in about four slides.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 4 · THREE VIEWS ══════════════ -->
+
+  <!-- ═══════════ 28. DIVIDER P4 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 4 · Three Views">
+    <div class="eyebrow">Part 4 of 4</div>
+    <h1>Three views of<br>one number</h1>
+    <p class="lede">Every good that is produced and sold has a <strong>matching payment</strong>. And every payment is <strong>income</strong> to somebody. So if you can total up the spending, you have &mdash; with the inventory caveat &mdash; totalled up the production.</p>
+    <div class="sectrail">WHAT COUNTS &#10003; &rarr; PRICES &#10003; &rarr; INVENTORIES &#10003; &rarr; THREE VIEWS</div>
+    <div class="through">Throughline: GDP is a measure of production. Prices, sales, spending and income are all machinery for getting at production, which we cannot observe directly.</div>
+  </section>
+
+  <!-- ═══════════ 29. C and I ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Three Views">
+    <div class="eyebrow">The expenditure approach &middot; first two components</div>
+    <h2>C and I</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:92ch">The <strong>expenditure approach</strong> computes GDP by measuring the total amount spent on all final goods and services in a period. Four buckets, and every dollar of spending goes in exactly one.</p>
+    <div class="condrow" style="grid-template-columns:1fr 1fr">
+      <div class="condcard">
+        <div class="ctitle">C &middot; personal consumption expenditure</div>
+        <div class="big">C</div>
+        <div class="cnote">Household spending on consumer goods and services.</div>
+        <button class="cbtn" data-cond="cBody">Show the three subcomponents</button>
+        <div class="cbody" id="cBody">
+          <ul>
+            <li><strong>Durable goods</strong> &mdash; last a relatively long time: cars, refrigerators, furniture.</li>
+            <li><strong>Nondurable goods</strong> &mdash; used up fairly quickly: food, fuel, clothing.</li>
+            <li><strong>Services</strong> &mdash; non-physical things households buy: health care, haircuts, streaming.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="condcard warm">
+        <div class="ctitle">I &middot; gross private domestic investment</div>
+        <div class="big">I</div>
+        <div class="cnote">Spending by firms and households on <strong>new capital</strong> &mdash; plant, equipment, housing, and inventory.</div>
+        <button class="cbtn" data-cond="iBody">Show the three subcomponents</button>
+        <div class="cbody" id="iBody">
+          <ul>
+            <li><strong>Nonresidential</strong> &mdash; machines, tools, plants: what firms buy to produce with.</li>
+            <li><strong>Residential</strong> &mdash; new houses and apartment buildings.</li>
+            <li><strong>Change in business inventories</strong> &mdash; <span class="gold">your 400 bicycles.</span> Inventory sits here because, like a machine, unsold stock earns the firm revenue <em>later</em>. The accounts treat the firm as buying its own unsold output, which is precisely how production that nobody spent money on still lands inside an expenditure total.</li>
+          </ul>
+          <p class="cnote" style="margin-top:.5rem"><strong>Gross vs. net.</strong> Gross investment is all newly produced capital; <strong>depreciation</strong> is the amount an asset&rsquo;s value falls over the period; net investment is gross minus depreciation. GDP uses the <em>gross</em> figure &mdash; the D in GDP.</p>
+        </div>
+      </div>
+    </div>
+    <p class="serif-note" style="margin-top:1rem">Slide 27 said the unsold bikes would come back. That bullet is where they live.</p>
+  </section>
+
+  <!-- ═══════════ 30. G and NX ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Three Views">
+    <div class="eyebrow">The expenditure approach &middot; the other two</div>
+    <h2>G and NX</h2>
+    <div class="titlerule"></div>
+    <div class="condrow" style="grid-template-columns:1fr 1fr">
+      <div class="condcard">
+        <div class="ctitle">G &middot; government consumption and gross investment</div>
+        <div class="big">G</div>
+        <div class="cnote">Federal, state and local purchases of goods and services, plus the government&rsquo;s own investment.</div>
+        <button class="cbtn" data-cond="gBody">What is <em>not</em> in G</button>
+        <div class="cbody" id="gBody">
+          <p class="cnote">G is <strong>purchases</strong>, not the whole budget. A payment that buys no good or service &mdash; a pension check, an unemployment benefit &mdash; is a transfer. Nothing was produced when it was sent, so it is not in G. It shows up in GDP later, if and when the recipient spends it, as part of <strong>C</strong>.</p>
+        </div>
+      </div>
+      <div class="condcard">
+        <div class="ctitle">NX &middot; net exports</div>
+        <div class="big">NX = EX &minus; IM</div>
+        <div class="cnote">Exports minus imports. The component everybody misreads, which is what Q11 and Q12 are for.</div>
+        <button class="cbtn" data-cond="nxBody">Why there is a minus sign at all</button>
+        <div class="cbody" id="nxBody">
+          <p class="cnote">Because C, I and G are measured as <strong>spending</strong>, and the people doing the spending do not check where a good was made. Some of that spending left the country. Meanwhile some things made here were bought by foreigners, so they never appeared in C, I or G at all. NX fixes both leaks at once.</p>
+        </div>
+      </div>
+    </div>
+    <div class="chain" style="margin-top:1.4rem;font-size:1.15rem">GDP = C + I + G + NX</div>
+    <p class="serif-note" style="margin-top:.8rem">Four buckets. The next three slides are entirely about the fourth one.</p>
+  </section>
+
+  <!-- ═══════════ 31. Q11 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Three Views">
+    <div class="eyebrow">Question 11 &middot; predict &middot; state the problem before the fix</div>
+    <h2>A small open economy</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1150px;gap:2.2rem">
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <table class="sched">
+          <caption>Spending this year, and how much of it was made abroad</caption>
+          <thead><tr><th scope="col">Component</th><th scope="col">Total</th><th scope="col">Of which foreign-produced</th></tr></thead>
+          <tbody>
+            <tr><td>C &middot; consumption</td><td>700</td><td class="foreign">120</td></tr>
+            <tr><td>I &middot; investment</td><td>200</td><td class="foreign">40</td></tr>
+            <tr><td>G &middot; government</td><td>150</td><td class="foreign">20</td></tr>
+            <tr><td>EX &middot; exports</td><td>130</td><td>&mdash;</td></tr>
+          </tbody>
+        </table>
+        <p class="serif-note">Exports are goods made <em>here</em> and bought by somebody <em>there</em>. Nobody in this economy spent that 130.</p>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <div class="predict">
+          <span class="cue">Q11 &middot; commit before any arithmetic</span>
+          <p>C, I and G each contain goods that were <strong>produced abroad</strong>. And none of them contain goods that were <strong>produced here and sold abroad</strong>.</p>
+          <p style="margin-top:.6rem">So: what has to happen to <strong>C + I + G</strong> before it can be called this country&rsquo;s production? Write the operation and the numbers you would use.</p>
+        </div>
+        <div class="chain">C + I + G = 700 + 200 + 150 = <strong>1,050</strong> spent &mdash; but not 1,050 produced here</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 32. Q11 REVEAL · two routes ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Three Views">
+    <div class="eyebrow">Reveal &middot; Q11 &middot; the same 1,000, twice</div>
+    <h2>Two routes to domestic production</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap" style="grid-template-columns:1.25fr .75fr">
+      <div class="panel">
+        <svg viewBox="0 0 660 348" role="img" aria-label="Spending in a small open economy, drawn as one horizontal bar and then transformed down three rows. Row one is what was spent inside this economy: brackets above the bar mark consumption at 700, investment at 200 and government at 150, making 1,050 in all, and inside each bracket the portion produced abroad — 120, 40 and 20 — sits in red at that segment's right-hand end. Row two, revealed by the button, drops all 180 of the red and closes the gaps, with dashed guides showing each surviving block slide left; it totals 870. Row three appends exports of 130, goods made here and sold abroad, reaching 1,000. A dashed marker shows that route one, 1,050 minus 180 plus 130, and route two, 580 plus 160 plus 130 plus 130, both finish at the same 1,000.">
+          <!-- ══ ROW 1 · what was spent here (given data) ══ -->
+          <text x="130" y="20" font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79">1 &middot; SPENT HERE &rarr; 1,050</text>
+
+          <!-- brackets: each one spans a whole component, blue part plus red part -->
+          <g font-family="monospace" font-size="11" font-weight="700" text-anchor="middle">
+            <text x="275" y="40" fill="#1F4E79">C = 700</text>
+            <text x="466" y="40" fill="#3A6E96">I = 200</text>
+            <text x="541.5" y="40" fill="#5B89AC">G = 150</text>
+          </g>
+          <g fill="none" stroke-width="1.4">
+            <path d="M130,54 L130,48 L420,48 L420,54" stroke="#1F4E79"/>
+            <path d="M428,54 L428,48 L504,48 L504,54" stroke="#3A6E96"/>
+            <path d="M512,54 L512,48 L571,48 L571,54" stroke="#5B89AC"/>
+          </g>
+
+          <rect x="130" y="58" width="294" height="32" rx="2" fill="#1F4E79"/>
+          <rect x="373.6" y="58" width="50.4" height="32" fill="#C0392B"/>
+          <rect x="424" y="58" width="84" height="32" rx="2" fill="#3A6E96"/>
+          <rect x="491.2" y="58" width="16.8" height="32" fill="#C0392B"/>
+          <rect x="508" y="58" width="63" height="32" rx="2" fill="#5B89AC"/>
+          <rect x="562.6" y="58" width="8.4" height="32" fill="#C0392B"/>
+          <!-- paper-colored dividers so C, I and G stay visibly separate -->
+          <rect x="423" y="58" width="2" height="32" fill="#F6F4EE"/>
+          <rect x="507" y="58" width="2" height="32" fill="#F6F4EE"/>
+
+          <g font-family="monospace" font-size="9.5" font-weight="700" fill="#C0392B" text-anchor="middle">
+            <text x="398.8" y="104">120</text>
+            <text x="499.6" y="104">40</text>
+            <text x="566.8" y="104">20</text>
+          </g>
+          <text x="130" y="104" font-family="monospace" font-size="10.5" fill="#5A5F66"><tspan fill="#1F4E79" font-weight="700">blue</tspan> = made here &middot; <tspan fill="#C0392B" font-weight="700">red</tspan> = made abroad</text>
+
+          <!-- ══ ROW 2 · revealed ══ -->
+          <g id="rtRow2" opacity="0">
+            <g stroke="#8A8F96" stroke-width="1.2" stroke-dasharray="3 3">
+              <line x1="373.6" y1="90" x2="373.6" y2="150"/>
+              <line x1="491.2" y1="90" x2="440.8" y2="150"/>
+              <line x1="562.6" y1="90" x2="495.4" y2="150"/>
+            </g>
+            <text x="130" y="142" font-family="monospace" font-size="11" font-weight="700" fill="#C0392B">2 &middot; DROP THE RED &rarr; 870</text>
+            <rect x="130" y="150" width="243.6" height="32" rx="2" fill="#1F4E79"/>
+            <rect x="373.6" y="150" width="67.2" height="32" fill="#3A6E96"/>
+            <rect x="440.8" y="150" width="54.6" height="32" rx="2" fill="#5B89AC"/>
+            <rect x="372.6" y="150" width="2" height="32" fill="#F6F4EE"/>
+            <rect x="439.8" y="150" width="2" height="32" fill="#F6F4EE"/>
+            <g font-family="monospace" font-size="11" font-weight="700" fill="#FbFaF7" text-anchor="middle">
+              <text x="251.8" y="171">C 580</text>
+              <text x="407.2" y="171">I 160</text>
+              <text x="468.1" y="171">G 130</text>
+            </g>
+          </g>
+
+          <!-- ══ ROW 3 · revealed ══ -->
+          <g id="rtRow3" opacity="0">
+            <line x1="495.4" y1="182" x2="495.4" y2="242" stroke="#8A8F96" stroke-width="1.2" stroke-dasharray="3 3"/>
+            <text x="130" y="234" font-family="monospace" font-size="11" font-weight="700" fill="#8A5900">3 &middot; ADD EXPORTS &rarr; 1,000</text>
+            <rect x="130" y="242" width="243.6" height="32" rx="2" fill="#1F4E79"/>
+            <rect x="373.6" y="242" width="67.2" height="32" fill="#3A6E96"/>
+            <rect x="440.8" y="242" width="54.6" height="32" fill="#5B89AC"/>
+            <rect x="495.4" y="242" width="54.6" height="32" rx="2" fill="#8A5900"/>
+            <rect x="372.6" y="242" width="2" height="32" fill="#F6F4EE"/>
+            <rect x="439.8" y="242" width="2" height="32" fill="#F6F4EE"/>
+            <rect x="494.4" y="242" width="2" height="32" fill="#F6F4EE"/>
+            <g font-family="monospace" font-size="11" font-weight="700" fill="#FbFaF7" text-anchor="middle">
+              <text x="251.8" y="263">C 580</text>
+              <text x="407.2" y="263">I 160</text>
+              <text x="468.1" y="263">G 130</text>
+              <text x="522.7" y="263">EX 130</text>
+            </g>
+            <g font-family="monospace" font-size="9.5" font-weight="700" fill="#8A5900">
+              <text x="556" y="256">made here,</text>
+              <text x="556" y="268">sold abroad</text>
+            </g>
+          </g>
+
+          <g id="rtLine" opacity="0">
+            <line x1="550" y1="54" x2="550" y2="288" stroke="#8A5900" stroke-width="2" stroke-dasharray="6 4"/>
+            <text x="550" y="302" text-anchor="middle" font-family="monospace" font-size="11.5" font-weight="700" fill="#8A5900">GDP = 1,000</text>
+          </g>
+
+          <g id="rtNote" opacity="0" font-family="monospace" font-size="11.5" font-weight="700">
+            <text x="130" y="320" fill="#1F4E79">ROUTE 1 &middot; 1,050 &minus; 180 + 130 = 1,000</text>
+            <text x="130" y="340" fill="#8A5900">ROUTE 2 &middot; 580 + 160 + 130 + 130 = 1,000</text>
+          </g>
+        </svg>
+      </div>
+      <div class="controls">
+        <table class="sched">
+          <caption>The same economy, two ways</caption>
+          <thead><tr><th scope="col">Route</th><th scope="col">Arithmetic</th><th scope="col">GDP</th></tr></thead>
+          <tbody>
+            <tr><td>1 &middot; C+I+G+NX</td><td><span class="hid" id="rt1a">700+200+150&minus;50</span></td><td><span class="hid" id="rt1b">1,000</span></td></tr>
+            <tr><td>2 &middot; domestic only</td><td><span class="hid" id="rt2a">580+160+130+130</span></td><td><span class="hid" id="rt2b">1,000</span></td></tr>
+          </tbody>
+        </table>
+        <button class="btn" data-reveal-svg="routes" data-reveal="rt1a,rt1b,rt2a,rt2b,q11rev">Show both routes</button>
+        <div class="reveal-hidden" id="q11rev">
+          <div class="reveal">
+            <span class="cue">Reveal &middot; Q11</span>
+            <p><strong>IM = 120 + 40 + 20 = 180</strong>, so <strong>NX = 130 &minus; 180 = &minus;50</strong>.</p>
+            <p style="margin-top:.6rem">Read the picture downward. In row 1 each bracket is a whole component &mdash; <strong>blue plus red is C</strong>, and the red tail is the part of that C made somewhere else. Row 2 deletes every red tail and closes the gaps; the dashed guides show each block sliding left. What survives is 580 + 160 + 130 = <strong>870</strong>, the part of our own spending we actually produced. Row 3 appends the 130 we made for other countries: <strong>1,000</strong>.</p>
+            <p style="margin-top:.6rem"><strong>Route 1</strong> does rows 2 and 3 in one lump, without ever separating them: 700 + 200 + 150 &minus; 50. <strong>Route 2</strong> is row 3 read straight across: 580 + 160 + 130 + 130. Same operation, same 1,000 &mdash; but route 2 shows what the &minus;IM in route 1 is actually <em>for</em>: deleting an over-count that C, I and G committed a moment earlier.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 33. PUNCHLINE · imports are not a penalty ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Three Views">
+    <div class="eyebrow">Punchline &middot; the most misused minus sign in macro</div>
+    <h2>Subtracting imports is not a penalty on trade</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1080px">
+      <div class="reveal" style="font-size:1.15rem;max-width:92ch">
+        <span class="cue">What the minus sign is doing</span>
+        <p>Imports are subtracted <strong>only to remove foreign production that was swept into C, I and G in the first place.</strong> The 180 was never domestic output; it got into the total because consumers, firms and governments do not sort their receipts by country of manufacture.</p>
+      </div>
+      <div class="pair2">
+        <div class="pcard warn">
+          <span class="ptag">This economy</span>
+          <div class="verdictbig">trade deficit of 50</div>
+          <p>EX 130, IM 180, NX = &minus;50. If the minus sign really were a penalty, that ought to be a drag on output.</p>
+        </div>
+        <div class="pcard">
+          <span class="ptag">And yet</span>
+          <div class="verdictbig">it produced 1,000</div>
+          <p>Route 2 never subtracts anything. It just adds up domestic production directly &mdash; and arrives at 1,000.</p>
+        </div>
+      </div>
+      <p class="lede" style="max-width:92ch"><strong>Expenditure is used to figure out what GDP is. It does not determine what GDP is.</strong> Production happened on factory floors and in offices before anybody spent a dollar; the accounting comes afterwards, and it is trying to reconstruct that production, not to reward or punish anyone for it.</p>
+      <div class="chain">produced &rarr; sold &rarr; paid for &rarr; recorded &nbsp;&mdash;&nbsp; <strong>the arrow only points one way</strong></div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 34. Q12 DIAGNOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Three Views">
+    <div class="eyebrow">Question 12 &middot; diagnose &middot; silent poll, then reveal</div>
+    <h2>One of these sentences would fail an exam</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:92ch">Same economy: C = 700, I = 200, G = 150, EX = 130, IM = 180, GDP = 1,000. <strong>Find the sentence whose reasoning breaks.</strong></p>
+    <div>
+      <div class="diag" id="diag12">
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">1</span><span class="s">Imports enter with a minus sign, so cutting imports in half would raise GDP.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">2</span><span class="s">The &minus;IM term cancels foreign goods that were already added inside C, I and G. It is bookkeeping, not a penalty.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">3</span><span class="s">This economy imports 180, exports 130, and still produces 1,000 &mdash; so a trade deficit on its own tells you nothing about how much was produced.</span></button>
+      </div>
+      <p class="poll-hint">Students pick a number on paper (or fingers on the chest). Then reveal.</p>
+      <button class="btn" data-diag-reveal="diag12" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem;max-width:100ch">
+        <span class="cue">Reveal &middot; the minus sign never travels alone</span>
+        <p><strong>Sentence 1 is the flaw</strong>, and it is seductive because the algebra looks like it is on its side: GDP = C + I + G + EX &minus; IM, so a smaller IM must mean a bigger GDP. It would &mdash; <em>if IM appeared only once.</em></p>
+        <p style="margin-top:.7rem">It does not. Every imported good is sitting in two places at the same time: inside C, I or G as spending, and inside IM as the correction. Halve imports and households buy 60 fewer foreign goods &mdash; C falls by 60 <em>and</em> IM falls by 60. The two changes cancel exactly, and domestic production is untouched, because <strong>nothing about a factory here changed when a shopper stopped buying something made there.</strong></p>
+        <p style="margin-top:.7rem">The test to carry away: when a term appears on both sides of a correction, you cannot move it on one side only. Ask what <em>else</em> moves when it moves &mdash; and then ask the question that actually matters, which is whether anything was produced differently.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 35. THE INCOME APPROACH · three views ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Three Views">
+    <div class="eyebrow">The income approach &middot; conceptual only</div>
+    <h2>One number, seen three ways</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1120px">
+      <p class="lede" style="max-width:92ch">The <strong>income approach</strong> computes GDP from the wages, rents, interest and profits received by all the factors of production. And it has to land in the same place, for a reason you can state in one line:</p>
+      <div class="reveal" style="font-size:1.13rem;max-width:92ch">
+        <span class="cue">The whole argument</span>
+        <p>Every <strong>expenditure</strong> by one person is <strong>income</strong> to another. The money a shopper hands over does not evaporate at the cash register &mdash; it becomes wages for the cashier, rent for the landlord, interest for the lender, profit for the owner. Total the payments made and you have totalled the payments received.</p>
+      </div>
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">Production</div>
+          <div class="big">what was made</div>
+          <div class="cnote">Value added at every stage. The thing we actually want, and the only one of the three that is not money.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Expenditure</div>
+          <div class="big">C + I + G + NX</div>
+          <div class="cnote">What was spent on it &mdash; with unsold output filed under investment so that nothing produced goes missing.</div>
+        </div>
+        <div class="condcard warm">
+          <div class="ctitle">Income</div>
+          <div class="big">wages + rents + interest + profits</div>
+          <div class="cnote">Who received the spending. Every dollar paid out is a dollar taken in by somebody.</div>
+        </div>
+      </div>
+      <div class="chain" style="font-size:1.1rem">Important result: GDP simultaneously measures <strong>production</strong>, <strong>expenditure</strong>, and <strong>income</strong></div>
+      <p class="serif-note">Not three numbers that happen to be close. Three descriptions of one number &mdash; which is why economists switch between them mid-sentence and expect you to follow.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 36. LIMITATIONS ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Three Views">
+    <div class="eyebrow">Limitations &middot; brief, but do not skip it</div>
+    <h2>What this number cannot tell you</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1120px">
+      <p class="lede" style="max-width:92ch">GDP is a good measure of <em>production</em>, and it is used every day as a measure of <em>welfare</em>. Those are not the same thing, and the gaps are systematic rather than random.</p>
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">Nonmarket work</div>
+          <div class="cnote">Housework, child care, elder care, cooking at home. Real production, done in enormous quantity, invisible to GDP because no market transaction records it. Pay someone to do it and GDP rises &mdash; while the amount of care produced has not.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">The informal economy</div>
+          <div class="cnote">Transactions that are unreported, cash-only, or illegal. Income is genuinely generated; none of it is counted. The size of the gap differs wildly across countries, which makes cross-country comparisons shakier than they look.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Distribution</div>
+          <div class="cnote">GDP is a total. It has nothing whatsoever to say about who received it. Two economies with identical GDP can be unrecognizably different places to live.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Leisure</div>
+          <div class="cnote">An extra week of holiday is an increase in wellbeing and usually a <em>decrease</em> in measured output. GDP scores it as a loss.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Bads counted as goods</div>
+          <div class="cnote">If crime fell, society would be better off &mdash; but less would be spent on security, and GDP would fall. Cleaning up after a disaster raises GDP.</div>
+        </div>
+        <div class="condcard warm">
+          <div class="ctitle">The honest summary</div>
+          <div class="cnote"><strong>GDP is not a measure of welfare.</strong> It never claimed to be. It answers &ldquo;how much did we produce?&rdquo; &mdash; well &mdash; and that is a different question from &ldquo;how well are we living?&rdquo;</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 37. SYNTHESIS ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Three Views">
+    <div class="eyebrow">Synthesis &middot; the whole hour, in one line</div>
+    <h2>Everything today was machinery</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:1080px;gap:1.2rem">
+      <div class="reveal">
+        <span class="cue">The throughline</span>
+        <p style="font-size:1.16rem">GDP is a measure of <strong>production</strong>. Prices, sales, spending and income are all <strong>machinery</strong> for getting at production, which we cannot observe directly.</p>
+      </div>
+      <div class="two" style="gap:1.6rem">
+        <div class="col" style="gap:.7rem;justify-content:flex-start">
+          <div class="chain">cups + laptops &rarr; <strong>prices</strong> &rarr; one number</div>
+          <div class="chain">fix the prices &rarr; only <strong>production</strong> can move it</div>
+          <div class="chain">final sales + <strong>&Delta; inventories</strong> &rarr; production</div>
+          <div class="chain">C + I + G + NX &rarr; production</div>
+          <div class="chain">wages + rents + interest + profits &rarr; production</div>
+        </div>
+        <div class="col" style="gap:.9rem;justify-content:flex-start">
+          <p class="lede" style="font-size:1.05rem">Five different-looking procedures, one target. Prices showed up because cups and laptops will not add. Fixed prices showed up because a moving ruler cannot measure. Inventories showed up because sales are not production. Net exports showed up because spending is not domestic production. Income showed up because every payment has two ends.</p>
+          <p class="serif-note">Whenever a GDP question confuses you this quarter, ask the one question underneath all five: <strong>is this telling me something about what was produced?</strong> If a number moved and nothing was made differently, you have found the machinery, not the economy.</p>
+        </div>
+      </div>
+      <div class="signature">What counts &#10003; &rarr; Prices &#10003; &rarr; Inventories &#10003; &rarr; Three views &#10003;</div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 38. CLOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 4 · Close">
+    <div class="eyebrow">Close &middot; on your own paper</div>
+    <h2>Finish the sentence</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;max-width:1000px;gap:1.3rem">
+      <p class="lede">In your own words &mdash; not mine. Hand it to nobody; you are writing it for yourself, for the midterm.</p>
+      <div class="blankline">
+        GDP measures <span class="bl">&nbsp;</span><br>
+        but not <span class="bl">&nbsp;</span>,<br>
+        because <span class="bl">&nbsp;</span>.
+      </div>
+      <div class="signature">What counts &rarr; Prices &rarr; Inventories &rarr; Three views</div>
+    </div>
+  </section>
+</div>
+
+<div class="chrome">
+  <span class="course" id="sectionLabel">ECON 002 · Discussion 4</span>
+  <span class="navhint">
+    <button id="prevBtn" aria-label="Previous slide">&larr; prev</button>
+    <span aria-live="polite" aria-atomic="true">Slide <span id="cur">1</span> of <span id="tot">38</span></span>
+    <button id="nextBtn" aria-label="Next slide">next &rarr;</button>
+  </span>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* the one place the course string lives */
+  const COURSE = 'ECON 002';
+  const DECK_TITLE = 'What GDP Actually Counts';
+  document.title = COURSE + ' · ' + DECK_TITLE;
+  const eyebrow = document.getElementById('titleEyebrow');
+  if(eyebrow) eyebrow.textContent = COURSE + ' · Discussion Section · Unit 3';
+
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  const prog=document.getElementById('prog');
+  const cur=document.getElementById('cur');
+  document.getElementById('tot').textContent=slides.length;
+
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    prog.style.width=((i)/(slides.length-1)*100)+'%';
+    cur.textContent=i+1;
+    const sec=slides[i].getAttribute('data-section');
+    const lbl=document.getElementById('sectionLabel');
+    if(lbl) lbl.textContent = sec ? (COURSE+' · '+sec) : (COURSE+' · Discussion');
+  }
+  function next(){show(i+1)}
+  function prev(){show(i-1)}
+
+  document.getElementById('nextBtn').onclick=next;
+  document.getElementById('prevBtn').onclick=prev;
+
+  /* guarded: Space must activate a focused control, not jump the slide */
+  window.addEventListener('keydown',e=>{
+    const t=e.target;
+    const onControl = t && t.closest && t.closest('button,a,input,select,textarea,[tabindex]');
+    if(e.key===' '||e.key==='Spacebar'){
+      if(onControl) return;               /* let the browser click the focused button */
+      e.preventDefault();next();return;
+    }
+    if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();next()}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}
+    else if(e.key.toLowerCase()==='f'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  /* ---- generic click-to-reveal: button[data-reveal="id"] or "id1,id2,id3"
+          A comma list lets one button uncover several table cells at once,
+          which is how every table on this deck stays empty until its reveal. */
+  document.querySelectorAll('[data-reveal]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      btn.getAttribute('data-reveal').split(',').forEach(id=>{
+        const t=document.getElementById(id.trim());
+        if(t) t.classList.add('shown');
+      });
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- generic quick-check polls: button[data-poll-reveal="pollId"] ---- */
+  document.querySelectorAll('[data-poll-reveal]').forEach(btn=>{
+    const group=document.getElementById(btn.getAttribute('data-poll-reveal'));
+    if(!group) return;
+    const opts=[...group.querySelectorAll('.poll-opt')];
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    btn.addEventListener('click',()=>{
+      group.classList.add('revealed');
+      opts.forEach(o=>{ if(o.dataset.correct==='true') o.classList.add('correct'); });
+      btn.style.display='none';
+    });
+  });
+
+  /* ---- generic diagnose (flawed-argument) groups ---- */
+  document.querySelectorAll('.diag').forEach(group=>{
+    const opts=[...group.querySelectorAll('.diag-opt')];
+    const revealBtn=group.parentElement.querySelector('[data-diag-reveal]');
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    if(revealBtn){
+      revealBtn.addEventListener('click',()=>{
+        group.classList.add('revealed');
+        opts.forEach(o=>{if(o.dataset.bad==='true')o.classList.add('bad');});
+        revealBtn.style.display='none';
+        const note=group.parentElement.querySelector('[data-diag-note]');
+        if(note) note.style.display='block';
+      });
+    }
+  });
+
+  /* ---- static SVG reveals: button[data-reveal-svg="key"] ---- */
+  const svgShifts={
+    routes : ['rtRow2','rtRow3','rtLine','rtNote']
+  };
+  function revealShift(key){
+    (svgShifts[key]||[]).forEach(id=>{const el=document.getElementById(id); if(el) el.setAttribute('opacity',1);});
+  }
+  document.querySelectorAll('[data-reveal-svg]').forEach(btn=>{
+    const key=btn.getAttribute('data-reveal-svg');
+    btn.addEventListener('click',()=>{ revealShift(key); });
+  });
+
+  /* ---- condition cards: button[data-cond="bodyId"] ---- */
+  document.querySelectorAll('[data-cond]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const body=document.getElementById(btn.getAttribute('data-cond'));
+      if(body){body.classList.add('shown');}
+      btn.style.display='none';
+    });
+  });
+
+  /* =====================================================================
+     ANIMATION SCAFFOLD
+     This unit is table-heavy rather than curve-heavy, so both animations
+     are DISCRETE steppers, not sweeps. Each still gets its own reset(),
+     finish() and reduced-motion branch, exactly as the sweeps do.
+     ===================================================================== */
+  const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const $ = id => document.getElementById(id);
+
+  /* ---------------------------------------------------------------------
+     makeStepper — walks a table one row at a time, highlighting the row
+     and ringing the matching element in the diagram.
+     --------------------------------------------------------------------- */
+  function makeStepper(o){
+    const playBtn=$(o.play);
+    if(!playBtn) return;
+    const resetBtn=$(o.reset);
+    const rows =o.rows.map($);
+    const rings=(o.rings||[]).map($);
+    const $n   =$(o.note);
+    const n    =rows.length;
+    let raf, last=-1;
+    function clear(){
+      rows.forEach(r=>r&&r.classList.remove('hl'));
+      rings.forEach(r=>r&&r.setAttribute('opacity',0));
+      last=-1;
+    }
+    function at(k){
+      if(k===last) return;
+      clear(); last=k;
+      if(rows[k])  rows[k].classList.add('hl');
+      if(rings[k]) rings[k].setAttribute('opacity',1);
+      if($n) $n.textContent=o.labels[k];
+    }
+    function reset(){
+      cancelAnimationFrame(raf);
+      clear();
+      if($n) $n.textContent=o.idle;
+      if(o.onReset) o.onReset();
+    }
+    function finish(){
+      at(n-1);
+      if($n) $n.textContent=o.done;
+      if(o.onFinish) o.onFinish();
+    }
+    function play(){
+      reset();
+      if(REDUCED){ finish(); return; }          /* reduced-motion branch */
+      const t0=performance.now(), stepMs=o.stepMs||900;
+      function tick(now){
+        const el=now-t0;
+        if(el >= stepMs*n){ finish(); return; }
+        const k=Math.min(n-1, Math.floor(el/stepMs));
+        at(k);
+        if(o.onStep) o.onStep(k);
+        raf=requestAnimationFrame(tick);
+      }
+      raf=requestAnimationFrame(tick);
+    }
+    playBtn.onclick=play;
+    if(resetBtn) resetBtn.addEventListener('click',reset);
+    reset();
+  }
+
+  /* ---------------------------------------------------------------------
+     makeStageStepper — a discrete stage animation. Each step shows one
+     named set of SVG elements (hiding every other) and rewrites the
+     labeled readout; there is no sweep, because inventory changes as
+     events, not as a continuous glide.
+     Same discipline as every other animation: reset(), finish(), reduced.
+     --------------------------------------------------------------------- */
+  function makeStageStepper(o){
+    const playBtn=$(o.play);
+    if(!playBtn) return null;
+    const $n=$(o.note);
+    const all=o.all.map($).filter(Boolean);
+    const outs={}; Object.keys(o.fields||{}).forEach(k=>{ outs[k]=$(o.fields[k]); });
+    const steps=o.steps, n=steps.length;
+    let timer=null;
+
+    function hideAll(){ all.forEach(e=>e.setAttribute('opacity',0)); }
+    function paint(k){
+      const st=steps[k];
+      hideAll();
+      st.ids.forEach(id=>{ const e=$(id); if(e) e.setAttribute('opacity',1); });
+      /* every step re-states the full readout, so a screen reader always
+         hears a complete picture rather than a single changed field */
+      Object.keys(outs).forEach(key=>{
+        if(outs[key]) outs[key].textContent = (st.show && st.show[key]) || '—';
+      });
+      if($n) $n.textContent=st.note;
+    }
+    function reset(){
+      if(timer){clearTimeout(timer);timer=null;}
+      hideAll();
+      Object.keys(outs).forEach(key=>{ if(outs[key]) outs[key].textContent='—'; });
+      if($n) $n.textContent=o.idle;
+    }
+    function finish(){
+      if(timer){clearTimeout(timer);timer=null;}
+      paint(n-1);
+    }
+    function play(){
+      if(timer){clearTimeout(timer);timer=null;}
+      reset();
+      if(REDUCED){ finish(); return; }          /* reduced-motion branch */
+      let k=0;
+      (function tick(){
+        paint(k);
+        if(k>=n-1) return;
+        k++;
+        timer=setTimeout(tick, o.stepMs||2400);
+      })();
+    }
+    playBtn.onclick=play;
+    (o.resets||[]).forEach(id=>{ const b=$(id); if(b) b.addEventListener('click',reset); });
+    return { reset:reset, finish:finish };
+  }
+
+  /* =====================================================================
+     Slide 9 · add up the three roasters. The point of the animation is
+     what it never needs: a price.
+     ===================================================================== */
+  makeStepper({
+    play:'r9play', reset:'r9reset', note:'r9note',
+    rows:['r9r0','r9r1','r9r2','r9r3'],
+    rings:['r9k0','r9k1','r9k2','r9g3'],
+    stepMs:950,
+    labels:['Bell Tower Roasting → 200 cups. Running total: 200.',
+            'Second Street Coffee → 120 cups. Running total: 320.',
+            'Kettle & Co → 80 cups. Running total: 400.',
+            'Total production: 400 cups. No prices were used anywhere.'],
+    idle:'Press play. Watch what the arithmetic needs — and what it does not.',
+    done:'400 cups. Three numbers added together, and not one price in sight.',
+    onReset:function(){ const t=$('r9tot'); if(t) t.classList.remove('shown'); },
+    onFinish:function(){ const t=$('r9tot'); if(t) t.classList.add('shown'); }
+  });
+
+  /* =====================================================================
+     Slide 26 · sales against production, stepped. Same 4,000 built either
+     way; the mismatch between the two bars is the change in inventories.
+     ===================================================================== */
+  (function(){
+    if(!$('mark4k')) return;
+    const ALL=['mark4k','sAsold','sAsplit','sAprod','sAeq','sBsold','sBprod','sBeq'];
+    const COMMON={
+      note:'ivNote', all:ALL, resets:['ivReset'], stepMs:2400,
+      fields:{start:'ivStart',prod:'ivProd',sold:'ivSold',end:'ivEnd',delta:'ivDelta',gdp:'ivGdp'},
+      idle:'Press a scenario. Three steps, one at a time — nothing slides.'
+    };
+    const A = makeStageStepper(Object.assign({},COMMON,{
+      play:'ivAplay',
+      steps:[
+        {ids:['sAsold'],
+         show:{sold:'4,300'},
+         note:'The receipts say 4,300 bikes sold in 2026. That is the whole of what a statistician can see.'},
+        {ids:['sAsold','sAsplit','mark4k'],
+         show:{start:'500',prod:'4,000',sold:'4,300'},
+         note:'Only 4,000 of them were built in 2026. The red 300 came off the shelf — built in 2025, and already counted in 2025.'},
+        {ids:['sAsold','sAsplit','mark4k','sAprod','sAeq'],
+         show:{start:'500',prod:'4,000',sold:'4,300',end:'200',delta:'−300',gdp:'4,300 + (−300) = 4,000'},
+         note:'Production stops at the dashed line: 4,000. Sales ran 300 past it, so inventories fell by 300 — and 4,300 + (−300) = 4,000.'}
+      ]
+    }));
+    const B = makeStageStepper(Object.assign({},COMMON,{
+      play:'ivBplay',
+      steps:[
+        {ids:['sBsold'],
+         show:{sold:'3,600'},
+         note:'The receipts say 3,600 bikes sold in 2026. A much worse-looking year.'},
+        {ids:['sBsold','sBprod','mark4k'],
+         show:{start:'500',prod:'4,000',sold:'3,600'},
+         note:'But the factory still built 4,000. The gold 400 were produced in 2026 and never left the warehouse.'},
+        {ids:['sBsold','sBprod','mark4k','sBeq'],
+         show:{start:'500',prod:'4,000',sold:'3,600',end:'900',delta:'+400',gdp:'3,600 + 400 = 4,000'},
+         note:'Production reaches the dashed line: 4,000. Sales stopped 400 short, so inventories rose by 400 — and 3,600 + 400 = 4,000.'}
+      ]
+    }));
+    if(A) A.reset();
+    if(B) B.reset();
+  })();
+
+  show(0);
+})();
+</script>
+
+</body>
+</html>

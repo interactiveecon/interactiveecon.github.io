@@ -1,0 +1,1877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECON 002 · When the Government Spends and Taxes</title>
+<style>
+  :root{
+    --ink:#14243A;          /* near-navy ink */
+    --accent:#1F4E79;       /* deep blue (from worksheets) */
+    --accent-soft:#8FAADC;
+    --paper:#F6F4EE;        /* warm chalk-paper */
+    --paper-line:#E4E0D5;
+    --gold:#8A5900;
+    --gold-soft:#FBF1DC;
+    --red:#C0392B;
+    --grey:#5A5F66;
+    --chalk:#FbFaF7;
+    --shadow:0 8px 30px rgba(20,36,58,.10);
+    --mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Georgia','Iowan Old Style',serif;
+    color:var(--ink);
+    background:var(--paper);
+    overflow:hidden;
+  }
+  /* ---------- deck scaffold ---------- */
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;
+    padding:clamp(1.25rem,4vw,4.5rem) clamp(1.5rem,6vw,6rem);
+    /* extra bottom room so content never hides behind the fixed nav bar (~46px) */
+    padding-bottom:calc(46px + clamp(1rem,3vw,2rem));
+    /* if a slide is taller than the screen, scroll it instead of clipping/overlapping */
+    overflow-y:auto;overflow-x:hidden;
+    scroll-padding-bottom:46px;
+    opacity:0;
+    transition:opacity .38s ease;
+  }
+  .slide.active{display:flex;opacity:1;animation:rise .45s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide.active{animation:none}
+    .slide{transition:none}
+    *{transition-duration:.001ms !important;animation-duration:.001ms !important}
+  }
+  /* visible keyboard focus (WCAG 2.4.7) */
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+    outline:3px solid var(--accent);outline-offset:3px;border-radius:6px;
+  }
+  :focus:not(:focus-visible){outline:none}
+  /* ---------- typography ---------- */
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--grey);margin-bottom:1.1rem;font-weight:600;
+  }
+  h1{font-size:clamp(2.4rem,5.5vw,4.4rem);line-height:1.02;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3.2vw,2.4rem);line-height:1.1;font-weight:700;letter-spacing:-.01em;margin-bottom:.4rem}
+  .lede{font-size:clamp(1.05rem,1.7vw,1.35rem);line-height:1.5;color:var(--ink);max-width:52ch}
+  .muted{color:var(--grey)}
+  .serif-note{font-style:italic;color:var(--grey);font-size:1rem;line-height:1.5}
+  strong{font-weight:700}
+  .accent{color:var(--accent)}
+  .red{color:var(--red)}
+  .gold{color:var(--gold)}
+  /* title rule */
+  h2 + .titlerule{height:2px;background:linear-gradient(90deg,var(--accent-soft),transparent);
+    width:min(100%,640px);margin:.2rem 0 1.4rem}
+  /* ---------- model cards ---------- */
+  .models{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin:1.4rem 0;max-width:900px}
+  .model{
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;
+    padding:1.4rem 1.6rem;box-shadow:var(--shadow);position:relative;
+  }
+  .model .tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:.6rem;display:block}
+  .model .eq{font-family:var(--mono);font-size:1.35rem;color:var(--ink)}
+  .model .eq .coef{color:var(--red);font-weight:700}
+  .model.dim{opacity:.4;filter:saturate(.4)}
+  .model.hi{border-color:var(--accent);box-shadow:0 8px 30px rgba(31,78,121,.22)}
+  .model .body{font-size:1rem;line-height:1.5;margin-top:.7rem}
+  .model.warm{background:var(--gold-soft);border-color:#E2CFA4}
+  .model.warm .tag{color:var(--gold)}
+  /* ---------- boxes ---------- */
+  .prompt,.reveal,.predict{
+    border-radius:10px;padding:1.05rem 1.3rem;max-width:820px;line-height:1.5;
+    font-family:'Georgia',serif;font-size:1.08rem;
+  }
+  .prompt{background:#EEF3FA;border-left:4px solid var(--accent)}
+  .reveal{background:var(--gold-soft);border-left:4px solid var(--gold)}
+  .cue{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;display:block;margin-bottom:.4rem}
+  .prompt .cue{color:var(--accent)}
+  .reveal .cue{color:var(--gold)}
+  .predict .cue{color:var(--red)}
+  .predict{background:#FBEEEC;border-left:4px solid var(--red)}
+  .prompt p,.reveal p,.predict p{margin:0;line-height:1.5}
+  .prompt .cue + p,.reveal .cue + p,.predict .cue + p{margin-top:.15rem}
+  .prompt ol,.predict ol,.reveal ol{margin:.5rem 0 0 1.3rem;line-height:1.6}
+  .prompt li,.predict li,.reveal li{margin-bottom:.25rem}
+  /* chain / mono line */
+  .chain{
+    font-family:var(--mono);background:#EDF1F8;border:1px solid var(--accent-soft);
+    border-radius:8px;padding:.7rem 1rem;font-size:1.05rem;color:var(--accent);
+    display:inline-block;margin-top:.4rem
+  }
+  .chain.warm{background:var(--gold-soft);border-color:#E2CFA4;color:var(--gold)}
+  /* ---------- interactive graph panel ---------- */
+  .graphwrap{display:grid;grid-template-columns:1.15fr .85fr;gap:2rem;align-items:center;margin-top:.6rem;flex:1 0 auto}
+  @media (max-width:900px){.graphwrap{grid-template-columns:1fr}}
+  .panel{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;padding:1.2rem;box-shadow:var(--shadow)}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .controls{display:flex;flex-direction:column;gap:1.3rem}
+  .readout{font-family:var(--mono);font-size:.92rem;line-height:1.7;color:var(--ink);background:#EDF1F8;border-radius:8px;padding:.8rem 1rem}
+  .readout .big{font-size:1.25rem;color:var(--accent);font-weight:700}
+  .readout .lbl2{color:var(--grey)}
+  .btn{
+    font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.7rem 1.2rem;cursor:pointer;
+    box-shadow:0 3px 10px rgba(31,78,121,.3);transition:transform .1s,background .2s;align-self:flex-start
+  }
+  .btn:hover{background:#173a5c;transform:translateY(-1px)}
+  /* a spent reveal button stays in place — hiding it slid the row under the
+     cursor, so a second click landed on the next answer (disabled controls
+     are exempt from the contrast minimum) */
+  .btn:disabled,.btn.ghost:disabled{opacity:.38;cursor:default;transform:none;box-shadow:none}
+  .btn:disabled:hover{background:var(--accent);transform:none}
+  .btn.ghost:disabled:hover{background:transparent}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
+  .btn.ghost:hover{background:#EEF3FA}
+  .btnrow{display:flex;gap:.7rem;flex-wrap:wrap}
+  /* ---------- poll ---------- */
+  .poll-opts{display:flex;flex-direction:column;gap:.8rem;max-width:860px;margin-top:1.1rem}
+  .poll-opt{
+    display:flex;align-items:stretch;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;
+    cursor:pointer;background:var(--chalk);transition:border-color .2s,transform .08s;position:relative;
+    width:100%;text-align:left;font:inherit;color:inherit;padding:0
+  }
+  .poll-opt:hover{border-color:var(--accent-soft)}
+  .poll-opt:active{transform:scale(.995)}
+  .poll-opt .num{background:var(--accent);color:#fff;font-family:var(--mono);font-weight:700;
+    display:flex;align-items:center;justify-content:center;padding:0 1.1rem;font-size:1.1rem;z-index:2}
+  .poll-opt .txt{padding:.9rem 1.1rem;line-height:1.4;z-index:2;font-size:1.02rem;font-family:'Georgia',serif}
+  .poll.revealed .poll-opt{opacity:.5;transition:opacity .4s}
+  .poll.revealed .poll-opt.correct{opacity:1;border-color:var(--gold);background:var(--gold-soft)}
+  .poll-opt.correct .num{background:var(--gold)}
+  .poll-opt.correct .txt::after{content:" ✓ correct";color:var(--gold);font-family:var(--mono);font-weight:700;font-size:.82rem}
+  .poll-hint{font-family:var(--mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-top:.9rem;font-weight:600}
+  /* ---------- footer / nav ---------- */
+  .chrome{position:fixed;bottom:0;left:0;right:0;height:46px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 1.4rem;font-family:var(--mono);font-size:.72rem;
+    letter-spacing:.08em;color:var(--grey);pointer-events:none;z-index:50}
+  .chrome .course{text-transform:uppercase}
+  .progress-track{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:60}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-soft));width:0;transition:width .35s ease}
+  .navhint{display:flex;gap:1.2rem;align-items:center;pointer-events:auto}
+  .navhint button{pointer-events:auto;background:none;border:none;color:var(--grey);cursor:pointer;font-family:var(--mono);font-size:.9rem;padding:.2rem .5rem;border-radius:5px}
+  .navhint button:hover{color:var(--accent);background:rgba(31,78,121,.08)}
+  .kbd{font-family:var(--mono);font-size:.66rem;border:1px solid var(--paper-line);border-radius:4px;padding:.1rem .35rem;color:var(--grey)}
+  /* content column helper */
+  .col{display:flex;flex-direction:column;gap:1.1rem;flex:1 0 auto;justify-content:center}
+  .grow{flex:1 0 auto}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+  @media (max-width:900px){.two{grid-template-columns:1fr}}
+  .calc{font-family:var(--mono);font-size:1.05rem;line-height:1.8}
+  .calc .lbl{color:var(--accent);font-weight:700}
+  .footnote{font-size:.92rem;color:var(--grey);font-style:italic}
+  /* two graphs above, readout + buttons below */
+  .ctrlrow{display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;align-items:start;margin-top:1rem}
+  @media (max-width:900px){.ctrlrow{grid-template-columns:1fr}}
+  .paneltitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;
+    font-weight:700;color:var(--accent);margin-bottom:.5rem}
+  .runsheet{display:grid;grid-template-columns:auto 1fr;gap:.35rem 1.1rem;font-family:var(--mono);font-size:.86rem;line-height:1.5;margin-top:.4rem}
+  .runsheet .rk{color:var(--accent);font-weight:700;white-space:nowrap}
+  /* title slide special */
+  .title-slide{justify-content:safe center}
+  .title-slide h1{margin:.6rem 0}
+  .signature{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:2rem}
+  /* ---------- section divider ---------- */
+  .divider{justify-content:safe center;background:linear-gradient(135deg,#1B3B5C,#14243A)}
+  .divider *{color:#F6F4EE}
+  .divider .eyebrow{color:#8FAADC}
+  .divider h1{font-size:clamp(2.2rem,5vw,4rem);color:#fff}
+  .divider .lede{color:#D6DEE9;max-width:52ch}
+  .divider .sectrail{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#8FAADC;margin-top:1.6rem}
+  .divider .through{font-family:var(--mono);font-size:.8rem;line-height:1.6;color:#D6DEE9;
+    border-left:3px solid #8FAADC;padding-left:.9rem;margin-top:1.4rem;max-width:60ch}
+  /* ---------- generic click-reveal ---------- */
+  .reveal-hidden{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .reveal-hidden.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* cell-level hide: keeps the table's layout, but the value is neither seen
+     nor read out by a screen reader until its reveal button is pressed */
+  .hid{visibility:hidden}
+  .hid.shown{visibility:visible}
+  /* condition cards (3-across; override grid-template-columns for 2) */
+  .condrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem}
+  @media (max-width:900px){.condrow{grid-template-columns:1fr !important}}
+  .condcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.5rem}
+  .condcard .ctitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .condcard .cbtn{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:.55rem .8rem;cursor:pointer;align-self:flex-start}
+  .condcard .cbtn:hover{background:#173a5c}
+  .condcard .cbody{opacity:0;max-height:0;overflow:hidden;transition:opacity .35s,max-height .45s}
+  .condcard .cbody.shown{opacity:1;max-height:none;overflow:visible;margin-top:.3rem}
+  .condcard .cnote{font-size:.95rem;line-height:1.5;color:var(--ink)}
+  .condcard ul{margin:.2rem 0 0 1.1rem;font-size:.95rem;line-height:1.55}
+  .condcard li{margin-bottom:.3rem}
+  .condcard .big{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--accent)}
+  .condcard.warm{background:var(--gold-soft);border-color:#E2CFA4}
+  .condcard.warm .ctitle,.condcard.warm .big{color:var(--gold)}
+  /* diagnose (numbered flawed-argument) list */
+  .diag{display:flex;flex-direction:column;gap:.7rem;max-width:920px;margin:1rem 0}
+  .diag-opt{display:flex;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;background:var(--chalk);width:100%;text-align:left;font:inherit;color:inherit;padding:0;cursor:pointer;transition:border-color .2s}
+  .diag-opt:hover{border-color:var(--accent-soft)}
+  .diag-opt .n{background:var(--grey);color:#fff;font-family:var(--mono);font-weight:700;display:flex;align-items:center;padding:0 1rem;font-size:1.05rem}
+  .diag-opt .s{padding:.85rem 1.1rem;line-height:1.45;font-family:'Georgia',serif;font-size:1.02rem}
+  .diag.revealed .diag-opt{opacity:.5}
+  .diag.revealed .diag-opt.bad{opacity:1;border-color:var(--red);background:#FBEEEC}
+  .diag-opt.bad .n{background:var(--red)}
+  .diag.revealed .diag-opt.bad .s::after{content:" ✗ the flaw";color:var(--red);font-family:var(--mono);font-weight:700;font-size:.8rem}
+  /* fill-in-the-blank close line */
+  .blankline{font-family:var(--mono);font-size:clamp(1.1rem,2.4vw,1.7rem);line-height:2;color:var(--ink);
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1.4rem 1.6rem;
+    box-shadow:var(--shadow);max-width:900px}
+  .blankline .bl{display:inline-block;min-width:9ch;border-bottom:2px solid var(--accent)}
+  /* ---------- data tables ---------- */
+  .sched{border-collapse:collapse;font-family:var(--mono);font-size:.86rem;background:var(--chalk);
+    border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+  .sched caption{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;color:var(--accent);text-align:left;padding:.5rem .8rem .35rem}
+  .sched th,.sched td{padding:.3rem .8rem;text-align:right;border-bottom:1px solid var(--paper-line)}
+  .sched th{color:var(--grey);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.66rem}
+  .sched td:first-child,.sched th:first-child{text-align:left;color:var(--accent);font-weight:700}
+  .sched tbody tr:last-child td{border-bottom:none}
+  .sched tr.tot td{border-top:2px solid var(--paper-line);font-weight:700;color:var(--gold)}
+  .sched tr.tot td:first-child{color:var(--gold)}
+  .sched.gold{background:var(--gold-soft)}
+  .sched.gold caption,.sched.gold td:first-child{color:var(--gold)}
+  .sched.txt td{text-align:left}
+  .sched.txt td:first-child{white-space:nowrap}
+  .sched .yes{color:var(--gold);font-weight:700}
+  .sched .no{color:var(--red);font-weight:700}
+  .sched .foreign{color:var(--red)}
+  .schedrow{display:flex;gap:1.4rem;flex-wrap:wrap;align-items:flex-start}
+  .sched tr.hl td{background:var(--gold-soft);color:var(--gold);font-weight:700}
+  .sched tr.hl td:first-child{color:var(--gold)}
+  .sched tr{transition:background .18s}
+  /* ---------- two-card takeaway ---------- */
+  .pair2{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin-top:.8rem}
+  @media (max-width:900px){.pair2{grid-template-columns:1fr}}
+  .pcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;
+    padding:1.2rem 1.3rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.7rem}
+  .pcard .ptag{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .pcard.warn .ptag{color:var(--red)}
+  .pcard .verdictbig{font-family:var(--mono);font-size:1rem;font-weight:700;line-height:1.5;color:var(--accent)}
+  .pcard.warn .verdictbig{color:var(--red)}
+  .pcard p{font-size:1rem;line-height:1.5}
+  /* ---------- slider bank (the lever panel) ---------- */
+  .sliders{display:flex;flex-direction:column;gap:.75rem}
+  .sldrow{display:grid;grid-template-columns:13ch 1fr 5ch;gap:.7rem;align-items:center}
+  .sldrow label{font-family:var(--mono);font-size:.74rem;line-height:1.25;font-weight:700;
+    color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
+  .sldrow .val{font-family:var(--mono);font-size:1rem;font-weight:700;color:var(--ink);text-align:right}
+  .sldrow input[type=range]{width:100%;min-width:0;height:1.7rem;cursor:pointer;
+    accent-color:var(--accent);background:transparent}
+  @media (max-width:700px){.sldrow{grid-template-columns:1fr 4.5ch;grid-auto-flow:row}
+    .sldrow label{grid-column:1 / -1}}
+
+  /* ---------- reflow at 320px (WCAG 1.4.10) ---------- */
+  @media (max-width:700px){
+    .models{grid-template-columns:1fr}
+    .chain{max-width:100%;overflow-wrap:anywhere}
+    .sched{font-size:.76rem}
+    .sched th,.sched td{padding:.25rem .45rem}
+    .schedrow{gap:.9rem}
+    /* a wide table scrolls inside its own box rather than widening the slide */
+    .sched{display:block;overflow-x:auto;max-width:100%}
+    .col,.two > *,.graphwrap > *,.condrow > *,.pair2 > *,.schedrow > *{min-width:0}
+    /* a button column beside a table is sized in ch and set not to shrink;
+       at phone widths it has to give way instead of pushing the slide wide */
+    .schedrow > .col{flex:1 1 auto;max-width:100% !important}
+    .btnrow .btn{max-width:100%;overflow-wrap:anywhere}
+  }
+</style>
+</head>
+<body>
+<div class="progress-track"><div class="progress-fill" id="prog"></div></div>
+<div class="deck" id="deck">
+
+
+  <!-- ═══════════ 1. TITLE ═══════════ -->
+  <section class="slide active title-slide" data-section="Discussion 9 · Opening">
+    <div class="eyebrow" id="titleEyebrow">ECON 002 &middot; Discussion Section</div>
+    <h1>When the government<br><span class="accent">spends and taxes</span></h1>
+    <p class="lede" style="margin-top:1rem">Last time the interest rate moved and output followed. Today the government acts on purpose. Two levers sit in front of it &mdash; what it buys and what it collects &mdash; and the same size change on each lever moves output by different amounts. Today is about why.</p>
+    <p class="serif-note" style="margin-top:1.6rem">Work on your own paper. Write your answer down before any answer appears &mdash; your reasoning is the point, not a clean final line.</p>
+    <div class="signature">Spending &rarr; Taxes &rarr; Both at once &rarr; The budget</div>
+  </section>
+
+  <!-- ══════════════ PART 1 · SPENDING ══════════════ -->
+
+  <!-- ═══════════ 2. DIVIDER P1 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 9 · Spending">
+    <div class="eyebrow">Part 1 of 4</div>
+    <h1>Spending</h1>
+    <p class="lede">Every shock so far has arrived from outside. The interest rate moved, and the economy adjusted. Now the change is deliberate: <strong>fiscal policy</strong> is a change in government purchases or in taxes, chosen in order to move output.</p>
+    <div class="sectrail">SPENDING &rarr; TAXES &rarr; BOTH AT ONCE &rarr; THE BUDGET</div>
+    <div class="through">Throughline: government purchases enter planned expenditure directly. Taxes do not &mdash; they work through consumption. That one difference explains every result in this unit.</div>
+  </section>
+
+  <!-- ═══════════ 3. RECAP ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Spending">
+    <div class="eyebrow">The same economy, one slide</div>
+    <h2>Where we left it</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:92ch">This is the economy you solved last time. Nothing about it has changed, and none of it needs rebuilding &mdash; it is here so the numbers are in front of you.</p>
+      <div class="models">
+        <div class="model">
+          <span class="tag">The economy</span>
+          <div class="eq" style="font-size:1.05rem;line-height:1.9">
+            C = 25 + 0.75(Y &minus; T)<br>
+            I = 60 &minus; 8r<br>
+            G = 40 &nbsp;&nbsp; T = 20 &nbsp;&nbsp; r = 5
+          </div>
+          <div class="body">At r = 5, investment is <strong>20</strong>. The <strong>MPC is 0.75</strong>, and that one number drives everything today.</div>
+        </div>
+        <div class="model warm">
+          <span class="tag">What it solved to</span>
+          <div class="eq" style="font-size:1.05rem;line-height:1.9">
+            PE = 70 + 0.75Y<br>
+            Y = PE &nbsp;&rarr;&nbsp; <strong>Y = 280</strong>
+          </div>
+          <div class="body">Output settles at <strong>280</strong>, the one level where planned spending and production agree and unplanned inventories are not moving.</div>
+        </div>
+      </div>
+      <p class="lede" style="max-width:92ch">Two of those numbers are now policy choices rather than facts of nature. <strong>G</strong> is what the government buys. <strong>T</strong> is what it collects. For the rest of today we move them.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 4. Q1 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Spending">
+    <div class="eyebrow">Question 1 &middot; predict &middot; commit before you see the answer</div>
+    <h2>Government purchases rise from 40 to 56</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">The government decides to buy more: new road resurfacing, more equipment, more hours of public service. <strong>G goes from 40 to 56</strong>, an increase of <strong>16</strong>. Taxes do not change. The interest rate does not change. The MPC is still 0.75.</p>
+      <div class="predict">
+        <span class="cue">Q1 &middot; predict &middot; a number, and one line saying why</span>
+        <p><strong>Write down how much you think equilibrium output rises by.</strong> Do not solve it &mdash; commit to a guess and to the sentence that justifies it. You will be held to both.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 5. Q1 REVEAL ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Spending">
+    <div class="eyebrow">Answer &middot; Question 1</div>
+    <h2>Output rises by 64</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:92ch">Trace it the way you traced the fall in investment. The government buying more is somebody selling more, and the chain starts from there.</p>
+      <div class="btnrow">
+        <button class="btn" data-reveal="s5a">The chain</button>
+        <button class="btn" data-reveal="s5b">Solve for the new equilibrium</button>
+      </div>
+      <div class="reveal reveal-hidden" id="s5a">
+        <span class="cue">What happens, in order</span>
+        <div class="chain warm" style="font-size:1rem">G&uarr; &rarr; PE&uarr; &rarr; PE &gt; Y &rarr; U.I.&darr; &rarr; firms produce more &rarr; Y&uarr;</div>
+        <p style="margin-top:.7rem">Read the middle of that chain carefully. Firms are still producing 280 while buyers now plan to spend more than 280, so goods leave the shelves faster than they are replaced and <strong>unplanned inventory investment &mdash; U.I. &mdash; goes negative</strong>. Falling inventories are the signal, and the signal says produce more.</p>
+      </div>
+      <div class="reveal reveal-hidden" id="s5b">
+        <span class="cue">The new equilibrium</span>
+        <div class="calc">
+          PE = 25 + 0.75(Y &minus; 20) + 20 + 56 = <strong>86 + 0.75Y</strong><br>
+          Y = 86 + 0.75Y &nbsp;&rarr;&nbsp; 0.25Y = 86 &nbsp;&rarr;&nbsp; Y = <strong>344</strong>
+        </div>
+        <div class="calc" style="margin-top:.6rem">&Delta;G = +16 &nbsp;&nbsp;&nbsp; &Delta;Y = 344 &minus; 280 = <strong>+64</strong></div>
+        <p style="margin-top:.6rem">Government purchases rose by 16 and output rose by <strong>64</strong>. Nothing else was touched: taxes are still 20, the interest rate is still 5, investment is still 20. So the next slide has only one job &mdash; where did the other 48 come from?</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 6. WHY 64 AND NOT 16 · STEPPED ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Spending">
+    <div class="eyebrow">Adding the rounds up</div>
+    <h2>Why 64 and not 16</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="paneltitle">Cumulative rise in output after each round</div>
+        <svg viewBox="0 0 480 300" role="img" aria-label="A bar chart of the running total rise in output as the multiplier rounds accumulate. Round one takes output up sixteen, round two adds twelve more, round three nine, round four six and three quarters, and later rounds add less and less. The bars climb toward but never pass a gold dashed line at plus sixty-four. The horizontal axis counts rounds of the multiplier and the vertical axis is the cumulative change in output. The chart shows that infinitely many shrinking rounds add to a finite total.">
+          <line x1="60" y1="40" x2="60" y2="255" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="60" y1="255" x2="460" y2="255" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="60" y1="193.6" x2="455" y2="193.6"/><line x1="60" y1="132.1" x2="455" y2="132.1"/>
+            <line x1="60" y1="70.7" x2="455" y2="70.7"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="54" y="259">0</text><text x="54" y="197.6">+20</text><text x="54" y="136.1">+40</text><text x="54" y="74.7">+60</text>
+          </g>
+          <text x="66" y="34" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">cumulative change in output, $bn</text>
+          <text x="460" y="292" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">rounds of the multiplier</text>
+          <g font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">
+            <text x="88.5" y="272">1</text><text x="125.5" y="272">2</text><text x="162.5" y="272">3</text>
+            <text x="199.5" y="272">4</text><text x="236.5" y="272">5</text><text x="273.5" y="272">6</text>
+            <text x="310.5" y="272">7</text><text x="347.5" y="272">8</text><text x="384.5" y="272">9</text><text x="421.5" y="272">10</text>
+          </g>
+          <g fill="#1F4E79">
+            <rect id="grB1" x="75.5" y="205.9" width="26" height="49.1" opacity="0"/>
+            <rect id="grB2" x="112.5" y="169.0" width="26" height="86.0" opacity="0"/>
+            <rect id="grB3" x="149.5" y="141.4" width="26" height="113.6" opacity="0"/>
+            <rect id="grB4" x="186.5" y="120.6" width="26" height="134.4" opacity="0"/>
+            <rect id="grB5" x="223.5" y="105.1" width="26" height="149.9" opacity="0"/>
+            <rect id="grB6" x="260.5" y="93.4" width="26" height="161.6" opacity="0"/>
+            <rect id="grB7" x="297.5" y="84.7" width="26" height="170.3" opacity="0"/>
+            <rect id="grB8" x="334.5" y="78.1" width="26" height="176.9" opacity="0"/>
+            <rect id="grB9" x="371.5" y="73.2" width="26" height="181.8" opacity="0"/>
+            <rect id="grB10" x="408.5" y="69.5" width="26" height="185.5" opacity="0"/>
+          </g>
+          <line id="grTot" x1="60" y1="58.4" x2="455" y2="58.4" stroke="#8A5900" stroke-width="2.5" stroke-dasharray="8 5" opacity="0"/>
+          <text id="grTotT" x="455" y="52" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900" text-anchor="end" opacity="0">total &Delta;Y = +64</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <div><span class="lbl2">rounds so far</span> <span class="big" id="grN">0</span></div>
+          <div><span class="lbl2">this round</span> <span class="big" id="grThis">&mdash;</span></div>
+          <div><span class="lbl2">running total &Delta;Y</span> <span class="big" id="grCum">0</span></div>
+          <div style="margin-top:.4rem" id="grNote">Press play to add the rounds one at a time.</div>
+        </div>
+        <div class="btnrow">
+          <button class="btn" id="grPlay">Play the rounds</button>
+          <button class="btn ghost" id="grReset">Reset</button>
+        </div>
+        <div class="btnrow"><button class="btn" data-reveal="s6a">Where the first 16 came from</button><button class="btn" data-reveal="s6b">The formula</button></div>
+        <div class="reveal reveal-hidden" id="s6a">
+          <span class="cue">Round 1 is the whole 16</span>
+          <p>Look at where G sits: <strong>PE = C + I + G</strong>. Government purchases are a <em>component</em> of planned expenditure, so when G rises by 16, planned expenditure rises by <strong>the full 16</strong> before a single household has reacted to anything. That is exactly the position investment held last time, which is why this is the same multiplier you already met.</p>
+          <p style="margin-top:.5rem">Then round 2: the extra 16 of production is 16 of somebody's <strong>income</strong>. Consumption rises by 0.75 &times; 16 = 12, planned expenditure rises again, and the loop restarts on a smaller number. Each round is three quarters of the one before it.</p>
+        </div>
+        <div class="reveal reveal-hidden" id="s6b">
+          <span class="cue">The government purchases multiplier</span>
+          <div class="calc">+16 + 12 + 9 + 6.75 + &hellip; = <strong>+64</strong></div>
+          <div class="chain warm" style="margin-top:.6rem;padding:.9rem 1rem">&Delta;Y = <span style="display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.2;margin:0 .15em"><span style="border-bottom:1.6px solid currentColor;padding:0 .4em">1</span><span style="padding:0 .4em">1 &minus; MPC</span></span> &times; &Delta;G &nbsp;&nbsp;=&nbsp;&nbsp; 4 &times; 16 = +64</div>
+          <p style="margin-top:.6rem">With MPC = 0.75 the multiplier is <strong>1 &divide; 0.25 = 4</strong>. Hold on to the shape of that fraction: a <strong>1</strong> on top, because the whole of &Delta;G lands on planned expenditure. The next part is about what happens when that is no longer true.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 7. THE 45-DEGREE DIAGRAM · SPENDING ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Spending">
+    <div class="eyebrow">The same 64, drawn</div>
+    <h2>A vertical shift of 16, a horizontal move of 64</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="paneltitle">Planned expenditure against aggregate income</div>
+        <div style="display:flex;gap:1.2rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;font-weight:700;margin-bottom:.5rem">
+          <span style="color:#5A5F66">&#9472;&#9472; 45&deg; line: Y = PE</span>
+          <span style="color:#1F4E79">&#9472;&#9472; PE = 70 + 0.75Y</span>
+          <span class="hid" id="sgPE2leg" style="color:#8A5900">&#9472; &#9472; PE&prime; = 86 + 0.75Y</span>
+        </div>
+        <svg viewBox="0 0 470 420" role="img" aria-label="A 45-degree diagram with aggregate income on the horizontal axis and planned aggregate expenditure on the vertical axis. A neutral grey 45-degree line marks every point where planned expenditure equals income. The blue planned expenditure line, seventy plus three quarters of income, crosses it at point A, an income of 280. A revealed gold dashed line lies sixteen above the blue line and crosses at point B, an income of 344. A short bracket labeled PE shifts up 16 marks the vertical distance between the two lines, and a much longer horizontal arrow labeled change in output equals plus 64 marks the move in equilibrium output. The diagram shows that a small vertical shift produces a much larger horizontal move.">
+          <defs>
+            <marker id="sgHead" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#8A5900"/></marker>
+          </defs>
+          <line x1="70" y1="20" x2="70" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="380" x2="440" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="335" x2="440" y2="335"/><line x1="70" y1="290" x2="440" y2="290"/>
+            <line x1="70" y1="245" x2="440" y2="245"/><line x1="70" y1="200" x2="440" y2="200"/>
+            <line x1="70" y1="155" x2="440" y2="155"/><line x1="70" y1="110" x2="440" y2="110"/>
+            <line x1="70" y1="65" x2="440" y2="65"/><line x1="70" y1="20" x2="440" y2="20"/>
+            <line x1="115" y1="20" x2="115" y2="380"/><line x1="160" y1="20" x2="160" y2="380"/>
+            <line x1="205" y1="20" x2="205" y2="380"/><line x1="250" y1="20" x2="250" y2="380"/>
+            <line x1="295" y1="20" x2="295" y2="380"/><line x1="340" y1="20" x2="340" y2="380"/>
+            <line x1="385" y1="20" x2="385" y2="380"/><line x1="430" y1="20" x2="430" y2="380"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="384">0</text><text x="62" y="294">100</text><text x="62" y="204">200</text>
+            <text x="62" y="132" fill="#1F4E79" font-weight="700">280</text><text x="62" y="74.4" fill="#8A5900" font-weight="700">344</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="399">0</text><text x="160" y="399">100</text>
+            <text x="322" y="399" fill="#1F4E79" font-weight="700">280</text>
+            <text x="379.6" y="399" fill="#8A5900" font-weight="700">344</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">planned expenditure (PE), $bn</text>
+          <text x="440" y="414" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">aggregate income (Y), $bn</text>
+          <line x1="70" y1="380" x2="430" y2="20" stroke="#5A5F66" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="70" y1="317" x2="430" y2="47" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <g stroke="#1F4E79" stroke-width="1.8" stroke-dasharray="5 4">
+            <line x1="70" y1="128" x2="322" y2="128"/><line x1="322" y1="128" x2="322" y2="380"/>
+          </g>
+          <circle cx="322" cy="128" r="7" fill="#1F4E79"/>
+          <text x="313" y="116" font-family="monospace" font-size="14" font-weight="700" fill="#1F4E79" text-anchor="end">A</text>
+          <line id="sgPE2" x1="70" y1="302.6" x2="430" y2="32.6" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <g id="sgBgd" opacity="0"><line x1="70" y1="70.4" x2="379.6" y2="70.4" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/><line x1="379.6" y1="70.4" x2="379.6" y2="380" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/></g>
+          <circle id="sgB" cx="379.6" cy="70.4" r="7" fill="#8A5900" opacity="0"/>
+          <text id="sgBl" x="371" y="59" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" text-anchor="end" opacity="0">B</text>
+          <path id="sgGarr" d="M152,249.5 H168 M160,249.5 V235.1 M152,235.1 H168" stroke="#8A5900" stroke-width="3" fill="none" opacity="0"/>
+          <line id="sgGlead" x1="160" y1="249.5" x2="160" y2="300" stroke="#8A5900" stroke-width="1.6" stroke-dasharray="4 3" opacity="0"/>
+          <text id="sgGlab" x="175" y="316" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">PE shifts up 16</text>
+          <path id="sgYcap" d="M322,346 V358 M379.6,346 V358" stroke="#8A5900" stroke-width="3" fill="none" opacity="0"/>
+          <line id="sgYarr" x1="322" y1="352" x2="376" y2="352" stroke="#8A5900" stroke-width="3" marker-end="url(#sgHead)" opacity="0"/>
+          <text id="sgYlab" x="350.8" y="341" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">&Delta;Y = +64</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <p class="lede" style="max-width:44ch">The 16 goes into the intercept, so the whole line lifts by 16 and by nothing more. Its slope is the MPC, and the MPC has not changed.</p>
+        <div class="btnrow"><button class="btn" data-reveal-svg="peUp" data-reveal="s7a,sgPE2leg">Show the shift</button></div>
+        <div class="reveal reveal-hidden" id="s7a">
+          <span class="cue">Read the two markings</span>
+          <p>The <strong>vertical</strong> bracket is the policy: the line moved up by <strong>16</strong>, and that is the entire size of what the government did. The <strong>horizontal</strong> arrow underneath is the consequence: equilibrium output moved right by <strong>64</strong>, from A to B.</p>
+          <p style="margin-top:.5rem">The geometry is the multiplier. Because the PE line is <em>flatter</em> than the 45-degree line, lifting it a little means the two lines do not meet again until much further right. Write down the number 16 next to the number 64 &mdash; in the next part you will lift the line by a different amount for the same size policy.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 8. THE IS CURVE · RIGHT SHIFT ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Spending">
+    <div class="eyebrow">The other pair of axes</div>
+    <h2>The IS curve shifts right</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="paneltitle">The interest rate against equilibrium output</div>
+        <svg viewBox="0 0 480 370" role="img" aria-label="Equilibrium output on the horizontal axis and the interest rate on the vertical axis. A downward-sloping blue IS curve passes through point A at an output of 280 and an interest rate of five. A revealed gold IS prime curve lies to the right of it and passes through point B at an output of 344 at the same interest rate of five, with a horizontal arrow labeled change in output equals plus 64 between the two points. The diagram shows that a rise in government purchases shifts the whole IS curve to the right, because the interest rate is on an axis here and never moved.">
+          <defs>
+            <marker id="isRhead" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#8A5900"/></marker>
+          </defs>
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="455" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="254" x2="450" y2="254"/><line x1="70" y1="198" x2="450" y2="198"/>
+            <line x1="70" y1="142" x2="450" y2="142"/><line x1="70" y1="86" x2="450" y2="86"/>
+            <line x1="70" y1="30" x2="450" y2="30"/>
+            <line x1="116.25" y1="30" x2="116.25" y2="310"/><line x1="162.5" y1="30" x2="162.5" y2="310"/>
+            <line x1="208.75" y1="30" x2="208.75" y2="310"/><line x1="255" y1="30" x2="255" y2="310"/>
+            <line x1="301.25" y1="30" x2="301.25" y2="310"/><line x1="347.5" y1="30" x2="347.5" y2="310"/>
+            <line x1="393.75" y1="30" x2="393.75" y2="310"/><line x1="440" y1="30" x2="440" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">0</text><text x="62" y="258">2</text><text x="62" y="202">4</text>
+            <text x="62" y="174" fill="#1F4E79" font-weight="700">5</text><text x="62" y="146">6</text>
+            <text x="62" y="90">8</text><text x="62" y="34">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="162.5" y="328">100</text>
+            <text x="329" y="328" fill="#1F4E79" font-weight="700">280</text>
+            <text x="388.2" y="328" fill="#8A5900" font-weight="700">344</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">interest rate (r)</text>
+          <text x="455" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">equilibrium output (Y), $bn</text>
+          <line x1="210.6" y1="58" x2="373.4" y2="212" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="378" y="222" font-family="monospace" font-size="14" fill="#1F4E79" font-weight="700">IS</text>
+          <g stroke="#1F4E79" stroke-width="1.6" stroke-dasharray="5 4">
+            <line x1="70" y1="170" x2="329" y2="170"/><line x1="329" y1="170" x2="329" y2="310"/>
+          </g>
+          <circle cx="329" cy="170" r="7" fill="#1F4E79"/>
+          <text x="320" y="190" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">A (280, 5)</text>
+          <line id="isRnew" x1="269.8" y1="58" x2="432.6" y2="212" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <text id="isRlab" x="437" y="222" font-family="monospace" font-size="14" fill="#8A5900" font-weight="700" opacity="0">IS&prime;</text>
+          <g id="isRgd" opacity="0"><line x1="329" y1="170" x2="388.2" y2="170" stroke="#8A5900" stroke-width="1.6" stroke-dasharray="5 4"/><line x1="388.2" y1="170" x2="388.2" y2="310" stroke="#8A5900" stroke-width="1.6" stroke-dasharray="5 4"/></g>
+          <circle id="isRb" cx="388.2" cy="170" r="7" fill="#8A5900" opacity="0"/>
+          <text id="isRbl" x="397" y="165" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" opacity="0">B (344, 5)</text>
+          <path id="isRcap" d="M329,264 V276 M388.2,264 V276" stroke="#8A5900" stroke-width="3" fill="none" opacity="0"/>
+          <line id="isRarr" x1="329" y1="270" x2="385" y2="270" stroke="#8A5900" stroke-width="3" marker-end="url(#isRhead)" opacity="0"/>
+          <text id="isRlab2" x="358.6" y="259" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">&Delta;Y = +64</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <p class="lede" style="max-width:44ch">The interest rate never moved. It stayed at 5 through the whole of Part 1 &mdash; and yet equilibrium output ended up at 344 instead of 280.</p>
+        <div class="btnrow"><button class="btn" data-reveal-svg="isRight" data-reveal="s8a">Show the shift</button></div>
+        <div class="reveal reveal-hidden" id="s8a">
+          <span class="cue">Run the axis test again</span>
+          <p>Same test as always: <strong>is the thing that changed written on an axis?</strong> The axes here are output and the interest rate. <strong>G is on neither of them</strong>, so it cannot be a movement along the curve. It has to move the whole curve.</p>
+          <p style="margin-top:.5rem">Which direction? At the one interest rate we can check, r = 5, equilibrium output went from 280 to 344. The curve has to pass through the new point, so it <strong>shifts right</strong> &mdash; and by 64 at every interest rate, not just at 5.</p>
+          <div class="chain" style="margin-top:.7rem">G&uarr; &rarr; PE line up &rarr; IS right &nbsp;&nbsp;|&nbsp;&nbsp; G&darr; &rarr; PE line down &rarr; IS left</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 2 · TAXES ══════════════ -->
+
+  <!-- ═══════════ 9. DIVIDER P2 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 9 · Taxes">
+    <div class="eyebrow">Part 2 of 4</div>
+    <h1>Taxes</h1>
+    <p class="lede">Now the other lever. Same economy, same starting point of 280, same MPC &mdash; and a policy change of exactly the same size, 16. If the size of the change were all that mattered, this part would be very short.</p>
+    <div class="sectrail">SPENDING &check; &rarr; TAXES &rarr; BOTH AT ONCE &rarr; THE BUDGET</div>
+    <div class="through">Throughline: government purchases enter planned expenditure directly. Taxes do not &mdash; they work through consumption. That one difference explains every result in this unit.</div>
+  </section>
+
+  <!-- ═══════════ 10. Q2 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Taxes">
+    <div class="eyebrow">Question 2 &middot; predict &middot; commit before you see the answer</div>
+    <h2>Taxes rise from 20 to 36</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch"><strong>Start over from the original economy.</strong> G is back to 40, output is back at 280, r is still 5. This time the government leaves its purchases alone and collects more instead: <strong>T goes from 20 to 36</strong>.</p>
+      <div class="calc" style="max-width:62ch">
+        &Delta;G = 0 &nbsp;&nbsp;&nbsp; &Delta;T = 36 &minus; 20 = <strong>+16</strong> &nbsp;&nbsp;&nbsp; MPC = 0.75
+      </div>
+      <div class="predict">
+        <span class="cue">Q2 &middot; predict &middot; a number, and say what makes you think so</span>
+        <p><strong>The change is the same size as before: 16. Write down how much you think equilibrium output falls by.</strong> Commit to the number now. You will not get another chance before the answer appears.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 11. Q3 PROMPT ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Taxes">
+    <div class="eyebrow">Question 3 &middot; write &middot; before anything is revealed</div>
+    <h2>Find the taxes in this equation</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.3rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">Before we answer Question 2, look hard at the definition of planned expenditure. It is three letters long and you have used it all quarter.</p>
+      <div class="chain" style="font-size:1.6rem;padding:1.1rem 1.6rem">PE = C + I + G</div>
+      <div class="prompt">
+        <span class="cue">Q3 &middot; point at it on your paper</span>
+        <p><strong>Write down where taxes appear in that equation.</strong> Name the letter, or say plainly that you cannot find one. Then answer a second question: when G rose by 16, planned expenditure shifted by 16 &mdash; when T rises by 16, does planned expenditure shift by 16?</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 12. Q3 REVEAL ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Taxes">
+    <div class="eyebrow">Answer &middot; Question 3</div>
+    <h2>They are not in it</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch"><strong>There is no T in PE = C + I + G.</strong> Not hidden, not implied &mdash; absent. And that single fact is the whole of today.</p>
+      <div class="pair2">
+        <div class="pcard">
+          <div class="ptag">G and I</div>
+          <div class="verdictbig">components of planned expenditure</div>
+          <p>They are terms in the sum. Change one by 16 and the sum changes by <strong>16</strong>, immediately, with no household involved. That is why the numerator of the spending multiplier is a plain <strong>1</strong>.</p>
+        </div>
+        <div class="pcard warn">
+          <div class="ptag">T</div>
+          <div class="verdictbig">not a component at all</div>
+          <p>A tax is not something anyone buys. It reaches planned expenditure only by going through <strong>C</strong> &mdash; it changes what households have left to spend, and they decide what to do with the difference.</p>
+        </div>
+      </div>
+      <div class="chain warm" style="font-size:1rem">T&uarr; &rarr; disposable income&darr; &rarr; C&darr; &rarr; PE&darr; &rarr; PE &lt; Y &rarr; U.I.&uarr; &rarr; firms produce less &rarr; Y&darr;</div>
+      <p class="lede" style="max-width:96ch">Count the arrows. The spending chain had <strong>one</strong> step before it reached PE. This one has <strong>three</strong>, and something is lost at the step in the middle. That loss is the number we need next.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 13. THE SIZE OF THE SHIFT ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Taxes">
+    <div class="eyebrow">The step in the middle</div>
+    <h2>The shift is the change in consumption, not the change in taxes</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="gap:2rem;align-items:start">
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <p class="lede">A household is handed a tax bill 16 larger than last year. It does not cut its spending by 16. It has two places to take the 16 from, and it uses both.</p>
+        <div class="btnrow"><button class="btn" data-reveal="s13a">How much comes out of spending</button></div>
+        <div class="reveal reveal-hidden" id="s13a">
+          <span class="cue">Straight from the consumption function</span>
+          <div class="calc">
+            C = 25 + 0.75(Y &minus; T)<br>
+            &Delta;C = &minus;MPC &times; &Delta;T<br>
+            &Delta;C = &minus;0.75 &times; 16 = <strong>&minus;12</strong>
+          </div>
+          <p style="margin-top:.6rem">So planned expenditure shifts down by <strong>12</strong>, not by 16.</p>
+        </div>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:1rem">
+        <div class="btnrow"><button class="btn" data-reveal="s13b">Where the other 4 went</button></div>
+        <div class="reveal reveal-hidden" id="s13b">
+          <span class="cue">It never was spending</span>
+          <p>The missing <strong>4</strong> comes out of <strong>saving</strong>. Households were putting a quarter of each dollar of disposable income aside, and when the tax bill arrives they take part of the payment from that quarter rather than from the shopping.</p>
+          <p style="margin-top:.5rem">That 4 is real money leaving the household &mdash; but it was <em>never going to be spent</em>, so planned expenditure never feels it. <strong>Only the part of a tax change that would have been spent shows up in PE.</strong></p>
+          <div class="chain warm" style="margin-top:.7rem">&Delta;T = +16 &nbsp;&rarr;&nbsp; 12 out of spending, 4 out of saving</div>
+          <p style="margin-top:.6rem">Now put the two policies side by side at this point in the story. The <strong>same</strong> 16 has landed on planned expenditure as <strong>16</strong> in one case and as <strong>12</strong> in the other, and nothing after this step treats them differently.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 14. Q2 REVEAL · THE TAX MULTIPLIER ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Taxes">
+    <div class="eyebrow">Answer &middot; Question 2</div>
+    <h2>Output falls by 48</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.05rem;max-width:1180px">
+      <p class="lede" style="max-width:96ch">Once the shift is known, the rest is the machinery you already have. A shift of &minus;12 in planned expenditure runs through the same rounds, with the same MPC, and gets multiplied by the same 4.</p>
+      <div class="btnrow">
+        <button class="btn" data-reveal="s14a">Multiply the shift</button>
+        <button class="btn" data-reveal="s14b">Write it as one multiplier</button>
+        <button class="btn" data-reveal="s14c">Two differences to name</button>
+      </div>
+      <div class="reveal reveal-hidden" id="s14a">
+        <span class="cue">The answer to Question 2</span>
+        <div class="calc">&Delta;Y = 4 &times; (&minus;12) = <strong>&minus;48</strong> &nbsp;&nbsp;&nbsp; Y: 280 &rarr; <strong>232</strong></div>
+        <p style="margin-top:.5rem">Check it directly: PE = 25 + 0.75(Y &minus; 36) + 20 + 40 = <strong>58 + 0.75Y</strong>, so 0.25Y = 58 and Y = <strong>232</strong>. The same 232.</p>
+      </div>
+      <div class="reveal reveal-hidden" id="s14b">
+        <span class="cue">The tax multiplier</span>
+        <div class="chain warm" style="padding:.9rem 1rem">&Delta;Y = &minus;<span style="display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.2;margin:0 .15em"><span style="border-bottom:1.6px solid currentColor;padding:0 .4em">MPC</span><span style="padding:0 .4em">1 &minus; MPC</span></span> &times; &Delta;T &nbsp;&nbsp;=&nbsp;&nbsp; &minus;<span style="display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.2;margin:0 .15em"><span style="border-bottom:1.6px solid currentColor;padding:0 .4em">0.75</span><span style="padding:0 .4em">0.25</span></span> &times; 16 = &minus;3 &times; 16 = <strong>&minus;48</strong></div>
+        <p style="margin-top:.6rem">It is the two steps stacked into one number: <strong>0.75</strong> converts the tax change into a change in planned expenditure, and <strong>1 &divide; 0.25</strong> runs that through the rounds. The tax multiplier is <strong>&minus;3</strong>.</p>
+      </div>
+      <div class="reveal reveal-hidden" id="s14c">
+        <span class="cue">Compared with 1 &divide; (1 &minus; MPC)</span>
+        <div class="condrow" style="grid-template-columns:1fr 1fr">
+          <div class="condcard">
+            <div class="ctitle">1 &middot; The negative sign</div>
+            <div class="cnote">Taxes and output move in <strong>opposite</strong> directions. Raising T lowers output; cutting T raises it. The sign is not an extra rule to memorize &mdash; it is the middle of the chain, where more tax means less disposable income.</div>
+          </div>
+          <div class="condcard warm">
+            <div class="ctitle">2 &middot; MPC on top instead of 1</div>
+            <div class="cnote">The numerator measures <strong>how much of the policy reaches planned expenditure in the first place</strong>. For G it is all of it, so the numerator is 1. For T it is the MPC, because the rest of a tax change is absorbed by saving.</div>
+          </div>
+        </div>
+        <p style="margin-top:.7rem">Since the MPC is always less than 1, <strong>the tax multiplier is always smaller in size than the spending multiplier.</strong> Not because taxes are gentler, but because part of a tax change never touches spending.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 15. THE 45-DEGREE DIAGRAM · TAXES ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Taxes">
+    <div class="eyebrow">The same 48, drawn</div>
+    <h2>A vertical shift of 12, a horizontal move of 48</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="paneltitle">Planned expenditure against aggregate income</div>
+        <div style="display:flex;gap:1.2rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;font-weight:700;margin-bottom:.5rem">
+          <span style="color:#5A5F66">&#9472;&#9472; 45&deg; line: Y = PE</span>
+          <span style="color:#1F4E79">&#9472;&#9472; PE = 70 + 0.75Y</span>
+          <span class="hid" id="txPE2leg" style="color:#8A5900">&#9472; &#9472; PE&prime; = 58 + 0.75Y</span>
+        </div>
+        <svg viewBox="0 0 470 420" role="img" aria-label="A 45-degree diagram with aggregate income on the horizontal axis and planned aggregate expenditure on the vertical axis. The blue planned expenditure line, seventy plus three quarters of income, crosses the neutral grey 45-degree line at point A, an income of 280. A revealed gold dashed line lies twelve below the blue line and crosses at point B, an income of 232. A short bracket labeled PE shifts down 12 marks the vertical distance between the two lines, and a longer horizontal arrow labeled change in output equals minus 48 marks the move in equilibrium output. The diagram shows that a tax increase of sixteen shifts the line by only twelve, and that the horizontal move is four times that shift.">
+          <defs>
+            <marker id="txHead" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#8A5900"/></marker>
+          </defs>
+          <line x1="70" y1="20" x2="70" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="380" x2="440" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="335" x2="440" y2="335"/><line x1="70" y1="290" x2="440" y2="290"/>
+            <line x1="70" y1="245" x2="440" y2="245"/><line x1="70" y1="200" x2="440" y2="200"/>
+            <line x1="70" y1="155" x2="440" y2="155"/><line x1="70" y1="110" x2="440" y2="110"/>
+            <line x1="70" y1="65" x2="440" y2="65"/><line x1="70" y1="20" x2="440" y2="20"/>
+            <line x1="115" y1="20" x2="115" y2="380"/><line x1="160" y1="20" x2="160" y2="380"/>
+            <line x1="205" y1="20" x2="205" y2="380"/><line x1="250" y1="20" x2="250" y2="380"/>
+            <line x1="295" y1="20" x2="295" y2="380"/><line x1="340" y1="20" x2="340" y2="380"/>
+            <line x1="385" y1="20" x2="385" y2="380"/><line x1="430" y1="20" x2="430" y2="380"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="384">0</text><text x="62" y="294">100</text>
+            <text x="62" y="175.2" fill="#8A5900" font-weight="700">232</text>
+            <text x="62" y="132" fill="#1F4E79" font-weight="700">280</text><text x="62" y="24">400</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="399">0</text><text x="160" y="399">100</text>
+            <text x="278.8" y="399" fill="#8A5900" font-weight="700">232</text>
+            <text x="322" y="399" fill="#1F4E79" font-weight="700">280</text><text x="430" y="399">400</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">planned expenditure (PE), $bn</text>
+          <text x="440" y="414" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">aggregate income (Y), $bn</text>
+          <line x1="70" y1="380" x2="430" y2="20" stroke="#5A5F66" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="70" y1="317" x2="430" y2="47" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <g stroke="#1F4E79" stroke-width="1.8" stroke-dasharray="5 4">
+            <line x1="70" y1="128" x2="322" y2="128"/><line x1="322" y1="128" x2="322" y2="380"/>
+          </g>
+          <circle cx="322" cy="128" r="7" fill="#1F4E79"/>
+          <text x="331" y="145" font-family="monospace" font-size="14" font-weight="700" fill="#1F4E79" stroke="#FbFaF7" stroke-width="3" paint-order="stroke">A</text>
+          <line id="txPE2" x1="70" y1="327.8" x2="430" y2="57.8" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <g id="txBgd" opacity="0"><line x1="70" y1="171.2" x2="278.8" y2="171.2" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/><line x1="278.8" y1="171.2" x2="278.8" y2="380" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/></g>
+          <circle id="txB" cx="278.8" cy="171.2" r="7" fill="#8A5900" opacity="0"/>
+          <text id="txBl" x="252" y="166" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" text-anchor="end" opacity="0">B</text>
+          <path id="txCarr" d="M152,249.5 H168 M160,249.5 V260.3 M152,260.3 H168" stroke="#8A5900" stroke-width="3" fill="none" opacity="0"/>
+          <line id="txClead" x1="160" y1="260.3" x2="160" y2="300" stroke="#8A5900" stroke-width="1.6" stroke-dasharray="4 3" opacity="0"/>
+          <text id="txClab" x="178" y="316" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">PE shifts down 12</text>
+          <path id="txYcap" d="M322,346 V358 M278.8,346 V358" stroke="#8A5900" stroke-width="3" fill="none" opacity="0"/>
+          <line id="txYarr" x1="322" y1="352" x2="282" y2="352" stroke="#8A5900" stroke-width="3" marker-end="url(#txHead)" opacity="0"/>
+          <text id="txYlab" x="300.4" y="341" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">&Delta;Y = &minus;48</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <p class="lede" style="max-width:44ch">The tax change was 16. The line moves <strong>12</strong>. Everything downstream of that first step is identical to Part 1 &mdash; the same rounds, the same MPC, the same multiplication by 4.</p>
+        <div class="btnrow"><button class="btn" data-reveal-svg="peDown" data-reveal="s15a,txPE2leg">Show the shift</button></div>
+        <div class="reveal reveal-hidden" id="s15a">
+          <span class="cue">The rounds, one line each</span>
+          <div class="calc" style="font-size:.98rem;line-height:1.7">
+            round 1 &nbsp;&minus;12 &nbsp;&nbsp;<span class="muted">consumption falls by 0.75 &times; 16</span><br>
+            round 2 &nbsp;&minus;9 &nbsp;&nbsp;&nbsp;<span class="muted">0.75 &times; 12, from lost income</span><br>
+            round 3 &nbsp;&minus;6.75 <span class="muted">0.75 &times; 9</span><br>
+            &hellip;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <strong>&minus;48</strong>
+          </div>
+          <p style="margin-top:.6rem">Compare with Part 1: <strong>+16, +12, +9, +6.75</strong> summing to 64, against <strong>&minus;12, &minus;9, &minus;6.75</strong> summing to &minus;48. Every round here is three quarters of the matching round there, because the sequence started one step lower down.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 16. SIDE BY SIDE ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Taxes">
+    <div class="eyebrow">The comparison this whole discussion is built around</div>
+    <h2>Same size policy, different sized effect</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1180px">
+      <div class="schedrow">
+        <table class="sched">
+          <caption>Two policies of the same size, 16, in the same economy</caption>
+          <thead>
+            <tr><th scope="col">Policy</th><th scope="col">Size</th><th scope="col">PE shifts by</th><th scope="col">Multiplier</th><th scope="col">New Y</th><th scope="col">&Delta;Y</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">G: 40 &rarr; 56</th><td>+16</td><td>+16</td><td>4</td><td>344</td><td>+64</td></tr>
+            <tr><th scope="row">T: 20 &rarr; 36</th><td>+16</td><td>&minus;12</td><td>&minus;3</td><td>232</td><td>&minus;48</td></tr>
+          </tbody>
+        </table>
+        <div class="col" style="justify-content:flex-start;gap:.9rem;max-width:44ch">
+          <p class="lede">Read across the row, then read down the <strong>PE shifts by</strong> column. That column is the only place the two policies differ.</p>
+          <div class="btnrow"><button class="btn" data-reveal="s16a">Say it in one sentence</button></div>
+        </div>
+      </div>
+      <div class="reveal reveal-hidden" id="s16a">
+        <span class="cue">The sentence to leave with</span>
+        <p>A 16 increase in government purchases raises output by <strong>64</strong>. A 16 increase in taxes lowers it by <strong>48</strong>. Same size policy, and the effects are not the same size &mdash; because <strong>only one of the two lands on planned expenditure in full</strong>.</p>
+        <p style="margin-top:.5rem">Nothing after the first step differs. Same MPC, same rounds, same multiplication by 4. The entire difference between 64 and 48 was decided in the step where the policy first touched planned expenditure: 16 in one case, 12 in the other, and 4 &times; 16 against 4 &times; 12.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 17. Q4 DIAGNOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Taxes">
+    <div class="eyebrow">Question 4 &middot; silent poll &middot; pick a number on paper</div>
+    <h2>One of these three is wrong</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:96ch">All three sentences compare a tax increase with a cut in government purchases. <strong>Two of them are sound. One is not.</strong> Write down the number of the one that fails, and one line saying where its reasoning gives out.</p>
+    <div>
+      <div class="diag" id="diag4">
+        <button class="diag-opt" type="button"><span class="n">1</span><span class="s">Cutting government purchases by $16 lowers planned expenditure by $16 right away, before any household has reacted to anything.</span></button>
+        <button class="diag-opt" type="button"><span class="n">2</span><span class="s">If households paid their whole tax bill by cutting spending and saved nothing, the two policies would land on planned expenditure with equal force.</span></button>
+        <button class="diag-opt" type="button" data-bad="true"><span class="n">3</span><span class="s">A $16 tax increase and a $16 cut in government purchases hit the economy equally hard, since either way $16 leaves the economy.</span></button>
+      </div>
+      <div class="btnrow"><button class="btn" data-diag-reveal="diag4">Show which one fails</button></div>
+      <div data-diag-note style="display:none">
+        <div class="reveal" style="margin-top:1.1rem;max-width:1020px">
+          <span class="cue">True about the household, false about the economy</span>
+          <p><strong>Sentence 3 fails.</strong> And notice how much of it is correct. $16 really does leave the household in both cases. The household is $16 poorer either way. Nothing in that first clause is wrong.</p>
+          <p style="margin-top:.5rem">The error is in what the sentence assumes those $16 were doing. <strong>The spending cut removes 16 from planned expenditure; the tax increase removes only 12</strong> &mdash; because households pay part of a tax bill out of saving rather than out of spending. Four of the sixteen was never going to be spent, so it cannot be subtracted from spending.</p>
+          <p style="margin-top:.5rem">The consequence is not small. Multiply both through and the spending cut costs 64 of output while the tax increase costs 48. <strong>Two policies described as equally hard differ by a third.</strong></p>
+          <p style="margin-top:.5rem">Sentence 2 is the check on this. It says: if the MPC were 1, nothing would be diverted to saving, the initial shift would be 16 in both cases, and the two really would be equal. That the answers differ is entirely a statement about the MPC.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 18. THE IS CURVE · LEFT SHIFT ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Taxes">
+    <div class="eyebrow">The other pair of axes, again</div>
+    <h2>The IS curve shifts left</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="paneltitle">The interest rate against equilibrium output</div>
+        <svg viewBox="0 0 480 370" role="img" aria-label="Equilibrium output on the horizontal axis and the interest rate on the vertical axis. A downward-sloping blue IS curve passes through point A at an output of 280 and an interest rate of five. A revealed gold IS prime curve lies to the left of it and passes through point B at an output of 232 at the same interest rate of five, with a horizontal arrow labeled change in output equals minus 48 between the two points. The diagram shows that a tax increase shifts the whole IS curve to the left, and that the shift is smaller than the rightward shift caused by an equally sized rise in government purchases.">
+          <defs>
+            <marker id="isLhead" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#8A5900"/></marker>
+          </defs>
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="455" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="254" x2="450" y2="254"/><line x1="70" y1="198" x2="450" y2="198"/>
+            <line x1="70" y1="142" x2="450" y2="142"/><line x1="70" y1="86" x2="450" y2="86"/>
+            <line x1="70" y1="30" x2="450" y2="30"/>
+            <line x1="116.25" y1="30" x2="116.25" y2="310"/><line x1="162.5" y1="30" x2="162.5" y2="310"/>
+            <line x1="208.75" y1="30" x2="208.75" y2="310"/><line x1="255" y1="30" x2="255" y2="310"/>
+            <line x1="301.25" y1="30" x2="301.25" y2="310"/><line x1="347.5" y1="30" x2="347.5" y2="310"/>
+            <line x1="393.75" y1="30" x2="393.75" y2="310"/><line x1="440" y1="30" x2="440" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">0</text><text x="62" y="258">2</text><text x="62" y="202">4</text>
+            <text x="62" y="174" fill="#1F4E79" font-weight="700">5</text><text x="62" y="146">6</text>
+            <text x="62" y="90">8</text><text x="62" y="34">10</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="162.5" y="328">100</text>
+            <text x="284.6" y="328" fill="#8A5900" font-weight="700">232</text>
+            <text x="337" y="328" fill="#1F4E79" font-weight="700">280</text><text x="440" y="328">400</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">interest rate (r)</text>
+          <text x="455" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">equilibrium output (Y), $bn</text>
+          <line x1="210.6" y1="58" x2="373.4" y2="212" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="378" y="222" font-family="monospace" font-size="14" fill="#1F4E79" font-weight="700">IS</text>
+          <g stroke="#1F4E79" stroke-width="1.6" stroke-dasharray="5 4">
+            <line x1="70" y1="170" x2="329" y2="170"/><line x1="329" y1="170" x2="329" y2="310"/>
+          </g>
+          <circle cx="329" cy="170" r="7" fill="#1F4E79"/>
+          <text x="338" y="165" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79">A (280, 5)</text>
+          <line id="isLnew" x1="166.2" y1="58" x2="329" y2="212" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <text id="isLlab" x="160" y="52" font-family="monospace" font-size="14" fill="#8A5900" font-weight="700" text-anchor="end" opacity="0">IS&prime;</text>
+          <g id="isLgd" opacity="0"><line x1="70" y1="170" x2="284.6" y2="170" stroke="#8A5900" stroke-width="1.6" stroke-dasharray="5 4"/><line x1="284.6" y1="170" x2="284.6" y2="310" stroke="#8A5900" stroke-width="1.6" stroke-dasharray="5 4"/></g>
+          <circle id="isLb" cx="284.6" cy="170" r="7" fill="#8A5900" opacity="0"/>
+          <text id="isLbl" x="276" y="190" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="end" opacity="0">B (232, 5)</text>
+          <path id="isLcap" d="M329,264 V276 M284.6,264 V276" stroke="#8A5900" stroke-width="3" fill="none" opacity="0"/>
+          <line id="isLarr" x1="329" y1="270" x2="288" y2="270" stroke="#8A5900" stroke-width="3" marker-end="url(#isLhead)" opacity="0"/>
+          <text id="isLlab2" x="306.8" y="259" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">&Delta;Y = &minus;48</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <p class="lede" style="max-width:44ch">Same test, same answer, opposite direction. <strong>T is on neither axis</strong>, so it cannot be a movement along the curve.</p>
+        <div class="btnrow"><button class="btn" data-reveal-svg="isLeft" data-reveal="s18a">Show the shift</button></div>
+        <div class="reveal reveal-hidden" id="s18a">
+          <span class="cue">And notice the size</span>
+          <p>At r = 5 the goods market now settles at 232 instead of 280, so the curve must pass through that point: it <strong>shifts left</strong>, by 48 at every interest rate.</p>
+          <p style="margin-top:.5rem">Put this diagram next to the last one. The same size policy pushed the curve <strong>right by 64</strong> when it was spending and <strong>left by 48</strong> when it was taxes. The horizontal size of an IS shift is the multiplier at work, so the two shifts are unequal for exactly the reason the two multipliers are.</p>
+          <div class="chain" style="margin-top:.7rem">T&uarr; &rarr; PE line down &rarr; IS left &nbsp;&nbsp;|&nbsp;&nbsp; T&darr; &rarr; PE line up &rarr; IS right</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 3 · BOTH AT ONCE ══════════════ -->
+
+  <!-- ═══════════ 19. DIVIDER P3 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 9 · Both at Once">
+    <div class="eyebrow">Part 3 of 4</div>
+    <h1>Both at once</h1>
+    <p class="lede">Governments rarely move one lever alone. Spending is proposed, and the question of how to pay for it arrives with it. So run both changes together and see what survives.</p>
+    <div class="sectrail">SPENDING &check; &rarr; TAXES &check; &rarr; BOTH AT ONCE &rarr; THE BUDGET</div>
+    <div class="through">Throughline: government purchases enter planned expenditure directly. Taxes do not &mdash; they work through consumption. That one difference explains every result in this unit.</div>
+  </section>
+
+  <!-- ═══════════ 20. Q5 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Both at Once">
+    <div class="eyebrow">Question 5 &middot; predict &middot; commit before you see the answer</div>
+    <h2>Pay for the spending with the tax</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">Back to the original economy at 280 one more time. Now the government does <strong>both</strong> of the things you have just studied, at the same time and in the same amount.</p>
+      <div class="calc" style="max-width:62ch">
+        G: 40 &rarr; 56 &nbsp;&nbsp;(&Delta;G = <strong>+16</strong>)<br>
+        T: 20 &rarr; 36 &nbsp;&nbsp;(&Delta;T = <strong>+16</strong>)
+      </div>
+      <p class="lede" style="max-width:92ch">It raises purchases by 16 and raises taxes by 16 to pay for them. Every extra dollar spent is collected. <strong>The budget balance is exactly where it started.</strong></p>
+      <div class="predict">
+        <span class="cue">Q5 &middot; predict &middot; a number, and one line saying why</span>
+        <p><strong>Write down what happens to output.</strong> Up, down, or unchanged &mdash; and by how much. Most people answer this one quickly. Write your reasoning down anyway, because that is what we will check.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 21. Q5 REVEAL · ANIMATED ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Both at Once">
+    <div class="eyebrow">Answer &middot; Question 5</div>
+    <h2>Output rises by 16</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <div class="paneltitle">Planned expenditure against aggregate income &middot; both axes begin at 240</div>
+        <div style="display:flex;gap:1.2rem;flex-wrap:wrap;font-family:var(--mono);font-size:.72rem;font-weight:700;margin-bottom:.5rem">
+          <span style="color:#5A5F66">&#9472;&#9472; 45&deg; line: Y = PE</span>
+          <span style="color:#1F4E79">&#9472;&#9472; PE = 70 + 0.75Y</span>
+          <span class="hid" id="bhPE2leg" style="color:#8A5900">&#9472; &#9472; PE&Prime; = 74 + 0.75Y</span>
+        </div>
+        <svg viewBox="0 0 470 420" role="img" aria-label="A close-up 45-degree diagram with aggregate income on the horizontal axis and planned aggregate expenditure on the vertical axis, both axes beginning at 240 rather than zero. The blue planned expenditure line crosses the neutral grey 45-degree line at point A, an income of 280. A revealed gold dashed line lies only four above the blue line, labeled PE shifts up 4, and crosses at point B, an income of 296. A pair of dots joined by a short vertical segment shows the gap between planned expenditure and output shrinking to zero as output travels from 280 to 296, and a horizontal arrow labels that move as plus 16. The diagram shows that raising purchases and taxes by the same amount still raises output, because the two shifts do not cancel.">
+          <defs>
+            <marker id="bhHead" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" refX="6.5" refY="3" orient="auto"><path d="M0,0 L6.5,3 L0,6 Z" fill="#8A5900"/></marker>
+          </defs>
+          <line x1="70" y1="20" x2="70" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="380" x2="440" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="308" x2="440" y2="308"/><line x1="70" y1="236" x2="440" y2="236"/>
+            <line x1="70" y1="164" x2="440" y2="164"/><line x1="70" y1="92" x2="440" y2="92"/>
+            <line x1="70" y1="20" x2="440" y2="20"/>
+            <line x1="142" y1="20" x2="142" y2="380"/><line x1="214" y1="20" x2="214" y2="380"/>
+            <line x1="286" y1="20" x2="286" y2="380"/><line x1="358" y1="20" x2="358" y2="380"/>
+            <line x1="430" y1="20" x2="430" y2="380"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="384">240</text><text x="62" y="312">260</text>
+            <text x="62" y="240" fill="#1F4E79" font-weight="700">280</text>
+            <text x="62" y="182.4" fill="#8A5900" font-weight="700">296</text>
+            <text x="62" y="96">320</text><text x="62" y="24">340</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="399">240</text><text x="142" y="399">260</text>
+            <text x="214" y="399" fill="#1F4E79" font-weight="700">280</text>
+            <text x="271.6" y="399" fill="#8A5900" font-weight="700">296</text>
+            <text x="358" y="399">320</text><text x="430" y="399">340</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">planned expenditure (PE), $bn</text>
+          <text x="440" y="414" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">aggregate income (Y), $bn</text>
+          <line x1="70" y1="380" x2="430" y2="20" stroke="#5A5F66" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="70" y1="344" x2="430" y2="74" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="214" cy="236" r="7.5" fill="#1F4E79"/>
+          <text x="224" y="252" font-family="monospace" font-size="14" font-weight="700" fill="#1F4E79" stroke="#FbFaF7" stroke-width="3" paint-order="stroke">A</text>
+          <line id="bhPE2" x1="70" y1="329.6" x2="430" y2="59.6" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round" opacity="0"/>
+          <path id="bhSarr" d="M98,317 H114 M106,317 V302.6 M98,302.6 H114" stroke="#8A5900" stroke-width="3" fill="none" opacity="0"/>
+          <line id="bhSlead" x1="106" y1="317" x2="106" y2="350" stroke="#8A5900" stroke-width="1.6" stroke-dasharray="4 3" opacity="0"/>
+          <text id="bhSlab" x="132" y="366" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">PE shifts up 4</text>
+          <g id="bhBgd" opacity="0"><line x1="70" y1="178.4" x2="271.6" y2="178.4" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/><line x1="271.6" y1="178.4" x2="271.6" y2="380" stroke="#8A5900" stroke-width="1.8" stroke-dasharray="5 4"/></g>
+          <circle id="bhB" cx="271.6" cy="178.4" r="7" fill="#8A5900" opacity="0"/>
+          <text id="bhBl" x="262" y="164" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">B &middot; Y = 296</text>
+          <path id="bhYcap" d="M214,346 V358 M271.6,346 V358" stroke="#8A5900" stroke-width="3" fill="none" opacity="0"/>
+          <line id="bhYarr" x1="214" y1="352" x2="268" y2="352" stroke="#8A5900" stroke-width="3" marker-end="url(#bhHead)" opacity="0"/>
+          <text id="bhYlab" x="242.8" y="341" font-family="monospace" font-size="14" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">&Delta;Y = +16</text>
+          <line id="bhGap" x1="214" y1="236" x2="214" y2="221.6" stroke="#8A5900" stroke-width="3.5" stroke-linecap="round" opacity="0"/>
+          <text id="bhGapT" x="224" y="231" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900" opacity="0">PE &minus; Y = +4</text>
+          <circle id="bhDot45" cx="214" cy="236" r="4.5" fill="#5A5F66" opacity="0"/>
+          <circle id="bhDotPE" cx="214" cy="221.6" r="7" fill="#1F4E79" stroke="#FbFaF7" stroke-width="1.5" opacity="0"/>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <div><span class="lbl2">output produced Y</span> <span class="big" id="bhYv">280</span></div>
+          <div><span class="lbl2">planned expenditure PE</span> <span class="big" id="bhPEv">284</span></div>
+          <div><span class="lbl2">gap PE &minus; Y</span> <span class="big" id="bhGapv">+4</span></div>
+          <div style="margin-top:.4rem" id="bhNote">Show the combined line, then let output adjust.</div>
+        </div>
+        <div class="btnrow">
+          <button class="btn" data-reveal-svg="peBoth" data-reveal="s21a,bhPE2leg">Show the combined line</button>
+          <button class="btn" id="bhPlay">Let output adjust</button>
+          <button class="btn ghost" id="bhReset">Reset</button>
+        </div>
+        <div class="reveal reveal-hidden" id="s21a">
+          <span class="cue">Not zero</span>
+          <p>Output rises from <strong>280 to 296</strong>. The two policies do not cancel. The spending increase adds <strong>64</strong>, the tax increase subtracts <strong>48</strong>, and 64 &minus; 48 = <strong>+16</strong>.</p>
+          <p style="margin-top:.5rem">On the diagram: the line went up 16 and then down 12, so it ends up <strong>4 above</strong> where it started &mdash; and 4 &times; 4 = 16.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 22. WHY EXACTLY 16 ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Both at Once">
+    <div class="eyebrow">Not a coincidence</div>
+    <h2>Why the answer is the size of the spending change</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">Output rose by 16, and the spending change was 16. That is not an accident of these numbers. It happens for <strong>any</strong> MPC, and one line of algebra shows why.</p>
+      <div class="btnrow"><button class="btn" data-reveal="s22a">Subtract the two multipliers</button><button class="btn" data-reveal="s22b">What it means</button></div>
+      <div class="reveal reveal-hidden" id="s22a">
+        <span class="cue">They differ by exactly one</span>
+        <div class="chain warm" style="padding:.9rem 1rem;font-size:1rem"><span style="display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.2;margin:0 .15em"><span style="border-bottom:1.6px solid currentColor;padding:0 .4em">1</span><span style="padding:0 .4em">1 &minus; MPC</span></span> &minus; <span style="display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.2;margin:0 .15em"><span style="border-bottom:1.6px solid currentColor;padding:0 .4em">MPC</span><span style="padding:0 .4em">1 &minus; MPC</span></span> = <span style="display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.2;margin:0 .15em"><span style="border-bottom:1.6px solid currentColor;padding:0 .4em">1 &minus; MPC</span><span style="padding:0 .4em">1 &minus; MPC</span></span> = <strong>1</strong></div>
+        <div class="calc" style="margin-top:.7rem">With MPC = 0.75: &nbsp; 4 &minus; 3 = <strong>1</strong> &nbsp;&nbsp;&nbsp; so &nbsp; &Delta;Y = 1 &times; 16 = <strong>+16</strong></div>
+      </div>
+      <div class="reveal reveal-hidden" id="s22b">
+        <span class="cue">A fully financed increase moves output dollar for dollar</span>
+        <p>Two fractions with the same denominator, and their numerators are <strong>1</strong> and <strong>MPC</strong>. Subtract them and the denominator cancels against the numerator. Whatever the MPC, <strong>the spending multiplier is exactly one larger than the size of the tax multiplier.</strong></p>
+        <p style="margin-top:.5rem">So a spending increase paid for entirely by taxes raises output by <strong>exactly the amount spent</strong> &mdash; no more, and no less. The multiplier gets almost all of its work undone by the tax, and what is left over is the original purchase itself.</p>
+        <p style="margin-top:.5rem">And you can see the same fact on the diagram: the line went up 16 from the spending, down 12 from the tax, and the leftover 4 is exactly the quarter of the tax that households would have saved. Multiply that 4 by 4 and you are back to 16.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 23. THE GENERAL RULE ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Both at Once">
+    <div class="eyebrow">One equation for any pair of changes</div>
+    <h2>When both move, the effects simply add</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">There is no separate formula for the case where G and T both change. Work out what each one does on its own, then add the two answers.</p>
+      <div class="chain warm" style="padding:1.1rem 1.3rem;font-size:1.05rem;display:block;max-width:62ch">&Delta;Y = <span style="display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.2;margin:0 .15em"><span style="border-bottom:1.6px solid currentColor;padding:0 .4em">1</span><span style="padding:0 .4em">1 &minus; MPC</span></span> &Delta;G &nbsp;+&nbsp; <span style="display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.2;margin:0 .15em"><span style="border-bottom:1.6px solid currentColor;padding:0 .4em">&minus;MPC</span><span style="padding:0 .4em">1 &minus; MPC</span></span> &Delta;T</div>
+      <div class="btnrow"><button class="btn" data-reveal="s23a">Three things to notice</button></div>
+      <div class="reveal reveal-hidden" id="s23a">
+        <span class="cue">Before you use it</span>
+        <div class="condrow">
+          <div class="condcard">
+            <div class="ctitle">Signs are not optional</div>
+            <div class="cnote">&Delta;G and &Delta;T carry their own signs, and the tax term already has a minus built in. A <em>cut</em> in taxes is a negative &Delta;T meeting a negative multiplier, and two negatives raise output.</div>
+          </div>
+          <div class="condcard">
+            <div class="ctitle">With MPC = 0.75</div>
+            <div class="cnote">The equation is just <strong>&Delta;Y = 4&Delta;G &minus; 3&Delta;T</strong>. Every number in Parts 1, 2 and 3 came out of that one line.</div>
+          </div>
+          <div class="condcard warm">
+            <div class="ctitle">On the diagram</div>
+            <div class="cnote">The line shifts by <strong>&Delta;G &minus; MPC &times; &Delta;T</strong>, once, and the crossing point moves by four times that. There is never more than one shift, no matter how many levers moved.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 24. Q6 COMPUTE ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Both at Once">
+    <div class="eyebrow">Question 6 &middot; compute &middot; then check the sign</div>
+    <h2>Purchases fall by 4, taxes fall by 8</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">The original economy again, output at 280, MPC still 0.75. This time the government cuts back on what it buys and cuts taxes at the same time.</p>
+      <div class="calc" style="max-width:62ch">&Delta;G = <strong>&minus;4</strong> &nbsp;&nbsp;&nbsp; &Delta;T = <strong>&minus;8</strong></div>
+      <div class="prompt">
+        <span class="cue">Q6 &middot; work it out, then commit to the direction</span>
+        <p><strong>Find the change in output and the new equilibrium.</strong> Before you press anything, write down whether output ends up higher or lower than 280 &mdash; and say why in one line.</p>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="s24a">Show the answer</button></div>
+      <div class="reveal reveal-hidden" id="s24a">
+        <span class="cue">Answer &middot; Question 6</span>
+        <div class="calc">
+          &Delta;Y = 4(&minus;4) + (&minus;3)(&minus;8)<br>
+          &Delta;Y = &minus;16 + 24 = <strong>+8</strong><br>
+          Y: 280 &rarr; <strong>288</strong>
+        </div>
+        <p style="margin-top:.6rem"><strong>Output rises, even though spending was cut.</strong> The spending cut pulls output down by 16. The tax cut pushes it up by 24 &mdash; a smaller multiplier applied to a larger change &mdash; and 24 beats 16.</p>
+        <p style="margin-top:.5rem">This is why the size of a policy tells you nothing on its own. <strong>Which lever moved matters as much as how far it moved.</strong> Two changes that look like a retreat from public spending add up to an expansion.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 25. Q7 DIAGNOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Both at Once">
+    <div class="eyebrow">Question 7 &middot; silent poll &middot; pick a number on paper</div>
+    <h2>One of these three is wrong</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:96ch">All three sentences are about the balanced change from Question 5. <strong>Two of them are sound. One is not.</strong> Write down the number of the one that fails, and one line saying where its reasoning gives out.</p>
+    <div>
+      <div class="diag" id="diag7">
+        <button class="diag-opt" type="button" data-bad="true"><span class="n">1</span><span class="s">As long as the budget stays balanced, fiscal policy cannot move output.</span></button>
+        <button class="diag-opt" type="button"><span class="n">2</span><span class="s">The tax increase does offset most of the spending increase &mdash; 48 of the 64 &mdash; which is why the effect on output is far smaller than the spending increase alone would suggest.</span></button>
+        <button class="diag-opt" type="button"><span class="n">3</span><span class="s">If the two multipliers happened to be equal in size, a balanced change really would leave output where it started.</span></button>
+      </div>
+      <div class="btnrow"><button class="btn" data-diag-reveal="diag7">Show which one fails</button></div>
+      <div data-diag-note style="display:none">
+        <div class="reveal" style="margin-top:1.1rem;max-width:1020px">
+          <span class="cue">A statement about the budget, mistaken for one about output</span>
+          <p><strong>Sentence 1 fails.</strong> It is doing something subtle: it takes a fact about the <em>government's accounts</em> &mdash; that the two changes are equal and opposite in dollars &mdash; and assumes it must also be a fact about the <em>economy</em>. Those are two different ledgers.</p>
+          <p style="margin-top:.5rem">A balanced change means the two policies are the same size. It says nothing about whether their effects are the same size, and <strong>in this model they never are.</strong> The spending change lands on planned expenditure in full and the tax change does not, so the two effects are 64 and 48 and there is always a remainder.</p>
+          <p style="margin-top:.5rem">Question 5 is the counterexample sitting right there: the budget balance did not move at all, and output went from 280 to 296. The two effects came within 16 of canceling, and 16 is not zero.</p>
+          <p style="margin-top:.5rem">Sentence 3 is the check. Cancellation would require the two multipliers to be equal in size, and we proved on the last slide that they differ by exactly one, for every MPC. <strong>Perfect cancellation is not merely unlikely here &mdash; it is impossible.</strong></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 26. THE LEVER PANEL ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · Both at Once">
+    <div class="eyebrow">Everything from today, on two sets of axes</div>
+    <h2>Move the levers</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:104ch">The blue lines are the economy you started with: <strong>G = 40, T = 20, r = 5</strong>, settling at 280. The gold lines are the economy as you set it. Move one lever at a time and watch <em>both</em> pictures at once.</p>
+    <div class="two" style="gap:1.3rem;align-items:start;margin-top:.7rem">
+      <div class="panel">
+        <div class="paneltitle">Planned expenditure against aggregate income</div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;font-family:var(--mono);font-size:.7rem;font-weight:700;margin-bottom:.4rem">
+          <span style="color:#5A5F66">&#9472;&#9472; 45&deg; line</span>
+          <span style="color:#1F4E79">&#9472;&#9472; PE at the starting values</span>
+          <span style="color:#8A5900">&#9472; &#9472; PE as you set it</span>
+        </div>
+        <svg viewBox="0 0 470 420" role="img" aria-label="A 45-degree diagram with aggregate income on the horizontal axis and planned aggregate expenditure on the vertical axis. A blue planned expenditure line for the starting values of the economy crosses the neutral grey 45-degree line at point A, an income of 280. A gold dashed line moves as the three sliders are changed, and its crossing point with the 45-degree line moves with it. The current values and the resulting equilibrium output are stated in the readout beneath the diagrams. The diagram shows that government purchases, taxes and the interest rate all act on output by moving the same one line up or down.">
+          <line x1="70" y1="20" x2="70" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="380" x2="440" y2="380" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="308" x2="440" y2="308"/><line x1="70" y1="236" x2="440" y2="236"/>
+            <line x1="70" y1="164" x2="440" y2="164"/><line x1="70" y1="92" x2="440" y2="92"/>
+            <line x1="70" y1="20" x2="440" y2="20"/>
+            <line x1="142" y1="20" x2="142" y2="380"/><line x1="214" y1="20" x2="214" y2="380"/>
+            <line x1="286" y1="20" x2="286" y2="380"/><line x1="358" y1="20" x2="358" y2="380"/>
+            <line x1="430" y1="20" x2="430" y2="380"/>
+          </g>
+          <g font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="384">0</text><text x="62" y="312">100</text><text x="62" y="240">200</text>
+            <text x="62" y="168">300</text><text x="62" y="96">400</text><text x="62" y="24">500</text>
+          </g>
+          <g font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="399">0</text><text x="142" y="399">100</text><text x="214" y="399">200</text>
+            <text x="286" y="399">300</text><text x="358" y="399">400</text><text x="430" y="399">500</text>
+          </g>
+          <text x="76" y="16" font-family="monospace" font-size="11" fill="#14243A" font-weight="700">planned expenditure (PE), $bn</text>
+          <text x="440" y="414" font-family="monospace" font-size="11" fill="#14243A" font-weight="700" text-anchor="end">aggregate income (Y), $bn</text>
+          <line x1="70" y1="380" x2="430" y2="20" stroke="#5A5F66" stroke-width="2.5" stroke-linecap="round"/>
+          <line x1="70" y1="329.6" x2="430" y2="59.6" stroke="#1F4E79" stroke-width="2.6" stroke-linecap="round"/>
+          <circle cx="271.6" cy="178.4" r="6" fill="#1F4E79"/>
+          <text x="280" y="194" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" stroke="#FbFaF7" stroke-width="3" paint-order="stroke">A</text>
+          <line id="lvPE" x1="70" y1="329.6" x2="430" y2="59.6" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round"/>
+          <g id="lvPEg" stroke="#8A5900" stroke-width="1.6" stroke-dasharray="5 4">
+            <line id="lvPEgh" x1="70" y1="178.4" x2="271.6" y2="178.4"/>
+            <line id="lvPEgv" x1="271.6" y1="178.4" x2="271.6" y2="380"/>
+          </g>
+          <circle id="lvPEdot" cx="271.6" cy="178.4" r="7" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5"/>
+          <text id="lvPElab" x="262" y="166" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">Y = 280</text>
+        </svg>
+      </div>
+      <div class="panel">
+        <div class="paneltitle">The interest rate against equilibrium output</div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;font-family:var(--mono);font-size:.7rem;font-weight:700;margin-bottom:.4rem">
+          <span style="color:#1F4E79">&#9472;&#9472; IS at the starting values</span>
+          <span style="color:#8A5900">&#9472; &#9472; IS as you set it</span>
+        </div>
+        <svg viewBox="0 0 480 370" role="img" aria-label="Equilibrium output on the horizontal axis and the interest rate on the vertical axis. A blue downward-sloping IS curve for the starting values of the economy passes through point A at an output of 280 and an interest rate of five. A gold dashed IS curve moves left or right as the government purchases and taxes sliders are changed, and a gold point slides along it as the interest rate slider is changed. The diagram shows that G and T shift the curve while r is a movement along it.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="455" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="254" x2="450" y2="254"/><line x1="70" y1="198" x2="450" y2="198"/>
+            <line x1="70" y1="142" x2="450" y2="142"/><line x1="70" y1="86" x2="450" y2="86"/>
+            <line x1="70" y1="30" x2="450" y2="30"/>
+            <line x1="144" y1="30" x2="144" y2="310"/><line x1="218" y1="30" x2="218" y2="310"/>
+            <line x1="292" y1="30" x2="292" y2="310"/><line x1="366" y1="30" x2="366" y2="310"/>
+            <line x1="440" y1="30" x2="440" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">0</text><text x="62" y="258">2</text><text x="62" y="202">4</text>
+            <text x="62" y="146">6</text><text x="62" y="90">8</text><text x="62" y="34">10</text>
+          </g>
+          <g font-family="monospace" font-size="11" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="144" y="328">100</text><text x="218" y="328">200</text>
+            <text x="292" y="328">300</text><text x="366" y="328">400</text><text x="440" y="328">500</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="12" fill="#14243A" font-weight="700">interest rate (r)</text>
+          <text x="455" y="350" font-family="monospace" font-size="12" fill="#14243A" font-weight="700" text-anchor="end">equilibrium output (Y), $bn</text>
+          <line x1="229.8" y1="114" x2="324.6" y2="226" stroke="#1F4E79" stroke-width="2.6" stroke-linecap="round"/>
+          <text x="330" y="236" font-family="monospace" font-size="12" fill="#1F4E79" font-weight="700">IS</text>
+          <circle cx="277.2" cy="170" r="6" fill="#1F4E79"/>
+          <text x="268" y="190" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="end" stroke="#FbFaF7" stroke-width="3" paint-order="stroke">A</text>
+          <line id="lvIS" x1="229.8" y1="114" x2="324.6" y2="226" stroke="#8A5900" stroke-width="3" stroke-dasharray="9 5" stroke-linecap="round"/>
+          <text id="lvISlab" x="330" y="112" font-family="monospace" font-size="12" fill="#8A5900" font-weight="700">IS&prime;</text>
+          <g id="lvISg" stroke="#8A5900" stroke-width="1.6" stroke-dasharray="5 4">
+            <line id="lvISgh" x1="70" y1="170" x2="277.2" y2="170"/>
+            <line id="lvISgv" x1="277.2" y1="170" x2="277.2" y2="310"/>
+          </g>
+          <circle id="lvISdot" cx="277.2" cy="170" r="7" fill="#8A5900" stroke="#FbFaF7" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
+    <div class="ctrlrow">
+      <div class="panel">
+        <div class="paneltitle">The three levers</div>
+        <div class="sliders">
+          <div class="sldrow">
+            <label for="lvG">government purchases G</label>
+            <input type="range" id="lvG" min="24" max="56" step="4" value="40">
+            <span class="val" id="lvGv">40</span>
+          </div>
+          <div class="sldrow">
+            <label for="lvT">taxes T</label>
+            <input type="range" id="lvT" min="4" max="36" step="4" value="20">
+            <span class="val" id="lvTv">20</span>
+          </div>
+          <div class="sldrow">
+            <label for="lvR">interest rate r</label>
+            <input type="range" id="lvR" min="3" max="7" step="0.5" value="5">
+            <span class="val" id="lvRv">5</span>
+          </div>
+        </div>
+        <div class="btnrow" style="margin-top:.9rem"><button class="btn ghost" id="lvReset">Back to the starting values</button></div>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          <div><span class="lbl2">planned expenditure</span> <span class="big" id="lvEq">PE = 70 + 0.75Y</span></div>
+          <div><span class="lbl2">equilibrium output Y</span> <span class="big" id="lvY">280</span></div>
+          <div><span class="lbl2">against the starting 280</span> <span class="big" id="lvD">0</span></div>
+          <div style="margin-top:.4rem" id="lvNote">Move a slider and the gold lines follow.</div>
+        </div>
+        <div class="btnrow"><button class="btn" data-reveal="s26a">Three things to try</button></div>
+        <div class="reveal reveal-hidden" id="s26a">
+          <span class="cue">Predict each one before you drag</span>
+          <ol style="margin:.4rem 0 0 1.2rem">
+            <li>Push <strong>G</strong> up by 8 and then <strong>T</strong> up by 8. Both diagrams should end up somewhere they have not been &mdash; the gold IS lands to the right of the blue one even though the budget balance never moved.</li>
+            <li>Move <strong>G</strong> and <strong>T</strong> by the same amount in the same direction and read the gold IS. It shifts by the size of the change in G, not by zero.</li>
+            <li>Now move <strong>r</strong> alone. The gold PE line moves, but the gold IS curve does not &mdash; the dot just slides along it. That is the axis test, live.</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 4 · THE BUDGET'S TURN ══════════════ -->
+
+  <!-- ═══════════ 27. DIVIDER P4 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 9 · The Budget">
+    <div class="eyebrow">Part 4 of 4</div>
+    <h1>The budget&rsquo;s turn</h1>
+    <p class="lede">Every arrow so far has run one way: the government changes something, and output responds. Turn the arrow around. Output changes on its own &mdash; and the budget responds, with nobody deciding anything.</p>
+    <div class="sectrail">SPENDING &check; &rarr; TAXES &check; &rarr; BOTH AT ONCE &check; &rarr; THE BUDGET</div>
+    <div class="through">Throughline: government purchases enter planned expenditure directly. Taxes do not &mdash; they work through consumption. That one difference explains every result in this unit.</div>
+  </section>
+
+  <!-- ═══════════ 28. Q8 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · The Budget">
+    <div class="eyebrow">Question 8 &middot; predict &middot; commit before you see the answer</div>
+    <h2>A recession begins and nobody does anything</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1100px">
+      <p class="lede" style="max-width:92ch">Output falls. Employment falls with it. And in this scenario the response is nothing at all: <strong>Congress passes no bill, no tax rate is changed, no spending program is created or expanded.</strong> The laws on the books at the start of the recession are the laws on the books at the end of it.</p>
+      <div class="predict">
+        <span class="cue">Q8 &middot; predict &middot; a direction, and the mechanism</span>
+        <p><strong>Write down what happens to the budget deficit.</strong> Wider, narrower, or unchanged &mdash; and, more importantly, name the thing that makes it move when no one has voted for anything.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 29. Q8 REVEAL ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · The Budget">
+    <div class="eyebrow">Answer &middot; Question 8</div>
+    <h2>The deficit widens on its own</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1180px">
+      <p class="lede" style="max-width:96ch">The budget moves because much of it is written as a <strong>rule</strong> rather than as an amount. The law does not say how many dollars to pay out; it says who qualifies. When a recession changes how many people qualify, the dollars change by themselves.</p>
+      <p class="lede" style="max-width:96ch">These are the <strong>automatic stabilizers</strong>: items in the budget that move with the state of the economy in the direction that steadies output. Press each card once you have predicted which way it moves.</p>
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">Unemployment insurance</div>
+          <button class="cbtn" data-cond="ac1">Reveal</button>
+          <div class="cbody" id="ac1">
+            <div class="cnote"><strong>Payments rise.</strong> More people are out of work, so more people claim. Nothing about the program changed &mdash; the number of eligible claimants did. Spending goes <strong>up</strong>.</div>
+          </div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Progressive income tax</div>
+          <button class="cbtn" data-cond="ac2">Reveal</button>
+          <div class="cbody" id="ac2">
+            <div class="cnote"><strong>Receipts fall more than proportionally.</strong> Because higher income is taxed at a higher rate, falling income moves people into <strong>lower brackets</strong>. Their average tax rate drops as well as their income, so revenue falls faster than income does. Taxes go <strong>down</strong>.</div>
+          </div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Food assistance and Medicaid</div>
+          <button class="cbtn" data-cond="ac3">Reveal</button>
+          <div class="cbody" id="ac3">
+            <div class="cnote"><strong>Enrollment rises.</strong> Eligibility depends on income, and incomes have fallen, so more households qualify and enroll. Spending goes <strong>up</strong>.</div>
+          </div>
+        </div>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="s28a">Put the three together</button></div>
+      <div class="reveal reveal-hidden" id="s28a">
+        <span class="cue">Spending up, taxes down, no vote taken</span>
+        <p>Every one of the three moves the same way: <strong>G up, T down.</strong> That is the definition of a widening deficit &mdash; and in the language of this discussion, it is <strong>a positive &Delta;G together with a negative &Delta;T</strong>, arriving on their own.</p>
+        <div class="chain" style="margin-top:.7rem">recession &rarr; claims&uarr; and receipts&darr; &rarr; deficit widens &nbsp;&nbsp;|&nbsp;&nbsp; no legislation required</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 30. PUNCHLINE ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · The Budget">
+    <div class="eyebrow">The punchline of Part 4</div>
+    <h2>That widening deficit is the budget doing its job</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">It is tempting to read a deficit that grows during a downturn as a budget that has gotten out of control. Look at what those payments are doing instead. <strong>They are landing on household income at the exact moment income is falling</strong> &mdash; which is where the whole of Part 1 tells us to look.</p>
+      <div class="btnrow"><button class="btn" data-reveal="s29a">Connect it to the rounds</button></div>
+      <div class="reveal reveal-hidden" id="s29a">
+        <span class="cue">Every round gets smaller</span>
+        <p>Go back to the multiplier rounds. A contraction propagates because <strong>lost production is lost income, and lost income is lost consumption</strong>. Each round is the MPC times the last.</p>
+        <p style="margin-top:.5rem">Now put the stabilizers into that loop. A household whose earnings fall is partly replaced by an insurance payment and pays less tax at the same time, so its <strong>disposable income falls by less than its earnings did</strong>. Less of the fall reaches consumption, so the next round is smaller than it would have been, and so is every round after it.</p>
+        <p style="margin-top:.5rem">The stabilizers do not stop the recession. They <strong>shorten every step of the chain</strong>, and a shallower chain is a shallower contraction. The deficit widened because the budget was absorbing part of the shock instead of passing it on.</p>
+        <div class="chain warm" style="margin-top:.7rem">earnings&darr; &rarr; disposable income&darr; by <strong>less</strong> &rarr; smaller rounds &rarr; shallower contraction</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 31. FISCAL DRAG ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · The Budget">
+    <div class="eyebrow">The same mechanism, running the other way</div>
+    <h2>Fiscal drag</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">A stabilizer has to work in both directions or it is not stabilizing anything. Run the expansion and watch the progressive income tax do the reverse of what it did in the recession.</p>
+      <div class="pair2">
+        <div class="pcard warn">
+          <div class="ptag">In a recession</div>
+          <div class="verdictbig">incomes fall into lower brackets</div>
+          <p>Average tax rates fall, disposable income is cushioned, and the contraction is shallower than it would have been.</p>
+        </div>
+        <div class="pcard">
+          <div class="ptag">In an expansion</div>
+          <div class="verdictbig">incomes rise into higher brackets</div>
+          <p>Average tax rates <strong>climb without any law changing</strong>, disposable income grows more slowly than earnings, and the expansion is slowed. That slowing is <strong>fiscal drag</strong>.</p>
+        </div>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="s30a">Why it is the same fact twice</button></div>
+      <div class="reveal reveal-hidden" id="s30a">
+        <span class="cue">One rule, two directions</span>
+        <p>Nobody legislated the tax increase during the expansion &mdash; the rate schedule sat unchanged while incomes moved up through it. That is precisely what happened in reverse during the recession, and it is the same sentence about the same tax code.</p>
+        <p style="margin-top:.5rem">So <strong>fiscal drag is not a separate phenomenon.</strong> It is what an automatic stabilizer looks like when it is holding back a boom rather than cushioning a bust, and someone who welcomes the cushion has already accepted the drag.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 32. Q9 PROMPT ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · The Budget">
+    <div class="eyebrow">Question 9 &middot; write &middot; commit on paper</div>
+    <h2>Which deficits were chosen?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.15rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">We now have a problem. Deficits widen when the government decides to spend more or tax less &mdash; and they also widen on their own when the economy weakens. Looking at a deficit tells you it is large. It does not tell you which of those two things put it there.</p>
+      <div class="prompt">
+        <span class="cue">Q9 &middot; design the comparison, do not just describe the problem</span>
+        <p><strong>Write down how you would tell a deficit caused by the business cycle from one that would be there anyway.</strong> You are being asked for a method: what would you have to know, or hold fixed, to separate the two?</p>
+      </div>
+      <div class="btnrow"><button class="btn" data-reveal="s31a">The benchmark</button><button class="btn" data-reveal="s31b">The two pieces</button></div>
+      <div class="reveal reveal-hidden" id="s31a">
+        <span class="cue">Hold the economy fixed, not the budget</span>
+        <p>The trick is to stop asking what the budget <em>is</em> and ask what it <strong>would be at one agreed level of output</strong>. Take today's tax rules and today's spending programs, and ask what they would collect and pay out if the economy were producing at the level associated with the <strong>natural rate of unemployment</strong> &mdash; the same natural rate you met in the unemployment discussion.</p>
+        <p style="margin-top:.5rem">That number is the <strong>full-employment budget</strong>. Because the state of the economy is held fixed inside it, anything left in it has to come from policy.</p>
+      </div>
+      <div class="reveal reveal-hidden" id="s31b">
+        <span class="cue">Split the deficit in two</span>
+        <div class="condrow" style="grid-template-columns:1fr 1fr">
+          <div class="condcard">
+            <div class="ctitle">Structural deficit</div>
+            <div class="cnote">The part that <strong>remains</strong> in the full-employment budget &mdash; the deficit that would still be there at the natural rate of unemployment. This one was chosen: it is a statement about the tax rules and the spending programs themselves.</div>
+          </div>
+          <div class="condcard warm">
+            <div class="ctitle">Cyclical deficit</div>
+            <div class="cnote">The rest &mdash; the part that exists <strong>only because output is below that level</strong>. Nobody voted for it. It is the automatic stabilizers doing their work, and it closes on its own as output recovers.</div>
+          </div>
+        </div>
+        <p style="margin-top:.7rem">Two economies with identical tax law and identical programs can run very different deficits, if one of them is in a downturn. Their <strong>structural</strong> deficits would be the same, and the whole of the difference would be <strong>cyclical</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 33. Q10 DIAGNOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · The Budget">
+    <div class="eyebrow">Question 10 &middot; silent poll &middot; pick a number on paper</div>
+    <h2>One of these three is wrong</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:96ch">All three sentences are about reading a deficit that has grown. <strong>Two of them are sound. One is not.</strong> Write down the number of the one that fails, and one line saying where its reasoning gives out.</p>
+    <div>
+      <div class="diag" id="diag10">
+        <button class="diag-opt" type="button"><span class="n">1</span><span class="s">Two economies with identical tax rules and identical spending programs can run different deficits, if one of them is in a downturn.</span></button>
+        <button class="diag-opt" type="button" data-bad="true"><span class="n">2</span><span class="s">The deficit grew last year, so Congress must have voted to spend more.</span></button>
+        <button class="diag-opt" type="button"><span class="n">3</span><span class="s">To find out whether a policy change is behind a wider deficit, compare it with what the budget would be at the natural rate of unemployment.</span></button>
+      </div>
+      <div class="btnrow"><button class="btn" data-diag-reveal="diag10">Show which one fails</button></div>
+      <div data-diag-note style="display:none">
+        <div class="reveal" style="margin-top:1.1rem;max-width:1020px">
+          <span class="cue">A real observation, and an inference that does not follow</span>
+          <p><strong>Sentence 2 fails.</strong> The observation is fine: deficits are measured, and this one grew. The word doing the damage is <strong>&ldquo;must.&rdquo;</strong> It treats a vote as the only thing that can widen a deficit.</p>
+          <p style="margin-top:.5rem">Part 4 is one long counterexample. <strong>A cyclical deficit widens with no vote at all</strong> &mdash; claims rise because more people qualify, receipts fall because incomes dropped into lower brackets, and the rules that produced both were written years earlier. That is exactly what automatic stabilizers do.</p>
+          <p style="margin-top:.5rem">Notice too that the sentence could be wrong in the opposite direction. Congress could cut spending in the same year, and if the downturn were deep enough the deficit would still widen. The number moved; <strong>the number alone cannot tell you who moved it.</strong></p>
+          <p style="margin-top:.5rem">Sentence 3 is the repair. Hold output fixed at the natural rate, look at what the budget would be there, and whatever remains is the part that policy is responsible for.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 34. SYNTHESIS ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · The Budget">
+    <div class="eyebrow">The throughline</div>
+    <h2>What you can now do</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <div class="chain warm" style="font-size:1.02rem;line-height:1.7;max-width:92ch;display:block">Government purchases enter planned expenditure directly. Taxes do not &mdash; they work through consumption. That one difference explains every result in this unit.</div>
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">The direct lever</div>
+          <div class="cnote"><strong>&Delta;Y = 4&Delta;G.</strong> G is a term in PE = C + I + G, so the line shifts by the whole change, and 16 became 64.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">The indirect lever</div>
+          <div class="cnote"><strong>&Delta;Y = &minus;3&Delta;T.</strong> T is in no term of PE at all. It reaches the line only through consumption, so the line shifts by MPC &times; &Delta;T, and 16 became 48 the other way.</div>
+        </div>
+        <div class="condcard warm">
+          <div class="ctitle">Together</div>
+          <div class="cnote"><strong>Add them.</strong> The two multipliers differ by exactly one, so a change financed dollar for dollar still moves output &mdash; by the size of the purchase.</div>
+        </div>
+      </div>
+      <p class="lede" style="max-width:96ch">And Part 4 is the same model read backward. Automatic stabilizers are &Delta;G and &Delta;T arriving without a vote, damping every round of the multiplier; the <strong>full-employment budget</strong> is how you tell those apart from the deficits somebody chose. <strong>The whole unit turns on which term of PE = C + I + G a policy touches</strong> &mdash; and taxes touch none of them.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 35. CLOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 9 · The Budget">
+    <div class="eyebrow">Before you leave &middot; on your own paper</div>
+    <h2>Finish the sentence</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.3rem;max-width:1100px">
+      <p class="lede">Write it out in full, in your own words. A good answer names where each policy first touches planned expenditure.</p>
+      <div class="blankline">
+        A $1 tax cut raises output by less than $1 of new government spending, because <span class="bl"></span>.
+      </div>
+      <p class="serif-note">If your sentence would still be true with an MPC of 1, it is not finished yet.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="chrome">
+  <span class="course" id="sectionLabel">ECON 002 &middot; Discussion 9</span>
+  <span class="navhint">
+    <button id="prevBtn" aria-label="Previous slide">&larr; prev</button>
+    <span aria-live="polite" aria-atomic="true">Slide <span id="cur">1</span> of <span id="tot">34</span></span>
+    <button id="nextBtn" aria-label="Next slide">next &rarr;</button>
+  </span>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* the one place the course string lives */
+  const COURSE = 'ECON 002';
+  const DECK_TITLE = 'When the Government Spends and Taxes';
+  document.title = COURSE + ' · ' + DECK_TITLE;
+  const eyebrow = document.getElementById('titleEyebrow');
+  if(eyebrow) eyebrow.textContent = COURSE + ' · Discussion Section · Unit 8';
+
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  /* slide element -> the reset() of every animation on it. Entering a slide
+     rewinds its animations, so nothing is already showing on arrival —
+     including on a second pass back through the deck. */
+  const slideResets=new Map();
+  function registerReset(el, fn){
+    const sl = el.closest && el.closest('.slide');
+    if(!sl) return;
+    if(!slideResets.has(sl)) slideResets.set(sl,[]);
+    slideResets.get(sl).push(fn);
+  }
+  const prog=document.getElementById('prog');
+  const cur=document.getElementById('cur');
+  document.getElementById('tot').textContent=slides.length;
+
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    prog.style.width=((i)/(slides.length-1)*100)+'%';
+    cur.textContent=i+1;
+    rewind(slides[i]);
+    const sec=slides[i].getAttribute('data-section');
+    const lbl=document.getElementById('sectionLabel');
+    if(lbl) lbl.textContent = sec ? (COURSE+' · '+sec) : (COURSE+' · Discussion');
+  }
+  function next(){show(i+1)}
+  function prev(){show(i-1)}
+
+  document.getElementById('nextBtn').onclick=next;
+  document.getElementById('prevBtn').onclick=prev;
+
+  /* guarded: Space must activate a focused control, not jump the slide */
+  window.addEventListener('keydown',e=>{
+    const t=e.target;
+    const onControl = t && t.closest && t.closest('button,a,input,select,textarea,[tabindex]');
+    if(e.key===' '||e.key==='Spacebar'){
+      if(onControl) return;               /* let the browser click the focused button */
+      e.preventDefault();next();return;
+    }
+    if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();next()}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}
+    else if(e.key.toLowerCase()==='f'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  /* ---- generic click-to-reveal: button[data-reveal="id"] or "id1,id2,id3"
+          A comma list lets one button uncover a block of text and a legend
+          entry at the same time, which is how a shifted line gets named. */
+  document.querySelectorAll('[data-reveal]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      btn.getAttribute('data-reveal').split(',').forEach(id=>{
+        const t=document.getElementById(id.trim());
+        if(t) t.classList.add('shown');
+      });
+      btn.disabled=true;
+    });
+  });
+
+  /* ---- generic quick-check polls: button[data-poll-reveal="pollId"] ---- */
+  document.querySelectorAll('[data-poll-reveal]').forEach(btn=>{
+    const group=document.getElementById(btn.getAttribute('data-poll-reveal'));
+    if(!group) return;
+    const opts=[...group.querySelectorAll('.poll-opt')];
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    btn.addEventListener('click',()=>{
+      group.classList.add('revealed');
+      opts.forEach(o=>{ if(o.dataset.correct==='true') o.classList.add('correct'); });
+      btn.disabled=true;
+    });
+  });
+
+  /* ---- generic diagnose (flawed-argument) groups ---- */
+  document.querySelectorAll('.diag').forEach(group=>{
+    const opts=[...group.querySelectorAll('.diag-opt')];
+    const revealBtn=group.parentElement.querySelector('[data-diag-reveal]');
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    if(revealBtn){
+      revealBtn.addEventListener('click',()=>{
+        group.classList.add('revealed');
+        opts.forEach(o=>{if(o.dataset.bad==='true')o.classList.add('bad');});
+        revealBtn.disabled=true;
+        const note=group.parentElement.querySelector('[data-diag-note]');
+        if(note) note.style.display='block';
+      });
+    }
+  });
+
+  /* ---- static shift diagrams: button[data-reveal-svg="key"] ----
+     Every shift of the planned expenditure line and every shift of the IS
+     curve is registered here, so all four are revealed by the same code. */
+  const svgShifts={
+    peUp   : ['sgPE2','sgBgd','sgB','sgBl',
+              'sgGarr','sgGlead','sgGlab','sgYcap','sgYarr','sgYlab'],
+    isRight: ['isRnew','isRlab','isRgd','isRb','isRbl',
+              'isRcap','isRarr','isRlab2'],
+    peDown : ['txPE2','txBgd','txB','txBl',
+              'txCarr','txClead','txClab','txYcap','txYarr','txYlab'],
+    isLeft : ['isLnew','isLlab','isLgd','isLb','isLbl',
+              'isLcap','isLarr','isLlab2'],
+    peBoth : ['bhPE2','bhSarr','bhSlead','bhSlab',
+              'bhGap','bhGapT','bhDot45','bhDotPE']
+  };
+  /* Entering a slide puts it back to its unrevealed state: uncovered text,
+     legend entries, polls, diagnose verdicts, marked-up SVGs and animations
+     all rewind, and their buttons come back — so a slide visited twice never
+     opens with its answer already showing. */
+  function rewind(sl){
+    if(!sl) return;
+    sl.querySelectorAll('.shown').forEach(e=>e.classList.remove('shown'));
+    sl.querySelectorAll('.revealed').forEach(g=>g.classList.remove('revealed'));
+    sl.querySelectorAll('.poll-opt.correct').forEach(o=>o.classList.remove('correct'));
+    sl.querySelectorAll('.diag-opt.bad').forEach(o=>o.classList.remove('bad'));
+    sl.querySelectorAll('.poll-opt,.diag-opt').forEach(o=>{o.style.outline='';});
+    sl.querySelectorAll('[data-diag-note]').forEach(n=>{n.style.display='none';});
+    sl.querySelectorAll('[data-reveal-svg]').forEach(b=>{
+      (svgShifts[b.getAttribute('data-reveal-svg')]||[]).forEach(id=>{
+        const el=document.getElementById(id); if(el) el.setAttribute('opacity',0);
+      });
+    });
+    sl.querySelectorAll('[data-reveal],[data-reveal-svg],[data-poll-reveal],[data-diag-reveal],[data-cond]')
+      .forEach(b=>{ b.disabled=false; });
+    (slideResets.get(sl)||[]).forEach(fn=>fn());
+  }
+
+  function revealShift(key){
+    (svgShifts[key]||[]).forEach(id=>{const el=document.getElementById(id); if(el) el.setAttribute('opacity',1);});
+  }
+  document.querySelectorAll('[data-reveal-svg]').forEach(btn=>{
+    const key=btn.getAttribute('data-reveal-svg');
+    btn.addEventListener('click',()=>{ revealShift(key); btn.disabled=true; });
+  });
+
+  /* ---- condition cards: button[data-cond="bodyId"] ---- */
+  document.querySelectorAll('[data-cond]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const body=document.getElementById(btn.getAttribute('data-cond'));
+      if(body){body.classList.add('shown');}
+      btn.disabled=true;
+    });
+  });
+
+  /* =====================================================================
+     ANIMATION SCAFFOLD
+     Two animations, and they are deliberately different in kind. The
+     multiplier arrives in discrete rounds, so it steps one bar at a time.
+     Output adjusting toward a new equilibrium is a continuous process, so
+     it takes the cosine sweep. Both carry reset(), finish() and a
+     reduced-motion branch.
+     ===================================================================== */
+  const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function ease(p){return p<1 ? (0.5-0.5*Math.cos(Math.PI*p)) : 1;}
+  const $ = id => document.getElementById(id);
+
+  /* signed value with its sign spelled out, so the direction is never read
+     from color or position alone */
+  function signed(v){
+    if(Math.abs(v)<0.05) return '0';
+    return (v>0 ? '+' : '−') + Math.abs(v).toFixed(1).replace(/\.0$/,'');
+  }
+  function trim(v){
+    return (Math.round(v*100)/100).toString();
+  }
+
+  /* =====================================================================
+     Slide 6 · the multiplier rounds after government purchases rise by 16.
+     Each round is 0.75 of the one before, so the running total is 16, 28,
+     37, 43.75, … climbing toward 64. Discrete rounds, so this steps.
+     ===================================================================== */
+  (function(){
+    if(!$('grPlay')) return;
+    const EACH=[16,12,9,6.75,5.0625,3.796875,2.84765625,2.13574219,1.60180664,1.20135498];
+    const CUM =[16,28,37,43.75,48.8125,52.609375,55.45703125,57.59277344,59.19458008,60.39593506];
+    const bars=[]; for(let k=1;k<=10;k++){ const b=$('grB'+k); if(b) bars.push(b); }
+    const tot=$('grTot'), totT=$('grTotT');
+    const $N=$('grN'), $T=$('grThis'), $C=$('grCum'), $n=$('grNote');
+    const bPlay=$('grPlay'), bReset=$('grReset');
+    let timer=null;
+
+    function setN(n){
+      bars.forEach((b,k)=>b.setAttribute('opacity', k<n ? 1 : 0));
+      $N.textContent = n;
+      $T.textContent = n ? '+' + trim(EACH[n-1]) : '—';
+      $C.textContent = n ? '+' + trim(CUM[n-1])  : '0';
+    }
+    function reset(){
+      if(timer){ clearTimeout(timer); timer=null; }
+      setN(0);
+      if(tot)  tot.setAttribute('opacity',0);
+      if(totT) totT.setAttribute('opacity',0);
+      bPlay.disabled=false;
+      $n.textContent='Press play to add the rounds one at a time.';
+    }
+    function finish(){
+      if(timer){ clearTimeout(timer); timer=null; }
+      setN(10);
+      if(tot)  tot.setAttribute('opacity',1);
+      if(totT) totT.setAttribute('opacity',1);
+      bPlay.disabled=true;
+      $n.textContent='Ten rounds have taken output up 60.4. The rounds never stop, but each is three quarters of the last, and the running total closes in on +64.';
+    }
+    function play(){
+      reset(); bPlay.disabled=true;
+      if(REDUCED){ finish(); return; }        /* reduced-motion branch */
+      let n=0;
+      $n.textContent='Each round is three quarters of the one before it.';
+      (function stepRound(){
+        n++; setN(n);
+        if(n>=10){ finish(); return; }
+        timer=setTimeout(stepRound,560);
+      })();
+    }
+
+    bPlay.onclick=play;
+    bReset.addEventListener('click',reset);
+    registerReset(bPlay,reset);
+    reset();
+  })();
+
+  /* =====================================================================
+     Slide 21 · output adjusting to the new equilibrium after G and T both
+     rise by 16. Close-up plot geometry: both axes run 240 to 340, so
+     x = 70 + 3.6(Y − 240) and y = 380 − 3.6(v − 240). The line has moved up
+     by only 4, so output travels 280 → 296. Continuous, so this sweeps.
+     ===================================================================== */
+  (function(){
+    if(!$('bhPlay')) return;
+    const xY = Y => 70 + 3.6*(Y-240);
+    const yV = v => 380 - 3.6*(v-240);
+    const gap  = $('bhGap'),  gapT = $('bhGapT');
+    const d45  = $('bhDot45'), dPE = $('bhDotPE');
+    const END  = ['bhBgd','bhB','bhBl','bhYcap','bhYarr','bhYlab'].map($).filter(Boolean);
+    const $Y=$('bhYv'), $PE=$('bhPEv'), $G=$('bhGapv'), $n=$('bhNote');
+    const bPlay=$('bhPlay'), bReset=$('bhReset');
+    const bShift=document.querySelector('[data-reveal-svg="peBoth"]');
+    let raf;
+
+    function place(Y){
+      const PE = 74 + 0.75*Y, g = PE - Y;
+      const x = xY(Y), yTop = yV(Y), yPE = yV(PE);
+      gap.setAttribute('x1',x.toFixed(1)); gap.setAttribute('x2',x.toFixed(1));
+      gap.setAttribute('y1',yTop.toFixed(1)); gap.setAttribute('y2',yPE.toFixed(1));
+      gapT.setAttribute('x',(x+10).toFixed(1));
+      gapT.setAttribute('y',((yTop+yPE)/2+4).toFixed(1));
+      gapT.textContent = 'PE − Y = ' + signed(g);
+      d45.setAttribute('cx',x.toFixed(1)); d45.setAttribute('cy',yTop.toFixed(1));
+      dPE.setAttribute('cx',x.toFixed(1)); dPE.setAttribute('cy',yPE.toFixed(1));
+      $Y.textContent  = Math.round(Y);
+      $PE.textContent = Math.round(PE);
+      $G.textContent  = signed(g);
+    }
+    function shows(v){ END.forEach(e=>e.setAttribute('opacity',v)); }
+
+    function reset(){
+      cancelAnimationFrame(raf);
+      place(280); shows(0);
+      bPlay.disabled=false;
+      $n.textContent='Show the combined line, then let output adjust.';
+    }
+    function finish(){
+      cancelAnimationFrame(raf);
+      place(296); shows(1);
+      bPlay.disabled=true;
+      $n.textContent='Y = PE = 296. The gap is closed, and output ended up 16 above where it started.';
+    }
+    function play(){
+      reset();
+      /* the dots ride the combined line, so make sure it is on screen */
+      revealShift('peBoth');
+      const leg=$('bhPE2leg'); if(leg) leg.classList.add('shown');
+      if(bShift) bShift.disabled=true;
+      bPlay.disabled=true;
+      if(REDUCED){ finish(); return; }        /* reduced-motion branch */
+      $n.textContent='Planned expenditure is above output, so inventories are falling and firms are producing more.';
+      const t0=performance.now();
+      (function step(now){
+        const p=Math.min(1,(now-t0)/2600), e=ease(p);
+        place(280 + 16*e);
+        if(p>=1) finish(); else raf=requestAnimationFrame(step);
+      })(t0);
+    }
+
+    bPlay.onclick=play;
+    bReset.addEventListener('click',reset);
+    registerReset(bPlay,reset);
+    reset();
+  })();
+
+  /* =====================================================================
+     Slide 26 · the lever panel. Not an animation — the two diagrams are
+     redrawn from the model every time a slider moves, so there is no sweep
+     to ease and no reduced-motion branch to take. reset() is still here,
+     because entering the slide has to put all three levers back to the
+     starting economy.
+
+       PE = 25 + 0.75(Y − T) + (60 − 8r) + G = a + 0.75Y,  a = 85 + G − 0.75T − 8r
+       Y* = a / 0.25 = 4a = k − 32r,          k = 340 + 4G − 3T
+
+     Both plots run 0 to 500 in Y. PE panel: x = 70 + 0.72Y, y = 380 − 0.72v.
+     IS panel: x = 70 + 0.74Y, y = 310 − 28r. The step sizes are chosen so
+     that a, and therefore Y*, is always a whole number.
+     ===================================================================== */
+  (function(){
+    if(!$('lvG')) return;
+    const sG=$('lvG'), sT=$('lvT'), sR=$('lvR');
+    const xP = Y => 70 + 0.72*Y, yP = v => 380 - 0.72*v;
+    const xI = Y => 70 + 0.74*Y, yI = r => 310 - 28*r;
+    const peL=$('lvPE'), peGh=$('lvPEgh'), peGv=$('lvPEgv'), peD=$('lvPEdot'), peLab=$('lvPElab');
+    const isL=$('lvIS'), isGh=$('lvISgh'), isGv=$('lvISgv'), isD=$('lvISdot'), isLab=$('lvISlab');
+    const $G=$('lvGv'), $T=$('lvTv'), $R=$('lvRv');
+    const $eq=$('lvEq'), $Y=$('lvY'), $D=$('lvD'), $n=$('lvNote');
+    const bReset=$('lvReset');
+    const set=(el,o)=>{for(const k in o) el.setAttribute(k,o[k]);};
+
+    function draw(){
+      const G=+sG.value, T=+sT.value, r=+sR.value;
+      const a = 85 + G - 0.75*T - 8*r;
+      const Y = 4*a, k = 340 + 4*G - 3*T;
+
+      $G.textContent=G; $T.textContent=T; $R.textContent=String(r);
+
+      /* planned expenditure against income */
+      set(peL,{x1:70, y1:yP(a).toFixed(1), x2:430, y2:yP(a+375).toFixed(1)});
+      const px=xP(Y), py=yP(Y);
+      set(peGh,{x1:70, y1:py.toFixed(1), x2:px.toFixed(1), y2:py.toFixed(1)});
+      set(peGv,{x1:px.toFixed(1), y1:py.toFixed(1), x2:px.toFixed(1), y2:380});
+      set(peD,{cx:px.toFixed(1), cy:py.toFixed(1)});
+      /* the readout label flips to the open side so it never runs off the plot */
+      const left = px < 200;
+      set(peLab,{x:(px + (left?12:-12)).toFixed(1), y:(py-12).toFixed(1),
+                 'text-anchor': left?'start':'end'});
+      peLab.textContent = 'Y = ' + Y;
+
+      /* the interest rate against equilibrium output */
+      const Y7 = k - 224, Y3 = k - 96;              /* the curve drawn r = 7 down to r = 3 */
+      set(isL,{x1:xI(Y7).toFixed(1), y1:114, x2:xI(Y3).toFixed(1), y2:226});
+      set(isLab,{x:xI(Y7).toFixed(1), y:105, 'text-anchor':'middle'});
+      const ix=xI(Y), iy=yI(r);
+      set(isGh,{x1:70, y1:iy.toFixed(1), x2:ix.toFixed(1), y2:iy.toFixed(1)});
+      set(isGv,{x1:ix.toFixed(1), y1:iy.toFixed(1), x2:ix.toFixed(1), y2:310});
+      set(isD,{cx:ix.toFixed(1), cy:iy.toFixed(1)});
+
+      $eq.textContent = 'PE = ' + a + ' + 0.75Y';
+      $Y.textContent  = Y;
+      $D.textContent  = signed(Y-280);
+      $n.textContent  = (k===440
+        ? 'G and T are at their starting values, so the IS curve has not moved — changing r only slides the point along it.'
+        : 'The IS curve has shifted ' + (k>440?'right':'left') + ' by ' + Math.abs(k-440) + '.');
+    }
+
+    function reset(){
+      sG.value=40; sT.value=20; sR.value=5;
+      draw();
+      $n.textContent='Move a slider and the gold lines follow.';
+    }
+
+    [sG,sT,sR].forEach(s=>s.addEventListener('input',draw));
+    bReset.addEventListener('click',reset);
+    registerReset(sG,reset);
+    reset();
+  })();
+
+  show(0);
+})();
+</script>
+</body>
+</html>

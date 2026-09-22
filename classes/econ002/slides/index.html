@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dynamic Lecture Slides — ECON 002</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+  <style>
+:root{
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-serif: "Source Serif 4", ui-serif, Georgia, "Times New Roman", serif;
+
+  --paper: #f6f2ea;
+  --panel: #ffffff;
+  --ink: #1f2937;
+  --ink-2: #374151;
+  --muted: #596878;
+  --line: #e7dfd2;
+  --line-2: #d9cfbf;
+  --shadow: 0 1px 2px rgba(17,24,39,0.06), 0 10px 24px rgba(17,24,39,0.06);
+
+  --accent: #2f5d7c;
+  --good: #155c38;
+  --bad: #b42318;
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+/* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+.skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+  background:var(--accent);color:#fff;font-weight:700;
+  text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+.skip-link:focus{top:0;}
+
+/* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;
+  margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+  white-space:nowrap;border:0;}
+
+/* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+
+/* ── Reduced motion ─────────────────────────────────────── */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms!important;
+    transition-duration:.01ms!important;}}
+
+.container{ max-width: 1120px; margin: 0 auto; padding: 18px 18px; }
+
+/* Header */
+.page-header{
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255,255,255,0.75), rgba(255,255,255,0));
+}
+.crumbbar{ margin: 6px 0 10px; }
+.crumb-link{ color: var(--accent); text-decoration: none; font-weight: 800;
+  font-size: 0.8125rem; }
+.crumb-link:hover{ text-decoration: underline; }
+
+.header-inner{ padding-top: 22px; padding-bottom: 14px; }
+.kicker{ font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 6px; }
+h1{ font-family: var(--font-serif); font-size: 2rem; line-height: 1.1;
+  letter-spacing: -0.01em; margin: 0; }
+.sub{ margin: 10px 0 0 0; color: var(--ink-2); line-height: 1.55;
+  max-width: 82ch; font-size: 0.9375rem; }
+
+/* Section heading above the card grid */
+h2.section-title{ font-family: var(--font-serif); font-size: 1.125rem;
+  margin: 22px 0 0 0; letter-spacing: -0.01em; }
+.section-note{ margin: 6px 0 0 0; font-size: 0.8125rem; color: var(--muted);
+  line-height: 1.55; max-width: 82ch; }
+
+/* ── Unit cards ─────────────────────────────────────────────
+   One card per unit, in syllabus order. A unit that has not been
+   built yet is a .deck-card.locked <div> instead of an <a>. */
+.deck-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px; margin-top: 14px; padding: 0; list-style: none;
+}
+.deck-grid > li { display: flex; }
+
+.deck-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  transition: transform .1s, box-shadow .1s, border-color .1s;
+}
+.deck-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(17,24,39,0.10);
+  border-color: var(--line-2);
+}
+.deck-card.locked { opacity: .55; cursor: default; pointer-events: none;
+  transform: none; }
+
+.deck-eyebrow{ font-size: 0.6875rem; text-transform: uppercase;
+  letter-spacing: .09em; color: var(--muted); font-weight: 700;
+  margin-bottom: 6px; }
+.deck-title{ font-size: 1rem; font-weight: 900; color: var(--ink);
+  margin-bottom: 6px; line-height: 1.3; }
+.deck-desc{ font-size: 0.8125rem; color: var(--ink-2); line-height: 1.5;
+  margin-bottom: 10px; }
+.deck-parts{ display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+.part-chip{ padding: 3px 9px; border-radius: 999px; font-size: 0.6875rem;
+  font-weight: 700; background: rgba(47,93,124,.08); color: #2f5d7c;
+  border: 1px solid rgba(47,93,124,.20); }
+.deck-meta{ font-size: 0.75rem; color: var(--muted); margin-top: auto;
+  padding-top: 4px; }
+.status-dot{ display:inline-block; width:7px; height:7px; border-radius:50%;
+  margin-right:5px; vertical-align:middle; }
+.dot-live  { background: #155c38; }
+.dot-soon  { background: #8c4800; }
+
+kbd{ border:1px solid var(--line-2); border-radius:5px; padding:1px 5px;
+  font-family: var(--font-sans); font-size:0.85em; font-weight:700;
+  color:var(--ink-2); background:var(--panel); }
+
+.ada-notice{ margin-top:22px; padding:14px 16px; border:1px solid var(--line);
+  border-radius:12px; background:var(--panel); font-size:0.8125rem;
+  color:var(--ink-2); line-height:1.55; }
+
+/* Footer */
+.footer-inner{ display:flex; justify-content:space-between; flex-wrap:wrap;
+  gap:8px; font-size:0.75rem; color:var(--muted);
+  padding-top:12px; border-top:1px solid var(--line); margin-top:24px; }
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
+    </nav>
+    <div class="header-inner">
+      <div class="title-block">
+        <div class="kicker">ECON 002</div>
+        <h1>Dynamic Lecture Slides</h1>
+        <p class="sub">The figures from each unit's notes, on their own and sized for
+        the lecture hall. Nothing but the diagram and its title — no prose to read from
+        the back of the room. Arrow keys move between figures, the space bar walks each
+        animation forward one step at a time, and <kbd>F</kbd> goes full screen.</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="container">
+
+  <h2 class="section-title">By unit</h2>
+  <p class="section-note">Units follow the syllabus. A unit appears here once its
+  figures are built. These are the same figures as in the accessible notes, drawn from
+  the same source, so the two can never drift apart.</p>
+
+  <ul class="deck-grid">
+
+    <!-- ══ UNIT 1 ════════════════════════════════════════════════════════
+         To add a unit: copy this <li>, point the href at that unit's
+         deck.html, and update the eyebrow, title, description, chips and
+         meta line. The decks live beside the notes they belong to, at
+         ../notes/unit-NN/deck.html. -->
+    <li>
+      <a class="deck-card" href="../notes/unit-01/deck.html">
+        <div class="deck-eyebrow">Unit 1 · Introduction</div>
+        <div class="deck-title">Introduction to Economics</div>
+        <div class="deck-desc">Total and marginal benefit, total and marginal cost, the
+        two side by side with the optimum locked in at marginal benefit equals marginal
+        cost, and the business cycle sweeping through peak, recession, trough and
+        expansion.</div>
+        <div class="deck-parts">
+          <span class="part-chip">5 slides</span>
+          <span class="part-chip">4 animated figures</span>
+          <span class="part-chip">Keyboard driven</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span>Open &nbsp;·&nbsp; Projection deck
+        </div>
+      </a>
+    </li>
+
+    <li>
+      <a class="deck-card" href="../notes/unit-02/deck.html">
+        <div class="deck-eyebrow">Unit 2 · Supply and Demand</div>
+        <div class="deck-title">Review of Supply and Demand</div>
+        <div class="deck-desc">Reading a schedule off a curve, curves that slide when
+        something other than price changes, surpluses and shortages closing as the
+        price adjusts, and the equilibrium walking to its new home after a demand or
+        supply shock.</div>
+        <div class="deck-parts">
+          <span class="part-chip">11 slides</span>
+          <span class="part-chip">10 animated figures</span>
+          <span class="part-chip">Keyboard driven</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span>Open &nbsp;·&nbsp; Projection deck
+        </div>
+      </a>
+    </li>
+
+    <li>
+      <a class="deck-card" href="../notes/unit-03/deck.html">
+        <div class="deck-eyebrow">Unit 3 · Measuring GDP</div>
+        <div class="deck-title">Measuring GDP</div>
+        <div class="deck-desc">GDP against GNP, nominal against real, value added stacking
+        up to the final sale price, and the circular flow built one group of arrows at a time — then the U.S. data.</div>
+        <div class="deck-parts">
+          <span class="part-chip">12 slides</span>
+          <span class="part-chip">4 animated figures</span>
+          <span class="part-chip">11 data charts</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span>Open &nbsp;·&nbsp; Projection deck
+        </div>
+      </a>
+    </li>
+
+    <li>
+      <a class="deck-card" href="../notes/unit-04/deck.html">
+        <div class="deck-eyebrow">Unit 4 · Unemployment</div>
+        <div class="deck-title">Unemployment</div>
+        <div class="deck-desc">The labor market built up curve by curve, a fall in demand
+        with the wage free to adjust and with it stuck, a wage held above equilibrium, and
+        the surplus of workers that each one leaves behind &mdash; then the U.S. data.</div>
+        <div class="deck-parts">
+          <span class="part-chip">8 slides</span>
+          <span class="part-chip">4 animated figures</span>
+          <span class="part-chip">4 data charts</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span>Open &nbsp;·&nbsp; Projection deck
+        </div>
+      </a>
+    </li>
+
+    <li>
+      <a class="deck-card" href="../notes/unit-05/deck.html">
+        <div class="deck-eyebrow">Unit 5 · Inflation</div>
+        <div class="deck-title">Inflation</div>
+        <div class="deck-desc">The U.S. inflation record and the goods whose prices fell
+        anyway, what sits in the CPI basket, that basket priced three years running, the
+        level against the rate, the three price indices side by side, headline against core,
+        and money against goods.</div>
+        <div class="deck-parts">
+          <span class="part-chip">9 slides</span>
+          <span class="part-chip">3 animated figures</span>
+          <span class="part-chip">5 data charts</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span>Open &nbsp;·&nbsp; Projection deck
+        </div>
+      </a>
+    </li>
+
+    <li>
+      <a class="deck-card" href="../notes/unit-06/deck.html">
+        <div class="deck-eyebrow">Unit 6 · Where GDP Comes From</div>
+        <div class="deck-title">GDP: Where Does it Come From?</div>
+        <div class="deck-desc">Output and marginal product built up worker by worker and unit
+        by unit, the hiring decision drawn as one curve crossing one line, and the three
+        aggregate-supply pictures &mdash; a move along SRAS, a shift of SRAS, and the
+        vertical LRAS that survives both.</div>
+        <div class="deck-parts">
+          <span class="part-chip">8 slides</span>
+          <span class="part-chip">7 animated figures</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span>Open &nbsp;·&nbsp; Projection deck
+        </div>
+      </a>
+    </li>
+
+    <li>
+      <a class="deck-card" href="../notes/unit-07/deck.html">
+        <div class="deck-eyebrow">Unit 7 · Equilibrium in the Goods Market</div>
+        <div class="deck-title">Equilibrium in the Goods Market</div>
+        <div class="deck-desc">Consumption and investment first, in the data and then as
+        functions. Then the Keynesian cross built line by line, an interest-rate shock
+        pushing planned expenditure down, the multiplier rounds adding up on screen, and the
+        IS curve drawn from the two equilibria beside it.</div>
+        <div class="deck-parts">
+          <span class="part-chip">10 slides</span>
+          <span class="part-chip">6 animated figures</span>
+          <span class="part-chip">4 data charts</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span>Open &nbsp;·&nbsp; Projection deck
+        </div>
+      </a>
+    </li>
+
+    <li>
+      <a class="deck-card" href="../notes/unit-08/deck.html">
+        <div class="deck-eyebrow">Unit 8 · Fiscal Policy</div>
+        <div class="deck-title">Fiscal Policy</div>
+        <div class="deck-desc">Three pictures for a change in government purchases &mdash;
+        the shift, the rounds, the IS curve &mdash; then the same three for a change in
+        taxes, so the difference between the two multipliers is a difference between two
+        slides rather than two formulas.</div>
+        <div class="deck-parts">
+          <span class="part-chip">7 slides</span>
+          <span class="part-chip">6 animated figures</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span>Open &nbsp;·&nbsp; Projection deck
+        </div>
+      </a>
+    </li>
+
+    <li>
+      <a class="deck-card" href="../notes/unit-09/deck.html">
+        <div class="deck-eyebrow">Unit 9 · Money</div>
+        <div class="deck-title">Money</div>
+        <div class="deck-desc">M1 and M2 in the data, the deposit cascade adding up on
+        screen, the money market built from a downward demand and a vertical supply, the
+        three things that move it one at a time, and the interest rate rule drawn twice
+        &mdash; once for P and once for M.</div>
+        <div class="deck-parts">
+          <span class="part-chip">8 slides</span>
+          <span class="part-chip">6 animated figures</span>
+          <span class="part-chip">1 data chart</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span>Open &nbsp;·&nbsp; Projection deck
+        </div>
+      </a>
+    </li>
+
+    <li>
+      <a class="deck-card" href="../notes/unit-10/deck.html">
+        <div class="deck-eyebrow">Unit 10 · Aggregate Demand</div>
+        <div class="deck-title">Aggregate Demand</div>
+        <div class="deck-desc">The IR&ndash;IS diagram built curve by curve, then four
+        shocks moving it one at a time, the aggregate demand curve traced out point by
+        point from three price levels, and the four policies shown on both diagrams at
+        once.</div>
+        <div class="deck-parts">
+          <span class="part-chip">11 slides</span>
+          <span class="part-chip">10 animated figures</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span>Open &nbsp;·&nbsp; Projection deck
+        </div>
+      </a>
+    </li>
+
+    <li>
+      <a class="deck-card" href="../notes/unit-11/deck.html">
+        <div class="deck-eyebrow">Unit 11 &middot; AS&ndash;AD</div>
+        <div class="deck-title">Aggregate Supply and Aggregate Demand</div>
+        <div class="deck-desc">The AS&ndash;AD diagram built curve by curve, a demand shock
+        played out into the long run, a supply shock shown temporary and then permanent, and
+        the four stabilization pictures run twice &mdash; once for the Fed, once for
+        Congress.</div>
+        <div class="deck-parts">
+          <span class="part-chip">14 slides</span>
+          <span class="part-chip">13 animated figures</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span>Open &nbsp;&middot;&nbsp; Projection deck
+        </div>
+      </a>
+    </li>
+
+  </ul>
+
+  <div class="ada-notice" role="note">
+    <strong>Reading these on your own:</strong> These slides are built for
+    projection, so they carry no explanatory text. If you are studying rather than
+    sitting in lecture, use the <a href="../notes/">accessible lecture notes</a>
+    instead — same figures, with the full handout around them.
+  </div>
+
+  <footer>
+    <div class="footer-inner">
+      <span>ECON 002 — Principles of Macroeconomics</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </footer>
+
+</main>
+
+</body>
+</html>

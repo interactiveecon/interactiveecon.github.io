@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECON 002 · Who Counts as Unemployed?</title>
+<style>
+  :root{
+    --ink:#14243A;          /* near-navy ink */
+    --accent:#1F4E79;       /* deep blue (from worksheets) */
+    --accent-soft:#8FAADC;
+    --paper:#F6F4EE;        /* warm chalk-paper */
+    --paper-line:#E4E0D5;
+    --gold:#8A5900;
+    --gold-soft:#FBF1DC;
+    --red:#C0392B;
+    --grey:#5A5F66;
+    --chalk:#FbFaF7;
+    --shadow:0 8px 30px rgba(20,36,58,.10);
+    --mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Georgia','Iowan Old Style',serif;
+    color:var(--ink);
+    background:var(--paper);
+    overflow:hidden;
+  }
+  /* ---------- deck scaffold ---------- */
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;
+    padding:clamp(1.25rem,4vw,4.5rem) clamp(1.5rem,6vw,6rem);
+    /* extra bottom room so content never hides behind the fixed nav bar (~46px) */
+    padding-bottom:calc(46px + clamp(1rem,3vw,2rem));
+    /* if a slide is taller than the screen, scroll it instead of clipping/overlapping */
+    overflow-y:auto;overflow-x:hidden;
+    scroll-padding-bottom:46px;
+    opacity:0;
+    transition:opacity .38s ease;
+  }
+  .slide.active{display:flex;opacity:1;animation:rise .45s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide.active{animation:none}
+    .slide{transition:none}
+    *{transition-duration:.001ms !important;animation-duration:.001ms !important}
+  }
+  /* visible keyboard focus (WCAG 2.4.7) */
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+    outline:3px solid var(--accent);outline-offset:3px;border-radius:6px;
+  }
+  :focus:not(:focus-visible){outline:none}
+  /* ---------- typography ---------- */
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--grey);margin-bottom:1.1rem;font-weight:600;
+  }
+  h1{font-size:clamp(2.4rem,5.5vw,4.4rem);line-height:1.02;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3.2vw,2.4rem);line-height:1.1;font-weight:700;letter-spacing:-.01em;margin-bottom:.4rem}
+  .lede{font-size:clamp(1.05rem,1.7vw,1.35rem);line-height:1.5;color:var(--ink);max-width:52ch}
+  .muted{color:var(--grey)}
+  .serif-note{font-style:italic;color:var(--grey);font-size:1rem;line-height:1.5}
+  strong{font-weight:700}
+  .accent{color:var(--accent)}
+  .red{color:var(--red)}
+  .gold{color:var(--gold)}
+  /* title rule */
+  h2 + .titlerule{height:2px;background:linear-gradient(90deg,var(--accent-soft),transparent);
+    width:min(100%,640px);margin:.2rem 0 1.4rem}
+  /* ---------- model cards ---------- */
+  .models{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin:1.4rem 0;max-width:900px}
+  .model{
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;
+    padding:1.4rem 1.6rem;box-shadow:var(--shadow);position:relative;
+  }
+  .model .tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:.6rem;display:block}
+  .model .eq{font-family:var(--mono);font-size:1.35rem;color:var(--ink)}
+  .model .eq .coef{color:var(--red);font-weight:700}
+  .model.dim{opacity:.4;filter:saturate(.4)}
+  .model.hi{border-color:var(--accent);box-shadow:0 8px 30px rgba(31,78,121,.22)}
+  .model .body{font-size:1rem;line-height:1.5;margin-top:.7rem}
+  .model.warm{background:var(--gold-soft);border-color:#E2CFA4}
+  .model.warm .tag{color:var(--gold)}
+  /* ---------- boxes ---------- */
+  .prompt,.reveal,.predict{
+    border-radius:10px;padding:1.05rem 1.3rem;max-width:820px;line-height:1.5;
+    font-family:'Georgia',serif;font-size:1.08rem;
+  }
+  .prompt{background:#EEF3FA;border-left:4px solid var(--accent)}
+  .reveal{background:var(--gold-soft);border-left:4px solid var(--gold)}
+  .cue{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;display:block;margin-bottom:.4rem}
+  .prompt .cue{color:var(--accent)}
+  .reveal .cue{color:var(--gold)}
+  .predict .cue{color:var(--red)}
+  .predict{background:#FBEEEC;border-left:4px solid var(--red)}
+  .prompt p,.reveal p,.predict p{margin:0;line-height:1.5}
+  .prompt .cue + p,.reveal .cue + p,.predict .cue + p{margin-top:.15rem}
+  .prompt ol,.predict ol,.reveal ol{margin:.5rem 0 0 1.3rem;line-height:1.6}
+  .prompt li,.predict li,.reveal li{margin-bottom:.25rem}
+  /* chain / mono line */
+  .chain{
+    font-family:var(--mono);background:#EDF1F8;border:1px solid var(--accent-soft);
+    border-radius:8px;padding:.7rem 1rem;font-size:1.05rem;color:var(--accent);
+    display:inline-block;margin-top:.4rem
+  }
+  .chain.warm{background:var(--gold-soft);border-color:#E2CFA4;color:var(--gold)}
+  /* ---------- interactive graph panel ---------- */
+  .graphwrap{display:grid;grid-template-columns:1.15fr .85fr;gap:2rem;align-items:center;margin-top:.6rem;flex:1 0 auto}
+  @media (max-width:900px){.graphwrap{grid-template-columns:1fr}}
+  .panel{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;padding:1.2rem;box-shadow:var(--shadow)}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .controls{display:flex;flex-direction:column;gap:1.3rem}
+  .readout{font-family:var(--mono);font-size:.92rem;line-height:1.7;color:var(--ink);background:#EDF1F8;border-radius:8px;padding:.8rem 1rem}
+  .readout .big{font-size:1.25rem;color:var(--accent);font-weight:700}
+  .readout .lbl2{color:var(--grey)}
+  .btn{
+    font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.7rem 1.2rem;cursor:pointer;
+    box-shadow:0 3px 10px rgba(31,78,121,.3);transition:transform .1s,background .2s;align-self:flex-start
+  }
+  .btn:hover{background:#173a5c;transform:translateY(-1px)}
+  /* a spent reveal button stays in place — hiding it slid the row under the
+     cursor, so a second click landed on the next answer (disabled controls
+     are exempt from the contrast minimum) */
+  .btn:disabled,.btn.ghost:disabled{opacity:.38;cursor:default;transform:none;box-shadow:none}
+  .btn:disabled:hover{background:var(--accent);transform:none}
+  .btn.ghost:disabled:hover{background:transparent}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
+  .btn.ghost:hover{background:#EEF3FA}
+  .btnrow{display:flex;gap:.7rem;flex-wrap:wrap}
+  /* ---------- poll ---------- */
+  .poll-opts{display:flex;flex-direction:column;gap:.8rem;max-width:860px;margin-top:1.1rem}
+  .poll-opt{
+    display:flex;align-items:stretch;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;
+    cursor:pointer;background:var(--chalk);transition:border-color .2s,transform .08s;position:relative;
+    width:100%;text-align:left;font:inherit;color:inherit;padding:0
+  }
+  .poll-opt:hover{border-color:var(--accent-soft)}
+  .poll-opt:active{transform:scale(.995)}
+  .poll-opt .num{background:var(--accent);color:#fff;font-family:var(--mono);font-weight:700;
+    display:flex;align-items:center;justify-content:center;padding:0 1.1rem;font-size:1.1rem;z-index:2}
+  .poll-opt .txt{padding:.9rem 1.1rem;line-height:1.4;z-index:2;font-size:1.02rem;font-family:'Georgia',serif}
+  .poll.revealed .poll-opt{opacity:.5;transition:opacity .4s}
+  .poll.revealed .poll-opt.correct{opacity:1;border-color:var(--gold);background:var(--gold-soft)}
+  .poll-opt.correct .num{background:var(--gold)}
+  .poll-opt.correct .txt::after{content:" ✓ correct";color:var(--gold);font-family:var(--mono);font-weight:700;font-size:.82rem}
+  .poll-hint{font-family:var(--mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-top:.9rem;font-weight:600}
+  /* ---------- footer / nav ---------- */
+  .chrome{position:fixed;bottom:0;left:0;right:0;height:46px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 1.4rem;font-family:var(--mono);font-size:.72rem;
+    letter-spacing:.08em;color:var(--grey);pointer-events:none;z-index:50}
+  .chrome .course{text-transform:uppercase}
+  .progress-track{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:60}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-soft));width:0;transition:width .35s ease}
+  .navhint{display:flex;gap:1.2rem;align-items:center;pointer-events:auto}
+  .navhint button{pointer-events:auto;background:none;border:none;color:var(--grey);cursor:pointer;font-family:var(--mono);font-size:.9rem;padding:.2rem .5rem;border-radius:5px}
+  .navhint button:hover{color:var(--accent);background:rgba(31,78,121,.08)}
+  .kbd{font-family:var(--mono);font-size:.66rem;border:1px solid var(--paper-line);border-radius:4px;padding:.1rem .35rem;color:var(--grey)}
+  /* content column helper */
+  .col{display:flex;flex-direction:column;gap:1.1rem;flex:1 0 auto;justify-content:center}
+  .grow{flex:1 0 auto}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+  @media (max-width:900px){.two{grid-template-columns:1fr}}
+  .calc{font-family:var(--mono);font-size:1.05rem;line-height:1.8}
+  .calc .lbl{color:var(--accent);font-weight:700}
+  .footnote{font-size:.92rem;color:var(--grey);font-style:italic}
+  .runsheet{display:grid;grid-template-columns:auto 1fr;gap:.35rem 1.1rem;font-family:var(--mono);font-size:.86rem;line-height:1.5;margin-top:.4rem}
+  .runsheet .rk{color:var(--accent);font-weight:700;white-space:nowrap}
+  /* title slide special */
+  .title-slide{justify-content:safe center}
+  .title-slide h1{margin:.6rem 0}
+  .signature{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:2rem}
+  /* ---------- section divider ---------- */
+  .divider{justify-content:safe center;background:linear-gradient(135deg,#1B3B5C,#14243A)}
+  .divider *{color:#F6F4EE}
+  .divider .eyebrow{color:#8FAADC}
+  .divider h1{font-size:clamp(2.2rem,5vw,4rem);color:#fff}
+  .divider .lede{color:#D6DEE9;max-width:52ch}
+  .divider .sectrail{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#8FAADC;margin-top:1.6rem}
+  .divider .through{font-family:var(--mono);font-size:.8rem;line-height:1.6;color:#D6DEE9;
+    border-left:3px solid #8FAADC;padding-left:.9rem;margin-top:1.4rem;max-width:60ch}
+  /* ---------- generic click-reveal ---------- */
+  .reveal-hidden{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .reveal-hidden.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* cell-level hide: keeps the table's layout, but the value is neither seen
+     nor read out by a screen reader until the TA presses the reveal button */
+  .hid{visibility:hidden}
+  .hid.shown{visibility:visible}
+  /* condition cards (3-across; override grid-template-columns for 2) */
+  .condrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem}
+  @media (max-width:900px){.condrow{grid-template-columns:1fr !important}}
+  .condcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.5rem}
+  .condcard .ctitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .condcard .cbtn{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:.55rem .8rem;cursor:pointer;align-self:flex-start}
+  .condcard .cbtn:hover{background:#173a5c}
+  .condcard .cbody{opacity:0;max-height:0;overflow:hidden;transition:opacity .35s,max-height .45s}
+  .condcard .cbody.shown{opacity:1;max-height:none;overflow:visible;margin-top:.3rem}
+  .condcard .cnote{font-size:.95rem;line-height:1.5;color:var(--ink)}
+  .condcard ul{margin:.2rem 0 0 1.1rem;font-size:.95rem;line-height:1.55}
+  .condcard li{margin-bottom:.3rem}
+  .condcard .big{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--accent)}
+  .condcard.warm{background:var(--gold-soft);border-color:#E2CFA4}
+  .condcard.warm .ctitle,.condcard.warm .big{color:var(--gold)}
+  /* diagnose (numbered flawed-argument) list */
+  .diag{display:flex;flex-direction:column;gap:.7rem;max-width:920px;margin:1rem 0}
+  .diag-opt{display:flex;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;background:var(--chalk);width:100%;text-align:left;font:inherit;color:inherit;padding:0;cursor:pointer;transition:border-color .2s}
+  .diag-opt:hover{border-color:var(--accent-soft)}
+  .diag-opt .n{background:var(--grey);color:#fff;font-family:var(--mono);font-weight:700;display:flex;align-items:center;padding:0 1rem;font-size:1.05rem}
+  .diag-opt .s{padding:.85rem 1.1rem;line-height:1.45;font-family:'Georgia',serif;font-size:1.02rem}
+  .diag.revealed .diag-opt{opacity:.5}
+  .diag.revealed .diag-opt.bad{opacity:1;border-color:var(--red);background:#FBEEEC}
+  .diag-opt.bad .n{background:var(--red)}
+  .diag.revealed .diag-opt.bad .s::after{content:" ✗ the flaw";color:var(--red);font-family:var(--mono);font-weight:700;font-size:.8rem}
+  /* fill-in-the-blank close line */
+  .blankline{font-family:var(--mono);font-size:clamp(1.1rem,2.4vw,1.7rem);line-height:2;color:var(--ink);
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1.4rem 1.6rem;
+    box-shadow:var(--shadow);max-width:900px}
+  .blankline .bl{display:inline-block;min-width:9ch;border-bottom:2px solid var(--accent)}
+  /* ---------- data tables ---------- */
+  .sched{border-collapse:collapse;font-family:var(--mono);font-size:.86rem;background:var(--chalk);
+    border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+  .sched caption{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;color:var(--accent);text-align:left;padding:.5rem .8rem .35rem}
+  .sched th,.sched td{padding:.3rem .8rem;text-align:right;border-bottom:1px solid var(--paper-line)}
+  .sched th{color:var(--grey);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.66rem}
+  .sched td:first-child,.sched th:first-child{text-align:left;color:var(--accent);font-weight:700}
+  .sched tbody tr:last-child td{border-bottom:none}
+  .sched tr.tot td{border-top:2px solid var(--paper-line);font-weight:700;color:var(--gold)}
+  .sched tr.tot td:first-child{color:var(--gold)}
+  .sched.gold{background:var(--gold-soft)}
+  .sched.gold caption,.sched.gold td:first-child{color:var(--gold)}
+  .sched.txt td{text-align:left}
+  .sched.txt td:first-child{white-space:nowrap}
+  .sched .yes{color:var(--gold);font-weight:700}
+  .sched .no{color:var(--red);font-weight:700}
+  .sched .foreign{color:var(--red)}
+  .schedrow{display:flex;gap:1.4rem;flex-wrap:wrap;align-items:flex-start}
+  .sched tr.hl td{background:var(--gold-soft);color:var(--gold);font-weight:700}
+  .sched tr.hl td:first-child{color:var(--gold)}
+  .sched tr{transition:background .18s}
+  /* ---------- two-card takeaway ---------- */
+  .pair2{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin-top:.8rem}
+  @media (max-width:900px){.pair2{grid-template-columns:1fr}}
+  .pcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;
+    padding:1.2rem 1.3rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.7rem}
+  .pcard .ptag{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .pcard.warn .ptag{color:var(--red)}
+  .pcard .verdictbig{font-family:var(--mono);font-size:1rem;font-weight:700;line-height:1.5;color:var(--accent)}
+  .pcard.warn .verdictbig{color:var(--red)}
+  .pcard p{font-size:1rem;line-height:1.5}
+  /* ---------- reflow at 320px (WCAG 1.4.10) ---------- */
+  @media (max-width:700px){
+    .models{grid-template-columns:1fr}
+    .chain{max-width:100%;overflow-wrap:anywhere}
+    .sched{font-size:.76rem}
+    .sched th,.sched td{padding:.25rem .45rem}
+    .schedrow{gap:.9rem}
+    /* a wide table scrolls inside its own box rather than widening the slide */
+    .sched{display:block;overflow-x:auto;max-width:100%}
+    .col,.two > *,.graphwrap > *,.condrow > *,.pair2 > *{min-width:0}
+  }
+</style>
+</head>
+<body>
+<div class="progress-track"><div class="progress-fill" id="prog"></div></div>
+<div class="deck" id="deck">
+
+  <!-- ═══════════ 1. TITLE ═══════════ -->
+  <section class="slide active title-slide" data-section="Discussion 5 · Opening">
+    <div class="eyebrow" id="titleEyebrow">ECON 002 · Discussion Section</div>
+    <h1>Who counts as<br><span class="accent">unemployed?</span></h1>
+    <p class="lede" style="margin-top:1rem">Not everyone without a job. Today we find the rule that decides, watch the unemployment rate fall for entirely the wrong reason, and then build a labor market in which unemployment is exactly zero &mdash; and ask what such a model is missing.</p>
+    <p class="serif-note" style="margin-top:1.6rem">Work on your own paper. Write before each reveal &mdash; the point is your reasoning, not a clean final answer.</p>
+    <div class="signature">Who counts &rarr; The puzzle &rarr; Natural rate &rarr; Cyclical</div>
+  </section>
+
+  <!-- ═══════════ 2. FOR THE TA ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Opening">
+    <div class="eyebrow">For the TA</div>
+    <h2>How to run this deck</h2>
+    <div class="titlerule"></div>
+    <div class="two" style="max-width:1150px">
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <p class="lede" style="max-width:58ch"><strong>Write first, reveal second.</strong> Every question gets <strong>1&ndash;2 minutes of silent writing</strong> before you press a button. Nothing reveals itself &mdash; no answer, no filled-in table and no marked equilibrium is on screen when a slide loads.</p>
+        <p class="lede" style="max-width:58ch"><strong>The deck is one argument, in order.</strong> Build the labor market, show that it clears completely, treat <em>that</em> as the puzzle, and only then let the three types of unemployment arrive as three answers to it. Do not name the three types early &mdash; the whole payoff of Part 2 is students noticing that a perfectly sensible model has just told them something false.</p>
+        <p class="lede" style="max-width:58ch"><strong>Diagnose slides are silent polls.</strong> Numbered sentences, one subtly flawed. Fingers on the chest, not hands in the air &mdash; then reveal. The point is always <em>why the reasoning fails</em>, not that the conclusion is wrong.</p>
+        <div class="prompt">
+          <span class="cue">The throughline &middot; say it out loud at each divider</span>
+          <p>Unemployment is not simply &ldquo;not working.&rdquo; It is a <strong>measured category with rules</strong> &mdash; and it never reaches zero because <strong>three different things</strong> keep the labor market from clearing.</p>
+        </div>
+      </div>
+      <div class="col" style="justify-content:flex-start;gap:.9rem">
+        <div class="predict">
+          <span class="cue">Protect these three payoffs</span>
+          <p><strong>Q2 (2,000 people give up).</strong> The unemployment rate falls from 5.0% to 3.4% with not one job created and employment identical in both columns. Sit on it. Everything students ever read about the unemployment rate has to survive this slide.</p>
+          <p style="margin-top:.6rem"><strong>Q5 (how many are unemployed in equilibrium).</strong> The answer is zero, and it has to land as a shock rather than as a technicality. Let the silence run.</p>
+          <p style="margin-top:.6rem"><strong>Q10, both cases.</strong> The same demand shock, twice. With a flexible wage: employment falls, unemployment is still zero. With the wage pinned at $14: a gap of two that never closes. The shock is not what creates unemployment.</p>
+        </div>
+        <div>
+          <div style="font-family:var(--mono);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);font-weight:700;margin-bottom:.2rem">Timing budget &middot; 75 minutes</div>
+          <div class="runsheet">
+            <span class="rk">Part 1</span><span>Who counts (Q1&ndash;Q3) &mdash; <strong>16 min</strong></span>
+            <span class="rk">Part 2</span><span>The puzzle (Q4&ndash;Q5) &mdash; <strong>15 min</strong></span>
+            <span class="rk">Part 3</span><span>Natural rate (Q6&ndash;Q9) &mdash; <strong>20 min</strong></span>
+            <span class="rk">Part 4</span><span>Cyclical (Q10&ndash;Q12) &mdash; <strong>21 min</strong></span>
+            <span class="rk">Close</span><span>One written line &mdash; <strong>3 min</strong></span>
+          </div>
+          <p class="footnote" style="margin-top:.6rem"><strong>If you run long:</strong> reveal the six Q1 cases in two groups instead of one at a time (there is a button for it), and trim the &ldquo;zero was never the goal&rdquo; slide to its two cards. Never trim Q5 and the puzzle that follows it, and never trim the two recession cases.</p>
+        </div>
+        <p class="footnote">Navigation: <span class="kbd">&rarr;</span> <span class="kbd">space</span> next &middot; <span class="kbd">&larr;</span> back &middot; <span class="kbd">F</span> fullscreen. Questions run Q1&ndash;Q12 continuously; students number them on their own paper. Every animation has a <strong>Play</strong> and a <strong>Reset</strong> &mdash; you can run them twice.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 1 · WHO COUNTS ══════════════ -->
+
+  <!-- ═══════════ 3. DIVIDER P1 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 5 · Who Counts">
+    <div class="eyebrow">Part 1 of 4</div>
+    <h1>A category<br>with rules</h1>
+    <p class="lede">Being without a job is not the test. There are three conditions, they all have to hold at once, and one of them is about what you did last month.</p>
+    <div class="sectrail">WHO COUNTS &rarr; THE PUZZLE &rarr; NATURAL RATE &rarr; CYCLICAL</div>
+    <div class="through">Throughline: unemployment is not simply &ldquo;not working.&rdquo; It is a measured category with rules &mdash; and it never reaches zero because three different things keep the labor market from clearing.</div>
+  </section>
+
+  <!-- ═══════════ 4. THE THREE BOXES ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Who Counts">
+    <div class="eyebrow">Setup &middot; no question yet</div>
+    <h2>The population, cut twice</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <div class="panel" style="max-width:900px">
+        <svg viewBox="0 0 640 196" role="img" aria-label="A diagram of how the working-age population is divided. The whole box is the working-age population. It splits into the labor force on the left and people not in the labor force on the right. The labor force splits again into the employed and the unemployed. The diagram shows that the unemployed are only one of three groups, and that the labor force is smaller than the working-age population.">
+          <text x="14" y="18" font-family="monospace" font-size="12" font-weight="700" fill="#14243A">WORKING-AGE POPULATION</text>
+          <rect x="10" y="26" width="620" height="160" fill="none" stroke="#8A8F96" stroke-width="1.6" rx="8"/>
+          <rect x="22" y="44" width="392" height="130" fill="none" stroke="#14243A" stroke-width="1.4" stroke-dasharray="6 4" rx="7"/>
+          <text x="30" y="62" font-family="monospace" font-size="11" font-weight="700" fill="#14243A">LABOR FORCE</text>
+          <rect x="34" y="72" width="184" height="92" fill="#EEF3FA" stroke="#1F4E79" stroke-width="1.6" rx="6"/>
+          <text x="126" y="104" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="middle">EMPLOYED</text>
+          <text x="126" y="126" font-family="Georgia,serif" font-size="12" fill="#14243A" text-anchor="middle">has a job,</text>
+          <text x="126" y="144" font-family="Georgia,serif" font-size="12" fill="#14243A" text-anchor="middle">full time or part time</text>
+          <rect x="228" y="72" width="174" height="92" fill="#FBEEEC" stroke="#C0392B" stroke-width="1.6" rx="6"/>
+          <text x="315" y="104" font-family="monospace" font-size="13" font-weight="700" fill="#C0392B" text-anchor="middle">UNEMPLOYED</text>
+          <text x="315" y="126" font-family="Georgia,serif" font-size="12" fill="#14243A" text-anchor="middle">no job, available,</text>
+          <text x="315" y="144" font-family="Georgia,serif" font-size="12" fill="#14243A" text-anchor="middle">and actively looking</text>
+          <rect x="426" y="72" width="192" height="92" fill="#F1EEE6" stroke="#5A5F66" stroke-width="1.6" rx="6"/>
+          <text x="522" y="100" font-family="monospace" font-size="13" font-weight="700" fill="#5A5F66" text-anchor="middle">NOT IN THE</text>
+          <text x="522" y="116" font-family="monospace" font-size="13" font-weight="700" fill="#5A5F66" text-anchor="middle">LABOR FORCE</text>
+          <text x="522" y="138" font-family="Georgia,serif" font-size="12" fill="#14243A" text-anchor="middle">not working and</text>
+          <text x="522" y="156" font-family="Georgia,serif" font-size="12" fill="#14243A" text-anchor="middle">not looking</text>
+        </svg>
+      </div>
+      <p class="footnote" style="max-width:104ch;margin-top:-.2rem">Everyone in that box is <strong>16 or older</strong>, a resident, not institutionalized, and not on active duty. Fail one of those screens and you are not in the diagram at all &mdash; not employed, not unemployed, not out of the labor force.</p>
+      <p class="lede" style="max-width:92ch">To be counted as <strong class="red">unemployed</strong>, three things have to be true <em>at the same time</em>. Two out of three is not a partial score &mdash; it puts you in a different box.</p>
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">1 &middot; No job</div>
+          <div class="cnote">Not working for pay at all. One paid hour in the reference week is enough to make you employed instead.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">2 &middot; Available to work</div>
+          <div class="cnote">You could start if a job were offered. Someone who could not take a job this month &mdash; for any reason &mdash; fails this one.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">3 &middot; Actively looked</div>
+          <div class="cnote">A real search step in the <strong>last four weeks</strong>: an application, an interview, a call. Wanting a job is not searching for one.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 5. Q1 · SORT ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Who Counts">
+    <div class="eyebrow">Question 1 &middot; write before you turn the page &middot; no reveal on this slide</div>
+    <h2>Six people. Four boxes.</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <div class="prompt">
+        <span class="cue">Q1 &middot; commit on paper</span>
+        <p>Write one of these four beside each name: <strong>employed</strong>, <strong>unemployed</strong>, <strong>not in the labor force</strong>, or <strong>not in the working-age population</strong>. Add a few words for why.</p>
+        <ol>
+          <li><strong>Maya</strong> graduated in May and applied to twelve jobs last week.</li>
+          <li><strong>Dev</strong> works ten hours a week at a coffee shop and wants full-time work.</li>
+          <li><strong>Ruth</strong> was laid off eight months ago and stopped applying in March.</li>
+          <li><strong>Sam</strong> is fifteen years old and delivers papers on weekends.</li>
+          <li><strong>Alex</strong> is on active duty in the Army.</li>
+          <li><strong>Nina</strong> quit a job to care for an aging parent and is not looking for work.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 6. Q1 REVEAL ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Who Counts">
+    <div class="eyebrow">Reveal &middot; Q1 &middot; one at a time</div>
+    <h2>Run the three conditions, in order, every time</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1180px">
+      <table class="sched txt">
+        <caption>Q1 &mdash; six people sorted into the four categories</caption>
+        <thead>
+          <tr><th scope="col">Person</th><th scope="col">Category</th><th scope="col">Why</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1 &middot; Maya</td><td><span class="hid" id="c1a">Unemployed</span></td><td><span class="hid" id="c1b">No job, available, and twelve applications last week. All three conditions hold.</span></td></tr>
+          <tr><td>2 &middot; Dev</td><td><span class="hid" id="c2a">Employed</span></td><td><span class="hid" id="c2b">Ten paid hours is work. <strong>Part-time counts as employed</strong>, and wanting more hours does not change the category.</span></td></tr>
+          <tr><td>3 &middot; Ruth</td><td><span class="hid" id="c3a">Not in the labor force</span></td><td><span class="hid" id="c3b">No job and available &mdash; but the search stopped in March. Condition 3 fails, so Ruth leaves the labor force entirely.</span></td></tr>
+          <tr><td>4 &middot; Sam</td><td><span class="hid" id="c4a">Not in the working-age population</span></td><td><span class="hid" id="c4b">Under 16. The paid work is real; the screen still excludes it before any of the three conditions is asked.</span></td></tr>
+          <tr><td>5 &middot; Alex</td><td><span class="hid" id="c5a">Not in the working-age population</span></td><td><span class="hid" id="c5b">Active duty is excluded by the same screen. Not employed, not unemployed &mdash; outside the count.</span></td></tr>
+          <tr><td>6 &middot; Nina</td><td><span class="hid" id="c6a">Not in the labor force</span></td><td><span class="hid" id="c6b">Not working and not looking. Same box as Ruth, arrived at by choice rather than by discouragement.</span></td></tr>
+        </tbody>
+      </table>
+      <div class="btnrow">
+        <button class="btn" data-reveal="c1a,c1b">1 &middot; Maya</button>
+        <button class="btn" data-reveal="c2a,c2b">2 &middot; Dev</button>
+        <button class="btn" data-reveal="c3a,c3b">3 &middot; Ruth</button>
+        <button class="btn" data-reveal="c4a,c4b">4 &middot; Sam</button>
+        <button class="btn" data-reveal="c5a,c5b">5 &middot; Alex</button>
+        <button class="btn" data-reveal="c6a,c6b">6 &middot; Nina</button>
+        <button class="btn ghost" data-reveal="c1a,c1b,c2a,c2b,c3a,c3b,c4a,c4b,c5a,c5b,c6a,c6b">Short on time &middot; reveal all six</button>
+      </div>
+      <button class="btn" data-reveal="q1note">The two worth stopping on</button>
+      <div class="reveal-hidden" id="q1note">
+        <div class="reveal" style="max-width:100ch">
+          <span class="cue">Reveal &middot; Dev and Ruth</span>
+          <p><strong>Dev is employed.</strong> The measure does not ask whether the job is enough. Ten hours a week at a coffee shop, wanting full-time work and not finding it, is a person the statistics call employed &mdash; the same word they use for a full-time salaried engineer. Whatever you think of that, it is the rule, and it means the unemployment rate is silent about hours, pay and whether the job fits.</p>
+          <p style="margin-top:.7rem"><strong>Ruth is not unemployed &mdash; and that is the more surprising one.</strong> Ruth has no job, would take one, and has been out of work for eight months. Every ordinary sense of the word applies. But the search stopped in March, so condition 3 fails, and failing it does not demote Ruth to some lesser category of unemployment. It moves Ruth <em>out of the labor force altogether</em> &mdash; out of the numerator and out of the denominator at the same time. Hold on to that. The next three slides are about what it does to the unemployment rate.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 7. TWO RATES ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Who Counts">
+    <div class="eyebrow">Setup &middot; two formulas, two denominators</div>
+    <h2>The unemployment rate everyone quotes, and the participation rate that checks it</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <div class="models" style="max-width:980px;margin:.4rem 0 .2rem">
+        <div class="model hi">
+          <span class="tag">Unemployment rate</span>
+          <div class="eq" style="font-size:1.05rem">unemployed &divide; <strong>labor force</strong></div>
+          <div class="body">The denominator is the labor force: the employed <em>plus</em> the unemployed. Everyone outside the labor force is invisible to this number.</div>
+        </div>
+        <div class="model">
+          <span class="tag">Participation rate</span>
+          <div class="eq" style="font-size:1.05rem">labor force &divide; <strong>working-age population</strong></div>
+          <div class="body">The denominator is everyone the screens let in. This is the number that notices whether people are in the labor force at all.</div>
+        </div>
+      </div>
+      <div class="prompt" style="max-width:100ch">
+        <span class="cue">The thing to notice before the next slide</span>
+        <p>The two rates do not share a denominator. Move one person from <strong>unemployed</strong> to <strong>not in the labor force</strong> and the unemployment rate loses a person from its numerator <em>and</em> from its denominator, while the participation rate loses one from its numerator only. The same person, moving once, pushes the two rates in different directions.</p>
+      </div>
+      <div class="chain">labor force = employed + unemployed &nbsp;&nbsp;|&nbsp;&nbsp; working-age population = labor force + not in the labor force</div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 8. Q2 · PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Who Counts">
+    <div class="eyebrow">Question 2 &middot; predict &middot; commit before any arithmetic</div>
+    <h2>Two thousand people stop looking</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:92ch">A town has <strong>200,000</strong> working-age people. <strong>114,000</strong> of them are employed and <strong>6,000</strong> are unemployed.</p>
+      <div class="predict" style="max-width:100ch">
+        <span class="cue">Q2 &middot; predict &middot; write it down before you compute</span>
+        <p>Over the next month, <strong>2,000 of the unemployed give up looking.</strong> No jobs are created. Nobody is hired. Nobody is fired. The only thing that changes is that 2,000 people stop searching.</p>
+        <p style="margin-top:.7rem">Write down, in this order: <strong>(a)</strong> does the unemployment rate rise, fall, or stay the same? <strong>(b)</strong> does the participation rate rise, fall, or stay the same? <strong>(c)</strong> in one sentence, is this town better off than it was last month?</p>
+      </div>
+      <p class="footnote">Do not compute yet. The prediction is the part that teaches; the arithmetic afterward only confirms it.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 9. Q2 REVEAL · ANIMATION ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Who Counts">
+    <div class="eyebrow">Reveal &middot; Q2 &middot; play it, then read the table</div>
+    <h2>The unemployment rate falls. Nobody was hired.</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 232" role="img" aria-label="An animation of a town's working-age population in three boxes: employed, unemployed, and not in the labor force. Two small blocks, each standing for one thousand people, move out of the unemployed box and into the not-in-the-labor-force box. The employed box never changes. As the blocks move, the unemployment rate falls from five percent to three point four percent and the participation rate falls from sixty percent to fifty-nine percent, with no jobs created.">
+          <rect x="14" y="30" width="452" height="150" fill="none" stroke="#8A8F96" stroke-width="1.4" rx="7"/>
+          <text x="18" y="22" font-family="monospace" font-size="10.5" font-weight="700" fill="#14243A">WORKING-AGE POPULATION &#183; 200,000</text>
+          <rect x="22" y="44" width="286" height="126" fill="none" stroke="#14243A" stroke-width="1.2" stroke-dasharray="6 4" rx="6"/>
+          <text x="28" y="58" font-family="monospace" font-size="9.5" font-weight="700" fill="#14243A">LABOR FORCE</text>
+          <rect x="30" y="66" width="140" height="96" fill="#EEF3FA" stroke="#1F4E79" stroke-width="1.5" rx="5"/>
+          <text x="100" y="92" font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79" text-anchor="middle">EMPLOYED</text>
+          <text x="100" y="122" font-family="monospace" font-size="15" font-weight="700" fill="#14243A" text-anchor="middle" id="bxE">114,000</text>
+          <text x="100" y="146" font-family="Georgia,serif" font-size="11" fill="#5A5F66" text-anchor="middle">never changes</text>
+          <rect x="180" y="66" width="120" height="96" fill="#FBEEEC" stroke="#C0392B" stroke-width="1.5" rx="5"/>
+          <text x="240" y="92" font-family="monospace" font-size="11" font-weight="700" fill="#C0392B" text-anchor="middle">UNEMPLOYED</text>
+          <text x="240" y="122" font-family="monospace" font-size="15" font-weight="700" fill="#14243A" text-anchor="middle" id="bxU">6,000</text>
+          <rect x="320" y="44" width="138" height="126" fill="#F1EEE6" stroke="#5A5F66" stroke-width="1.5" rx="5"/>
+          <text x="389" y="70" font-family="monospace" font-size="11" font-weight="700" fill="#5A5F66" text-anchor="middle">NOT IN THE</text>
+          <text x="389" y="84" font-family="monospace" font-size="11" font-weight="700" fill="#5A5F66" text-anchor="middle">LABOR FORCE</text>
+          <text x="389" y="116" font-family="monospace" font-size="15" font-weight="700" fill="#14243A" text-anchor="middle" id="bxN">80,000</text>
+          <g id="blkA">
+            <rect x="192" y="128" width="44" height="24" fill="#8A5900" stroke="#5E3D00" stroke-width="1.2" rx="4"/>
+            <text x="214" y="144" font-family="monospace" font-size="10" font-weight="700" fill="#FbFaF7" text-anchor="middle">1,000</text>
+          </g>
+          <g id="blkB">
+            <rect x="244" y="128" width="44" height="24" fill="#8A5900" stroke="#5E3D00" stroke-width="1.2" rx="4"/>
+            <text x="266" y="144" font-family="monospace" font-size="10" font-weight="700" fill="#FbFaF7" text-anchor="middle">1,000</text>
+          </g>
+          <text x="14" y="200" font-family="monospace" font-size="11.5" font-weight="700" fill="#14243A">unemployment rate <tspan id="bxUR" fill="#8A5900">5.0%</tspan> &#183; participation rate <tspan id="bxPR" fill="#8A5900">60.0%</tspan></text>
+          <text x="14" y="222" font-family="Georgia,serif" font-size="11.5" fill="#5A5F66" id="bxCap">Before anyone gives up.</text>
+        </svg>
+        <p class="footnote" style="margin-top:.6rem">Each gold block is 1,000 people who stopped searching. No block ever enters the employed box.</p>
+      </div>
+      <div class="controls">
+        <div class="btnrow">
+          <button class="btn" id="dwplay">&#9654; Move them, one thousand at a time</button>
+          <button class="btn ghost" id="dwreset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          employed &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="dwE">114,000</span><br>
+          unemployed &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="dwU">6,000</span><br>
+          labor force &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="dwL">120,000</span><br>
+          unemployment rate &nbsp;&rarr;&nbsp; <span class="big" id="dwUR">5.0%</span><br>
+          participation rate &rarr;&nbsp; <span class="big" id="dwPR">60.0%</span><br>
+          <span id="dwnote" style="color:var(--grey)">Press play. Watch the employed box while you do.</span>
+        </div>
+        <button class="btn" data-reveal="q2rev">Reveal the table and the reasoning</button>
+      </div>
+    </div>
+    <div class="reveal-hidden" id="q2rev">
+      <div class="schedrow" style="align-items:flex-start">
+        <table class="sched">
+          <caption>Q2 &mdash; the same town, before and after 2,000 people stop looking</caption>
+          <thead>
+            <tr><th scope="col">&nbsp;</th><th scope="col">Before</th><th scope="col">After</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Working-age population</td><td>200,000</td><td>200,000</td></tr>
+            <tr><td>Employed</td><td>114,000</td><td>114,000</td></tr>
+            <tr><td>Unemployed</td><td>6,000</td><td>4,000</td></tr>
+            <tr><td>Labor force</td><td>120,000</td><td>118,000</td></tr>
+            <tr class="tot"><td>Unemployment rate</td><td>5.0%</td><td>3.4%</td></tr>
+            <tr class="tot"><td>Participation rate</td><td>60.0%</td><td>59.0%</td></tr>
+          </tbody>
+        </table>
+        <div class="reveal" style="max-width:70ch">
+          <span class="cue">Reveal &middot; Q2</span>
+          <p>The unemployment rate <strong>falls</strong>, from 5.0% to 3.4%. It falls because 2,000 people were subtracted from the numerator <em>and</em> from the denominator at once: 4,000 &divide; 118,000 instead of 6,000 &divide; 120,000.</p>
+          <p style="margin-top:.7rem">The participation rate <strong>falls too</strong>, from 60.0% to 59.0% &mdash; because its denominator, the working-age population, did not move. And the employed row is <strong>identical in both columns</strong>. Not one job was created. By any honest reading, this town is worse off than it was a month ago, and its unemployment rate improved by 1.6 percentage points.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 10. PUNCHLINE · BOTH DIRECTIONS ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Who Counts">
+    <div class="eyebrow">The habit to carry out of Part 1</div>
+    <h2>A moving unemployment rate has two stories, always</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <div class="pair2">
+        <div class="pcard">
+          <div class="ptag">When the unemployment rate falls</div>
+          <div class="verdictbig">people found work &nbsp;&mdash; or&nbsp; people stopped looking</div>
+          <p>The first is good news and the second is bad news, and the unemployment rate reports them with the same downward move. It cannot tell you which happened, because it never looks outside the labor force.</p>
+        </div>
+        <div class="pcard warn">
+          <div class="ptag">When the unemployment rate rises</div>
+          <div class="verdictbig">conditions worsened &nbsp;&mdash; or&nbsp; discouraged workers came back</div>
+          <p>This is the case people forget. Early in a recovery, workers who had given up start searching again. They re-enter the labor force as <strong>unemployed</strong>, the denominator and numerator both grow, and the measured unemployment rate can climb <em>while the labor market is improving</em>.</p>
+        </div>
+      </div>
+      <div class="chain warm">people stop looking &rarr; LF&darr; &rarr; U&darr; &rarr; unemployment rate&darr; &nbsp;&nbsp;with zero jobs created</div>
+      <div class="chain">discouraged workers return &rarr; LF&uarr; &rarr; U&uarr; &rarr; unemployment rate&uarr; &nbsp;&nbsp;while conditions improve</div>
+      <div class="prompt" style="max-width:100ch">
+        <span class="cue">So what do you do about it</span>
+        <p>Read the two rates together. The unemployment rate tells you what is happening <em>inside</em> the labor force; the participation rate tells you whether the labor force itself is emptying out or filling back up. A falling unemployment rate alongside a falling participation rate is the signature of discouragement, not recovery.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 11. Q3 DIAGNOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Who Counts">
+    <div class="eyebrow">Question 3 &middot; diagnose &middot; silent poll, then reveal</div>
+    <h2>One of these three does not follow</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:92ch">All three sentences below are about the numbers we just computed. <strong>One of them reasons badly.</strong> Pick its number, and be ready to say what is wrong with the <em>reasoning</em> rather than with the arithmetic.</p>
+    <div>
+      <div class="diag" id="diag3">
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">1</span><span class="s">The unemployment rate fell last quarter, so more people must have found jobs.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">2</span><span class="s">A rise in the participation rate means more people are either working or actively looking for work.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">3</span><span class="s">Someone who wants a job but has not searched in six months is not counted as unemployed.</span></button>
+      </div>
+      <p class="poll-hint">Students pick a number on paper (or fingers on the chest). Then reveal.</p>
+      <button class="btn" data-diag-reveal="diag3" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem;max-width:100ch">
+        <span class="cue">Reveal &middot; a conclusion that is usually true and never implied</span>
+        <p><strong>Sentence 1 is the flaw</strong>, and notice how little of it is wrong. The premise is fine, the conclusion is often correct in practice, and the word doing the damage is <strong>so</strong>.</p>
+        <p style="margin-top:.7rem">The unemployment rate is a fraction, and a fraction falls when the numerator shrinks <em>or</em> when the denominator grows relative to it. Hiring shrinks the numerator. So does giving up. The town on the last slide produced exactly this fall in the unemployment rate &mdash; 5.0% to 3.4% &mdash; with the employed row unchanged. Nothing in a falling unemployment rate, on its own, distinguishes the two.</p>
+        <p style="margin-top:.7rem">Sentences 2 and 3 are both simply true, and they are the tools: sentence 3 is why Ruth left the labor force, and sentence 2 is the check that would have caught the mistake. <strong>Whenever the unemployment rate moves, ask which part of the fraction moved.</strong></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 2 · THE PUZZLE ══════════════ -->
+
+  <!-- ═══════════ 12. DIVIDER P2 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 5 · The Puzzle">
+    <div class="eyebrow">Part 2 of 4</div>
+    <h1>A market that<br>clears <span style="color:#8FAADC">completely</span></h1>
+    <p class="lede">Now build the labor market the way we built the market for burritos: a downward-sloping demand, an upward-sloping supply, a crossing point. Follow it honestly and it hands you a number that cannot possibly be right.</p>
+    <div class="sectrail">WHO COUNTS &#10003; &rarr; THE PUZZLE &rarr; NATURAL RATE &rarr; CYCLICAL</div>
+    <div class="through">Throughline: unemployment is not simply &ldquo;not working.&rdquo; It is a measured category with rules &mdash; and it never reaches zero because three different things keep the labor market from clearing.</div>
+  </section>
+
+  <!-- ═══════════ 13. BUILD THE LABOR MARKET ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · The Puzzle">
+    <div class="eyebrow">Setup &middot; the same two curves, a different market</div>
+    <h2>Labor is bought and sold like anything else</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="The labor market. The horizontal axis is the number of workers from zero to ten; the vertical axis is the real wage from zero to twenty-four dollars. The red labor demand curve falls from twenty-four dollars at zero workers to four dollars at ten workers. The blue labor supply curve rises from four dollars at zero workers to twenty-four dollars at ten workers. They cross once, near the middle of the picture; the crossing point is not marked yet.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90" x2="430" y2="90"/><line x1="70" y1="46" x2="430" y2="46"/>
+            <line x1="106" y1="30" x2="106" y2="310"/><line x1="142" y1="30" x2="142" y2="310"/>
+            <line x1="178" y1="30" x2="178" y2="310"/><line x1="214" y1="30" x2="214" y2="310"/>
+            <line x1="250" y1="30" x2="250" y2="310"/><line x1="286" y1="30" x2="286" y2="310"/>
+            <line x1="322" y1="30" x2="322" y2="310"/><line x1="358" y1="30" x2="358" y2="310"/>
+            <line x1="394" y1="30" x2="394" y2="310"/><line x1="430" y1="30" x2="430" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$4</text><text x="62" y="226">$8</text>
+            <text x="62" y="182">$12</text><text x="62" y="138">$16</text><text x="62" y="94">$20</text><text x="62" y="50">$24</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="106" y="328">1</text><text x="142" y="328">2</text><text x="178" y="328">3</text>
+            <text x="214" y="328">4</text><text x="250" y="328">5</text><text x="286" y="328">6</text><text x="322" y="328">7</text>
+            <text x="358" y="328">8</text><text x="394" y="328">9</text><text x="430" y="328">10</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">real wage W/P</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">workers L</text>
+          <line x1="70" y1="46" x2="430" y2="266" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="426" y="288" font-family="monospace" font-size="13" fill="#C0392B" font-weight="700" text-anchor="end">LD &#183; firms hiring</text>
+          <line x1="70" y1="266" x2="430" y2="46" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="426" y="40" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">LS &#183; people looking</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="models" style="grid-template-columns:1fr;gap:.9rem;margin:0">
+          <div class="model" style="border-color:#C0392B">
+            <span class="tag" style="color:#C0392B">Labor demand &middot; LD</span>
+            <div class="eq">W = 24 &minus; 2L</div>
+            <div class="body">How many workers <strong>firms want to hire</strong>. It falls in the wage: labor is a cost, so the dearer it is, the fewer hours a firm buys.</div>
+          </div>
+          <div class="model" style="border-color:#1F4E79">
+            <span class="tag">Labor supply &middot; LS</span>
+            <div class="eq">W = 4 + 2L</div>
+            <div class="body">How many people <strong>are looking for jobs</strong>. It rises in the wage: the better the pay, the more people are willing to give up their time for it.</div>
+          </div>
+        </div>
+        <div class="prompt">
+          <span class="cue">Why the vertical axis says <em>real</em> wage</span>
+          <p>Neither side cares about the number printed on the check. Firms care what an hour of work costs them in goods they could have sold, and workers care what an hour of work buys. That is <strong>W/P</strong> &mdash; the wage divided by the price level.</p>
+        </div>
+        <p class="footnote">This market is deliberately stylized: ten workers, round intercepts, clean crossings. Read the mechanism off it, never the magnitudes &mdash; the percentages it implies are nothing like real ones.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 14. Q4 · READ THE GRAPH ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · The Puzzle">
+    <div class="eyebrow">Question 4 &middot; read the graph &middot; write before the reveal</div>
+    <h2>Enter from the wage axis at $18</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="The labor market read at a real wage of eighteen dollars. Starting from eighteen dollars on the vertical axis and traveling right, the red labor demand curve is met at three workers and the blue labor supply curve at seven workers. The reading shows that at eighteen dollars firms want three workers while seven people want jobs.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90" x2="430" y2="90"/><line x1="70" y1="46" x2="430" y2="46"/>
+            <line x1="106" y1="30" x2="106" y2="310"/><line x1="142" y1="30" x2="142" y2="310"/>
+            <line x1="178" y1="30" x2="178" y2="310"/><line x1="214" y1="30" x2="214" y2="310"/>
+            <line x1="250" y1="30" x2="250" y2="310"/><line x1="286" y1="30" x2="286" y2="310"/>
+            <line x1="322" y1="30" x2="322" y2="310"/><line x1="358" y1="30" x2="358" y2="310"/>
+            <line x1="394" y1="30" x2="394" y2="310"/><line x1="430" y1="30" x2="430" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$4</text><text x="62" y="226">$8</text>
+            <text x="62" y="182">$12</text><text x="62" y="138">$16</text><text x="62" y="94">$20</text><text x="62" y="50">$24</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="106" y="328">1</text><text x="142" y="328">2</text><text x="178" y="328">3</text>
+            <text x="214" y="328">4</text><text x="250" y="328">5</text><text x="286" y="328">6</text><text x="322" y="328">7</text>
+            <text x="358" y="328">8</text><text x="394" y="328">9</text><text x="430" y="328">10</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">real wage W/P</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">workers L</text>
+          <line x1="70" y1="46" x2="430" y2="266" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="426" y="288" font-family="monospace" font-size="13" fill="#C0392B" font-weight="700" text-anchor="end">LD</text>
+          <line x1="70" y1="266" x2="430" y2="46" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="426" y="40" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">LS</text>
+          <line id="q4lvl" x1="70" y1="112" x2="322" y2="112" stroke="#8A5900" stroke-width="1.6" stroke-dasharray="5 4" opacity="0"/>
+          <text id="q4w" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" x="62" y="108" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900" text-anchor="end" opacity="0">$18</text>
+          <line id="q4vd" x1="178" y1="112" x2="178" y2="310" stroke="#C0392B" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="q4vs" x1="322" y1="112" x2="322" y2="310" stroke="#1F4E79" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <circle id="q4dd" cx="178" cy="112" r="6" fill="#C0392B" opacity="0"/>
+          <circle id="q4ds" cx="322" cy="112" r="6" fill="#1F4E79" opacity="0"/>
+          <text id="q4l1" x="178" y="344" font-family="monospace" font-size="12" font-weight="700" fill="#C0392B" text-anchor="middle" opacity="0">firms want 3</text>
+          <text id="q4l2" x="322" y="344" font-family="monospace" font-size="12" font-weight="700" fill="#1F4E79" text-anchor="middle" opacity="0">7 want jobs</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="prompt">
+          <span class="cue">Q4 &middot; write two numbers</span>
+          <p>Set the real wage at <strong>$18</strong>. Reading the graph &mdash; or the two equations, whichever you prefer:</p>
+          <ol>
+            <li>How many workers do <strong>firms want to hire</strong>?</li>
+            <li>How many people <strong>want jobs</strong>?</li>
+          </ol>
+          <p style="margin-top:.6rem">Two numbers. Nothing else yet.</p>
+        </div>
+        <button class="btn" data-reveal-svg="q4read" data-reveal="q4rev">Reveal both readings</button>
+        <div class="reveal-hidden" id="q4rev">
+          <div class="reveal">
+            <span class="cue">Reveal &middot; Q4</span>
+            <p>Into LD: 18 = 24 &minus; 2L, so L = <strong>3</strong>. Into LS: 18 = 4 + 2L, so L = <strong>7</strong>. At $18, firms want three workers and seven people want jobs.</p>
+            <p style="margin-top:.7rem">Stop there. You can see there is a gap, and you can already guess what it is called. <strong>Do not name it yet</strong> &mdash; whether a gap like this can survive is exactly the question Part 3 exists to answer.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 15. EQUILIBRIUM ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · The Puzzle">
+    <div class="eyebrow">Setup &middot; the crossing point, two ways</div>
+    <h2>Where the two curves agree</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="The labor market equilibrium. The red labor demand curve and the blue labor supply curve cross at five workers and a real wage of fourteen dollars; dashed guides run from the crossing point to fourteen dollars on the wage axis and five workers on the horizontal axis. Fourteen dollars is the one wage at which the number of workers firms want equals the number of people looking for jobs.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90" x2="430" y2="90"/><line x1="70" y1="46" x2="430" y2="46"/>
+            <line x1="106" y1="30" x2="106" y2="310"/><line x1="142" y1="30" x2="142" y2="310"/>
+            <line x1="178" y1="30" x2="178" y2="310"/><line x1="214" y1="30" x2="214" y2="310"/>
+            <line x1="250" y1="30" x2="250" y2="310"/><line x1="286" y1="30" x2="286" y2="310"/>
+            <line x1="322" y1="30" x2="322" y2="310"/><line x1="358" y1="30" x2="358" y2="310"/>
+            <line x1="394" y1="30" x2="394" y2="310"/><line x1="430" y1="30" x2="430" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$4</text><text x="62" y="226">$8</text>
+            <text x="62" y="182">$12</text><text x="62" y="138">$16</text><text x="62" y="94">$20</text><text x="62" y="50">$24</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="106" y="328">1</text><text x="142" y="328">2</text><text x="178" y="328">3</text>
+            <text x="214" y="328">4</text><text x="250" y="328">5</text><text x="286" y="328">6</text><text x="322" y="328">7</text>
+            <text x="358" y="328">8</text><text x="394" y="328">9</text><text x="430" y="328">10</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">real wage W/P</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">workers L</text>
+          <line x1="70" y1="46" x2="430" y2="266" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="426" y="288" font-family="monospace" font-size="13" fill="#C0392B" font-weight="700" text-anchor="end">LD</text>
+          <line x1="70" y1="266" x2="430" y2="46" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="426" y="40" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">LS</text>
+          <line id="eqh" x1="70" y1="156" x2="250" y2="156" stroke="#8A5900" stroke-width="1.5" stroke-dasharray="5 4" opacity="0"/>
+          <line id="eqv" x1="250" y1="156" x2="250" y2="310" stroke="#8A5900" stroke-width="1.5" stroke-dasharray="5 4" opacity="0"/>
+          <circle id="eqdot" cx="250" cy="156" r="7" fill="#8A5900" opacity="0"/>
+          <text id="eqp" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" x="62" y="152" font-family="monospace" font-size="12.5" font-weight="700" fill="#8A5900" text-anchor="end" opacity="0">$14</text>
+          <text id="eqq" x="250" y="346" font-family="monospace" font-size="12.5" font-weight="700" fill="#8A5900" text-anchor="middle" opacity="0">L = 5</text>
+          <text id="eqlab" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" x="264" y="142" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900" opacity="0">equilibrium</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="prompt">
+          <span class="cue">Route one &middot; look at it</span>
+          <p>One point sits on both curves at once. There the number of workers firms want and the number of people looking are <strong>the same number</strong>.</p>
+        </div>
+        <div class="calc">
+          <span class="lbl">Route two &middot; set them equal</span><br>
+          24 &minus; 2L = 4 + 2L<br>
+          20 = 4L<br>
+          L = <strong>5</strong><br>
+          W/P = 4 + 2(5) = <strong>$14</strong>
+        </div>
+        <button class="btn" data-reveal-svg="eqmark">Mark it on the graph</button>
+        <p class="footnote">Check it against LD as well: 24 &minus; 2(5) = 14. Both curves give the same wage at the same number of workers, which is what makes it the crossing point.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 16. Q5 · PROMPT ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · The Puzzle">
+    <div class="eyebrow">Question 5 &middot; commit a number &middot; no reveal on this slide</div>
+    <h2>So how many people are unemployed?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <div class="chain">LD: W = 24 &minus; 2L &nbsp;&nbsp;|&nbsp;&nbsp; LS: W = 4 + 2L &nbsp;&nbsp;|&nbsp;&nbsp; equilibrium: L = 5, W/P = $14</div>
+      <div class="prompt" style="max-width:100ch">
+        <span class="cue">Q5 &middot; write one number, then one sentence</span>
+        <p>The wage in this market is $14 and five people are working. <strong>How many people in this economy are unemployed?</strong></p>
+        <p style="margin-top:.7rem">Write the number first. Then write the sentence that justifies it &mdash; using the three conditions from Part 1, not your instinct about what unemployment feels like.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 17. Q5 REVEAL · ZERO ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · The Puzzle">
+    <div class="eyebrow">Reveal &middot; Q5</div>
+    <h2>Zero</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <div class="two" style="max-width:1150px">
+        <div class="col" style="justify-content:flex-start;gap:1rem">
+          <div class="blankline" style="text-align:center;font-size:clamp(2rem,6vw,4rem);padding:1rem">0</div>
+          <p class="lede">At $14, firms want five workers and exactly five people are looking. Every single person who wants a job at the going wage <strong>has one</strong>.</p>
+        </div>
+        <div class="col" style="justify-content:flex-start;gap:1rem">
+          <button class="btn" data-reveal="q5rev">Reveal the reasoning</button>
+          <div class="reveal-hidden" id="q5rev">
+            <div class="reveal">
+              <span class="cue">Reveal &middot; Q5 &middot; and be careful with the sixth person</span>
+              <p>Somebody is standing at home at $14 &mdash; the sixth person, who would work for $16 but not for $14. Are they unemployed? Run the three conditions: no job, <em>available</em>, and <em>actively looking</em>. They are not looking, because at this wage they do not want the job. They are <strong>out of the labor force</strong>, exactly like Nina.</p>
+              <p style="margin-top:.7rem">So the labor force here is five people and five people are employed. The unemployment rate is <strong>0 &divide; 5 = 0%</strong>. Any unemployment in this model is momentary: a wage above $14 gets bid down, a wage below $14 gets bid up, and the market lands back where nobody who wants work at the going wage is without it.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 18. THE PUZZLE ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · The Puzzle">
+    <div class="eyebrow">The hinge of the whole discussion</div>
+    <h2>The unemployment rate has never been zero</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:94ch">Not in a boom, not in a recovery, not in the best year anyone can name. Never. And the model we just built &mdash; two ordinary curves, a crossing point, nothing exotic anywhere in it &mdash; says it should be.</p>
+      <div class="predict" style="max-width:100ch">
+        <span class="cue">Take the failure seriously</span>
+        <p>The honest response is not to abandon supply and demand. It is to ask <strong>what the model left out</strong>. Something real is keeping this market from doing the one thing our diagram says it always does: clear.</p>
+      </div>
+      <p class="lede" style="max-width:94ch">There are <strong>three</strong> answers, and each one is a different thing going wrong. The rest of the discussion is those three, in order:</p>
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">Frictional</div>
+          <div class="cnote">The first answer. We meet it in Part 3.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Structural</div>
+          <div class="cnote">The second answer. Also Part 3, and it is the one people misapply.</div>
+        </div>
+        <div class="condcard warm">
+          <div class="ctitle">Cyclical</div>
+          <div class="cnote">The third answer, and the hardest. All of Part 4.</div>
+        </div>
+      </div>
+      <p class="footnote">Write the three words down now. By the end you should be able to say, for any story you are handed, which one it is and what test you used.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 3 · FRICTIONAL, STRUCTURAL, NATURAL ══════════════ -->
+
+  <!-- ═══════════ 19. DIVIDER P3 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 5 · Natural Rate">
+    <div class="eyebrow">Part 3 of 4</div>
+    <h1>Two answers,<br>and an unemployment rate<br>we call <span style="color:#8FAADC">natural</span></h1>
+    <p class="lede">The first two answers to the puzzle. One of them is a healthy market working slowly; the other is a market where the job simply is not there. Telling them apart is the skill.</p>
+    <div class="sectrail">WHO COUNTS &#10003; &rarr; THE PUZZLE &#10003; &rarr; NATURAL RATE &rarr; CYCLICAL</div>
+    <div class="through">Throughline: unemployment is not simply &ldquo;not working.&rdquo; It is a measured category with rules &mdash; and it never reaches zero because three different things keep the labor market from clearing.</div>
+  </section>
+
+  <!-- ═══════════ 20. Q6 · PROMPT ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Natural Rate">
+    <div class="eyebrow">Question 6 &middot; commit yes or no &middot; no reveal on this slide</div>
+    <h2>Six weeks and one refused offer</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:94ch">A new graduate has been applying for <strong>six weeks</strong>. Interviews have happened. One offer came in, and it was <strong>turned down</strong> &mdash; wrong city, wrong work.</p>
+      <div class="prompt" style="max-width:100ch">
+        <span class="cue">Q6 &middot; write yes or no, then a reason</span>
+        <p>This person counts as unemployed &mdash; no job, available, actively looking. <strong>Is that evidence that something is wrong with the labor market?</strong></p>
+        <p style="margin-top:.7rem">Commit to yes or no, and write the reason in one sentence. The reason is the part we will compare.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 21. Q6 REVEAL · FRICTIONAL ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Natural Rate">
+    <div class="eyebrow">Reveal &middot; Q6 &middot; the first answer to the puzzle</div>
+    <h2>Frictional unemployment</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <div class="reveal" style="max-width:104ch">
+        <span class="cue">Reveal &middot; Q6 &middot; no, and the reason matters more than the answer</span>
+        <p><strong>Frictional unemployment</strong> is the unemployment that comes from people <strong>switching jobs and searching for the right match</strong>. Workers differ, jobs differ, and neither side knows where the other one is. Finding out takes time, and during that time the searcher is counted as unemployed.</p>
+        <p style="margin-top:.7rem">The defining feature &mdash; and this is the sentence to write down &mdash; is that <strong>the right job exists and there is a vacancy waiting to be filled.</strong> Nothing is missing from this economy except information and a few weeks.</p>
+      </div>
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">The test</div>
+          <div class="cnote">Is there a vacancy out there that <strong>matches this person&rsquo;s skills</strong>? If yes, the problem is search, and search is frictional.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Duration</div>
+          <div class="cnote"><strong>Short.</strong> Weeks, not years. It ends when the match is found, and it ends on its own.</div>
+        </div>
+        <div class="condcard warm">
+          <div class="ctitle">What it tells you about the economy</div>
+          <div class="cnote"><strong>Nothing bad.</strong> A perfectly healthy labor market has frictional unemployment in it every single day.</div>
+        </div>
+      </div>
+      <p class="lede" style="max-width:94ch">The refused offer is the giveaway in the other direction: a market where every offer had to be accepted on the spot would be matching people to jobs <em>worse</em>, not better. Taking six weeks to find work you can actually do is the mechanism succeeding, slowly.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 22. STRUCTURAL ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Natural Rate">
+    <div class="eyebrow">The second answer to the puzzle</div>
+    <h2>Structural unemployment</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">A change in the <strong>structure of the economy</strong> leaves <strong>too few jobs</strong> for a particular set of skills. It is sometimes called <strong>rationing unemployment</strong>, and the name is exact: the jobs are being rationed because they are not there to be had.</p>
+      <div class="pair2">
+        <div class="pcard">
+          <div class="ptag">Cause one &middot; the skills stopped being wanted</div>
+          <div class="verdictbig">technological change</div>
+          <p>A technology permanently reduces the demand for a kind of worker. The vacancies do not exist anywhere at any wage &mdash; not this month, not next year. Searching harder does not help, because there is nothing to find.</p>
+        </div>
+        <div class="pcard warn">
+          <div class="ptag">Cause two &middot; the wage cannot fall to clear</div>
+          <div class="verdictbig">a wage held above equilibrium</div>
+          <p>By a union contract, by a minimum wage, or by <strong>efficiency wages</strong> &mdash; firms paying above the market wage on purpose, to keep workers productive and to hold on to them. Whatever the source, the wage will not fall, so the gap it opens does not close.</p>
+        </div>
+      </div>
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">The test</div>
+          <div class="cnote">Is there a vacancy that matches? <strong>No.</strong> That single answer is what separates structural from frictional.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Duration</div>
+          <div class="cnote"><strong>Long.</strong> Months and years. It does not end on its own, because waiting does not create the job.</div>
+        </div>
+        <div class="condcard warm">
+          <div class="ctitle">The usual remedy</div>
+          <div class="cnote"><strong>Retraining.</strong> Move the worker to where the vacancies are, in skills rather than in patience.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 23. Q7 · WAGE FLOOR ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Natural Rate">
+    <div class="eyebrow">Question 7 &middot; predict &middot; then we show the shift</div>
+    <h2>A wage floor at $18</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="The labor market with a wage floor at eighteen dollars, above the equilibrium wage of fourteen. At eighteen dollars the red labor demand curve gives three workers and the blue labor supply curve gives seven, and the four-worker distance between them is drawn as a thick gold segment labeled unemployment equals four workers. Because the wage is not allowed to fall back to fourteen, the gap stays open.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90" x2="430" y2="90"/><line x1="70" y1="46" x2="430" y2="46"/>
+            <line x1="106" y1="30" x2="106" y2="310"/><line x1="142" y1="30" x2="142" y2="310"/>
+            <line x1="178" y1="30" x2="178" y2="310"/><line x1="214" y1="30" x2="214" y2="310"/>
+            <line x1="250" y1="30" x2="250" y2="310"/><line x1="286" y1="30" x2="286" y2="310"/>
+            <line x1="322" y1="30" x2="322" y2="310"/><line x1="358" y1="30" x2="358" y2="310"/>
+            <line x1="394" y1="30" x2="394" y2="310"/><line x1="430" y1="30" x2="430" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$4</text><text x="62" y="226">$8</text>
+            <text x="62" y="182">$12</text><text x="62" y="138">$16</text><text x="62" y="94">$20</text><text x="62" y="50">$24</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="106" y="328">1</text><text x="142" y="328">2</text><text x="178" y="328">3</text>
+            <text x="214" y="328">4</text><text x="250" y="328">5</text><text x="286" y="328">6</text><text x="322" y="328">7</text>
+            <text x="358" y="328">8</text><text x="394" y="328">9</text><text x="430" y="328">10</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">real wage W/P</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">workers L</text>
+          <line x1="70" y1="46" x2="430" y2="266" stroke="#C0392B" stroke-width="3" stroke-linecap="round"/>
+          <text x="426" y="288" font-family="monospace" font-size="13" fill="#C0392B" font-weight="700" text-anchor="end">LD</text>
+          <line x1="70" y1="266" x2="430" y2="46" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="426" y="40" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">LS</text>
+          <circle cx="250" cy="156" r="4.5" fill="#14243A" opacity=".4"/>
+          <text x="258" y="172" font-family="monospace" font-size="11" fill="#5A5F66">$14 if free</text>
+          <line id="wfline" x1="70" y1="112" x2="430" y2="112" stroke="#8A5900" stroke-width="2" stroke-dasharray="6 4" opacity="0"/>
+          <text id="wftxt" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" x="62" y="108" font-family="monospace" font-size="12.5" font-weight="700" fill="#8A5900" text-anchor="end" opacity="0">$18</text>
+          <text id="wffl" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" x="76" y="106" font-family="monospace" font-size="11.5" font-weight="700" fill="#8A5900" opacity="0">wage floor</text>
+          <line id="wfgap" x1="178" y1="112" x2="322" y2="112" stroke="#8A5900" stroke-width="9" stroke-linecap="round" opacity="0"/>
+          <line id="wfvd" x1="178" y1="112" x2="178" y2="310" stroke="#C0392B" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <line id="wfvs" x1="322" y1="112" x2="322" y2="310" stroke="#1F4E79" stroke-width="1.4" stroke-dasharray="4 3" opacity="0"/>
+          <circle id="wfdd" cx="178" cy="112" r="6" fill="#C0392B" opacity="0"/>
+          <circle id="wfds" cx="322" cy="112" r="6" fill="#1F4E79" opacity="0"/>
+          <text id="wflab" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" x="250" y="94" font-family="monospace" font-size="12.5" font-weight="700" fill="#8A5900" text-anchor="middle" opacity="0">UNEMPLOYMENT = 4 WORKERS</text>
+          <text id="wfl1" x="178" y="344" font-family="monospace" font-size="12" font-weight="700" fill="#C0392B" text-anchor="middle" opacity="0">firms want 3</text>
+          <text id="wfl2" x="322" y="344" font-family="monospace" font-size="12" font-weight="700" fill="#1F4E79" text-anchor="middle" opacity="0">7 want jobs</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="predict">
+          <span class="cue">Q7 &middot; predict &middot; write it before the reveal</span>
+          <p>The equilibrium wage is $14. Now a rule &mdash; a union contract, a minimum wage, a policy of paying above the market &mdash; sets a floor: <strong>the wage may not go below $18.</strong></p>
+          <p style="margin-top:.7rem">Write: how many people end up working, how many want to work, and <strong>what happens next</strong>. Does anything push the wage back to $14?</p>
+        </div>
+        <button class="btn" data-reveal-svg="floor18" data-reveal="q7rev">Show the gap</button>
+        <div class="reveal-hidden" id="q7rev">
+          <div class="reveal">
+            <span class="cue">Reveal &middot; Q7</span>
+            <p>At $18 firms want <strong>3</strong> workers and <strong>7</strong> people want jobs. Four people want work at the going wage and cannot get it: that is <strong>unemployment of 4</strong>, and it is drawn as the gold segment between the two curves.</p>
+            <p style="margin-top:.7rem">In every earlier market, a gap like this closed itself &mdash; the price moved. Here <strong>nothing moves</strong>. The wage would have to fall to $14 to close it, and the floor forbids exactly that. The gap does not shrink, and the four people are not searching in the wrong places. There are three jobs.</p>
+          </div>
+        </div>
+        <p class="footnote">Four out of seven is a made-up magnitude, not a plausible unemployment rate. Read the mechanism off this picture; never the size.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 24. Q8 DIAGNOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Natural Rate">
+    <div class="eyebrow">Question 8 &middot; diagnose &middot; silent poll, then reveal</div>
+    <h2>The confusion this unit is built to prevent</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:92ch">Three sentences about frictional and structural unemployment. <strong>One of them reasons badly.</strong> Pick its number and be ready to name the test it skipped.</p>
+    <div>
+      <div class="diag" id="diag8">
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">1</span><span class="s">A software developer who quit in June and is interviewing in July is frictionally unemployed.</span></button>
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">2</span><span class="s">A travel agent laid off after their agency closed is frictionally unemployed, because they are between jobs.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">3</span><span class="s">Structural unemployment can persist even when the number of job openings in the economy is high.</span></button>
+      </div>
+      <p class="poll-hint">Students pick a number on paper (or fingers on the chest). Then reveal.</p>
+      <button class="btn" data-diag-reveal="diag8" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem;max-width:100ch">
+        <span class="cue">Reveal &middot; the right box for the wrong reason</span>
+        <p><strong>Sentence 2 is the flaw.</strong> &ldquo;Between jobs&rdquo; is true of every unemployed person who ever held a job, so it cannot be what makes someone frictionally unemployed &mdash; it does not distinguish anything. The reasoning is what fails, and it would fail in the same way even if the conclusion happened to be right.</p>
+        <p style="margin-top:.7rem"><strong>The test is whether a vacancy exists that matches the skills.</strong> Online travel booking did not slow the agency down; it removed the work. If that industry shrank, the travel agent is <strong>structurally</strong> unemployed, and the difference is not academic: frictional unemployment ends when the search ends, so the advice is keep looking. Structural unemployment does not end by looking, so the advice is <strong>retrain</strong>. Tell a structurally unemployed person to search harder and you have told them to keep doing the thing that will not work.</p>
+        <p style="margin-top:.7rem">Sentence 3 is the same point from the other side, and it is why the vacancy test says &ldquo;matches.&rdquo; An economy can be advertising a great many jobs and still leave someone stranded, if none of those jobs is one they can do.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 25. THE NATURAL RATE ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Natural Rate">
+    <div class="eyebrow">Putting the first two answers together</div>
+    <h2>The natural rate of unemployment</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <div class="chain warm">natural rate = frictional + structural</div>
+      <p class="lede" style="max-width:96ch">Both of these are with us in good times and bad. People keep switching jobs; industries keep changing shape; wage floors stay where they were put. So economists bundle them and treat the sum as a <strong>roughly stable feature of the economy</strong> &mdash; a property of how this labor market is built, rather than something that rises and falls with the business cycle.</p>
+      <div class="pair2">
+        <div class="pcard">
+          <div class="ptag">What it is</div>
+          <div class="verdictbig">the unemployment the economy carries anyway</div>
+          <p>Not a target, not a failure, not zero. It is what is left over once you accept that matching takes time and that some jobs are gone for good.</p>
+        </div>
+        <div class="pcard">
+          <div class="ptag">How the actual unemployment rate behaves</div>
+          <div class="verdictbig">it fluctuates <em>around</em> the natural rate</div>
+          <p>Above it in bad times, below it in very tight ones. In the long run the economy is assumed to <strong>return</strong> to it. The gap between the actual rate and the natural rate is the thing Part 4 is about.</p>
+        </div>
+      </div>
+      <div class="prompt" style="max-width:100ch">
+        <span class="cue">The one thing not in the sum</span>
+        <p>Cyclical unemployment is deliberately excluded. That is the whole point of the definition: the natural rate is what remains when you strip the business cycle out, which is why it can serve as the line the actual unemployment rate moves around.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 26. WHY ZERO WAS NEVER THE GOAL · Q9 ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Natural Rate">
+    <div class="eyebrow">Question 9 &middot; quick check &middot; commit before the reveal</div>
+    <h2>Zero was never the goal</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <div class="pair2">
+        <div class="pcard warn">
+          <div class="ptag">Too much unemployment is costly</div>
+          <div class="verdictbig">idle resources, and real harm</div>
+          <p>Workers who could be producing are producing nothing &mdash; output the economy simply never gets. And the cost lands hardest on the unemployed themselves: <strong>worse mental and physical health, even after controlling for income</strong>, and worse the longer the spell runs.</p>
+        </div>
+        <div class="pcard">
+          <div class="ptag">Too little unemployment is also costly</div>
+          <div class="verdictbig">labor shortages are not free</div>
+          <p>With almost nobody searching, firms cannot fill vacancies. They burn real resources competing for the few workers available &mdash; recruiting, bidding, poaching, waiting with jobs unfilled. That effort produces nothing either.</p>
+        </div>
+      </div>
+      <div>
+        <div class="poll" id="poll9">
+          <div class="poll-opts">
+            <button type="button" class="poll-opt" data-correct="false"><span class="num">1</span><span class="txt">Zero unemployment would be the ideal, since every worker who wanted a job would have one.</span></button>
+            <button type="button" class="poll-opt" data-correct="true"><span class="num">2</span><span class="txt">Very low unemployment is <strong>also</strong> inefficient: with almost nobody searching, firms spend real resources competing to fill vacancies.</span></button>
+            <button type="button" class="poll-opt" data-correct="false"><span class="num">3</span><span class="txt">Unemployment is costly only to the people who are unemployed.</span></button>
+          </div>
+          <p class="poll-hint">Students commit on paper (or a show of fingers). Then reveal.</p>
+        </div>
+        <button class="btn" data-poll-reveal="poll9" data-reveal="q9note" style="margin-top:.4rem">Reveal the answer</button>
+        <div class="reveal-hidden" id="q9note">
+          <div class="reveal" style="max-width:100ch">
+            <span class="cue">Reveal &middot; Q9</span>
+            <p><strong>Sentence 2.</strong> The cost of unemployment is not a straight line that bottoms out at zero. Push the unemployment rate far enough down and the economy starts spending real effort on <em>finding</em> people rather than on making things &mdash; which is why &ldquo;drive unemployment to zero&rdquo; is not a policy any economist proposes.</p>
+            <p style="margin-top:.7rem">Sentence 1 also quietly forgets what we established in Part 3: some of the unemployment out there is frictional, and a market with zero frictional unemployment would be one where nobody was ever allowed to look for a better match. Sentence 3 forgets the output nobody ever gets to consume.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 4 · CYCLICAL ══════════════ -->
+
+  <!-- ═══════════ 27. DIVIDER P4 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 5 · Cyclical">
+    <div class="eyebrow">Part 4 of 4</div>
+    <h1>The third answer,<br>and the one<br>that needs <span style="color:#8FAADC">two</span> ingredients</h1>
+    <p class="lede">A recession arrives and labor demand falls. Everyone knows what happens next. Run it through the model twice &mdash; once with a wage free to move, once without &mdash; and only one of the two runs produces any unemployment at all.</p>
+    <div class="sectrail">WHO COUNTS &#10003; &rarr; THE PUZZLE &#10003; &rarr; NATURAL RATE &#10003; &rarr; CYCLICAL</div>
+    <div class="through">Throughline: unemployment is not simply &ldquo;not working.&rdquo; It is a measured category with rules &mdash; and it never reaches zero because three different things keep the labor market from clearing.</div>
+  </section>
+
+  <!-- ═══════════ 28. Q10 · PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Cyclical">
+    <div class="eyebrow">Question 10 &middot; predict &middot; no reveal on this slide</div>
+    <h2>A recession hits this market</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <div class="models" style="max-width:980px;margin:.2rem 0">
+        <div class="model dim" style="border-color:#C0392B">
+          <span class="tag" style="color:#C0392B">Before &middot; LD</span>
+          <div class="eq">W = <span class="coef">24</span> &minus; 2L</div>
+          <div class="body">Equilibrium: L = 5, W/P = $14.</div>
+        </div>
+        <div class="model hi" style="border-color:#C0392B">
+          <span class="tag" style="color:#C0392B">After the shock &middot; LD&#8322;</span>
+          <div class="eq">W = <span class="coef">20</span> &minus; 2L</div>
+          <div class="body">At every wage, firms now want <strong>two fewer workers</strong>. Labor supply is unchanged: LS is still W = 4 + 2L.</div>
+        </div>
+      </div>
+      <div class="predict" style="max-width:100ch">
+        <span class="cue">Q10 &middot; predict &middot; two answers, written down</span>
+        <p>Demand for output falls, so firms want fewer workers at every wage. Write:</p>
+        <ol>
+          <li>What happens to <strong>employment</strong> &mdash; the number of people actually working?</li>
+          <li>What happens to <strong>unemployment</strong> &mdash; the number of people who want work at the going wage and do not have it?</li>
+        </ol>
+        <p style="margin-top:.6rem">They are not the same question, and this slide is the moment to discover that.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 29. CASE ONE · FLEXIBLE WAGE ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Cyclical">
+    <div class="eyebrow">Reveal &middot; Q10 &middot; case one of two</div>
+    <h2>If the wage is free to fall</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="A fall in labor demand with a flexible wage. The red labor demand curve slides down from W equals 24 minus 2L to W equals 20 minus 2L while the blue labor supply curve stays where it is. The equilibrium dot rides down the supply curve from five workers at fourteen dollars to four workers at twelve dollars. Employment falls by one worker and the wage falls by two dollars, but the two curves still cross, so unemployment is zero the whole way.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90" x2="430" y2="90"/><line x1="70" y1="46" x2="430" y2="46"/>
+            <line x1="106" y1="30" x2="106" y2="310"/><line x1="142" y1="30" x2="142" y2="310"/>
+            <line x1="178" y1="30" x2="178" y2="310"/><line x1="214" y1="30" x2="214" y2="310"/>
+            <line x1="250" y1="30" x2="250" y2="310"/><line x1="286" y1="30" x2="286" y2="310"/>
+            <line x1="322" y1="30" x2="322" y2="310"/><line x1="358" y1="30" x2="358" y2="310"/>
+            <line x1="394" y1="30" x2="394" y2="310"/><line x1="430" y1="30" x2="430" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$4</text><text x="62" y="226">$8</text>
+            <text x="62" y="182">$12</text><text x="62" y="138">$16</text><text x="62" y="94">$20</text><text x="62" y="50">$24</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="106" y="328">1</text><text x="142" y="328">2</text><text x="178" y="328">3</text>
+            <text x="214" y="328">4</text><text x="250" y="328">5</text><text x="286" y="328">6</text><text x="322" y="328">7</text>
+            <text x="358" y="328">8</text><text x="394" y="328">9</text><text x="430" y="328">10</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">real wage W/P</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">workers L</text>
+          <line x1="70" y1="46" x2="430" y2="266" stroke="#C0392B" stroke-width="2.4" stroke-linecap="round" opacity=".38"/>
+          <text x="426" y="288" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700" text-anchor="end" opacity=".55">LD (old)</text>
+          <line x1="70" y1="266" x2="430" y2="46" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="426" y="40" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">LS &#183; unchanged</text>
+          <circle cx="250" cy="156" r="4.5" fill="#14243A" opacity=".38"/>
+          <text x="258" y="150" font-family="monospace" font-size="11" fill="#5A5F66" stroke="#FbFaF7" stroke-width="3" paint-order="stroke">A &#183; L=5, $14</text>
+          <line id="fxld" x1="70" y1="46" x2="430" y2="266" stroke="#C0392B" stroke-width="3" stroke-linecap="round" opacity="0"/>
+          <text id="fxlab" x="78" y="86" font-family="monospace" font-size="12.5" font-weight="700" fill="#C0392B" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">LD&#8322;</text>
+          <line id="fxh" x1="70" y1="156" x2="250" y2="156" stroke="#8A5900" stroke-width="1.3" stroke-dasharray="4 3" opacity="0"/>
+          <line id="fxv" x1="250" y1="156" x2="250" y2="310" stroke="#8A5900" stroke-width="1.3" stroke-dasharray="4 3" opacity="0"/>
+          <circle id="fxdot" cx="250" cy="156" r="7" fill="#8A5900" opacity="0"/>
+          <text id="fxend" x="80" y="296" font-family="monospace" font-size="12.5" font-weight="700" fill="#8A5900" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">B &#183; L = 4, W/P = $12, unemployment 0</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="btnrow">
+          <button class="btn" id="fxplay">&#9654; Play the shock</button>
+          <button class="btn ghost" id="fxreset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          real wage &nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="fxw">$14.00</span><br>
+          employed &nbsp;&nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="fxl">5.0</span><br>
+          unemployed &rarr;&nbsp; <span class="big" id="fxu">0</span><br>
+          <span id="fxnote" style="color:var(--grey)">Press play. Keep one eye on the unemployed line.</span>
+        </div>
+        <button class="btn" data-reveal="q10arev">Reveal the reasoning</button>
+        <div class="reveal-hidden" id="q10arev">
+          <div class="reveal">
+            <span class="cue">Reveal &middot; Q10 &middot; case one</span>
+            <p>Set 20 &minus; 2L = 4 + 2L: 16 = 4L, so L = <strong>4</strong> and W/P = 4 + 2(4) = <strong>$12</strong>. Employment falls by one worker and the wage falls by two dollars.</p>
+            <p style="margin-top:.7rem">And <strong>unemployment is still zero</strong> &mdash; at every instant of that slide, the number of workers firms want and the number of people looking are the same number. The fifth worker is not unemployed; at $12 that person would rather not work, which puts them out of the labor force. Half the room predicted rising unemployment, and the model just refused to deliver it.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 30. CASE TWO · STICKY WAGE ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Cyclical">
+    <div class="eyebrow">Reveal &middot; Q10 &middot; case two of two &middot; same shock</div>
+    <h2>If the wage stays at $14</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 480 370" role="img" aria-label="The same fall in labor demand, but with the real wage held at fourteen dollars. The red labor demand curve slides down from W equals 24 minus 2L to W equals 20 minus 2L while the wage stays on the fourteen dollar line. Along that line the number of workers firms want falls from five to three while five people still want jobs, and the widening distance between them is drawn as a thick gold segment labeled with the number of unemployed workers, ending at two. Because nothing pushes the wage down, the gap stays open.">
+          <line x1="70" y1="30" x2="70" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <line x1="70" y1="310" x2="440" y2="310" stroke="#8A8F96" stroke-width="1.6"/>
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="266" x2="430" y2="266"/><line x1="70" y1="222" x2="430" y2="222"/>
+            <line x1="70" y1="178" x2="430" y2="178"/><line x1="70" y1="134" x2="430" y2="134"/>
+            <line x1="70" y1="90" x2="430" y2="90"/><line x1="70" y1="46" x2="430" y2="46"/>
+            <line x1="106" y1="30" x2="106" y2="310"/><line x1="142" y1="30" x2="142" y2="310"/>
+            <line x1="178" y1="30" x2="178" y2="310"/><line x1="214" y1="30" x2="214" y2="310"/>
+            <line x1="250" y1="30" x2="250" y2="310"/><line x1="286" y1="30" x2="286" y2="310"/>
+            <line x1="322" y1="30" x2="322" y2="310"/><line x1="358" y1="30" x2="358" y2="310"/>
+            <line x1="394" y1="30" x2="394" y2="310"/><line x1="430" y1="30" x2="430" y2="310"/>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="314">$0</text><text x="62" y="270">$4</text><text x="62" y="226">$8</text>
+            <text x="62" y="182">$12</text><text x="62" y="138">$16</text><text x="62" y="94">$20</text><text x="62" y="50">$24</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="328">0</text><text x="106" y="328">1</text><text x="142" y="328">2</text><text x="178" y="328">3</text>
+            <text x="214" y="328">4</text><text x="250" y="328">5</text><text x="286" y="328">6</text><text x="322" y="328">7</text>
+            <text x="358" y="328">8</text><text x="394" y="328">9</text><text x="430" y="328">10</text>
+          </g>
+          <text x="76" y="24" font-family="monospace" font-size="13" fill="#14243A" font-weight="700">real wage W/P</text>
+          <text x="440" y="350" font-family="monospace" font-size="13" fill="#14243A" font-weight="700" text-anchor="end">workers L</text>
+          <line x1="70" y1="46" x2="430" y2="266" stroke="#C0392B" stroke-width="2.4" stroke-linecap="round" opacity=".38"/>
+          <text x="426" y="288" font-family="monospace" font-size="12" fill="#C0392B" font-weight="700" text-anchor="end" opacity=".55">LD (old)</text>
+          <line x1="70" y1="266" x2="430" y2="46" stroke="#1F4E79" stroke-width="3" stroke-linecap="round"/>
+          <text x="426" y="40" font-family="monospace" font-size="13" fill="#1F4E79" font-weight="700" text-anchor="end">LS &#183; unchanged</text>
+          <line id="stw" x1="70" y1="156" x2="430" y2="156" stroke="#14243A" stroke-width="1.8" stroke-dasharray="7 4" opacity="0"/>
+          <text id="stwt" x="62" y="152" font-family="monospace" font-size="12.5" font-weight="700" fill="#14243A" text-anchor="end" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">$14</text>
+          <text id="stwf" x="292" y="150" font-family="monospace" font-size="11.5" font-weight="700" fill="#14243A" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">wage does not move</text>
+          <line id="stld" x1="70" y1="46" x2="430" y2="266" stroke="#C0392B" stroke-width="3" stroke-linecap="round" opacity="0"/>
+          <text id="stlab2" x="78" y="86" font-family="monospace" font-size="12.5" font-weight="700" fill="#C0392B" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">LD&#8322;</text>
+          <line id="stgap" x1="250" y1="156" x2="250" y2="156" stroke="#8A5900" stroke-width="9" stroke-linecap="round" opacity="0"/>
+          <line id="stvd" x1="250" y1="156" x2="250" y2="310" stroke="#C0392B" stroke-width="1.3" stroke-dasharray="4 3" opacity="0"/>
+          <line id="stvs" x1="250" y1="156" x2="250" y2="310" stroke="#1F4E79" stroke-width="1.3" stroke-dasharray="4 3" opacity="0"/>
+          <circle id="stdd" cx="250" cy="156" r="6.5" fill="#C0392B" opacity="0"/>
+          <circle id="stds" cx="250" cy="156" r="6.5" fill="#1F4E79" opacity="0"/>
+          <text id="stlab" x="250" y="136" font-family="monospace" font-size="12.5" font-weight="700" fill="#8A5900" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">UNEMPLOYMENT = 0</text>
+          <text id="stend" x="80" y="296" font-family="monospace" font-size="12.5" font-weight="700" fill="#8A5900" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke" opacity="0">firms want 3 &#183; 5 want jobs &#183; the gap stays</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="btnrow">
+          <button class="btn" id="stplay">&#9654; Play the same shock</button>
+          <button class="btn ghost" id="streset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          real wage &nbsp;&nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="stwv">$14.00</span><br>
+          firms want &nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="stld_n">5.0</span><br>
+          want jobs &nbsp;&nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="stls_n">5.0</span><br>
+          unemployed &nbsp;&rarr;&nbsp; <span class="big" id="stu">0</span><br>
+          <span id="stnote" style="color:var(--grey)">Same shock as the last slide. Only one thing is different.</span>
+        </div>
+        <button class="btn" data-reveal="q10brev,q10bcmp">Reveal the reasoning</button>
+        <div class="reveal-hidden" id="q10brev">
+          <div class="reveal">
+            <span class="cue">Reveal &middot; Q10 &middot; case two</span>
+            <p>At a wage of $14 on the new curve: 14 = 20 &minus; 2L, so firms want <strong>3</strong>. On labor supply, 14 = 4 + 2L still gives <strong>5</strong> people looking. Two people want work at the going wage and cannot get it &mdash; <strong>unemployment of 2</strong>, the gold segment.</p>
+            <p style="margin-top:.7rem">And it does not close. Closing it would take the wage falling to $12, which is precisely what this case rules out. Nothing in the picture pushes it down.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="reveal-hidden" id="q10bcmp">
+    <div class="pair2" style="margin-top:1.2rem">
+      <div class="pcard">
+        <div class="ptag">Case one &middot; wage free to move</div>
+        <div class="verdictbig">L: 5 &rarr; 4 &nbsp;&middot;&nbsp; W/P: $14 &rarr; $12 &nbsp;&middot;&nbsp; unemployment 0</div>
+        <p>The shock lands entirely on the wage and on the number of jobs. Nobody is left wanting work at the going wage.</p>
+      </div>
+      <div class="pcard warn">
+        <div class="ptag">Case two &middot; wage stuck at $14</div>
+        <div class="verdictbig">L: 5 &rarr; 3 &nbsp;&middot;&nbsp; W/P: $14 &rarr; $14 &nbsp;&middot;&nbsp; unemployment 2</div>
+        <p>The same shock, with one thing forbidden. Employment falls further <em>and</em> two people are now unemployed.</p>
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 31. PUNCHLINE · STICKY WAGES ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Cyclical">
+    <div class="eyebrow">The most important sentence in Part 4</div>
+    <h2>The shock is not what makes unemployment</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <div class="blankline" style="font-size:clamp(1rem,2.1vw,1.5rem);line-height:1.7">The demand shock <strong style="color:#C0392B">alone</strong> does not create unemployment.<br>The shock <strong style="color:#8A5900">plus a wage that will not fall</strong> creates unemployment.</div>
+      <p class="lede" style="max-width:96ch">Case one had the whole recession in it &mdash; the same fall in demand, the same lost jobs &mdash; and produced an unemployment rate of zero. The second ingredient is what turned a shock into people out of work. So <strong>cyclical unemployment</strong> is the unemployment caused by a downturn <em>in a labor market whose wages do not adjust downward</em>.</p>
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">Implicit or social contracts</div>
+          <div class="cnote">An unwritten understanding that pay does not get cut. Firms break it at the cost of morale, effort and reputation &mdash; so mostly they do not break it.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Explicit contracts</div>
+          <div class="cnote">Union agreements and written terms fix the wage for a stated period. It legally cannot fall this year, whatever demand does.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Relative-wage concerns</div>
+          <div class="cnote">Workers judge their pay against what comparable workers get. Accepting a cut while others hold means losing ground, so it is resisted even when the total pie has shrunk.</div>
+        </div>
+      </div>
+      <div class="prompt" style="max-width:100ch">
+        <span class="cue">How it ends</span>
+        <p>Cyclical unemployment is not permanent. It resolves in one of two ways: <strong>demand recovers</strong>, and the labor demand curve slides back to where it was; or the wage eventually gives, as workers <strong>accept lower wages</strong> once the downturn has lasted long enough. The stickiness is a feature of the short run, which is exactly why cyclical unemployment sits <em>above</em> the natural rate rather than inside it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 32. Q11 DIAGNOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Cyclical">
+    <div class="eyebrow">Question 11 &middot; diagnose &middot; harder than the last two</div>
+    <h2>One of these is not wrong. It is unfinished.</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:92ch">Three sentences about cyclical unemployment. <strong>One of them reasons badly</strong> &mdash; and this time the flaw is not a false statement. Pick its number anyway.</p>
+    <div>
+      <div class="diag" id="diag11">
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">1</span><span class="s">Cyclical unemployment happens because the demand for labor falls during a recession.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">2</span><span class="s">If wages fell freely during a recession, employment would still drop.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">3</span><span class="s">Cyclical unemployment is the part of unemployment that moves with the business cycle, above or below the natural rate.</span></button>
+      </div>
+      <p class="poll-hint">Students pick a number on paper (or fingers on the chest). Then reveal.</p>
+      <button class="btn" data-diag-reveal="diag11" style="margin-top:.6rem">Reveal the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem;max-width:100ch">
+        <span class="cue">Reveal &middot; incomplete rather than false</span>
+        <p><strong>Sentence 1 &mdash; and say plainly that this one is harder than the usual diagnose item.</strong> Nothing in it is untrue. Labor demand does fall in a recession, and cyclical unemployment does happen then. The sentence is <em>incomplete</em>, and an incomplete explanation is much harder to catch than a wrong one, because there is no false clause to point at.</p>
+        <p style="margin-top:.7rem">What it leaves out is the second ingredient. We ran that shock with a flexible wage two slides ago: demand fell, the curve moved, employment dropped from five to four &mdash; and unemployment was <strong>zero</strong>. Falling labor demand on its own delivers a smaller, poorer labor market, not an unemployed one. <strong>The stickiness is what converts a shock into unemployment</strong>, and any account that stops at &ldquo;demand fell&rdquo; has skipped the mechanism it was supposed to explain.</p>
+        <p style="margin-top:.7rem">Sentence 2 is the fact that proves it: employment falls in <em>both</em> cases, which is why the fall in employment cannot be what unemployment means. Sentence 3 is the definition, and it is worth noting it goes both ways &mdash; in a boom the actual unemployment rate sits <em>below</em> the natural rate, and that gap is cyclical too.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 33. Q12 · SORT THE THREE ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Cyclical">
+    <div class="eyebrow">Question 12 &middot; label all three before any reveal</div>
+    <h2>Three stories, one of each</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1180px">
+      <div class="prompt" style="max-width:104ch">
+        <span class="cue">Q12 &middot; write frictional, structural or cyclical beside each &mdash; and the test you used</span>
+        <ol>
+          <li>A software engineer leaves one company and spends <strong>four months</strong> finding the role they actually want.</li>
+          <li>A coal region where the mines <strong>closed a decade ago</strong> and never reopened.</li>
+          <li>A restaurant chain <strong>lays off staff during a downturn</strong> while keeping everyone&rsquo;s wages unchanged.</li>
+        </ol>
+      </div>
+      <table class="sched txt">
+        <caption>Q12 &mdash; the three types, and the question that separates them</caption>
+        <thead>
+          <tr><th scope="col">Story</th><th scope="col">Type</th><th scope="col">The test that decides it</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1 &middot; Four months to find the right role</td><td><span class="hid" id="s12a">Frictional</span></td><td><span class="hid" id="s12b">Does a matching vacancy exist? <strong>Yes</strong> &mdash; plenty of them. The four months are search, and search ends on its own.</span></td></tr>
+          <tr><td>2 &middot; The mines closed a decade ago</td><td><span class="hid" id="s12c">Structural</span></td><td><span class="hid" id="s12d">Does a matching vacancy exist? <strong>No</strong> &mdash; the industry is gone. Ten years of searching has already demonstrated it. Retraining, not patience.</span></td></tr>
+          <tr><td>3 &middot; Layoffs in a downturn, wages unchanged</td><td><span class="hid" id="s12e">Cyclical</span></td><td><span class="hid" id="s12f">Both ingredients are named in the sentence: a <strong>downturn</strong> and <strong>wages that did not move</strong>. Take either one away and the layoffs stop being cyclical unemployment.</span></td></tr>
+        </tbody>
+      </table>
+      <div class="btnrow">
+        <button class="btn" data-reveal="s12a,s12b">1 &middot; the engineer</button>
+        <button class="btn" data-reveal="s12c,s12d">2 &middot; the coal region</button>
+        <button class="btn" data-reveal="s12e,s12f">3 &middot; the restaurant chain</button>
+        <button class="btn ghost" data-reveal="s12a,s12b,s12c,s12d,s12e,s12f">Reveal all three</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 34. SYNTHESIS ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Cyclical">
+    <div class="eyebrow">Synthesis &middot; the whole discussion on one slide</div>
+    <h2>Two claims, and the three answers between them</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1180px">
+      <div class="prompt" style="max-width:104ch">
+        <span class="cue">The throughline</span>
+        <p>Unemployment is not simply &ldquo;not working.&rdquo; It is a <strong>measured category with rules</strong> &mdash; and it never reaches zero because <strong>three different things</strong> keep the labor market from clearing.</p>
+      </div>
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">Frictional</div>
+          <div class="cnote"><strong>A vacancy exists.</strong> Matching takes time. Short. Healthy. In the natural rate.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Structural</div>
+          <div class="cnote"><strong>No matching vacancy</strong> &mdash; the skills are not wanted, or a wage floor holds the market open. Long. Retraining. In the natural rate.</div>
+        </div>
+        <div class="condcard warm">
+          <div class="ctitle">Cyclical</div>
+          <div class="cnote"><strong>A downturn plus a wage that will not fall.</strong> Both ingredients required. Temporary. <em>Not</em> in the natural rate &mdash; it is the gap around it.</div>
+        </div>
+      </div>
+      <div class="pair2">
+        <div class="pcard">
+          <div class="ptag">Part 1 said</div>
+          <div class="verdictbig">the unemployment rate can move for reasons that have nothing to do with jobs</div>
+          <p>2,000 people gave up and the unemployment rate improved. Always ask which part of the fraction moved, and read the participation rate alongside it.</p>
+        </div>
+        <div class="pcard">
+          <div class="ptag">Parts 2 to 4 said</div>
+          <div class="verdictbig">a market that clears has no unemployment at all</div>
+          <p>So every real unemployment number is evidence of something the clean model leaves out: search, a structural gap, or a wage that will not fall.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 35. CLOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 5 · Close">
+    <div class="eyebrow">Close &middot; write one sentence before you leave</div>
+    <h2>Finish the line in your own words</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1150px">
+      <div class="blankline">
+        <span class="bl">&nbsp;</span> unemployment exists even in a<br>healthy economy, because <span class="bl">&nbsp;</span>.
+      </div>
+      <p class="lede" style="max-width:92ch">One word in the first blank, one clause in the second. If the second half of your sentence is a restatement of the first, it is not finished &mdash; say what it is about a healthy economy that produces this kind of unemployment anyway.</p>
+      <p class="serif-note">Next unit: what happens to all of this when prices themselves start moving.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="chrome">
+  <span class="course" id="sectionLabel">ECON 002 · Discussion 5</span>
+  <span class="navhint">
+    <button id="prevBtn" aria-label="Previous slide">&larr; prev</button>
+    <span aria-live="polite" aria-atomic="true">Slide <span id="cur">1</span> of <span id="tot">35</span></span>
+    <button id="nextBtn" aria-label="Next slide">next &rarr;</button>
+  </span>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* the one place the course string lives */
+  const COURSE = 'ECON 002';
+  const DECK_TITLE = 'Who Counts as Unemployed?';
+  document.title = COURSE + ' · ' + DECK_TITLE;
+  const eyebrow = document.getElementById('titleEyebrow');
+  if(eyebrow) eyebrow.textContent = COURSE + ' · Discussion Section · Unit 4';
+
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  /* slide element -> the reset() of every animation on it. Entering a slide
+     rewinds its animations, so the shock is never already showing when the
+     TA arrives — including on a second pass back through the deck. */
+  const slideResets=new Map();
+  function registerReset(el, fn){
+    const sl = el.closest && el.closest('.slide');
+    if(!sl) return;
+    if(!slideResets.has(sl)) slideResets.set(sl,[]);
+    slideResets.get(sl).push(fn);
+  }
+  const prog=document.getElementById('prog');
+  const cur=document.getElementById('cur');
+  document.getElementById('tot').textContent=slides.length;
+
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    prog.style.width=((i)/(slides.length-1)*100)+'%';
+    cur.textContent=i+1;
+    rewind(slides[i]);
+    const sec=slides[i].getAttribute('data-section');
+    const lbl=document.getElementById('sectionLabel');
+    if(lbl) lbl.textContent = sec ? (COURSE+' · '+sec) : (COURSE+' · Discussion');
+  }
+  function next(){show(i+1)}
+  function prev(){show(i-1)}
+
+  document.getElementById('nextBtn').onclick=next;
+  document.getElementById('prevBtn').onclick=prev;
+
+  /* guarded: Space must activate a focused control, not jump the slide */
+  window.addEventListener('keydown',e=>{
+    const t=e.target;
+    const onControl = t && t.closest && t.closest('button,a,input,select,textarea,[tabindex]');
+    if(e.key===' '||e.key==='Spacebar'){
+      if(onControl) return;               /* let the browser click the focused button */
+      e.preventDefault();next();return;
+    }
+    if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();next()}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}
+    else if(e.key.toLowerCase()==='f'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  /* ---- generic click-to-reveal: button[data-reveal="id"] or "id1,id2,id3"
+          A comma list lets one button uncover several table cells at once,
+          which is how the Q1 and Q12 tables stay empty until their reveal. */
+  document.querySelectorAll('[data-reveal]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      btn.getAttribute('data-reveal').split(',').forEach(id=>{
+        const t=document.getElementById(id.trim());
+        if(t) t.classList.add('shown');
+      });
+      btn.disabled=true;
+    });
+  });
+
+  /* ---- generic quick-check polls: button[data-poll-reveal="pollId"] ---- */
+  document.querySelectorAll('[data-poll-reveal]').forEach(btn=>{
+    const group=document.getElementById(btn.getAttribute('data-poll-reveal'));
+    if(!group) return;
+    const opts=[...group.querySelectorAll('.poll-opt')];
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    btn.addEventListener('click',()=>{
+      group.classList.add('revealed');
+      opts.forEach(o=>{ if(o.dataset.correct==='true') o.classList.add('correct'); });
+      btn.disabled=true;
+    });
+  });
+
+  /* ---- generic diagnose (flawed-argument) groups ---- */
+  document.querySelectorAll('.diag').forEach(group=>{
+    const opts=[...group.querySelectorAll('.diag-opt')];
+    const revealBtn=group.parentElement.querySelector('[data-diag-reveal]');
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    if(revealBtn){
+      revealBtn.addEventListener('click',()=>{
+        group.classList.add('revealed');
+        opts.forEach(o=>{if(o.dataset.bad==='true')o.classList.add('bad');});
+        revealBtn.disabled=true;
+        const note=group.parentElement.querySelector('[data-diag-note]');
+        if(note) note.style.display='block';
+      });
+    }
+  });
+
+  /* ---- static shift diagrams: button[data-reveal-svg="key"] ---- */
+  const svgShifts={
+    q4read  : ['q4lvl','q4w','q4vd','q4vs','q4dd','q4ds','q4l1','q4l2'],
+    eqmark  : ['eqh','eqv','eqdot','eqp','eqq','eqlab'],
+    floor18 : ['wfline','wftxt','wffl','wfgap','wfvd','wfvs','wfdd','wfds','wflab','wfl1','wfl2']
+  };
+  /* Entering a slide puts it back to its unrevealed state: uncovered text,
+     table cells, polls, diagnose verdicts, marked-up SVGs and animations all
+     rewind, and their buttons come back. Reveals used to persist, so a slide
+     visited twice — a second section, or a step backward — opened with its
+     answer already showing. */
+  function rewind(sl){
+    if(!sl) return;
+    sl.querySelectorAll('.shown').forEach(e=>e.classList.remove('shown'));
+    sl.querySelectorAll('.revealed').forEach(g=>g.classList.remove('revealed'));
+    sl.querySelectorAll('.poll-opt.correct').forEach(o=>o.classList.remove('correct'));
+    sl.querySelectorAll('.diag-opt.bad').forEach(o=>o.classList.remove('bad'));
+    sl.querySelectorAll('.poll-opt,.diag-opt').forEach(o=>{o.style.outline='';});
+    sl.querySelectorAll('[data-diag-note]').forEach(n=>{n.style.display='none';});
+    sl.querySelectorAll('[data-reveal-svg]').forEach(b=>{
+      (svgShifts[b.getAttribute('data-reveal-svg')]||[]).forEach(id=>{
+        const el=document.getElementById(id); if(el) el.setAttribute('opacity',0);
+      });
+    });
+    sl.querySelectorAll('[data-reveal],[data-reveal-svg],[data-poll-reveal],[data-diag-reveal],[data-cond]')
+      .forEach(b=>{ b.disabled=false; });
+    (slideResets.get(sl)||[]).forEach(fn=>fn());
+  }
+
+  function revealShift(key){
+    (svgShifts[key]||[]).forEach(id=>{const el=document.getElementById(id); if(el) el.setAttribute('opacity',1);});
+  }
+  document.querySelectorAll('[data-reveal-svg]').forEach(btn=>{
+    const key=btn.getAttribute('data-reveal-svg');
+    btn.addEventListener('click',()=>{ revealShift(key); btn.disabled=true; });
+  });
+
+  /* ---- condition cards: button[data-cond="bodyId"] ---- */
+  document.querySelectorAll('[data-cond]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const body=document.getElementById(btn.getAttribute('data-cond'));
+      if(body){body.classList.add('shown');}
+      btn.disabled=true;
+    });
+  });
+
+  /* =====================================================================
+     ANIMATION SCAFFOLD
+     Two kinds live here, and the choice is not cosmetic. A wage adjusting
+     is a continuous process, so it gets the shared cosine sweep. Two
+     thousand people leaving the labor force is a discrete event, so it
+     gets a stepper. Both get reset(), finish() and a reduced-motion branch.
+     ===================================================================== */
+  const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const DUR = 2600;
+  function ease(p){return p<1 ? (0.5-0.5*Math.cos(Math.PI*p)) : 1;}
+
+  /* plot geometry — real wage on the vertical axis, workers on the horizontal */
+  const xL = L => 70 + 36*L;
+  const yW = W => 310 - 11*W;
+  const $  = id => document.getElementById(id);
+  function money(W){ return '$' + W.toFixed(2); }
+  function num(n){ return (Math.round(n*10)/10).toFixed(1); }
+  function comma(n){ return n.toLocaleString('en-US'); }
+  function seg(el,x1,y1,x2,y2){ el.setAttribute('x1',x1);el.setAttribute('y1',y1);el.setAttribute('x2',x2);el.setAttribute('y2',y2); }
+  function dot(el,x,y){ el.setAttribute('cx',x);el.setAttribute('cy',y); }
+
+  /* ---------------------------------------------------------------------
+     makeAnim — the shared cosine sweep, used for both wage adjustments.
+     --------------------------------------------------------------------- */
+  function makeAnim(o){
+    const playBtn = $(o.play);
+    if(!playBtn) return;
+    const resetBtn = $(o.reset);
+    const shockEls = (o.shock||[]).map($).filter(Boolean);
+    const endEls   = (o.end||[]).map($).filter(Boolean);
+    const endAt    = (o.endAt===undefined) ? 0.5 : o.endAt;
+    const dur      = o.dur || DUR;
+    let raf;
+    function reset(){
+      cancelAnimationFrame(raf);
+      o.place(0);
+      shockEls.concat(endEls).forEach(e=>e.setAttribute('opacity',0));
+      if(o.onReset) o.onReset();
+    }
+    function finish(){
+      o.place(1);
+      shockEls.concat(endEls).forEach(e=>e.setAttribute('opacity',1));
+      if(o.onFinish) o.onFinish();
+    }
+    function play(){
+      reset();
+      if(o.onStart) o.onStart();
+      shockEls.forEach(e=>e.setAttribute('opacity',1));
+      if(REDUCED){ finish(); return; }          /* reduced-motion branch */
+      const t0=performance.now();
+      function step(now){
+        const p=Math.min(1,(now-t0)/dur), e=ease(p);
+        o.place(e);
+        if(e>endAt) endEls.forEach(el=>el.setAttribute('opacity',1));
+        if(p>=1) finish(); else raf=requestAnimationFrame(step);
+      }
+      raf=requestAnimationFrame(step);
+    }
+    playBtn.onclick=play;
+    if(resetBtn) resetBtn.addEventListener('click',reset);
+    registerReset(playBtn, reset);
+    reset();
+  }
+
+  /* ---------------------------------------------------------------------
+     makeSteps — a discrete stepper. Nothing glides: each step is a state
+     of the world, painted whole, so a screen reader hears a complete
+     picture rather than a single changed field. Same discipline as the
+     sweep: reset(), finish(), reduced-motion branch.
+     --------------------------------------------------------------------- */
+  function makeSteps(o){
+    const playBtn=$(o.play);
+    if(!playBtn) return;
+    const n=o.steps.length;
+    let timer=null;
+    function reset(){
+      if(timer){clearTimeout(timer);timer=null;}
+      o.paint(o.initial);
+    }
+    function finish(){
+      if(timer){clearTimeout(timer);timer=null;}
+      o.paint(o.steps[n-1]);
+    }
+    function play(){
+      reset();
+      if(REDUCED){ finish(); return; }          /* reduced-motion branch */
+      let k=0;
+      (function tick(){
+        o.paint(o.steps[k]);
+        if(k>=n-1) return;
+        k++;
+        timer=setTimeout(tick, o.stepMs||1900);
+      })();
+    }
+    playBtn.onclick=play;
+    (o.resets||[]).forEach(id=>{ const b=$(id); if(b) b.addEventListener('click',reset); });
+    registerReset(playBtn, reset);
+    reset();
+  }
+
+  /* =====================================================================
+     Slide 9 · 2,000 people stop looking. The whole point of the animation
+     is the box that never changes.
+     ===================================================================== */
+  (function(){
+    if(!$('dwplay')) return;
+    const POP=200000, EMP=114000;
+    const blkA=$('blkA'), blkB=$('blkB');
+    const bxE=$('bxE'), bxU=$('bxU'), bxN=$('bxN'),
+          bxUR=$('bxUR'), bxPR=$('bxPR'), bxCap=$('bxCap');
+    const dwE=$('dwE'), dwU=$('dwU'), dwL=$('dwL'),
+          dwUR=$('dwUR'), dwPR=$('dwPR'), dwnote=$('dwnote');
+    const MOVED='translate(142,4)', HOME='translate(0,0)';
+
+    function paint(st){
+      const U  = 6000 - 1000*st.moved;
+      const LF = EMP + U;
+      const N  = POP - LF;
+      const ur = (100*U/LF).toFixed(1)+'%';
+      const pr = (100*LF/POP).toFixed(1)+'%';
+      blkA.setAttribute('transform', st.moved>=1 ? MOVED : HOME);
+      blkB.setAttribute('transform', st.moved>=2 ? MOVED : HOME);
+      bxE.textContent=comma(EMP); bxU.textContent=comma(U); bxN.textContent=comma(N);
+      bxUR.textContent=ur; bxPR.textContent=pr; bxCap.textContent=st.cap;
+      /* the readout re-states every field on every step, never just the one
+         that moved, so the live region always announces a complete state */
+      dwE.textContent=comma(EMP); dwU.textContent=comma(U); dwL.textContent=comma(LF);
+      dwUR.textContent=ur; dwPR.textContent=pr;
+      dwnote.textContent=st.note;
+    }
+
+    makeSteps({
+      play:'dwplay', resets:['dwreset'], stepMs:2100, paint:paint,
+      initial:{moved:0, cap:'Before anyone gives up.',
+               note:'Press play. Keep one eye on the employed box while you do.'},
+      steps:[
+        {moved:0, cap:'Before anyone gives up.',
+         note:'Starting point: 6,000 unemployed out of a labor force of 120,000. The unemployment rate is 5.0%.'},
+        {moved:1, cap:'One thousand have stopped searching.',
+         note:'The first 1,000 stop looking. They leave the labor force, so they leave the numerator and the denominator at once — 4.2%. Employment: unchanged.'},
+        {moved:2, cap:'Two thousand have stopped searching. Employment: 114,000, exactly as before.',
+         note:'All 2,000 have given up. The unemployment rate is 3.4%, down from 5.0%, and not one person was hired.'}
+      ]
+    });
+  })();
+
+  /* =====================================================================
+     Slide 29 · the demand shock with a wage free to fall.
+     LD slides from W = 24 − 2L to W = 20 − 2L; the equilibrium rides
+     down the (unchanged) supply curve. Unemployment never leaves zero.
+     ===================================================================== */
+  (function(){
+    if(!$('fxplay')) return;
+    const ld=$('fxld'), d=$('fxdot'), h=$('fxh'), v=$('fxv');
+    const $w=$('fxw'), $l=$('fxl'), $u=$('fxu'), $n=$('fxnote');
+    makeAnim({
+      play:'fxplay', reset:'fxreset', dur:3000,
+      shock:['fxld','fxdot','fxh','fxv'], end:['fxlab','fxend'], endAt:0.94,
+      place:function(p){
+        const a = 24 - 4*p;                  /* the intercept slides 24 → 20 */
+        seg(ld, 70, yW(a), 430, yW(a-20));
+        const L=(a-4)/4, W=(a+4)/2, x=xL(L), y=yW(W);
+        dot(d,x,y); seg(h,70,y,x,y); seg(v,x,y,x,310);
+        $w.textContent=money(W); $l.textContent=num(L); $u.textContent='0';
+      },
+      onReset:function(){ $w.textContent='$14.00'; $l.textContent='5.0'; $u.textContent='0';
+        $n.textContent='Press play. Keep one eye on the unemployed line.'; },
+      onStart:function(){ $n.textContent='Demand falls. The wage is free, so it falls with it …'; },
+      onFinish:function(){ $w.textContent='$12.00'; $l.textContent='4.0'; $u.textContent='0';
+        $n.textContent='One job gone, two dollars off the wage — and unemployment never left zero.'; }
+    });
+  })();
+
+  /* =====================================================================
+     Slide 30 · the identical shock with the wage pinned at $14.
+     Firms slide back along the $14 line to 3; 5 people still want jobs.
+     The gap opens to 2 and has nothing to close it.
+     ===================================================================== */
+  (function(){
+    if(!$('stplay')) return;
+    const ld=$('stld'), gap=$('stgap'), dd=$('stdd'), ds=$('stds'),
+          vd=$('stvd'), vs=$('stvs'), lab=$('stlab');
+    const $w=$('stwv'), $d=$('stld_n'), $s=$('stls_n'), $u=$('stu'), $n=$('stnote');
+    const yFix = yW(14), xFix = xL(5);
+    makeAnim({
+      play:'stplay', reset:'streset', dur:3000,
+      shock:['stw','stwt','stwf','stld','stgap','stvd','stvs','stdd','stds','stlab'],
+      end:['stlab2','stend'], endAt:0.94,
+      place:function(p){
+        const a = 24 - 4*p;                  /* the same slide, 24 → 20 */
+        seg(ld, 70, yW(a), 430, yW(a-20));
+        const Ld=(a-14)/2, xd=xL(Ld), g=5-Ld;
+        seg(gap, xd, yFix, xFix, yFix);
+        seg(vd, xd, yFix, xd, 310); seg(vs, xFix, yFix, xFix, 310);
+        dot(dd, xd, yFix); dot(ds, xFix, yFix);
+        lab.setAttribute('x',(xd+xFix)/2);
+        lab.textContent='UNEMPLOYMENT = '+num(g);
+        $w.textContent='$14.00'; $d.textContent=num(Ld); $s.textContent='5.0'; $u.textContent=num(g);
+      },
+      onReset:function(){ $w.textContent='$14.00'; $d.textContent='5.0'; $s.textContent='5.0'; $u.textContent='0';
+        $n.textContent='Same shock as the last slide. Only one thing is different.'; },
+      onStart:function(){ $n.textContent='Demand falls. The wage does not …'; },
+      onFinish:function(){ lab.textContent='UNEMPLOYMENT = 2 WORKERS';
+        $w.textContent='$14.00'; $d.textContent='3.0'; $s.textContent='5.0'; $u.textContent='2';
+        $n.textContent='Firms want 3, five people want jobs, and the gap of 2 has nothing to close it.'; }
+    });
+  })();
+
+  show(0);
+})();
+</script>
+</body>
+</html>

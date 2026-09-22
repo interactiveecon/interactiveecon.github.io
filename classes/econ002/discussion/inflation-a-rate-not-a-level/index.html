@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECON 002 · Inflation: A Rate, Not a Level</title>
+<style>
+  :root{
+    --ink:#14243A;          /* near-navy ink */
+    --accent:#1F4E79;       /* deep blue (from worksheets) */
+    --accent-soft:#8FAADC;
+    --paper:#F6F4EE;        /* warm chalk-paper */
+    --paper-line:#E4E0D5;
+    --gold:#8A5900;
+    --gold-soft:#FBF1DC;
+    --red:#C0392B;
+    --grey:#5A5F66;
+    --chalk:#FbFaF7;
+    --shadow:0 8px 30px rgba(20,36,58,.10);
+    --mono:'Iosevka','SFMono-Regular',ui-monospace,'Cascadia Code',Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Georgia','Iowan Old Style',serif;
+    color:var(--ink);
+    background:var(--paper);
+    overflow:hidden;
+  }
+  /* ---------- deck scaffold ---------- */
+  .deck{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;
+    padding:clamp(1.25rem,4vw,4.5rem) clamp(1.5rem,6vw,6rem);
+    /* extra bottom room so content never hides behind the fixed nav bar (~46px) */
+    padding-bottom:calc(46px + clamp(1rem,3vw,2rem));
+    /* if a slide is taller than the screen, scroll it instead of clipping/overlapping */
+    overflow-y:auto;overflow-x:hidden;
+    scroll-padding-bottom:46px;
+    opacity:0;
+    transition:opacity .38s ease;
+  }
+  .slide.active{display:flex;opacity:1;animation:rise .45s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .slide.active{animation:none}
+    .slide{transition:none}
+    *{transition-duration:.001ms !important;animation-duration:.001ms !important}
+  }
+  /* visible keyboard focus (WCAG 2.4.7) */
+  a:focus-visible,button:focus-visible,input:focus-visible,[tabindex]:focus-visible{
+    outline:3px solid var(--accent);outline-offset:3px;border-radius:6px;
+  }
+  :focus:not(:focus-visible){outline:none}
+  /* ---------- typography ---------- */
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--grey);margin-bottom:1.1rem;font-weight:600;
+  }
+  h1{font-size:clamp(2.4rem,5.5vw,4.4rem);line-height:1.02;font-weight:700;letter-spacing:-.02em}
+  h2{font-size:clamp(1.5rem,3.2vw,2.4rem);line-height:1.1;font-weight:700;letter-spacing:-.01em;margin-bottom:.4rem}
+  .lede{font-size:clamp(1.05rem,1.7vw,1.35rem);line-height:1.5;color:var(--ink);max-width:52ch}
+  .muted{color:var(--grey)}
+  .serif-note{font-style:italic;color:var(--grey);font-size:1rem;line-height:1.5}
+  strong{font-weight:700}
+  .accent{color:var(--accent)}
+  .red{color:var(--red)}
+  .gold{color:var(--gold)}
+  /* title rule */
+  h2 + .titlerule{height:2px;background:linear-gradient(90deg,var(--accent-soft),transparent);
+    width:min(100%,640px);margin:.2rem 0 1.4rem}
+  /* ---------- model cards ---------- */
+  .models{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin:1.4rem 0;max-width:900px}
+  .model{
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;
+    padding:1.4rem 1.6rem;box-shadow:var(--shadow);position:relative;
+  }
+  .model .tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--accent);font-weight:700;margin-bottom:.6rem;display:block}
+  .model .eq{font-family:var(--mono);font-size:1.35rem;color:var(--ink)}
+  .model .eq .coef{color:var(--red);font-weight:700}
+  .model.dim{opacity:.4;filter:saturate(.4)}
+  .model.hi{border-color:var(--accent);box-shadow:0 8px 30px rgba(31,78,121,.22)}
+  .model .body{font-size:1rem;line-height:1.5;margin-top:.7rem}
+  .model.warm{background:var(--gold-soft);border-color:#E2CFA4}
+  .model.warm .tag{color:var(--gold)}
+  /* ---------- boxes ---------- */
+  .prompt,.reveal,.predict{
+    border-radius:10px;padding:1.05rem 1.3rem;max-width:820px;line-height:1.5;
+    font-family:'Georgia',serif;font-size:1.08rem;
+  }
+  .prompt{background:#EEF3FA;border-left:4px solid var(--accent)}
+  .reveal{background:var(--gold-soft);border-left:4px solid var(--gold)}
+  .cue{font-family:var(--mono);font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;display:block;margin-bottom:.4rem}
+  .prompt .cue{color:var(--accent)}
+  .reveal .cue{color:var(--gold)}
+  .predict .cue{color:var(--red)}
+  .predict{background:#FBEEEC;border-left:4px solid var(--red)}
+  .prompt p,.reveal p,.predict p{margin:0;line-height:1.5}
+  .prompt .cue + p,.reveal .cue + p,.predict .cue + p{margin-top:.15rem}
+  .prompt ol,.predict ol,.reveal ol{margin:.5rem 0 0 1.3rem;line-height:1.6}
+  .prompt li,.predict li,.reveal li{margin-bottom:.25rem}
+  /* chain / mono line */
+  .chain{
+    font-family:var(--mono);background:#EDF1F8;border:1px solid var(--accent-soft);
+    border-radius:8px;padding:.7rem 1rem;font-size:1.05rem;color:var(--accent);
+    display:inline-block;margin-top:.4rem
+  }
+  .chain.warm{background:var(--gold-soft);border-color:#E2CFA4;color:var(--gold)}
+  /* ---------- interactive graph panel ---------- */
+  .graphwrap{display:grid;grid-template-columns:1.15fr .85fr;gap:2rem;align-items:center;margin-top:.6rem;flex:1 0 auto}
+  @media (max-width:900px){.graphwrap{grid-template-columns:1fr}}
+  .panel{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;padding:1.2rem;box-shadow:var(--shadow)}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .controls{display:flex;flex-direction:column;gap:1.3rem}
+  .readout{font-family:var(--mono);font-size:.92rem;line-height:1.7;color:var(--ink);background:#EDF1F8;border-radius:8px;padding:.8rem 1rem}
+  .readout .big{font-size:1.25rem;color:var(--accent);font-weight:700}
+  .readout .lbl2{color:var(--grey)}
+  .btn{
+    font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;font-weight:700;
+    background:var(--accent);color:#fff;border:none;border-radius:8px;padding:.7rem 1.2rem;cursor:pointer;
+    box-shadow:0 3px 10px rgba(31,78,121,.3);transition:transform .1s,background .2s;align-self:flex-start
+  }
+  .btn:hover{background:#173a5c;transform:translateY(-1px)}
+  /* a spent reveal button stays in place — hiding it slid the row under the
+     cursor, so a second click landed on the next answer (disabled controls
+     are exempt from the contrast minimum) */
+  .btn:disabled,.btn.ghost:disabled{opacity:.38;cursor:default;transform:none;box-shadow:none}
+  .btn:disabled:hover{background:var(--accent);transform:none}
+  .btn.ghost:disabled:hover{background:transparent}
+  .btn.ghost{background:transparent;color:var(--accent);border:1.5px solid var(--accent);box-shadow:none}
+  .btn.ghost:hover{background:#EEF3FA}
+  .btnrow{display:flex;gap:.7rem;flex-wrap:wrap}
+  /* ---------- poll ---------- */
+  .poll-opts{display:flex;flex-direction:column;gap:.8rem;max-width:860px;margin-top:1.1rem}
+  .poll-opt{
+    display:flex;align-items:stretch;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;
+    cursor:pointer;background:var(--chalk);transition:border-color .2s,transform .08s;position:relative;
+    width:100%;text-align:left;font:inherit;color:inherit;padding:0
+  }
+  .poll-opt:hover{border-color:var(--accent-soft)}
+  .poll-opt:active{transform:scale(.995)}
+  .poll-opt .num{background:var(--accent);color:#fff;font-family:var(--mono);font-weight:700;
+    display:flex;align-items:center;justify-content:center;padding:0 1.1rem;font-size:1.1rem;z-index:2}
+  .poll-opt .txt{padding:.9rem 1.1rem;line-height:1.4;z-index:2;font-size:1.02rem;font-family:'Georgia',serif}
+  .poll.revealed .poll-opt{opacity:.5;transition:opacity .4s}
+  .poll.revealed .poll-opt.correct{opacity:1;border-color:var(--gold);background:var(--gold-soft)}
+  .poll-opt.correct .num{background:var(--gold)}
+  .poll-opt.correct .txt::after{content:" ✓ correct";color:var(--gold);font-family:var(--mono);font-weight:700;font-size:.82rem}
+  .poll-hint{font-family:var(--mono);font-size:.76rem;letter-spacing:.1em;text-transform:uppercase;color:var(--grey);margin-top:.9rem;font-weight:600}
+  /* ---------- footer / nav ---------- */
+  .chrome{position:fixed;bottom:0;left:0;right:0;height:46px;display:flex;align-items:center;
+    justify-content:space-between;padding:0 1.4rem;font-family:var(--mono);font-size:.72rem;
+    letter-spacing:.08em;color:var(--grey);pointer-events:none;z-index:50}
+  .chrome .course{text-transform:uppercase}
+  .progress-track{position:fixed;top:0;left:0;right:0;height:3px;background:transparent;z-index:60}
+  .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-soft));width:0;transition:width .35s ease}
+  .navhint{display:flex;gap:1.2rem;align-items:center;pointer-events:auto}
+  .navhint button{pointer-events:auto;background:none;border:none;color:var(--grey);cursor:pointer;font-family:var(--mono);font-size:.9rem;padding:.2rem .5rem;border-radius:5px}
+  .navhint button:hover{color:var(--accent);background:rgba(31,78,121,.08)}
+  .kbd{font-family:var(--mono);font-size:.66rem;border:1px solid var(--paper-line);border-radius:4px;padding:.1rem .35rem;color:var(--grey)}
+  /* content column helper */
+  .col{display:flex;flex-direction:column;gap:1.1rem;flex:1 0 auto;justify-content:center}
+  .grow{flex:1 0 auto}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:start}
+  @media (max-width:900px){.two{grid-template-columns:1fr}}
+  .calc{font-family:var(--mono);font-size:1.05rem;line-height:1.8}
+  .calc .lbl{color:var(--accent);font-weight:700}
+  .footnote{font-size:.92rem;color:var(--grey);font-style:italic}
+  .runsheet{display:grid;grid-template-columns:auto 1fr;gap:.35rem 1.1rem;font-family:var(--mono);font-size:.86rem;line-height:1.5;margin-top:.4rem}
+  .runsheet .rk{color:var(--accent);font-weight:700;white-space:nowrap}
+  /* title slide special */
+  .title-slide{justify-content:safe center}
+  .title-slide h1{margin:.6rem 0}
+  .signature{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:2rem}
+  /* ---------- section divider ---------- */
+  .divider{justify-content:safe center;background:linear-gradient(135deg,#1B3B5C,#14243A)}
+  .divider *{color:#F6F4EE}
+  .divider .eyebrow{color:#8FAADC}
+  .divider h1{font-size:clamp(2.2rem,5vw,4rem);color:#fff}
+  .divider .lede{color:#D6DEE9;max-width:52ch}
+  .divider .sectrail{font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#8FAADC;margin-top:1.6rem}
+  .divider .through{font-family:var(--mono);font-size:.8rem;line-height:1.6;color:#D6DEE9;
+    border-left:3px solid #8FAADC;padding-left:.9rem;margin-top:1.4rem;max-width:60ch}
+  /* ---------- generic click-reveal ---------- */
+  .reveal-hidden{opacity:0;max-height:0;overflow:hidden;transition:opacity .4s ease,max-height .5s ease}
+  .reveal-hidden.shown{opacity:1;max-height:none;overflow:visible;margin-top:1.1rem}
+  /* cell-level hide: keeps the table's layout, but the value is neither seen
+     nor read out by a screen reader until its reveal button is pressed */
+  .hid{visibility:hidden}
+  .hid.shown{visibility:visible}
+  /* condition cards (3-across; override grid-template-columns for 2) */
+  .condrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-top:1rem}
+  @media (max-width:900px){.condrow{grid-template-columns:1fr !important}}
+  .condcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.5rem}
+  .condcard .ctitle{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .condcard .cbtn{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:7px;padding:.55rem .8rem;cursor:pointer;align-self:flex-start}
+  .condcard .cbtn:hover{background:#173a5c}
+  .condcard .cbody{opacity:0;max-height:0;overflow:hidden;transition:opacity .35s,max-height .45s}
+  .condcard .cbody.shown{opacity:1;max-height:none;overflow:visible;margin-top:.3rem}
+  .condcard .cnote{font-size:.95rem;line-height:1.5;color:var(--ink)}
+  .condcard ul{margin:.2rem 0 0 1.1rem;font-size:.95rem;line-height:1.55}
+  .condcard li{margin-bottom:.3rem}
+  .condcard .big{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--accent)}
+  .condcard.warm{background:var(--gold-soft);border-color:#E2CFA4}
+  .condcard.warm .ctitle,.condcard.warm .big{color:var(--gold)}
+  /* diagnose (numbered flawed-argument) list */
+  .diag{display:flex;flex-direction:column;gap:.7rem;max-width:920px;margin:1rem 0}
+  .diag-opt{display:flex;gap:0;border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;background:var(--chalk);width:100%;text-align:left;font:inherit;color:inherit;padding:0;cursor:pointer;transition:border-color .2s}
+  .diag-opt:hover{border-color:var(--accent-soft)}
+  .diag-opt .n{background:var(--grey);color:#fff;font-family:var(--mono);font-weight:700;display:flex;align-items:center;padding:0 1rem;font-size:1.05rem}
+  .diag-opt .s{padding:.85rem 1.1rem;line-height:1.45;font-family:'Georgia',serif;font-size:1.02rem}
+  .diag.revealed .diag-opt{opacity:.5}
+  .diag.revealed .diag-opt.bad{opacity:1;border-color:var(--red);background:#FBEEEC}
+  .diag-opt.bad .n{background:var(--red)}
+  .diag.revealed .diag-opt.bad .s::after{content:" ✗ the flaw";color:var(--red);font-family:var(--mono);font-weight:700;font-size:.8rem}
+  /* fill-in-the-blank close line */
+  .blankline{font-family:var(--mono);font-size:clamp(1.1rem,2.4vw,1.7rem);line-height:2;color:var(--ink);
+    background:var(--chalk);border:1px solid var(--paper-line);border-radius:12px;padding:1.4rem 1.6rem;
+    box-shadow:var(--shadow);max-width:900px}
+  .blankline .bl{display:inline-block;min-width:9ch;border-bottom:2px solid var(--accent)}
+  /* ---------- data tables ---------- */
+  .sched{border-collapse:collapse;font-family:var(--mono);font-size:.86rem;background:var(--chalk);
+    border:1px solid var(--paper-line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+  .sched caption{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+    font-weight:700;color:var(--accent);text-align:left;padding:.5rem .8rem .35rem}
+  .sched th,.sched td{padding:.3rem .8rem;text-align:right;border-bottom:1px solid var(--paper-line)}
+  .sched th{color:var(--grey);font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.66rem}
+  .sched td:first-child,.sched th:first-child{text-align:left;color:var(--accent);font-weight:700}
+  .sched tbody tr:last-child td{border-bottom:none}
+  .sched tr.tot td{border-top:2px solid var(--paper-line);font-weight:700;color:var(--gold)}
+  .sched tr.tot td:first-child{color:var(--gold)}
+  .sched.gold{background:var(--gold-soft)}
+  .sched.gold caption,.sched.gold td:first-child{color:var(--gold)}
+  .sched.txt td{text-align:left}
+  .sched.txt td:first-child{white-space:nowrap}
+  .sched .yes{color:var(--gold);font-weight:700}
+  .sched .no{color:var(--red);font-weight:700}
+  .sched .foreign{color:var(--red)}
+  .schedrow{display:flex;gap:1.4rem;flex-wrap:wrap;align-items:flex-start}
+  .sched tr.hl td{background:var(--gold-soft);color:var(--gold);font-weight:700}
+  .sched tr.hl td:first-child{color:var(--gold)}
+  .sched tr{transition:background .18s}
+  /* ---------- two-card takeaway ---------- */
+  .pair2{display:grid;grid-template-columns:1fr 1fr;gap:1.6rem;margin-top:.8rem}
+  @media (max-width:900px){.pair2{grid-template-columns:1fr}}
+  .pcard{background:var(--chalk);border:1px solid var(--paper-line);border-radius:14px;
+    padding:1.2rem 1.3rem;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:.7rem}
+  .pcard .ptag{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:var(--accent)}
+  .pcard.warn .ptag{color:var(--red)}
+  .pcard .verdictbig{font-family:var(--mono);font-size:1rem;font-weight:700;line-height:1.5;color:var(--accent)}
+  .pcard.warn .verdictbig{color:var(--red)}
+  .pcard p{font-size:1rem;line-height:1.5}
+  /* ---------- reflow at 320px (WCAG 1.4.10) ---------- */
+  @media (max-width:700px){
+    .models{grid-template-columns:1fr}
+    .chain{max-width:100%;overflow-wrap:anywhere}
+    .sched{font-size:.76rem}
+    .sched th,.sched td{padding:.25rem .45rem}
+    .schedrow{gap:.9rem}
+    /* a wide table scrolls inside its own box rather than widening the slide */
+    .sched{display:block;overflow-x:auto;max-width:100%}
+    .col,.two > *,.graphwrap > *,.condrow > *,.pair2 > *,.schedrow > *{min-width:0}
+    /* a button column beside a table is sized in ch and set not to shrink;
+       at phone widths it has to give way instead of pushing the slide wide */
+    .schedrow > .col{flex:1 1 auto;max-width:100% !important}
+    .btnrow .btn{max-width:100%;overflow-wrap:anywhere}
+  }
+</style>
+</head>
+<body>
+<div class="progress-track"><div class="progress-fill" id="prog"></div></div>
+<div class="deck" id="deck">
+
+  <!-- ═══════════ 1. TITLE ═══════════ -->
+  <section class="slide active title-slide" data-section="Discussion 6 · Opening">
+    <div class="eyebrow" id="titleEyebrow">ECON 002 &middot; Discussion Section</div>
+    <h1>Inflation:<br><span class="accent">a rate, not a level</span></h1>
+    <p class="lede" style="margin-top:1rem">Today we pin down exactly which number the word &ldquo;inflation&rdquo; refers to, build that number out of a shopping basket, find where it comes from over the long run, and work out whose money it actually moves.</p>
+    <p class="serif-note" style="margin-top:1.6rem">Work on your own paper. Write your answer down before any answer appears &mdash; your reasoning is the point, not a clean final line.</p>
+    <div class="signature">What it is &rarr; Measuring &rarr; Where it comes from &rarr; Why it matters</div>
+  </section>
+
+  <!-- ══════════════ PART 1 · WHAT IT IS ══════════════ -->
+
+  <!-- ═══════════ 2. DIVIDER P1 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 6 · What It Is">
+    <div class="eyebrow">Part 1 of 4</div>
+    <h1>A rate,<br>not a level</h1>
+    <p class="lede">Nearly everything people get wrong about inflation is a confusion among three different numbers: the price level, the rate at which that level is changing, and the price of one particular thing.</p>
+    <div class="sectrail">WHAT IT IS &rarr; MEASURING &rarr; WHERE IT COMES FROM &rarr; WHY IT MATTERS</div>
+    <div class="through">Throughline: inflation is the rate at which the price level changes. Almost every mistake about inflation comes from confusing that rate with the level, or with the price of any one thing.</div>
+  </section>
+
+  <!-- ═══════════ 3. DEFINITION + Q1 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · What It Is">
+    <div class="eyebrow">Setup, then Question 1 &middot; commit on paper</div>
+    <h2>Two numbers, and only one of them is inflation</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch"><strong>Inflation is an overall increase in the price level</strong>, where the price level is roughly the average price across the whole economy. Two words in that sentence are doing all the work: <em>overall</em>, and <em>increase</em>.</p>
+      <div class="models">
+        <div class="model">
+          <span class="tag">The price level &middot; a level</span>
+          <div class="eq">P = 110</div>
+          <div class="body">An index number describing how expensive everything is right now, taken together. It answers <em>how high</em>. On its own it says nothing about which direction anything is moving.</div>
+        </div>
+        <div class="model warm">
+          <span class="tag">Inflation &middot; a rate</span>
+          <div class="eq">&pi; = 10%</div>
+          <div class="body">The percent change in that level over a year. It answers <em>how fast, and which way</em>. A rate can fall while the level it describes is still climbing.</div>
+        </div>
+      </div>
+      <div class="predict">
+        <span class="cue">Q1 &middot; predict &middot; write it down before the next slide</span>
+        <p>In a year when inflation is <strong>10%</strong>, does every price in the economy have to go up? Commit to <strong>yes</strong> or <strong>no</strong>, and add one sentence saying why.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 4. Q1 REVEAL ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · What It Is">
+    <div class="eyebrow">Answer &middot; Question 1</div>
+    <h2>No. One of these four got cheaper.</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">Four goods a student actually buys, priced in two consecutive years. Inflation over that year was <strong>10%</strong> &mdash; we build that number ourselves in Part 2.</p>
+      <div class="schedrow">
+        <table class="sched">
+          <caption>Q1 &mdash; four prices, 2024 and 2025</caption>
+          <thead>
+            <tr><th scope="col">Good</th><th scope="col">Price 2024</th><th scope="col">Price 2025</th><th scope="col">What it did</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Coffee (cup)</th><td>$4.00</td><td>$4.40</td><td><span class="hid yes" id="w1">&uarr; rose 10.0%</span></td></tr>
+            <tr><th scope="row">Bus pass (month)</th><td>$30</td><td>$36</td><td><span class="hid yes" id="w2">&uarr; rose 20.0%</span></td></tr>
+            <tr><th scope="row">Burrito</th><td>$10</td><td>$13</td><td><span class="hid yes" id="w3">&uarr; rose 30.0%</span></td></tr>
+            <tr><th scope="row">Textbook</th><td>$125</td><td>$120</td><td><span class="hid no" id="w4">&#9660; FELL 4.0%</span></td></tr>
+          </tbody>
+        </table>
+        <div class="col" style="justify-content:flex-start;gap:.7rem;max-width:46ch">
+          <div class="btnrow">
+            <button class="btn" data-reveal="w1,w2,w3">Show the first three</button>
+            <button class="btn" data-reveal="w4,q1rev">Show the fourth</button>
+          </div>
+        </div>
+      </div>
+      <div class="reveal-hidden" id="q1rev">
+        <div class="reveal" style="max-width:104ch">
+          <span class="cue">Answer &middot; Q1</span>
+          <p><strong>No.</strong> The textbook line fell from $125 to $120 &mdash; a drop of 4% &mdash; in a year when inflation ran at 10%. Nothing about that is a contradiction.</p>
+          <p style="margin-top:.7rem">Individual prices move for their own reasons: a new supplier, a bad harvest, a shift in what people want, a used-book market that finally got organized. <strong>Inflation is not a claim about any one of those prices.</strong> It is a claim about the average of all of them, and an average can rise while some of its parts fall.</p>
+          <div class="chain warm" style="margin-top:.8rem">three prices &uarr; &nbsp; one price &#9660; &nbsp; &rarr; &nbsp; the average still &uarr; 10%</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 5. Q2 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · What It Is">
+    <div class="eyebrow">Question 2 &middot; predict &middot; no answer on this slide</div>
+    <h2>Inflation falls from 10% to 5%</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:92ch">A country reports inflation of <strong>10%</strong> one year and <strong>5%</strong> the next. Every headline says inflation is coming down.</p>
+      <div class="predict">
+        <span class="cue">Q2 &middot; predict &middot; commit on paper</span>
+        <p>Write down whether <strong>prices are falling</strong>. Then write one more sentence saying what, exactly, <em>is</em> falling.</p>
+      </div>
+      <p class="serif-note">Both halves matter. The second sentence is where the distinction lives.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 6. Q2 REVEAL · THREE-REGIME ANIMATION ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · What It Is">
+    <div class="eyebrow">Answer &middot; Question 2</div>
+    <h2>What actually happened to the price level</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 500 394" role="img" aria-label="An animated line chart of the price level over four years. The line starts at 100 and climbs steeply to 110, then climbs gently to 115.5, then turns downward to 113.2. Brackets underneath name the three stretches: inflation at plus ten percent, disinflation at plus five percent where the level is still rising but more slowly, and deflation at minus two percent where the level is finally falling. The chart demonstrates that a fall in the inflation rate from ten percent to five percent leaves the price level rising.">
+          <g stroke="#E4E0D5" stroke-width="1">
+            <line x1="70" y1="300" x2="445" y2="300"/><line x1="70" y1="252" x2="445" y2="252"/>
+            <line x1="70" y1="204" x2="445" y2="204"/><line x1="70" y1="156" x2="445" y2="156"/>
+            <line x1="70" y1="108" x2="445" y2="108"/><line x1="70" y1="60" x2="445" y2="60"/>
+            <line x1="195" y1="60" x2="195" y2="300"/><line x1="320" y1="60" x2="320" y2="300"/>
+            <line x1="445" y1="60" x2="445" y2="300"/>
+          </g>
+          <line x1="70" y1="60" x2="70" y2="300" stroke="#5A5F66" stroke-width="1.6"/>
+          <line x1="70" y1="300" x2="445" y2="300" stroke="#5A5F66" stroke-width="1.6"/>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="end">
+            <text x="62" y="304">95</text><text x="62" y="256">100</text><text x="62" y="208">105</text>
+            <text x="62" y="160">110</text><text x="62" y="112">115</text><text x="62" y="64">120</text>
+          </g>
+          <g font-family="monospace" font-size="12" fill="#5A5F66" text-anchor="middle">
+            <text x="70" y="320">2024</text><text x="195" y="320">2025</text>
+            <text x="320" y="320">2026</text><text x="445" y="320">2027</text>
+          </g>
+          <text x="76" y="50" font-family="monospace" font-size="12.5" font-weight="700" fill="#14243A">price level (CPI)</text>
+          <polyline id="plPath" points="70,252" fill="none" stroke="#1F4E79" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle id="plDot" cx="70" cy="252" r="6.5" fill="#1F4E79"/>
+          <text x="70" y="274" font-family="monospace" font-size="12" font-weight="700" fill="#1F4E79" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">100.0</text>
+          <g id="plg1" opacity="0">
+            <text x="195" y="146" font-family="monospace" font-size="12" font-weight="700" fill="#1F4E79" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">110.0</text>
+            <path d="M70 326 L70 332 L195 332 L195 326" fill="none" stroke="#1F4E79" stroke-width="1.6"/>
+            <text x="132" y="350" font-family="monospace" font-size="12.5" font-weight="700" fill="#1F4E79" text-anchor="middle">INFLATION</text>
+            <text x="132" y="365" font-family="monospace" font-size="11" font-weight="700" fill="#1F4E79" text-anchor="middle">&#43;10.0%</text>
+            <text x="132" y="379" font-family="monospace" font-size="9.5" fill="#5A5F66" text-anchor="middle">rising fast</text>
+          </g>
+          <g id="plg2" opacity="0">
+            <text x="320" y="93" font-family="monospace" font-size="12" font-weight="700" fill="#1F4E79" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">115.5</text>
+            <path d="M195 326 L195 332 L320 332 L320 326" fill="none" stroke="#8A5900" stroke-width="1.6"/>
+            <text x="257" y="350" font-family="monospace" font-size="12.5" font-weight="700" fill="#8A5900" text-anchor="middle">DISINFLATION</text>
+            <text x="257" y="365" font-family="monospace" font-size="11" font-weight="700" fill="#8A5900" text-anchor="middle">&#43;5.0%</text>
+            <text x="257" y="379" font-family="monospace" font-size="9.5" fill="#5A5F66" text-anchor="middle">still rising, slower</text>
+          </g>
+          <g id="plg3" opacity="0">
+            <text x="445" y="147" font-family="monospace" font-size="12" font-weight="700" fill="#C0392B" text-anchor="middle" stroke="#FbFaF7" stroke-width="3.5" paint-order="stroke">&#9660; 113.2</text>
+            <path d="M320 326 L320 332 L445 332 L445 326" fill="none" stroke="#C0392B" stroke-width="1.6"/>
+            <text x="382" y="350" font-family="monospace" font-size="12.5" font-weight="700" fill="#C0392B" text-anchor="middle">&#9660; DEFLATION</text>
+            <text x="382" y="365" font-family="monospace" font-size="11" font-weight="700" fill="#C0392B" text-anchor="middle">&minus;2.0%</text>
+            <text x="382" y="379" font-family="monospace" font-size="9.5" fill="#5A5F66" text-anchor="middle">the level falls</text>
+          </g>
+        </svg>
+        <p class="footnote" style="margin-top:.6rem">The first two stretches are this economy&rsquo;s own basket numbers; the third is added to show what deflation would look like in the same economy. It is the only stretch in which prices fall, and it is marked <span class="no">&#9660;</span> as well as colored.</p>
+      </div>
+      <div class="controls">
+        <div class="btnrow">
+          <button class="btn" id="plplay">&#9654; Play the three stretches</button>
+          <button class="btn ghost" id="plreset">Reset</button>
+        </div>
+        <div class="readout" aria-live="polite" aria-atomic="true">
+          price level &nbsp;&nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="plP">100.0</span><br>
+          this stretch &nbsp;&nbsp;&rarr;&nbsp; <span class="big" id="plW">2024</span><br>
+          inflation rate &rarr;&nbsp; <span class="big" id="plI">&mdash;</span><br>
+          <span id="plnote" style="color:var(--grey)">Press play. Watch the line, not the labels.</span>
+        </div>
+        <button class="btn" data-reveal="q2rev">Show the answer</button>
+        <div class="reveal-hidden" id="q2rev">
+          <div class="reveal">
+            <span class="cue">Answer &middot; Q2</span>
+            <p><strong>No, prices are not falling.</strong> The price level went from <strong>110 to 115.5</strong>. It rose. What fell was the <em>rate</em> at which it was rising: 10% became 5%.</p>
+            <p style="margin-top:.7rem">Three words, three different claims about the same line: <strong>inflation</strong>, the level is rising; <strong>disinflation</strong>, the level is still rising but the rate is smaller; <strong>deflation</strong>, the level is actually falling. Only the third is prices going down.</p>
+            <div class="chain warm" style="margin-top:.8rem">&#43;10% &rarr; &#43;5% &rarr; &minus;2% &nbsp;&nbsp; rising fast &rarr; rising slowly &rarr; falling</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 7. Q3 DIAGNOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · What It Is">
+    <div class="eyebrow">Question 3 &middot; diagnose &middot; pick a number on paper first</div>
+    <h2>One of these three does not follow</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:92ch">All three sentences below are about an economy whose inflation rate went from 10% to 5%. <strong>One of them reasons badly.</strong> Pick its number, and be ready to say what is wrong with the <em>reasoning</em> rather than with the arithmetic.</p>
+    <div>
+      <div class="diag" id="diag3">
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">1</span><span class="s">The price level rose in 2025 and rose again in 2026, but it rose by less in 2026.</span></button>
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">2</span><span class="s">Inflation came down from 10% to 5% last year, so groceries should cost less than they did.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">3</span><span class="s">A single good&rsquo;s price can fall during a year in which the overall price level rises.</span></button>
+      </div>
+      <p class="poll-hint">Commit to a number on your own paper before the answer appears.</p>
+      <button class="btn" data-diag-reveal="diag3" style="margin-top:.6rem">Show the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem;max-width:104ch">
+        <span class="cue">Answer &middot; a true premise and a conclusion it does not support</span>
+        <p><strong>Sentence 2 is the flaw</strong>, and notice how little of it is wrong. Inflation really did come down from 10% to 5%. The word doing the damage is <strong>so</strong>.</p>
+        <p style="margin-top:.7rem">5% is a positive rate, and a positive rate means the level is still climbing &mdash; from 110 to 115.5 in this economy. Groceries cost <em>more</em> than they did; they simply got more expensive at half the pace. The only thing that would make the level fall is a <strong>negative</strong> rate, and 5% is not negative.</p>
+        <p style="margin-top:.7rem">Sentences 1 and 3 are both true, and they are the tools. Sentence 1 is the correct reading of exactly the same fact. Sentence 3 is Q1: an average can rise while some of its parts fall. <strong>Whenever an inflation number moves, ask first whether it is the level or the rate that just changed.</strong></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 2 · MEASURING ══════════════ -->
+
+  <!-- ═══════════ 8. DIVIDER P2 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 6 · Measuring">
+    <div class="eyebrow">Part 2 of 4</div>
+    <h1>One number out<br>of millions</h1>
+    <p class="lede">An economy has millions of prices, moving in different directions and by different amounts. Getting a single honest number out of that requires deciding what to hold still.</p>
+    <div class="sectrail">WHAT IT IS &#10003; &rarr; MEASURING &rarr; WHERE IT COMES FROM &rarr; WHY IT MATTERS</div>
+    <div class="through">Throughline: inflation is the rate at which the price level changes. Almost every mistake about inflation comes from confusing that rate with the level, or with the price of any one thing.</div>
+  </section>
+
+  <!-- ═══════════ 9. THE FIXED BASKET ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Measuring">
+    <div class="eyebrow">Setup &middot; no question yet</div>
+    <h2>Fix the basket, then price it again</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">In Q1, four prices went four different ways. Multiply that by every good in the economy and the question becomes real: <strong>which of those millions of numbers is &ldquo;the&rdquo; price?</strong></p>
+      <div class="panel" style="max-width:940px">
+        <svg viewBox="0 0 560 195" role="img" aria-label="Three panels side by side, labeled 2024, 2025, and 2026. Each panel lists exactly the same quantities: 250 cups of coffee, 10 bus passes, 4 textbooks, and 20 burritos. Each panel ends with the cost of that basket, still unknown. The diagram shows that the list of goods and quantities never changes from year to year, so only the prices can move.">
+            <text x="10" y="16" font-family="monospace" font-size="11" font-weight="700" fill="#5A5F66">THE SAME LIST, THE SAME QUANTITIES, EVERY YEAR</text>
+            <g>
+              <rect x="10" y="30" width="170" height="145" fill="#EEF3FA" stroke="#1F4E79" stroke-width="1.5" rx="8"/>
+              <text x="95" y="52" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="middle">2024</text>
+              <g font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle">
+                <text x="95" y="74">250 cups of coffee</text><text x="95" y="92">10 bus passes</text>
+                <text x="95" y="110">4 textbooks</text><text x="95" y="128">20 burritos</text>
+              </g>
+              <line x1="26" y1="140" x2="164" y2="140" stroke="#8FAADC" stroke-width="1"/>
+              <text x="95" y="162" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle">cost = ?</text>
+            </g>
+            <g>
+              <rect x="195" y="30" width="170" height="145" fill="#EEF3FA" stroke="#1F4E79" stroke-width="1.5" rx="8"/>
+              <text x="280" y="52" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="middle">2025</text>
+              <g font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle">
+                <text x="280" y="74">250 cups of coffee</text><text x="280" y="92">10 bus passes</text>
+                <text x="280" y="110">4 textbooks</text><text x="280" y="128">20 burritos</text>
+              </g>
+              <line x1="211" y1="140" x2="349" y2="140" stroke="#8FAADC" stroke-width="1"/>
+              <text x="280" y="162" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle">cost = ?</text>
+            </g>
+            <g>
+              <rect x="380" y="30" width="170" height="145" fill="#EEF3FA" stroke="#1F4E79" stroke-width="1.5" rx="8"/>
+              <text x="465" y="52" font-family="monospace" font-size="13" font-weight="700" fill="#1F4E79" text-anchor="middle">2026</text>
+              <g font-family="monospace" font-size="11" fill="#14243A" text-anchor="middle">
+                <text x="465" y="74">250 cups of coffee</text><text x="465" y="92">10 bus passes</text>
+                <text x="465" y="110">4 textbooks</text><text x="465" y="128">20 burritos</text>
+              </g>
+              <line x1="396" y1="140" x2="534" y2="140" stroke="#8FAADC" stroke-width="1"/>
+              <text x="465" y="162" font-family="monospace" font-size="13" font-weight="700" fill="#8A5900" text-anchor="middle">cost = ?</text>
+            </g>
+        </svg>
+      </div>
+      <p class="lede" style="max-width:96ch">The answer is to stop asking about goods one at a time. Choose a fixed list of goods <em>and quantities</em> &mdash; a <strong>basket</strong> &mdash; and find what that identical basket costs, year after year. The list never moves. So if its cost changes, prices are the only thing that can have changed it.</p>
+      <div class="chain">same basket &rarr; priced in 2024, 2025, 2026 &rarr; the change is prices, and nothing else</div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 10. Q4 · COST OF THE BASKET IN 2024 ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Measuring">
+    <div class="eyebrow">Question 4 &middot; compute it before you press anything</div>
+    <h2>The basket, in its base year</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <div class="prompt" style="max-width:104ch">
+        <span class="cue">Q4 &middot; compute</span>
+        <p>Multiply quantity by price for each good, then add the four products. <strong>What did this basket cost in 2024?</strong> Write all four products and the total.</p>
+      </div>
+      <div class="schedrow">
+        <table class="sched">
+          <caption>Q4 &mdash; the basket at 2024 prices</caption>
+          <thead>
+            <tr><th scope="col">Good</th><th scope="col">Quantity (2024)</th><th scope="col">Price 2024</th><th scope="col">Spending</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Coffee (cups)</th><td>250</td><td>$4.00</td><td><span class="hid" id="b1">$1,000</span></td></tr>
+            <tr><th scope="row">Bus pass (months)</th><td>10</td><td>$30</td><td><span class="hid" id="b2">$300</span></td></tr>
+            <tr><th scope="row">Textbooks</th><td>4</td><td>$125</td><td><span class="hid" id="b3">$500</span></td></tr>
+            <tr><th scope="row">Burritos</th><td>20</td><td>$10</td><td><span class="hid" id="b4">$200</span></td></tr>
+            <tr class="tot"><td>Cost of the basket</td><td></td><td></td><td><span class="hid" id="b5">$2,000</span></td></tr>
+          </tbody>
+        </table>
+        <div class="col" style="justify-content:flex-start;gap:.6rem;max-width:40ch">
+          <div class="btnrow">
+            <button class="btn" data-reveal="b1">Coffee</button>
+            <button class="btn" data-reveal="b2">Bus pass</button>
+            <button class="btn" data-reveal="b3">Textbooks</button>
+            <button class="btn" data-reveal="b4">Burritos</button>
+          </div>
+          <button class="btn ghost" data-reveal="b1,b2,b3,b4,b5,q4rev">Show the total</button>
+        </div>
+      </div>
+      <div class="reveal-hidden" id="q4rev">
+        <div class="reveal" style="max-width:104ch">
+          <span class="cue">Answer &middot; Q4</span>
+          <div class="calc">250&times;$4.00 = <span class="lbl">$1,000</span> &nbsp;&#43;&nbsp; 10&times;$30 = <span class="lbl">$300</span> &nbsp;&#43;&nbsp; 4&times;$125 = <span class="lbl">$500</span> &nbsp;&#43;&nbsp; 20&times;$10 = <span class="lbl">$200</span> &nbsp;=&nbsp; <strong>$2,000</strong></div>
+          <p style="margin-top:.7rem">2024 is the <strong>base year</strong>: the year whose quantities we froze, and the year every later basket gets compared against.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 11. Q5 · THE 2025 COST AND THE CPI ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Measuring">
+    <div class="eyebrow">Question 5 &middot; compute it before you press anything</div>
+    <h2>The same basket, one year later</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <div class="prompt" style="max-width:104ch">
+        <span class="cue">Q5 &middot; compute, in two steps</span>
+        <p>The quantities are still the 2024 quantities. Only the prices are new.</p>
+        <ol>
+          <li>What does the basket cost in <strong>2025</strong>?</li>
+          <li>Taking 2024 as the base year, what is the <strong>CPI</strong> for 2025?</li>
+        </ol>
+      </div>
+      <div class="schedrow">
+        <table class="sched">
+          <caption>Q5 &mdash; the 2024 basket at 2025 prices</caption>
+          <thead>
+            <tr><th scope="col">Good</th><th scope="col">Quantity (still 2024)</th><th scope="col">Price 2025</th><th scope="col">Spending</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Coffee (cups)</th><td>250</td><td>$4.40</td><td><span class="hid" id="c1">$1,100</span></td></tr>
+            <tr><th scope="row">Bus pass (months)</th><td>10</td><td>$36</td><td><span class="hid" id="c2">$360</span></td></tr>
+            <tr><th scope="row">Textbooks</th><td>4</td><td>$120 <span class="no">&#9660;</span></td><td><span class="hid" id="c3">$480</span></td></tr>
+            <tr><th scope="row">Burritos</th><td>20</td><td>$13</td><td><span class="hid" id="c4">$260</span></td></tr>
+            <tr class="tot"><td>Cost of the basket</td><td></td><td></td><td><span class="hid" id="c5">$2,200</span></td></tr>
+          </tbody>
+        </table>
+        <div class="col" style="justify-content:flex-start;gap:.6rem;max-width:40ch">
+          <div class="btnrow">
+            <button class="btn" data-reveal="c1">Coffee</button>
+            <button class="btn" data-reveal="c2">Bus pass</button>
+            <button class="btn" data-reveal="c3">Textbooks</button>
+            <button class="btn" data-reveal="c4">Burritos</button>
+          </div>
+          <button class="btn ghost" data-reveal="c1,c2,c3,c4,c5">Show the total</button>
+          <button class="btn" data-reveal="q5rev">Show the CPI</button>
+        </div>
+      </div>
+      <div class="reveal-hidden" id="q5rev">
+        <div class="reveal" style="max-width:104ch">
+          <span class="cue">Answer &middot; Q5</span>
+          <div class="calc">$1,100 &#43; $360 &#43; $480 &#43; $260 = <strong>$2,200</strong></div>
+          <p style="margin-top:.7rem">The CPI turns that dollar figure into an index by comparing it with the base year:</p>
+          <div class="chain warm" style="margin-top:.4rem">CPI = 100 &times; (cost of the basket this year) &divide; (cost of the basket in the base year)</div>
+          <div class="calc" style="margin-top:.6rem">2024: 100 &times; $2,000 &divide; $2,000 = <strong>100.0</strong><br>2025: 100 &times; $2,200 &divide; $2,000 = <strong>110.0</strong></div>
+          <p style="margin-top:.7rem">The base year always comes out at exactly <strong>100</strong>, because you are dividing a number by itself. The CPI has no units and no meaning on its own &mdash; 110 is only informative next to the 100 it is being compared with.</p>
+          <p style="margin-top:.7rem">And notice the textbook row: <span class="no">&#9660;</span> that price <em>fell</em>, from $500 of spending to $480, and the basket still cost 10% more. That is Q1, in this economy&rsquo;s own arithmetic.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 12. FROM AN INDEX TO A RATE ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Measuring">
+    <div class="eyebrow">Building the rate out of the level</div>
+    <h2>Inflation is the percent change in the CPI</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <div class="chain">&pi; = 100 &times; (CPI this year &minus; CPI last year) &divide; CPI last year</div>
+      <div class="schedrow">
+        <table class="sched">
+          <caption>The basket, three years running</caption>
+          <thead>
+            <tr><th scope="col">Year</th><th scope="col">Cost of basket</th><th scope="col">CPI</th><th scope="col">Inflation</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">2024</th><td>$2,000</td><td>100.0</td><td>&mdash;</td></tr>
+            <tr><th scope="row">2025</th><td>$2,200</td><td>110.0</td><td><span class="hid yes" id="d1">10.0%</span></td></tr>
+            <tr><th scope="row">2026</th><td><span class="hid" id="d2">$2,310</span></td><td><span class="hid" id="d3">115.5</span></td><td><span class="hid yes" id="d4">5.0%</span></td></tr>
+          </tbody>
+        </table>
+        <div class="col" style="justify-content:flex-start;gap:.6rem;max-width:44ch">
+          <button class="btn" data-reveal="d1,r25">Show the 2025 rate</button>
+          <button class="btn" data-reveal="d2,d3,d4,r26">Show all of 2026</button>
+        </div>
+      </div>
+      <div class="reveal-hidden" id="r25">
+        <div class="reveal" style="max-width:104ch">
+          <span class="cue">2025</span>
+          <div class="calc">100 &times; (110.0 &minus; 100.0) &divide; 100.0 = <strong>10.0%</strong></div>
+        </div>
+      </div>
+      <div class="reveal-hidden" id="r26">
+        <div class="reveal" style="max-width:104ch">
+          <span class="cue">2026 &middot; and a number you have already argued about</span>
+          <div class="calc">2026 basket: 250&times;$4.80 &#43; 10&times;$39 &#43; 4&times;$120 &#43; 20&times;$12 = <strong>$2,310</strong><br>CPI: 100 &times; $2,310 &divide; $2,000 = <strong>115.5</strong><br>&pi;: 100 &times; (115.5 &minus; 110.0) &divide; 110.0 = <strong>5.0%</strong></div>
+          <p style="margin-top:.7rem">Look at what this economy just did. <strong>Inflation fell from 10% to 5%.</strong> Over the same two years the <strong>price level rose from 110 to 115.5.</strong> That is Q2, no longer as a word puzzle but as two columns of one table.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 13. WHY THE QUANTITIES ARE FROZEN ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Measuring">
+    <div class="eyebrow">The same trick you have already seen, run backward</div>
+    <h2>Hold one thing still, and measure the other</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">Freezing the quantities is not a convenience. It is the entire measurement. If the list of goods were allowed to change alongside the prices, a rise in the basket&rsquo;s cost could mean prices went up, or that people simply started buying more &mdash; and there would be no way to tell which.</p>
+      <div class="pair2">
+        <div class="pcard">
+          <div class="ptag">Real GDP &middot; from Measuring GDP</div>
+          <div class="verdictbig">hold prices fixed &rarr; measure quantities</div>
+          <p>Price every year&rsquo;s output at one year&rsquo;s prices. Then the only thing that can move the total is how much got produced. The ruler stops moving so the object can be measured.</p>
+        </div>
+        <div class="pcard">
+          <div class="ptag">The CPI &middot; today</div>
+          <div class="verdictbig">hold quantities fixed &rarr; measure prices</div>
+          <p>Buy the same list every year. Then the only thing that can move the total is what those goods cost. Same discipline, pointed the other way.</p>
+        </div>
+      </div>
+      <div class="chain">one moving part at a time &rarr; the number means something</div>
+      <p class="serif-note">Every good measure of anything in this course is built this way: decide what you want to see, then freeze everything else so it cannot contaminate the answer.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 14. Q6 · SUBSTITUTION ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Measuring">
+    <div class="eyebrow">Question 6 &middot; predict &middot; the cost of freezing the basket</div>
+    <h2>Coffee doubles. Everybody switches to tea.</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">The price of coffee doubles. Students respond the way people do: they stop buying 250 cups a year and drink tea instead, at roughly the old cost.</p>
+      <div class="predict">
+        <span class="cue">Q6 &middot; predict &middot; commit on paper</span>
+        <p>Does the CPI notice the switch? Write <strong>yes</strong> or <strong>no</strong>, and then say what that means for whether the CPI is telling the truth about the cost of living.</p>
+      </div>
+      <button class="btn" data-reveal="q6rev">Show the answer</button>
+      <div class="reveal-hidden" id="q6rev">
+        <div class="reveal" style="max-width:104ch">
+          <span class="cue">Answer &middot; Q6</span>
+          <p><strong>No, it does not notice.</strong> The basket was fixed in 2024 and it still contains 250 cups of coffee. The CPI keeps charging you for coffee at the new high price even though you no longer buy any.</p>
+          <p style="margin-top:.7rem">So the CPI reports a bigger increase in the cost of living than students actually suffered &mdash; they dodged most of it by switching. Freezing the basket is what made the measure honest about prices, and it is the same freezing that makes it <strong>overstate</strong> the rise in the cost of living. This is <strong>substitution bias</strong>, and it is the price of the trick from the last slide.</p>
+        </div>
+        <div class="condrow" style="margin-top:1rem">
+          <div class="condcard warm">
+            <div class="ctitle">1 &middot; Substitution bias</div>
+            <div class="cnote">When one good gets expensive, people buy less of it. The fixed basket cannot, so the CPI overstates how much worse off they are.</div>
+          </div>
+          <div class="condcard">
+            <div class="ctitle">2 &middot; New goods</div>
+            <div class="cnote">A good invented after the base year is not in the basket, so the extra choice it gives consumers never shows up in the index.</div>
+          </div>
+          <div class="condcard">
+            <div class="ctitle">3 &middot; Unmeasured quality</div>
+            <div class="cnote">A phone that costs 10% more and does twice as much is recorded as a 10% price increase, when part of that is simply a better good.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 15. THE GDP DEFLATOR ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Measuring">
+    <div class="eyebrow">A second route to a price level</div>
+    <h2>The GDP deflator</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <div class="chain">GDP deflator = 100 &times; nominal GDP &divide; real GDP</div>
+      <p class="lede" style="max-width:96ch">Nominal GDP is this year&rsquo;s output at this year&rsquo;s prices; real GDP is this year&rsquo;s output at base-year prices. They describe the same pile of goods, so whatever separates them is <em>only</em> prices &mdash; which makes their ratio a price level. Here is the <strong>coffee-and-laptop economy from Measuring GDP</strong>, back again.</p>
+      <div class="schedrow">
+        <table class="sched">
+          <caption>The coffee-and-laptop economy &mdash; 2025 is the base year</caption>
+          <thead>
+            <tr><th scope="col">Year</th><th scope="col">Nominal GDP</th><th scope="col">Real GDP (2025 prices)</th><th scope="col">Deflator</th><th scope="col">Inflation</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">2025</th><td>$20,000</td><td>$20,000</td><td><span class="hid" id="e1">100.0</span></td><td>&mdash;</td></tr>
+            <tr><th scope="row">2026</th><td>$28,000</td><td>$25,000</td><td><span class="hid" id="e2">112.0</span></td><td><span class="hid yes" id="e3">12.0%</span></td></tr>
+          </tbody>
+        </table>
+        <div class="col" style="justify-content:flex-start;gap:.6rem;max-width:44ch">
+          <button class="btn" data-reveal="e1">Show the 2025 deflator</button>
+          <button class="btn" data-reveal="e2,e3,defrev">Show 2026 and the rate</button>
+        </div>
+      </div>
+      <div class="reveal-hidden" id="defrev">
+        <div class="reveal" style="max-width:104ch">
+          <span class="cue">Worked through</span>
+          <div class="calc">2025: 100 &times; $20,000 &divide; $20,000 = <strong>100.0</strong><br>2026: 100 &times; $28,000 &divide; $25,000 = <strong>112.0</strong><br>&pi;: 100 &times; (112.0 &minus; 100.0) &divide; 100.0 = <strong>12.0%</strong></div>
+          <p style="margin-top:.7rem">In the base year nominal and real GDP are the same number by construction, so the deflator is 100 &mdash; exactly as the CPI is 100 in its base year. Both indexes are built to be meaningless alone and informative in comparison.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 16. Q7 · SORT ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Measuring">
+    <div class="eyebrow">Question 7 &middot; sort all three on paper first</div>
+    <h2>Which index sees each of these?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <div class="prompt" style="max-width:104ch">
+        <span class="cue">Q7 &middot; write CPI, deflator, or both beside each</span>
+        <ol>
+          <li>An imported television, bought by a household.</li>
+          <li>A factory robot, built in this country and bought by a firm.</li>
+          <li>A haircut, bought by a household from a local shop.</li>
+        </ol>
+        <p style="margin-top:.6rem">Two questions decide every one of them: <em>was it produced here?</em> and <em>did a household buy it?</em></p>
+      </div>
+      <div class="schedrow">
+        <table class="sched txt">
+          <caption>Q7 &mdash; what each index is built to see</caption>
+          <thead>
+            <tr><th scope="col">Item</th><th scope="col">Counted in</th><th scope="col">Why</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">1 &middot; Imported television</th><td><span class="hid" id="f1">CPI only</span></td><td><span class="hid" id="f2">A household bought it, so it is in the consumption basket. It was not produced here, so it is in nobody&rsquo;s GDP but the exporter&rsquo;s.</span></td></tr>
+            <tr><th scope="row">2 &middot; Factory robot</th><td><span class="hid" id="f3">Deflator only</span></td><td><span class="hid" id="f4">Produced here, so it is in GDP. No household buys a factory robot, so it is nowhere near the consumption basket.</span></td></tr>
+            <tr><th scope="row">3 &middot; Haircut</th><td><span class="hid" id="f5">Both</span></td><td><span class="hid" id="f6">Produced here and bought by a household. It clears both tests, which is why most of what you buy shows up in both indexes.</span></td></tr>
+          </tbody>
+        </table>
+        <div class="col" style="justify-content:flex-start;gap:.6rem;max-width:34ch">
+          <div class="btnrow">
+            <button class="btn" data-reveal="f1,f2">1 &middot; television</button>
+            <button class="btn" data-reveal="f3,f4">2 &middot; robot</button>
+            <button class="btn" data-reveal="f5,f6">3 &middot; haircut</button>
+          </div>
+          <button class="btn" data-reveal="q7rev">And the deeper difference</button>
+        </div>
+      </div>
+      <div class="reveal-hidden" id="q7rev">
+        <div class="reveal" style="max-width:104ch">
+          <span class="cue">The structural difference</span>
+          <p>Coverage is the easy half. The real difference is in the basket itself. <strong>The CPI&rsquo;s basket is fixed</strong> at base-year quantities and only changes when the quantities are deliberately re-surveyed. <strong>The deflator&rsquo;s basket is whatever the economy actually produced this year</strong>, so it changes every single year, on its own.</p>
+          <p style="margin-top:.7rem">That is why substitution bias is a CPI problem and not a deflator problem &mdash; and why the deflator cannot answer the question the CPI is built for, which is what happened to the cost of buying a <em>particular</em> standard of living.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 17. CORE INFLATION ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Measuring">
+    <div class="eyebrow">One adjustment, and one more index</div>
+    <h2>Core inflation</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">Food and energy prices swing sharply from month to month &mdash; a bad harvest, a cold winter, a disruption in oil &mdash; and they are a large share of the basket. So a single shock can move the headline number without telling you anything about where prices are heading.</p>
+      <div class="pair2">
+        <div class="pcard">
+          <div class="ptag">Headline inflation</div>
+          <div class="verdictbig">every good in the basket</div>
+          <p>What households actually pay, including the volatile parts. This is the number that describes your year.</p>
+        </div>
+        <div class="pcard">
+          <div class="ptag">Core inflation</div>
+          <div class="verdictbig">food and energy excluded</div>
+          <p>The identical calculation with the two jumpiest categories removed, so the underlying trend is visible through the noise.</p>
+        </div>
+      </div>
+      <p class="lede" style="max-width:96ch">One more index worth knowing by name: the <strong>PCE deflator</strong> covers consumer spending only, like the CPI, but with a basket that changes every year, like the deflator &mdash; and it is the measure the Federal Reserve prefers.</p>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 3 · WHERE IT COMES FROM ══════════════ -->
+
+  <!-- ═══════════ 18. DIVIDER P3 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 6 · Where It Comes From">
+    <div class="eyebrow">Part 3 of 4</div>
+    <h1>Where it<br>comes from</h1>
+    <p class="lede">Any single price can move for its own reasons. But a rise in <em>every</em> price at once is a different kind of event, and over the long run it has one source &mdash; and the source is not the goods.</p>
+    <div class="sectrail">WHAT IT IS &#10003; &rarr; MEASURING &#10003; &rarr; WHERE IT COMES FROM &rarr; WHY IT MATTERS</div>
+    <div class="through">Throughline: inflation is the rate at which the price level changes. Almost every mistake about inflation comes from confusing that rate with the level, or with the price of any one thing.</div>
+  </section>
+
+  <!-- ═══════════ 19. SETUP + Q8 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Where It Comes From">
+    <div class="eyebrow">Setup, then Question 8 &middot; predict</div>
+    <h2>Five hundred goods, two thousand dollars</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">An economy produces <strong>500 goods</strong> a year. There are <strong>$2,000</strong> of money in it, and every dollar gets spent exactly once. All $2,000 is therefore spent on all 500 goods, which fixes the average price with no room for argument.</p>
+      <div class="panel" style="max-width:820px">
+        <svg viewBox="0 0 630 120" role="img" aria-label="A bar chart of one economy in which one dollar and one good are drawn the same length. A gold money bar for two thousand dollars runs exactly four times as long as the blue goods bar for five hundred goods, and the money bar is divided into four segments, each the length of the goods bar, numbered one to four. Counting those four segments gives the average price of four dollars a good.">
+            <text x="8" y="13" font-family="monospace" font-size="10" font-weight="700" fill="#5A5F66">$1 OF MONEY AND 1 GOOD ARE DRAWN THE SAME LENGTH</text>
+            <line x1="120" y1="34" x2="120" y2="106" stroke="#5A5F66" stroke-width="1.6"/>
+            <line x1="160" y1="40" x2="160" y2="100" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="200" y1="40" x2="200" y2="100" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="240" y1="40" x2="240" y2="100" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="280" y1="40" x2="280" y2="100" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <text x="140" y="34" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">1</text>
+            <text x="180" y="34" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">2</text>
+            <text x="220" y="34" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">3</text>
+            <text x="260" y="34" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">4</text>
+            <text x="8" y="58" font-family="monospace" font-size="10" font-weight="700" fill="#5A5F66">CASE A</text>
+            <text x="8" y="71" font-family="monospace" font-size="10" fill="#5A5F66">today</text>
+            <text x="112" y="58" font-family="monospace" font-size="11" font-weight="700" fill="#5A5F66" text-anchor="end">MONEY</text>
+            <rect x="120" y="40" width="160" height="26" fill="#8A5900" stroke="#5E3D00" stroke-width="1.2" rx="3"/>
+            <line x1="160" y1="40" x2="160" y2="66" stroke="#FbFaF7" stroke-width="1.3"/>
+            <line x1="200" y1="40" x2="200" y2="66" stroke="#FbFaF7" stroke-width="1.3"/>
+            <line x1="240" y1="40" x2="240" y2="66" stroke="#FbFaF7" stroke-width="1.3"/>
+            <text x="288" y="58" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900">$2,000</text>
+            <text x="112" y="92" font-family="monospace" font-size="11" font-weight="700" fill="#5A5F66" text-anchor="end">GOODS</text>
+            <rect x="120" y="74" width="40" height="26" fill="#1F4E79" stroke="#14243A" stroke-width="1.2" rx="3"/>
+            <text x="168" y="92" font-family="monospace" font-size="12" font-weight="700" fill="#1F4E79">500 goods</text>
+            <text x="610" y="70" font-family="monospace" font-size="17" font-weight="700" fill="#14243A" text-anchor="end">P = $4</text>
+        </svg>
+      </div>
+      <div class="chain">P = M &divide; Y = $2,000 &divide; 500 = $4</div>
+      <div class="predict">
+        <span class="cue">Q8 &middot; predict &middot; commit on paper</span>
+        <p>The money supply doubles to <strong>$4,000</strong>. The economy still produces <strong>500 goods</strong>. Write down the new average price &mdash; and then write down whether anyone in this economy is better off.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 20. Q8 REVEAL ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Where It Comes From">
+    <div class="eyebrow">Answer &middot; Question 8 &middot; two cases</div>
+    <h2>The same 500 goods, either way</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 630 330" role="img" aria-label="A bar chart of three cases of the same economy, in which one dollar and one good are always drawn the same length, so the money bar is as many times longer than the goods bar as the price is in dollars. In case A the money bar for two thousand dollars is four goods-bar lengths long and the price is four dollars. In case B the money bar doubles to four thousand dollars while the goods bar is unchanged, so it is now eight goods-bar lengths long and the price doubles to eight dollars. In case C both bars double, so the money bar is four goods-bar lengths long again and the price is back to four dollars. The chart demonstrates that the price level depends on money relative to output, not on money alone.">
+            <text x="8" y="13" font-family="monospace" font-size="10" font-weight="700" fill="#5A5F66">$1 OF MONEY AND 1 GOOD ARE DRAWN THE SAME LENGTH</text>
+            <line x1="120" y1="34" x2="120" y2="316" stroke="#5A5F66" stroke-width="1.6"/>
+            <line x1="160" y1="40" x2="160" y2="100" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="200" y1="40" x2="200" y2="100" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="240" y1="40" x2="240" y2="100" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="280" y1="40" x2="280" y2="100" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <text x="140" y="34" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">1</text>
+            <text x="180" y="34" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">2</text>
+            <text x="220" y="34" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">3</text>
+            <text x="260" y="34" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">4</text>
+            <text x="8" y="58" font-family="monospace" font-size="10" font-weight="700" fill="#5A5F66">CASE A</text>
+            <text x="8" y="71" font-family="monospace" font-size="10" fill="#5A5F66">today</text>
+            <text x="112" y="58" font-family="monospace" font-size="11" font-weight="700" fill="#5A5F66" text-anchor="end">MONEY</text>
+            <rect x="120" y="40" width="160" height="26" fill="#8A5900" stroke="#5E3D00" stroke-width="1.2" rx="3"/>
+            <line x1="160" y1="40" x2="160" y2="66" stroke="#FbFaF7" stroke-width="1.3"/>
+            <line x1="200" y1="40" x2="200" y2="66" stroke="#FbFaF7" stroke-width="1.3"/>
+            <line x1="240" y1="40" x2="240" y2="66" stroke="#FbFaF7" stroke-width="1.3"/>
+            <text x="288" y="58" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900">$2,000</text>
+            <text x="112" y="92" font-family="monospace" font-size="11" font-weight="700" fill="#5A5F66" text-anchor="end">GOODS</text>
+            <rect x="120" y="74" width="40" height="26" fill="#1F4E79" stroke="#14243A" stroke-width="1.2" rx="3"/>
+            <text x="168" y="92" font-family="monospace" font-size="12" font-weight="700" fill="#1F4E79">500 goods</text>
+            <text x="610" y="70" font-family="monospace" font-size="17" font-weight="700" fill="#14243A" text-anchor="end">P = $4</text>
+            <g id="mbBand" opacity="0">
+            <line x1="8" y1="120" x2="622" y2="120" stroke="#E4E0D5" stroke-width="1"/>
+            <line x1="160" y1="146" x2="160" y2="206" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="200" y1="146" x2="200" y2="206" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="240" y1="146" x2="240" y2="206" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="280" y1="146" x2="280" y2="206" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="320" y1="146" x2="320" y2="206" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="360" y1="146" x2="360" y2="206" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="400" y1="146" x2="400" y2="206" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="440" y1="146" x2="440" y2="206" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <text x="140" y="140" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">1</text>
+            <text x="180" y="140" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">2</text>
+            <text x="220" y="140" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">3</text>
+            <text x="260" y="140" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">4</text>
+            <text x="300" y="140" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">5</text>
+            <text x="340" y="140" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">6</text>
+            <text x="380" y="140" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">7</text>
+            <text x="420" y="140" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">8</text>
+            <text x="8" y="164" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900">CASE B</text>
+            <text x="8" y="177" font-family="monospace" font-size="10" fill="#5A5F66">M doubles</text>
+            <text x="112" y="164" font-family="monospace" font-size="11" font-weight="700" fill="#5A5F66" text-anchor="end">MONEY</text>
+            <rect x="120" y="146" width="320" height="26" fill="#8A5900" stroke="#5E3D00" stroke-width="1.2" rx="3"/>
+            <line x1="160" y1="146" x2="160" y2="172" stroke="#FbFaF7" stroke-width="1.3"/>
+            <line x1="200" y1="146" x2="200" y2="172" stroke="#FbFaF7" stroke-width="1.3"/>
+            <line x1="240" y1="146" x2="240" y2="172" stroke="#FbFaF7" stroke-width="1.3"/>
+            <line x1="280" y1="146" x2="280" y2="172" stroke="#FbFaF7" stroke-width="1.3"/>
+            <line x1="320" y1="146" x2="320" y2="172" stroke="#FbFaF7" stroke-width="1.3"/>
+            <line x1="360" y1="146" x2="360" y2="172" stroke="#FbFaF7" stroke-width="1.3"/>
+            <line x1="400" y1="146" x2="400" y2="172" stroke="#FbFaF7" stroke-width="1.3"/>
+            <text x="448" y="164" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900">$4,000</text>
+            <text x="112" y="198" font-family="monospace" font-size="11" font-weight="700" fill="#5A5F66" text-anchor="end">GOODS</text>
+            <rect x="120" y="180" width="40" height="26" fill="#1F4E79" stroke="#14243A" stroke-width="1.2" rx="3"/>
+            <text x="168" y="198" font-family="monospace" font-size="12" font-weight="700" fill="#1F4E79">500 goods</text>
+            <text x="610" y="176" font-family="monospace" font-size="17" font-weight="700" fill="#8A5900" text-anchor="end">P = $8 &#9650;</text>
+            </g>
+            <g id="mcBand" opacity="0">
+            <line x1="8" y1="226" x2="622" y2="226" stroke="#E4E0D5" stroke-width="1"/>
+            <line x1="200" y1="252" x2="200" y2="312" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="280" y1="252" x2="280" y2="312" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="360" y1="252" x2="360" y2="312" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <line x1="440" y1="252" x2="440" y2="312" stroke="#D9CFBF" stroke-width="1" stroke-dasharray="3 3"/>
+            <text x="160" y="246" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">1</text>
+            <text x="240" y="246" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">2</text>
+            <text x="320" y="246" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">3</text>
+            <text x="400" y="246" font-family="monospace" font-size="10" font-weight="700" fill="#8A5900" text-anchor="middle">4</text>
+            <text x="8" y="270" font-family="monospace" font-size="10" font-weight="700" fill="#1F4E79">CASE C</text>
+            <text x="8" y="283" font-family="monospace" font-size="10" fill="#5A5F66">both double</text>
+            <text x="112" y="270" font-family="monospace" font-size="11" font-weight="700" fill="#5A5F66" text-anchor="end">MONEY</text>
+            <rect x="120" y="252" width="320" height="26" fill="#8A5900" stroke="#5E3D00" stroke-width="1.2" rx="3"/>
+            <line x1="200" y1="252" x2="200" y2="278" stroke="#FbFaF7" stroke-width="1.3"/>
+            <line x1="280" y1="252" x2="280" y2="278" stroke="#FbFaF7" stroke-width="1.3"/>
+            <line x1="360" y1="252" x2="360" y2="278" stroke="#FbFaF7" stroke-width="1.3"/>
+            <text x="448" y="270" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900">$4,000</text>
+            <text x="112" y="304" font-family="monospace" font-size="11" font-weight="700" fill="#5A5F66" text-anchor="end">GOODS</text>
+            <rect x="120" y="286" width="80" height="26" fill="#1F4E79" stroke="#14243A" stroke-width="1.2" rx="3"/>
+            <text x="208" y="304" font-family="monospace" font-size="12" font-weight="700" fill="#1F4E79">1,000 goods</text>
+            <text x="610" y="282" font-family="monospace" font-size="17" font-weight="700" fill="#1F4E79" text-anchor="end">P = $4</text>
+            <text x="610" y="303" font-family="monospace" font-size="11" font-weight="700" fill="#5A5F66" text-anchor="end">unchanged</text>
+            </g>
+        </svg>
+        <p class="footnote" style="margin-top:.6rem">A dollar and a good are drawn the same length, so <strong>the money bar is as many times longer than the goods bar as the price is in dollars.</strong> The numbers count the goods-bar lengths that fit inside the money bar &mdash; four of them at $4 a good, eight at $8.</p>
+      </div>
+      <div class="controls">
+        <div class="btnrow">
+          <button class="btn" data-reveal-svg="moneyB" data-reveal="q8a">Case B &middot; money doubles</button>
+          <button class="btn" data-reveal-svg="moneyC" data-reveal="q8b">Case C &middot; output doubles too</button>
+        </div>
+        <div class="reveal-hidden" id="q8a">
+          <div class="reveal">
+            <span class="cue">Answer &middot; Q8</span>
+            <p><strong>P = $4,000 &divide; 500 = $8.</strong> Twice the money is chasing exactly the same 500 goods, so every price doubles.</p>
+            <p style="margin-top:.7rem">And <strong>nobody is better off.</strong> Every person is holding twice as many dollars and every good costs twice as much. There are still 500 goods to divide among the same people. Doubling the money changed the numbers on the price tags and changed nothing that anyone can eat, wear, or use.</p>
+          </div>
+        </div>
+        <div class="reveal-hidden" id="q8b">
+          <div class="reveal">
+            <span class="cue">The other case</span>
+            <p>Now suppose output had doubled too, to <strong>1,000 goods</strong>. Then P = $4,000 &divide; 1,000 = <strong>$4</strong>, exactly where it started. The money supply doubled and the price level did not move an inch, because there were twice as many goods for those dollars to be spent on.</p>
+            <p style="margin-top:.7rem">So it was never the money on its own. <strong>It is money relative to output.</strong></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 21. THE LONG-RUN RULE ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Where It Comes From">
+    <div class="eyebrow">The two cases, written as one rule</div>
+    <h2>Inflation is money growth minus output growth</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <div class="chain" style="font-size:1.25rem">&pi; = %&Delta;M &minus; %&Delta;Y</div>
+      <p class="lede" style="max-width:96ch">Both of your cases are in that one line. Case B: money grew 100%, output grew 0%, so &pi; = 100% and $4 became $8. Case C: money grew 100%, output grew 100%, so &pi; = 0% and $4 stayed $4. Everything in between follows the same subtraction.</p>
+      <div class="condrow">
+        <div class="condcard warm">
+          <div class="ctitle">M grows faster than Y</div>
+          <div class="big">&pi; &gt; 0</div>
+          <div class="cnote"><strong>Inflation.</strong> Money is being added faster than goods are, so each dollar ends up buying less. Money 8%, output 3% &rarr; about 5% inflation.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">M grows at the same rate as Y</div>
+          <div class="big">&pi; = 0</div>
+          <div class="cnote"><strong>Stable prices.</strong> The extra dollars have exactly the extra goods to be spent on. Money 3%, output 3% &rarr; the price level holds still.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">M grows more slowly than Y</div>
+          <div class="big">&#9660; &pi; &lt; 0</div>
+          <div class="cnote"><strong>Deflation.</strong> Goods are arriving faster than dollars, so each dollar buys more. Money 1%, output 3% &rarr; about &minus;2% inflation.</div>
+        </div>
+      </div>
+      <p class="serif-note">This is a statement about the long run. In any given month a hurricane, a strike or an oil shock can move the price level on its own. Over years, the arithmetic above is what is left.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 22. Q9 DIAGNOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Where It Comes From">
+    <div class="eyebrow">Question 9 &middot; diagnose &middot; pick a number on paper first</div>
+    <h2>One of these three does not follow</h2>
+    <div class="titlerule"></div>
+    <p class="lede" style="max-width:92ch">Three sentences about the economy you just built. <strong>One of them reasons badly.</strong> Pick its number, and be ready to name the step where the reasoning breaks.</p>
+    <div>
+      <div class="diag" id="diag9">
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">1</span><span class="s">Doubling the money supply while output is unchanged doubles the average price.</span></button>
+        <button type="button" class="diag-opt" data-bad="false"><span class="n">2</span><span class="s">If the money supply and the quantity of goods both double, the average price is unchanged.</span></button>
+        <button type="button" class="diag-opt" data-bad="true"><span class="n">3</span><span class="s">If the government printed twice as much money, the country would be twice as rich.</span></button>
+      </div>
+      <p class="poll-hint">Commit to a number on your own paper before the answer appears.</p>
+      <button class="btn" data-diag-reveal="diag9" style="margin-top:.6rem">Show the flaw</button>
+      <div class="reveal" data-diag-note style="display:none;margin-top:1rem;max-width:104ch">
+        <span class="cue">Answer &middot; a nominal number standing in for a real one</span>
+        <p><strong>Sentence 3 is the flaw.</strong> Printing money is a real thing a government can do, and the first half of the sentence is not in dispute. The break is at the word <strong>rich</strong>.</p>
+        <p style="margin-top:.7rem">This is the distinction from <strong>Measuring GDP</strong>, arriving in a new costume. Doubling the money supply doubles every nominal magnitude &mdash; the balance in your account, the number on the price tag, nominal GDP. It does not produce one additional good. <strong>Real GDP does not move.</strong> The country has exactly the 500 goods it had before, now labeled with bigger numbers.</p>
+        <div class="chain warm" style="margin-top:.8rem">M &times;2 &rarr; P &times;2 &rarr; nominal GDP &times;2 &rarr; real GDP unchanged</div>
+        <p style="margin-top:.8rem">Sentences 1 and 2 are your two cases, stated correctly, and together they are the whole rule: what matters is money <em>relative to</em> output. <strong>Wealth is goods. Money is how we count them.</strong></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ PART 4 · WHY IT MATTERS ══════════════ -->
+
+  <!-- ═══════════ 23. DIVIDER P4 ═══════════ -->
+  <section class="slide divider" data-section="Discussion 6 · Why It Matters">
+    <div class="eyebrow">Part 4 of 4</div>
+    <h1>Whose money<br>it moves</h1>
+    <p class="lede">If every price and every wage doubled overnight, nothing real would have happened. Inflation does damage for narrower reasons than that &mdash; and the reasons decide exactly who pays.</p>
+    <div class="sectrail">WHAT IT IS &#10003; &rarr; MEASURING &#10003; &rarr; WHERE IT COMES FROM &#10003; &rarr; WHY IT MATTERS</div>
+    <div class="through">Throughline: inflation is the rate at which the price level changes. Almost every mistake about inflation comes from confusing that rate with the level, or with the price of any one thing.</div>
+  </section>
+
+  <!-- ═══════════ 24. Q10 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Why It Matters">
+    <div class="eyebrow">Question 10 &middot; predict &middot; no answer on this slide</div>
+    <h2>Six percent, in the bank</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:92ch">You put <strong>$1,000</strong> in a savings account paying <strong>6%</strong>. You do not touch it. A year later the statement says <strong>$1,060</strong>.</p>
+      <div class="predict">
+        <span class="cue">Q10 &middot; predict &middot; commit on paper</span>
+        <p>Write down whether you are <strong>6% better off</strong>. If your answer is &ldquo;it depends,&rdquo; write down exactly <em>what</em> it depends on, and what number you would need in order to settle it.</p>
+      </div>
+      <p class="serif-note">The statement is not lying to you. It is simply answering a different question from the one you care about.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 25. Q10 REVEAL · NOMINAL VS REAL ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Why It Matters">
+    <div class="eyebrow">Answer &middot; Question 10</div>
+    <h2>What the extra dollars can actually buy</h2>
+    <div class="titlerule"></div>
+    <div class="graphwrap">
+      <div class="panel">
+        <svg viewBox="0 0 520 180" role="img" aria-label="A comparison of two changes over one year, drawn from a common starting line. A gold bar shows the sixty extra dollars of interest earned on a one thousand dollar deposit. A shorter red bar shows the forty extra dollars now needed to buy what one thousand dollars bought a year earlier, when inflation is four percent. A bracket marks the twenty dollar difference, which is a real gain of about two percent. Only the changes are drawn; the original one thousand dollars is not shown.">
+          <line x1="180" y1="20" x2="180" y2="140" stroke="#5A5F66" stroke-width="1.6"/>
+          <text x="180" y="14" font-family="monospace" font-size="10" font-weight="700" fill="#5A5F66" text-anchor="middle">where the year started</text>
+          <g id="rrA" opacity="0">
+            <text x="172" y="49" font-family="monospace" font-size="11" font-weight="700" fill="#5A5F66" text-anchor="end">dollars gained</text>
+            <rect x="180" y="30" width="120" height="26" fill="#FBF1DC" stroke="#8A5900" stroke-width="1.6" rx="4"/>
+            <text x="308" y="49" font-family="monospace" font-size="12" font-weight="700" fill="#8A5900">&#43;$60 &#183; the 6% interest</text>
+          </g>
+          <g id="rrB" opacity="0">
+            <text x="172" y="95" font-family="monospace" font-size="11" font-weight="700" fill="#5A5F66" text-anchor="end">dollars needed</text>
+            <rect x="180" y="76" width="80" height="26" fill="#FBEEEC" stroke="#C0392B" stroke-width="1.6" rx="4"/>
+            <text x="268" y="95" font-family="monospace" font-size="12" font-weight="700" fill="#C0392B">&#43;$40 &#183; just to stand still</text>
+            <path d="M260 116 L260 128 L300 128 L300 116" fill="none" stroke="#1F4E79" stroke-width="1.8"/>
+            <text x="280" y="148" font-family="monospace" font-size="12.5" font-weight="700" fill="#1F4E79" text-anchor="middle">&#43;$20 &rarr; about 2% real</text>
+          </g>
+          <text x="8" y="172" font-family="monospace" font-size="10" fill="#5A5F66">Only the changes are drawn to scale. The original $1,000 is not in the picture.</text>
+        </svg>
+      </div>
+      <div class="controls">
+        <div class="btnrow">
+          <button class="btn" data-reveal-svg="rrA">What you gained</button>
+          <button class="btn" data-reveal-svg="rrB" data-reveal="q10rev">What it cost to stand still</button>
+        </div>
+        <div class="reveal-hidden" id="q10rev">
+          <div class="reveal">
+            <span class="cue">Answer &middot; Q10</span>
+            <p><strong>It depends on inflation, and the number you needed was that one.</strong> Suppose inflation was <strong>4%</strong>. Then the bundle of goods that cost $1,000 a year ago now costs <strong>$1,040</strong>.</p>
+            <p style="margin-top:.7rem">You have $1,060 and you need $1,040 simply to buy what you could have bought last year. Your purchasing power went up by about <strong>2%</strong>, not 6%. Four of your six points were spent standing still.</p>
+          </div>
+        </div>
+        <div class="readout" style="margin-top:.2rem">
+          nominal rate <span class="lbl2">i</span> &rarr; <span class="big">6%</span> &nbsp;&nbsp;<span class="lbl2">what the bank pays, in dollars</span><br>
+          inflation <span class="lbl2">&pi;</span> &nbsp;&nbsp;&nbsp;&rarr; <span class="big">4%</span> &nbsp;&nbsp;<span class="lbl2">what those dollars lost</span><br>
+          real rate <span class="lbl2">r</span> &nbsp;&nbsp;&nbsp;&rarr; <span class="big">2%</span> &nbsp;&nbsp;<span class="lbl2">the change in what you can buy</span>
+        </div>
+        <div class="chain warm">r = i &minus; &pi; &nbsp;&nbsp;&rarr;&nbsp;&nbsp; 6% &minus; 4% = 2%</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 26. COSTS OF EXPECTED INFLATION ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Why It Matters">
+    <div class="eyebrow">Costs that survive even when everyone sees it coming</div>
+    <h2>Three costs of expected inflation</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">Start with the easier case: inflation that everybody correctly anticipates. Contracts and interest rates can be written with it already in mind &mdash; and it still costs the economy something real.</p>
+      <div class="condrow">
+        <div class="condcard">
+          <div class="ctitle">1 &middot; Shoe leather costs</div>
+          <div class="cnote">Money loses value while you hold it, so people hold less of it &mdash; more trips to the bank, more moving of balances around, more attention paid to cash management. Real time and effort spent on nothing but staying ahead of the price level.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">2 &middot; Menu costs</div>
+          <div class="cnote">Every posted price has to be changed: menus reprinted, shelves relabeled, catalogs and systems updated. Small for any one change, and the changes never stop.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">3 &middot; Tax distortions</div>
+          <div class="cnote">Taxes are levied on <strong>nominal</strong> gains. An asset that rises 6% while prices rise 4% has gained 2% in real terms, but the tax bill is computed on the full 6% &mdash; so part of what is taxed as income was never income at all.</div>
+        </div>
+      </div>
+      <p class="serif-note">None of these requires anyone to be surprised. They are the running cost of a price level that will not sit still.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 27. Q11 PREDICT ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Why It Matters">
+    <div class="eyebrow">Question 11 &middot; predict &middot; no answer on this slide</div>
+    <h2>A loan, and an inflation rate nobody expected</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.1rem;max-width:1150px">
+      <p class="lede" style="max-width:92ch">A lender makes a <strong>$10,000</strong> loan for one year at a nominal rate of <strong>6%</strong>. Both sides expect inflation of <strong>2%</strong>. Inflation turns out to be <strong>8%</strong>.</p>
+      <div class="predict">
+        <span class="cue">Q11 &middot; predict &middot; commit on paper</span>
+        <p>Write down the real return the lender <em>expected</em>, the real return the lender <em>got</em>, and then one sentence naming who comes out ahead and why.</p>
+      </div>
+      <p class="serif-note">The dollar amount repaid is the same in both stories. Only one thing changed.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════ 28. Q11 REVEAL ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Why It Matters">
+    <div class="eyebrow">Answer &middot; Question 11</div>
+    <h2>The surprise is the whole story</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <div class="schedrow">
+        <table class="sched">
+          <caption>Q11 &mdash; the same loan, expected and realized</caption>
+          <thead>
+            <tr><th scope="col">&nbsp;</th><th scope="col">Expected</th><th scope="col">Actual</th></tr>
+          </thead>
+          <tbody>
+            <tr><th scope="row">Nominal rate i</th><td>6%</td><td>6%</td></tr>
+            <tr><th scope="row">Inflation &pi;</th><td>2%</td><td><span class="hid" id="g1">8%</span></td></tr>
+            <tr class="tot"><td>Real return r = i &minus; &pi;</td><td><span class="hid yes" id="g2">&#43;4%</span></td><td><span class="hid no" id="g3">&#9660; &minus;2%</span></td></tr>
+          </tbody>
+        </table>
+        <div class="col" style="justify-content:flex-start;gap:.6rem;max-width:40ch">
+          <button class="btn" data-reveal="g2">Show what was expected</button>
+          <button class="btn" data-reveal="g1,g3,q11rev">Show what happened</button>
+        </div>
+      </div>
+      <div class="reveal-hidden" id="q11rev">
+        <div class="reveal" style="max-width:104ch">
+          <span class="cue">Answer &middot; Q11</span>
+          <p>Expected: 6% &minus; 2% = <strong>&#43;4%</strong>. Actual: 6% &minus; 8% = <span class="no">&#9660;</span> <strong>&minus;2%</strong>.</p>
+          <p style="margin-top:.7rem"><strong>The borrower comes out ahead.</strong> The $10,600 repayment is fixed in dollars, and those dollars turned out to buy considerably less than either party planned for. The borrower hands back something worth less than was borrowed; the lender ends the year able to buy about 2% <em>less</em> than at the start, having lent money out for a year. Six percentage points of real return moved from one side of the contract to the other, and no one renegotiated anything.</p>
+          <p style="margin-top:.7rem">The same mechanism hits anyone whose income is fixed in dollars. A pension that pays $2,000 a month pays $2,000 a month while the cost of living climbs past it &mdash; the payment never changed, and it buys less every year.</p>
+        </div>
+      </div>
+      <button class="btn" data-reveal="q11pt">And the point to take out of the room</button>
+      <div class="reveal-hidden" id="q11pt">
+        <div class="pair2">
+          <div class="pcard">
+            <div class="ptag">Expected inflation</div>
+            <div class="verdictbig">already inside the nominal rate</div>
+            <p>If both sides had expected 8%, the loan would have been written at a higher nominal rate to begin with. Anticipated inflation gets priced in, which is why its costs are the shoe leather, menus and taxes from the last slide &mdash; not a transfer.</p>
+          </div>
+          <div class="pcard warn">
+            <div class="ptag">Unexpected inflation</div>
+            <div class="verdictbig">this is what moves wealth</div>
+            <p>Nobody can price in a surprise. Every contract already signed in fixed dollars &mdash; loans, pensions, long wage agreements &mdash; is quietly rewritten in favor of whoever owes the dollars. <strong>It is the surprise, not the inflation, that redistributes.</strong></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 29. Q12 · DEFLATION ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Why It Matters">
+    <div class="eyebrow">Question 12 &middot; predict, then check yourself</div>
+    <h2>So why is deflation a problem?</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <p class="lede" style="max-width:96ch">Deflation means the price level is genuinely falling <span class="no">&#9660;</span> &mdash; the third stretch of the line in Part 1. Everything you buy gets cheaper. That sounds like unambiguous good news for anyone doing the buying.</p>
+      <div class="predict">
+        <span class="cue">Q12 &middot; predict &middot; commit on paper</span>
+        <p>Write down why economists treat deflation as a problem anyway. List as many separate reasons as you can before pressing the button &mdash; there are five worth having.</p>
+      </div>
+      <button class="btn" data-reveal="q12rev">Show the five</button>
+      <div class="reveal-hidden" id="q12rev">
+        <div class="reveal" style="max-width:104ch">
+          <span class="cue">Answer &middot; Q12</span>
+          <ol>
+            <li><strong>Purchases get postponed.</strong> If the same thing is cheaper next month, waiting is rewarded. Spending gets delayed, which weakens demand further, which pushes prices down again.</li>
+            <li><strong>The real burden of debt grows.</strong> A debt fixed in dollars has to be repaid with dollars that now buy more than the ones borrowed &mdash; Q11 run in reverse, with the borrower on the losing side.</li>
+            <li><strong>Wages are very hard to cut.</strong> Workers resist nominal pay cuts far more than they resist inflation eating the same amount. So when prices fall, firms cut jobs instead of pay.</li>
+            <li><strong>Profits shrink.</strong> Revenue falls with prices, while many costs &mdash; wages, leases, supply contracts &mdash; were committed earlier at higher levels and cannot follow prices down.</li>
+            <li><strong>Monetary policy becomes less effective.</strong> The usual response is to cut interest rates, and there is a limit to how far a nominal rate can be cut.</li>
+          </ol>
+          <div class="chain warm" style="margin-top:.9rem">prices &#9660; &rarr; wait to buy &rarr; spending &darr; &rarr; prices &#9660; again</div>
+          <p style="margin-top:.8rem">Notice what these five have in common. Not one of them is about goods being cheap. Every one is about a <strong>contract or a plan written in dollars</strong> while the value of a dollar was moving underneath it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 30. SYNTHESIS ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Close">
+    <div class="eyebrow">One distinction, four times</div>
+    <h2>The same confusion, in four disguises</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1rem;max-width:1150px">
+      <div class="condrow" style="grid-template-columns:1fr 1fr">
+        <div class="condcard">
+          <div class="ctitle">Part 1 &middot; the rate is not the level</div>
+          <div class="cnote">Inflation falling from 10% to 5% is a fall in the <em>rate</em>. The level went from 110 to 115.5 &mdash; it rose the whole time. And a 10% average is perfectly compatible with a textbook getting cheaper.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Part 2 &middot; the index is not the rate</div>
+          <div class="cnote">The CPI is a level: 100, then 110, then 115.5. Inflation is what you get by taking percent changes of it. Two different objects, one built out of the other, constantly swapped for each other in conversation.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Part 3 &middot; nominal is not real</div>
+          <div class="cnote">Doubling the money supply doubles the price level and every nominal number attached to it. The 500 goods do not move. Wealth is goods; money is the unit we count them in.</div>
+        </div>
+        <div class="condcard">
+          <div class="ctitle">Part 4 &middot; expected is not actual</div>
+          <div class="cnote">Six percent in the bank is a nominal rate; 2% is what you gained. And the nominal rate already carries expected inflation inside it &mdash; so it is the gap between expected and actual that takes money from one person and gives it to another.</div>
+        </div>
+      </div>
+      <div class="prompt" style="max-width:104ch">
+        <span class="cue">The throughline</span>
+        <p><strong>Inflation is the rate at which the price level changes.</strong> Almost every mistake about inflation comes from confusing that rate with the level, or with the price of any one thing.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ 31. CLOSE ═══════════ -->
+  <section class="slide" data-section="Discussion 6 · Close">
+    <div class="eyebrow">Close &middot; write one sentence before you leave</div>
+    <h2>Finish the line in your own words</h2>
+    <div class="titlerule"></div>
+    <div class="col" style="justify-content:flex-start;gap:1.2rem;max-width:1150px">
+      <div class="blankline">
+        Inflation makes <span class="bl">&nbsp;</span> worse off<br>but not <span class="bl">&nbsp;</span>, because <span class="bl">&nbsp;</span>.
+      </div>
+      <p class="lede" style="max-width:92ch">A group in the first blank, a group in the second, and the reason in the third. If your reason is &ldquo;prices went up,&rdquo; the sentence is not finished &mdash; prices went up for both groups. Say what it is about the second group that protects them.</p>
+      <p class="serif-note">Next unit: where GDP itself comes from.</p>
+    </div>
+  </section>
+
+</div>
+
+<div class="chrome">
+  <span class="course" id="sectionLabel">ECON 002 &middot; Discussion 6</span>
+  <span class="navhint">
+    <button id="prevBtn" aria-label="Previous slide">&larr; prev</button>
+    <span aria-live="polite" aria-atomic="true">Slide <span id="cur">1</span> of <span id="tot">31</span></span>
+    <button id="nextBtn" aria-label="Next slide">next &rarr;</button>
+  </span>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* the one place the course string lives */
+  const COURSE = 'ECON 002';
+  const DECK_TITLE = 'Inflation: A Rate, Not a Level';
+  document.title = COURSE + ' · ' + DECK_TITLE;
+  const eyebrow = document.getElementById('titleEyebrow');
+  if(eyebrow) eyebrow.textContent = COURSE + ' · Discussion Section · Unit 5';
+
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0;
+  /* slide element -> the reset() of every animation on it. Entering a slide
+     rewinds its animations, so nothing is already showing on arrival —
+     including on a second pass back through the deck. */
+  const slideResets=new Map();
+  function registerReset(el, fn){
+    const sl = el.closest && el.closest('.slide');
+    if(!sl) return;
+    if(!slideResets.has(sl)) slideResets.set(sl,[]);
+    slideResets.get(sl).push(fn);
+  }
+  const prog=document.getElementById('prog');
+  const cur=document.getElementById('cur');
+  document.getElementById('tot').textContent=slides.length;
+
+  function show(n){
+    i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    prog.style.width=((i)/(slides.length-1)*100)+'%';
+    cur.textContent=i+1;
+    rewind(slides[i]);
+    const sec=slides[i].getAttribute('data-section');
+    const lbl=document.getElementById('sectionLabel');
+    if(lbl) lbl.textContent = sec ? (COURSE+' · '+sec) : (COURSE+' · Discussion');
+  }
+  function next(){show(i+1)}
+  function prev(){show(i-1)}
+
+  document.getElementById('nextBtn').onclick=next;
+  document.getElementById('prevBtn').onclick=prev;
+
+  /* guarded: Space must activate a focused control, not jump the slide */
+  window.addEventListener('keydown',e=>{
+    const t=e.target;
+    const onControl = t && t.closest && t.closest('button,a,input,select,textarea,[tabindex]');
+    if(e.key===' '||e.key==='Spacebar'){
+      if(onControl) return;               /* let the browser click the focused button */
+      e.preventDefault();next();return;
+    }
+    if(e.key==='ArrowRight'||e.key==='PageDown'){e.preventDefault();next()}
+    else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}
+    else if(e.key.toLowerCase()==='f'){
+      if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();
+      else document.exitFullscreen?.();
+    }
+  });
+
+  /* ---- generic click-to-reveal: button[data-reveal="id"] or "id1,id2,id3"
+          A comma list lets one button uncover several table cells at once,
+          which is how the basket tables stay empty until they are computed. */
+  document.querySelectorAll('[data-reveal]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      btn.getAttribute('data-reveal').split(',').forEach(id=>{
+        const t=document.getElementById(id.trim());
+        if(t) t.classList.add('shown');
+      });
+      btn.disabled=true;
+    });
+  });
+
+  /* ---- generic quick-check polls: button[data-poll-reveal="pollId"] ---- */
+  document.querySelectorAll('[data-poll-reveal]').forEach(btn=>{
+    const group=document.getElementById(btn.getAttribute('data-poll-reveal'));
+    if(!group) return;
+    const opts=[...group.querySelectorAll('.poll-opt')];
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    btn.addEventListener('click',()=>{
+      group.classList.add('revealed');
+      opts.forEach(o=>{ if(o.dataset.correct==='true') o.classList.add('correct'); });
+      btn.disabled=true;
+    });
+  });
+
+  /* ---- generic diagnose (flawed-argument) groups ---- */
+  document.querySelectorAll('.diag').forEach(group=>{
+    const opts=[...group.querySelectorAll('.diag-opt')];
+    const revealBtn=group.parentElement.querySelector('[data-diag-reveal]');
+    opts.forEach(o=>o.addEventListener('click',()=>{
+      opts.forEach(x=>x.style.outline='');
+      o.style.outline='2px solid var(--accent)';o.style.outlineOffset='2px';
+    }));
+    if(revealBtn){
+      revealBtn.addEventListener('click',()=>{
+        group.classList.add('revealed');
+        opts.forEach(o=>{if(o.dataset.bad==='true')o.classList.add('bad');});
+        revealBtn.disabled=true;
+        const note=group.parentElement.querySelector('[data-diag-note]');
+        if(note) note.style.display='block';
+      });
+    }
+  });
+
+  /* ---- static shift diagrams: button[data-reveal-svg="key"] ---- */
+  const svgShifts={
+    moneyB : ['mbBand'],
+    moneyC : ['mcBand'],
+    rrA    : ['rrA'],
+    rrB    : ['rrB']
+  };
+  /* Entering a slide puts it back to its unrevealed state: uncovered text,
+     table cells, polls, diagnose verdicts, marked-up SVGs and animations all
+     rewind, and their buttons come back — so a slide visited twice never
+     opens with its answer already showing. */
+  function rewind(sl){
+    if(!sl) return;
+    sl.querySelectorAll('.shown').forEach(e=>e.classList.remove('shown'));
+    sl.querySelectorAll('.revealed').forEach(g=>g.classList.remove('revealed'));
+    sl.querySelectorAll('.poll-opt.correct').forEach(o=>o.classList.remove('correct'));
+    sl.querySelectorAll('.diag-opt.bad').forEach(o=>o.classList.remove('bad'));
+    sl.querySelectorAll('.poll-opt,.diag-opt').forEach(o=>{o.style.outline='';});
+    sl.querySelectorAll('[data-diag-note]').forEach(n=>{n.style.display='none';});
+    sl.querySelectorAll('[data-reveal-svg]').forEach(b=>{
+      (svgShifts[b.getAttribute('data-reveal-svg')]||[]).forEach(id=>{
+        const el=document.getElementById(id); if(el) el.setAttribute('opacity',0);
+      });
+    });
+    sl.querySelectorAll('[data-reveal],[data-reveal-svg],[data-poll-reveal],[data-diag-reveal],[data-cond]')
+      .forEach(b=>{ b.disabled=false; });
+    (slideResets.get(sl)||[]).forEach(fn=>fn());
+  }
+
+  function revealShift(key){
+    (svgShifts[key]||[]).forEach(id=>{const el=document.getElementById(id); if(el) el.setAttribute('opacity',1);});
+  }
+  document.querySelectorAll('[data-reveal-svg]').forEach(btn=>{
+    const key=btn.getAttribute('data-reveal-svg');
+    btn.addEventListener('click',()=>{ revealShift(key); btn.disabled=true; });
+  });
+
+  /* ---- condition cards: button[data-cond="bodyId"] ---- */
+  document.querySelectorAll('[data-cond]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const body=document.getElementById(btn.getAttribute('data-cond'));
+      if(body){body.classList.add('shown');}
+      btn.disabled=true;
+    });
+  });
+
+  /* =====================================================================
+     ANIMATION SCAFFOLD
+     A price level moving through time is a continuous process, so it gets
+     the shared cosine sweep. `stages` fades in an annotation once the
+     sweep passes a point, which is how the three regimes get named one at
+     a time rather than all at once. reset(), finish() and a reduced-motion
+     branch, as every animation in these decks has.
+     ===================================================================== */
+  const REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const DUR = 2600;
+  function ease(p){return p<1 ? (0.5-0.5*Math.cos(Math.PI*p)) : 1;}
+  const $ = id => document.getElementById(id);
+
+  function makeAnim(o){
+    const playBtn = $(o.play);
+    if(!playBtn) return;
+    const resetBtn = $(o.reset);
+    const shockEls = (o.shock||[]).map($).filter(Boolean);
+    const endEls   = (o.end||[]).map($).filter(Boolean);
+    const stages   = (o.stages||[]).map(s=>({at:s.at, els:(s.ids||[]).map($).filter(Boolean)}));
+    const endAt    = (o.endAt===undefined) ? 0.5 : o.endAt;
+    const dur      = o.dur || DUR;
+    let raf;
+    function stageEls(){ return stages.reduce((a,s)=>a.concat(s.els),[]); }
+    function reset(){
+      cancelAnimationFrame(raf);
+      o.place(0);
+      shockEls.concat(endEls,stageEls()).forEach(e=>e.setAttribute('opacity',0));
+      if(o.onReset) o.onReset();
+    }
+    function finish(){
+      o.place(1);
+      shockEls.concat(endEls,stageEls()).forEach(e=>e.setAttribute('opacity',1));
+      if(o.onFinish) o.onFinish();
+    }
+    function play(){
+      reset();
+      if(o.onStart) o.onStart();
+      shockEls.forEach(e=>e.setAttribute('opacity',1));
+      if(REDUCED){ finish(); return; }          /* reduced-motion branch */
+      const t0=performance.now();
+      function step(now){
+        const p=Math.min(1,(now-t0)/dur), e=ease(p);
+        o.place(e);
+        stages.forEach(s=>{ if(e>=s.at) s.els.forEach(el=>el.setAttribute('opacity',1)); });
+        if(e>endAt) endEls.forEach(el=>el.setAttribute('opacity',1));
+        if(p>=1) finish(); else raf=requestAnimationFrame(step);
+      }
+      raf=requestAnimationFrame(step);
+    }
+    playBtn.onclick=play;
+    if(resetBtn) resetBtn.addEventListener('click',reset);
+    registerReset(playBtn, reset);
+    reset();
+  }
+
+  /* =====================================================================
+     Slide 6 · the price level across three regimes. The line is drawn as
+     it is swept, so the shape arrives with the argument rather than
+     before it: steep rise, gentle rise, then an actual fall.
+     ===================================================================== */
+  (function(){
+    if(!$('plplay')) return;
+    const path=$('plPath'), dot=$('plDot');
+    const $P=$('plP'), $W=$('plW'), $I=$('plI'), $n=$('plnote');
+
+    /* x is time in years from 2024; y is the index value */
+    const xT = t => 70 + 125*t;
+    const yP = P => 300 - (P-95)*9.6;
+    const NODES=[{t:0,P:100},{t:1,P:110},{t:2,P:115.5},{t:3,P:113.2}];
+
+    function levelAt(t){
+      if(t<=1) return 100 + 10*t;
+      if(t<=2) return 110 + 5.5*(t-1);
+      return 115.5 - 2.3*(t-2);
+    }
+    function stretch(t){
+      if(t<=0)  return ['2024','—','Press play. Watch the line, not the labels.'];
+      if(t<=1)  return ['2024 to 2025','+10.0%','Rising fast. This is inflation.'];
+      if(t<=2)  return ['2025 to 2026','+5.0%','Still rising, at half the pace. The rate fell; the level did not.'];
+      return ['2026 to 2027','−2.0%','Now the level itself is falling. Only this stretch is deflation.'];
+    }
+
+    function place(p){
+      const t = 3*p;
+      let pts=[];
+      NODES.forEach(n=>{ if(n.t < t) pts.push(xT(n.t).toFixed(1)+','+yP(n.P).toFixed(1)); });
+      if(!pts.length) pts.push(xT(0)+','+yP(100));
+      const P = levelAt(t);
+      pts.push(xT(t).toFixed(1)+','+yP(P).toFixed(1));
+      path.setAttribute('points', pts.join(' '));
+      dot.setAttribute('cx', xT(t)); dot.setAttribute('cy', yP(P));
+      const s = stretch(t);
+      $P.textContent = P.toFixed(1);
+      $W.textContent = s[0];
+      $I.textContent = s[1];
+      if(p>0) $n.textContent = s[2];
+    }
+
+    makeAnim({
+      play:'plplay', reset:'plreset', dur:5200,
+      stages:[
+        {at:0.334, ids:['plg1']},
+        {at:0.667, ids:['plg2']},
+        {at:0.999, ids:['plg3']}
+      ],
+      place:place,
+      onReset:function(){
+        $P.textContent='100.0'; $W.textContent='2024'; $I.textContent='—';
+        $n.textContent='Press play. Watch the line, not the labels.';
+      },
+      onFinish:function(){
+        $P.textContent='113.2'; $W.textContent='2026 to 2027'; $I.textContent='−2.0%';
+        $n.textContent='Three stretches: +10%, then +5%, then −2%. The level only ever fell in the third.';
+      }
+    });
+  })();
+
+  show(0);
+})();
+</script>
+</body>
+</html>

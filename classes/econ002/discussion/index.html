@@ -16,32 +16,15 @@
   --panel: #ffffff;
   --ink: #1f2937;
   --ink-2: #374151;
-  --muted: #6b7280;
+  --muted: #596878;
   --line: #e7dfd2;
   --line-2: #d9cfbf;
   --shadow: 0 1px 2px rgba(17,24,39,0.06), 0 10px 24px rgba(17,24,39,0.06);
 
   --accent: #2f5d7c;
-  --focus: #2563eb;
-
-  --gdp: #2f5d7c;
-  --gnp: #3b7a57;
-  --both: #6b5ca5;
-  --neither: #8b5a2b;
-
-  --good: #1b7f4b;
+  --good: #155c38;
   --bad: #b42318;
 }
-
-/* Breadcrumb (back to hub) */
-.crumbbar{ margin: 6px 0 10px; }
-.crumb-link{
-  color: var(--accent);
-  text-decoration: none;
-  font-weight: 800;
-  font-size: 13px;
-}
-.crumb-link:hover{ text-decoration: underline; }
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
@@ -51,6 +34,26 @@ body{
   color: var(--ink);
   font-family: var(--font-sans);
 }
+
+/* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+.skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+  background:var(--accent);color:#fff;font-weight:700;
+  text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+.skip-link:focus{top:0;}
+
+/* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;
+  margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+  white-space:nowrap;border:0;}
+
+/* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+
+/* ── Reduced motion ─────────────────────────────────────── */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms!important;
+    transition-duration:.01ms!important;}}
 
 .container{
   max-width: 1120px;
@@ -63,648 +66,481 @@ body{
   border-bottom: 1px solid var(--line);
   background: linear-gradient(180deg, rgba(255,255,255,0.75), rgba(255,255,255,0));
 }
+.crumbbar{ margin: 6px 0 10px; }
+.crumb-link{
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 0.8125rem;
+}
+.crumb-link:hover{ text-decoration: underline; }
+
 .header-inner{
-  display:grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 18px;
-  align-items: start;
   padding-top: 22px;
   padding-bottom: 14px;
 }
-@media (max-width: 980px){
-  .header-inner{ grid-template-columns: 1fr; }
-}
-
 .kicker{
-  font-size: 12px;
+  font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
   margin-bottom: 6px;
 }
-
 h1{
   font-family: var(--font-serif);
-  font-size: 36px;
+  font-size: 2rem;
   line-height: 1.1;
   letter-spacing: -0.01em;
   margin: 0;
 }
-
 .sub{
   margin: 10px 0 0 0;
   color: var(--ink-2);
   line-height: 1.55;
   max-width: 82ch;
+  font-size: 0.9375rem;
 }
 
-.howto{
-  margin-top: 14px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: rgba(255,255,255,0.70);
-  padding: 10px 12px;
+/* Section heading above the card grid */
+h2.section-title{
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  margin: 22px 0 0 0;
+  letter-spacing: -0.01em;
 }
-.howto summary{
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--accent);
-}
-.howto-body{
-  margin-top: 10px;
-  color: var(--ink-2);
+.section-note{
+  margin: 6px 0 0 0;
+  font-size: 0.8125rem;
+  color: var(--muted);
   line-height: 1.55;
-}
-.howto-body ul{ margin: 0 0 8px 18px; }
-
-.howto-row{
-  display:flex;
-  gap:12px;
-  align-items:flex-start;
-  flex-wrap:wrap;
-}
-.howto-row .howto{
-  flex: 1 1 320px;
+  max-width: 82ch;
 }
 
-/* Controls */
-.controls-card{
+/* ── Topic cards ────────────────────────────────────────────
+   One card per discussion resource, grouped by course unit and
+   listed in the order the material is taught. */
+.deck-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+  padding: 0;
+  list-style: none;
+}
+.deck-grid > li { display: flex; }
+
+.deck-card {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 18px;
-  padding: 14px;
+  padding: 20px;
   box-shadow: var(--shadow);
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  transition: transform .1s, box-shadow .1s, border-color .1s;
 }
-.controls-top{
-  display:flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: end;
-  flex-wrap: wrap;
+.deck-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(17,24,39,0.10);
+  border-color: var(--line-2);
 }
-.control label{
-  display:block;
-  font-size: 12px;
+.deck-card.locked {
+  opacity: .55;
+  cursor: default;
+  pointer-events: none;
+  transform: none;
+}
+
+.deck-eyebrow {
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  letter-spacing: .09em;
   color: var(--muted);
+  font-weight: 700;
   margin-bottom: 6px;
 }
-.controls-actions{
-  display:flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.btn{
-  border: 1px solid var(--line-2);
-  background: #fff;
+.deck-title {
+  font-size: 1rem;
+  font-weight: 900;
   color: var(--ink);
-  padding: 10px 12px;
-  border-radius: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.06s ease, background 0.15s ease, border-color 0.15s ease;
+  margin-bottom: 6px;
+  line-height: 1.3;
 }
-.btn:hover{ background: rgba(47,93,124,0.06); border-color: rgba(47,93,124,0.35); }
-.btn:active{ transform: translateY(1px); }
-.btn.primary{
-  background: rgba(47,93,124,0.10);
-  border-color: rgba(47,93,124,0.35);
-}
-.btn.primary:hover{ background: rgba(47,93,124,0.14); }
-.btn.subtle{
-  background: rgba(139,90,43,0.08);
-  border-color: rgba(139,90,43,0.25);
-}
-.btn.subtle:hover{ background: rgba(139,90,43,0.12); }
-
-.status{
-  margin-top: 10px;
-  min-height: 20px;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-/* Totals */
-.totals{
-  display:grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-top: 12px;
-}
-@media (max-width: 980px){
-  .totals{ grid-template-columns: 1fr 1fr; }
-}
-.metric{
-  background: rgba(246,242,234,0.55);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 12px;
-}
-.metric .label{
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--muted);
-}
-.metric .value{
-  margin-top: 6px;
-  font-size: 16px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 800;
-  color: var(--ink);
-}
-
-/* Layout */
-.main-grid{
-  display:grid;
-  grid-template-columns: 1.05fr 1.55fr;
-  gap: 18px;
-  align-items: start;
-  margin-top: 18px;
-}
-@media (max-width: 980px){
-  .main-grid{ grid-template-columns: 1fr; }
-}
-
-.panel{
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 16px;
-  box-shadow: var(--shadow);
-}
-
-.panel-head{
-  display:flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: baseline;
+.deck-desc {
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+  line-height: 1.5;
   margin-bottom: 10px;
 }
-h2{
-  margin: 0;
-  font-size: 14px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--accent);
-}
-.panel-sub{
-  margin: 0;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-/* Tabs */
-.tabs{
-  display:flex;
-  gap: 8px;
-  margin: 10px 0 12px 0;
+.deck-parts {
+  display: flex;
   flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 12px;
 }
-.tab{
-  border: 1px solid var(--line-2);
-  background: rgba(255,255,255,0.9);
-  color: var(--ink);
-  padding: 9px 12px;
+.part-chip {
+  padding: 3px 9px;
   border-radius: 999px;
-  font-weight: 800;
-  cursor: pointer;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: rgba(47,93,124,.08);
+  color: #2f5d7c;
+  border: 1px solid rgba(47,93,124,.20);
 }
-.tab.active{
-  background: rgba(47,93,124,0.10);
-  border-color: rgba(47,93,124,0.35);
-  color: var(--accent);
-}
-
-/* Dropzones */
-.dropzone{
-  min-height: 140px;
-  padding: 12px;
-  border: 2px dashed var(--line-2);
-  border-radius: 16px;
-  background: rgba(246,242,234,0.55);
-  display:flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.pool{ min-height: 520px; }
-
-.dropzone.dragover{
-  border-color: rgba(47,93,124,0.70);
-  background: rgba(47,93,124,0.08);
-}
-
-/* Bins */
-.bin-grid{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-.bin-grid.wide{
-  grid-template-columns: 1fr 1fr;
-}
-@media (max-width: 650px){
-  .bin-grid{ grid-template-columns: 1fr; }
-  .bin-grid.wide{ grid-template-columns: 1fr; }
-}
-
-.bin-title{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  margin: 8px 0 10px 0;
-}
-.bin-title h3{
-  margin: 0;
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--ink);
-}
-.bin-accent{
-  width: 10px;
-  height: 18px;
-  border-radius: 999px;
-}
-.bin-accent.gdp{ background: var(--gdp); }
-.bin-accent.gnp{ background: var(--gnp); }
-.bin-accent.both{ background: var(--both); }
-.bin-accent.neither{ background: var(--neither); }
-
-.subnote{
-  margin-top: 8px;
-  font-size: 12px;
+.deck-meta {
+  font-size: 0.75rem;
   color: var(--muted);
+  margin-top: auto;          /* keeps the status line flush to the card bottom */
+  padding-top: 4px;
 }
-
-/* Cards */
-.card{
-  border: 1px solid var(--line);
-  background: #fff;
-  border-radius: 16px;
-  padding: 10px 12px;
-  cursor: grab;
-  box-shadow: 0 1px 2px rgba(17,24,39,0.06);
-  transition: transform 0.08s ease, box-shadow 0.15s ease;
+.status-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
 }
-.card:hover{
-  transform: translateY(-1px);
-  box-shadow: 0 2px 10px rgba(17,24,39,0.10);
-}
-.card:active{ cursor: grabbing; }
-
-.card .top{
-  display:flex;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 6px;
-}
-.money{
-  font-variant-numeric: tabular-nums;
-  font-weight: 900;
-  color: var(--accent);
-}
-.card .desc{
-  font-size: 13px;
-  line-height: 1.45;
-  color: var(--ink);
-}
-.card .feedback{
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--ink-2);
-}
-
-.good{ border-color: rgba(27,127,75,0.70) !important; }
-.bad{  border-color: rgba(180,35,24,0.70) !important; }
-
-.note{
-  margin-top: 12px;
-  font-size: 13px;
-  color: var(--ink-2);
-  line-height: 1.55;
-  background: rgba(246,242,234,0.35);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 12px;
-}
-
-.results{
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
-}
-.explain{
-  margin-top: 10px;
-  font-size: 13px;
-  color: var(--ink-2);
-  line-height: 1.55;
-}
+.dot-live  { background: #155c38; }
+.dot-soon  { background: #8c4800; }
+.dot-draft { background: #8c7f72; }
 
 /* Footer */
-.footer{
-  margin-top: 18px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 12px;
-}
 .footer-inner{
-  display:flex;
+  display: flex;
   justify-content: space-between;
-  gap: 10px;
   flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--muted);
 }
-.footer-note{ opacity: 0.95; }
-
-:focus-visible{
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
-}
-
-.sol .math{
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  background: rgba(0,0,0,0.04);
-  padding: 10px;
-  border-radius: 12px;
-  overflow-x:auto;
-  color: var(--ink);
-  white-space: pre-wrap; /* <-- THIS makes your line breaks show */
-}
-
-/* --- Mechanism result: right below the mechanism --- */
-.mech-result{
-  margin-top: 10px;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding-top: 10px;
-  border-top: 1px solid rgba(0,0,0,0.08);
-  color: var(--ink-2);
-  font-size: 13px;
-  line-height: 1.4;
-  white-space: pre-line;
-}
-
-.mech-badge{
-  display:inline-flex;
-  align-items:center;
-  padding: 0 10px;
-  height: 22px;
-  border-radius: 999px;
-  font-weight: 900;
-  font-size: 12px;
-  border: 1px solid transparent;
-}
-
-/* match your existing green/red pill vibe */
-.mech-badge.ok{
-  background: rgba(34,139,34,0.12);
-  border-color: rgba(34,139,34,0.25);
-  color: rgba(34,120,34,1);
-}
-.mech-badge.bad{
-  background: rgba(178,34,34,0.10);
-  border-color: rgba(178,34,34,0.25);
-  color: rgba(140,0,0,0.95);
-}
-
-.mech-msg{ flex: 1; }
-
-.hidden{ display:none !important; }
-
-  </style>
-  <style>
-    .disc-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 14px;
-      margin-top: 20px;
-    }
-
-    .week-card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 20px;
-      box-shadow: var(--shadow);
-      text-decoration: none;
-      color: inherit;
-      display: block;
-      transition: transform .1s, box-shadow .1s, border-color .1s;
-    }
-    .week-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 20px rgba(17,24,39,0.10);
-      border-color: var(--line-2);
-    }
-    .week-card.locked {
-      opacity: .55; cursor: default; pointer-events: none;
-    }
-
-    .week-num {
-      font-size: 11px; text-transform: uppercase; letter-spacing: .09em;
-      color: var(--muted); font-weight: 700; margin-bottom: 6px;
-    }
-    .week-title {
-      font-size: 16px; font-weight: 900; color: var(--ink);
-      margin-bottom: 8px; line-height: 1.3;
-    }
-    .week-labs {
-      display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px;
-    }
-    .lab-chip {
-      padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 700;
-      background: rgba(47,93,124,.08); color: #2f5d7c;
-      border: 1px solid rgba(47,93,124,.20);
-    }
-    .week-meta {
-      font-size: 12px; color: var(--muted);
-    }
-    .status-dot {
-      display: inline-block; width: 7px; height: 7px;
-      border-radius: 50%; margin-right: 5px; vertical-align: middle;
-    }
-    .dot-live  { background: #1b7f4b; }
-    .dot-soon  { background: #b47200; }
-    .dot-draft { background: #d1d5db; }
-
-    .info-banner {
-      background: rgba(47,93,124,.07);
-      border: 1px solid rgba(47,93,124,.20);
-      border-radius: 16px;
-      padding: 16px 20px;
-      font-size: 13px; color: var(--ink-2); line-height: 1.6;
-      margin-top: 16px;
-    }
-    .info-banner strong { color: var(--accent); }
   </style>
 </head>
 <body>
 
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
 <header class="page-header">
   <div class="container">
-    <nav class="crumbbar">
+    <nav class="crumbbar" aria-label="Breadcrumb">
       <a class="crumb-link" href="/classes/econ002/">← ECON 002 Home</a>
     </nav>
     <div class="header-inner">
       <div class="title-block">
         <div class="kicker">ECON 002</div>
         <h1>Discussion Section</h1>
-        <p class="sub">Weekly practice labs for discussion section. Your TA will tell you which week to open and give you the session code. Enter your name and student ID when prompted — your results stay in your browser until you download your summary PDF.</p>
+        <p class="sub">Every discussion-section resource, grouped by course unit and listed in the order we cover the material. Your TA will tell you which one to open.</p>
       </div>
     </div>
   </div>
 </header>
 
-<main class="container">
+<main id="main-content" class="container">
 
-  <div class="info-banner">
-    <strong>How it works:</strong> Click your week's link → enter your name, student ID, and the session code from your TA → complete each lab → download your summary PDF and submit it to Canvas.
-  </div>
+  <h2 class="section-title">By topic</h2>
+  <p class="section-note">Cards follow the syllabus units. A card opens once its discussion section meets.</p>
 
-  <div class="disc-grid">
+  <ul class="deck-grid">
 
-<!-- ── WEEK 1 ── -->
-    <a class="week-card" href="">
-      <div class="week-num">Week 1</div>
-      <div class="week-title">Discussion Section Canceled</div>
-      <div class="week-meta">
-        <span class="status-dot dot-draft"></span>No Assignment
-        &nbsp;·&nbsp;
-      </div>
-    </a>
-    
-    <!-- ── WEEK 2 ── -->
-    <a class="week-card" href="week-01/">
-      <div class="week-num">Week 2</div>
-      <div class="week-title">Introduction</div>
-      <div class="week-labs">
-        <span class="lab-chip">Opportunity Cost</span>
-        <span class="lab-chip">Positive vs. Normative Statements</span>
-        <span class="lab-chip">The Business Cycle</span>
-      </div>
-      <div class="week-meta">
-        <span class="status-dot dot-live"></span>Live
-        &nbsp;·&nbsp; 3 labs
-      </div>
-    </a>
+    <!-- ══ UNIT 1 · READING A GRAPH ══════════════════════════════════════
+         data-release locks THIS CARD'S LINK until the date/time below, in
+         California time (auto-adjusts for PST/PDT). The resource itself
+         stays reachable by direct URL at all times — this only gates the
+         click here. To change when the link opens, edit data-release.
+         Format: YYYY-MM-DDTHH:MM  ·  To leave a card open, delete it. -->
+    <li>
+      <a class="deck-card" href="reading-a-graph/">
+        <div class="deck-eyebrow">Unit 0 · Introduction</div>
+        <div class="deck-title">Reading a Graph</div>
+        <div class="deck-desc">Get a number off a graph in either direction, and tell a movement <em>along</em> a line from a move <em>of</em> the line — using a gas pump, a phone bill and a pizza habit. No macro content.</div>
+        <div class="deck-parts">
+          <span class="part-chip">A point is a pair</span>
+          <span class="part-chip">Along vs. shift</span>
+          <span class="part-chip">Transfer</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span><span class="deck-status">Open</span> &nbsp;·&nbsp; Slide deck &nbsp;·&nbsp; 24 slides &nbsp;·&nbsp; 3 parts
+        </div>
+      </a>
+    </li>
 
-    <!-- ── WEEK 3 ── -->
-    <a class="week-card" href="week-02/">
-      <div class="week-num">Week 2</div>
-      <div class="week-title">Supply &amp; Demand</div>
-      <div class="week-labs">
-        <span class="lab-chip">Coming soon</span>
-      </div>
-      <div class="week-meta">
-        <span class="status-dot dot-soon"></span>Coming soon
-      </div>
-    </a>
+    <!-- ══ UNIT 1 · THINKING LIKE AN ECONOMIST ═══════════════════════════
+         To gate this link until its discussion meets, add a data-release
+         attribute exactly as documented on the first card above. -->
+    <li>
+      <a class="deck-card" href="thinking-like-an-economist/">
+        <div class="deck-eyebrow">Unit 1 · Introduction</div>
+        <div class="deck-title">Thinking Like an Economist</div>
+        <div class="deck-desc">Three habits: what a choice <em>actually</em> cost you, why only the next step matters, and whether a sentence is a claim about the world or a claim about what is <em>better</em>. Built on a fundraiser table, not the study-hours example.</div>
+        <div class="deck-parts">
+          <span class="part-chip">Opportunity cost</span>
+          <span class="part-chip">Thinking at the margin</span>
+          <span class="part-chip">Positive vs. normative</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span><span class="deck-status">Open</span> &nbsp;·&nbsp; Slide deck &nbsp;·&nbsp; 27 slides &nbsp;·&nbsp; 3 parts
+        </div>
+      </a>
+    </li>
 
-    <!-- ── WEEK 4 ── -->
-    <a class="week-card locked" href="week-03/">
-      <div class="week-num">Week 3</div>
-      <div class="week-title">GDP &amp; Measurement</div>
-      <div class="week-labs">
-        <span class="lab-chip">Coming soon</span>
-      </div>
-      <div class="week-meta">
-        <span class="status-dot dot-draft"></span>Not yet scheduled
-      </div>
-    </a>
+    <!-- ══ UNIT 1 · INTRODUCTION LABS ════════════════════════════════════
+         To gate this link until its discussion meets, add a data-release
+         attribute exactly as documented on the card above, e.g.
+         data-release="2026-09-29T12:00" -->
 
-    <!-- ── WEEK 5 ── -->
-    <a class="week-card locked" href="week-04/">
-      <div class="week-num">Week 4</div>
-      <div class="week-title">Unemployment</div>
-      <div class="week-labs">
-        <span class="lab-chip">Coming soon</span>
-      </div>
-      <div class="week-meta">
-        <span class="status-dot dot-draft"></span>Not yet scheduled
-      </div>
-    </a>
+    <li>
+      <a class="deck-card" href="supply-and-demand/">
+        <div class="deck-eyebrow">Unit 2 · Supply and Demand</div>
+        <div class="deck-title">Along It, or Move It?</div>
+        <div class="deck-desc">Demand, supply, and the one price that leaves no leftover pressure — built on burritos at the campus taquer&iacute;a. The first place the along-versus-shift distinction earns its keep.</div>
+        <div class="deck-parts">
+          <span class="part-chip">Demand</span>
+          <span class="part-chip">Supply</span>
+          <span class="part-chip">Equilibrium</span>
+          <span class="part-chip">Shocks</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span><span class="deck-status">Open</span> &nbsp;·&nbsp; Slide deck &nbsp;·&nbsp; 31 slides &nbsp;·&nbsp; 4 parts
+        </div>
+      </a>
+    </li>
 
-    <!-- ── WEEK 6 ── -->
-    <a class="week-card locked" href="week-05/">
-      <div class="week-num">Week 5</div>
-      <div class="week-title">Inflation</div>
-      <div class="week-labs">
-        <span class="lab-chip">Coming soon</span>
-      </div>
-      <div class="week-meta">
-        <span class="status-dot dot-draft"></span>Not yet scheduled
-      </div>
-    </a>
+    <li>
+      <a class="deck-card" href="measuring-gdp/">
+        <div class="deck-eyebrow">Unit 3 &middot; Measuring GDP</div>
+        <div class="deck-title">What GDP Actually Counts</div>
+        <div class="deck-desc">Why prices show up in a measure of production at all, why they have to be held still, and why the bicycles nobody bought still count. Built on coffee, laptops, a loaf of bread and a warehouse.</div>
+        <div class="deck-parts">
+          <span class="part-chip">What counts</span>
+          <span class="part-chip">Prices</span>
+          <span class="part-chip">Inventories</span>
+          <span class="part-chip">Three views</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span><span class="deck-status">Open</span> &nbsp;&middot;&nbsp; Slide deck &nbsp;&middot;&nbsp; 38 slides &nbsp;&middot;&nbsp; 4 parts
+        </div>
+      </a>
+    </li>
 
-    <!-- ── WEEK 7 ── -->
-    <a class="week-card locked" href="week-06/">
-      <div class="week-num">Week 6</div>
-      <div class="week-title">IS Curve &amp; Goods Market</div>
-      <div class="week-labs">
-        <span class="lab-chip">Coming soon</span>
-      </div>
-      <div class="week-meta">
-        <span class="status-dot dot-draft"></span>Not yet scheduled
-      </div>
-    </a>
+    <li>
+      <a class="deck-card" href="who-counts-as-unemployed/">
+        <div class="deck-eyebrow">Unit 4 &middot; Unemployment</div>
+        <div class="deck-title">Who Counts as Unemployed?</div>
+        <div class="deck-desc">The three conditions that decide who is counted, a rate that falls because 2,000 people gave up, and a labor market whose equilibrium unemployment is zero &mdash; then the three answers to why it never is.</div>
+        <div class="deck-parts">
+          <span class="part-chip">Who counts</span>
+          <span class="part-chip">The puzzle</span>
+          <span class="part-chip">Natural rate</span>
+          <span class="part-chip">Cyclical</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span><span class="deck-status">Open</span> &nbsp;&middot;&nbsp; Slide deck &nbsp;&middot;&nbsp; 35 slides &nbsp;&middot;&nbsp; 4 parts
+        </div>
+      </a>
+    </li>
 
-    <!-- ── WEEK 8 ── -->
-    <a class="week-card locked" href="week-07/">
-      <div class="week-num">Week 7</div>
-      <div class="week-title">Fiscal Policy</div>
-      <div class="week-labs">
-        <span class="lab-chip">Coming soon</span>
-      </div>
-      <div class="week-meta">
-        <span class="status-dot dot-draft"></span>Not yet scheduled
-      </div>
-    </a>
+    <li>
+      <a class="deck-card" href="inflation-a-rate-not-a-level/">
+        <div class="deck-eyebrow">Unit 5 &middot; Inflation</div>
+        <div class="deck-title">Inflation: A Rate, Not a Level</div>
+        <div class="deck-desc">A rate that falls while the price level keeps climbing, a basket frozen so that only prices can move, the CPI against the deflator, and the surprise inflation that quietly moves money from a lender to a borrower.</div>
+        <div class="deck-parts">
+          <span class="part-chip">What it is</span>
+          <span class="part-chip">Measuring</span>
+          <span class="part-chip">Where it comes from</span>
+          <span class="part-chip">Why it matters</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span><span class="deck-status">Open</span> &nbsp;&middot;&nbsp; Slide deck &nbsp;&middot;&nbsp; 31 slides &nbsp;&middot;&nbsp; 4 parts
+        </div>
+      </a>
+    </li>
 
-    <!-- ── WEEK 9 ── -->
-    <a class="week-card locked" href="week-08/">
-      <div class="week-num">Week 8</div>
-      <div class="week-title">Money &amp; Monetary Policy</div>
-      <div class="week-labs">
-        <span class="lab-chip">Coming soon</span>
-      </div>
-      <div class="week-meta">
-        <span class="status-dot dot-draft"></span>Not yet scheduled
-      </div>
-    </a>
+    <!-- ══ UNITS NOT YET BUILT ═══════════════════════════════════════════
+         Each is a plain <div>, not a link, so nothing here points at a
+         page that does not exist yet. When a resource is ready, swap the
+         <div class="deck-card locked"> for an <a class="deck-card"
+         href="folder-name/"> and fill in the chips and meta line. -->
 
-    <!-- ── WEEK 10 ── -->
-    <a class="week-card locked" href="week-09/">
-      <div class="week-num">Week 9</div>
-      <div class="week-title">Aggregate Demand</div>
-      <div class="week-labs">
-        <span class="lab-chip">Coming soon</span>
-      </div>
-      <div class="week-meta">
-        <span class="status-dot dot-draft"></span>Not yet scheduled
-      </div>
-    </a>
 
-    <!-- ── WEEK 11 ── -->
-    <a class="week-card locked" href="week-10/">
-      <div class="week-num">Week 10</div>
-      <div class="week-title">Review</div>
-      <div class="week-labs">
-        <span class="lab-chip">Coming soon</span>
-      </div>
-      <div class="week-meta">
-        <span class="status-dot dot-draft"></span>Not yet scheduled
-      </div>
-    </a>
+    <li>
+      <a class="deck-card" href="where-output-comes-from/">
+        <div class="deck-eyebrow">Unit 6 &middot; GDP: Where Does It Come From?</div>
+        <div class="deck-title">Where Output Comes From</div>
+        <div class="deck-desc">One bakery with a fixed number of ovens, a fourth worker who adds less than the third, the break-even hire that sets the wage, and higher prices that raise output right up until the wage catches up.</div>
+        <div class="deck-parts">
+          <span class="part-chip">The recipe</span>
+          <span class="part-chip">One more</span>
+          <span class="part-chip">Who gets paid</span>
+          <span class="part-chip">Aggregate supply</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span><span class="deck-status">Open</span> &nbsp;&middot;&nbsp; Slide deck &nbsp;&middot;&nbsp; 33 slides &nbsp;&middot;&nbsp; 4 parts
+        </div>
+      </a>
+    </li>
 
-  </div>
+    <li>
+      <a class="deck-card" href="where-output-settles/">
+        <div class="deck-eyebrow">Unit 7 &middot; Equilibrium in the Goods Market</div>
+        <div class="deck-title">Where Output Settles</div>
+        <div class="deck-desc">What determines each piece of spending, why unsold goods on a shelf are the signal that moves output, why a fall of 16 in investment costs 64 of output, and how the whole story collapses into a single downward-sloping line.</div>
+        <div class="deck-parts">
+          <span class="part-chip">The pieces</span>
+          <span class="part-chip">Equilibrium</span>
+          <span class="part-chip">The multiplier</span>
+          <span class="part-chip">The IS curve</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span><span class="deck-status">Open</span> &nbsp;&middot;&nbsp; Slide deck &nbsp;&middot;&nbsp; 37 slides &nbsp;&middot;&nbsp; 4 parts
+        </div>
+      </a>
+    </li>
+
+    <li>
+      <a class="deck-card" href="when-the-government-spends-and-taxes/">
+        <div class="deck-eyebrow">Unit 8 &middot; Fiscal Policy</div>
+        <div class="deck-title">When the Government Spends and Taxes</div>
+        <div class="deck-desc">Why a rise of 16 in government purchases adds 64 to output while a rise of 16 in taxes takes away only 48, why paying for spending with taxes still moves output, and why a deficit can widen with nobody voting for it.</div>
+        <div class="deck-parts">
+          <span class="part-chip">Spending</span>
+          <span class="part-chip">Taxes</span>
+          <span class="part-chip">Both at once</span>
+          <span class="part-chip">The budget</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span><span class="deck-status">Open</span> &nbsp;&middot;&nbsp; Slide deck &nbsp;&middot;&nbsp; 35 slides &nbsp;&middot;&nbsp; 4 parts
+        </div>
+      </a>
+    </li>
+
+    <li>
+      <a class="deck-card" href="where-money-comes-from/">
+        <div class="deck-eyebrow">Unit 9 &middot; Money</div>
+        <div class="deck-title">Where Money Comes From</div>
+        <div class="deck-desc">How a single deposit of 400 becomes 1,600 of money without one new reserve appearing, why that fact hands control of the money supply to the Fed, and how the quantity of money ends up setting the interest rate every earlier deck simply handed you.</div>
+        <div class="deck-parts">
+          <span class="part-chip">What money is</span>
+          <span class="part-chip">Banks make money</span>
+          <span class="part-chip">The Fed&rsquo;s levers</span>
+          <span class="part-chip">The price of money</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span><span class="deck-status">Open</span> &nbsp;&middot;&nbsp; Slide deck &nbsp;&middot;&nbsp; 37 slides &nbsp;&middot;&nbsp; 4 parts
+        </div>
+      </a>
+    </li>
+
+    <li>
+      <a class="deck-card" href="two-markets-one-curve/">
+        <div class="deck-eyebrow">Unit 10 &middot; Aggregate Demand</div>
+        <div class="deck-title">Two Markets, One Curve</div>
+        <div class="deck-desc">The goods market and the money market go on one diagram, and running that diagram at three different price levels traces out the aggregate demand curve &mdash; which is why fiscal and monetary policy move output the same way and the interest rate opposite ways.</div>
+        <div class="deck-parts">
+          <span class="part-chip">Two curves</span>
+          <span class="part-chip">Deriving AD</span>
+          <span class="part-chip">Policy shifts AD</span>
+          <span class="part-chip">Same output, different rates</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span><span class="deck-status">Open</span> &nbsp;&middot;&nbsp; Slide deck &nbsp;&middot;&nbsp; 31 slides &nbsp;&middot;&nbsp; 4 parts
+        </div>
+      </a>
+    </li>
+
+    <li>
+      <a class="deck-card" href="when-the-two-sides-meet/">
+        <div class="deck-eyebrow">Unit 11 &middot; AS&ndash;AD</div>
+        <div class="deck-title">When the Two Sides Meet</div>
+        <div class="deck-desc">Aggregate demand joins the two aggregate supply curves on one diagram. Demand shocks move output and prices together and correct themselves; supply shocks move them apart and force policy to choose which half of its mandate to protect.</div>
+        <div class="deck-parts">
+          <span class="part-chip">Three curves</span>
+          <span class="part-chip">Demand shocks</span>
+          <span class="part-chip">Supply shocks</span>
+          <span class="part-chip">The choice</span>
+        </div>
+        <div class="deck-meta">
+          <span class="status-dot dot-live"></span><span class="deck-status">Open</span> &nbsp;&middot;&nbsp; Slide deck &nbsp;&middot;&nbsp; 32 slides &nbsp;&middot;&nbsp; 4 parts
+        </div>
+      </a>
+    </li>
+
+    <li>
+      <div class="deck-card locked" aria-disabled="true">
+        <div class="deck-eyebrow">End of quarter</div>
+        <div class="deck-title">Review</div>
+        <div class="deck-desc">A last pass over the whole course before the final.</div>
+        <div class="deck-meta"><span class="status-dot dot-draft"></span>Not yet scheduled</div>
+      </div>
+    </li>
+
+  </ul>
 </main>
 
 <footer style="margin-top:32px;padding-top:12px;border-top:1px solid var(--line);">
-  <div class="container" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--muted);">
-    <span>ECON 002 — Discussion Section</span>
-    <span>interactiveecon.github.io</span>
+  <div class="container">
+    <div class="footer-inner">
+      <span>ECON 002 — Discussion Section</span>
+      <span>interactiveecon.github.io</span>
+    </div>
   </div>
 </footer>
+
+<script>
+(function(){
+  'use strict';
+  /* ── Card release gate (SOFT lock) ─────────────────────────────────
+     Locks a card's LINK until its data-release moment, in California
+     time (America/Los_Angeles — auto-adjusts for PST/PDT). The resource
+     stays publicly reachable by its direct URL at all times; this only
+     stops the card here from being clicked early. Soft deterrent only —
+     a determined student can still type the URL. To gate a card, add a
+     data-release attribute to it (format: YYYY-MM-DDTHH:MM). No card is
+     gated right now, so this loop simply finds nothing to do. */
+
+  // "Now" as California wall-clock, packed into a sortable YYYYMMDDHHMM number
+  function calNowKey(){
+    var parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone:'America/Los_Angeles', hourCycle:'h23',
+      year:'numeric', month:'2-digit', day:'2-digit',
+      hour:'2-digit', minute:'2-digit'
+    }).formatToParts(new Date());
+    var v = function(t){ return parts.find(function(p){return p.type===t;}).value; };
+    return Number(v('year')+v('month')+v('day')+v('hour')+v('minute'));
+  }
+  function keyOf(s){ return Number(String(s).replace(/[^0-9]/g,'').slice(0,12)); }
+  function shortDate(s){
+    var d = String(s).split('T'), ymd = (d[0]||'').split('-'), hm = (d[1]||'00:00').split(':');
+    var mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var hh = Number(hm[0]||0), h12 = ((hh+11)%12)+1, ampm = hh>=12?'PM':'AM';
+    return mon[Number(ymd[1])-1]+' '+Number(ymd[2])+', '+ymd[0]+' · '+h12+':'+hm[1]+' '+ampm+' PT';
+  }
+
+  // Gate every card that carries a data-release attribute
+  Array.prototype.forEach.call(document.querySelectorAll('.deck-card[data-release]'), function(card){
+    var release = card.getAttribute('data-release');
+    var open;
+    try { open = keyOf(calNowKey()) >= keyOf(release); }   // keyOf(number) is a no-op cast
+    catch(e){ open = true; }   // fail open if Intl time-zone data is unavailable
+    if(open) return;           // released → leave the card as a normal live link
+
+    // Not released yet → disable the link and show the unlock date
+    card.classList.add('locked');
+    if(card.getAttribute('href')){
+      card.setAttribute('data-href', card.getAttribute('href'));
+      card.removeAttribute('href');          // no navigation by mouse or keyboard
+    }
+    card.setAttribute('aria-disabled', 'true');
+    card.setAttribute('tabindex', '-1');
+    var dot = card.querySelector('.status-dot');
+    if(dot) dot.className = 'status-dot dot-soon';
+    var status = card.querySelector('.deck-status');
+    if(status) status.textContent = 'Opens ' + shortDate(release);
+  });
+})();
+</script>
 </body>
 </html>
