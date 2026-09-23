@@ -234,6 +234,12 @@
       background:rgba(47,93,124,.07);border:1px solid rgba(47,93,124,.25);
       font-family:var(--font-mono);font-size:0.875rem;line-height:1.6;color:var(--ink);}
 
+    /* ── Problem bar ───────────────────────────────────────────── */
+    .problem-bar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;}
+    .problem-bar .pb-text{flex:1 1 280px;min-width:0;}
+    .problem-bar h2{margin:0 0 2px;}
+    .problem-bar p{margin:2px 0;}
+
     /* ── CYU / model details ───────────────────────────────────── */
     .cyu-q{border-top:1px solid var(--line);padding-top:14px;margin-top:14px;}
     .cyu-q:first-of-type{border-top:none;margin-top:4px;padding-top:4px;}
@@ -548,15 +554,17 @@ function prefersReduced(){
 
 /* ─────────────────────────────────────────────────────────────────
    Model — the only place the formulas live
-   Y = aL − L², MPL = a − 2L, firms hire until MPL = W/P.
+   Y = aL − bL², MPL = a − 2bL, firms hire until MPL = W/P.
+   A technology is either a number a (with b = 1) or an object {a, b}.
    ───────────────────────────────────────────────────────────────── */
+function techOf(t){ return typeof t === 'number' ? { a: t, b: 1 } : t; }
 const model = {
   A0: 20,          // baseline technology
   LMAX: 10,
   LBAR: 5,         // normal employment (natural rate of unemployment)
-  Y(L, a){ return a * L - L * L; },
-  MPL(L, a){ return a - 2 * L; },
-  L_of_w(w, a){ return clamp(a / 2 - w / 2, 0, model.LMAX); },
+  Y(L, t){ const k = techOf(t); return k.a * L - k.b * L * L; },
+  MPL(L, t){ const k = techOf(t); return k.a - 2 * k.b * L; },
+  L_of_w(w, t){ const k = techOf(t); return clamp((k.a - w) / (2 * k.b), 0, model.LMAX); },
   Ybar(a){ return model.Y(model.LBAR, a); },   // potential output
   wLR(a){ return model.MPL(model.LBAR, a); }   // long-run real wage
 };
@@ -629,7 +637,7 @@ function setupCanvas(canvas, wrap){
 const PAD = { l:52, r:16, t:16, b:48 }; // CSS px
 /* Left and bottom padding grow with the user's font size so tick labels fit. */
 function padFor(){
-  return { l: Math.round(28 + 24 * _fs), r: 14, t: 14, b: Math.round(20 + 28 * _fs) };
+  return { l: Math.round(32 + 24 * _fs), r: 14, t: 14, b: Math.round(20 + 28 * _fs) };
 }
 
 function makeCoords(W, H, dpr, xMax, yMax, pad){
@@ -808,19 +816,25 @@ function arrow(ctx, x0, y0, x1, y1, color, dpr){
   ctx.restore();
 }
 
-/* Axes, grid, tick labels and titles. Extra x-ticks (like Ȳ) are drawn first;
-   numeric tick labels that would collide with them are skipped. */
+/* Axes, grid, tick labels and titles. Extra ticks (like Ȳ on the x-axis, or
+   the output being read off the y-axis) are drawn first; numeric tick labels
+   that would collide with them are skipped. */
+function ticks(max, step){
+  const out = [];
+  for(let k = 0; k * step <= max + 1e-9; k++) out.push(Math.round(k * step * 1e6) / 1e6);
+  return out;
+}
 function drawAxes(s, c, o){
   const { ctx, dpr, W, H } = s, p = c.p;
   ctx.save();
   ctx.setLineDash([]);
   ctx.lineWidth = dpr; ctx.strokeStyle = COL.line;
-  for(let v = o.yStep; v <= o.yMax + 1e-9; v += o.yStep){
+  ticks(o.yMax, o.yStep).slice(1).forEach(v => {
     ctx.beginPath(); ctx.moveTo(p.l, c.yC(v)); ctx.lineTo(W - p.r, c.yC(v)); ctx.stroke();
-  }
-  for(let v = o.xStep; v <= o.xMax + 1e-9; v += o.xStep){
+  });
+  ticks(o.xMax, o.xStep).slice(1).forEach(v => {
     ctx.beginPath(); ctx.moveTo(c.xC(v), p.t); ctx.lineTo(c.xC(v), H - p.b); ctx.stroke();
-  }
+  });
   ctx.strokeStyle = COL.ink; ctx.lineWidth = 1.5 * dpr;
   ctx.beginPath(); ctx.moveTo(p.l, p.t); ctx.lineTo(p.l, H - p.b); ctx.lineTo(W - p.r, H - p.b); ctx.stroke();
 
@@ -835,15 +849,27 @@ function drawAxes(s, c, o){
   });
   ctx.font = font(400, 11, dpr); ctx.fillStyle = COL.muted;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  for(let v = 0; v <= o.xMax + 1e-9; v += o.xStep){
-    const x = c.xC(v), lab = String(v), w = ctx.measureText(lab).width;
-    if(taken.some(t => x + w / 2 > t[0] && x - w / 2 < t[1])) continue;
+  ticks(o.xMax, o.xLabelStep || o.xStep).forEach(v => {
+    const x = c.xC(v), lab = num(v), w = ctx.measureText(lab).width;
+    if(taken.some(t => x + w / 2 > t[0] && x - w / 2 < t[1])) return;
     ctx.fillText(lab, x, rowY);
-  }
-  ctx.textAlign = 'right';
-  for(let v = 0; v <= o.yMax + 1e-9; v += o.yStep){
-    ctx.fillText(String(v), p.l - 6 * dpr, c.yC(v));
-  }
+    taken.push([x - w / 2 - 4 * dpr, x + w / 2 + 4 * dpr]);   // later labels that would touch this one are skipped
+  });
+  const yTaken = [], labH = 11 * dpr * _fs;
+  (o.yExtra || []).forEach(e => {
+    const y = c.yC(e.v);
+    ctx.strokeStyle = e.color; ctx.lineWidth = 2 * dpr;
+    ctx.beginPath(); ctx.moveTo(p.l - 5 * dpr, y); ctx.lineTo(p.l, y); ctx.stroke();
+    ctx.font = font(800, 11, dpr); ctx.fillStyle = e.color; ctx.textAlign = 'right';
+    ctx.fillText(e.text, p.l - 7 * dpr, y);
+    yTaken.push([y - labH, y + labH]);
+  });
+  ctx.font = font(400, 11, dpr); ctx.fillStyle = COL.muted; ctx.textAlign = 'right';
+  ticks(o.yMax, o.yStep).forEach(v => {
+    const y = c.yC(v);
+    if(yTaken.some(t => y > t[0] && y < t[1])) return;
+    ctx.fillText(num(v), p.l - 6 * dpr, y);
+  });
   ctx.font = font(700, 11, dpr); ctx.fillStyle = COL.ink2;
   ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
   ctx.fillText(o.xTitle, p.l + c.PW / 2, H - 3 * dpr);
@@ -871,7 +897,7 @@ const AXES = {
 function axesFor(key, s, extra){
   const o = Object.assign({}, AXES[key], extra || {});
   const plotCss = s.W / s.dpr - padFor().l - padFor().r;
-  if(o.xMax === 10 && plotCss < 230) o.xStep = 2;
+  if(o.xMax === 10 && plotCss < 230) o.xLabelStep = 2;   // keep a gridline at every worker
   return o;
 }
 
@@ -930,10 +956,12 @@ function drawProd(sc){
   if(!s) return;
   const { ctx, dpr, W, H } = s;
   ctx.clearRect(0, 0, W, H);
-  const o = axesFor('prod', s), c = makeCoords(W, H, dpr, o.xMax, o.yMax, padFor());
+  const e = sc.e;
+  // While output is being read (and after), mark it on the y-axis
+  const yExtra = sc.prod.guide || sc.prod.point ? [{ v: e.Y, text: num(e.Y), color: COL.ink }] : [];
+  const o = axesFor('prod', s, { yExtra }), c = makeCoords(W, H, dpr, o.xMax, o.yMax, padFor());
   drawAxes(s, c, o);
   const board = makeBoard(ctx, dpr, plotRect(c, W, H));
-  const e = sc.e;
 
   clipPlot(ctx, c, W, H);
   sc.prod.F.forEach(f => {
@@ -959,8 +987,9 @@ function drawProd(sc){
     board.add({ runs: f.runs, color: STY[f.style].text, cands, pri: 5 - i, req: true });
   });
   if(sc.prod.guide){
-    const x = c.xC(e.L);
-    guide(ctx, x, H - c.p.b, x, c.yC(e.Y), dpr);
+    const x = c.xC(e.L), y = c.yC(e.Y);
+    guide(ctx, x, H - c.p.b, x, y, dpr);
+    guide(ctx, x, y, c.p.l, y, dpr);
   }
   if(sc.prod.point){
     const x = c.xC(e.L), y = c.yC(e.Y);
@@ -968,8 +997,6 @@ function drawProd(sc){
     guide(ctx, x, y, c.p.l, y, dpr);
     dot(ctx, x, y, 5, COL.ink, dpr);
     board.reservePoint(x, y, 7 * dpr);
-    board.add({ runs: 'Y = ' + num(e.Y), color: COL.ink, pri: 8, req: true,
-      cands: [{ x: c.p.l + 4 * dpr, y: y - 3 * dpr, ax: 'l', ay: 'b' }, { x: c.p.l + 4 * dpr, y: y + 3 * dpr, ax: 'l', ay: 't' }] });
     const runs = ['slope = MP', { t: 'L', sub: true }, ' = ' + num(e.mpl)];
     const xe = c.xC(e.L + 1.4), ye = c.yC(e.Y + e.mpl * 1.4);
     board.add({ runs, alt: ['slope = ' + num(e.mpl)], color: COL.wage, pri: 9, req: true,
@@ -980,9 +1007,9 @@ function drawProd(sc){
 }
 
 /* SRAS for a nominal wage W and technology a, drawn parametrically in P. */
-function srasPts(W, a, c){
-  const pts = [];
-  for(let P = 0.5; P <= 5.0001; P += 0.02){
+function srasPts(W, a, c, pMax){
+  const pts = [], dP = pMax / 250;
+  for(let P = pMax / 10; P <= pMax * 1.0001; P += dP){
     const L = model.L_of_w(W / P, a);
     if(L <= 0 || L >= model.LMAX) continue;
     pts.push([c.xC(model.Y(L, a)), c.yC(P)]);
@@ -1004,9 +1031,9 @@ function drawAS(sc){
   clipPlot(ctx, c, W, H);
   A.lras.forEach(l => {
     const x = c.xC(model.Ybar(l.a));
-    strokePts(ctx, [[x, c.yC(0)], [x, c.yC(5)]], STY[l.style], dpr);
+    strokePts(ctx, [[x, c.yC(0)], [x, c.yC(o.yMax)]], STY[l.style], dpr);
   });
-  A.sras.forEach(r => strokePts(ctx, srasPts(r.W, r.a, c), STY[r.style], dpr));
+  A.sras.forEach(r => strokePts(ctx, srasPts(r.W, r.a, c, o.yMax), STY[r.style], dpr));
   (A.trail || []).forEach(t => {
     ctx.save(); ctx.globalAlpha = .75;
     dot(ctx, c.xC(t.Y), c.yC(t.P), 2.6, COL.accent, dpr);
@@ -1024,7 +1051,7 @@ function drawAS(sc){
     // With two LRAS lines, each label goes on its outer side so it doesn't cross the other line
     const Yb = model.Ybar(l.a), x = c.xC(Yb);
     const leftFirst = A.lras.some(o => model.Ybar(o.a) > Yb);
-    const Ps = [4.75, 4.25, 3.75, 0.75, 0.3];
+    const Ps = [0.95, 0.85, 0.75, 0.15, 0.06].map(f => f * o.yMax);
     const R1 = Ps.map(P => ({ x: x + 5 * dpr, y: c.yC(P), ax: 'l', ay: 'm' }));
     const L1 = Ps.map(P => ({ x: x - 5 * dpr, y: c.yC(P), ax: 'r', ay: 'm' }));
     board.add({ runs: l.label, color: STY[l.style].text, pri: 8.5 - i * 0.1, req: true,
@@ -1033,7 +1060,7 @@ function drawAS(sc){
   A.sras.forEach((r, i) => {
     if(!r.label) return;
     const cands = [];
-    (r.at || [4.6, 4.2, 3.8, 3.4, 1.4, 1.1, 3.0, 2.6]).forEach(P => {
+    (r.at || [0.92, 0.84, 0.76, 0.68, 0.28, 0.22, 0.6, 0.52].map(f => f * o.yMax)).forEach(P => {
       const L = model.L_of_w(r.W / P, r.a);
       if(L <= 0 || L >= model.LMAX) return;
       const x = c.xC(model.Y(L, r.a)), y = c.yC(P);
@@ -1270,8 +1297,9 @@ function describe(sc){
     'Output rises from 0 at L = 0 to 100 at L = 10 and gets flatter as L rises' + (shifted ? '; this curve is now faded' : '') + '. ';
   if(shifted) t += 'The dashed F′ curve is ' + (view.a > model.A0 ? 'steeper' : 'flatter') + ', reaching ' +
     num(model.Y(10, view.a)) + ' at L = 10. ';
-  if(sc.prod.point) t += 'The point at L = ' + num(e.L) + ' shows Y = ' + num(e.Y) +
-    '. A short tangent line there has slope MPL = ' + num(e.mpl) + '.';
+  if(sc.prod.point || sc.prod.guide) t += 'Dashed guides run from L = ' + num(e.L) + ' up to the ' +
+    (shifted ? 'F′ ' : '') + 'curve and across to the vertical axis, where output ' + num(e.Y) + ' is marked. ';
+  if(sc.prod.point) t += 'A short tangent line at that point has slope MPL = ' + num(e.mpl) + '.';
   $('prodDesc').textContent = t;
 
   const A = sc.as, parts = ['Aggregate supply graph. Output Y from 0 to 120 across, price level P from 0 to 5 up.'];
