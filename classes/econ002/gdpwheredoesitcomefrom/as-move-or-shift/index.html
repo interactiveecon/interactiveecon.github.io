@@ -349,7 +349,8 @@
   <section class="card" aria-labelledby="drillTitle">
     <h3 id="drillTitle" class="sr-only">Hiring drill</h3>
     <div class="rule-card"><span class="box-tag">Rule</span>Hire the next worker if their
-      MP<sub>L</sub> is at least W/P.</div>
+      MP<sub>L</sub> is at least W/P. In every problem here, the last worker hired has
+      MP<sub>L</sub> = W/P.</div>
     <div class="tables one" id="tables">
       <div id="table1"></div>
       <div id="table2" class="hidden"></div>
@@ -725,13 +726,15 @@ function showTechTable(a){
 
 /* ─────────────────────────────────────────────────────────────────
    Part B — problem generator
-   P from a fixed list; W/P an even integer from 2 to 18; W whole dollars.
+   W/P is always an odd whole number from 3 to 17, which is exactly the MPL of
+   one worker in the table (19, 17, 15, …). So the last worker hired always has
+   MPL = W/P. P comes from a fixed list and W is a whole number of dollars.
    ───────────────────────────────────────────────────────────────── */
-const P_SET = [1, 1.25, 1.5, 2, 2.5, 3, 4, 5];
-const W_REAL = [2, 4, 6, 8, 10, 12, 14, 16, 18];
+const P_SET = [1, 2, 3, 4, 5];
+const W_REAL = [3, 5, 7, 9, 11, 13, 15, 17];
 const TYPES = ['T1', 'T2', 'T3', 'T4', 'T5'];
 function whole(x){ return Math.abs(x - Math.round(x)) < 1e-9; }
-function isEvenReal(w){ return whole(w) && Math.round(w) % 2 === 0 && w >= 2 - 1e-9 && w <= 18 + 1e-9; }
+function isTableReal(w){ return whole(w) && W_REAL.indexOf(Math.round(w)) >= 0; }
 function pickPW(){
   for(;;){
     const P = pick(P_SET), w = pick(W_REAL);
@@ -746,7 +749,7 @@ function makeProblem(type){
     if(t === 'T1') return { type: t, P: b.P, W: b.W, w: b.w, L, answer: L };
     if(t === 'T2') return { type: t, P: b.P, W: b.W, w: b.w, L, Y, answer: Y };
     if(t === 'T3'){
-      const opts = P_SET.filter(P2 => P2 !== b.P && isEvenReal(b.W / P2));
+      const opts = P_SET.filter(P2 => P2 !== b.P && isTableReal(b.W / P2));
       if(!opts.length) continue;
       const P2 = pick(opts), w2 = Math.round(b.W / P2), L2 = hireDiscrete(w2, model.A0);
       return { type: t, P: b.P, W: b.W, w: b.w, L, Y, P2, w2, L2, Y2: model.Y(L2, model.A0),
@@ -785,8 +788,10 @@ function hintHtml(q){
   return 'Read the L = 5 row of the new table.';
 }
 function hireReason(w, L){
-  const next = L < model.LMAX ? ' Worker ' + (L + 1) + '\'s ' + MPL_HTML + ' is ' + workerMPL(L + 1, model.A0) + ', less than ' + w + '.' : '';
-  return 'Worker ' + L + '\'s ' + MPL_HTML + ' is ' + workerMPL(L, model.A0) + ', at least ' + w + '.' + next;
+  const next = L < model.LMAX ? ' Worker ' + (L + 1) + '\'s ' + MPL_HTML + ' is only ' + workerMPL(L + 1, model.A0) +
+    ', less than W/P, so firms stop there.' : '';
+  return 'Worker ' + L + '\'s ' + MPL_HTML + ' is ' + workerMPL(L, model.A0) + ', exactly W/P, so that worker is worth ' +
+    'hiring: ' + MPL_HTML + ' = W/P.' + next;
 }
 function solutionHtml(q){
   if(q.type === 'T1') return 'W/P = ' + fmtW(q.W) + ' ÷ ' + fmtP(q.P) + ' = ' + q.w + '. ' + hireReason(q.w, q.L) +
@@ -798,9 +803,10 @@ function solutionHtml(q){
     'economy <strong>moved along the SRAS</strong>' + (q.P2 > q.P ? ' (up and to the right).' : ' (down and to the left).');
   if(q.type === 'T4') return 'Originally W/P = ' + fmtW(q.W) + ' ÷ ' + fmtP(q.P) + ' = ' + q.w + '. To keep W/P = ' + q.w +
     ' at P = ' + fmtP(q.P2) + ', W = ' + q.w + ' × ' + fmtP(q.P2) + ' = <strong>' + fmtW(q.answer) + '</strong>. ' +
-    'W changes by the same percent as P, so employment stays at ' + q.L + '.';
+    'W changes by the same percent as P, so W/P is still ' + q.w + ' and employment stays at ' + q.L +
+    ' (worker ' + q.L + '\'s ' + MPL_HTML + ' is ' + q.w + ').';
   return 'In the long run L = ' + LBAR_HTML + ' = 5, so Y = F′(5) = <strong>' + q.answer + '</strong> (with the new technology). ' +
-    'The real wage settles at the new ' + MPL_HTML + ' of that 5th worker.';
+    'The real wage settles at the new ' + MPL_HTML + ' of that 5th worker, ' + workerMPL(model.LBAR, q.a) + ' in the new table.';
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -956,19 +962,19 @@ function selfTest(){
     }
     is(tag + ' P in set', P_SET.indexOf(q.P) >= 0);
     is(tag + ' W whole', Number.isInteger(q.W));
-    is(tag + ' W/P even 2–18', isEvenReal(q.W / q.P) && q.w === q.W / q.P);
-    is(tag + ' L matches both rules', q.L === model.L_of_w(q.w, 20) && q.L === hireDiscrete(q.w, 20));
-    if(q.type === 'T1') is(tag + ' answer', q.answer === 10 - q.w / 2);
+    is(tag + ' W/P odd 3–17', isTableReal(q.W / q.P) && q.w === q.W / q.P);
+    is(tag + ' last worker has MPL = W/P', q.L === hireDiscrete(q.w, 20) && workerMPL(q.L, 20) === q.w);
+    if(q.type === 'T1') is(tag + ' answer', q.answer === (21 - q.w) / 2);
     if(q.type === 'T2') is(tag + ' answer', q.answer === TABLE[20][q.L]);
     if(q.type === 'T3'){
       is(tag + ' P2 in set and differs', P_SET.indexOf(q.P2) >= 0 && q.P2 !== q.P);
-      is(tag + ' W/P2 even 2–18', isEvenReal(q.W / q.P2));
-      is(tag + ' answer', q.answer === TABLE[20][10 - (q.W / q.P2) / 2] && q.mc === 'along');
+      is(tag + ' W/P2 odd 3–17', isTableReal(q.W / q.P2) && workerMPL(q.L2, 20) === q.w2);
+      is(tag + ' answer', q.answer === TABLE[20][(21 - q.W / q.P2) / 2] && q.mc === 'along');
     }
     if(q.type === 'T4'){
       is(tag + ' P2 in set and differs', P_SET.indexOf(q.P2) >= 0 && q.P2 !== q.P);
       is(tag + ' answer whole', Number.isInteger(q.answer) && Math.abs(q.answer - q.W * q.P2 / q.P) < 1e-9);
-      is(tag + ' restores L', model.L_of_w(q.answer / q.P2, 20) === q.L);
+      is(tag + ' restores L', hireDiscrete(q.answer / q.P2, 20) === q.L);
     }
     is(tag + ' solution names answer', solutionHtml(q).indexOf(q.type === 'T4' ? fmtW(q.answer) : String(q.answer)) >= 0);
   }

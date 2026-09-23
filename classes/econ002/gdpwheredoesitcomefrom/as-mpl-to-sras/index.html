@@ -111,14 +111,17 @@
 
     /* ── Graph dock: three canvases, chain strip, readout ──────── */
     .graph-dock{margin-bottom:14px;}
-    .canvas-row3{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;}
+    .canvas-row3{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:start;}
+    /* The AS graph gets the most room: a full row between 700 and 1000px, and a
+       wider, taller column at 1000px and up. */
     @media(min-width:701px){
       .canvas-row3{grid-template-columns:repeat(2,minmax(0,1fr));}
-      .canvas-row3 > .graph-card:nth-child(3){grid-column:1 / -1;justify-self:center;
-        width:calc(50% - 6px);}}
+      .canvas-row3 > .graph-card:nth-child(3){grid-column:1 / -1;}
+      .canvas-row3 > .graph-card:nth-child(3) .aspect-g{aspect-ratio:2/1;}}
     @media(min-width:1000px){
-      .canvas-row3{grid-template-columns:repeat(3,minmax(0,1fr));}
-      .canvas-row3 > .graph-card:nth-child(3){grid-column:auto;justify-self:stretch;width:auto;}}
+      .canvas-row3{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1.5fr);}
+      .canvas-row3 > .graph-card:nth-child(3){grid-column:auto;}
+      .canvas-row3 > .graph-card:nth-child(3) .aspect-g{aspect-ratio:3/2;}}
     /* Pinned above the steps on wide, tall screens; inline otherwise */
     @media(min-width:1000px) and (min-height:820px){
       .graph-dock{position:sticky;top:0;z-index:20;background:var(--paper);
@@ -560,6 +563,7 @@ const STY = {
   lras:      { color: COL.good,   width: 4,   dash: [],     alpha: 1,   text: COL.good },
   lrasFaded: { color: COL.good,   width: 4,   dash: [],     alpha: .45, text: COL.muted },
   lrasNew:   { color: COL.bad,    width: 4,   dash: [9, 6], alpha: 1,   text: COL.bad },
+  ghost:     { color: COL.bad,    width: 1.5, dash: [4, 4], alpha: .25, text: COL.muted },
   wage:      { color: COL.wage,   width: 2,   dash: [6, 4], alpha: 1,   text: COL.wage }
 };
 
@@ -748,6 +752,7 @@ function drawAxes(s, c, o){
     const y = c.yC(e.v);
     ctx.strokeStyle = e.color; ctx.lineWidth = 2 * dpr;
     ctx.beginPath(); ctx.moveTo(p.l - 5 * dpr, y); ctx.lineTo(p.l, y); ctx.stroke();
+    if(yTaken.some(t => y > t[0] && y < t[1])) return;      // an earlier marked value already sits here
     ctx.font = font(800, 11, dpr); ctx.fillStyle = e.color; ctx.textAlign = 'right';
     ctx.fillText(e.text, p.l - 7 * dpr, y);
     yTaken.push([y - labH, y + labH]);
@@ -794,7 +799,8 @@ function drawLabor(sc){
   if(!s) return;
   const { ctx, dpr, W, H } = s;
   ctx.clearRect(0, 0, W, H);
-  const o = axesFor('labor', s), c = makeCoords(W, H, dpr, o.xMax, o.yMax, padFor());
+  const yExtra = (sc.labor.yTicks || []).map(t => ({ v: t.v, text: num(t.v), color: t.color || COL.ink }));
+  const o = axesFor('labor', s, { yExtra }), c = makeCoords(W, H, dpr, o.xMax, o.yMax, padFor());
   drawAxes(s, c, o);
   const board = makeBoard(ctx, dpr, plotRect(c, W, H));
   const e = sc.e;
@@ -816,9 +822,9 @@ function drawLabor(sc){
     board.add({ runs: m.runs, color: STY[m.style].text, cands, pri: 5 - i, req: true });
   });
   if(sc.labor.lbar){
-    const x = c.xC(model.LBAR);
+    const x = c.xC(sc.labor.lbarAt != null ? sc.labor.lbarAt : model.LBAR);
     guide(ctx, x, c.p.t, x, H - c.p.b, dpr, COL.good);
-    board.add({ runs: [{ t: 'L', bar: true }, ' = ' + num(model.LBAR)], color: COL.good, pri: 7, req: true,
+    board.add({ runs: [{ t: 'L', bar: true }, ' = ' + num(sc.labor.lbarAt != null ? sc.labor.lbarAt : model.LBAR)], color: COL.good, pri: 7, req: true,
       cands: [{ x: x + 5 * dpr, y: c.p.t + 4 * dpr, ax: 'l', ay: 't' }, { x: x - 5 * dpr, y: c.p.t + 4 * dpr, ax: 'r', ay: 't' }] });
   }
   if(sc.labor.point){
@@ -846,7 +852,10 @@ function drawProd(sc){
   ctx.clearRect(0, 0, W, H);
   const e = sc.e;
   // While output is being read (and after), mark it on the y-axis
-  const yExtra = sc.prod.guide || sc.prod.point ? [{ v: e.Y, text: num(e.Y), color: COL.ink }] : [];
+  const yExtra = [];
+  const rd = sc.prod.readAt;                         // read F at another L (e.g. potential output at L-bar)
+  if(rd) yExtra.push({ v: model.Y(rd.L, rd.a), text: num(model.Y(rd.L, rd.a)), color: rd.color || COL.good });
+  if(sc.prod.guide || sc.prod.point) yExtra.push({ v: e.Y, text: num(e.Y), color: COL.ink });
   const o = axesFor('prod', s, { yExtra }), c = makeCoords(W, H, dpr, o.xMax, o.yMax, padFor());
   drawAxes(s, c, o);
   const board = makeBoard(ctx, dpr, plotRect(c, W, H));
@@ -854,7 +863,10 @@ function drawProd(sc){
   clipPlot(ctx, c, W, H);
   sc.prod.F.forEach(f => {
     const pts = [];
-    for(let L = 0; L <= 10.0001; L += 0.1) pts.push([c.xC(L), c.yC(model.Y(L, f.a))]);
+    // Drawn only while MPL ≥ 0: firms never hire a worker who lowers output, so F never turns down on the graph
+    const k = techOf(f.a), Lend = Math.min(10, k.a / (2 * k.b));
+    const n = Math.ceil(Lend / 0.1 - 1e-9);
+    for(let i = 0; i <= n; i++){ const L = Math.min(Lend, i * 0.1); pts.push([c.xC(L), c.yC(model.Y(L, f.a))]); }
     strokePts(ctx, pts, STY[f.style], dpr);
   });
   if(sc.prod.point){
@@ -874,6 +886,12 @@ function drawProd(sc){
     });
     board.add({ runs: f.runs, color: STY[f.style].text, cands, pri: 5 - i, req: true });
   });
+  if(rd){
+    const x = c.xC(rd.L), y = c.yC(model.Y(rd.L, rd.a));
+    guide(ctx, x, H - c.p.b, x, y, dpr, rd.color || COL.good);
+    guide(ctx, x, y, c.p.l, y, dpr, rd.color || COL.good);
+    dot(ctx, x, y, 4, rd.color || COL.good, dpr, true);
+  }
   if(sc.prod.guide){
     const x = c.xC(e.L), y = c.yC(e.Y);
     guide(ctx, x, H - c.p.b, x, y, dpr);
@@ -910,7 +928,8 @@ function drawAS(sc){
   if(!s) return;
   const { ctx, dpr, W, H } = s;
   ctx.clearRect(0, 0, W, H);
-  const xExtra = sc.as.lras.map(l => ({ v: model.Ybar(l.a), runs: l.tick, color: STY[l.style].text }));
+  const lrY = l => l.Y != null ? l.Y : model.Ybar(l.a);      // an LRAS may carry its own Y-bar
+  const xExtra = sc.as.lras.map(l => ({ v: lrY(l), runs: l.tick, color: STY[l.style].text }));
   const o = axesFor('as', s, { xExtra }), c = makeCoords(W, H, dpr, o.xMax, o.yMax, padFor());
   drawAxes(s, c, o);
   const board = makeBoard(ctx, dpr, plotRect(c, W, H));
@@ -918,7 +937,7 @@ function drawAS(sc){
 
   clipPlot(ctx, c, W, H);
   A.lras.forEach(l => {
-    const x = c.xC(model.Ybar(l.a));
+    const x = c.xC(lrY(l));
     strokePts(ctx, [[x, c.yC(0)], [x, c.yC(o.yMax)]], STY[l.style], dpr);
   });
   A.sras.forEach(r => strokePts(ctx, srasPts(r.W, r.a, c, o.yMax), STY[r.style], dpr));
@@ -937,8 +956,8 @@ function drawAS(sc){
   // Labels: LRAS, SRAS curves (candidate spots walk down each curve)
   A.lras.forEach((l, i) => {
     // With two LRAS lines, each label goes on its outer side so it doesn't cross the other line
-    const Yb = model.Ybar(l.a), x = c.xC(Yb);
-    const leftFirst = A.lras.some(o => model.Ybar(o.a) > Yb);
+    const Yb = lrY(l), x = c.xC(Yb);
+    const leftFirst = A.lras.some(o => lrY(o) > Yb);
     const Ps = [0.95, 0.85, 0.75, 0.15, 0.06].map(f => f * o.yMax);
     const R1 = Ps.map(P => ({ x: x + 5 * dpr, y: c.yC(P), ax: 'l', ay: 'm' }));
     const L1 = Ps.map(P => ({ x: x - 5 * dpr, y: c.yC(P), ax: 'r', ay: 'm' }));
@@ -1031,74 +1050,106 @@ function setView(v){
 
 /* ─────────────────────────────────────────────────────────────────
    Problems — problem 1 is the lecture example. New problem draws another
-   technology (Y = aL − bL²), starting price level, real wage, price rise
-   and raise, chosen so every number students work out comes out clean.
+   technology (Y = aL − bL²), a starting price level and employment, a price
+   change (rise or fall) and a wage change (raise or cut), chosen so every
+   number students work out comes out clean.
    ───────────────────────────────────────────────────────────────── */
+/* Every technology has a ≥ 20b, so MPL ≥ 0 out to L = 10 and F never turns down. */
 const TECHS = [
-  { a: 20, b: 1 }, { a: 18, b: 1 }, { a: 22, b: 1 }, { a: 24, b: 1 },
-  { a: 12, b: 0.5 }, { a: 14, b: 0.5 }
+  { a: 20, b: 1 }, { a: 21, b: 1 }, { a: 22, b: 1 }, { a: 23, b: 1 }, { a: 24, b: 1 },
+  { a: 25, b: 1 }, { a: 26, b: 1 }, { a: 27, b: 1 }, { a: 28, b: 1 },
+  { a: 10, b: 0.5 }, { a: 11, b: 0.5 }, { a: 12, b: 0.5 }, { a: 13, b: 0.5 },
+  { a: 14, b: 0.5 }, { a: 16, b: 0.5 },
+  { a: 40, b: 2 }, { a: 42, b: 2 }, { a: 44, b: 2 }
 ];
-const BASE_SPEC = { tech: TECHS[0], P0: 2, w0: 10, r: 1.25, w2: 12 };
-const P0_CHOICES = [1, 2, 4];
-const PRICE_RISES = [1.25, 1.5, 2];
+/* A spec picks employment at A (L0), at B after the price change (L1) and at C
+   after the wage change (L2). Wages and prices follow from MPL = W/P. */
+const BASE_SPEC = { tech: TECHS[0], P0: 2, L0: 5, L1: 6, L2: 4 };
+const P0_CHOICES = [1, 2, 3, 4];
+function pickOne(arr){ return arr[Math.floor(rng() * arr.length)]; }
 function isInt(x){ return Math.abs(x - Math.round(x)) < 1e-9; }
-/* Hiring rule without the 0–10 clamp, so no problem relies on the clamp. */
+function isCents(x){ return isInt(x * 100); }
+/* Hiring rule without the 0–10 clamp. */
 function hireRaw(w, t){ return (t.a - w) / (2 * t.b); }
-/* Whole workers; with b = 0.5 workers come in pairs so output stays whole. */
-function cleanL(L, t){ return isInt(L) && (t.b === 1 || Math.round(L) % 2 === 0); }
-function pStep(P0){ return P0 >= 4 ? 0.1 : 0.05; }
-function specOk(sp){
-  const t = sp.tech, P0 = sp.P0, w1 = sp.w0 / sp.r;
-  const L0 = hireRaw(sp.w0, t), L1 = hireRaw(w1, t), L2 = hireRaw(sp.w2, t);
-  return cleanL(L0, t) && L0 >= 3 && L0 <= 7 &&
-    isInt(w1) && cleanL(L1, t) && L1 <= 9 &&
-    cleanL(L2, t) && L2 >= 1 &&
-    isInt((sp.w2 / sp.w0 - 1) * 100) &&                          // a whole-percent raise
-    isInt(P0 * sp.w2 / sp.w0 * 100) &&                           // SRAS′ is back at A's output at a 2-decimal P
-    sp.w0 * P0 >= 10 &&                                          // wages big enough for a $1 sandbox slider
-    hireRaw(sp.w0 / 0.75, t) >= 0.25 && hireRaw(sp.w0 / 2, t) <= 9.75 &&  // the P slider's ends stay on the graphs
-    isInt(P0 * sp.r / pStep(P0));                                // the new price level is a slider stop
+/* Whole workers from 1 to 9; with b = 0.5 workers come in pairs so output stays whole. */
+function cleanL(L, t){ return isInt(L) && L >= 1 && L <= 9 && (t.b !== 0.5 || L % 2 === 0); }
+function pStep(P0){ return P0 <= 2 ? 0.05 : 0.1; }
+function onGrid(x, st){ return isInt(x / st); }
+function gridUp(x, st){ return Math.round(Math.ceil(x / st - 1e-9) * st * 100) / 100; }
+function gridDown(x, st){ return Math.round(Math.floor(x / st + 1e-9) * st * 100) / 100; }
+function specKey(sp){ return [sp.tech.a, sp.tech.b, sp.P0, sp.L0, sp.L1, sp.L2].join('|'); }
+
+/* Everything a problem needs, derived from its spec through the model, or null
+   if the spec doesn't give clean numbers. */
+function makeProblem(sp){
+  const t = sp.tech, P0 = sp.P0, st = pStep(P0);
+  if(![sp.L0, sp.L1, sp.L2].every(L => cleanL(L, t)) || sp.L0 < 3 || sp.L0 > 7) return null;
+  if(sp.L1 === sp.L0 || sp.L2 === sp.L0) return null;
+  const w0 = model.MPL(sp.L0, t), w1 = model.MPL(sp.L1, t), w2 = model.MPL(sp.L2, t);
+  const W0 = w0 * P0, W1 = w2 * P0, P1 = Math.round(W0 / w1 * 1e6) / 1e6, Pn = Math.round(P0 * w2 / w0 * 1e6) / 1e6;
+  const pct = Math.round(Math.abs(w2 / w0 - 1) * 1e8) / 1e6;
+  if(!isInt(W0) || !isInt(W1) || W0 < 8) return null;
+  if(!isCents(P1) || !onGrid(P1, st) || P1 < 0.6 * P0 || P1 > 1.8 * P0) return null;   // new P is a slider stop
+  if(Pn < 0.6 * P0 || Pn > 1.8 * P0) return null;
+  // P slider: from where firms hire half a worker to where they hire 9.5, within 0.5–2 × P0
+  const pMin = gridUp(Math.max(0.5 * P0, W0 / model.MPL(0.5, t)), st);
+  const pMax = gridDown(Math.min(2 * P0, W0 / model.MPL(9.5, t)), st);
+  if(!(pMin < Math.min(P0, P1) - 1e-9 && pMax > Math.max(P0, P1) + 1e-9 && pMax - pMin >= 0.8 * P0 - 1e-9)) return null;
+  const wStep = Math.max(1, Math.round(Math.max(W0, W1) / 30));
+  if(!onGrid(W0, wStep) || !onGrid(W1, wStep)) return null;
+  // Shift arrows at up to three price levels where both SRAS curves are on the graph
+  const onBoth = P => [W0, W1].every(W => { const L = hireRaw(W / P, t); return L > 0.3 && L < 9.7; });
+  const arrowsAt = [P0, 1.5 * P0, 0.75 * P0, 1.25 * P0, 2 * P0]
+    .filter(P => P >= pMin - 1e-9 && P <= pMax + 1e-9 && onBoth(P)).slice(0, 3).sort((x, y) => x - y);
+  if(arrowsAt.length < 2) return null;
+  const peak = model.Y(model.LMAX, t);                        // F rises all the way to L = 10
+  const yStep = peak + 5 <= 80 ? 10 : peak + 5 <= 160 ? 20 : 40;
+  const mplStep = t.a + 2 <= 24 ? 4 : 8;
+  return {
+    spec: sp, key: specKey(sp), tech: t, P0, P1, W0, W1,
+    dir2: sp.L1 > sp.L0 ? 'rise' : 'fall',                   // price rise → lower W/P → more hiring
+    dir4: sp.L2 < sp.L0 ? 'raise' : 'cut',
+    A: econ(W0, P0, t), B: econ(W0, P1, t), C: econ(W1, P0, t),
+    Pn,                                                       // on SRAS′, output is back at A's here
+    pct,
+    pnText: (isCents(Pn) ? '' : 'about ') + fmtP(Pn),        // Pn isn't always a round number
+    pctText: isInt(pct) ? num(pct) + '%' : pct.toFixed(1) + '%',
+    axes: { mplMax: mplStep * Math.ceil((t.a + 2) / mplStep), mplStep,
+            yMax: yStep * Math.ceil((peak + 5) / yStep), yStep, pMax: 2.5 * P0, pStep: P0 / 2 },
+    pSlider: { min: pMin, max: pMax, step: st },
+    span: 0.5 * P0,
+    wSlider: { min: Math.max(wStep, Math.floor(0.75 * Math.min(W0, W1) / wStep) * wStep),
+               max: Math.ceil(1.3 * Math.max(W0, W1) / wStep) * wStep, step: wStep },
+    arrowsAt
+  };
 }
 const SPECS = (function(){
   const out = [];
   TECHS.forEach(tech => P0_CHOICES.forEach(P0 => {
-    for(let w0 = 1; w0 <= 30; w0++) PRICE_RISES.forEach(r => {
-      for(let w2 = w0 + 1; w2 <= w0 * 1.5 + 1e-9; w2++){
-        const sp = { tech, P0, w0, r, w2 };
-        if(specOk(sp)) out.push(sp);
-      }
-    });
+    for(let L0 = 3; L0 <= 7; L0++) for(let d1 = -3; d1 <= 3; d1++) for(let d2 = -3; d2 <= 3; d2++){
+      const sp = { tech, P0, L0, L1: L0 + d1, L2: L0 + d2 };
+      if(makeProblem(sp)) out.push(sp);
+    }
   }));
   return out;
 })();
-function specKey(sp){ return [sp.tech.a, sp.tech.b, sp.P0, sp.w0, sp.r, sp.w2].join('|'); }
-
-/* Everything a problem needs, derived from its spec through the model. */
-function makeProblem(sp){
-  const t = sp.tech, P0 = sp.P0, P1 = Math.round(P0 * sp.r * 100) / 100;
-  const W0 = sp.w0 * P0, W1 = sp.w2 * P0;
-  const peak = model.Y(Math.min(model.LMAX, t.a / (2 * t.b)), t);
-  const yMax = 20 * Math.ceil((peak + 5) / 20);
-  const wStep = W0 >= 40 ? 2 : 1;
-  return {
-    spec: sp, key: specKey(sp), tech: t, P0, P1, W0, W1,
-    A: econ(W0, P0, t), B: econ(W0, P1, t), C: econ(W1, P0, t),
-    Pn: Math.round(P0 * sp.w2 / sp.w0 * 100) / 100,     // on SRAS′, output is back at A's here
-    raisePct: Math.round((sp.w2 / sp.w0 - 1) * 100),
-    axes: { mplMax: 4 * Math.ceil((t.a + 2) / 4), yMax, pMax: 2.5 * P0, pStep: P0 / 2 },
-    pSlider: { min: 0.75 * P0, max: 2 * P0, step: pStep(P0) },
-    span: 0.5 * P0,
-    wSlider: { min: Math.floor(0.8 * W0 / wStep) * wStep,
-               max: Math.max(Math.ceil(1.3 * W0 / wStep) * wStep, W1), step: wStep },
-    arrowsAt: [P0, 1.5 * P0, 2 * P0]
-  };
+/* New problem: a different technology, directions chosen at random, then a
+   starting real wage chosen at random so real wages vary widely. */
+function pickSpec(current){
+  const techs = TECHS.filter(t => t !== (current && current.tech) && SPECS.some(x => x.tech === t));
+  const t = pickOne(techs);
+  let pool = SPECS.filter(x => x.tech === t);
+  const want2 = pickOne([1, -1]), want4 = pickOne([1, -1]);
+  const pref = pool.filter(x => Math.sign(x.L1 - x.L0) === want2 && Math.sign(x.L2 - x.L0) === want4);
+  if(pref.length) pool = pref;
+  const w0 = pickOne(Array.from(new Set(pool.map(x => model.MPL(x.L0, t)))));
+  return pickOne(pool.filter(x => model.MPL(x.L0, t) === w0));
 }
 /* Axes follow the problem so its curves and points always fit. */
 function applyAxes(p){
-  const yStep = p.axes.yMax >= 100 ? 20 : 10;
-  Object.assign(AXES.labor, { yMax: p.axes.mplMax, yStep: 4 });
-  Object.assign(AXES.prod, { yMax: p.axes.yMax, yStep });
-  Object.assign(AXES.as, { xMax: p.axes.yMax, xStep: yStep, yMax: p.axes.pMax, yStep: p.axes.pStep });
+  Object.assign(AXES.labor, { yMax: p.axes.mplMax, yStep: p.axes.mplStep });
+  Object.assign(AXES.prod, { yMax: p.axes.yMax, yStep: p.axes.yStep });
+  Object.assign(AXES.as, { xMax: p.axes.yMax, xStep: p.axes.yStep, yMax: p.axes.pMax, yStep: p.axes.pStep });
 }
 /* "20L − L²", "14L − 0.5L²" and the matching MPL, for the Model details box. */
 function formulaY(t){ return t.a + 'L − ' + (t.b === 1 ? '' : num(t.b)) + 'L²'; }
@@ -1147,12 +1198,12 @@ function scene(){
     if(S.srasNew){
       sc.as.sras.push(Object.assign(srasItem(PR.W1, 'new', true), { pri: 7 }));
       sc.as.arrows = PR.arrowsAt.map(Pv => ({ P: Pv, Y0: econ(PR.W0, Pv, t).Y, Y1: econ(PR.W1, Pv, t).Y }));
-      sc.as.arrowLabel = 'W↑';
+      sc.as.arrowLabel = PR.dir4 === 'raise' ? 'W↑' : 'W↓';
     }
     sc.as.trail = S.visited.map(Pv => ({ P: Pv, Y: econ(PR.W0, Pv, t).Y }));
   }
   if(S.notice) sc.as.points.push({ Y: PR.A.Y, P: PR.Pn, hollow: true, color: COL.bad, textColor: COL.bad,
-    label: '(' + num(PR.A.Y) + ', ' + fmtP(PR.Pn) + ')', key: 'notice', pri: 4, req: false });
+    label: '(' + num(PR.A.Y) + ', ' + (isCents(PR.Pn) ? '' : '≈') + fmtP(PR.Pn) + ')', key: 'notice', pri: 4, req: false });
   return sc;
 }
 
@@ -1197,16 +1248,16 @@ function describe(sc){
 
   const A = sc.as, parts = ['Aggregate supply graph. Output Y from 0 to ' + AXES.as.xMax + ' across, price level P from 0 to ' +
     num(AXES.as.yMax) + ' up.'];
-  const P1 = PR.P0, P2 = 1.5 * PR.P0;
+  const P1 = PR.arrowsAt[0], P2 = PR.arrowsAt[1];
   if(!A.sras.length) parts.push('No SRAS curve is drawn yet.');
   A.sras.forEach(r => parts.push(r.name + (r.style === 'faded' ? ', faded,' : r.style === 'new' ? ', dashed,' : ', solid,') +
     ' slopes up: at P = ' + fmtP(P1) + ' it gives Y = ' + num(econ(r.W, P1, r.a).Y) + ', at P = ' + fmtP(P2) +
     ' it gives Y = ' + num(econ(r.W, P2, r.a).Y) + '.'));
-  if(A.arrows.length) parts.push('Arrows point left from SRAS to SRAS′ at P = ' + PR.arrowsAt.map(fmtP).join(', ') +
-    ': at every price level, firms produce less.');
+  if(A.arrows.length) parts.push('Arrows point ' + (PR.dir4 === 'raise' ? 'left' : 'right') + ' from SRAS to SRAS′ at P = ' +
+    PR.arrowsAt.map(fmtP).join(', ') + ': at every price level, firms produce ' + (PR.dir4 === 'raise' ? 'less' : 'more') + '.');
   const pts = A.points.filter(p => p.key !== 'notice');
   if(pts.length) parts.push('Labeled points: ' + pts.map(p => p.key + ' at Y = ' + num(p.Y) + ', P = ' + fmtP(p.P)).join('; ') + '.');
-  if(S.notice) parts.push('A hollow marker at Y = ' + num(PR.A.Y) + ', P = ' + fmtP(PR.Pn) + ' shows where SRAS′ returns to ' + num(PR.A.Y) + '.');
+  if(S.notice) parts.push('A hollow marker at Y = ' + num(PR.A.Y) + ', P = ' + PR.pnText + ' shows where SRAS′ returns to ' + num(PR.A.Y) + '.');
   if(A.trail.length) parts.push(A.trail.length + ' small dots mark price levels you have tried, and they line up along an upward-sloping path.');
   if(A.cur) parts.push('Current point: Y = ' + num(e.Y) + ', P = ' + fmtP(e.P) + '.');
   $('asDesc').textContent = parts.join(' ');
@@ -1414,15 +1465,19 @@ function buildStep1(){
    Step 2 — prices rise, wages don't
    ───────────────────────────────────────────────────────────────── */
 function buildStep2(){
-  const p = PR, A = p.A, B = p.B, more = B.L - A.L;
+  const p = PR, A = p.A, B = p.B, up = p.dir2 === 'rise', dL = Math.abs(B.L - A.L);
+  $('s2Title').textContent = up ? 'Prices rise, wages don\'t' : 'Prices fall, wages don\'t';
   $('s2Body').innerHTML =
-    '<p class="story">Prices rise to <strong>P = ' + fmtP(p.P1) + '</strong>. Workers\' contracts still pay ' +
-    '<strong>W = ' + fmtW(p.W0) + '</strong>.</p>' +
+    '<p class="story">Prices ' + (up ? 'rise' : 'fall') + ' to <strong>P = ' + fmtP(p.P1) + '</strong>. Workers\' contracts ' +
+    'still pay <strong>W = ' + fmtW(p.W0) + '</strong>.</p>' +
     predictBlock('s2', 'Predict: How many workers will firms want now?') +
     '<div id="s2Qs"></div>' +
     '<div id="s2Done" class="hidden">' +
-      '<span class="sr-only">Chain: P rises, so W over P falls, so W over P is below MPL, so firms hire more and L rises, so MPL falls, so Y rises.</span>' +
-      '<div class="chain" aria-hidden="true">P↑ → W/P↓ → W/P &lt; MP<sub>L</sub> → L↑ → MP<sub>L</sub>↓ → Y↑</div>' +
+      (up
+        ? '<span class="sr-only">Chain: P rises, so W over P falls, so W over P is below MPL, so firms hire more and L rises, so MPL falls, so Y rises.</span>' +
+          '<div class="chain" aria-hidden="true">P↑ → W/P↓ → W/P &lt; MP<sub>L</sub> → L↑ → MP<sub>L</sub>↓ → Y↑</div>'
+        : '<span class="sr-only">Chain: P falls, so W over P rises, so W over P is above MPL, so firms hire fewer and L falls, so MPL rises, so Y falls.</span>' +
+          '<div class="chain" aria-hidden="true">P↓ → W/P↑ → W/P &gt; MP<sub>L</sub> → L↓ → MP<sub>L</sub>↑ → Y↓</div>') +
       '<div class="keyresult"><span class="box-tag">Point B</span>At P = ' + fmtP(p.P1) + ' firms hire ' + workers(B.L) +
       ' and produce ' + num(B.Y) + '. Point <strong>B (Y = ' + num(B.Y) + ', P = ' + fmtP(p.P1) + ')</strong> is now on the ' +
       'aggregate supply graph.</div>' +
@@ -1430,13 +1485,18 @@ function buildStep2(){
   let seq = null;
   makePredict({
     group: 's2Opts', go: 's2Go', fb: 's2Fb',
-    options: [
+    options: up ? [
       { text: 'More', correct: true },
       { text: 'Fewer', fb: 'W didn\'t change, but each dollar of it now buys less. In goods, workers got cheaper.' },
       { text: 'The same', fb: 'W didn\'t change, but P did, so the real wage W/P changed.' }
+    ] : [
+      { text: 'More', fb: 'W didn\'t change, but each dollar of it now buys more. In goods, workers got more expensive.' },
+      { text: 'Fewer', correct: true },
+      { text: 'The same', fb: 'W didn\'t change, but P did, so the real wage W/P changed.' }
     ],
-    explain: 'Watch the real wage line on the labor graph fall. Each worker is now cheaper in goods, ' +
-      'so hiring more workers pays off. Now work out the numbers.',
+    explain: up
+      ? 'Watch the real wage line on the labor graph fall. Each worker is now cheaper in goods, so hiring more workers pays off. Now work out the numbers.'
+      : 'Watch the real wage line on the labor graph rise. Each worker now costs more in goods than the last one hired adds, so firms cut back. Now work out the numbers.',
     onReveal(){
       S.known.L = false; S.known.Y = false;
       animateTo({ P: p.P1 }, () => seq[0].show());
@@ -1446,14 +1506,15 @@ function buildStep2(){
     { id: 's2a', q: 'What is the real wage now?', answer: B.w, hidden: true,
       hint: 'Divide the nominal wage by the new price level.',
       solution: 'W/P = ' + fmtW(p.W0) + ' ÷ ' + fmtP(p.P1) + ' = <strong>' + num(B.w) + '</strong>. The same ' +
-        fmtW(p.W0) + ' now buys fewer goods.',
+        fmtW(p.W0) + ' now buys ' + (up ? 'fewer' : 'more') + ' goods.',
       wrong: [{ num: p.W0 * p.P1, text: 'You multiplied. The real wage is W divided by P.' },
               { num: A.w, text: 'That was the real wage at P = ' + fmtP(p.P0) + '. The price level is now ' + fmtP(p.P1) + '.' }] },
     { id: 's2b', q: 'How many workers do firms hire now?', answer: B.L,
-      hint: 'Find where the ' + MPL_HTML + ' line hits the new, lower W/P line.',
-      solution: MPL_HTML + ' = W/P = ' + num(B.w) + ' at L = <strong>' + num(B.L) + '</strong>. Firms hire ' +
-        (more === 1 ? 'one more worker' : num(more) + ' more workers') + '.',
-      wrong: [{ num: A.L, text: 'That was employment at the old real wage. The W/P line moved down.' }],
+      hint: 'Find where the ' + MPL_HTML + ' line hits the new, ' + (up ? 'lower' : 'higher') + ' W/P line.',
+      solution: MPL_HTML + ' = W/P = ' + num(B.w) + ' at L = <strong>' + num(B.L) + '</strong>. ' +
+        (up ? 'Firms hire ' + (dL === 1 ? 'one more worker' : num(dL) + ' more workers')
+            : 'Firms let ' + (dL === 1 ? 'one worker' : num(dL) + ' workers') + ' go') + '.',
+      wrong: [{ num: A.L, text: 'That was employment at the old real wage. The W/P line moved ' + (up ? 'down' : 'up') + '.' }],
       onDone(){ S.known.L = true; redraw(); } },
     { id: 's2c', q: 'How much output do they produce now?', answer: B.Y,
       hint: 'Read F(' + num(B.L) + ') off the production function: follow the dashed line across to the vertical axis.',
@@ -1476,19 +1537,25 @@ function buildStep2(){
    ───────────────────────────────────────────────────────────────── */
 const VISIT_MIN = 4;
 const S3 = {};
-const CHAIN = [
-  { key: 'P', text: 'P↑ (price level rises)' },
-  { key: 'w', text: 'W/P↓ (real wage falls)' },
-  { key: 'L', text: 'L↑ (firms hire more)' },
-  { key: 'Y', text: 'Y↑ (output rises)' }
-];
+/* The chain follows the direction of the Step 2 price change. */
+function chainFor(dir){
+  const up = dir === 'rise';
+  return [
+    { key: 'P', text: up ? 'P↑ (price level rises)' : 'P↓ (price level falls)' },
+    { key: 'w', text: up ? 'W/P↓ (real wage falls)' : 'W/P↑ (real wage rises)' },
+    { key: 'L', text: up ? 'L↑ (firms hire more)' : 'L↓ (firms hire fewer)' },
+    { key: 'Y', text: up ? 'Y↑ (output rises)' : 'Y↓ (output falls)' }
+  ];
+}
+let CHAIN = chainFor('rise');
 let chainSlots = [];
 function visitedSpan(){
   if(!S.visited.length) return 0;
   return Math.max.apply(null, S.visited) - Math.min.apply(null, S.visited);
 }
 function buildStep3(){
-  const p = PR, sl = p.pSlider;
+  const p = PR, sl = p.pSlider, up = p.dir2 === 'rise';
+  CHAIN = chainFor(p.dir2);
   Object.assign(S3, { drawn: false, chainOk: false, wrong: 0, done: false });
   $('s3Body').innerHTML =
     '<p>Move the price level. The nominal wage stays at ' + fmtW(p.W0) + '. Each price level you try leaves a small dot ' +
@@ -1511,8 +1578,12 @@ function buildStep3(){
     '</div>' +
     '<div aria-live="polite" aria-atomic="true"><div id="s3ChainFb" class="feedback hidden"></div></div>' +
     '<div id="s3Done" class="hidden"><div class="keyresult"><span class="box-tag">Key result</span>' +
-      '“An increase in the price level causes output to go up in the short run. Higher prices mean workers are ' +
-      'cheaper in real terms, so firms hire more workers. This is why the SRAS curve is upward sloping.”</div></div>';
+      (up
+        ? '“An increase in the price level causes output to go up in the short run. Higher prices mean workers are ' +
+          'cheaper in real terms, so firms hire more workers. This is why the SRAS curve is upward sloping.”'
+        : 'A decrease in the price level causes output to go down in the short run. Lower prices mean workers are ' +
+          'more expensive in real terms, so firms hire fewer workers. P and Y move together, so the SRAS curve is ' +
+          'upward sloping.') + '</div></div>';
   syncSlider('s3P', 's3PVal', p.P1, fmtP);
 
   $('s3P').addEventListener('input', () => {
@@ -1598,8 +1669,11 @@ function finishChain(shown){
   $('s3ChainCheck').disabled = true; $('s3ChainShow').disabled = true;
   showFb($('s3ChainFb'), shown ? 'info' : 'correct',
     (shown ? SYM.info + '<strong>Answer.</strong> ' : SYM.correct + '<strong>Correct.</strong> ') +
-    'P↑ → W/P↓ → L↑ → Y↑. The nominal wage is stuck, so a higher price level makes each worker cheaper ' +
-    'in goods. Firms hire until ' + MPL_HTML + ' falls to the new real wage, and more workers make more output.');
+    (PR.dir2 === 'rise'
+      ? 'P↑ → W/P↓ → L↑ → Y↑. The nominal wage is stuck, so a higher price level makes each worker cheaper ' +
+        'in goods. Firms hire until ' + MPL_HTML + ' falls to the new real wage, and more workers make more output.'
+      : 'P↓ → W/P↑ → L↓ → Y↓. The nominal wage is stuck, so a lower price level makes each worker more expensive ' +
+        'in goods. Firms cut back until ' + MPL_HTML + ' rises to the new real wage, and fewer workers make less output.'));
   rescueFocus($('s3ChainFb'));
   step3Check();
 }
@@ -1618,33 +1692,46 @@ function step3Check(){
    Step 4 — workers win a raise
    ───────────────────────────────────────────────────────────────── */
 function buildStep4(){
-  const p = PR, A = p.A, C = p.C, fewer = A.L - C.L;
+  const p = PR, A = p.A, C = p.C, raise = p.dir4 === 'raise', dL = Math.abs(A.L - C.L);
+  const ats = p.arrowsAt.map(fmtP);
+  $('s4Title').textContent = raise ? 'Workers win a raise' : 'Workers take a pay cut';
   $('s4Body').innerHTML =
-    '<p class="story">Back at <strong>P = ' + fmtP(p.P0) + '</strong>, workers negotiate a raise: ' +
-    '<strong>W rises from ' + fmtW(p.W0) + ' to ' + fmtW(p.W1) + '</strong>.</p>' +
+    '<p class="story">Back at <strong>P = ' + fmtP(p.P0) + '</strong>, ' +
+    (raise ? 'workers negotiate a raise: <strong>W rises from ' : 'workers accept a pay cut: <strong>W falls from ') +
+    fmtW(p.W0) + ' to ' + fmtW(p.W1) + '</strong>.</p>' +
     predictBlock('s4', 'Predict: What happens to the SRAS curve?') +
     '<div id="s4Qs"></div>' +
     '<div id="s4Done" class="hidden">' +
-      '<p><strong>At every price level, firms produce less.</strong> The arrows on the aggregate supply graph run ' +
-      'from SRAS to SRAS′ at P = ' + p.arrowsAt.slice(0, 2).map(fmtP).join(', ') + ' and ' + fmtP(p.arrowsAt[2]) + '.</p>' +
-      '<span class="sr-only">Chain: W rises, so W over P rises, so W over P is above MPL, so firms hire fewer and L falls, so MPL rises, so Y falls, so SRAS shifts left.</span>' +
-      '<div class="chain" aria-hidden="true">W↑ → W/P↑ → W/P &gt; MP<sub>L</sub> → L↓ → MP<sub>L</sub>↑ → Y↓ → SRAS shifts left</div>' +
+      '<p><strong>At every price level, firms produce ' + (raise ? 'less' : 'more') + '.</strong> The arrows on the aggregate ' +
+      'supply graph run from SRAS to SRAS′ at P = ' + (ats.length > 2 ? ats.slice(0, -1).join(', ') + ' and ' + ats[ats.length - 1]
+        : ats.join(' and ')) + '.</p>' +
+      (raise
+        ? '<span class="sr-only">Chain: W rises, so W over P rises, so W over P is above MPL, so firms hire fewer and L falls, so MPL rises, so Y falls, so SRAS shifts left.</span>' +
+          '<div class="chain" aria-hidden="true">W↑ → W/P↑ → W/P &gt; MP<sub>L</sub> → L↓ → MP<sub>L</sub>↑ → Y↓ → SRAS shifts left</div>'
+        : '<span class="sr-only">Chain: W falls, so W over P falls, so W over P is below MPL, so firms hire more and L rises, so MPL falls, so Y rises, so SRAS shifts right.</span>' +
+          '<div class="chain" aria-hidden="true">W↓ → W/P↓ → W/P &lt; MP<sub>L</sub> → L↑ → MP<sub>L</sub>↓ → Y↑ → SRAS shifts right</div>') +
       '<div class="keyresult notice"><span class="box-tag">Notice</span>' +
-        'On SRAS′, firms produce ' + num(A.Y) + ' again only if P rises to ' + fmtP(p.Pn) + '. That\'s a ' + p.raisePct +
-        '% higher price level, matching the ' + p.raisePct + '% raise. Hold that thought: it\'s the key to the long run in ' +
-        'the next lab. (The hollow marker on the graph shows this point.)</div>' +
+        'On SRAS′, firms produce ' + num(A.Y) + ' again only if P ' + (raise ? 'rises' : 'falls') + ' to ' + p.pnText +
+        '. That\'s a ' + (raise ? 'rise' : 'drop') + ' of ' + (isInt(p.pct) ? '' : 'about ') + p.pctText +
+        ' in the price level, matching the ' + p.pctText + ' ' +
+        (raise ? 'raise' : 'pay cut') + ' (both W and P change by the same proportion, so W/P is back to ' + num(A.w) +
+        '). Hold that thought: it\'s the key to the long run in the next lab. ' +
+        '(The hollow marker on the graph shows this point.)</div>' +
     '</div>';
   let seq = null;
   makePredict({
     group: 's4Opts', go: 's4Go', fb: 's4Fb',
     options: [
-      { text: 'Shifts left', correct: true },
-      { text: 'Shifts right', fb: 'A raise makes workers more expensive, so firms produce less at each price level, not more.' },
-      { text: 'Move down along it', fb: 'Movements along SRAS come from changes in P. Here P didn\'t change, W did.' },
-      { text: 'No change', fb: 'Firms respond to the real wage, and W/P rose at every price level.' }
+      { text: 'Shifts left', correct: raise,
+        fb: raise ? null : 'A pay cut makes workers cheaper, so firms produce more at each price level, not less.' },
+      { text: 'Shifts right', correct: !raise,
+        fb: raise ? 'A raise makes workers more expensive, so firms produce less at each price level, not more.' : null },
+      { text: 'Moves along it', fb: 'Movements along SRAS come from changes in P. Here P didn\'t change, W did.' },
+      { text: 'No change', fb: 'Firms respond to the real wage, and W/P ' + (raise ? 'rose' : 'fell') + ' at every price level.' }
     ],
-    explain: 'Watch the real wage line rise on the labor graph. At P = ' + fmtP(p.P0) + ', ' + fmtW(p.W1) +
-      ' buys more goods than ' + fmtW(p.W0) + ' did, so each worker costs more in goods. Now work out the numbers.',
+    explain: 'Watch the real wage line ' + (raise ? 'rise' : 'fall') + ' on the labor graph. At P = ' + fmtP(p.P0) + ', ' +
+      fmtW(p.W1) + ' buys ' + (raise ? 'more' : 'fewer') + ' goods than ' + fmtW(p.W0) + ' did, so each worker costs ' +
+      (raise ? 'more' : 'less') + ' in goods. Now work out the numbers.',
     onReveal(){
       S.known.L = false; S.known.Y = false;
       animateTo({ W: p.W1 }, () => seq[0].show());
@@ -1655,12 +1742,13 @@ function buildStep4(){
       hint: 'Divide the new nominal wage by the price level.',
       solution: 'W/P = ' + fmtW(p.W1) + ' ÷ ' + fmtP(p.P0) + ' = <strong>' + num(C.w) + '</strong>.',
       wrong: [{ num: p.W1 * p.P0, text: 'You multiplied. The real wage is W divided by P.' },
-              { num: A.w, text: 'That was the real wage before the raise.' }] },
+              { num: A.w, text: 'That was the real wage before the ' + (raise ? 'raise' : 'pay cut') + '.' }] },
     { id: 's4b', q: 'How many workers do firms hire now?', answer: C.L,
-      hint: 'Find where the ' + MPL_HTML + ' line hits the new, higher W/P line.',
-      solution: MPL_HTML + ' = W/P = ' + num(C.w) + ' at L = <strong>' + num(C.L) + '</strong>. Firms let ' +
-        (fewer === 1 ? 'one worker' : num(fewer) + ' workers') + ' go.',
-      wrong: [{ num: A.L, text: 'That was employment at the old real wage. The W/P line moved up.' }],
+      hint: 'Find where the ' + MPL_HTML + ' line hits the new, ' + (raise ? 'higher' : 'lower') + ' W/P line.',
+      solution: MPL_HTML + ' = W/P = ' + num(C.w) + ' at L = <strong>' + num(C.L) + '</strong>. ' +
+        (raise ? 'Firms let ' + (dL === 1 ? 'one worker' : num(dL) + ' workers') + ' go'
+               : 'Firms hire ' + (dL === 1 ? 'one more worker' : num(dL) + ' more workers')) + '.',
+      wrong: [{ num: A.L, text: 'That was employment at the old real wage. The W/P line moved ' + (raise ? 'up' : 'down') + '.' }],
       onDone(){ S.known.L = true; redraw(); } },
     { id: 's4c', q: 'How much output do they produce now?', answer: C.Y,
       hint: 'Read F(' + num(C.L) + ') off the production function: follow the dashed line across to the vertical axis.',
@@ -1947,14 +2035,7 @@ function recordSession(i){
    production function, then a spec for it. */
 function generateParams(first){
   if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
-  let sp = BASE_SPEC;
-  if(!first){
-    const techs = TECHS.filter(t => t !== (PR && PR.tech) && SPECS.some(x => x.tech === t));
-    const t = techs[Math.floor(rng() * techs.length)];
-    const pool = SPECS.filter(x => x.tech === t);
-    sp = pool[Math.floor(rng() * pool.length)];
-  }
-  PR = makeProblem(sp);
+  PR = makeProblem(first ? BASE_SPEC : pickSpec(PR));
   applyAxes(PR);
 }
 
@@ -2017,38 +2098,55 @@ function selfTest(){
   }
   // Problems: the lecture example comes first, and every generated problem is clean
   const base = makeProblem(BASE_SPEC);
-  is('base spec valid', specOk(BASE_SPEC));
+  is('base spec valid', !!base);
   eq('base A', base.A.Y, 75); eq('base B', base.B.Y, 84); eq('base C', base.C.Y, 64);
-  eq('notice P', base.Pn, 2.4); is('base raise 20%', base.raisePct === 20);
-  is('enough problems', SPECS.length >= 30);
-  TECHS.forEach(t => is('problems for a=' + t.a + ' b=' + t.b, SPECS.some(x => x.tech === t)));
+  eq('base P1', base.P1, 2.5); eq('base W1', base.W1, 24);
+  eq('notice P', base.Pn, 2.4); is('base raise 20%', base.pctText === '20%' && base.pnText === '2.4' &&
+    base.dir2 === 'rise' && base.dir4 === 'raise');
+  is('enough problems', SPECS.length >= 100);
+  TECHS.forEach(t => {
+    is('problems for a=' + t.a + ' b=' + t.b, SPECS.some(x => x.tech === t));
+    is('F never turns down for a=' + t.a + ' b=' + t.b, model.MPL(model.LMAX, t) >= 0);
+  });
+  const dirs = new Set(SPECS.map(sp => { const q = makeProblem(sp); return q.dir2 + '/' + q.dir4; }));
+  is('all four direction pairs available', dirs.size === 4);
+  const reals = new Set(SPECS.map(sp => makeProblem(sp).A.w));
+  is('at least 15 different starting real wages', reals.size >= 15);
   SPECS.forEach(sp => {
     const q = makeProblem(sp), tag = 'problem ' + q.key;
     [q.A, q.B, q.C].forEach((e, i) => is(tag + ' clean ' + 'ABC'[i],
       isInt(e.w) && isInt(e.L) && isInt(e.Y) && e.L > 0 && e.L < model.LMAX && same(e.mpl, e.w)));
-    is(tag + ' B hires more, C fewer', q.B.L > q.A.L && q.C.L < q.A.L);
+    is(tag + ' B and C move the right way', (q.B.L > q.A.L) === (q.dir2 === 'rise') && (q.C.L < q.A.L) === (q.dir4 === 'raise'));
+    is(tag + ' price moved', (q.P1 > q.P0) === (q.dir2 === 'rise') && q.P1 !== q.P0);
     is(tag + ' whole-dollar wages', isInt(q.W0) && isInt(q.W1));
     eq(tag + ' notice point on SRAS′', econ(q.W1, q.Pn, q.tech).Y, q.A.Y);
-    is(tag + ' fits the axes', model.Y(model.LMAX, q.tech) <= q.axes.yMax && econ(q.W0, q.pSlider.max, q.tech).Y <= q.axes.yMax &&
-      model.MPL(0, q.tech) <= q.axes.mplMax && q.Pn <= q.axes.pMax && q.pSlider.max <= q.axes.pMax);
+    for(let L = 0; L < 10; L++) if(!(model.Y(L + 1, q.tech) >= model.Y(L, q.tech))){ fails.push(tag + ' F declines'); break; }
+    is(tag + ' fits the axes', model.Y(model.LMAX, q.tech) <= q.axes.yMax && model.MPL(0, q.tech) <= q.axes.mplMax &&
+      q.Pn <= q.axes.pMax && q.pSlider.max <= q.axes.pMax);
     is(tag + ' P on slider stops', [q.P0, q.P1].every(P => P >= q.pSlider.min - 1e-9 && P <= q.pSlider.max + 1e-9 &&
       isInt((P - q.pSlider.min) / q.pSlider.step)));
     is(tag + ' W on slider stops', [q.W0, q.W1].every(W => W >= q.wSlider.min && W <= q.wSlider.max &&
       isInt((W - q.wSlider.min) / q.wSlider.step)));
+    const shift = q.dir4 === 'raise' ? -1 : 1;
     for(let P = q.pSlider.min; P < q.pSlider.max - 1e-9; P += q.pSlider.step){
       const lo = econ(q.W0, P, q.tech), hi = econ(q.W0, P + q.pSlider.step, q.tech);
-      if(!(lo.L > 0 && hi.Y > lo.Y)){ fails.push(tag + ' SRAS not upward at P=' + num(P)); break; }
-      if(!(econ(q.W1, P, q.tech).Y < lo.Y)){ fails.push(tag + ' SRAS′ not left of SRAS at P=' + num(P)); break; }
+      if(!(lo.L > 0 && hi.L < model.LMAX && hi.Y > lo.Y)){ fails.push(tag + ' SRAS not upward at P=' + num(P)); break; }
     }
+    q.arrowsAt.forEach(P => is(tag + ' SRAS′ shifts the right way at P=' + num(P),
+      Math.sign(econ(q.W1, P, q.tech).Y - econ(q.W0, P, q.tech).Y) === shift));
   });
   // New problem always changes the production function
   const savedPR = PR, savedRng = _rng;
   let prev = PR;
-  for(let n = 0; n < 200; n++){
+  const seenDirs = new Set(), seenW = new Set();
+  for(let n = 0; n < 300; n++){
     generateParams(false);
     is('new problem ' + n + ' changes technology', PR.tech !== prev.tech);
+    seenDirs.add(PR.dir2 + '/' + PR.dir4); seenW.add(PR.A.w);
     prev = PR;
   }
+  is('New problem produces all four direction pairs', seenDirs.size === 4);
+  is('New problem produces many real wages', seenW.size >= 10);
   PR = savedPR; _rng = savedRng; applyAxes(PR);
   is('fmtP', fmtP(2) === '2' && fmtP(2.5) === '2.5' && fmtP(1.6) === '1.6' && fmtP(20 / 3) === '6.67');
   is('fmtW', fmtW(20) === '$20');
