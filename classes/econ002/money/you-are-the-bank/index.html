@@ -1,0 +1,1931 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>You Are the Bank: T-Accounts and Money Creation — ECON 002</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <!--
+    LAB_ID:    you-are-the-bank
+    LAB_LABEL: You Are the Bank: T-Accounts and Money Creation
+    url:       /classes/econ002/money/you-are-the-bank/?disc=1
+    Single-phase lab: the Check Your Understanding block records to Session
+    (first attempt = Phase 1, latest attempt = final).
+    Covers the Unit 9 notes sections "How do Banks Work?", "The Bank's
+    Balance Sheet" and "The Creation of Money", and previews open market
+    operations and interest on reserves. Replaces the older
+    money/fractional-reserve-banking lab on the labs index.
+    Append ?selftest to the URL to run the self-test in the console.
+  -->
+
+  <style>
+    /* ── Design tokens ─────────────────────────────────────────── */
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --font-mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+      --paper:#f6f2ea;
+      --panel:#ffffff;
+      --ink:#1f2937;
+      --ink-2:#374151;
+      --muted:#596878;       /* 5.85:1 on white — WCAG AA ✓ */
+      --line:#e7dfd2;
+      --line-2:#d9cfbf;
+      --accent:#2f5d7c;      /* 6.4:1  on white — WCAG AA ✓ */
+      --good:#155c38;        /* 7.7:1  on white — WCAG AA ✓ */
+      --bad:#b42318;         /* 6.2:1  on white — WCAG AA ✓ */
+      --loan:#8c4800;        /* 6.3:1  on white — WCAG AA ✓ */
+      --shadow:0 1px 2px rgba(17,24,39,.06),
+               0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3 / good practice) ────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* ── Header / footer ───────────────────────────────────────── */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),
+      rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;
+      font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;
+      line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;
+      max-width:80ch;font-size:0.9375rem;}
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+    .hidden{display:none!important;}
+
+    /* ── Instructions dropdown ─────────────────────────────────── */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* ── Buttons ───────────────────────────────────────────────── */
+    /* Default button border #8c7f72 = 3.53:1 on white (WCAG 1.4.11 ✓) */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+    .option-btn.active,
+    .option-btn.active:hover:not(:disabled){background:var(--accent);color:#fff;
+      border-color:var(--accent);}
+    .option-btn.active:disabled{opacity:.75;}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover{background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    .btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center;}
+
+    /* ── Cards / text ──────────────────────────────────────────── */
+    .card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px;box-shadow:var(--shadow);
+      margin-bottom:14px;min-width:0;}
+    .card h2{font-family:var(--font-serif);font-size:1.25rem;margin:0 0 8px;}
+    .card h3{font-family:var(--font-serif);font-size:1.125rem;margin:0 0 6px;}
+    .card p{margin:8px 0;line-height:1.55;color:var(--ink-2);font-size:0.9375rem;}
+    .part-title{font-family:var(--font-serif);font-size:1.5rem;line-height:1.2;
+      margin:26px 0 10px;}
+    .part-eyebrow{display:block;font-family:var(--font-sans);font-size:0.75rem;
+      font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+      margin-bottom:2px;}
+    .step-label{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
+    .note{font-size:0.8125rem;color:var(--muted);line-height:1.5;margin:8px 0 0;}
+    .lock-note{font-size:0.875rem;color:var(--muted);font-style:italic;margin:6px 0;}
+    .q-text{font-weight:700;color:var(--ink)!important;}
+    .quote{margin:10px 0;padding:10px 14px;border-left:4px solid var(--line-2);
+      color:var(--ink-2);line-height:1.55;font-size:0.9375rem;font-style:italic;}
+    .quote cite{display:block;font-style:normal;font-size:0.8125rem;color:var(--muted);margin-top:4px;}
+    .assume{margin:8px 0 0;padding-left:20px;color:var(--ink-2);font-size:0.9375rem;line-height:1.55;}
+
+    /* Variable colors — always paired with a text label */
+    .c-r{color:var(--accent);font-weight:700;}
+    .c-d{color:var(--good);font-weight:700;}
+    .c-l{color:var(--loan);font-weight:700;}
+
+    /* m̂: an m with a small caret drawn above it (no glyph, so AT reads the sr-only text) */
+    .mhat{position:relative;display:inline-block;line-height:1;font-style:italic;}
+    .mhat::before{content:'';position:absolute;left:50%;top:-.02em;width:.3em;height:.3em;
+      border-left:.09em solid currentColor;border-top:.09em solid currentColor;
+      transform:translateX(-50%) rotate(45deg);}
+
+    /* ── MC / feedback ─────────────────────────────────────────── */
+    .mc-group{display:flex;flex-direction:column;gap:6px;align-items:stretch;margin-top:8px;}
+    .mc-group .option-btn{text-align:left;font-weight:600;font-size:0.875rem;line-height:1.4;}
+    .feedback{margin-top:10px;padding:10px 14px;border-radius:10px;
+      font-size:0.875rem;line-height:1.5;border:1px solid transparent;}
+    .feedback.correct{background:rgba(21,92,56,.08);border-color:rgba(21,92,56,.25);color:#0d4427;}
+    .feedback.incorrect{background:rgba(180,35,24,.06);border-color:rgba(180,35,24,.25);color:#7a1810;}
+    .feedback.hint{background:#fff7e6;border-color:#e8c989;color:#8c4800;}
+    .feedback.info{background:rgba(47,93,124,.07);border-color:rgba(47,93,124,.25);color:#1f3c52;}
+    .feedback p{margin:4px 0;font-size:0.875rem;color:inherit;}
+    .feedback ul{margin:4px 0;padding-left:18px;}
+    .feedback li{margin:3px 0;}
+    .symbol{font-weight:900;margin-right:6px;display:inline-block;min-width:1em;}
+    .dash-echo{display:block;margin-top:6px;font-family:var(--font-mono);font-size:0.8125rem;}
+
+    /* ── Key result / formula / chain ──────────────────────────── */
+    .keyresult{background:var(--panel);border:1px solid var(--line);
+      border-left:5px solid var(--good);border-radius:0 12px 12px 0;
+      padding:12px 16px;margin:12px 0 0;font-size:0.9375rem;line-height:1.55;color:var(--ink);}
+    .keyresult .box-tag{font-size:0.6875rem;font-weight:800;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--good);display:block;margin-bottom:4px;}
+    .formula{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;
+      font-size:1.125rem;color:var(--ink);}
+    .frac{display:inline-flex;flex-direction:column;align-items:stretch;text-align:center;
+      vertical-align:middle;line-height:1.35;}
+    .frac > .num{border-bottom:1.5px solid currentColor;padding:0 6px 2px;}
+    .frac > .den{padding:2px 6px 0;}
+    .chain{display:inline-block;margin:10px 0 4px;padding:8px 14px;border-radius:14px;
+      background:rgba(47,93,124,.07);border:1px solid rgba(47,93,124,.25);
+      font-family:var(--font-mono);font-size:0.875rem;line-height:1.6;color:var(--ink);
+      max-width:100%;}
+
+    /* ── Fed T-account (static table) ──────────────────────────── */
+    table.fed-t{border-collapse:collapse;width:100%;max-width:420px;margin:10px 0;
+      font-size:0.875rem;}
+    table.fed-t caption{text-align:left;font-weight:800;color:var(--ink);font-size:0.875rem;
+      padding-bottom:6px;}
+    table.fed-t th{font-size:0.6875rem;text-transform:uppercase;letter-spacing:.07em;
+      color:var(--muted);padding:4px 8px;border-bottom:2px solid var(--ink);width:50%;}
+    table.fed-t td{padding:8px;vertical-align:top;line-height:1.4;}
+    table.fed-t th + th,table.fed-t td + td{border-left:2px solid var(--ink);}
+
+    /* ── Parts 1–2 layout with the sticky dashboard ────────────── */
+    .chain-grid,.pr-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:0 16px;}
+    .chain-grid{grid-template-areas:"p1" "p2h" "dash" "p2";}
+    .pr-grid{grid-template-areas:"prh" "dash" "prm";}
+    .cg-p1{grid-area:p1;min-width:0;}
+    .cg-p2h{grid-area:p2h;min-width:0;}
+    .cg-p2{grid-area:p2;min-width:0;}
+    .cg-dash{grid-area:dash;min-width:0;}
+    .pr-head{grid-area:prh;min-width:0;}
+    .pr-main{grid-area:prm;min-width:0;}
+    @media(min-width:980px){
+      .chain-grid{grid-template-columns:minmax(0,1fr) 290px;
+        grid-template-areas:"p1 dash" "p2h dash" "p2 dash";grid-template-rows:auto auto 1fr;}
+      .pr-grid{grid-template-columns:minmax(0,1fr) 290px;
+        grid-template-areas:"prh dash" "prm dash";grid-template-rows:auto 1fr;}
+      .cg-dash{padding-top:4px;}
+      .cg-dash .dash{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto;}
+    }
+
+    /* ── Dashboard ─────────────────────────────────────────────── */
+    .dash{--seg-dur:600ms;background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:14px;box-shadow:var(--shadow);margin-bottom:14px;}
+    .dash-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;}
+    .dash-sub{margin:2px 0 8px;font-size:0.8125rem;color:var(--muted);}
+    .bar-block{margin-top:10px;}
+    .bar-lab{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+      font-size:0.8125rem;line-height:1.35;color:var(--ink-2);margin-bottom:4px;}
+    .bar-lab strong{font-size:0.9375rem;white-space:nowrap;}
+    .bar-note{color:var(--muted);font-weight:600;}
+    .track{position:relative;height:20px;border-radius:6px;background:var(--paper);
+      border:1px solid #8c7f72;overflow:hidden;}
+    .fill-m{height:100%;width:0;background:var(--good);transition:width var(--seg-dur) ease;}
+    .rbar,.fill-r{display:flex;height:100%;width:0;transition:width var(--seg-dur) ease;}
+    .seg{height:100%;flex:none;width:0;transition:width var(--seg-dur) ease;
+      box-shadow:inset -1px 0 0 #fff;}
+    .scale{display:grid;grid-template-columns:1fr 1fr 1fr;margin-top:3px;
+      font-size:0.6875rem;color:var(--muted);}
+    .scale span:nth-child(2){text-align:center;}
+    .scale span:nth-child(3){text-align:right;}
+    .fixed-note{margin:6px 0 0;font-size:0.8125rem;font-weight:700;color:var(--accent);}
+    .zoom-lab{margin-top:12px;font-size:0.75rem;font-weight:800;color:var(--ink-2);}
+    .ztrack{display:flex;height:34px;margin-top:4px;border-radius:6px;overflow:hidden;
+      border:1px solid #8c7f72;background:var(--paper);}
+    .zseg{position:relative;height:100%;flex:none;width:0;overflow:hidden;
+      transition:width var(--seg-dur) ease;box-shadow:inset -2px 0 0 #fff;}
+    .zsubs{display:flex;height:100%;width:100%;}
+    .zsub{height:100%;flex:none;width:0;transition:width var(--seg-dur) ease;
+      box-shadow:inset -1px 0 0 #fff;}
+    .zchip{position:absolute;left:4px;top:50%;transform:translateY(-50%);
+      background:var(--accent);color:#fff;border-radius:5px;padding:1px 5px;
+      font-size:0.6875rem;font-weight:700;white-space:nowrap;}
+    .zchip.off{visibility:hidden;}
+    .res-list{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-wrap:wrap;
+      gap:4px 12px;font-size:0.8125rem;color:var(--ink-2);}
+    .res-list li{display:flex;align-items:center;gap:5px;}
+    .sw{display:inline-block;width:18px;height:12px;border-radius:2px;flex:none;}
+    .dash-line{margin:10px 0 0;padding:8px 10px;border-radius:10px;background:var(--paper);
+      border:1px solid var(--line);font-family:var(--font-mono);font-size:0.8125rem;
+      line-height:1.5;color:var(--ink);}
+    /* Reserve patterns: hatching marks reserves; angle/density tells banks apart */
+    .pat-0{background:repeating-linear-gradient(45deg,var(--accent) 0 5px,#a9bfd0 5px 7px);}
+    .pat-1{background:repeating-linear-gradient(-45deg,var(--accent) 0 3px,#a9bfd0 3px 6px);}
+    .pat-2{background:repeating-linear-gradient(90deg,var(--accent) 0 4px,#a9bfd0 4px 6px);}
+    .pat-r{background:repeating-linear-gradient(45deg,transparent 0 4px,#a9bfd0 4px 5px),
+      repeating-linear-gradient(-45deg,var(--accent) 0 4px,#a9bfd0 4px 5px);}
+
+    /* ── Bank cards and T-accounts ─────────────────────────────── */
+    .bank-card h3{margin-bottom:2px;}
+    .bank-from{margin:4px 0 10px!important;font-size:0.875rem!important;}
+    .panels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;
+      align-items:start;margin-top:10px;}
+    @media(max-width:700px){.panels{grid-template-columns:minmax(0,1fr);}}
+    .panel{border:1.5px solid #8c7f72;border-radius:14px;padding:10px;
+      background:var(--panel);min-width:0;}
+    .panel.locked{background:rgba(246,242,234,.7);border-style:dashed;}
+    .panel.active{border:2px solid var(--accent);box-shadow:0 0 0 3px rgba(47,93,124,.12);}
+    .panel.done{border:2px solid var(--good);}
+    .panel-top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:2px 8px;}
+    .panel-eyebrow{font-size:0.6875rem;font-weight:800;letter-spacing:.07em;
+      text-transform:uppercase;color:var(--muted);}
+    .panel-badge{font-size:0.75rem;font-weight:800;color:var(--muted);white-space:nowrap;}
+    .panel.active .panel-badge{color:var(--accent);}
+    .panel.done .panel-badge{color:var(--good);}
+    .panel h4{font-family:var(--font-serif);font-size:1rem;margin:2px 0 4px;line-height:1.3;
+      flex:1 0 100%;}
+    .panel-say{margin:0 0 8px!important;font-size:0.8125rem!important;line-height:1.45!important;}
+    .panel .lock-note{font-size:0.8125rem;margin:4px 0 8px;}
+    .t{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin-top:4px;}
+    .t-side{min-width:0;padding:0 6px 4px;}
+    .t-side + .t-side{border-left:2px solid var(--ink);}
+    .t-head{font-size:0.6875rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;
+      color:var(--muted);text-align:center;padding:2px 0 4px;margin:0 -6px 6px;
+      border-bottom:2px solid var(--ink);}
+    .t-row{margin-bottom:8px;}
+    .t-row label,.t-row .t-name{display:block;font-size:0.8125rem;margin-bottom:2px;}
+    .t-lab{display:flex;justify-content:space-between;align-items:baseline;gap:4px;}
+    .money{display:flex;align-items:center;gap:3px;}
+    .money .cur{font-weight:700;color:var(--ink-2);font-size:0.875rem;}
+    .cell{width:100%;min-width:0;padding:6px 5px;border-radius:8px;border:1.5px solid #8c7f72;
+      background:var(--panel);font-family:var(--font-sans);font-size:0.9375rem;font-weight:700;
+      color:var(--ink);text-align:right;}
+    .cell:disabled{background:transparent;border-color:var(--line-2);color:var(--ink);opacity:1;}
+    .panel.locked .cell:disabled{border-style:dashed;}
+    .cell[aria-invalid="true"]{border:2px solid var(--bad);}
+    .panel.done .cell{border-color:rgba(21,92,56,.45);background:rgba(21,92,56,.05);}
+    .t-val{display:block;font-weight:700;font-size:0.9375rem;text-align:right;padding:6px 8px;}
+    .mark{display:inline-block;min-width:1.1em;font-weight:900;text-align:center;font-size:0.875rem;}
+    .mark.ok{color:var(--good);} .mark.no{color:var(--bad);}
+    .balance{margin-top:4px;padding:6px 8px;border-radius:8px;font-size:0.8125rem;line-height:1.4;
+      background:var(--paper);color:var(--ink-2);}
+    .balance.ok{background:rgba(21,92,56,.08);color:#0d4427;}
+    .balance.no{background:rgba(180,35,24,.06);color:#7a1810;}
+    .panel .btn-row .primary-btn{padding:8px 16px;}
+    .panel .feedback{padding:8px 10px;font-size:0.8125rem;}
+    .panel .feedback p,.panel .feedback li{font-size:0.8125rem;}
+    .gate{margin:0 0 10px;padding:10px;border-radius:10px;background:rgba(47,93,124,.06);
+      border:1px solid rgba(47,93,124,.25);}
+    .gate .q-text{font-size:0.875rem;margin:6px 0 0;line-height:1.45;}
+    .gate .feedback{margin-top:8px;}
+
+    /* ── Run the rest / end-state checks ───────────────────────── */
+    .run-readout{font-family:var(--font-mono);font-size:0.9375rem;font-weight:700;color:var(--ink);
+      margin:10px 0 0;}
+    .end-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:10px 0;}
+    .end-row label,.end-row .end-txt{font-weight:700;font-size:0.9375rem;color:var(--ink);}
+    .end-row .cell{width:110px;}
+    .end-row select{padding:7px 8px;border-radius:10px;border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.9375rem;font-weight:700;color:var(--ink);max-width:100%;}
+    .end-row select[aria-invalid="true"]{border:2px solid var(--bad);}
+    .end-row select:disabled{opacity:1;background:rgba(21,92,56,.05);border-color:rgba(21,92,56,.45);}
+
+    /* ── Sandbox ───────────────────────────────────────────────── */
+    .sb-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:16px;
+      align-items:start;margin-top:10px;}
+    @media(max-width:760px){.sb-grid{grid-template-columns:minmax(0,1fr);}}
+    .stepper{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:0 0 14px;}
+    .stepper-label{flex:1 0 100%;font-weight:700;font-size:0.9375rem;}
+    .stepper-help{flex:1 0 100%;font-size:0.8125rem;color:var(--muted);line-height:1.45;}
+    .step-btn{min-width:2.75rem;font-size:1.125rem;padding:4px 12px;line-height:1.3;}
+    .stepper-val{min-width:6ch;text-align:center;font-weight:800;font-size:1.125rem;
+      font-family:var(--font-serif);}
+    .sb-panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;}
+    .start-mark{position:absolute;top:0;bottom:0;width:3px;margin-left:-1px;
+      background:repeating-linear-gradient(180deg,var(--ink) 0 4px,#fff 4px 7px);}
+    .sb-readout{margin-top:10px;font-size:0.9375rem;color:var(--ink);line-height:1.6;}
+    .challenges{list-style:none;margin:12px 0 0;padding:0;}
+    .challenge{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;padding:8px 12px;
+      border:1px solid #8c7f72;border-radius:10px;margin-top:8px;
+      font-size:0.9375rem;color:var(--ink-2);line-height:1.5;}
+    .challenge.solved{border:2px solid var(--good);background:rgba(21,92,56,.06);}
+    .ch-status{font-weight:800;font-size:0.8125rem;min-width:7ch;color:var(--muted);}
+    .challenge.solved .ch-status{color:var(--good);}
+
+    /* ── Practice / CYU ────────────────────────────────────────── */
+    .score{font-size:0.875rem;font-weight:800;color:var(--ink);margin:12px 0 0;}
+    .scenario{font-size:1rem!important;color:var(--ink)!important;}
+    .cyu-q{border-top:1px solid var(--line);padding-top:14px;margin-top:14px;}
+    .cyu-q:first-of-type{border-top:none;margin-top:4px;padding-top:4px;}
+    .cyu-prompt{font-weight:700;color:var(--ink);line-height:1.5;margin:0 0 8px;font-size:0.9375rem;}
+    .input-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:10px 0;}
+    .input-row label{font-weight:700;font-size:0.9375rem;color:var(--ink);}
+    .num-input{padding:8px 10px;border-radius:10px;border:1.5px solid #8c7f72;
+      background:var(--panel);font-family:var(--font-sans);font-size:0.9375rem;
+      font-weight:700;color:var(--ink);width:110px;text-align:right;}
+    .num-input:disabled{background:rgba(21,92,56,.06);color:var(--ink);opacity:1;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ002/">← ECON 002</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 002 — Money</div>
+      <h1>You Are the Bank: T-Accounts and Money Creation</h1>
+      <p class="sub">Fill in banks' T-accounts step by step and watch the money supply
+      grow while total reserves stay fixed.</p>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>You run the banks. The Fed creates $100 of new reserves, and you fill in
+          each bank's T-account as the money moves from bank to bank. A dashboard tracks
+          the whole banking system. Watch two numbers: the <strong>money supply (M)</strong>
+          grows every time a bank makes a loan, but <strong>total reserves (R)</strong> never
+          change after the Fed acts.</p>
+          <p>You will be asked to answer the following questions:</p>
+          <ol>
+            <li><strong>Part 1: The Fed injects reserves.</strong> Read the Fed's T-account
+            and predict what happens to total reserves.</li>
+            <li><strong>Part 2: Walk the chain.</strong> Fill in three T-accounts for each of
+            Banks 1, 2 and 3, run the rest of the chain, and sum up what happened.</li>
+            <li><strong>Part 3: The two levers.</strong> Use the two ways to change the
+            money supply to solve two challenges.</li>
+            <li><strong>Part 4: Practice.</strong> Fill in T-accounts with new numbers. The
+            <strong>New problem</strong> button makes fresh numbers, so you can practice as
+            many times as you like.</li>
+            <li><strong>Check your understanding.</strong> Three final questions.</li>
+          </ol>
+          <p>For each step, enter your answer and click <strong>Check</strong> or
+          <strong>Check Answer</strong>. If your answer is incorrect, hints and the
+          worked solution are available. <strong>Show solution</strong> becomes available
+          after two incorrect checks.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <div class="chain-grid">
+
+    <!-- ═══════════════ PART 1 ═══════════════ -->
+    <div class="cg-p1">
+      <h2 class="part-title"><span class="part-eyebrow">Part 1</span>The Fed injects reserves</h2>
+
+      <section class="card" aria-labelledby="bsTitle">
+        <h3 id="bsTitle">A bank's balance sheet</h3>
+        <p>A bank's T-account lists what it owns on the left and what it owes on the
+        right. Assets always equal liabilities.</p>
+        <ul class="assume">
+          <li><strong>Assets:</strong> <span class="c-r">Reserves</span> (the bank's account
+          at the Fed, plus vault cash) and <span class="c-l">Loans</span>.</li>
+          <li><strong>Liabilities:</strong> <span class="c-d">Deposits</span>.</li>
+        </ul>
+        <p><strong>Assumptions:</strong></p>
+        <ul class="assume">
+          <li>The required reserve ratio is 20% (rr = 0.20).</li>
+          <li>Banks hold only the required reserves.</li>
+          <li>No one holds cash.</li>
+        </ul>
+      </section>
+
+      <section class="card" aria-labelledby="fedTitle">
+        <div class="step-label">Step 1</div>
+        <h3 id="fedTitle">An open market purchase</h3>
+        <p>The Fed buys a $100 Treasury bond from a household. It pays by creating
+        $100 of brand-new reserves. The household deposits the payment in Bank 1.</p>
+        <table class="fed-t">
+          <caption>The Fed's T-account</caption>
+          <thead><tr><th scope="col">Assets</th><th scope="col">Liabilities</th></tr></thead>
+          <tbody><tr>
+            <td>Treasury bonds +$100</td>
+            <td><span class="c-r">Bank reserves</span> +$100</td>
+          </tr></tbody>
+        </table>
+        <p><strong>This is the only step in the whole lab where total reserves change,
+        and it's the Fed that changes them.</strong></p>
+        <p>After this step, Bank 1 has <span class="c-r">Reserves $100</span> and
+        <span class="c-d">Deposits $100</span>. The household's $100 deposit is new money,
+        so the dashboard starts at M = $100 and R = $100.</p>
+      </section>
+
+      <section class="card" aria-labelledby="p1PredTitle">
+        <div class="step-label">Predict</div>
+        <h3 id="p1PredTitle">Where will the reserves end up?</h3>
+        <p class="q-text" id="p1Q">The Fed just created $100 of reserves. By the end of this
+        lab, after banks have made all their loans, how many total reserves will be in the
+        banking system?</p>
+        <div class="mc-group" role="group" aria-labelledby="p1Q" id="p1Opts"></div>
+        <div class="btn-row"><button type="button" class="primary-btn" id="p1Go" disabled>Lock in my prediction</button></div>
+        <div aria-live="polite" aria-atomic="true"><div id="p1Fb" class="feedback hidden"></div></div>
+      </section>
+    </div>
+
+    <!-- ═══════════════ PART 2 heading ═══════════════ -->
+    <div class="cg-p2h">
+      <h2 class="part-title"><span class="part-eyebrow">Part 2</span>Walk the chain</h2>
+      <section class="card" aria-labelledby="p2IntroTitle">
+        <h3 id="p2IntroTitle">Fill in the T-accounts</h3>
+        <p>Each bank goes through three panels: <strong>Panel 1</strong> a deposit arrives,
+        <strong>Panel 2</strong> a loan creates a deposit, and <strong>Panel 3</strong> the
+        borrower's check clears. Type every number. Only the current panel is open.</p>
+        <p>Click <strong>Check</strong> to mark each cell ✓ or ✗. After each panel, the
+        dashboard shows what happened to <span class="c-d">M</span> and to
+        <span class="c-r">R</span>.</p>
+        <div class="btn-row"><button type="button" class="option-btn" id="p2Reset" disabled>Start Part 2 over</button></div>
+      </section>
+    </div>
+
+    <!-- ═══════════════ DASHBOARD ═══════════════ -->
+    <aside class="cg-dash" aria-labelledby="d1Title">
+      <div class="dash" id="dash1"></div>
+    </aside>
+
+    <!-- ═══════════════ PART 2 body ═══════════════ -->
+    <div class="cg-p2">
+      <p class="lock-note" id="p2Lock">Lock in your Part 1 prediction to start Part 2.</p>
+      <div id="p2Banks"></div>
+
+      <section class="card hidden" id="p2RunCard" aria-labelledby="p2RunTitle">
+        <div class="step-label">Banks 4 and beyond</div>
+        <h3 id="p2RunTitle">Run the rest of the chain</h3>
+        <p>Bank 4 now has a $51.20 deposit. It lends, the check clears at Bank 5, and so on.
+        Each loan is 80% of the one before. Run the chain until the next loan is less than a cent.</p>
+        <div class="btn-row"><button type="button" class="primary-btn" id="p2Run">Run the rest</button></div>
+        <p class="run-readout" id="p2RunOut" aria-live="polite" aria-atomic="true">Banks in the chain so far: 3</p>
+      </section>
+
+      <section class="card hidden" id="p2SumCard" aria-labelledby="p2SumTitle">
+        <div class="step-label">Summary</div>
+        <h3 id="p2SumTitle">What did the chain do?</h3>
+        <p>Use the dashboard to fill in the results.</p>
+        <div id="p2Sum"></div>
+      </section>
+
+      <section class="card hidden" id="p2KeyCard" aria-labelledby="p2KeyTitle">
+        <h3 id="p2KeyTitle">The key result</h3>
+        <div class="keyresult">
+          <span class="box-tag">Key result</span>
+          <span class="sr-only">M equals m-hat times R, which is 1 over 0.20 times $100, which is $500.</span>
+          <span class="formula" aria-hidden="true">
+            <span class="c-d">M</span> = <span class="mhat">m</span> × <span class="c-r">R</span> =
+            (<span class="frac"><span class="num">1</span><span class="den">0.20</span></span>) × <span class="c-r">$100</span> =
+            <strong class="c-d">$500</strong>
+          </span>
+        </div>
+        <blockquote class="quote">“Financial intermediation does <strong>not</strong> change the total
+        number of reserves in the economy. The Fed has complete control over the total number of
+        reserves.”<cite>Unit 9 notes</cite></blockquote>
+        <div id="p2PredReveal" class="feedback info"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ═══════════════ PART 3 ═══════════════ -->
+  <h2 class="part-title"><span class="part-eyebrow">Part 3</span>The two levers</h2>
+  <section class="card" aria-labelledby="sbTitle">
+    <h3 id="sbTitle">The notes list two ways to change the money supply. Which one changes reserves?</h3>
+    <p class="lock-note" id="sbLock">Finish the Part 2 summary to unlock the two levers.</p>
+    <div id="sbBody" class="hidden">
+      <div class="sb-grid">
+        <div>
+          <div class="stepper" role="group" aria-labelledby="sbRLabel">
+            <span class="stepper-label c-r" id="sbRLabel">Fed open market purchase (R)</span>
+            <button type="button" class="option-btn step-btn" id="sbRDown" aria-label="Decrease the Fed's purchase by $50">−</button>
+            <span class="stepper-val c-r" id="sbRVal">$100</span>
+            <button type="button" class="option-btn step-btn" id="sbRUp" aria-label="Increase the Fed's purchase by $50">+</button>
+          </div>
+          <div class="stepper" role="group" aria-labelledby="sbRRLabel">
+            <span class="stepper-label" id="sbRRLabel">Banks' reserve ratio (rr)</span>
+            <span class="stepper-help">Banks can choose to hold more than required, for example
+            when the Fed raises interest on reserves.</span>
+            <button type="button" class="option-btn step-btn" id="sbRRDown" aria-label="Lower the reserve ratio">−</button>
+            <span class="stepper-val" id="sbRRVal">0.20</span>
+            <button type="button" class="option-btn step-btn" id="sbRRUp" aria-label="Raise the reserve ratio">+</button>
+          </div>
+          <div class="btn-row"><button type="button" class="option-btn" id="sbReset">Reset</button></div>
+          <h4 class="step-label" style="margin-top:16px;">Challenges</h4>
+          <ol class="challenges">
+            <li class="challenge" id="ch1"><span class="ch-status" id="ch1Status">Not yet</span>
+              <span>1. Cut the money supply in half without the Fed selling any bonds.</span></li>
+            <li class="challenge" id="ch2"><span class="ch-status" id="ch2Status">Not yet</span>
+              <span>2. Double the money supply without changing banks' reserve ratio.</span></li>
+          </ol>
+          <div aria-live="polite" aria-atomic="true"><div id="chFb" class="feedback hidden"></div></div>
+        </div>
+        <div class="sb-panel">
+          <div class="dash-title">Reserves and money</div>
+          <div class="bar-block">
+            <div class="bar-lab"><span class="c-r">Reserves (R)</span><strong class="c-r" id="sbRBarVal">$100</strong></div>
+            <div class="track" aria-hidden="true"><div class="fill-r pat-0" id="sbRFill"></div>
+              <div class="start-mark" id="sbRStart"></div></div>
+          </div>
+          <div class="bar-block">
+            <div class="bar-lab"><span class="c-d">Money supply (M)</span><strong class="c-d" id="sbMBarVal">$500</strong></div>
+            <div class="track" aria-hidden="true"><div class="fill-m" id="sbMFill"></div>
+              <div class="start-mark" id="sbMStart"></div></div>
+          </div>
+          <div class="scale" aria-hidden="true"><span>$0</span><span>$1,000</span><span>$2,000</span></div>
+          <p class="note">Dashed lines mark the start: R = $100 and M = $500.</p>
+          <div aria-live="polite" aria-atomic="true">
+            <p class="sb-readout" id="sbReadout"></p>
+            <div class="chain" id="sbChain">Move a lever to see its causal chain.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ PART 4 ═══════════════ -->
+  <h2 class="part-title"><span class="part-eyebrow">Part 4</span>Practice</h2>
+  <div class="pr-grid">
+    <div class="pr-head">
+      <section class="card" aria-labelledby="prTitle">
+        <h3 id="prTitle">A new chain, new numbers</h3>
+        <p class="scenario" id="prScenario" aria-live="polite" aria-atomic="true"></p>
+        <p>Fill in Bank 1 Panels 2 and 3 and all three panels for Bank 2. Then run the rest
+        of the chain and find the end state.</p>
+        <div class="btn-row"><button type="button" class="primary-btn" id="prNew">New problem</button></div>
+        <p class="score" id="prScore" aria-live="polite">Problems completed: 0 · First-try correct: 0</p>
+      </section>
+    </div>
+    <aside class="cg-dash" aria-labelledby="d2Title">
+      <div class="dash" id="dash2"></div>
+    </aside>
+    <div class="pr-main">
+      <div id="prBanks"></div>
+      <section class="card hidden" id="prRunCard" aria-labelledby="prRunTitle">
+        <div class="step-label">Banks 3 and beyond</div>
+        <h3 id="prRunTitle">Run the rest of the chain</h3>
+        <div class="btn-row"><button type="button" class="primary-btn" id="prRun">Run the rest</button></div>
+        <p class="run-readout" id="prRunOut" aria-live="polite" aria-atomic="true">Banks in the chain so far: 2</p>
+      </section>
+      <section class="card hidden" id="prEndCard" aria-labelledby="prEndTitle">
+        <div class="step-label">End state</div>
+        <h3 id="prEndTitle">After every bank has lent</h3>
+        <div id="prEnd"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ═══════════════ CHECK YOUR UNDERSTANDING ═══════════════ -->
+  <section class="card" aria-labelledby="cyuTitle">
+    <h2 id="cyuTitle">Check your understanding</h2>
+    <div id="cyu"></div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 002 — Principles of Macroeconomics</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+const LAB_ID    = 'you-are-the-bank';
+const LAB_LABEL = 'You Are the Bank: T-Accounts and Money Creation';
+
+function $(id){ return document.getElementById(id); }
+
+let _rng = null;
+function rng(){ return _rng ? _rng() : Math.random(); }
+function pick(arr){ return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function prefersReduced(){
+  return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Formatting and parsing
+   ───────────────────────────────────────────────────────────────── */
+function round2(x){ return Math.round((x + (x >= 0 ? 1 : -1) * 1e-9) * 100) / 100; }
+/* $80, $51.20, $1,999.91: two decimals only when the value isn't whole. */
+function fmtMoney(num){
+  const n = round2(num);
+  const c = Math.round(Math.abs(n) * 100);
+  const whole = c % 100 === 0;
+  const s = (c / 100).toLocaleString('en-US', whole
+    ? { maximumFractionDigits: 0 }
+    : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (n < 0 ? '−$' : '$') + s;
+}
+function fmtRR(rr){ return rr.toFixed(2); }
+function fmtNum(x){ return String(round2(x)); }
+/* Accepts $, commas, spaces and a Unicode minus. */
+function parseNum(str){
+  const raw = String(str == null ? '' : str).trim();
+  const clean = raw.replace(/[$,\s]/g, '').replace(/[−–]/g, '-');
+  if(!/^-?(\d+\.?\d*|\.\d+)$/.test(clean)) return NaN;
+  return parseFloat(clean);
+}
+const TOL = 0.01;
+function near(a, b){ return Math.abs(a - b) <= TOL + 1e-9; }
+function twoDecimals(x){ return Math.abs(x * 100 - Math.round(x * 100)) < 1e-6; }
+
+const MHAT = '<span class="mhat" aria-hidden="true">m</span><span class="sr-only">m-hat</span>';
+const SYM = {
+  correct: '<span class="symbol" aria-hidden="true">✓</span>',
+  incorrect: '<span class="symbol" aria-hidden="true">✗</span>',
+  hint: '<span class="symbol" aria-hidden="true">?</span>',
+  info: '<span class="symbol" aria-hidden="true">=</span>'
+};
+function showFb(el, kind, html){
+  el.className = 'feedback ' + kind;
+  el.innerHTML = html;
+}
+function hideFb(el){ el.className = 'feedback hidden'; el.innerHTML = ''; }
+function esc(s){ return String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' })[c]); }
+
+/* ─────────────────────────────────────────────────────────────────
+   Model (the notes' simplified bank balance sheet)
+   Bank k receives a deposit X_k = ΔR·(1 − rr)^(k−1) and lends
+   L_k = (1 − rr)·X_k. Panel 1: R X | D X. Panel 2: R X, L L_k | D X + L_k.
+   Panel 3: R X − L_k, L L_k | D X.
+   ───────────────────────────────────────────────────────────────── */
+const NOTES = { dR: 100, rr: 0.20 };
+const MAX_BANKS = 100, MIN_LOAN = 0.01;
+const PANEL_NAME = { 1: 'Deposit arrives', 2: 'Loan creates a deposit', 3: 'Check clears' };
+
+function depositAt(dR, rr, k){ return dR * Math.pow(1 - rr, k - 1); }
+function loanAt(dR, rr, k){ return (1 - rr) * depositAt(dR, rr, k); }
+function panelValues(dR, rr, k, p){
+  const X = depositAt(dR, rr, k), L = loanAt(dR, rr, k);
+  if(p === 1) return { R: round2(X), L: 0, D: round2(X) };
+  if(p === 2) return { R: round2(X), L: round2(L), D: round2(X + L) };
+  return { R: round2(X - L), L: round2(L), D: round2(X) };
+}
+
+/* Dashboard state. res[k] = reserves held by Bank k (1-based). M = total
+   new deposits since the Fed's purchase. K = banks shown individually. */
+function fedState(dR, rr, K){ return { dR, rr, K, M: dR, res: [0, dR], lastBank: 1 }; }
+function cloneState(s){ return Object.assign({}, s, { res: s.res.slice() }); }
+function totalRes(s){ return s.res.reduce((a, b) => a + (b || 0), 0); }
+function resGroups(s){
+  const out = [];
+  for(let k = 1; k <= s.K; k++) out.push({ label: 'Bank ' + k, val: s.res[k] || 0 });
+  let rest = 0;
+  for(let k = s.K + 1; k < s.res.length; k++) rest += s.res[k] || 0;
+  out.push({ label: 'Banks ' + (s.K + 1) + '+', val: rest, rest: true });
+  return out;
+}
+function fedEvent(s){
+  return {
+    line: 'Fed bought a ' + fmtMoney(s.dR) + ' bond → M +' + fmtMoney(s.dR) + ' · R +' + fmtMoney(s.dR) + ' (new reserves from the Fed)',
+    say: 'The Fed bought a ' + fmtMoney(s.dR) + ' bond. The household deposited the payment in Bank 1, so the money supply rose by ' +
+      fmtMoney(s.dR) + ' and total reserves rose by ' + fmtMoney(s.dR) + '.'
+  };
+}
+/* Apply the completion of Bank k's Panel p to the dashboard state. */
+function dashEvent(s, k, p){
+  if(p === 1){
+    const X = depositAt(s.dR, s.rr, k);
+    return {
+      line: 'Deposit arrived at Bank ' + k + ' → M unchanged · R unchanged (the ' + fmtMoney(X) + ' check from Bank ' + (k - 1) + ')',
+      say: 'Bank ' + k + ' received the ' + fmtMoney(X) + ' check from Bank ' + (k - 1) +
+        '. This is the same event as the check clearing, so the money supply and total reserves did not change.'
+    };
+  }
+  const L = loanAt(s.dR, s.rr, k);
+  if(p === 2){
+    s.M += L;
+    return {
+      line: 'Loan made → M +' + fmtMoney(L) + ' · R unchanged',
+      say: 'Bank ' + k + ' made a ' + fmtMoney(L) + ' loan by creating a deposit. The money supply rose by ' +
+        fmtMoney(L) + '. Total reserves did not change.'
+    };
+  }
+  s.res[k] -= L;
+  s.res[k + 1] = (s.res[k + 1] || 0) + L;
+  s.lastBank = Math.max(s.lastBank, k + 1);
+  return {
+    line: 'Check cleared → M unchanged · ' + fmtMoney(L) + ' of reserves moved Bank ' + k + ' → Bank ' + (k + 1),
+    say: 'The check cleared. ' + fmtMoney(L) + ' of reserves moved from Bank ' + k + ' to Bank ' + (k + 1) +
+      '. The money supply and total reserves did not change.'
+  };
+}
+/* Run the chain from the bank now holding the newest deposit until the next
+   loan is under a cent (cap: 100 banks), then add every later bank at once
+   (their loans sum to L_n ÷ rr), so M lands on ΔR ÷ rr. */
+function runRestSnapshots(s0){
+  const s = cloneState(s0), snaps = [];
+  let n = s.lastBank;
+  while(n < MAX_BANKS){
+    const L = loanAt(s.dR, s.rr, n);
+    if(L < MIN_LOAN) break;
+    s.M += L;
+    s.res[n] -= L;
+    s.res[n + 1] = (s.res[n + 1] || 0) + L;
+    s.lastBank = n + 1;
+    snaps.push({ kind: 'bank', n, L, state: cloneState(s),
+      line: 'Bank ' + n + ': loan made, check cleared → M +' + fmtMoney(L) + ' · R unchanged' });
+    n++;
+  }
+  const tail = loanAt(s.dR, s.rr, n) / s.rr;
+  s.M += tail;
+  snaps.push({ kind: 'tail', n, tail, state: cloneState(s),
+    line: 'End of the chain → ΔM = ' + fmtMoney(s.M) + ' · ΔR = ' + fmtMoney(totalRes(s)) + ', unchanged' });
+  return snaps;
+}
+
+/* Targeted hints for a T-account check. v holds the parsed entries. */
+function panelHints(p, X, rr, v, ok){
+  const L = round2((1 - rr) * X), out = [];
+  const add = (key, text) => out.push({ key, text });
+  if(p === 1){
+    if(!ok.R) add('p1Reserves', 'When the check cleared, the reserves came with it. This bank\'s reserves rise by the whole deposit.');
+    if(!ok.D) add('p1Deposits', 'The whole check was deposited here, so deposits equal the amount of the check.');
+  } else if(p === 2){
+    if(!ok.D && near(v.D, X))
+      add('p2Deposits', 'When the bank makes a loan, it credits the borrower\'s checking account. That\'s a brand-new deposit, so add the loan to deposits.');
+    if(!ok.R && (near(v.R, X - L) || (v.L > 0 && near(v.R, X - v.L))))
+      add('p2Reserves', 'The borrower hasn\'t spent the loan yet. No reserves have left the bank.');
+    if(!ok.L && near(v.L, X))
+      add('p2Loans', 'The bank must keep rr of its deposits as reserves. It can lend only (1 − rr) of the new deposit (here rr = ' + fmtRR(rr) + ').');
+  } else {
+    if(!ok.R && near(v.R, X))
+      add('p3Reserves', 'The borrower\'s check was deposited at the next bank. When it clears, this bank\'s reserves move to that bank.');
+    if(!ok.L && v.L < L - TOL)
+      add('p3Loans', 'The loan still exists. The borrower still owes the bank. Only the deposit and reserves moved.');
+    if(!ok.D && near(v.D, X + L))
+      add('p3Deposits', 'The borrower spent the loan, so that deposit left this bank.');
+  }
+  if(!out.length) add('generic', 'Start from the previous panel. Change only what this step changes, and make sure assets equal liabilities.');
+  return out;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Dashboard (plain HTML bars)
+   ───────────────────────────────────────────────────────────────── */
+const PATS = ['pat-0', 'pat-1', 'pat-2'];
+const MAX_SUBS = 40;
+
+function Dashboard(root, idp, K){
+  this.root = root; this.idp = idp; this.K = K; this.scale = 500; this.dR = 100;
+  this.runToken = 0;  // bumped to cancel a "Run the rest" in progress
+  const n = K + 1;
+  let segs = '', zsegs = '';
+  for(let i = 0; i < n; i++){
+    const pat = i < K ? PATS[i] : 'pat-r';
+    segs += '<div class="seg ' + pat + '"></div>';
+    zsegs += i < K
+      ? '<div class="zseg ' + pat + '"><span class="zchip"></span></div>'
+      : '<div class="zseg"><div class="zsubs"></div><span class="zchip"></span></div>';
+  }
+  root.innerHTML =
+    '<div class="dash-title" id="' + idp + 'Title">System dashboard</div>' +
+    '<p class="dash-sub" id="' + idp + 'Sub"></p>' +
+    '<div class="bar-block"><div class="bar-lab"><span><span class="c-d">Money supply created</span> ' +
+      '<span class="bar-note">(ΔM = total new deposits)</span></span><strong class="c-d" data-k="mval"></strong></div>' +
+      '<div class="track" aria-hidden="true"><div class="fill-m" data-k="mfill"></div></div></div>' +
+    '<div class="bar-block"><div class="bar-lab"><span><span class="c-r">Total reserves in the banking system</span> ' +
+      '<span class="bar-note">(ΔR)</span></span><strong class="c-r" data-k="rval"></strong></div>' +
+      '<div class="track" aria-hidden="true"><div class="rbar" data-k="rbar">' + segs + '</div></div></div>' +
+    '<div class="scale" aria-hidden="true"><span>$0</span><span data-k="mid"></span><span data-k="max"></span></div>' +
+    '<p class="fixed-note" data-k="fixed"></p>' +
+    '<div class="zoom-lab" aria-hidden="true">Who holds the reserves (zoomed in)</div>' +
+    '<div class="ztrack" aria-hidden="true" data-k="z">' + zsegs + '</div>' +
+    '<ul class="res-list" data-k="list" aria-label="Reserves by bank"></ul>' +
+    '<p class="dash-line" data-k="line"></p>' +
+    '<p class="sr-only" aria-live="polite" aria-atomic="true" data-k="desc"></p>';
+  const q = k => root.querySelector('[data-k="' + k + '"]');
+  this.el = { mval: q('mval'), mfill: q('mfill'), rval: q('rval'), rbar: q('rbar'), mid: q('mid'), max: q('max'),
+    fixed: q('fixed'), z: q('z'), list: q('list'), line: q('line'), desc: q('desc'), sub: $(idp + 'Sub') };
+  this.segs = Array.from(this.el.rbar.children);
+  this.zsegs = Array.from(this.el.z.children);
+  this.subsWrap = this.zsegs[K].querySelector('.zsubs');
+}
+Dashboard.prototype.setup = function(dR, rr, scale, subText){
+  this.dR = dR; this.scale = scale;
+  this.el.mid.textContent = fmtMoney(scale / 2);
+  this.el.max.textContent = fmtMoney(scale);
+  this.el.fixed.textContent = 'Total: ' + fmtMoney(dR) + ', unchanged since the Fed\'s purchase.';
+  this.el.sub.textContent = subText;
+  this.subsWrap.innerHTML = '';
+};
+Dashboard.prototype.render = function(s, ev, opt){
+  opt = opt || {};
+  const dur = opt.dur != null ? opt.dur : 600;
+  this.root.style.setProperty('--seg-dur', (prefersReduced() ? 0 : dur) + 'ms');
+  const pct = x => (Math.max(0, Math.min(1, x)) * 100).toFixed(3) + '%';
+  const tot = totalRes(s), groups = resGroups(s);
+  this.el.mval.textContent = fmtMoney(s.M);
+  this.el.mfill.style.width = pct(s.M / this.scale);
+  this.el.rval.textContent = fmtMoney(tot);
+  this.el.rbar.style.width = pct(tot / this.scale);
+  const zW = this.el.z.clientWidth;
+  groups.forEach((g, i) => {
+    this.segs[i].style.width = pct(g.val / tot);
+    this.zsegs[i].style.width = pct(g.val / tot);
+    const chip = this.zsegs[i].querySelector('.zchip');
+    chip.textContent = (g.rest ? g.label : 'B' + (i + 1)) + ' ' + fmtMoney(g.val);
+    chip.classList.toggle('off', chip.offsetWidth + 8 > (g.val / tot) * zW || g.val < 0.005);
+  });
+  // "Banks K+1+" is split into one stripe per bank, so the split is visible as the chain runs.
+  const subs = [];
+  for(let k = s.K + 1; k < s.res.length; k++) if(s.res[k] > 0) subs.push(s.res[k]);
+  const restTot = subs.reduce((a, b) => a + b, 0);
+  if(subs.length > MAX_SUBS){
+    const extra = subs.splice(MAX_SUBS - 1).reduce((a, b) => a + b, 0);
+    subs.push(extra);
+  }
+  const wrap = this.subsWrap;
+  while(wrap.children.length < subs.length){
+    const d = document.createElement('div');
+    d.className = 'zsub ' + (wrap.children.length % 2 ? 'pat-1' : 'pat-r');
+    wrap.appendChild(d);
+    void d.offsetWidth;
+  }
+  while(wrap.children.length > subs.length) wrap.removeChild(wrap.lastChild);
+  subs.forEach((v, i) => { wrap.children[i].style.width = pct(restTot ? v / restTot : 0); });
+
+  this.el.list.innerHTML = groups.filter(g => g.val >= 0.005).map((g, i) => {
+    const pat = g.rest ? 'pat-r' : PATS[groups.indexOf(g)];
+    return '<li><span class="sw ' + pat + '" aria-hidden="true"></span>' + g.label + ': ' + fmtMoney(g.val) + '</li>';
+  }).join('');
+  if(ev) this.el.line.textContent = ev.line;
+  if(opt.announce !== false){
+    const who = groups.filter(g => g.val >= 0.005).map(g => g.label + (g.rest ? ' hold ' : ' holds ') + fmtMoney(g.val)).join(', ');
+    this.el.desc.textContent = (ev && ev.say ? ev.say + ' ' : '') + 'Dashboard: money supply created ' + fmtMoney(s.M) +
+      '. Total reserves ' + fmtMoney(tot) + ', unchanged since the Fed\'s purchase. ' + who + '.';
+  }
+};
+
+/* ─────────────────────────────────────────────────────────────────
+   Prediction gates (multiple choice, locked in before a panel opens)
+   ───────────────────────────────────────────────────────────────── */
+let _gateN = 0;
+function renderGate(gate, mount, onLocked){
+  const gid = 'gate' + (++_gateN);
+  let html = '<div class="gate"><div class="step-label">Predict first</div>';
+  gate.questions.forEach((q, qi) => { html += '<p class="q-text" id="' + gid + 'q' + qi + '">' + q.q + '</p>' +
+    (gate.locked ? '' : '<div class="mc-group" role="group" aria-labelledby="' + gid + 'q' + qi + '" data-q="' + qi + '"></div>'); });
+  if(!gate.locked) html += '<div class="btn-row"><button type="button" class="primary-btn" data-go>Lock in my prediction' +
+    (gate.questions.length > 1 ? 's' : '') + '</button></div>';
+  html += '<div aria-live="polite" aria-atomic="true"><div class="feedback hidden" data-fb></div></div></div>';
+  mount.innerHTML = html;
+  const fb = mount.querySelector('[data-fb]');
+  if(gate.locked){ showFb(fb, gate.fbKind, gate.fbHTML); return; }
+  const picks = gate.questions.map(() => null);
+  const go = mount.querySelector('[data-go]');
+  go.disabled = true;
+  gate.questions.forEach((q, qi) => {
+    const grp = mount.querySelector('[data-q="' + qi + '"]');
+    const btns = q.options.map((o, j) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'option-btn'; b.setAttribute('aria-pressed', 'false');
+      b.textContent = o.text;
+      b.addEventListener('click', () => {
+        picks[qi] = j;
+        btns.forEach(x => { const on = x === b; x.classList.toggle('active', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+        go.disabled = picks.some(x => x == null);
+      });
+      grp.appendChild(b);
+      return b;
+    });
+  });
+  go.addEventListener('click', () => {
+    if(picks.some(x => x == null)) return;
+    mount.querySelectorAll('.mc-group .option-btn').forEach(b => { b.disabled = true; });
+    go.disabled = true; go.textContent = 'Locked in';
+    let allOk = true;
+    const parts = gate.questions.map((q, qi) => {
+      const o = q.options[picks[qi]];
+      if(!o.correct) allOk = false;
+      return '<p>' + (o.correct ? SYM.correct + '<strong>You predicted ' + esc(o.text.toLowerCase()) + '. Correct.</strong> '
+                                : SYM.incorrect + '<strong>You predicted ' + esc(o.text.toLowerCase()) + '.</strong> ' + (o.fb ? o.fb + ' ' : '')) +
+        q.explain + '</p>';
+    });
+    gate.locked = true;
+    gate.fbKind = allOk ? 'correct' : 'incorrect';
+    gate.fbHTML = parts.join('');
+    showFb(fb, gate.fbKind, gate.fbHTML);
+    onLocked();
+  });
+}
+
+function makeGates(){
+  return {
+    '1-2': { locked: false, questions: [
+      { q: 'Bank 1 is about to lend $80. What will happen to the money supply?',
+        options: [
+          { text: 'Rise by $80', correct: true },
+          { text: 'No change', fb: 'The loan is paid into the borrower\'s checking account, and that deposit is new.' },
+          { text: 'Fall by $80', fb: 'No deposit disappears when a loan is made.' }
+        ],
+        explain: 'Bank 1 makes the loan by creating an $80 deposit in the borrower\'s account. Deposits are money, so M rises by $80.' },
+      { q: '…and to total reserves in the banking system?',
+        options: [
+          { text: 'Rise', fb: 'Banks can\'t create reserves.' },
+          { text: 'No change', correct: true },
+          { text: 'Fall', fb: 'Nothing has left Bank 1 yet, and reserves never leave the banking system.' }
+        ],
+        explain: 'The loan creates a deposit, not reserves. Bank 1 still holds the same $100 of reserves. Only the Fed changes total reserves.' }
+    ] },
+    '1-3': { locked: false, questions: [
+      { q: 'The borrower\'s $80 check clears at Bank 2. What happens to the money supply?',
+        options: [
+          { text: 'Rise by $80', fb: 'The $80 was already counted when the loan was made.' },
+          { text: 'No change', correct: true },
+          { text: 'Fall by $80', fb: 'The deposit doesn\'t disappear; it lands in Bank 2.' }
+        ],
+        explain: 'The deposit just moved from Bank 1 to Bank 2. Money was created when the loan was made, not when the check cleared.' }
+    ] }
+  };
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   T-account panel
+   ───────────────────────────────────────────────────────────────── */
+function TAcct(o){
+  // o: { ws, k, p, prefix }
+  this.o = o;
+  const ws = o.ws, k = o.k, p = o.p;
+  this.exp = panelValues(ws.dR, ws.rr, k, p);
+  this.X = round2(depositAt(ws.dR, ws.rr, k));
+  this.fields = p === 1 ? ['R', 'D'] : ['R', 'L', 'D'];
+  this.prefilled = k === 1 && p === 1;
+  this.checks = 0; this.wrong = 0; this.firstOk = null; this.state = 'locked';
+  const id = o.prefix + 'b' + k + 'p' + p;
+  this.id = id;
+  const el = document.createElement('section');
+  el.className = 'panel locked';
+  el.setAttribute('aria-labelledby', id + 'T');
+  const next = k + 1;
+  const say = p === 1
+    ? (this.prefilled ? 'The household deposits the Fed\'s ' + fmtMoney(ws.dR) + ' payment. Filled in from Part 1.'
+                      : 'The check from Bank ' + (k - 1) + '\'s borrower is deposited here and clears.')
+    : p === 2
+      ? 'Bank ' + k + ' lends (1 − rr) = ' + fmtRR(1 - ws.rr) + ' of the deposit from Panel 1 by creating a deposit in the borrower\'s account.'
+      : 'The borrower spends the loan with a check, which is deposited in Bank ' + next +
+        '. When it clears, that many reserves move from Bank ' + k + ' to Bank ' + next + '.';
+  const NAMES = { R: ['Reserves', 'c-r'], L: ['Loans', 'c-l'], D: ['Deposits', 'c-d'] };
+  const ctx = ', Bank ' + k + ' Panel ' + p;
+  const row = f => {
+    const [name, cls] = NAMES[f];
+    if(this.prefilled){
+      return '<div class="t-row"><span class="t-name ' + cls + '">' + name + '</span>' +
+        '<span class="t-val">' + fmtMoney(this.exp[f]) + '</span></div>';
+    }
+    return '<div class="t-row"><div class="t-lab"><label for="' + id + f + '" class="' + cls + '">' + name +
+      '<span class="sr-only">' + ctx + '</span></label><span class="mark" id="' + id + f + 'M"></span></div>' +
+      '<span class="money"><span class="cur" aria-hidden="true">$</span>' +
+      '<input class="cell" id="' + id + f + '" type="text" inputmode="decimal" autocomplete="off" disabled/></span></div>';
+  };
+  const assets = this.fields.filter(f => f !== 'D').map(row).join('');
+  el.innerHTML =
+    '<div class="panel-top"><span class="panel-eyebrow">Panel ' + p + '</span>' +
+      '<span class="panel-badge" id="' + id + 'B">' + (this.prefilled ? '✓ Filled in' : 'Locked') + '</span>' +
+      '<h4 id="' + id + 'T">Bank ' + k + ': ' + PANEL_NAME[p] + '</h4></div>' +
+    '<p class="panel-say">' + say + '</p>' +
+    '<div data-gate></div>' +
+    (this.prefilled ? '' : '<p class="lock-note" id="' + id + 'Lk">Complete the panel before this one.</p>') +
+    '<div class="t"><div class="t-side"><div class="t-head">Assets</div>' + assets + '</div>' +
+      '<div class="t-side"><div class="t-head">Liabilities</div>' + row('D') + '</div></div>' +
+    '<div class="balance" id="' + id + 'Bal" aria-hidden="true"></div>' +
+    '<span class="sr-only" role="status" id="' + id + 'BalSr"></span>' +
+    (this.prefilled ? '' :
+      '<div class="btn-row"><button type="button" class="primary-btn" id="' + id + 'C" disabled>Check</button>' +
+      '<button type="button" class="option-btn" id="' + id + 'S" disabled>Show solution</button></div>' +
+      '<div aria-live="polite" aria-atomic="true"><div class="feedback hidden" id="' + id + 'F"></div></div>');
+  this.el = el;
+  this.gateSlot = el.querySelector('[data-gate]');
+  if(this.prefilled){
+    el.className = 'panel done';
+    this.state = 'done';
+  }
+}
+TAcct.prototype.q = function(suffix){ return this.el.querySelector('#' + this.id + suffix); };
+TAcct.prototype.wire = function(){
+  if(this.prefilled){ this.updateBalance(); return; }
+  this.fields.forEach(f => {
+    const inp = this.q(f);
+    inp.addEventListener('input', () => {
+      inp.removeAttribute('aria-invalid');
+      this.q(f + 'M').innerHTML = '';
+      this.updateBalance();
+    });
+    inp.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); this.check(); } });
+  });
+  this.q('C').addEventListener('click', () => this.check());
+  this.q('S').addEventListener('click', () => this.finish(true));
+  this.updateBalance();
+};
+TAcct.prototype.values = function(){
+  const v = {};
+  this.fields.forEach(f => {
+    if(this.prefilled){ v[f] = this.exp[f]; return; }
+    const s = this.q(f).value.trim();
+    v[f] = s === '' ? null : parseNum(s);
+  });
+  if(!('L' in v)) v.L = 0;
+  return v;
+};
+TAcct.prototype.updateBalance = function(){
+  const v = this.values();
+  const vals = this.fields.map(f => v[f]);
+  const bal = this.q('Bal');
+  let text, cls;
+  if(vals.every(x => x == null)){
+    text = 'Assets = Liabilities? Type the values to see.'; cls = '';
+  } else {
+    const n = x => (x == null || isNaN(x)) ? 0 : x;
+    const a = n(v.R) + n(v.L), l = n(v.D);
+    if(near(a, l)){ text = 'Balanced ✓: assets ' + fmtMoney(a) + ' = liabilities ' + fmtMoney(l); cls = 'ok'; }
+    else { text = 'Not balanced ✗: assets ' + fmtMoney(a) + ', liabilities ' + fmtMoney(l); cls = 'no'; }
+  }
+  bal.textContent = text;
+  bal.className = 'balance' + (cls ? ' ' + cls : '');
+  clearTimeout(this._balT);
+  this._balT = setTimeout(() => { this.q('BalSr').textContent = text; }, 900);
+};
+TAcct.prototype.showGate = function(gate, onOpen){
+  this.el.className = 'panel active';
+  this.q('B').textContent = 'Now: predict';
+  this.q('Lk').textContent = 'Lock in your prediction to open this panel.';
+  renderGate(gate, this.gateSlot, onOpen);
+};
+TAcct.prototype.setActive = function(){
+  this.state = 'active';
+  this.el.className = 'panel active';
+  this.q('B').textContent = 'Now';
+  this.q('Lk').classList.add('hidden');
+  this.fields.forEach(f => { this.q(f).disabled = false; });
+  this.q('C').disabled = false;
+  this.q('S').disabled = this.wrong < 2;
+};
+TAcct.prototype.check = function(){
+  if(this.state !== 'active') return;
+  const v = this.values(), fb = this.q('F');
+  if(this.fields.some(f => v[f] == null || isNaN(v[f]))){
+    showFb(fb, 'hint', SYM.hint + 'Fill in every cell with a number, for example 80 or $51.20.');
+    return;
+  }
+  const ok = {};
+  this.fields.forEach(f => {
+    ok[f] = near(v[f], this.exp[f]);
+    const inp = this.q(f), mk = this.q(f + 'M');
+    inp.setAttribute('aria-invalid', ok[f] ? 'false' : 'true');
+    mk.className = 'mark ' + (ok[f] ? 'ok' : 'no');
+    mk.innerHTML = (ok[f] ? '✓' : '✗') + '<span class="sr-only">' + (ok[f] ? ' correct' : ' incorrect') + '</span>';
+  });
+  if(!('L' in ok)) ok.L = true;
+  const allOk = this.fields.every(f => ok[f]);
+  this.checks++;
+  if(this.checks === 1) this.firstOk = allOk;
+  if(allOk){ this.finish(false); return; }
+  this.wrong++;
+  const NAMES = { R: 'Reserves', L: 'Loans', D: 'Deposits' };
+  const wrongNames = this.fields.filter(f => !ok[f]).map(f => NAMES[f]).join(', ');
+  const hints = panelHints(this.o.p, this.X, this.o.ws.rr, v, ok);
+  if(this.wrong >= 2) this.q('S').disabled = false;
+  showFb(fb, 'incorrect', SYM.incorrect + '<strong>Not quite.</strong> Check: ' + wrongNames + '.' +
+    '<ul>' + hints.map(h => '<li>' + h.text + '</li>').join('') + '</ul>' +
+    (this.wrong >= 2 ? 'Show solution is now available.' : 'Try again.'));
+};
+TAcct.prototype.finish = function(viaSolution){
+  if(this.state === 'done') return;
+  this.state = 'done';
+  this.fields.forEach(f => {
+    const inp = this.q(f), mk = this.q(f + 'M');
+    if(viaSolution) inp.value = fmtMoney(this.exp[f]).replace('$', '');
+    inp.disabled = true;
+    inp.removeAttribute('aria-invalid');
+    mk.className = 'mark ok';
+    mk.innerHTML = '✓<span class="sr-only"> correct</span>';
+  });
+  this.updateBalance();
+  this.q('C').disabled = true; this.q('S').disabled = true;
+  this.el.className = 'panel done';
+  this.q('B').textContent = '✓ Done';
+  const e = this.exp;
+  const a = e.R + e.L;
+  const vals = this.fields.map(f => ({ R: 'Reserves', L: 'Loans', D: 'Deposits' })[f] + ' ' + fmtMoney(e[f])).join(', ');
+  showFb(this.q('F'), viaSolution ? 'info' : 'correct',
+    viaSolution ? SYM.info + '<strong>Solution:</strong> ' + vals + '. Assets ' + fmtMoney(a) + ' = liabilities ' + fmtMoney(e.D) + '.'
+                : SYM.correct + '<strong>Correct.</strong> Assets ' + fmtMoney(a) + ' = liabilities ' + fmtMoney(e.D) + '.');
+  this.o.ws.panelDone(this, !viaSolution && this.firstOk === true);
+};
+TAcct.prototype.echo = function(line){
+  const fb = this.q('F');
+  if(!fb) return;
+  const span = document.createElement('span');
+  span.className = 'dash-echo';
+  span.textContent = 'Dashboard: ' + line;
+  fb.appendChild(span);
+};
+
+/* ─────────────────────────────────────────────────────────────────
+   Chain workspace: a sequence of banks, three panels each
+   ───────────────────────────────────────────────────────────────── */
+function ChainWorkspace(cfg){
+  // cfg: { root, prefix, dR, rr, K, dash, gates, onPanels }
+  this.cfg = cfg; this.dR = cfg.dR; this.rr = cfg.rr; this.K = cfg.K;
+  this.state = fedState(cfg.dR, cfg.rr, cfg.K);
+  this.steps = [];
+  for(let k = 1; k <= cfg.K; k++) for(let p = 1; p <= 3; p++) if(!(k === 1 && p === 1)) this.steps.push({ k, p });
+  this.idx = 0; this.firstTryAll = true; this.accts = {};
+  cfg.root.innerHTML = '';
+  for(let k = 1; k <= cfg.K; k++){
+    const card = document.createElement('section');
+    card.className = 'card bank-card';
+    card.setAttribute('aria-labelledby', cfg.prefix + 'bank' + k);
+    card.innerHTML = '<h3 id="' + cfg.prefix + 'bank' + k + '">Bank ' + k + '</h3>' +
+      (k > 1 ? '<p class="bank-from"><strong>Where did this deposit come from?</strong> It is the loan Bank ' + (k - 1) +
+        ' made in its Panel 2. The borrower spent it, and the check was deposited here.</p>' : '') +
+      '<div class="panels"></div>';
+    const panels = card.querySelector('.panels');
+    for(let p = 1; p <= 3; p++){
+      const a = new TAcct({ ws: this, k, p, prefix: cfg.prefix });
+      panels.appendChild(a.el);
+      a.wire();
+      this.accts[k + '-' + p] = a;
+    }
+    cfg.root.appendChild(card);
+  }
+  cfg.dash.render(this.state, fedEvent(this.state), { dur: 0, announce: false });
+}
+ChainWorkspace.prototype.start = function(){ this.activate(); };
+ChainWorkspace.prototype.activate = function(){
+  if(this.idx >= this.steps.length){ if(this.cfg.onPanels) this.cfg.onPanels(); return; }
+  const st = this.steps[this.idx], a = this.accts[st.k + '-' + st.p];
+  const gate = this.cfg.gates && this.cfg.gates[st.k + '-' + st.p];
+  if(gate && !gate.locked) a.showGate(gate, () => a.setActive());
+  else {
+    if(gate) renderGate(gate, a.gateSlot, () => {});
+    a.setActive();
+  }
+};
+ChainWorkspace.prototype.panelDone = function(a, firstTry){
+  if(!firstTry) this.firstTryAll = false;
+  const ev = dashEvent(this.state, a.o.k, a.o.p);
+  this.cfg.dash.render(this.state, ev);
+  a.echo(ev.line);
+  this.idx++;
+  this.activate();
+};
+
+/* Play "Run the rest" on a workspace. Reduced motion jumps to the end. */
+function playRun(ws, dash, outEl, onDone){
+  const snaps = runRestSnapshots(ws.state);
+  const token = ++dash.runToken;
+  const finish = () => {
+    const last = snaps[snaps.length - 1];
+    ws.state = last.state;
+    dash.render(ws.state, { line: last.line, say: 'The chain is finished.' }, { dur: prefersReduced() ? 0 : 400 });
+    outEl.textContent = 'Banks in the chain: ' + last.n + ', plus every later bank, each lending less than a cent. ΔM = ' +
+      fmtMoney(ws.state.M) + ', ΔR = ' + fmtMoney(totalRes(ws.state)) + '.';
+    onDone();
+  };
+  if(prefersReduced()){ finish(); return; }
+  let i = 0;
+  const step = () => {
+    if(dash.runToken !== token) return;
+    if(i >= snaps.length - 1){ finish(); return; }
+    const sn = snaps[i], delay = Math.max(70, 560 * Math.pow(0.87, i));
+    dash.render(sn.state, { line: sn.line }, { dur: Math.min(600, delay * 0.9), announce: false });
+    outEl.textContent = 'Banks in the chain so far: ' + (sn.n + 1) + ' · ΔM = ' + fmtMoney(sn.state.M);
+    i++;
+    setTimeout(step, delay);
+  };
+  step();
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   End-state checks (Part 2 summary and practice end state)
+   ───────────────────────────────────────────────────────────────── */
+function EndCheck(o){
+  // o: { mount, prefix, items, onDone(firstTry) }
+  this.o = o; this.checks = 0; this.wrong = 0; this.firstOk = null; this.done = false;
+  const id = o.prefix;
+  let html = '';
+  o.items.forEach((it, i) => {
+    const iid = id + 'i' + i;
+    if(it.kind === 'num'){
+      html += '<div class="end-row"><label for="' + iid + '">' + it.label + '</label>' +
+        '<span class="money">' + (it.money ? '<span class="cur" aria-hidden="true">$</span>' : '') +
+        '<input class="cell" id="' + iid + '" type="text" inputmode="decimal" autocomplete="off"/>' +
+        '<span class="mark" id="' + iid + 'M"></span></span></div>';
+    } else {
+      html += '<div class="end-row"><span class="end-txt" aria-hidden="true">' + it.pre + '</span>' +
+        '<select id="' + iid + '" aria-label="' + esc(it.aria) + '"><option value="">Choose…</option>' +
+        it.options.map((op, j) => '<option value="' + j + '">' + op.text + '</option>').join('') + '</select>' +
+        '<span class="end-txt" aria-hidden="true">' + it.post + '</span>' +
+        '<span class="mark" id="' + iid + 'M"></span></div>';
+    }
+  });
+  html += '<div class="btn-row"><button type="button" class="primary-btn" id="' + id + 'C">Check</button>' +
+    '<button type="button" class="option-btn" id="' + id + 'S" disabled>Show solution</button></div>' +
+    '<div aria-live="polite" aria-atomic="true"><div class="feedback hidden" id="' + id + 'F"></div></div>';
+  o.mount.innerHTML = html;
+  o.items.forEach((it, i) => {
+    const el = $(id + 'i' + i);
+    const clear = () => { el.removeAttribute('aria-invalid'); $(id + 'i' + i + 'M').innerHTML = ''; };
+    el.addEventListener(it.kind === 'num' ? 'input' : 'change', clear);
+    if(it.kind === 'num') el.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); this.check(); } });
+  });
+  $(id + 'C').addEventListener('click', () => this.check());
+  $(id + 'S').addEventListener('click', () => this.finish(true));
+}
+EndCheck.prototype.check = function(){
+  if(this.done) return;
+  const id = this.o.prefix, fb = $(id + 'F');
+  const vals = this.o.items.map((it, i) => {
+    const el = $(id + 'i' + i);
+    if(it.kind === 'num'){ const s = el.value.trim(); return s === '' ? NaN : parseNum(s); }
+    return el.value === '' ? null : +el.value;
+  });
+  if(vals.some((v, i) => this.o.items[i].kind === 'num' ? isNaN(v) : v == null)){
+    showFb(fb, 'hint', SYM.hint + 'Answer every item first.');
+    return;
+  }
+  const notes = [];
+  const oks = this.o.items.map((it, i) => {
+    const v = vals[i];
+    const ok = it.kind === 'num' ? near(v, it.exp) : !!it.options[v].correct;
+    const el = $(id + 'i' + i), mk = $(id + 'i' + i + 'M');
+    el.setAttribute('aria-invalid', ok ? 'false' : 'true');
+    mk.className = 'mark ' + (ok ? 'ok' : 'no');
+    mk.innerHTML = (ok ? '✓' : '✗') + '<span class="sr-only">' + (ok ? ' correct' : ' incorrect') + '</span>';
+    if(!ok){
+      let t;
+      if(it.kind === 'num'){ const w = (it.wrong || []).find(w => near(v, w.num)); t = w ? w.text : it.hint; }
+      else t = it.options[v].fb || it.hint;
+      notes.push('<li><strong>' + (i + 1) + '.</strong> ' + t + '</li>');
+    }
+    return ok;
+  });
+  const allOk = oks.every(Boolean);
+  this.checks++;
+  if(this.checks === 1) this.firstOk = allOk;
+  if(allOk){ this.finish(false); return; }
+  this.wrong++;
+  if(this.wrong >= 2) $(id + 'S').disabled = false;
+  showFb(fb, 'incorrect', SYM.incorrect + '<strong>Not quite.</strong><ul>' + notes.join('') + '</ul>' +
+    (this.wrong >= 2 ? 'Show solution is now available.' : 'Try again.'));
+};
+EndCheck.prototype.finish = function(viaSolution){
+  if(this.done) return;
+  this.done = true;
+  const id = this.o.prefix;
+  this.o.items.forEach((it, i) => {
+    const el = $(id + 'i' + i), mk = $(id + 'i' + i + 'M');
+    if(viaSolution){
+      if(it.kind === 'num') el.value = fmtNum(it.exp);
+      else el.value = String(it.options.findIndex(op => op.correct));
+    }
+    el.disabled = true; el.removeAttribute('aria-invalid');
+    mk.className = 'mark ok'; mk.innerHTML = '✓<span class="sr-only"> correct</span>';
+  });
+  $(id + 'C').disabled = true; $(id + 'S').disabled = true;
+  showFb($(id + 'F'), viaSolution ? 'info' : 'correct',
+    (viaSolution ? SYM.info + '<strong>Solution.</strong> ' : SYM.correct + '<strong>Correct.</strong> ') + this.o.solution);
+  this.o.onDone(!viaSolution && this.firstOk === true);
+};
+
+/* ─────────────────────────────────────────────────────────────────
+   Part 1 — prediction
+   ───────────────────────────────────────────────────────────────── */
+const P1_OPTS = [
+  { text: 'Less than $100', end: 'Loans moved reserves from bank to bank, but none left the banking system.' },
+  { text: 'Exactly $100', correct: true, end: 'Loans only move reserves between banks.' },
+  { text: 'More than $100', end: 'Banks can\'t create reserves. Only the Fed can.' },
+  { text: '$500', end: '$500 is the money supply. Reserves stayed at $100.' }
+];
+const P1 = { pick: null, locked: false };
+
+function renderP1(){
+  const grp = $('p1Opts'), go = $('p1Go');
+  const btns = P1_OPTS.map((o, j) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'option-btn'; b.setAttribute('aria-pressed', 'false');
+    b.textContent = o.text;
+    b.addEventListener('click', () => {
+      P1.pick = j;
+      btns.forEach(x => { const on = x === b; x.classList.toggle('active', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+      go.disabled = false;
+    });
+    grp.appendChild(b);
+    return b;
+  });
+  go.addEventListener('click', () => {
+    if(P1.pick == null) return;
+    P1.locked = true;
+    btns.forEach(b => { b.disabled = true; });
+    go.disabled = true; go.textContent = 'Prediction locked in';
+    showFb($('p1Fb'), 'info', SYM.info + '<strong>You predicted: ' + P1_OPTS[P1.pick].text + '.</strong> Hold that thought. You\'ll check it at the end.');
+    $('p2Lock').classList.add('hidden');
+    $('p2Reset').disabled = false;
+    P2.ws.start();
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Part 2 — walk the chain
+   ───────────────────────────────────────────────────────────────── */
+const P2 = { ws: null, gates: makeGates(), sum: null, sumDone: false };
+let dash1, dash2;
+
+function buildP2(){
+  dash1.runToken++;
+  dash1.setup(NOTES.dR, NOTES.rr, 500, 'Fed purchase $100 · rr = 0.20');
+  P2.ws = new ChainWorkspace({ root: $('p2Banks'), prefix: 'p2', dR: NOTES.dR, rr: NOTES.rr, K: 3,
+    dash: dash1, gates: P2.gates, onPanels: () => {
+      $('p2RunCard').classList.remove('hidden');
+      $('p2Run').disabled = false;
+    } });
+  $('p2RunCard').classList.add('hidden');
+  $('p2Run').disabled = true;
+  $('p2RunOut').textContent = 'Banks in the chain so far: 3';
+  $('p2SumCard').classList.add('hidden');
+  $('p2KeyCard').classList.add('hidden');
+  P2.sumDone = false;
+  P2.sum = new EndCheck({ mount: $('p2Sum'), prefix: 'p2s', items: P2_SUM_ITEMS,
+    solution: 'ΔM = $500, ΔR = $100 and ' + MHAT + ' = 1 ÷ 0.20 = 5. Financial intermediation <strong>does not</strong> change the total number of reserves. Money is created when a bank <strong>makes a loan</strong>.',
+    onDone: () => {
+      P2.sumDone = true;
+      showKeyResult();
+      unlockSandbox();
+    } });
+}
+
+const P2_SUM_ITEMS = [
+  { kind: 'num', money: true, label: '1. Total money supply created, ΔM =', exp: 500,
+    wrong: [ { num: 100, text: 'That\'s only the first deposit. Add up every deposit in the chain: $100 + $80 + $64 + …' },
+             { num: 295.2, text: 'That\'s only Banks 1 to 3. Include every bank in the chain.' } ],
+    hint: 'Read the money supply bar on the dashboard at the end of the chain.' },
+  { kind: 'num', money: true, label: '2. Total reserves in the banking system, ΔR =', exp: 100,
+    wrong: [ { num: 500, text: 'That\'s the money supply. The reserves bar never changed length.' },
+             { num: 20, text: 'That\'s only what Bank 1 kept. Add up the reserves at every bank.' } ],
+    hint: 'Read the reserves bar on the dashboard. Loans move reserves between banks; they don\'t create them.' },
+  { kind: 'num', money: false, label: '3. Money multiplier, ' + MHAT + ' = 1/rr =', exp: 5,
+    wrong: [ { num: 0.2, text: MHAT + ' is 1 divided by rr: 1 ÷ 0.20.' },
+             { num: 500, text: 'That\'s the money supply. The multiplier is 1 ÷ rr.' } ],
+    hint: 'Divide 1 by the reserve ratio.' },
+  { kind: 'sel', pre: '4. Financial intermediation', post: 'change the total number of reserves.',
+    aria: '4. Financial intermediation, blank, change the total number of reserves.',
+    options: [ { text: 'does', fb: 'Look at the reserves bar: $100 from the start of the chain to the end.' },
+               { text: 'does not', correct: true } ],
+    hint: 'Look at the reserves bar.' },
+  { kind: 'sel', pre: '5. Money is created when a bank', post: '.',
+    aria: '5. Money is created when a bank, blank.',
+    options: [ { text: 'makes a loan', correct: true },
+               { text: 'receives a check', fb: 'When a check clears, a deposit moves from one bank to another. The total doesn\'t change.' },
+               { text: 'sends reserves to another bank', fb: 'Moving reserves between banks changes neither M nor total R.' } ],
+    hint: 'Which step made the money supply bar grow?' }
+];
+
+function showKeyResult(){
+  const o = P1_OPTS[P1.pick];
+  $('p2PredReveal').innerHTML = (o.correct ? SYM.correct : SYM.info) + '<strong>You predicted ' + esc(o.text.toLowerCase()) +
+    '. Total reserves ended at exactly $100.</strong> ' + o.end;
+  $('p2PredReveal').className = 'feedback ' + (o.correct ? 'correct' : 'info');
+  $('p2KeyCard').classList.remove('hidden');
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Part 3 — the two levers
+   ───────────────────────────────────────────────────────────────── */
+const SB_R = [50, 100, 150, 200];
+const SB_RR = [0.10, 0.20, 0.25, 0.40, 0.50];
+const SB_START = { ri: 1, rri: 1 };
+const SB_SCALE = 2000;
+const SB = { ri: 1, rri: 1, last: null, shown: false, solved: [false, false] };
+function sbMoney(R, rr){ return R / rr; }
+function ch1Solved(R, rr){ return R >= 100 && near(sbMoney(R, rr), 250); }
+function ch2Solved(R, rr){ return rr === 0.20 && near(sbMoney(R, rr), 1000); }
+function sbChain(last){
+  if(!last) return 'Move a lever to see its causal chain.';
+  if(last === 'R+') return 'Fed buys bonds → R↑ → M↑';
+  if(last === 'R-') return 'Fed sells bonds → R↓ → M↓';
+  if(last === 'rr+') return 'IOR↑ → rr↑ → ' + MHAT + '↓ → M↓';
+  return 'IOR↓ → rr↓ → ' + MHAT + '↑ → M↑';
+}
+
+function unlockSandbox(){
+  if(SB.shown) return;
+  SB.shown = true;
+  $('sbLock').classList.add('hidden');
+  $('sbBody').classList.remove('hidden');
+  updateSandbox(false);
+}
+function updateSandbox(announce){
+  const R = SB_R[SB.ri], rr = SB_RR[SB.rri], M = sbMoney(R, rr), m = 1 / rr;
+  $('sbRVal').textContent = fmtMoney(R);
+  $('sbRRVal').textContent = fmtRR(rr);
+  $('sbRBarVal').textContent = fmtMoney(R);
+  $('sbMBarVal').textContent = fmtMoney(M);
+  $('sbRFill').style.width = (R / SB_SCALE * 100) + '%';
+  $('sbMFill').style.width = (M / SB_SCALE * 100) + '%';
+  $('sbRStart').style.left = (100 / SB_SCALE * 100) + '%';
+  $('sbMStart').style.left = (500 / SB_SCALE * 100) + '%';
+  const setDis = (btn, dis, other) => {
+    const had = document.activeElement === btn;
+    btn.disabled = dis;
+    if(dis && had) other.focus();
+  };
+  setDis($('sbRDown'), SB.ri === 0, $('sbRUp'));
+  setDis($('sbRUp'), SB.ri === SB_R.length - 1, $('sbRDown'));
+  setDis($('sbRRDown'), SB.rri === 0, $('sbRRUp'));
+  setDis($('sbRRUp'), SB.rri === SB_RR.length - 1, $('sbRRDown'));
+  $('sbReadout').innerHTML = '<span class="c-d">M</span> = ' + MHAT + ' × <span class="c-r">R</span> = (1/rr) × <span class="c-r">R</span> = (1/' +
+    fmtRR(rr) + ') × <span class="c-r">' + fmtMoney(R) + '</span> = ' + fmtNum(m) + ' × ' + fmtMoney(R) + ' = <strong class="c-d">' + fmtMoney(M) + '</strong>';
+  $('sbChain').innerHTML = sbChain(SB.last);
+  const tests = [ch1Solved(R, rr), ch2Solved(R, rr)];
+  const msgs = [
+    'Challenge 1 solved: banks raised rr to 0.40, so ' + MHAT + ' fell from 5 to 2.5 and M fell from $500 to $250. Reserves stayed at $100.',
+    'Challenge 2 solved: the Fed doubled reserves to $200 with rr still 0.20, so M doubled to $1,000.'
+  ];
+  tests.forEach((ok, i) => {
+    if(ok && !SB.solved[i]){
+      SB.solved[i] = true;
+      $('ch' + (i + 1)).classList.add('solved');
+      $('ch' + (i + 1) + 'Status').textContent = '✓ Solved';
+      if(announce) showFb($('chFb'), 'correct', SYM.correct + msgs[i]);
+    }
+  });
+}
+function sbStep(which, dir){
+  if(which === 'R') SB.ri = Math.max(0, Math.min(SB_R.length - 1, SB.ri + dir));
+  else SB.rri = Math.max(0, Math.min(SB_RR.length - 1, SB.rri + dir));
+  SB.last = which + (dir > 0 ? '+' : '-');
+  updateSandbox(true);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Part 4 — practice
+   ───────────────────────────────────────────────────────────────── */
+const PR_DR = [20, 40, 60, 80, 100, 120, 140, 160, 180, 200];
+const PR_RR = [0.10, 0.20, 0.25, 0.50];
+const PR = { prob: null, ws: null, end: null, completed: 0, firstTry: 0 };
+function snapUp(raw){
+  const s=[5,8,10,12,15,20,25,30,40,50,60,80,100,120,
+           150,200,250,300,400,500,600,800,1000];
+  return s.find(v => v >= raw) || Math.ceil(raw/100)*100;
+}
+function drawPractice(prev){
+  let d;
+  do { d = { dR: pick(PR_DR), rr: pick(PR_RR) }; }
+  while((d.dR === NOTES.dR && d.rr === NOTES.rr) || (prev && prev.dR === d.dR && prev.rr === d.rr));
+  return d;
+}
+function practiceEndItems(d){
+  const M = d.dR / d.rr, m = 1 / d.rr;
+  return [
+    { kind: 'num', money: true, label: 'ΔM =', exp: M,
+      wrong: [ { num: d.dR, text: 'That\'s the reserves the Fed created. Each dollar of reserves supports 1/rr dollars of deposits.' },
+               { num: d.dR * d.rr, text: 'Divide by rr, don\'t multiply: ΔM = ΔR ÷ rr.' } ],
+      hint: 'Use M = ' + MHAT + ' × R, or read the dashboard.' },
+    { kind: 'num', money: true, label: 'ΔR =', exp: d.dR,
+      wrong: [ { num: M, text: 'That\'s the money supply. Total reserves never changed after the Fed\'s purchase.' } ],
+      hint: 'Only the Fed changes total reserves. Read the reserves bar.' },
+    { kind: 'num', money: false, label: MHAT + ' =', exp: m,
+      wrong: [ { num: d.rr, text: MHAT + ' is 1 divided by rr.' } ],
+      hint: MHAT + ' = 1 ÷ rr.' }
+  ];
+}
+function newPractice(){
+  dash2.runToken++;
+  const d = drawPractice(PR.prob);
+  PR.prob = d;
+  const M = d.dR / d.rr;
+  $('prScenario').textContent = 'The Fed buys a ' + fmtMoney(d.dR) + ' bond from a household, which deposits the payment in Bank 1. The reserve ratio is ' + fmtRR(d.rr) + '.';
+  dash2.setup(d.dR, d.rr, snapUp(M), 'Fed purchase ' + fmtMoney(d.dR) + ' · rr = ' + fmtRR(d.rr));
+  PR.ws = new ChainWorkspace({ root: $('prBanks'), prefix: 'pr', dR: d.dR, rr: d.rr, K: 2, dash: dash2, gates: null,
+    onPanels: () => { $('prRunCard').classList.remove('hidden'); $('prRun').disabled = false; } });
+  PR.ws.start();
+  $('prRunCard').classList.add('hidden');
+  $('prRun').disabled = true;
+  $('prRunOut').textContent = 'Banks in the chain so far: 2';
+  $('prEndCard').classList.add('hidden');
+  PR.end = new EndCheck({ mount: $('prEnd'), prefix: 'pre', items: practiceEndItems(d),
+    solution: 'ΔM = ΔR ÷ rr = ' + fmtMoney(d.dR) + ' ÷ ' + fmtRR(d.rr) + ' = ' + fmtMoney(M) + '. ΔR = ' + fmtMoney(d.dR) +
+      ', unchanged. ' + MHAT + ' = 1 ÷ ' + fmtRR(d.rr) + ' = ' + fmtNum(1 / d.rr) + '. Click <strong>New problem</strong> for another.',
+    onDone: firstTry => {
+      PR.completed++;
+      if(firstTry && PR.ws.firstTryAll) PR.firstTry++;
+      $('prScore').textContent = 'Problems completed: ' + PR.completed + ' · First-try correct: ' + PR.firstTry;
+    } });
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Check your understanding
+   ───────────────────────────────────────────────────────────────── */
+const QUESTIONS = [
+  {
+    kind: 'numeric',
+    prompt: 'The reserve ratio is 0.25, and the Fed buys a $40 bond from a household. After banks finish lending, what is the total money supply created?',
+    answer: 160, prefix: '$', unit: '',
+    wrongHints: [
+      { num: 40, text: 'That\'s the reserves. How many times can each dollar of reserves be multiplied?' },
+      { num: 10, text: 'Multiply by 1/rr instead of by rr.' },
+      { num: 30, text: 'That\'s only the first loan. Add up every deposit in the chain.' }
+    ],
+    hint: 'Use M = m-hat × R, with m-hat = 1/rr.',
+    solution: 'M = (1/0.25) × $40 = 4 × $40 = <strong>$160</strong>.'
+  },
+  {
+    kind: 'mc',
+    prompt: 'Bank 2 receives an $80 deposit and lends out $64. What happens to total reserves in the banking system?',
+    options: [
+      { text: 'Rise by $64', fb: 'The loan created a deposit, not reserves.' },
+      { text: 'Rise by $16', fb: 'Bank 2 keeps $16, but those reserves came from Bank 1.' },
+      { text: 'Don\'t change', correct: true },
+      { text: 'Fall by $64', fb: 'When the loan is spent, reserves move to another bank; they don\'t leave the system.' }
+    ],
+    hint: 'Can a bank create reserves? Can reserves leave the banking system?',
+    solution: 'Total reserves <strong>don\'t change</strong>. The loan creates a $64 deposit (new money). When it is spent, $64 of reserves move to the next bank. Only the Fed changes total reserves.'
+  },
+  {
+    kind: 'numeric',
+    prompt: 'Total reserves are $100, and the Fed raises interest on reserves, so banks raise their reserve ratio from 0.20 to 0.40. What is the new money supply?',
+    answer: 250, prefix: '$', unit: '',
+    wrongHints: [
+      { num: 500, text: 'That\'s the old money supply. Reserves didn\'t change, but the multiplier did.' },
+      { num: 40, text: 'Divide reserves by rr: M = R ÷ rr.' }
+    ],
+    hint: 'Reserves stay at $100. Find the new multiplier 1/rr.',
+    solution: 'M = (1/0.40) × $100 = 2.5 × $100 = <strong>$250</strong>. Reserves didn\'t change; the multiplier fell.'
+  }
+];
+
+const cyu = QUESTIONS.map(() => ({ attempts: 0, wrong: 0, firstAns: null, firstOk: null, lastAns: null, lastOk: null, sel: null, order: null }));
+
+function renderCYU(){
+  const root = $('cyu');
+  root.innerHTML = '';
+  QUESTIONS.forEach((q, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'cyu-q';
+    const pid = 'cyuP' + i;
+    let html = '<p class="cyu-prompt" id="' + pid + '">' + (i + 1) + '. ' + q.prompt + '</p>';
+    if(q.kind === 'numeric'){
+      html += '<div class="input-row"><label for="cyuIn' + i + '">Answer' + (q.prefix ? ' ' + q.prefix : '') + '</label>' +
+        '<span><input id="cyuIn' + i + '" class="num-input" type="text" inputmode="decimal" autocomplete="off"' +
+        ' aria-describedby="cyuFb' + i + '"/> <span class="unit">' + q.unit + '</span></span></div>';
+    } else {
+      cyu[i].order = shuffle(q.options.map((_, j) => j));
+      html += '<div class="mc-group" role="group" aria-labelledby="' + pid + '">';
+      cyu[i].order.forEach((j, pos) => {
+        html += '<button type="button" class="option-btn" aria-pressed="false" data-opt="' + j + '">' +
+          String.fromCharCode(65 + pos) + '. ' + q.options[j].text + '</button>';
+      });
+      html += '</div>';
+    }
+    html += '<div class="btn-row">' +
+      '<button type="button" class="primary-btn" id="cyuCheck' + i + '">Check Answer</button>' +
+      '<button type="button" class="option-btn" id="cyuHint' + i + '" disabled>Show Hint</button>' +
+      '<button type="button" class="option-btn" id="cyuSol' + i + '" disabled>Show Worked Solution</button></div>' +
+      '<div aria-live="polite" aria-atomic="true"><div id="cyuFb' + i + '" class="feedback hidden"></div></div>';
+    wrap.innerHTML = html;
+    root.appendChild(wrap);
+
+    if(q.kind === 'mc'){
+      const btns = Array.from(wrap.querySelectorAll('[data-opt]'));
+      btns.forEach(b => b.addEventListener('click', () => {
+        cyu[i].sel = +b.getAttribute('data-opt');
+        btns.forEach(x => {
+          const on = x === b;
+          x.classList.toggle('active', on);
+          x.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+      }));
+    } else {
+      $('cyuIn' + i).addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); checkQ(i); } });
+    }
+    $('cyuCheck' + i).addEventListener('click', () => checkQ(i));
+    $('cyuHint' + i).addEventListener('click', () =>
+      showFb($('cyuFb' + i), 'hint', SYM.hint + '<strong>Hint.</strong> ' + q.hint));
+    $('cyuSol' + i).addEventListener('click', () =>
+      showFb($('cyuFb' + i), 'info', SYM.info + '<strong>Worked solution.</strong> ' + q.solution));
+  });
+}
+
+function checkQ(i){
+  const q = QUESTIONS[i], s = cyu[i], fbEl = $('cyuFb' + i);
+  let ok, ans, fb = '';
+  if(q.kind === 'numeric'){
+    const num = parseNum($('cyuIn' + i).value);
+    if(isNaN(num)){ showFb(fbEl, 'hint', SYM.hint + 'Enter a number.'); return; }
+    ok = near(num, q.answer);
+    ans = $('cyuIn' + i).value.trim();
+    if(!ok){
+      const wh = (q.wrongHints || []).find(w => near(num, w.num));
+      if(wh) fb = ' ' + wh.text;
+    }
+  } else {
+    if(s.sel == null){ showFb(fbEl, 'hint', SYM.hint + 'Choose an answer first.'); return; }
+    const o = q.options[s.sel];
+    ok = !!o.correct;
+    ans = o.text;
+    if(!ok && o.fb) fb = ' ' + o.fb;
+  }
+  s.attempts++;
+  if(s.attempts === 1){ s.firstAns = ans; s.firstOk = ok; }
+  s.lastAns = ans; s.lastOk = ok;
+
+  if(ok){
+    showFb(fbEl, 'correct', SYM.correct + '<strong>Correct.</strong> ' + q.solution);
+    $('cyuCheck' + i).disabled = true;
+    $('cyuCheck' + i).closest('.cyu-q').querySelectorAll('input, [data-opt]').forEach(el => { el.disabled = true; });
+  } else {
+    s.wrong++;
+    $('cyuHint' + i).disabled = false;
+    if(s.wrong >= 2) $('cyuSol' + i).disabled = false;
+    showFb(fbEl, 'incorrect', SYM.incorrect + '<strong>Not quite.</strong>' + fb + ' ' +
+      (s.wrong >= 2 ? 'The hint and the worked solution are now available.' : 'Try again, or use the hint.'));
+  }
+  recordSession(i);
+}
+
+function recordSession(i){
+  const q = QUESTIONS[i], s = cyu[i];
+  if(window.Session && Session.recordQuestion)
+    Session.recordQuestion(LAB_ID, i, q.prompt, s.firstAns, s.firstOk, s.lastAns, s.lastOk);
+  if(cyu.every(c => c.attempts > 0) && window.Session && Session.recordLabDone){
+    const first = cyu.filter(c => c.firstOk).length;
+    const fin = cyu.filter(c => c.lastOk).length;
+    Session.recordLabDone(LAB_ID, LAB_LABEL, first, fin, QUESTIONS.length);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Params / redraw
+   ───────────────────────────────────────────────────────────────── */
+function generateParams(){
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+  newPractice();
+}
+/* No canvas in this lab; redraw re-fits the dashboard's zoomed labels. */
+function redraw(){
+  if(P2.ws) dash1.render(P2.ws.state, null, { dur: 0, announce: false });
+  if(PR.ws) dash2.render(PR.ws.state, null, { dur: 0, announce: false });
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Wiring
+   ───────────────────────────────────────────────────────────────── */
+dash1 = new Dashboard($('dash1'), 'd1', 3);
+dash2 = new Dashboard($('dash2'), 'd2', 2);
+renderP1();
+buildP2();
+
+$('p2Run').addEventListener('click', () => {
+  $('p2Run').disabled = true;
+  playRun(P2.ws, dash1, $('p2RunOut'), () => { $('p2SumCard').classList.remove('hidden'); });
+});
+$('p2Reset').addEventListener('click', () => {
+  buildP2();
+  if(P1.locked) P2.ws.start();
+  $('p2Lock').classList.remove('hidden');
+  $('p2Lock').textContent = 'Part 2 cleared. The dashboard is back to the Fed\'s purchase.';
+});
+
+$('sbRDown').addEventListener('click', () => sbStep('R', -1));
+$('sbRUp').addEventListener('click', () => sbStep('R', 1));
+$('sbRRDown').addEventListener('click', () => sbStep('rr', -1));
+$('sbRRUp').addEventListener('click', () => sbStep('rr', 1));
+$('sbReset').addEventListener('click', () => {
+  SB.ri = SB_START.ri; SB.rri = SB_START.rri; SB.last = null;
+  hideFb($('chFb'));
+  updateSandbox(false);
+});
+
+$('prNew').addEventListener('click', newPractice);
+$('prRun').addEventListener('click', () => {
+  $('prRun').disabled = true;
+  playRun(PR.ws, dash2, $('prRunOut'), () => { $('prEndCard').classList.remove('hidden'); });
+});
+
+/* ─────────────────────────────────────────────────────────────────
+   Self-test (?selftest)
+   ───────────────────────────────────────────────────────────────── */
+function selfTest(){
+  const fails = [];
+  const eq = (label, got, want) => { if(Math.abs(got - want) > 1e-6) fails.push(label + ': got ' + got + ', want ' + want); };
+  const is = (label, cond) => { if(!cond) fails.push(label); };
+
+  // 1. The notes' three-bank table
+  const TABLE = {
+    '1-1': { R: 100, L: 0, D: 100 },    '1-2': { R: 100, L: 80, D: 180 },       '1-3': { R: 20, L: 80, D: 100 },
+    '2-1': { R: 80, L: 0, D: 80 },      '2-2': { R: 80, L: 64, D: 144 },        '2-3': { R: 16, L: 64, D: 80 },
+    '3-1': { R: 64, L: 0, D: 64 },      '3-2': { R: 64, L: 51.20, D: 115.20 },  '3-3': { R: 12.80, L: 51.20, D: 64 }
+  };
+  Object.keys(TABLE).forEach(key => {
+    const [k, p] = key.split('-').map(Number), got = panelValues(100, 0.20, k, p), want = TABLE[key];
+    ['R', 'L', 'D'].forEach(f => eq('table Bank ' + k + ' Panel ' + p + ' ' + f, got[f], want[f]));
+    eq('table balance ' + key, got.R + got.L, got.D);
+  });
+  is('fmt $80', fmtMoney(80) === '$80'); is('fmt $51.20', fmtMoney(51.2) === '$51.20');
+  is('fmt $12.80', fmtMoney(12.8) === '$12.80'); is('fmt $295.20', fmtMoney(295.2) === '$295.20');
+
+  // 2. The dashboard table
+  const ROWS = [
+    [null,   100,   { 1: 100 }],
+    ['1-2',  180,   { 1: 100 }],
+    ['1-3',  180,   { 1: 20, 2: 80 }],
+    ['2-1',  180,   { 1: 20, 2: 80 }],
+    ['2-2',  244,   { 1: 20, 2: 80 }],
+    ['2-3',  244,   { 1: 20, 2: 16, 3: 64 }],
+    ['3-1',  244,   { 1: 20, 2: 16, 3: 64 }],
+    ['3-2',  295.2, { 1: 20, 2: 16, 3: 64 }],
+    ['3-3',  295.2, { 1: 20, 2: 16, 3: 12.8, rest: 51.2 }]
+  ];
+  const s = fedState(100, 0.20, 3);
+  ROWS.forEach(([ev, M, byBank]) => {
+    if(ev){ const [k, p] = ev.split('-').map(Number); dashEvent(s, k, p); }
+    const tag = 'dashboard after ' + (ev || 'Fed step');
+    eq(tag + ' ΔM', round2(s.M), M);
+    eq(tag + ' ΔR', round2(totalRes(s)), 100);
+    const g = resGroups(s);
+    [1, 2, 3].forEach(k => eq(tag + ' Bank ' + k, round2(g[k - 1].val), byBank[k] || 0));
+    eq(tag + ' Banks 4+', round2(g[3].val), byBank.rest || 0);
+  });
+  is('fed line', fedEvent(fedState(100, 0.2, 3)).line.indexOf('M +$100 · R +$100') >= 0);
+  is('loan line', dashEvent(fedState(100, 0.2, 3), 1, 2).line === 'Loan made → M +$80 · R unchanged');
+  const s2 = fedState(100, 0.2, 3); dashEvent(s2, 1, 2);
+  is('clear line', dashEvent(s2, 1, 3).line === 'Check cleared → M unchanged · $80 of reserves moved Bank 1 → Bank 2');
+
+  // 3. Run the rest (Part 2): reserves fixed at every step, end state converges
+  const snaps = runRestSnapshots(s);
+  snaps.forEach((sn, i) => eq('Part 2 run step ' + i + ' total reserves', totalRes(sn.state), 100));
+  const fin = snaps[snaps.length - 1].state;
+  is('Part 2 end ΔM = 500 within $0.01', Math.abs(fin.M - 500) <= 0.01);
+  const gEnd = resGroups(fin);
+  eq('end Bank 1', round2(gEnd[0].val), 20); eq('end Bank 2', round2(gEnd[1].val), 16);
+  eq('end Bank 3', round2(gEnd[2].val), 12.8); eq('end Banks 4+', round2(gEnd[3].val), 51.2);
+  is('Part 2 run stops at a sub-cent loan', loanAt(100, 0.2, snaps[snaps.length - 1].n) < MIN_LOAN);
+  is('Part 2 run lent at least a cent each step', snaps.slice(0, -1).every(sn => sn.L >= MIN_LOAN));
+  is('Part 2 run ≤ 100 banks', snaps[snaps.length - 1].n <= MAX_BANKS);
+  eq('multiplier 1/rr', 1 / 0.20, 5); eq('M = m × R', (1 / 0.20) * 100, 500);
+
+  // 4. Part 3 challenges over the whole stepper grid
+  let c1 = 0, c2 = 0;
+  SB_R.forEach(R => SB_RR.forEach(rr => {
+    if(ch1Solved(R, rr)){ c1++; is('ch1 only at R=100, rr=0.40', R === 100 && rr === 0.40); }
+    if(ch2Solved(R, rr)){ c2++; is('ch2 only at R=200, rr=0.20', R === 200 && rr === 0.20); }
+  }));
+  is('ch1 exactly one solution', c1 === 1); is('ch2 exactly one solution', c2 === 1);
+  is('ch1 not reachable by selling bonds (R=50, rr=0.20 gives $250)', near(sbMoney(50, 0.2), 250) && !ch1Solved(50, 0.2));
+  is('ch2 not reachable by changing rr (R=100, rr=0.10 gives $1,000)', near(sbMoney(100, 0.1), 1000) && !ch2Solved(100, 0.1));
+  is('start M = $500', near(sbMoney(SB_R[SB_START.ri], SB_RR[SB_START.rri]), 500));
+
+  // 5. 1,000 New problem draws + full chains
+  const saved = _rng; _rng = null;
+  let prev = null;
+  for(let n = 0; n < 1000; n++){
+    const d = drawPractice(prev);
+    const tag = 'practice ' + n + ' (' + d.dR + ', ' + d.rr + ')';
+    is(tag + ' not the notes\' pair', !(d.dR === 100 && d.rr === 0.2));
+    is(tag + ' not a repeat', !(prev && prev.dR === d.dR && prev.rr === d.rr));
+    is(tag + ' in range', PR_DR.indexOf(d.dR) >= 0 && PR_RR.indexOf(d.rr) >= 0);
+    prev = d;
+    // Every value students type: Bank 1 Panels 1–3, Bank 2 Panels 1–3, end state
+    const raw = [];
+    [1, 2].forEach(k => {
+      const X = depositAt(d.dR, d.rr, k), L = loanAt(d.dR, d.rr, k);
+      raw.push(X, L, X + L, X - L);
+    });
+    raw.push(d.dR / d.rr, d.dR, 1 / d.rr);
+    is(tag + ' ≤ 2 decimals', raw.every(twoDecimals));
+    // Walk the chain through the same code the page uses
+    const st = fedState(d.dR, d.rr, 2);
+    [[1, 2], [1, 3], [2, 1], [2, 2], [2, 3]].forEach(([k, p]) => {
+      dashEvent(st, k, p);
+      if(Math.abs(totalRes(st) - d.dR) > 1e-6) fails.push(tag + ' reserves after Bank ' + k + ' Panel ' + p);
+      const pv = panelValues(d.dR, d.rr, k, p);
+      if(!near(pv.R + pv.L, pv.D)) fails.push(tag + ' Bank ' + k + ' Panel ' + p + ' unbalanced');
+    });
+    const sn = runRestSnapshots(st);
+    if(sn.some(x => Math.abs(totalRes(x.state) - d.dR) > 1e-6)) fails.push(tag + ' reserves changed during run');
+    const e = sn[sn.length - 1].state;
+    if(Math.abs(e.M - d.dR / d.rr) > 0.01) fails.push(tag + ' ΔM did not converge: ' + e.M);
+    if(Math.abs(totalRes(e) - d.dR) > 1e-6) fails.push(tag + ' ΔR changed');
+    if(sn[sn.length - 1].n > MAX_BANKS) fails.push(tag + ' more than 100 banks');
+  }
+  _rng = saved;
+
+  // 6. Every targeted hint fires for its intended wrong answer
+  const X = 100, rr = 0.2, L = 80;
+  const keys = (p, v) => {
+    const exp = panelValues(100, 0.2, 1, p), ok = {};
+    ['R', 'L', 'D'].forEach(f => { ok[f] = near(v[f], exp[f]); });
+    return panelHints(p, X, rr, v, ok).map(h => h.key);
+  };
+  is('hint p2Deposits', keys(2, { R: 100, L: 80, D: 100 }).indexOf('p2Deposits') >= 0);
+  is('hint p2Reserves', keys(2, { R: 20, L: 80, D: 180 }).indexOf('p2Reserves') >= 0);
+  is('hint p2Loans', keys(2, { R: 100, L: 100, D: 180 }).indexOf('p2Loans') >= 0);
+  is('hint p3Reserves', keys(3, { R: 100, L: 80, D: 100 }).indexOf('p3Reserves') >= 0);
+  is('hint p3Loans', keys(3, { R: 20, L: 0, D: 100 }).indexOf('p3Loans') >= 0);
+  is('hint p3Deposits', keys(3, { R: 20, L: 80, D: 180 }).indexOf('p3Deposits') >= 0);
+  is('hint generic fallback', keys(2, { R: 7, L: 80, D: 180 }).join() === 'generic');
+  is('p2 hint text', panelHints(2, X, rr, { R: 100, L: 80, D: 100 }, { R: true, L: true, D: false })[0].text
+    .indexOf('brand-new deposit') >= 0);
+
+  // Parser and CYU answers
+  ['80', '$80', ' 80 ', '80.00', '$1,000'].forEach(str => is('parse ' + str, !isNaN(parseNum(str))));
+  is('parse $51.20', near(parseNum('$51.20'), 51.2)); is('parse 1,000', near(parseNum('1,000'), 1000));
+  is('tolerance ±0.01', near(51.21, 51.2) && !near(51.22, 51.2));
+  eq('CYU 1', (1 / 0.25) * 40, QUESTIONS[0].answer);
+  is('CYU 2', QUESTIONS[1].options.filter(o => o.correct).length === 1 && QUESTIONS[1].options.find(o => o.correct).text === 'Don\'t change');
+  eq('CYU 3', (1 / 0.40) * 100, QUESTIONS[2].answer);
+  eq('summary ΔM', P2_SUM_ITEMS[0].exp, 500); eq('summary ΔR', P2_SUM_ITEMS[1].exp, 100); eq('summary m', P2_SUM_ITEMS[2].exp, 5);
+
+  const ok = fails.length === 0;
+  fails.forEach(f => console.error('[selftest] FAIL', f));
+  console.log(ok ? '[selftest] PASS — notes table, dashboard rows, run-the-rest, sandbox challenges, 1,000 practice problems, hints'
+                 : '[selftest] FAILED (' + fails.length + ')');
+  return { ok, fails };
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Init
+   ───────────────────────────────────────────────────────────────── */
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(redraw, 80);
+});
+
+generateParams();
+renderCYU();
+redraw();
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(redraw);
+if(/[?&]selftest\b/.test(location.search)) window.__selftest = selfTest();
+
+})();
+</script>
+</body>
+</html>

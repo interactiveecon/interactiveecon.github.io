@@ -28,16 +28,17 @@
   // MODEL (wider slider ranges + slightly stronger sensitivities)
   // -----------------------
   const M = {
-    isfr: { Ymin: 0, Ymax: 200, rmin: 0, rmax: 20 },
+    isir: { Ymin: 0, Ymax: 200, rmin: 0, rmax: 20 },
     ad: { Ymin: 0, Ymax: 200, Pmin: 2.5, Pmax: 7.5 },
 
-    base: { G: 100, T: 100, C: 100, I: 100, P: 5, Z: 5 },
+    base: { G: 100, T: 100, C: 100, I: 100, P: 5, M: 100 },
 
     // IS: r = aIS - bIS*Y + shifters
     IS: { aIS: 16, bIS: 0.06, gG: 0.08, gT: 0.08, gC: 0.08, gI: 0.08 },
 
-    // FR: r = aFR + bFR*Y + hP*(P-P0) + hZ*(Z-Z0)
-    FR: { aFR: 2, bFR: 0.04, hP: 2.4, hZ: 2.4 },
+    // IR (interest rate rule, r = cP + dY − eM):
+    // r = aIR + bIR*Y + hP*(P-P0) - hM*(M-M0)
+    IR: { aIR: 2, bIR: 0.04, hP: 2.4, hM: 0.15 },
 
     ranges: {
       G: { min: 60, max: 140, step: 1 },
@@ -45,7 +46,7 @@
       C: { min: 60, max: 140, step: 1 },
       I: { min: 60, max: 140, step: 1 },
       P: { min: 2.5, max: 7.5, step: 0.1 },
-      Z: { min: 2.5, max: 7.5, step: 0.1 },
+      M: { min: 60, max: 140, step: 1 },
     },
   };
 
@@ -58,41 +59,41 @@
     return aIS - bIS * Y + gG * (G - G0) - gT * (T - T0) + gC * (C - C0) + gI * (I - I0);
   }
 
-  function FR_r(Y, P, Z) {
-    const { aFR, bFR, hP, hZ } = M.FR;
-    const { P: P0, Z: Z0 } = M.base;
-    return aFR + bFR * Y + hP * (P - P0) + hZ * (Z - Z0);
+  function IR_r(Y, P, Ms) {
+    const { aIR, bIR, hP, hM } = M.IR;
+    const { P: P0, M: M0 } = M.base;
+    return aIR + bIR * Y + hP * (P - P0) - hM * (Ms - M0);
   }
 
-  // Clamped equilibrium for drawing point/IS-FR canvas (so points stay on chart)
-  function eqm(G, T, C, I, P, Z) {
+  // Clamped equilibrium for drawing point/IS-IR canvas (so points stay on chart)
+  function eqm(G, T, C, I, P, Ms) {
     const A0 = IS_r(0, G, T, C, I);
-    const C0 = FR_r(0, P, Z);
-    const denom = M.IS.bIS + M.FR.bFR;
+    const C0 = IR_r(0, P, Ms);
+    const denom = M.IS.bIS + M.IR.bIR;
 
     let Y = (A0 - C0) / denom;
-    Y = clamp(Y, M.isfr.Ymin, M.isfr.Ymax);
-    const r = FR_r(Y, P, Z);
+    Y = clamp(Y, M.isir.Ymin, M.isir.Ymax);
+    const r = IR_r(Y, P, Ms);
     return { Y, r };
   }
 
   // Unclamped equilibrium for AD curve generation (prevents vertical "sticking")
-  function eqmUnclamped(G, T, C, I, P, Z) {
+  function eqmUnclamped(G, T, C, I, P, Ms) {
     const A0 = IS_r(0, G, T, C, I);
-    const C0 = FR_r(0, P, Z);
-    const denom = M.IS.bIS + M.FR.bFR;
+    const C0 = IR_r(0, P, Ms);
+    const denom = M.IS.bIS + M.IR.bIR;
 
     const Y = (A0 - C0) / denom; // no clamp
-    const r = FR_r(Y, P, Z);
+    const r = IR_r(Y, P, Ms);
     return { Y, r };
   }
 
   // Use unclamped Y for AD curve; we will clip at draw time
-  function buildADCurve({ G, T, C, I, Z }, n = 70) {
+  function buildADCurve({ G, T, C, I, M: Ms }, n = 70) {
     const pts = [];
     for (let i = 0; i <= n; i++) {
       const P = M.ad.Pmin + (M.ad.Pmax - M.ad.Pmin) * (i / n);
-      const { Y } = eqmUnclamped(G, T, C, I, P, Z);
+      const { Y } = eqmUnclamped(G, T, C, I, P, Ms);
       pts.push({ Y, P });
     }
     return pts;
@@ -112,44 +113,57 @@
     Idn: "I↓",
     Pup: "P↑",
     Pdn: "P↓",
-    Zup: "Z↑",
-    Zdn: "Z↓",
+    Mup: "M↑",
+    Mdn: "M↓",
+    OMP: "Open Market Purchase",
+    OMS: "Open Market Sale",
+    IORup: "IOR↑",
+    IORdn: "IOR↓",
+    Rup: "Reserves↑",
+    Rdn: "Reserves↓",
+    rrUp: "rr↑",
+    rrDn: "rr↓",
+    MPup: "M/P↑",
+    MPdn: "M/P↓",
+    Lup: "Money Demand↑",
+    Ldn: "Money Demand↓",
     PEup: "PE↑",
     PEdn: "PE↓",
     UInvUp: "Unplanned Inventories↑",
     UInvDn: "Unplanned Inventories↓",
     Yup: "Y↑",
     Ydn: "Y↓",
-    FFup: "FF↑",
-    FFdn: "FF↓",
     rup: "r↑",
     rdn: "r↓",
   };
 
   const MECH = {
     // Government purchases:
-    G_up: [TOK.Gup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
-    G_dn: [TOK.Gdn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
+    G_up: [TOK.Gup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.Lup, TOK.rup],
+    G_dn: [TOK.Gdn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.Ldn, TOK.rdn],
 
     // Taxes:
-    T_dn: [TOK.Tdn, TOK.Cup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
-    T_up: [TOK.Tup, TOK.Cdn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
+    T_dn: [TOK.Tdn, TOK.Cup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.Lup, TOK.rup],
+    T_up: [TOK.Tup, TOK.Cdn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.Ldn, TOK.rdn],
 
     // Price Level:
-    P_up: [TOK.Pup, TOK.FFup, TOK.rup, TOK.Idn, TOK.PEdn, TOK.UInvUp, TOK.Ydn],
-    P_dn: [TOK.Pdn, TOK.FFdn, TOK.rdn, TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup],
+    P_up: [TOK.Pup, TOK.MPdn, TOK.rup, TOK.Idn, TOK.PEdn, TOK.UInvUp, TOK.Ydn],
+    P_dn: [TOK.Pdn, TOK.MPup, TOK.rdn, TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup],
 
-    // Z:
-    Z_up: [TOK.Zup, TOK.FFup, TOK.rup, TOK.Idn, TOK.PEdn, TOK.UInvUp, TOK.Ydn],
-    Z_dn: [TOK.Zdn, TOK.FFdn, TOK.rdn, TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup],
+    // Money supply — keyed by the Fed tool that changes it:
+    // open market operations change reserves; IOR changes the reserve ratio.
+    M_up_omo: [TOK.OMP, TOK.Rup, TOK.Mup, TOK.MPup, TOK.rdn, TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup],
+    M_dn_omo: [TOK.OMS, TOK.Rdn, TOK.Mdn, TOK.MPdn, TOK.rup, TOK.Idn, TOK.PEdn, TOK.UInvUp, TOK.Ydn],
+    M_up_ior: [TOK.IORdn, TOK.rrDn, TOK.Mup, TOK.MPup, TOK.rdn, TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup],
+    M_dn_ior: [TOK.IORup, TOK.rrUp, TOK.Mdn, TOK.MPdn, TOK.rup, TOK.Idn, TOK.PEdn, TOK.UInvUp, TOK.Ydn],
 
     // Consumption shocks:
-    C_up: [TOK.Cup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
-    C_dn: [TOK.Cdn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
+    C_up: [TOK.Cup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.Lup, TOK.rup],
+    C_dn: [TOK.Cdn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.Ldn, TOK.rdn],
 
     // Investment shocks:
-    I_dn: [TOK.Idn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.FFdn, TOK.rdn],
-    I_up: [TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.FFup, TOK.rup],
+    I_dn: [TOK.Idn, TOK.PEdn, TOK.UInvUp, TOK.Ydn, TOK.Ldn, TOK.rdn],
+    I_up: [TOK.Iup, TOK.PEup, TOK.UInvDn, TOK.Yup, TOK.Lup, TOK.rup],
   };
 
   const PILL_GROUPS = [
@@ -158,15 +172,19 @@
     { name: "Consumption", pills: [TOK.Cup, TOK.Cdn] },
     { name: "Investment", pills: [TOK.Iup, TOK.Idn] },
     { name: "Price Level", pills: [TOK.Pup, TOK.Pdn] },
-    { name: "Other Factors (Z)", pills: [TOK.Zup, TOK.Zdn] },
+    { name: "Fed Tools", pills: [TOK.OMP, TOK.OMS, TOK.IORup, TOK.IORdn] },
+    { name: "Bank Reserves", pills: [TOK.Rup, TOK.Rdn] },
+    { name: "Reserve Ratio", pills: [TOK.rrUp, TOK.rrDn] },
+    { name: "Money Supply", pills: [TOK.Mup, TOK.Mdn] },
+    { name: "Real Money Balances", pills: [TOK.MPup, TOK.MPdn] },
+    { name: "Money Demand", pills: [TOK.Lup, TOK.Ldn] },
     { name: "Planned Expenditure", pills: [TOK.PEup, TOK.PEdn] },
     { name: "Unplanned Inventories", pills: [TOK.UInvUp, TOK.UInvDn] },
     { name: "Output", pills: [TOK.Yup, TOK.Ydn] },
-    { name: "Federal Funds Rate", pills: [TOK.FFup, TOK.FFdn] },
     { name: "Interest Rate", pills: [TOK.rup, TOK.rdn] },
   ];
 
-  const mechKeyFor = (varName, dir) => `${varName}_${dir === "up" ? "up" : "dn"}`;
+  const mechKeyFor = (s) => `${s.var}_${s.dir === "up" ? "up" : "dn"}${s.tool ? "_" + s.tool : ""}`;
 
   // -----------------------
   // Expanded scenarios (~60), with clearer G "government buys goods/services"
@@ -292,29 +310,33 @@
     { var:"P", dir:"down", source:"Inflation Watch", headline:"Prices fall across core categories", brief:"Deflation appears economy-wide." },
     { var:"P", dir:"down", source:"Inflation Watch", headline:"Deflation surprise", brief:"Prices fall more than expected." },
 
-    // Z up (more cautious/hawkish)
-    { var:"Z", dir:"up", source:"Policy Desk", headline:"Major tariff package announced; uncertainty rises", brief:"Policy uncertainty increases; the Fed becomes more cautious." },
-    { var:"Z", dir:"up", source:"Financial Stability", headline:"Financial stability concerns rise", brief:"Risk management concerns push the Fed toward caution." },
-    { var:"Z", dir:"up", source:"Policy Desk", headline:"Geopolitical risk rises", brief:"The Fed leans more cautious because risks are elevated." },
-    { var:"Z", dir:"up", source:"Market Monitor", headline:"Risk premia rise; Fed signals caution", brief:"The Fed becomes more hawkish/cautious independent of output." },
-    { var:"Z", dir:"up", source:"Policy Desk", headline:"Policy uncertainty surges", brief:"The Fed adopts a more cautious stance while risks are assessed." },
-    { var:"Z", dir:"up", source:"Financial Conditions", headline:"Financial volatility increases", brief:"The Fed becomes more cautious in setting policy." },
-    { var:"Z", dir:"up", source:"Policy Desk", headline:"Risk management shifts toward restraint", brief:"The Fed leans more hawkish at any output level." },
-    { var:"Z", dir:"up", source:"Financial Stability", headline:"Concerns about overheating grow", brief:"The Fed becomes more cautious independent of output." },
-    { var:"Z", dir:"up", source:"Market Monitor", headline:"Financial conditions tighten unexpectedly", brief:"The Fed prioritizes caution in policy stance." },
-    { var:"Z", dir:"up", source:"Policy Desk", headline:"Uncertainty about future policy rises", brief:"The Fed leans more cautious while waiting for clarity." },
+    // M up — open market purchases (reserves↑ → M↑)
+    { var:"M", dir:"up", tool:"omo", source:"Federal Reserve", headline:"Fed announces open market purchases of Treasury bonds", brief:"The Fed buys Treasury bonds from banks, crediting their reserve accounts." },
+    { var:"M", dir:"up", tool:"omo", source:"FOMC Statement", headline:"FOMC directs the trading desk to buy Treasuries", brief:"Open market purchases add reserves to the banking system." },
+    { var:"M", dir:"up", tool:"omo", source:"Federal Reserve", headline:"Fed steps up bond purchases from banks", brief:"Banks sell Treasury bonds to the Fed and receive new reserves." },
+    { var:"M", dir:"up", tool:"omo", source:"Market Monitor", headline:"Fed buys $50 billion in Treasury securities", brief:"Bank reserves rise as the Fed pays for the bonds it buys." },
+    { var:"M", dir:"up", tool:"omo", source:"Federal Reserve", headline:"Open market desk expands Treasury purchases", brief:"The Fed purchases bonds from banks, increasing their reserves." },
 
-    // Z down (more supportive/dovish)
-    { var:"Z", dir:"down", source:"Financial Conditions", headline:"Financial conditions ease; markets calm", brief:"The Fed feels more comfortable supporting activity." },
-    { var:"Z", dir:"down", source:"Financial Stability", headline:"Banking stress fades", brief:"The Fed shifts toward a more supportive stance." },
-    { var:"Z", dir:"down", source:"Policy Desk", headline:"Forward guidance emphasizes patience and support", brief:"The Fed adopts a more dovish stance at any output level." },
-    { var:"Z", dir:"down", source:"Market Monitor", headline:"Liquidity improves; stress indicators fall", brief:"Easier financial conditions support a more dovish stance." },
-    { var:"Z", dir:"down", source:"Financial Conditions", headline:"Risk sentiment improves broadly", brief:"The Fed becomes more supportive independent of output." },
-    { var:"Z", dir:"down", source:"Policy Desk", headline:"Uncertainty fades; Fed signals flexibility", brief:"The Fed leans more supportive at any output level." },
-    { var:"Z", dir:"down", source:"Market Monitor", headline:"Volatility declines; financial stress recedes", brief:"The Fed feels more comfortable supporting the economy." },
-    { var:"Z", dir:"down", source:"Financial Stability", headline:"Stability concerns ease", brief:"The Fed adopts a more supportive policy stance." },
-    { var:"Z", dir:"down", source:"Policy Desk", headline:"Risk management shifts toward support", brief:"The Fed leans more dovish independent of output." },
-    { var:"Z", dir:"down", source:"Financial Conditions", headline:"Credit conditions improve", brief:"The Fed becomes more supportive at any output level." },
+    // M up — lower interest on reserves (rr↓ → M↑)
+    { var:"M", dir:"up", tool:"ior", source:"Federal Reserve", headline:"Fed cuts the interest rate it pays on reserves", brief:"Holding reserves at the Fed earns banks less, so banks lend out more of their deposits." },
+    { var:"M", dir:"up", tool:"ior", source:"FOMC Statement", headline:"FOMC lowers interest on reserve balances", brief:"Banks hold a smaller share of deposits as reserves and make more loans." },
+    { var:"M", dir:"up", tool:"ior", source:"Banking Desk", headline:"Lower IOR makes lending more attractive", brief:"With less interest paid on reserves, banks reduce their reserve ratios." },
+    { var:"M", dir:"up", tool:"ior", source:"Federal Reserve", headline:"Fed reduces IOR by half a percentage point", brief:"Banks move funds out of reserves and into loans." },
+    { var:"M", dir:"up", tool:"ior", source:"Banking Desk", headline:"Banks shift money from reserves into loans after IOR cut", brief:"The reserve ratio falls as reserves earn less at the Fed." },
+
+    // M down — open market sales (reserves↓ → M↓)
+    { var:"M", dir:"down", tool:"omo", source:"Federal Reserve", headline:"Fed announces open market sales of Treasury bonds", brief:"The Fed sells Treasury bonds to banks, debiting their reserve accounts." },
+    { var:"M", dir:"down", tool:"omo", source:"FOMC Statement", headline:"FOMC directs the trading desk to sell Treasuries", brief:"Open market sales drain reserves from the banking system." },
+    { var:"M", dir:"down", tool:"omo", source:"Federal Reserve", headline:"Fed sells bonds from its portfolio to banks", brief:"Banks pay for the bonds with reserves, so bank reserves fall." },
+    { var:"M", dir:"down", tool:"omo", source:"Market Monitor", headline:"Fed sells $50 billion in Treasury securities", brief:"Bank reserves fall as banks pay the Fed for the bonds." },
+    { var:"M", dir:"down", tool:"omo", source:"Federal Reserve", headline:"Open market desk steps up Treasury sales", brief:"The Fed sells bonds to banks, reducing their reserves." },
+
+    // M down — higher interest on reserves (rr↑ → M↓)
+    { var:"M", dir:"down", tool:"ior", source:"Federal Reserve", headline:"Fed raises the interest rate it pays on reserves", brief:"Holding reserves at the Fed earns banks more, so banks lend out less of their deposits." },
+    { var:"M", dir:"down", tool:"ior", source:"FOMC Statement", headline:"FOMC increases interest on reserve balances", brief:"Banks hold a larger share of deposits as reserves and make fewer loans." },
+    { var:"M", dir:"down", tool:"ior", source:"Banking Desk", headline:"Higher IOR makes holding reserves more attractive", brief:"With more interest paid on reserves, banks raise their reserve ratios." },
+    { var:"M", dir:"down", tool:"ior", source:"Federal Reserve", headline:"Fed lifts IOR by half a percentage point", brief:"Banks keep more funds as reserves instead of lending them out." },
+    { var:"M", dir:"down", tool:"ior", source:"Banking Desk", headline:"Banks park more funds at the Fed after IOR hike", brief:"The reserve ratio rises as reserves earn more at the Fed." },
   ];
 
   // -----------------------
@@ -329,8 +351,8 @@
     // predictions
     isAction: $("isAction"),
     isDir: $("isDir"),
-    frAction: $("frAction"),
-    frDir: $("frDir"),
+    irAction: $("irAction"),
+    irDir: $("irDir"),
     adAction: $("adAction"),
     adDir: $("adDir"),
     checkPredBtn: $("checkPredBtn"),
@@ -343,13 +365,13 @@
     Cslider: $("Cslider"),
     Islider: $("Islider"),
     Pslider: $("Pslider"),
-    Zslider: $("Zslider"),
+    Mslider: $("Mslider"),
     Gdisp: $("Gdisp"),
     Tdisp: $("Tdisp"),
     Cdisp: $("Cdisp"),
     Idisp: $("Idisp"),
     Pdisp: $("Pdisp"),
-    Zdisp: $("Zdisp"),
+    Mdisp: $("Mdisp"),
 
     // mechanism
     slots: $("slots"),
@@ -362,24 +384,24 @@
     mechMsg: $("mechMsg"),
 
     // canvases
-    isfrCanvas: $("isfrCanvas"),
+    isirCanvas: $("isirCanvas"),
     adCanvas: $("adCanvas"),
 
     // canvas accessible descriptions
-    isfrDesc: $("isfrDesc"),
+    isirDesc: $("isirDesc"),
     adDesc: $("adDesc"),
   };
 
   // Guard: if index is missing required ids, fail gracefully.
   const required = [
-    "newBtn","resetBtn","scenarioDesc","isAction","isDir","frAction","frDir","adAction","adDir",
+    "newBtn","resetBtn","scenarioDesc","isAction","isDir","irAction","irDir","adAction","adDir",
     "checkPredBtn","whyPredBtn","predStatus",
-    "Gslider","Tslider","Cslider","Islider","Pslider","Zslider",
-    "Gdisp","Tdisp","Cdisp","Idisp","Pdisp","Zdisp",
+    "Gslider","Tslider","Cslider","Islider","Pslider","Mslider",
+    "Gdisp","Tdisp","Cdisp","Idisp","Pdisp","Mdisp",
     "slots","poolGroups","checkMechBtn","clearMechBtn",
     "mechBadge","mechMsg",
-    "isfrCanvas","adCanvas",
-    "isfrDesc","adDesc"
+    "isirCanvas","adCanvas",
+    "isirDesc","adDesc"
   ];
   for (const id of required) {
     if (!els[id]) {
@@ -402,8 +424,8 @@
 
   let cur = { ...M.base };
 
-  const baseEq = eqm(M.base.G, M.base.T, M.base.C, M.base.I, M.base.P, M.base.Z);
-  const baseAD = buildADCurve({ G: M.base.G, T: M.base.T, C: M.base.C, I: M.base.I, Z: M.base.Z }, 80);
+  const baseEq = eqm(M.base.G, M.base.T, M.base.C, M.base.I, M.base.P, M.base.M);
+  const baseAD = buildADCurve({ G: M.base.G, T: M.base.T, C: M.base.C, I: M.base.I, M: M.base.M }, 80);
 
   // -----------------------
   // Status helpers
@@ -431,7 +453,7 @@
   // Sliders: lock/unlock
   // -----------------------
   function applyDefaultRanges() {
-    const map = { G: els.Gslider, T: els.Tslider, C: els.Cslider, I: els.Islider, P: els.Pslider, Z: els.Zslider };
+    const map = { G: els.Gslider, T: els.Tslider, C: els.Cslider, I: els.Islider, P: els.Pslider, M: els.Mslider };
     for (const k of Object.keys(map)) {
       const sl = map[k];
       const r = M.ranges[k];
@@ -442,7 +464,7 @@
   }
 
   function lockAllSliders() {
-    [els.Gslider, els.Tslider, els.Cslider, els.Islider, els.Pslider, els.Zslider].forEach(sl => sl.disabled = true);
+    [els.Gslider, els.Tslider, els.Cslider, els.Islider, els.Pslider, els.Mslider].forEach(sl => sl.disabled = true);
   }
 
   function resetSlidersToBaseline() {
@@ -452,7 +474,7 @@
     els.Cslider.value = String(M.base.C);
     els.Islider.value = String(M.base.I);
     els.Pslider.value = String(M.base.P);
-    els.Zslider.value = String(M.base.Z);
+    els.Mslider.value = String(M.base.M);
   }
 
   function setSliderConstraint(sl, min, max) {
@@ -473,7 +495,7 @@
     const dir = scenario.dir;
     const baseVal = M.base[v];
 
-    const sliderMap = { G: els.Gslider, T: els.Tslider, C: els.Cslider, I: els.Islider, P: els.Pslider, Z: els.Zslider };
+    const sliderMap = { G: els.Gslider, T: els.Tslider, C: els.Cslider, I: els.Islider, P: els.Pslider, M: els.Mslider };
     const sl = sliderMap[v];
     if (!sl) return;
 
@@ -496,7 +518,7 @@
     cur.C = Number(els.Cslider.value);
     cur.I = Number(els.Islider.value);
     cur.P = Number(els.Pslider.value);
-    cur.Z = Number(els.Zslider.value);
+    cur.M = Number(els.Mslider.value);
   }
 
   function updateReadouts() {
@@ -505,7 +527,7 @@
     els.Cdisp.textContent = cur.C.toFixed(0);
     els.Idisp.textContent = cur.I.toFixed(0);
     els.Pdisp.textContent = cur.P.toFixed(1);
-    els.Zdisp.textContent = cur.Z.toFixed(1);
+    els.Mdisp.textContent = cur.M.toFixed(0);
   }
 
   // -----------------------
@@ -661,7 +683,7 @@
 
   function checkMechanism() {
     if (!scenario) { setMechResult("bad", "Click New Scenario first."); return; }
-    const key = mechKeyFor(scenario.var, scenario.dir);
+    const key = mechKeyFor(scenario);
     const seq = MECH[key];
     if (!seq) { setMechResult("bad", "No mechanism defined."); return; }
 
@@ -701,10 +723,10 @@
       if (act === "shift") return fillOptions(els.isDir, [["right","Right"], ["left","Left"]]);
       return fillOptions(els.isDir, [["up","Up along"], ["down","Down along"]]);
     }
-    if (curve === "FR") {
-      const act = els.frAction.value || "";
-      if (!act) return fillOptions(els.frDir, []);
-      return fillOptions(els.frDir, [["up","Up"], ["down","Down"]]);
+    if (curve === "IR") {
+      const act = els.irAction.value || "";
+      if (!act) return fillOptions(els.irDir, []);
+      return fillOptions(els.irDir, [["up","Up"], ["down","Down"]]);
     }
     if (curve === "AD") {
       const act = els.adAction.value || "";
@@ -716,15 +738,15 @@
 
   function initPredictionUI() {
     els.isAction.addEventListener("change", () => updateDirOptions("IS"));
-    els.frAction.addEventListener("change", () => updateDirOptions("FR"));
+    els.irAction.addEventListener("change", () => updateDirOptions("IR"));
     els.adAction.addEventListener("change", () => updateDirOptions("AD"));
-    updateDirOptions("IS"); updateDirOptions("FR"); updateDirOptions("AD");
+    updateDirOptions("IS"); updateDirOptions("IR"); updateDirOptions("AD");
   }
 
   function predComplete() {
     const vals = [
       els.isAction.value, els.isDir.value,
-      els.frAction.value, els.frDir.value,
+      els.irAction.value, els.irDir.value,
       els.adAction.value, els.adDir.value
     ];
     return vals.every(v => (v ?? "").trim() !== "");
@@ -736,29 +758,29 @@
     if (v === "G" || v === "C" || v === "I") {
       return {
         IS: { action:"shift", dir: dir === "up" ? "right" : "left" },
-        FR: { action:"move",  dir: dir === "up" ? "up" : "down" },
+        IR: { action:"move",  dir: dir === "up" ? "up" : "down" },
         AD: { action:"shift", dir: dir === "up" ? "right" : "left" },
       };
     }
     if (v === "T") {
       return {
         IS: { action:"shift", dir: dir === "up" ? "left" : "right" },
-        FR: { action:"move",  dir: dir === "up" ? "down" : "up" },
+        IR: { action:"move",  dir: dir === "up" ? "down" : "up" },
         AD: { action:"shift", dir: dir === "up" ? "left" : "right" },
       };
     }
     if (v === "P") {
       return {
         IS: { action:"move",  dir: dir === "up" ? "up" : "down" },
-        FR: { action:"shift", dir: dir === "up" ? "up" : "down" },
+        IR: { action:"shift", dir: dir === "up" ? "up" : "down" },
         AD: { action:"move",  dir: dir === "up" ? "up" : "down" },
       };
     }
-    // Z
+    // M (money supply): M↑ → M/P↑ → r↓ at every Y, so IR shifts down
     return {
-      IS: { action:"move",  dir: dir === "up" ? "up" : "down" },
-      FR: { action:"shift", dir: dir === "up" ? "up" : "down" },
-      AD: { action:"shift", dir: dir === "up" ? "left" : "right" },
+      IS: { action:"move",  dir: dir === "up" ? "down" : "up" },
+      IR: { action:"shift", dir: dir === "up" ? "down" : "up" },
+      AD: { action:"shift", dir: dir === "up" ? "right" : "left" },
     };
   }
 
@@ -766,29 +788,32 @@
     const v = s.var, up = (s.dir === "up");
     let txt = "Big idea:\n";
     txt += "• IS shifts when planned spending changes at a given interest rate (G, T, C, I).\n";
-    txt += "• FR shifts when the Fed wants a different r at each output level (P or Z).\n";
-    txt += "• AD comes from IS–FR equilibrium: shifts in IS/FR shift AD; changes in P move along AD.\n\n";
+    txt += "• IR shifts when the money-market interest rate changes at each output level (P or M).\n";
+    txt += "• AD comes from IS–IR equilibrium: shifts in IS/IR shift AD; changes in P move along AD.\n\n";
 
     if (v === "G" || v === "C" || v === "I") {
       txt += `This scenario changes ${v}, changing planned expenditure.\n`;
       txt += `• IS shifts ${up ? "right" : "left"}.\n`;
-      txt += "• FR does not shift; output changes so the economy moves along FR.\n";
+      txt += `• IR does not shift; Y ${up ? "up" : "down"} changes money demand, so the economy moves ${up ? "up" : "down"} along IR.\n`;
       txt += `• Therefore AD shifts ${up ? "right" : "left"}.\n`;
     } else if (v === "T") {
       txt += "This scenario changes taxes, which changes consumption.\n";
       txt += `• T ${up ? "up" : "down"} → C ${up ? "down" : "up"} → IS shifts ${up ? "left" : "right"}.\n`;
-      txt += "• FR does not shift; the equilibrium moves along FR.\n";
+      txt += `• IR does not shift; the equilibrium moves ${up ? "down" : "up"} along IR.\n`;
       txt += `• Therefore AD shifts ${up ? "left" : "right"}.\n`;
     } else if (v === "P") {
       txt += "This scenario is a change in the price level.\n";
-      txt += `• P ${up ? "up" : "down"} shifts FR ${up ? "up" : "down"}.\n`;
+      txt += `• P ${up ? "up" : "down"} → M/P ${up ? "down" : "up"} → r ${up ? "up" : "down"} at every Y, so IR shifts ${up ? "up" : "down"}.\n`;
       txt += "• IS does not shift; r changes move along IS.\n";
       txt += "• In (P,Y) space, changing P is a movement along AD.\n";
     } else {
-      txt += "This scenario is a change in other policy considerations (Z).\n";
-      txt += `• Z ${up ? "up" : "down"} shifts FR ${up ? "up" : "down"}.\n`;
-      txt += "• IS does not shift; r changes move along IS.\n";
-      txt += `• Therefore AD shifts ${up ? "left" : "right"}.\n`;
+      const how = s.tool === "ior"
+        ? `The Fed ${up ? "lowers" : "raises"} the interest rate on reserves → banks' reserve ratio ${up ? "falls" : "rises"} → money multiplier ${up ? "rises" : "falls"}`
+        : `An open market ${up ? "purchase" : "sale"} ${up ? "adds" : "removes"} bank reserves`;
+      txt += `This scenario is monetary policy: ${how}, so the money supply ${up ? "rises" : "falls"}.\n`;
+      txt += `• M ${up ? "up" : "down"} → M/P ${up ? "up" : "down"} → r ${up ? "down" : "up"} at every Y, so IR shifts ${up ? "down" : "up"}.\n`;
+      txt += `• IS does not shift; the equilibrium moves ${up ? "down" : "up"} along IS.\n`;
+      txt += `• Output ${up ? "rises" : "falls"} at the same price level, so AD shifts ${up ? "right" : "left"}.\n`;
     }
     return txt;
   }
@@ -799,8 +824,8 @@
       const missing = [];
       if (!els.isAction.value) missing.push("IS action");
       if (!els.isDir.value) missing.push("IS direction");
-      if (!els.frAction.value) missing.push("FR action");
-      if (!els.frDir.value) missing.push("FR direction");
+      if (!els.irAction.value) missing.push("IR action");
+      if (!els.irDir.value) missing.push("IR direction");
       if (!els.adAction.value) missing.push("AD action");
       if (!els.adDir.value) missing.push("AD direction");
       setPredStatus("Answer all prediction dropdowns first. Missing: " + missing.join(", "));
@@ -810,13 +835,13 @@
     const exp = expectedPrediction(scenario);
     const got = {
       IS: { action: els.isAction.value, dir: els.isDir.value },
-      FR: { action: els.frAction.value, dir: els.frDir.value },
+      IR: { action: els.irAction.value, dir: els.irDir.value },
       AD: { action: els.adAction.value, dir: els.adDir.value },
     };
 
     const ok =
       got.IS.action === exp.IS.action && got.IS.dir === exp.IS.dir &&
-      got.FR.action === exp.FR.action && got.FR.dir === exp.FR.dir &&
+      got.IR.action === exp.IR.action && got.IR.dir === exp.IR.dir &&
       got.AD.action === exp.AD.action && got.AD.dir === exp.AD.dir;
 
     predMade = true;
@@ -948,15 +973,74 @@
     }
   }
 
-  function drawISFR() {
-    const { ctx, dpr, W, H } = getCtx(els.isfrCanvas);
+  // ── Curve labels ──────────────────────────────────────────────────────────
+  // Label text colours: baseline grey and dark amber (#8c4800) both pass
+  // WCAG 1.4.3 on white; the lighter amber line colour would not.
+  const LABEL_BASE = "rgba(0,0,0,0.70)";
+  const LABEL_CUR  = "#8c4800";
+
+  function labelFont(dpr) {
+    return `700 ${Math.round(12 * dpr * _fs)}px system-ui`;
+  }
+
+  // Right padding wide enough for "IR′" / "AD′" at the user's font scale
+  function rightPad(dpr) {
+    return (16 + 28 * _fs) * dpr;
+  }
+
+  // Draw labels with a white halo so they stay legible over grid lines.
+  // Each label: { text, x, y, color, align } with y as the vertical centre.
+  function drawLabels(ctx, labels, dpr) {
+    ctx.save();
+    ctx.font = labelFont(dpr);
+    ctx.textBaseline = "middle";
+    ctx.lineJoin = "round";
+    for (const L of labels) {
+      ctx.textAlign = L.align || "left";
+      ctx.strokeStyle = "rgba(255,255,255,0.9)";
+      ctx.lineWidth = 4 * dpr;
+      ctx.strokeText(L.text, L.x, L.y);
+      ctx.fillStyle = L.color;
+      ctx.fillText(L.text, L.x, L.y);
+    }
+    ctx.restore();
+  }
+
+  // Spread a column of labels (same x) so none overlap, keeping all of them
+  // inside [top, bottom]. Labels are moved as little as possible.
+  function spreadColumn(labels, gap, top, bottom) {
+    const L = [...labels].sort((a, b) => a.y - b.y);
+    for (let i = 1; i < L.length; i++) {
+      if (L[i].y - L[i - 1].y < gap) L[i].y = L[i - 1].y + gap;
+    }
+    if (L.length && L[L.length - 1].y > bottom) L[L.length - 1].y = bottom;
+    for (let i = L.length - 2; i >= 0; i--) {
+      if (L[i + 1].y - L[i].y < gap) L[i].y = L[i + 1].y - gap;
+    }
+    if (L.length && L[0].y < top) {
+      L[0].y = top;
+      for (let i = 1; i < L.length; i++) {
+        if (L[i].y - L[i - 1].y < gap) L[i].y = L[i - 1].y + gap;
+      }
+    }
+  }
+
+  function clipToPlot(ctx, X0, Y0, X1, Y1) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(X0, Y0, X1 - X0, Y1 - Y0);
+    ctx.clip();
+  }
+
+  function drawISIR() {
+    const { ctx, dpr, W, H } = getCtx(els.isirCanvas);
     ctx.clearRect(0, 0, W, H);
 
-    const pad = { l: 70*dpr, r: 18*dpr, t: 18*dpr, b: 60*dpr };
+    const pad = { l: 70*dpr, r: rightPad(dpr), t: 18*dpr, b: 60*dpr };
     const X0 = pad.l, X1 = W - pad.r;
     const Y0 = pad.t, Y1 = H - pad.b;
 
-    const { Ymin, Ymax, rmin, rmax } = M.isfr;
+    const { Ymin, Ymax, rmin, rmax } = M.isir;
     const xTo = (Y) => X0 + (Y - Ymin) / (Ymax - Ymin) * (X1 - X0);
     const yTo = (r) => Y0 + (rmax - r) / (rmax - rmin) * (Y1 - Y0);
 
@@ -982,10 +1066,24 @@
     // baseline curves — dashed for non-color distinction (WCAG 1.4.1)
     const isL0 = IS_r(YL, M.base.G, M.base.T, M.base.C, M.base.I);
     const isR0 = IS_r(YR, M.base.G, M.base.T, M.base.C, M.base.I);
-    const frL0 = FR_r(YL, M.base.P, M.base.Z);
-    const frR0 = FR_r(YR, M.base.P, M.base.Z);
+    const irL0 = IR_r(YL, M.base.P, M.base.M);
+    const irR0 = IR_r(YR, M.base.P, M.base.M);
+    clipToPlot(ctx, X0, Y0, X1, Y1);
     drawLine(ctx, xTo(YL), yTo(isL0), xTo(YR), yTo(isR0), "rgba(0,0,0,0.35)", 3, dpr, [8, 5]);
-    drawLine(ctx, xTo(YL), yTo(frL0), xTo(YR), yTo(frR0), "rgba(0,0,0,0.35)", 3, dpr, [8, 5]);
+    drawLine(ctx, xTo(YL), yTo(irL0), xTo(YR), yTo(irR0), "rgba(0,0,0,0.35)", 3, dpr, [8, 5]);
+    ctx.restore();
+
+    // Curve labels sit in the right margin at each line's right end
+    const labelH = 12 * dpr * _fs;
+    const curveLabels = [
+      { text: "IS", y: yTo(isR0), color: LABEL_BASE },
+      { text: "IR", y: yTo(irR0), color: LABEL_BASE },
+    ];
+    const placeCurveLabels = () => {
+      curveLabels.forEach(L => { L.x = X1 + 6*dpr; L.align = "left"; });
+      spreadColumn(curveLabels, labelH + 4*dpr, Y0 + labelH/2, Y1 - labelH/2);
+      drawLabels(ctx, curveLabels, dpr);
+    };
 
     // baseline point
     const x1p = xTo(baseEq.Y), y1p = yTo(baseEq.r);
@@ -995,18 +1093,24 @@
     xTick(ctx, x1p, Y1, "Y₁", dpr);
     yTick(ctx, X0, y1p, "r₁", dpr);
 
-    if (!revealed) return;
+    if (!revealed) { placeCurveLabels(); return; }
 
     // current curves — solid
     const isL1 = IS_r(YL, cur.G, cur.T, cur.C, cur.I);
     const isR1 = IS_r(YR, cur.G, cur.T, cur.C, cur.I);
-    const frL1 = FR_r(YL, cur.P, cur.Z);
-    const frR1 = FR_r(YR, cur.P, cur.Z);
+    const irL1 = IR_r(YL, cur.P, cur.M);
+    const irR1 = IR_r(YR, cur.P, cur.M);
+    clipToPlot(ctx, X0, Y0, X1, Y1);
     drawLine(ctx, xTo(YL), yTo(isL1), xTo(YR), yTo(isR1), "rgba(230,159,0,0.95)", 3, dpr);
-    drawLine(ctx, xTo(YL), yTo(frL1), xTo(YR), yTo(frR1), "rgba(230,159,0,0.95)", 3, dpr);
+    drawLine(ctx, xTo(YL), yTo(irL1), xTo(YR), yTo(irR1), "rgba(230,159,0,0.95)", 3, dpr);
+    ctx.restore();
+
+    // A shifted curve gets its own primed label
+    if (!approxEq(isR1, isR0, 1e-6)) curveLabels.push({ text: "IS′", y: yTo(isR1), color: LABEL_CUR });
+    if (!approxEq(irR1, irR0, 1e-6)) curveLabels.push({ text: "IR′", y: yTo(irR1), color: LABEL_CUR });
 
     // new point (clamped to chart)
-    const eq2 = eqm(cur.G, cur.T, cur.C, cur.I, cur.P, cur.Z);
+    const eq2 = eqm(cur.G, cur.T, cur.C, cur.I, cur.P, cur.M);
     const x2p = xTo(eq2.Y), y2p = yTo(eq2.r);
     dot(ctx, x2p, y2p, "rgba(230,159,0,0.95)", dpr);
     drawLine(ctx, x2p, y2p, x2p, yTo(rmin), "rgba(0,0,0,0.30)", 2, dpr, [4, 6]);
@@ -1014,13 +1118,23 @@
     if (!approxEq(eq2.Y, baseEq.Y, 1e-6)) xTick(ctx, x2p, Y1, "Y₂", dpr);
     yTick(ctx, X0, y2p, "r₂", dpr);
     arrow(ctx, x1p, y1p, x2p, y2p, "rgba(230,159,0,0.95)", dpr);
+    placeCurveLabels();
+  }
+
+  // Label position at the lower-right end of a visible AD curve: beside the
+  // point where it leaves the plot (right edge or bottom edge).
+  function adEndLabel(curve, xTo, yTo, Ymin, Ymax) {
+    const vis = curve.filter(pt => pt.Y >= Ymin && pt.Y <= Ymax);
+    if (!vis.length) return null;
+    const end = vis[0]; // curve is built from Pmin upward, so [0] is the lowest-P end
+    return { x: xTo(end.Y), y: yTo(end.P) };
   }
 
   function drawAD() {
     const { ctx, dpr, W, H } = getCtx(els.adCanvas);
     ctx.clearRect(0, 0, W, H);
 
-    const pad = { l: 70*dpr, r: 18*dpr, t: 18*dpr, b: 60*dpr };
+    const pad = { l: 70*dpr, r: rightPad(dpr), t: 18*dpr, b: 60*dpr };
     const X0 = pad.l, X1 = W - pad.r;
     const Y0 = pad.t, Y1 = H - pad.b;
 
@@ -1068,10 +1182,21 @@
     xTick(ctx, x1p, Y1, "Y₁", dpr);
     yTick(ctx, X0, y1p, "P₁", dpr);
 
-    if (!revealed) return;
+    // AD labels: to the right of each curve's lower-right end
+    const labelH = 12 * dpr * _fs;
+    const labelW = 30 * dpr * _fs;
+    const toLabel = (end, text, color) => ({
+      text, color, align: "left",
+      x: Math.min(end.x, X1) + 6*dpr,
+      y: Math.max(Y0 + labelH/2, Math.min(Y1 - labelH/2, end.y)),
+    });
+    const baseEnd = adEndLabel(baseAD, xTo, yTo, Ymin, Ymax);
+    const adLabels = baseEnd ? [toLabel(baseEnd, "AD", LABEL_BASE)] : [];
+
+    if (!revealed) { drawLabels(ctx, adLabels, dpr); return; }
 
     // current AD — solid
-    const curAD = buildADCurve({ G: cur.G, T: cur.T, C: cur.C, I: cur.I, Z: cur.Z }, 80);
+    const curAD = buildADCurve({ G: cur.G, T: cur.T, C: cur.C, I: cur.I, M: cur.M }, 80);
     ctx.strokeStyle = "rgba(230,159,0,0.95)";
     ctx.lineWidth = 3*dpr;
     ctx.setLineDash([]);
@@ -1086,7 +1211,7 @@
     ctx.stroke();
 
     // new point (clamped point for readability)
-    const eq2 = eqm(cur.G, cur.T, cur.C, cur.I, cur.P, cur.Z);
+    const eq2 = eqm(cur.G, cur.T, cur.C, cur.I, cur.P, cur.M);
     const x2p = xTo(eq2.Y), y2p = yTo(cur.P);
     dot(ctx, x2p, y2p, "rgba(230,159,0,0.95)", dpr);
     drawLine(ctx, x2p, y2p, x2p, yTo(Pmin), "rgba(0,0,0,0.30)", 2, dpr, [4, 6]);
@@ -1097,33 +1222,50 @@
     if (!approxEq(cur.P, M.base.P, 1e-6)) yTick(ctx, X0, y2p, "P₂", dpr);
 
     arrow(ctx, x1p, y1p, x2p, y2p, "rgba(230,159,0,0.95)", dpr);
+
+    // Label the current AD only if it actually shifted away from the baseline
+    const shifted = curAD.some((pt, i) => !approxEq(pt.Y, baseAD[i].Y, 1e-6));
+    const curEnd = shifted ? adEndLabel(curAD, xTo, yTo, Ymin, Ymax) : null;
+    if (curEnd) {
+      const c = toLabel(curEnd, "AD′", LABEL_CUR);
+      const b = adLabels[0];
+      // If the two labels collide, lift whichever sits further right (that one
+      // is in the empty right margin, or right of both curves) above the other.
+      if (b && Math.abs(c.x - b.x) < labelW && Math.abs(c.y - b.y) < labelH + 4*dpr) {
+        const mover = c.x >= b.x ? c : b;
+        const other = mover === c ? b : c;
+        mover.y = other.y - (labelH + 4*dpr);
+      }
+      adLabels.push(c);
+    }
+    drawLabels(ctx, adLabels, dpr);
   }
 
   function updateGraphDesc() {
-    if (!els.isfrDesc || !els.adDesc) return;
+    if (!els.isirDesc || !els.adDesc) return;
 
-    let isfrText, adText;
+    let isirText, adText;
 
     if (!scenario) {
-      isfrText = "IS-FR diagram showing baseline equilibrium. No scenario loaded yet.";
+      isirText = "IS-IR diagram showing baseline equilibrium. No scenario loaded yet.";
       adText = "Aggregate Demand diagram showing baseline AD curve. No scenario loaded yet.";
     } else if (!revealed) {
-      isfrText = `IS-FR diagram. Baseline equilibrium (dashed curves) at output Y₁ = ${baseEq.Y.toFixed(0)} and interest rate r₁ = ${baseEq.r.toFixed(1)}. Scenario: ${scenario.headline}. Move the unlocked slider to reveal the new equilibrium.`;
+      isirText = `IS-IR diagram. Baseline equilibrium (dashed curves) at output Y₁ = ${baseEq.Y.toFixed(0)} and interest rate r₁ = ${baseEq.r.toFixed(1)}. Scenario: ${scenario.headline}. Move the unlocked slider to reveal the new equilibrium.`;
       adText = `Aggregate Demand diagram. Baseline AD curve shown (dashed). Scenario: ${scenario.headline}. Move the unlocked slider to reveal the shifted AD curve.`;
     } else {
-      const eq2 = eqm(cur.G, cur.T, cur.C, cur.I, cur.P, cur.Z);
-      isfrText = `IS-FR diagram. Baseline equilibrium (dashed curves) at Y₁ = ${baseEq.Y.toFixed(0)}, r₁ = ${baseEq.r.toFixed(1)}. Current equilibrium (solid curves) at Y₂ = ${eq2.Y.toFixed(0)}, r₂ = ${eq2.r.toFixed(1)}.`;
+      const eq2 = eqm(cur.G, cur.T, cur.C, cur.I, cur.P, cur.M);
+      isirText = `IS-IR diagram. Baseline equilibrium (dashed curves) at Y₁ = ${baseEq.Y.toFixed(0)}, r₁ = ${baseEq.r.toFixed(1)}. Current equilibrium (solid curves) at Y₂ = ${eq2.Y.toFixed(0)}, r₂ = ${eq2.r.toFixed(1)}.`;
       adText = `Aggregate Demand diagram. Baseline AD (dashed) and current AD (solid). Current price level P = ${cur.P.toFixed(1)}. Current equilibrium output Y₂ = ${eq2.Y.toFixed(0)}.`;
     }
 
-    els.isfrDesc.textContent = isfrText;
+    els.isirDesc.textContent = isirText;
     els.adDesc.textContent = adText;
   }
 
   function drawAll() {
     _fs = Math.max(0.75, Math.min(2.5,
       parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
-    drawISFR();
+    drawISIR();
     drawAD();
     updateGraphDesc();
   }
@@ -1137,7 +1279,7 @@
       `${s.headline}\n` +
       `${s.brief}\n\n` +
       `Step 1: Build the mechanism.\n` +
-      `Step 2: Make predictions for IS, FR, and AD, then click Check answers.\n` +
+      `Step 2: Make predictions for IS, IR, and AD, then click Check answers.\n` +
       `Step 3: Use the unlocked slider to reveal what happens.`;
   }
 
@@ -1156,11 +1298,11 @@
     setPredStatus("");
 
     els.isAction.value = "";
-    els.frAction.value = "";
+    els.irAction.value = "";
     els.adAction.value = "";
-    updateDirOptions("IS"); updateDirOptions("FR"); updateDirOptions("AD");
+    updateDirOptions("IS"); updateDirOptions("IR"); updateDirOptions("AD");
     els.isDir.value = "";
-    els.frDir.value = "";
+    els.irDir.value = "";
     els.adDir.value = "";
 
     lockAllSliders();
@@ -1199,7 +1341,7 @@
 
     // pool + slots
     renderPoolGrouped();
-    const key = mechKeyFor(scenario.var, scenario.dir);
+    const key = mechKeyFor(scenario);
     const seq = MECH[key];
     renderSlots(seq.length);
 
@@ -1225,7 +1367,7 @@
   els.Cslider.addEventListener("input", onSlider);
   els.Islider.addEventListener("input", onSlider);
   els.Pslider.addEventListener("input", onSlider);
-  els.Zslider.addEventListener("input", onSlider);
+  els.Mslider.addEventListener("input", onSlider);
 
   window.addEventListener("resize", () => requestAnimationFrame(drawAll));
 

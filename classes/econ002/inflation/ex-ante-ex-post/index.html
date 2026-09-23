@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Ex Ante vs. Ex Post Real Interest Rates — ECON 002</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <!--
+    LAB_ID:    ex-ante-ex-post
+    LAB_LABEL: Ex Ante vs. Ex Post Real Interest Rates
+    Standalone conceptual tutorial — NOT discussion-compatible.
+    ECON 002 version: two phases (Phase 3 "Many Loans" simulation removed).
+  -->
+
+  <style>
+    /* ── Design tokens ─────────────────────────────────────────── */
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --paper:#f6f2ea;
+      --panel:#ffffff;
+      --ink:#1f2937;
+      --ink-2:#374151;
+      --muted:#596878;
+      --line:#e7dfd2;
+      --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;
+      --bad:#b42318;
+      --shadow:0 1px 2px rgba(17,24,39,.06),0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3 / good practice) ────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* ── Header ────────────────────────────────────────────────── */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;
+      font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;
+      line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;
+      max-width:80ch;font-size:0.9375rem;}
+
+    /* ── Instructions dropdown ─────────────────────────────────── */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* ── Layout ─────────────────────────────────────────────────── */
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+    footer{margin-top:24px;}
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+    .hidden{display:none!important;}
+
+    /* ── Tabs ───────────────────────────────────────────────────── */
+    .tablist{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;
+      border-bottom:1px solid var(--line);padding-bottom:0;}
+    .tab-btn{border:1.5px solid #8c7f72;background:var(--panel);
+      color:var(--ink-2);padding:10px 16px;border-radius:12px 12px 0 0;
+      font-family:var(--font-sans);font-size:0.875rem;font-weight:700;
+      cursor:pointer;display:inline-flex;align-items:center;gap:8px;
+      transition:all .12s;border-bottom-color:transparent;
+      margin-bottom:-1px;}
+    .tab-btn:hover:not([aria-disabled="true"]):not([aria-selected="true"]){
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .tab-btn[aria-selected="true"]{background:var(--accent);color:#fff;
+      border-color:var(--accent);}
+    .tab-btn[aria-disabled="true"]{cursor:not-allowed;color:var(--muted);
+      background:rgba(0,0,0,.03);}
+    .tab-lock{font-size:0.75rem;font-weight:700;letter-spacing:.04em;
+      text-transform:uppercase;}
+
+    /* ── Cards ──────────────────────────────────────────────────── */
+    .card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:20px;box-shadow:var(--shadow);
+      margin-bottom:14px;}
+    .card h2{font-family:var(--font-serif);font-size:1.25rem;
+      margin:0 0 10px;}
+    .card h3{font-family:var(--font-serif);font-size:1.0625rem;
+      margin:0 0 8px;color:var(--ink);}
+    .card p{margin:8px 0;line-height:1.55;color:var(--ink-2);
+      font-size:0.9375rem;}
+    .step-label{font-size:0.75rem;font-weight:800;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.08em;
+      margin-bottom:4px;}
+
+    /* ── Given values strip ─────────────────────────────────────── */
+    .given-row{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 14px;}
+    .given-pill{background:rgba(47,93,124,.08);border:1px solid var(--line);
+      border-radius:10px;padding:8px 14px;font-size:0.875rem;
+      color:var(--ink-2);}
+    .given-pill strong{color:var(--accent);font-weight:800;
+      margin-left:6px;}
+
+    /* ── Input row ──────────────────────────────────────────────── */
+    .input-row{display:flex;flex-wrap:wrap;align-items:center;
+      gap:10px;margin:12px 0;}
+    .input-row label{font-weight:700;font-size:0.9375rem;color:var(--ink);}
+    .num-input{padding:8px 10px;border-radius:10px;border:1.5px solid #8c7f72;
+      background:var(--panel);font-family:var(--font-sans);
+      font-size:0.9375rem;font-weight:700;color:var(--ink);width:90px;
+      text-align:right;}
+    .num-input:focus{border-color:var(--accent);outline:none;}
+    .pct-suffix{font-weight:700;color:var(--ink-2);font-size:0.9375rem;
+      margin-left:-4px;}
+
+    /* ── Buttons ────────────────────────────────────────────────── */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+    .option-btn.active{background:var(--accent);color:#fff;
+      border-color:var(--accent);}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover{background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+    .btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+
+    /* ── Feedback ───────────────────────────────────────────────── */
+    .feedback{margin-top:10px;padding:10px 14px;border-radius:10px;
+      font-size:0.875rem;line-height:1.5;border:1px solid transparent;}
+    .feedback.correct{background:rgba(21,92,56,.08);
+      border-color:rgba(21,92,56,.25);color:#0d4427;}
+    .feedback.incorrect{background:rgba(180,35,24,.06);
+      border-color:rgba(180,35,24,.25);color:#7a1810;}
+    .feedback.hint{background:#fff7e6;border-color:#e8c989;
+      color:#8c4800;}
+    .feedback.info{background:rgba(47,93,124,.07);
+      border-color:rgba(47,93,124,.25);color:#1f3c52;}
+    .feedback strong{font-weight:800;}
+    .symbol{font-weight:900;margin-right:6px;display:inline-block;
+      min-width:1em;}
+
+    /* ── Reveal panel (Step 1b) ─────────────────────────────────── */
+    .reveal-panel{margin-top:14px;padding:14px;border-radius:12px;
+      background:rgba(47,93,124,.06);border:1px dashed var(--line-2);
+      transition:opacity .35s ease-in-out;}
+    .reveal-panel .reveal-label{font-size:0.75rem;font-weight:800;
+      color:var(--accent);letter-spacing:.07em;text-transform:uppercase;
+      margin-bottom:4px;}
+    .reveal-panel .reveal-value{font-family:var(--font-serif);
+      font-size:1.5rem;font-weight:700;color:var(--ink);}
+
+    /* ── Summary card (Phase 2) ─────────────────────────────────── */
+    .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;
+      margin-top:14px;}
+    @media(max-width:700px){.summary-grid{grid-template-columns:1fr;}}
+    .role-card{padding:14px;border-radius:12px;border:1px solid var(--line);
+      background:rgba(246,242,234,.45);}
+    .role-card h4{margin:0 0 8px;font-family:var(--font-sans);
+      font-size:0.75rem;font-weight:800;color:var(--accent);
+      letter-spacing:.08em;text-transform:uppercase;}
+    .role-row{display:flex;justify-content:space-between;gap:10px;
+      padding:4px 0;font-size:0.875rem;color:var(--ink-2);}
+    .role-row strong{color:var(--ink);font-weight:800;font-family:var(--font-serif);}
+    .role-result{margin-top:8px;padding:6px 10px;border-radius:8px;
+      font-size:0.875rem;font-weight:700;display:inline-flex;
+      align-items:center;gap:6px;}
+    .role-result.won{background:rgba(21,92,56,.12);color:#0d4427;}
+    .role-result.lost{background:rgba(180,35,24,.10);color:#7a1810;}
+    .role-result.even{background:rgba(89,104,120,.12);color:var(--ink-2);}
+
+    /* ── Callout ────────────────────────────────────────────────── */
+    .callout{margin-top:14px;padding:14px 16px;border-radius:12px;
+      background:#fff7e6;border:1px solid #e8c989;color:#5a3c00;
+      font-size:0.9375rem;line-height:1.55;}
+    .callout strong{color:#3f2900;}
+
+    /* ── Top action bar ─────────────────────────────────────────── */
+    .actions-bar{display:flex;flex-wrap:wrap;gap:8px;
+      justify-content:flex-end;margin-bottom:6px;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ002/labs/">← ECON 002 Practice Labs</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 002 — Inflation</div>
+      <h1>Ex Ante vs. Ex Post Real Interest Rates</h1>
+      <p class="sub">Step into the shoes of a lender, then a borrower, and
+      see how unexpected inflation drives a wedge between the real return
+      both sides expected and the one they actually got.</p>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>This two-phase tutorial walks you through the distinction
+          between the <em>ex ante</em> real rate (planned, based on expected
+          inflation) and the <em>ex post</em> real rate (realized, after
+          actual inflation is observed).</p>
+          <p>You will work through:</p>
+          <ol>
+            <li><strong>Single Loan.</strong> As a lender, set the nominal
+            rate that delivers your desired real return, then compute the
+            realized real return after actual inflation is revealed.</li>
+            <li><strong>Both Sides.</strong> Flip perspectives to the borrower
+            on the same loan and see how the gain or loss is mirrored.</li>
+          </ol>
+          <p>Phase 2 unlocks once Phase 1 is complete. Use
+          <strong>New Scenario</strong> to redraw values within a phase,
+          or <strong>Start Over</strong> to reset everything.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <div class="actions-bar">
+    <button id="startOverBtn" class="option-btn" type="button">Start Over</button>
+  </div>
+
+  <!-- ── Tabs ─────────────────────────────────────────────────── -->
+  <div class="tablist" role="tablist" aria-label="Tutorial phases">
+    <button class="tab-btn" role="tab" id="tab1" aria-selected="true"
+            aria-controls="panel1" type="button">
+      1. Single Loan
+    </button>
+    <button class="tab-btn" role="tab" id="tab2" aria-selected="false"
+            aria-controls="panel2" aria-disabled="true" type="button">
+      2. Both Sides <span class="tab-lock" aria-hidden="true">(Locked)</span>
+      <span class="sr-only">Locked. Finish Phase 1 to unlock.</span>
+    </button>
+  </div>
+
+  <!-- ═══════════ PHASE 1 ═══════════ -->
+  <section id="panel1" role="tabpanel" aria-labelledby="tab1">
+
+    <div class="card">
+      <h2>Phase 1 — The Single Loan (Lender's Perspective)</h2>
+      <p><em>You are a bank making a one-year loan.</em> You want to earn
+      a certain real return after accounting for the inflation you
+      expect over the next year.</p>
+
+      <div class="given-row" aria-label="Loan parameters">
+        <div class="given-pill">Expected inflation <strong id="p1ExpInf">—</strong></div>
+        <div class="given-pill">Desired real return <strong id="p1DesR">—</strong></div>
+      </div>
+
+      <!-- Step 1a -->
+      <div id="step1a">
+        <div class="step-label">Step 1 of 3</div>
+        <h3>What nominal rate should you charge?</h3>
+        <p>Pick the nominal interest rate <em>i</em> that locks in your
+        desired real return, given your expectation of inflation.</p>
+        <div class="input-row">
+          <label for="p1iInput">Nominal rate <em>i</em> =</label>
+          <input id="p1iInput" class="num-input" type="number"
+                 step="0.1" inputmode="decimal"
+                 aria-describedby="p1iFeedback"/>
+          <span class="pct-suffix" aria-hidden="true">%</span>
+          <button id="p1iCheck" class="primary-btn" type="button">Check Answer</button>
+        </div>
+        <div class="btn-row" id="p1iHelp">
+          <button id="p1iHint" class="option-btn" type="button" disabled>Show Hint</button>
+          <button id="p1iFormula" class="option-btn" type="button" disabled>Show Formula</button>
+          <button id="p1iAnswer" class="option-btn" type="button" disabled>Show Answer</button>
+        </div>
+        <div id="p1iFeedback" class="feedback hidden" aria-live="polite" aria-atomic="true"></div>
+      </div>
+
+      <!-- Step 1b -->
+      <div id="step1b" class="hidden">
+        <hr style="margin:18px 0;border:none;border-top:1px solid var(--line);"/>
+        <div class="step-label">Step 2 of 3</div>
+        <h3>A year has passed. Actual inflation is in.</h3>
+        <div class="reveal-panel">
+          <div class="reveal-label">Realized inflation, π</div>
+          <div class="reveal-value"><span id="p1ActualInf">—</span></div>
+        </div>
+        <p>Given the nominal rate you charged, what real return did you
+        <em>actually</em> earn?</p>
+        <div class="input-row">
+          <label for="p1rInput">Realized real rate <em>r</em> =</label>
+          <input id="p1rInput" class="num-input" type="number"
+                 step="0.1" inputmode="decimal"
+                 aria-describedby="p1rFeedback"/>
+          <span class="pct-suffix" aria-hidden="true">%</span>
+          <button id="p1rCheck" class="primary-btn" type="button">Check Answer</button>
+        </div>
+        <div class="btn-row">
+          <button id="p1rHint" class="option-btn" type="button" disabled>Show Hint</button>
+          <button id="p1rFormula" class="option-btn" type="button" disabled>Show Formula</button>
+          <button id="p1rAnswer" class="option-btn" type="button" disabled>Show Answer</button>
+        </div>
+        <div id="p1rFeedback" class="feedback hidden" aria-live="polite" aria-atomic="true"></div>
+      </div>
+
+      <!-- Step 1c -->
+      <div id="step1c" class="hidden">
+        <hr style="margin:18px 0;border:none;border-top:1px solid var(--line);"/>
+        <div class="step-label">Step 3 of 3</div>
+        <h3>How did the lender do?</h3>
+        <div class="summary-grid" id="p1Compare" aria-live="polite" aria-atomic="true">
+          <!-- filled by JS -->
+        </div>
+        <p style="margin-top:12px;">As the lender, did you win or lose?</p>
+        <div role="group" aria-label="Lender outcome" class="btn-row" id="p1Outcome">
+          <button class="option-btn" data-out="won" type="button"
+                  aria-pressed="false">Won (more real return than expected)</button>
+          <button class="option-btn" data-out="lost" type="button"
+                  aria-pressed="false">Lost (less than expected)</button>
+          <button class="option-btn" data-out="even" type="button"
+                  aria-pressed="false">Broke even (as expected)</button>
+        </div>
+        <div id="p1OutFeedback" class="feedback hidden" aria-live="polite" aria-atomic="true"></div>
+        <div class="btn-row" id="p1Done" style="margin-top:14px;">
+          <button id="p1NewScenario" class="option-btn" type="button">New Scenario</button>
+          <button id="p1ToPhase2" class="primary-btn hidden" type="button">Continue to Phase 2 →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════ PHASE 2 ═══════════ -->
+  <section id="panel2" role="tabpanel" aria-labelledby="tab2" hidden>
+    <div class="card">
+      <h2>Phase 2 — The Other Side (Borrower's Perspective)</h2>
+      <p><em>Now you are the borrower on the same loan.</em> You agreed
+      to pay the nominal rate below, expecting inflation of <span id="p2ExpInf">—</span>
+      over the year.</p>
+
+      <div class="given-row" aria-label="Loan parameters">
+        <div class="given-pill">Nominal rate paid <strong id="p2Nom">—</strong></div>
+        <div class="given-pill">Expected inflation <strong id="p2ExpInf2">—</strong></div>
+        <div class="given-pill">Realized inflation <strong id="p2ActInf">—</strong></div>
+      </div>
+
+      <h3>How did the borrower do?</h3>
+      <p>Thinking in real terms — that is, in the actual purchasing-power
+      cost of the interest you paid — did you, the borrower, win or lose?</p>
+      <div role="group" aria-label="Borrower outcome" class="btn-row" id="p2Outcome">
+        <button class="option-btn" data-out="won" type="button"
+                aria-pressed="false">Won (paid less in real terms than expected)</button>
+        <button class="option-btn" data-out="lost" type="button"
+                aria-pressed="false">Lost (paid more in real terms than expected)</button>
+        <button class="option-btn" data-out="even" type="button"
+                aria-pressed="false">Broke even (as expected)</button>
+      </div>
+      <div id="p2OutFeedback" class="feedback hidden" aria-live="polite" aria-atomic="true"></div>
+
+      <div id="p2Summary" class="hidden">
+        <h3 style="margin-top:18px;">Side-by-Side Summary</h3>
+        <div class="summary-grid" aria-live="polite" aria-atomic="true">
+          <div class="role-card">
+            <h4>Lender</h4>
+            <div class="role-row"><span>Expected real return</span>
+              <strong id="sumLendExp">—</strong></div>
+            <div class="role-row"><span>Realized real return</span>
+              <strong id="sumLendAct">—</strong></div>
+            <div id="sumLendResult" class="role-result"
+                 aria-label="Lender result">—</div>
+          </div>
+          <div class="role-card">
+            <h4>Borrower</h4>
+            <div class="role-row"><span>Expected real cost</span>
+              <strong id="sumBorrExp">—</strong></div>
+            <div class="role-row"><span>Realized real cost</span>
+              <strong id="sumBorrAct">—</strong></div>
+            <div id="sumBorrResult" class="role-result"
+                 aria-label="Borrower result">—</div>
+          </div>
+        </div>
+        <div class="callout">
+          <strong>Key insight.</strong> Unexpected inflation transfers
+          wealth from lender to borrower. Unexpected
+          <em>dis</em>inflation does the opposite. Expected inflation
+          transfers nothing — it is already priced into <em>i</em>.
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 002 — Principles of Macroeconomics</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+'use strict';
+
+/* ─────────────────────────────────────────────────────────────────
+   Helpers
+   ───────────────────────────────────────────────────────────────── */
+function $(id){ return document.getElementById(id); }
+function pct(x){ return (Math.round(x * 10) / 10).toFixed(1) + '%'; }
+function approxEq(a, b, tol){ return Math.abs(a - b) <= (tol == null ? 0.05 : tol); }
+
+function randInt(lo, hi){
+  return Math.floor(Math.random() * (hi - lo + 1)) + lo;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Lab state
+   ───────────────────────────────────────────────────────────────── */
+let state = {
+  expInf: 3,        // Eπ — expected inflation (integer %)
+  desR:   2,        // r — desired real return (integer %)
+  nom:    5,        // i — nominal (computed)
+  actInf: null,     // π — actual inflation, set after step 1a
+  p1aDone: false,
+  p1bDone: false,
+  p1cDone: false,
+  p2Done:  false,
+  unlockedPhase: 1
+};
+
+function generateParams(){
+  state.expInf = randInt(1, 6);
+  state.desR   = randInt(1, 5);
+  state.nom    = state.expInf + state.desR;
+  state.actInf = null;
+}
+
+/* Draw shock weighted away from zero so cases stay pedagogically
+   interesting. Reject draws producing negative π. */
+function drawActualInflation(expInf){
+  const choices = [-3,-3,-2,-2,-2,-1,-1,-1,0,1,1,1,2,2,2,3,3];
+  for(let i = 0; i < 50; i++){
+    const shock = choices[Math.floor(Math.random() * choices.length)];
+    const pi = expInf + shock;
+    if(pi >= 0) return pi;
+  }
+  return expInf;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Tabs
+   ───────────────────────────────────────────────────────────────── */
+const TABS = [
+  { btn: $('tab1'), panel: $('panel1') },
+  { btn: $('tab2'), panel: $('panel2') }
+];
+
+function selectTab(idx){
+  if(TABS[idx].btn.getAttribute('aria-disabled') === 'true') return;
+  TABS.forEach((t, i) => {
+    const active = (i === idx);
+    t.btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    if(active){ t.panel.removeAttribute('hidden'); }
+    else { t.panel.setAttribute('hidden', ''); }
+  });
+}
+
+TABS.forEach((t, i) => {
+  t.btn.addEventListener('click', () => selectTab(i));
+});
+
+function unlockTab(idx){
+  const btn = TABS[idx].btn;
+  btn.removeAttribute('aria-disabled');
+  const lock = btn.querySelector('.tab-lock');
+  if(lock) lock.remove();
+  const sr = btn.querySelector('.sr-only');
+  if(sr) sr.remove();
+  state.unlockedPhase = Math.max(state.unlockedPhase, idx + 1);
+}
+
+function relockTab(idx){
+  const btn = TABS[idx].btn;
+  btn.setAttribute('aria-disabled', 'true');
+  if(!btn.querySelector('.tab-lock')){
+    const sp = document.createElement('span');
+    sp.className = 'tab-lock';
+    sp.setAttribute('aria-hidden', 'true');
+    sp.textContent = '(Locked)';
+    btn.appendChild(document.createTextNode(' '));
+    btn.appendChild(sp);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   PHASE 1 logic
+   ───────────────────────────────────────────────────────────────── */
+function renderPhase1Given(){
+  $('p1ExpInf').textContent = pct(state.expInf);
+  $('p1DesR').textContent   = pct(state.desR);
+}
+
+/* progressive help helper: enables buttons in sequence */
+function bumpHelp(level, btns){
+  // level: 1=hint, 2=formula, 3=answer
+  btns.forEach((b, i) => { if(i < level) b.disabled = false; });
+}
+
+function showFeedback(el, kind, html){
+  el.className = 'feedback ' + kind;
+  el.innerHTML = html;
+  el.classList.remove('hidden');
+}
+
+/* ── Step 1a: nominal-rate input ──────────────────────────────── */
+let p1aWrongCount = 0;
+
+function resetP1aHelp(){
+  ['p1iHint','p1iFormula','p1iAnswer'].forEach(id => $(id).disabled = true);
+  p1aWrongCount = 0;
+  $('p1iFeedback').classList.add('hidden');
+  $('p1iInput').value = '';
+  $('p1iInput').disabled = false;
+  $('p1iCheck').disabled = false;
+}
+
+$('p1iCheck').addEventListener('click', () => {
+  const v = parseFloat($('p1iInput').value);
+  if(isNaN(v)){
+    showFeedback($('p1iFeedback'), 'hint',
+      '<span class="symbol" aria-hidden="true">!</span>Please enter a numeric value.');
+    return;
+  }
+  const target = state.expInf + state.desR;
+  if(approxEq(v, target, 0.05)){
+    showFeedback($('p1iFeedback'), 'correct',
+      '<span class="symbol" aria-hidden="true">✓</span><strong>Correct.</strong> ' +
+      'A nominal rate of <strong>' + pct(target) + '</strong> delivers a ' +
+      pct(state.desR) + ' real return when inflation is ' + pct(state.expInf) + '.');
+    $('p1iInput').disabled = true;
+    $('p1iCheck').disabled = true;
+    state.p1aDone = true;
+    advanceToStep1b();
+  } else {
+    p1aWrongCount++;
+    bumpHelp(Math.min(p1aWrongCount, 3),
+      [$('p1iHint'), $('p1iFormula'), $('p1iAnswer')]);
+    showFeedback($('p1iFeedback'), 'incorrect',
+      '<span class="symbol" aria-hidden="true">✗</span><strong>Not quite.</strong> ' +
+      'Use the buttons below for a hint, the formula, or the answer.');
+  }
+});
+
+$('p1iHint').addEventListener('click', () => {
+  showFeedback($('p1iFeedback'), 'hint',
+    '<span class="symbol" aria-hidden="true">💡</span><strong>Hint.</strong> ' +
+    'The lender needs to be compensated both for the desired real return ' +
+    '<em>and</em> for the loss of purchasing power they expect from inflation.');
+});
+$('p1iFormula').addEventListener('click', () => {
+  showFeedback($('p1iFeedback'), 'info',
+    '<span class="symbol" aria-hidden="true">ƒ</span><strong>Formula.</strong> ' +
+    'The ex-ante Fisher equation: <em>i = r + Eπ</em>.');
+});
+$('p1iAnswer').addEventListener('click', () => {
+  const target = state.expInf + state.desR;
+  showFeedback($('p1iFeedback'), 'info',
+    '<span class="symbol" aria-hidden="true">A</span><strong>Answer.</strong> ' +
+    '<em>i</em> = ' + pct(state.desR) + ' + ' + pct(state.expInf) +
+    ' = <strong>' + pct(target) + '</strong>.');
+  $('p1iInput').value = target.toFixed(1);
+});
+
+/* ── Step 1b: realized real rate input ─────────────────────────── */
+let p1bWrongCount = 0;
+
+function advanceToStep1b(){
+  // Reveal actual inflation
+  state.actInf = drawActualInflation(state.expInf);
+  $('p1ActualInf').textContent = pct(state.actInf);
+  const panel = $('step1b');
+  panel.classList.remove('hidden');
+  // Soft fade so it feels like a reveal
+  panel.style.opacity = '0';
+  requestAnimationFrame(() => {
+    panel.style.transition = 'opacity .35s ease-in-out';
+    panel.style.opacity = '1';
+  });
+  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function resetP1bHelp(){
+  ['p1rHint','p1rFormula','p1rAnswer'].forEach(id => $(id).disabled = true);
+  p1bWrongCount = 0;
+  $('p1rFeedback').classList.add('hidden');
+  $('p1rInput').value = '';
+  $('p1rInput').disabled = false;
+  $('p1rCheck').disabled = false;
+}
+
+$('p1rCheck').addEventListener('click', () => {
+  const v = parseFloat($('p1rInput').value);
+  if(isNaN(v)){
+    showFeedback($('p1rFeedback'), 'hint',
+      '<span class="symbol" aria-hidden="true">!</span>Please enter a numeric value.');
+    return;
+  }
+  const target = state.nom - state.actInf;
+  if(approxEq(v, target, 0.05)){
+    showFeedback($('p1rFeedback'), 'correct',
+      '<span class="symbol" aria-hidden="true">✓</span><strong>Correct.</strong> ' +
+      'The realized real return is <strong>' + pct(target) + '</strong>.');
+    $('p1rInput').disabled = true;
+    $('p1rCheck').disabled = true;
+    state.p1bDone = true;
+    advanceToStep1c();
+  } else {
+    p1bWrongCount++;
+    bumpHelp(Math.min(p1bWrongCount, 3),
+      [$('p1rHint'), $('p1rFormula'), $('p1rAnswer')]);
+    showFeedback($('p1rFeedback'), 'incorrect',
+      '<span class="symbol" aria-hidden="true">✗</span><strong>Not quite.</strong> ' +
+      'Use the buttons below for a hint, the formula, or the answer.');
+  }
+});
+
+$('p1rHint').addEventListener('click', () => {
+  showFeedback($('p1rFeedback'), 'hint',
+    '<span class="symbol" aria-hidden="true">💡</span><strong>Hint.</strong> ' +
+    'Once actual inflation is known, the realized real return is the ' +
+    'nominal rate minus how much purchasing power was actually lost to inflation.');
+});
+$('p1rFormula').addEventListener('click', () => {
+  showFeedback($('p1rFeedback'), 'info',
+    '<span class="symbol" aria-hidden="true">ƒ</span><strong>Formula.</strong> ' +
+    'The ex-post Fisher relation: <em>r<sub>realized</sub> = i − π</em>.');
+});
+$('p1rAnswer').addEventListener('click', () => {
+  const target = state.nom - state.actInf;
+  showFeedback($('p1rFeedback'), 'info',
+    '<span class="symbol" aria-hidden="true">A</span><strong>Answer.</strong> ' +
+    '<em>r</em> = ' + pct(state.nom) + ' − ' + pct(state.actInf) +
+    ' = <strong>' + pct(target) + '</strong>.');
+  $('p1rInput').value = target.toFixed(1);
+});
+
+/* ── Step 1c: lender outcome ──────────────────────────────────── */
+function advanceToStep1c(){
+  const panel = $('step1c');
+  panel.classList.remove('hidden');
+  panel.scrollIntoView({behavior:'smooth', block:'nearest'});
+  renderP1Compare();
+}
+
+function renderP1Compare(){
+  const exp = state.desR;
+  const act = state.nom - state.actInf;
+  const dir = (act > exp + 0.01) ? 'won'
+            : (act < exp - 0.01) ? 'lost' : 'even';
+  const dirText = dir === 'won' ? '✓ Better than expected'
+                : dir === 'lost' ? '✗ Worse than expected'
+                : '= As expected';
+  const dirClass = dir === 'won' ? 'won' : dir === 'lost' ? 'lost' : 'even';
+
+  $('p1Compare').innerHTML =
+    '<div class="role-card">' +
+      '<h4>Expected real return (ex ante)</h4>' +
+      '<div class="role-row"><span>r = i − Eπ</span>' +
+      '<strong>' + pct(exp) + '</strong></div>' +
+      '<div class="role-row" style="font-size:0.8125rem;color:var(--muted);">' +
+      '= ' + pct(state.nom) + ' − ' + pct(state.expInf) + '</div>' +
+    '</div>' +
+    '<div class="role-card">' +
+      '<h4>Realized real return (ex post)</h4>' +
+      '<div class="role-row"><span>r = i − π</span>' +
+      '<strong>' + pct(act) + '</strong></div>' +
+      '<div class="role-row" style="font-size:0.8125rem;color:var(--muted);">' +
+      '= ' + pct(state.nom) + ' − ' + pct(state.actInf) + '</div>' +
+      '<div class="role-result ' + dirClass + '"><span aria-hidden="true">' +
+        (dir === 'won' ? '▲' : dir === 'lost' ? '▼' : '●') +
+      '</span>' + dirText + '</div>' +
+    '</div>';
+}
+
+const P1_OUT_BTNS = Array.from($('p1Outcome').querySelectorAll('button'));
+P1_OUT_BTNS.forEach(b => {
+  b.addEventListener('click', () => {
+    const choice = b.getAttribute('data-out');
+    const exp = state.desR;
+    const act = state.nom - state.actInf;
+    const truth = (act > exp + 0.01) ? 'won'
+                : (act < exp - 0.01) ? 'lost' : 'even';
+    P1_OUT_BTNS.forEach(x => {
+      x.classList.remove('active');
+      x.setAttribute('aria-pressed', 'false');
+    });
+    b.classList.add('active');
+    b.setAttribute('aria-pressed', 'true');
+    const correct = (choice === truth);
+    if(correct){
+      const msg = truth === 'won'
+        ? 'Inflation came in <em>below</em> what you expected, so each ' +
+          'dollar you got back was worth more than you planned for. ' +
+          'As the lender, you came out ahead in real terms.'
+        : truth === 'lost'
+        ? 'Inflation came in <em>above</em> what you expected, so each ' +
+          'dollar you got back was worth less than you planned for. ' +
+          'As the lender, you fell short in real terms.'
+        : 'Actual inflation exactly matched expectations, so the ex-ante ' +
+          'and ex-post real returns are identical.';
+      showFeedback($('p1OutFeedback'), 'correct',
+        '<span class="symbol" aria-hidden="true">✓</span><strong>Correct.</strong> ' + msg);
+      state.p1cDone = true;
+      unlockTab(1);
+      $('p1ToPhase2').classList.remove('hidden');
+    } else {
+      const truthText = truth === 'won' ? 'Won' : truth === 'lost' ? 'Lost' : 'Broke even';
+      showFeedback($('p1OutFeedback'), 'incorrect',
+        '<span class="symbol" aria-hidden="true">✗</span><strong>Not quite.</strong> ' +
+        'Compare the realized real return (' + pct(act) +
+        ') with the expected real return (' + pct(exp) +
+        '). The correct answer is <strong>' + truthText + '</strong>.');
+    }
+  });
+});
+
+/* New Scenario inside Phase 1 */
+$('p1NewScenario').addEventListener('click', () => { resetPhase1(); });
+
+function resetPhase1(){
+  generateParams();
+  renderPhase1Given();
+  resetP1aHelp();
+  resetP1bHelp();
+  $('step1b').classList.add('hidden');
+  $('step1c').classList.add('hidden');
+  $('p1OutFeedback').classList.add('hidden');
+  P1_OUT_BTNS.forEach(b => {
+    b.classList.remove('active');
+    b.setAttribute('aria-pressed', 'false');
+  });
+  $('p1ToPhase2').classList.add('hidden');
+  state.p1aDone = state.p1bDone = state.p1cDone = false;
+  state.p2Done = false;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   PHASE 2 logic
+   ───────────────────────────────────────────────────────────────── */
+function renderPhase2(){
+  $('p2ExpInf').textContent = pct(state.expInf);
+  $('p2ExpInf2').textContent = pct(state.expInf);
+  $('p2Nom').textContent = pct(state.nom);
+  $('p2ActInf').textContent = pct(state.actInf);
+  $('p2OutFeedback').classList.add('hidden');
+  $('p2Summary').classList.add('hidden');
+  P2_OUT_BTNS.forEach(b => {
+    b.classList.remove('active');
+    b.setAttribute('aria-pressed', 'false');
+  });
+}
+
+const P2_OUT_BTNS = Array.from($('p2Outcome').querySelectorAll('button'));
+P2_OUT_BTNS.forEach(b => {
+  b.addEventListener('click', () => {
+    const choice = b.getAttribute('data-out');
+    const expReal = state.desR;
+    const actReal = state.nom - state.actInf;
+    // Borrower's outcome is the opposite of lender's: lender's loss
+    // is the borrower's gain in real terms, and vice versa.
+    const bWon = actReal < expReal - 0.01;   // borrower wins when realized real cost < expected
+    const bLost = actReal > expReal + 0.01;  // borrower loses when realized real cost > expected
+    const truth = bWon ? 'won' : bLost ? 'lost' : 'even';
+    P2_OUT_BTNS.forEach(x => {
+      x.classList.remove('active');
+      x.setAttribute('aria-pressed', 'false');
+    });
+    b.classList.add('active');
+    b.setAttribute('aria-pressed', 'true');
+    const correct = (choice === truth);
+    if(correct){
+      const msg = truth === 'won'
+        ? 'Inflation came in <em>above</em> what you expected. ' +
+          'The dollars you used to repay the loan were worth <em>less</em>, ' +
+          'so your real cost was lower than planned — the borrower wins.'
+        : truth === 'lost'
+        ? 'Inflation came in <em>below</em> what you expected. ' +
+          'The dollars you used to repay the loan kept more of their ' +
+          'purchasing power, so your real cost was higher than planned — the borrower loses.'
+        : 'Actual inflation exactly matched expectations: real cost ' +
+          'equals planned cost, and no surprise transfer happened.';
+      showFeedback($('p2OutFeedback'), 'correct',
+        '<span class="symbol" aria-hidden="true">✓</span><strong>Correct.</strong> ' + msg +
+        ' Notice the mirror: whatever the lender lost, the borrower gained.');
+      renderP2Summary();
+      $('p2Summary').classList.remove('hidden');
+      state.p2Done = true;
+    } else {
+      const truthText = truth === 'won' ? 'Won' : truth === 'lost' ? 'Lost' : 'Broke even';
+      showFeedback($('p2OutFeedback'), 'incorrect',
+        '<span class="symbol" aria-hidden="true">✗</span><strong>Not quite.</strong> ' +
+        'Remember: the borrower\'s outcome is the <em>mirror</em> of the lender\'s. ' +
+        'The correct answer is <strong>' + truthText + '</strong>.');
+    }
+  });
+});
+
+function renderP2Summary(){
+  const expR = state.desR;
+  const actR = state.nom - state.actInf;
+  $('sumLendExp').textContent = pct(expR);
+  $('sumLendAct').textContent = pct(actR);
+  $('sumBorrExp').textContent = pct(expR);
+  $('sumBorrAct').textContent = pct(actR);
+
+  const lendDir = (actR > expR + 0.01) ? 'won'
+                : (actR < expR - 0.01) ? 'lost' : 'even';
+  // borrower opposite
+  const borrDir = lendDir === 'won' ? 'lost'
+                : lendDir === 'lost' ? 'won' : 'even';
+
+  function badge(el, dir){
+    el.className = 'role-result ' + dir;
+    const sym = dir === 'won' ? '▲' : dir === 'lost' ? '▼' : '●';
+    const label = dir === 'won' ? 'Won' : dir === 'lost' ? 'Lost' : 'Broke even';
+    el.innerHTML = '<span aria-hidden="true">' + sym + '</span>' + label;
+  }
+  badge($('sumLendResult'), lendDir);
+  badge($('sumBorrResult'), borrDir);
+}
+
+/* Continue buttons */
+$('p1ToPhase2').addEventListener('click', () => {
+  renderPhase2();
+  selectTab(1);
+});
+
+/* ─────────────────────────────────────────────────────────────────
+   Start Over
+   ───────────────────────────────────────────────────────────────── */
+$('startOverBtn').addEventListener('click', () => {
+  // Relock tab 2, reset everything, return to tab 1
+  relockTab(1);
+  state.unlockedPhase = 1;
+  resetPhase1();
+  // Phase 2 reset is implicit via renderPhase2() when reentered
+  selectTab(0);
+});
+
+/* ─────────────────────────────────────────────────────────────────
+   Init
+   ───────────────────────────────────────────────────────────────── */
+generateParams();
+renderPhase1Given();
+resetP1aHelp();
+resetP1bHelp();
+
+})();
+</script>
+</body>
+</html>

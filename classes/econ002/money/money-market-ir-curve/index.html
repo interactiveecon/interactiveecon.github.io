@@ -1,0 +1,2490 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>From the Money Market to the IR Curve — ECON 002</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
+
+  <!--
+    LAB_ID:    money-market-ir-curve
+    LAB_LABEL: From the Money Market to the IR Curve
+    url:       /classes/econ002/money/money-market-ir-curve/?disc=1
+    Single-phase lab: the Check Your Understanding block records to Session
+    (first attempt = Phase 1, latest attempt = final). Parts 1–6 are guided
+    practice and are not recorded.
+    Covers the Unit 9 notes' "How is the Interest Rate Determined?", "What
+    Changes the Interest Rate?" and "The Interest Rate Rule": the money market
+    sets r, Y changes move the economy along the IR curve, and P or M changes
+    shift it.
+    Model (shown in Part 5's "Under the hood"): L(r, Y) = 0.5·Y − 100·r, so the
+    money market clears at r = Y/200 − (M/P)/100.
+    Append ?selftest to the URL to run the self-test in the console.
+  -->
+
+  <style>
+    /* ── Design tokens ─────────────────────────────────────────── */
+    :root{
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --font-mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+      --paper:#f6f2ea;
+      --panel:#ffffff;
+      --ink:#1f2937;
+      --ink-2:#374151;
+      --muted:#596878;       /* 5.85:1 on white — WCAG AA ✓ */
+      --line:#e7dfd2;
+      --line-2:#d9cfbf;
+      --accent:#2f5d7c;      /* 6.4:1  on white — WCAG AA ✓ */
+      --good:#155c38;        /* 7.7:1  on white — WCAG AA ✓ */
+      --bad:#b42318;         /* 6.2:1  on white — WCAG AA ✓ */
+      --ir:#8c4800;          /* 6.3:1  on white — WCAG AA ✓ */
+      --shadow:0 1px 2px rgba(17,24,39,.06),
+               0 10px 24px rgba(17,24,39,.06);
+    }
+    *,*::before,*::after{box-sizing:border-box;}
+    html,body{margin:0;}
+    body{background:var(--paper);color:var(--ink);font-family:var(--font-sans);}
+
+    /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
+    .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
+      background:var(--accent);color:#fff;font-weight:700;
+      text-decoration:none;border-radius:0 0 8px 0;z-index:999;}
+    .skip-link:focus{top:0;}
+
+    /* ── Visually hidden / AT-readable (WCAG 1.1.1) ─────────── */
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;
+      margin:-1px;overflow:hidden;clip:rect(0,0,0,0);
+      white-space:nowrap;border:0;}
+
+    /* ── Focus indicator (WCAG 2.4.7) ───────────────────────── */
+    :focus-visible{outline:3px solid var(--accent);outline-offset:2px;}
+    button:focus-visible{border-radius:10px;}
+
+    /* ── Reduced motion (WCAG 2.3.3 / good practice) ────────── */
+    @media(prefers-reduced-motion:reduce){
+      *,*::before,*::after{
+        animation-duration:.01ms!important;
+        transition-duration:.01ms!important;}}
+
+    /* ── Header / footer ───────────────────────────────────────── */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),
+      rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;
+      font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;
+      line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;
+      max-width:80ch;font-size:0.9375rem;}
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+    .hidden{display:none!important;}
+    .mono{font-family:var(--font-mono);}
+
+    /* ── Instructions dropdown ─────────────────────────────────── */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
+
+    /* ── Graph dock: two linked canvases, bridge, readout ─────── */
+    .graph-dock{margin-bottom:14px;}
+    /* Pinned above the parts on wide, tall screens. Elsewhere the dock moves
+       to sit just above whichever part is in use. */
+    @media(min-width:1000px) and (min-height:820px){
+      #dockHome{position:sticky;top:0;z-index:20;background:var(--paper);
+        padding:8px 0 10px;margin-bottom:14px;border-bottom:1px solid var(--line-2);}
+      #dockHome .graph-dock{margin-bottom:0;}}
+    .dock-status{font-size:0.75rem;font-weight:700;color:var(--muted);margin:0 0 6px;}
+    .canvas-row{position:relative;display:grid;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;}
+    @media(max-width:700px){.canvas-row{grid-template-columns:minmax(0,1fr);gap:8px;}}
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:12px;box-shadow:var(--shadow);min-width:0;}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;line-height:1.4;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;
+      overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+    .aspect-g{aspect-ratio:3/2;}
+    @media(max-width:700px){.aspect-g{aspect-ratio:6/5;}}
+    /* The r bridge between the canvases (drawn inside each canvas, and across
+       the gap by this element). */
+    .bridge-gap{position:absolute;height:0;border-top:2px dashed var(--ink);
+      pointer-events:none;display:none;}
+    .bridge-text{display:none;margin:0;padding:6px 10px;border-radius:10px;
+      background:var(--panel);border:1px dashed var(--ink-2);
+      font-size:0.8125rem;font-weight:700;color:var(--ink);text-align:center;}
+    @media(max-width:700px){.bridge-text{display:block;}}
+    .readout-strip{display:flex;flex-wrap:wrap;gap:4px 14px;margin:8px 0 0;padding:0 4px;
+      font-size:0.8125rem;color:var(--ink-2);font-variant-numeric:tabular-nums;}
+    .readout-strip b{color:var(--ink);}
+    .readout-strip .sep{color:var(--muted);}
+
+    /* ── Buttons ───────────────────────────────────────────────── */
+    /* Default button border #8c7f72 = 3.53:1 on white (WCAG 1.4.11 ✓) */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+    .option-btn.active,
+    .option-btn.active:hover:not(:disabled){background:var(--accent);color:#fff;
+      border-color:var(--accent);}
+    .option-btn.active:disabled{opacity:.75;}
+
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover{background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
+    .btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center;}
+
+    /* Answer choices: once checked they stay readable. The correct option gets
+       a green border plus a text tag (not color alone). */
+    .mc-group{display:flex;flex-direction:column;gap:6px;align-items:stretch;margin-top:8px;}
+    .choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:8px;}
+    @media(max-width:560px){.choice-grid{grid-template-columns:minmax(0,1fr);}}
+    .choice{text-align:left;display:flex;gap:8px;align-items:center;
+      font-weight:600;font-size:0.875rem;line-height:1.4;}
+    .choice:disabled{opacity:1;cursor:default;color:var(--muted);border-color:var(--line-2);}
+    .choice.active:disabled{color:#fff;background:var(--accent);border-color:var(--accent);}
+    .choice.is-answer:disabled{border:2.5px solid var(--good);color:var(--ink);}
+    .choice.is-answer.active:disabled{color:#fff;background:var(--good);}
+    .choice.is-flaw:disabled{border:2.5px solid var(--bad);color:var(--ink);}
+    .choice.is-flaw.active:disabled{color:#fff;background:var(--bad);}
+    .ans-tag{font-size:0.75rem;font-weight:800;margin-left:auto;padding-left:8px;white-space:nowrap;}
+    .choice:not(.active) .ans-tag{color:var(--good);}
+    .choice.is-flaw:not(.active) .ans-tag{color:var(--bad);}
+    .choice .num-tag{font-weight:800;min-width:1.4em;}
+
+    /* ── Cards / parts ─────────────────────────────────────────── */
+    .card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px;box-shadow:var(--shadow);
+      margin-bottom:14px;min-width:0;}
+    .card h2{font-family:var(--font-serif);font-size:1.375rem;line-height:1.2;margin:0 0 8px;}
+    .card h3{font-family:var(--font-serif);font-size:1.0625rem;margin:18px 0 6px;}
+    .card p{margin:8px 0;line-height:1.55;color:var(--ink-2);font-size:0.9375rem;}
+    .part-eyebrow{display:block;font-family:var(--font-sans);font-size:0.75rem;
+      font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;}
+    .locked-note{font-style:italic;color:var(--muted)!important;}
+    .lede{font-family:var(--font-serif);font-size:1.0625rem!important;color:var(--ink)!important;
+      font-weight:600;}
+    .q-block{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);}
+    .q-text{font-weight:700;color:var(--ink)!important;}
+    .step-tag{font-size:0.75rem;font-weight:800;color:var(--accent);text-transform:uppercase;
+      letter-spacing:.08em;display:block;margin-bottom:2px;}
+    .input-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:8px 0;}
+    .input-row label,.unit{font-weight:700;font-size:0.9375rem;color:var(--ink);}
+    .num-input{padding:8px 10px;border-radius:10px;border:1.5px solid #8c7f72;
+      background:var(--panel);font-family:var(--font-sans);font-size:0.9375rem;
+      font-weight:700;color:var(--ink);width:96px;text-align:right;}
+    .num-input:focus{border-color:var(--accent);}
+    .num-input:disabled{background:rgba(21,92,56,.06);color:var(--ink);opacity:1;}
+    .chain{display:inline-block;font-family:var(--font-mono);font-size:0.875rem;
+      padding:6px 12px;border-radius:14px;background:rgba(140,72,0,.07);
+      border:1px solid #d9b98f;color:var(--ink);line-height:1.5;overflow-wrap:anywhere;}
+    .reveal{margin-top:10px;padding:12px 14px;border-radius:12px;
+      background:rgba(246,242,234,.7);border-left:4px solid var(--accent);}
+    .reveal p{margin:6px 0;}
+    .key-card{border:1px solid var(--line);border-left:5px solid var(--ir);
+      border-radius:0 12px 12px 0;padding:12px 16px;margin:14px 0 4px;
+      font-size:1rem;line-height:1.55;color:var(--ink);background:var(--panel);}
+    .box-tag{font-size:0.6875rem;font-weight:800;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--ir);display:block;margin-bottom:4px;}
+    .note{font-size:0.8125rem!important;color:var(--muted)!important;}
+
+    /* ── Feedback ──────────────────────────────────────────────── */
+    .feedback{margin-top:10px;padding:10px 14px;border-radius:10px;
+      font-size:0.9375rem;line-height:1.55;border:1px solid transparent;}
+    .feedback.correct{background:rgba(21,92,56,.08);border-color:rgba(21,92,56,.25);color:#0d4427;}
+    .feedback.incorrect{background:rgba(180,35,24,.06);border-color:rgba(180,35,24,.25);color:#7a1810;}
+    .feedback.hint{background:#fff7e6;border-color:#e8c989;color:#8c4800;}
+    .feedback.info{background:rgba(47,93,124,.07);border-color:rgba(47,93,124,.25);color:#1f3c52;}
+    .feedback p{margin:4px 0;color:inherit;font-size:0.9375rem;}
+    .symbol{font-weight:900;margin-right:6px;display:inline-block;min-width:1em;}
+
+    /* ── Part 5: summary table ─────────────────────────────────── */
+    .sum-table{width:100%;border-collapse:collapse;font-size:0.875rem;margin:10px 0 4px;}
+    .sum-table th,.sum-table td{border:1px solid var(--line-2);padding:8px;text-align:left;vertical-align:top;}
+    .sum-table thead th{background:rgba(47,93,124,.07);font-size:0.75rem;
+      text-transform:uppercase;letter-spacing:.05em;color:var(--ink);}
+    .sum-table tbody th{font-family:var(--font-mono);font-size:1rem;white-space:nowrap;}
+    .sum-table select{width:100%;padding:6px 8px;border-radius:8px;border:1.5px solid #8c7f72;
+      background:var(--panel);font-family:var(--font-sans);font-size:0.8125rem;color:var(--ink);}
+    .sum-table select:disabled{opacity:1;color:var(--ink);background:rgba(246,242,234,.6);}
+    .cell-mark{display:block;font-size:0.75rem;font-weight:800;margin-top:4px;min-height:1em;}
+    .cell-mark.ok{color:var(--good);}
+    .cell-mark.no{color:var(--bad);}
+    @media(max-width:700px){
+      .sum-table,.sum-table tbody,.sum-table tr,.sum-table th,.sum-table td{display:block;width:100%;}
+      .sum-table thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);}
+      .sum-table tr{border:1px solid var(--line-2);border-radius:12px;margin-bottom:10px;padding:6px;}
+      .sum-table th,.sum-table td{border:none;padding:6px;}
+      .sum-table td::before{content:attr(data-label);display:block;font-size:0.75rem;
+        font-weight:800;color:var(--ink-2);margin-bottom:4px;}}
+
+    /* ── Part 5: sandbox ───────────────────────────────────────── */
+    .steppers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:8px;}
+    @media(max-width:700px){.steppers{grid-template-columns:minmax(0,1fr);}}
+    .stepper{border:1px solid var(--line);border-radius:12px;padding:10px;background:rgba(246,242,234,.45);}
+    .stepper-label{font-size:0.8125rem;font-weight:800;color:var(--ink);margin:0 0 6px;display:block;}
+    .stepper-ctl{display:flex;align-items:center;gap:8px;}
+    .stepper-ctl .option-btn{min-width:44px;font-size:1rem;padding:6px 12px;}
+    .stepper-val{min-width:4.5em;text-align:center;font-weight:800;font-size:1rem;
+      font-variant-numeric:tabular-nums;color:var(--ink);}
+    .step-note{display:block;font-size:0.75rem;color:var(--bad);font-weight:700;margin-top:6px;min-height:0;}
+    .sb-log{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;}
+    .sb-log li{font-family:var(--font-mono);font-size:0.8125rem;color:var(--ink);padding:6px 10px;
+      border-radius:8px;background:rgba(246,242,234,.7);border:1px solid var(--line);overflow-wrap:anywhere;}
+    .sb-log li:first-child{border-color:#d9b98f;background:rgba(140,72,0,.07);}
+    .hood{border:1px solid var(--line);border-radius:12px;margin-top:16px;background:var(--panel);}
+    .hood summary{cursor:pointer;padding:10px 14px;font-weight:800;font-size:0.8125rem;color:var(--accent);}
+    .hood-body{padding:0 14px 10px;border-top:1px solid var(--line);}
+    .hood-body .mono{font-size:0.875rem;color:var(--ink);}
+
+    /* ── Part 6: practice ──────────────────────────────────────── */
+    .problem-text{font-family:var(--font-serif);font-size:1.0625rem!important;line-height:1.55;
+      color:var(--ink)!important;padding:12px 14px;border-radius:12px;
+      background:rgba(246,242,234,.7);border-left:4px solid var(--accent);}
+    .score{font-size:0.875rem;font-weight:800;color:var(--ink)!important;margin:14px 0 0;}
+
+    /* ── Check your understanding ──────────────────────────────── */
+    .cyu-q{border-top:1px solid var(--line);padding-top:14px;margin-top:14px;}
+    .cyu-q:first-of-type{border-top:none;margin-top:4px;padding-top:0;}
+    .cyu-prompt{font-weight:700;color:var(--ink)!important;}
+  </style>
+</head>
+<body>
+
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<header class="page-header">
+  <div class="container">
+    <nav class="crumbbar" aria-label="Breadcrumb">
+      <a class="crumb-link" href="/classes/econ002/">← ECON 002</a>
+    </nav>
+    <div class="header-inner">
+      <div class="kicker">ECON 002 — Money</div>
+      <h1>From the Money Market to the IR Curve</h1>
+      <p class="sub">See how the money market sets the interest rate, build the IR curve point by
+      point, and learn which changes move you along it and which shift it.</p>
+
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>Two linked graphs run through the whole lab: the money market on the left and the
+          IR curve on the right. A dashed <strong>r bridge</strong> carries the interest rate the
+          money market sets across to the IR graph, where it is plotted against income. The key
+          idea is the difference between <strong>moving along</strong> the IR curve and the
+          curve <strong>shifting</strong>. Parts 1–5 unlock in order; Part 6 opens once you finish
+          Part 2.</p>
+          <p>You will be asked to answer the following questions:</p>
+          <ol>
+            <li><strong>Read the money market.</strong> Find the interest rate where money supply
+            and money demand meet.</li>
+            <li><strong>Build the IR curve.</strong> Change income, read the new interest rates,
+            and connect the points into the IR curve.</li>
+            <li><strong>Shift the IR curve (P).</strong> Predict, then see, what a higher price
+            level does to both graphs.</li>
+            <li><strong>Shift the IR curve (M).</strong> Predict, then see, what a larger money
+            supply does to both graphs.</li>
+            <li><strong>Movement vs. shift.</strong> Fill in a summary table, then experiment in a
+            sandbox and solve a challenge.</li>
+            <li><strong>Practice.</strong> Work through randomized problems in three steps.
+            <strong>New problem</strong> generates a fresh scenario each time, so you can
+            practice as much as you like.</li>
+          </ol>
+          <p>The lab ends with three Check your understanding questions. For each step, enter or
+          choose your answer and click <strong>Check Answer</strong>. If your answer is
+          incorrect, hints and the worked solution are available.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main-content" class="lab-wrap">
+
+  <p class="sr-only" id="announce" aria-live="polite" aria-atomic="true"></p>
+
+  <!-- ═══════════════ GRAPHS ═══════════════ -->
+  <h2 class="sr-only">Graphs</h2>
+  <div id="dockHome">
+    <div class="graph-dock" id="graphDock">
+      <p class="dock-status" id="dockStatus">Graphs showing: Part 1</p>
+      <div class="canvas-row" id="canvasRow">
+        <div class="graph-card">
+          <div class="graph-title" id="mmTitle">The Money Market</div>
+          <div class="canvas-wrap aspect-g" id="mmWrap">
+            <canvas id="mmCanvas" role="img" aria-labelledby="mmTitle"
+                    aria-describedby="mmDesc"></canvas>
+          </div>
+        </div>
+        <p class="bridge-text hidden" id="bridgeText"></p>
+        <div class="graph-card">
+          <div class="graph-title" id="irTitle">The IR Curve</div>
+          <div class="canvas-wrap aspect-g" id="irWrap">
+            <canvas id="irCanvas" role="img" aria-labelledby="irTitle"
+                    aria-describedby="irDesc"></canvas>
+          </div>
+        </div>
+        <div class="bridge-gap" id="bridgeGap" aria-hidden="true"></div>
+      </div>
+      <div class="readout-strip" id="readout" aria-live="polite" aria-atomic="true"></div>
+    </div>
+  </div>
+  <section class="sr-only" id="graphsDesc" aria-live="polite" aria-atomic="true">
+    <p id="mmDesc">Money market graph.</p>
+    <p id="irDesc">IR curve graph.</p>
+  </section>
+
+  <!-- ═══════════════ PART 1 ═══════════════ -->
+  <div class="graph-slot" id="slot1"></div>
+  <section class="card part" id="part1" aria-labelledby="p1Title">
+    <h2 id="p1Title"><span class="part-eyebrow">Part 1</span>Read the money market</h2>
+    <p>Supply of real money balances is a vertical line at <strong>M/P</strong>: the Fed sets
+    M, and the price level P is taken as given. Demand, <strong>L(r, Y)</strong>, slopes down
+    because r is the opportunity cost of holding money, and it rises with income. Right now
+    income is Y = 2,000, the money supply is M = 500, and the price level is P = 1.00.</p>
+    <div id="p1Num"></div>
+    <div class="reveal hidden" id="p1Reveal">
+      <p><strong>r = 5.</strong> At r = 5, people want to hold exactly the $500 of real money
+      balances that exist. The dashed r bridge carries that interest rate across to the IR
+      graph, where it is plotted against income: <strong>Y = 2,000 → r = 5</strong>.</p>
+    </div>
+  </section>
+
+  <!-- ═══════════════ PART 2 ═══════════════ -->
+  <div class="graph-slot" id="slot2"></div>
+  <section class="card part" id="part2" aria-labelledby="p2Title">
+    <h2 id="p2Title"><span class="part-eyebrow">Part 2</span>Build the IR curve (a change in Y)</h2>
+    <p class="locked-note" id="p2Locked">Finish Part 1 to unlock this part.</p>
+    <div class="hidden" id="p2Body">
+      <p class="lede">The IR curve is a list of money-market equilibria, one for each level of income.</p>
+      <div id="p2Predict"></div>
+      <div class="reveal hidden" id="p2Reveal">
+        <p><span class="chain">Y↑ → L↑ → r↑</span></p>
+        <p>Higher income means people want to hold more money at every interest rate, so money
+        demand shifts right, from L(r, Y<sub>1</sub>) to L(r, Y<sub>2</sub>). Supply hasn't
+        moved, so r rises from 5 to 7 (point B). On the IR graph that is a new point:
+        <strong>Y = 2,400 → r = 7</strong>.</p>
+      </div>
+      <div id="p2Num"></div>
+      <div class="reveal hidden" id="p2NumReveal">
+        <p>Lower income, lower money demand, lower r: <strong>Y = 1,600 → r = 3</strong>
+        (point C). You now have three money-market equilibria, one for each income level.</p>
+      </div>
+      <div class="q-block hidden" id="p2ConnectBlock">
+        <p class="q-text">Connect the three points on the IR graph.</p>
+        <div class="btn-row">
+          <button type="button" class="primary-btn" id="p2Connect">Connect the dots</button>
+        </div>
+        <div class="reveal hidden" id="p2ConnectReveal" aria-live="polite">
+          <p>That line is the IR curve, <strong>IR<sub>1</sub></strong>. It slopes up because
+          Y↑ → r↑.</p>
+        </div>
+      </div>
+      <div class="q-block hidden" id="p2TraceBlock">
+        <p class="q-text">Now sweep income from 1,200 to 2,800 and watch both graphs.</p>
+        <div class="btn-row">
+          <button type="button" class="primary-btn" id="p2Trace">Trace the IR curve</button>
+        </div>
+      </div>
+      <div class="hidden" id="p2KeyBlock">
+        <div class="key-card"><span class="box-tag">Key result</span>Every point on the IR curve
+          is a money-market equilibrium for one level of Y. <strong>A change in Y moves the
+          economy along the IR curve. It does not shift it.</strong></div>
+        <div id="p2Diag"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ PART 3 ═══════════════ -->
+  <div class="graph-slot" id="slot3"></div>
+  <section class="card part" id="part3" aria-labelledby="p3Title">
+    <h2 id="p3Title"><span class="part-eyebrow">Part 3</span>Shift the IR curve (a change in P)</h2>
+    <p class="locked-note" id="p3Locked">Finish Part 2 to unlock this part.</p>
+    <div class="hidden" id="p3Body">
+      <p>Back to the baseline: Y = 2,000, M = 500, P = 1.00, with IR<sub>1</sub> and its three
+      points.</p>
+      <div id="p3Pred1"></div>
+      <div id="p3Pred2"></div>
+      <div class="reveal hidden" id="p3Reveal">
+        <p><span class="chain">P↑ → M/P↓ → r↑ at every Y → IR shifts up</span></p>
+        <p>M/P falls from 500 to 400, so at Y = 2,000 the interest rate rises from 5 to 6.
+        Higher prices mean the same dollars buy less, so at <strong>every</strong> income level
+        the interest rate is higher: 3 → 4 at Y = 1,600, 5 → 6 at Y = 2,000, 7 → 8 at
+        Y = 2,400. A higher r at every Y is a whole new curve, IR<sub>2</sub>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ PART 4 ═══════════════ -->
+  <div class="graph-slot" id="slot4"></div>
+  <section class="card part" id="part4" aria-labelledby="p4Title">
+    <h2 id="p4Title"><span class="part-eyebrow">Part 4</span>Shift the IR curve (a change in M)</h2>
+    <p class="locked-note" id="p4Locked">Finish Part 3 to unlock this part.</p>
+    <div class="hidden" id="p4Body">
+      <p>Back to the baseline again: Y = 2,000, M = 500, P = 1.00, with IR<sub>1</sub>.</p>
+      <div id="p4Pred1"></div>
+      <div id="p4Pred2"></div>
+      <div class="reveal hidden" id="p4Reveal">
+        <p><span class="chain">M↑ → M/P↑ → r↓ at every Y → IR shifts down</span></p>
+        <p>More money at the same prices is more real money balances: M/P rises from 500 to 600,
+        and r at Y = 2,000 falls from 5 to 4. People will only hold the extra money at a lower
+        interest rate, and that is true at every income level: 3 → 2, 5 → 4 and 7 → 6. The whole
+        curve shifts down to IR<sub>2</sub>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ PART 5 ═══════════════ -->
+  <div class="graph-slot" id="slot5"></div>
+  <section class="card part" id="part5" aria-labelledby="p5Title">
+    <h2 id="p5Title"><span class="part-eyebrow">Part 5</span>Movement vs. shift</h2>
+    <p class="locked-note" id="p5Locked">Finish Part 4 to unlock this part.</p>
+    <div class="hidden" id="p5Body">
+      <p>Fill in the table for each change, starting from the baseline.</p>
+      <table class="sum-table" id="sumTable">
+        <caption class="sr-only">Summary: what each change does in the money market and on the IR graph</caption>
+        <thead>
+          <tr>
+            <th scope="col" id="colChange">Change</th>
+            <th scope="col" id="col-curve">Which money-market curve moves?</th>
+            <th scope="col" id="col-dir">Direction</th>
+            <th scope="col" id="col-rDir">Equilibrium r</th>
+            <th scope="col" id="col-ir">IR graph</th>
+          </tr>
+        </thead>
+        <tbody id="tblBody"></tbody>
+      </table>
+      <div class="btn-row">
+        <button type="button" class="primary-btn" id="tblCheck">Check Answer</button>
+        <button type="button" class="option-btn" id="tblSol" disabled>Show solution</button>
+      </div>
+      <div aria-live="polite" aria-atomic="true"><div id="tblFb" class="feedback hidden"></div></div>
+      <div class="key-card hidden" id="ruleCard"><span class="box-tag">Rule of thumb</span>If the
+        change is on the IR graph's axis (Y), you move along the curve. If it's anything else
+        that changes the money market (P or M), the curve shifts.</div>
+
+      <h3 id="sbTitle">Sandbox</h3>
+      <p>Change Y, M or P one step at a time and watch both graphs. The dashed curves and point A
+      show where you started; <strong>Set as new start</strong> makes the current state the new
+      starting point.</p>
+      <div class="steppers" id="steppers"></div>
+      <div class="btn-row">
+        <button type="button" class="option-btn" id="sbSetStart">Set as new start</button>
+        <button type="button" class="option-btn" id="sbReset">Reset</button>
+      </div>
+      <ul class="sb-log" id="sbLog" aria-live="polite" aria-label="Changes so far, newest first"></ul>
+
+      <h3 id="chTitle">Challenge</h3>
+      <p>Starting from Y = 2,000, M = 400, P = 0.80, raise P to 1.00. Then find the M that puts
+      the IR curve back where it started.</p>
+      <div class="btn-row">
+        <button type="button" class="primary-btn" id="chStart">Start the challenge</button>
+      </div>
+      <div aria-live="polite" aria-atomic="true"><div id="chFb" class="feedback hidden"></div></div>
+
+      <details class="hood">
+        <summary>Under the hood</summary>
+        <div class="hood-body">
+          <p>Both graphs come from one small model, so they always agree exactly.</p>
+          <p>Money demand: <span class="mono">L(r, Y) = 0.5·Y − 100·r</span></p>
+          <p>The money market clears where M/P = L(r, Y), so
+          <span class="mono">r = Y/200 − (M/P)/100</span>.</p>
+          <p>For a given M and P, that is the IR curve. Its slope, 1/200, never changes, so a
+          change in P or M moves the whole line up or down in parallel.</p>
+          <p>The notes write the interest rate rule as <span class="mono">r = cP + dY − eM</span>,
+          where c, d and e are positive constants. What matters here are the signs:
+          <strong>P +, Y +, M −</strong>. The numbers in this model are chosen to keep the graphs
+          readable; they are not estimates of c, d and e.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ═══════════════ PART 6 ═══════════════ -->
+  <div class="graph-slot" id="slot6"></div>
+  <section class="card part" id="part6" aria-labelledby="p6Title">
+    <h2 id="p6Title"><span class="part-eyebrow">Part 6</span>Practice</h2>
+    <p class="locked-note" id="p6Locked">Finish Part 2 to unlock this part.</p>
+    <div class="hidden" id="p6Body">
+      <p>Each problem gives you a starting point and a change. Work through the three steps;
+      each one unlocks the next.</p>
+      <div class="btn-row">
+        <button type="button" class="option-btn" id="p6New">New problem</button>
+      </div>
+      <p class="problem-text" id="p6Text" aria-live="polite"></p>
+      <div id="p6Steps"></div>
+      <p class="score" id="p6Score" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <!-- ═══════════════ CHECK YOUR UNDERSTANDING ═══════════════ -->
+  <section class="card" id="cyuCard" aria-labelledby="cyuTitle">
+    <h2 id="cyuTitle">Check your understanding</h2>
+    <div id="cyuRoot"></div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 002 — Principles of Macroeconomics</span>
+      <span>interactiveecon.github.io</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
+<script>
+(function(){
+'use strict';
+
+const LAB_ID    = 'money-market-ir-curve';
+const LAB_LABEL = 'From the Money Market to the IR Curve';
+
+function $(id){ return document.getElementById(id); }
+
+let _rng = null;
+function rng(){ return _rng ? _rng() : Math.random(); }
+function pick(arr){ return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function lerp(a, b, t){ return a + (b - a) * t; }
+function reduced(){
+  return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Model — the only place the formulas live.
+   Money demand L(r, Y) = 0.5·Y − 100·r. The money market clears where
+   M/P = L(r, Y), so r = Y/200 − (M/P)/100: that is the IR curve for a
+   given M and P (slope 1/200, so P and M changes are parallel shifts).
+   ───────────────────────────────────────────────────────────────── */
+const BASE = { Y: 2000, M: 500, P: 1 };
+const Y_SET = [1200, 1400, 1600, 1800, 2000, 2200, 2400, 2600, 2800];
+const M_SET = [300, 400, 500, 600, 700];
+const P_SET = [0.8, 1, 1.25];
+const R_LO = 0.5, R_HI = 9.5;          // keep r on the graph
+const model = {
+  L(r, Y){ return 0.5 * Y - 100 * r; },
+  demandR(Y, q){ return Y / 200 - q / 100; },   // demand curve solved for r
+  r(Y, mp){ return Y / 200 - mp / 100; },       // equilibrium r = the IR curve
+  IR_SLOPE: 1 / 200
+};
+function tidy(x){ return Math.round(x * 1e6) / 1e6; }
+function mpOf(s){ return tidy(s.M / s.P); }
+function rOf(s){ return tidy(model.r(s.Y, mpOf(s))); }
+function sameState(a, b){ return a.Y === b.Y && a.M === b.M && a.P === b.P; }
+
+/* What a change does. Only one of Y and M/P changes in any scenario here. */
+function classify(a, b){
+  const mpA = mpOf(a), mpB = mpOf(b), rA = rOf(a), rB = rOf(b);
+  const rDir = rB > rA + 1e-9 ? 'up' : rB < rA - 1e-9 ? 'down' : 'none';
+  if(Math.abs(mpB - mpA) > 1e-9){
+    const right = mpB > mpA;
+    return { curve: 'ms', dir: right ? 'right' : 'left', rDir,
+             ir: right ? 'shiftDown' : 'shiftUp', step1: right ? 'msR' : 'msL' };
+  }
+  if(b.Y !== a.Y){
+    const right = b.Y > a.Y;
+    return { curve: 'md', dir: right ? 'right' : 'left', rDir,
+             ir: right ? 'alongUp' : 'alongDown', step1: right ? 'mdR' : 'mdL' };
+  }
+  return { curve: 'none', dir: 'none', rDir: 'none', ir: 'none', step1: 'none' };
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Formatting
+   ───────────────────────────────────────────────────────────────── */
+function fmtR(r){ const v = Math.round(r * 100) / 100; return String(v === 0 ? 0 : v); }
+function fmtP(P){ return P.toFixed(2); }
+function fmtN(x){ return Math.round(x).toLocaleString('en-US'); }
+/* Canvas labels mark a subscript digit with '_' (IR_1); lbl() draws it small and low. */
+function demandLabel(sub){ return 'L(r, Y' + (sub ? '_' + sub : '') + ')'; }
+function supplyLabel(sub){ return sub ? '(M/P)_' + sub : 'M/P'; }
+function irLabel(sub){ return 'IR_' + sub; }
+/* Plain-text versions for screen-reader descriptions */
+function demandText(sub){ return 'money demand L(r, Y' + (sub ? ' ' + sub : '') + ')'; }
+function supplyText(sub){ return 'real money supply ' + (sub ? '(M/P) ' + sub : 'M/P'); }
+function arrowWord(d){ return d > 0 ? '↑' : '↓'; }
+const SYM = {
+  correct: '<span class="symbol" aria-hidden="true">✓</span>',
+  incorrect: '<span class="symbol" aria-hidden="true">✗</span>',
+  hint: '<span class="symbol" aria-hidden="true">?</span>',
+  info: '<span class="symbol" aria-hidden="true">=</span>'
+};
+function showFb(el, kind, html){ el.className = 'feedback ' + kind; el.innerHTML = html; }
+function focusFb(el){ el.setAttribute('tabindex', '-1'); el.focus(); }
+function announce(msg){ const a = $('announce'); a.textContent = ''; setTimeout(() => { a.textContent = msg; }, 30); }
+function parseNum(str){
+  const clean = String(str == null ? '' : str).trim().replace(/[$,%\s]/g, '').replace(/^r=/i, '');
+  if(!/^-?\d*\.?\d+$/.test(clean)) return NaN;
+  return parseFloat(clean);
+}
+
+/* Chain text for a single change (sandbox log, practice solutions). */
+function varMoves(a, b){
+  const out = [];
+  if(b.Y !== a.Y) out.push('Y' + arrowWord(b.Y - a.Y));
+  if(b.M !== a.M) out.push('M' + arrowWord(b.M - a.M));
+  if(b.P !== a.P) out.push('P' + arrowWord(b.P - a.P));
+  return out;
+}
+function chainFor(a, b){
+  const c = classify(a, b), moves = varMoves(a, b);
+  if(!moves.length) return 'No change';
+  const rPart = c.rDir === 'none' ? 'r unchanged' : 'r' + (c.rDir === 'up' ? '↑' : '↓');
+  if(c.curve === 'md') return moves.join(', ') + ' → L' + (c.dir === 'right' ? '↑' : '↓') + ' → ' + rPart + ' · moved along IR';
+  if(c.curve === 'ms') return moves.join(', ') + ' → M/P' + (c.dir === 'right' ? '↑' : '↓') + ' → ' + rPart +
+    ' · IR shifted ' + (c.ir === 'shiftUp' ? 'up' : 'down');
+  return moves.join(', ') + ' → M/P unchanged → r unchanged · IR didn\'t move';
+}
+function shiftTag(a, b){ return varMoves(a, b).filter(m => m[0] !== 'Y').join(', '); }
+
+/* ─────────────────────────────────────────────────────────────────
+   The view: everything the two canvases draw. Each part builds one of
+   these from its own progress (scene functions), and animations tween
+   its numbers frame by frame.
+   ───────────────────────────────────────────────────────────────── */
+function blank(vals){
+  return {
+    vals: { Y: vals.Y, M: vals.M, P: vals.P }, showR: true,
+    demand: null, demandGhost: null, supply: null, supplyGhost: null,
+    mmPts: [], eq: null,
+    irCurves: [], irStamps: [], irPts: [], irDot: null,
+    arrows: [], arrowTag: '', along: null, trace: null,
+    bridge: false, bridgeT: 1, bridgeY: null,
+    change: ''
+  };
+}
+let V = null;
+
+/* ─────────────────────────────────────────────────────────────────
+   Canvas drawing
+   ───────────────────────────────────────────────────────────────── */
+const INK = '#1f2937', ACCENT = '#2f5d7c', GOOD = '#155c38', IRC = '#8c4800';
+const MUTED = '#596878', GRID = '#e7dfd2', GRID2 = '#f0ebe2', AXIS = '#8c7f72', BG = '#fbf9f5';
+const Y_MAX = 10;
+const G = {
+  mm: { canvas: $('mmCanvas'), wrap: $('mmWrap'), xMax: 1000, xStep: 100,
+        xTitle: 'Real Money Balances (M/P)', yTitle: 'Interest Rate (r)' },
+  ir: { canvas: $('irCanvas'), wrap: $('irWrap'), xMax: 3000, xStep: 500,
+        xTitle: 'Aggregate Output (Income): Y', yTitle: 'Interest Rate: r' }
+};
+let _fs = 1, DPR = 1;
+const LAST = { mm: null, ir: null };
+
+function setupCanvas(canvas, wrap){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  const W = Math.round(rect.width * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){
+    canvas.width = W; canvas.height = H;
+  }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+/* Both canvases use the same padding, so a given r sits at the same height
+   in each (the r bridge depends on this). */
+function pads(){
+  return { l: Math.round(28 + 22 * _fs), r: 16, t: Math.round(10 + 16 * _fs), b: Math.round(20 + 26 * _fs) };
+}
+function makeCoords(W, H, dpr, xMax, yMax){
+  const P = pads();
+  const p = { l: P.l * dpr, r: P.r * dpr, t: P.t * dpr, b: P.b * dpr };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  return {
+    xC: x => p.l + (x / xMax) * PW,
+    yC: y => H - p.b - (y / yMax) * PH,
+    p, PW, PH, W, H, dpr
+  };
+}
+function px(n){ return n * DPR; }
+function font(weight, n){ return `${weight} ${Math.round(n * DPR * _fs)}px "Inter",sans-serif`; }
+function seg(ctx, x0, y0, x1, y1){ ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); }
+function lblParts(str){
+  return String(str).split(/(_\d)/).filter(Boolean).map(t => /^_\d$/.test(t) ? { t: t[1], sub: true } : { t, sub: false });
+}
+/* Measure a label: its box for the given anchor, alignment and baseline. */
+function lblBox(ctx, str, x, y, o){
+  o = o || {};
+  const size = o.size || 11, w = o.w || 700, parts = lblParts(str);
+  let width = 0;
+  parts.forEach(pt => { ctx.font = font(w, pt.sub ? size * 0.72 : size); pt.w = ctx.measureText(pt.t).width; width += pt.w; });
+  const h = size * DPR * _fs * 1.3, base = o.base || 'middle';
+  const x0 = o.align === 'right' ? x - width : o.align === 'center' ? x - width / 2 : x;
+  const y0 = base === 'top' ? y - px(1) : base === 'bottom' ? y - h + px(1) : y - h / 2;
+  return { x0, y0, x1: x0 + width, y1: y0 + h, parts, size, w, base };
+}
+function lbl(ctx, str, x, y, o){
+  o = o || {};
+  const b = lblBox(ctx, str, x, y, o);
+  if(o.bg){ ctx.fillStyle = o.bg; ctx.fillRect(b.x0 - px(3), b.y0, b.x1 - b.x0 + px(6), b.y1 - b.y0); }
+  ctx.fillStyle = o.color || INK;
+  ctx.textAlign = 'left'; ctx.textBaseline = b.base;
+  let cx = b.x0;
+  b.parts.forEach(pt => {
+    ctx.font = font(b.w, pt.sub ? b.size * 0.72 : b.size);
+    ctx.fillText(pt.t, cx, y + (pt.sub ? b.size * DPR * _fs * 0.3 : 0));
+    cx += pt.w;
+  });
+  return b;
+}
+function pointDot(ctx, x, y, hollow, color){
+  ctx.beginPath(); ctx.arc(x, y, px(hollow ? 4.5 : 5.5), 0, Math.PI * 2);
+  if(hollow){ ctx.fillStyle = BG; ctx.fill(); ctx.lineWidth = px(2); ctx.strokeStyle = color || INK; ctx.stroke(); }
+  else { ctx.fillStyle = color || INK; ctx.fill(); ctx.lineWidth = px(1.5); ctx.strokeStyle = '#fff'; ctx.stroke(); }
+}
+function arrowHead(ctx, x0, y0, x1, y1, color, size){
+  const a = Math.atan2(y1 - y0, x1 - x0), s = px(size || 7);
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.moveTo(x1, y1);
+  ctx.lineTo(x1 - s * Math.cos(a - 0.45), y1 - s * Math.sin(a - 0.45));
+  ctx.lineTo(x1 - s * Math.cos(a + 0.45), y1 - s * Math.sin(a + 0.45));
+  ctx.closePath(); ctx.fill();
+}
+
+function drawGrid(ctx, c, g){
+  const { p, W, H } = c;
+  ctx.setLineDash([]);
+  ctx.lineWidth = px(1);
+  ctx.strokeStyle = GRID2;
+  for(let y = 0.5; y < Y_MAX; y += 1) seg(ctx, p.l, c.yC(y), W - p.r, c.yC(y));
+  ctx.strokeStyle = GRID;
+  for(let y = 1; y <= Y_MAX; y++) seg(ctx, p.l, c.yC(y), W - p.r, c.yC(y));
+  for(let x = g.xStep; x <= g.xMax; x += g.xStep) seg(ctx, c.xC(x), p.t, c.xC(x), H - p.b);
+  ctx.strokeStyle = AXIS; ctx.lineWidth = px(1.5);
+  seg(ctx, p.l, p.t, p.l, H - p.b);
+  seg(ctx, p.l, H - p.b, W - p.r, H - p.b);
+}
+function drawTicks(ctx, c, g){
+  const { p, H } = c;
+  ctx.font = font(400, 10.5);
+  const wMax = ctx.measureText(fmtN(g.xMax)).width;
+  const sp = c.PW / (g.xMax / g.xStep);
+  const k = [1, 2, 5, 10].find(k => sp * k >= wMax + px(8)) || 10;
+  const tick = x => ({ x, o: { w: 400, size: 10.5, base: 'top', align: x === g.xMax ? 'right' : 'center', color: INK } });
+  const ticks = [];
+  for(let i = 0; i * g.xStep <= g.xMax; i++) if(i % k === 0 || i * g.xStep === g.xMax) ticks.push(tick(i * g.xStep));
+  const boxOf = t => lblBox(ctx, fmtN(t.x), c.xC(t.x), H - p.b + px(5), t.o);
+  const lastBox = boxOf(ticks[ticks.length - 1]);
+  let right = -Infinity;
+  ticks.forEach((t, j) => {
+    const b = boxOf(t), isLast = j === ticks.length - 1;
+    if(!isLast && (b.x0 < right + px(4) || b.x1 > lastBox.x0 - px(4))) return;
+    lbl(ctx, fmtN(t.x), c.xC(t.x), H - p.b + px(5), t.o);
+    right = b.x1;
+  });
+  const lh = 10.5 * DPR * _fs * 1.5, spY = c.PH / Y_MAX;
+  const ky = [1, 2, 5].find(k => spY * k >= lh) || 5;
+  for(let y = 0; y <= Y_MAX; y += ky){
+    lbl(ctx, String(y), p.l - px(6), c.yC(y), { w: 400, size: 10.5, align: 'right', bg: BG, color: INK });
+  }
+  lbl(ctx, g.xTitle, p.l + c.PW / 2, H - px(4), { w: 700, size: 11, align: 'center', base: 'bottom' });
+  lbl(ctx, g.yTitle, px(4), px(4), { w: 700, size: 11, align: 'left', base: 'top' });
+}
+function clipPlot(ctx, c){
+  const { p, W, H } = c;
+  ctx.save(); ctx.beginPath(); ctx.rect(p.l, p.t, W - p.l - p.r, H - p.t - p.b); ctx.clip();
+}
+function styleLine(ctx, color, ghost, width){
+  ctx.strokeStyle = color; ctx.lineWidth = px(width || 3);
+  ctx.globalAlpha = ghost ? 0.55 : 1;
+  ctx.setLineDash(ghost ? [px(7), px(5)] : []);
+}
+function resetLine(ctx){ ctx.globalAlpha = 1; ctx.setLineDash([]); }
+
+/* ── Money market ──────────────────────────────────────────────── */
+function demandAnchor(Y, rTarget, qMax){
+  // Point on the demand line at r = rTarget, pulled inside the plot.
+  let q = (Y / 200 - rTarget) * 100;
+  q = Math.max(0, Math.min(qMax, q));
+  return { q, r: model.demandR(Y, q) };
+}
+function drawMM(){
+  const s = setupCanvas(G.mm.canvas, G.mm.wrap);
+  if(!s) return null;
+  const { ctx, dpr, W, H } = s; DPR = dpr;
+  const c = makeCoords(W, H, dpr, G.mm.xMax, Y_MAX), { p } = c;
+  ctx.clearRect(0, 0, W, H);
+  drawGrid(ctx, c, G.mm);
+
+  clipPlot(ctx, c);
+  const supplyLine = (mp, ghost) => { styleLine(ctx, GOOD, ghost); seg(ctx, c.xC(mp), p.t, c.xC(mp), H - p.b); resetLine(ctx); };
+  const demandLine = (Y, ghost) => {
+    styleLine(ctx, ACCENT, ghost);
+    seg(ctx, c.xC(0), c.yC(model.demandR(Y, 0)), c.xC(1000), c.yC(model.demandR(Y, 1000)));
+    resetLine(ctx);
+  };
+  if(V.supplyGhost) supplyLine(V.supplyGhost.mp, true);
+  if(V.demandGhost) demandLine(V.demandGhost.Y, true);
+  if(V.supply) supplyLine(V.supply.mp, false);
+  if(V.demand) demandLine(V.demand.Y, false);
+  ctx.restore();
+
+  // r bridge: from the equilibrium to the right edge of this canvas
+  let bridgeYpx = null;
+  if(V.bridge && V.eq){
+    const x0 = c.xC(V.eq.q), y = c.yC(V.eq.r);
+    bridgeYpx = y;
+    ctx.strokeStyle = INK; ctx.lineWidth = px(2); ctx.setLineDash([px(5), px(4)]);
+    seg(ctx, x0, y, lerp(x0, W, Math.min(1, V.bridgeT * 2)), y);
+    ctx.setLineDash([]);
+  }
+  drawTicks(ctx, c, G.mm);
+
+  // Curve labels: current demand at its lower end, ghost at its upper end;
+  // supply labels at the top, on the outside of the pair.
+  // Largest q that leaves room for a label to the right of its anchor
+  const qFit = str => {
+    const b = lblBox(ctx, str, 0, 0, {});
+    return Math.max(0, (W - p.r - px(4) - (b.x1 - b.x0) - px(6) - p.l) / c.PW * G.mm.xMax);
+  };
+  if(V.demand){
+    const str = demandLabel(V.demand.sub), qm = qFit(str);
+    let a = demandAnchor(V.demand.Y, 1.3, qm);
+    const near = V.eq && Math.abs(V.eq.q - a.q) < 150 && Math.abs(V.eq.r - a.r) < 1.5;
+    if(near) a = demandAnchor(V.demand.Y, a.r + 2.5, qm);
+    lbl(ctx, str, c.xC(a.q) + px(6), c.yC(a.r) - px(4), { color: ACCENT, base: 'bottom', bg: BG });
+  }
+  if(V.demandGhost){
+    const str = demandLabel(V.demandGhost.sub);
+    const a = demandAnchor(V.demandGhost.Y, 8.7, qFit(str));
+    lbl(ctx, str, c.xC(a.q) + px(6), c.yC(a.r) - px(4), { color: ACCENT, base: 'bottom', bg: BG });
+  }
+  // Supply labels sit at the top unless a point is up there; then at the bottom.
+  const highPt = [V.eq].concat(V.mmPts).some(pt => pt && pt.r > 8.2);
+  const supY = c.yC(highPt ? 0.55 : 9.45);
+  if(V.supply){
+    const leftSide = V.supplyGhost && V.supplyGhost.mp > V.supply.mp;
+    lbl(ctx, supplyLabel(V.supply.sub), c.xC(V.supply.mp) + (leftSide ? -px(6) : px(6)), supY,
+        { color: GOOD, align: leftSide ? 'right' : 'left', bg: BG });
+  }
+  if(V.supplyGhost){
+    const leftSide = V.supply && V.supplyGhost.mp < V.supply.mp;
+    lbl(ctx, supplyLabel(V.supplyGhost.sub), c.xC(V.supplyGhost.mp) + (leftSide ? -px(6) : px(6)), supY,
+        { color: GOOD, align: leftSide ? 'right' : 'left', bg: BG });
+  }
+
+  V.mmPts.forEach(pt => {
+    const x = c.xC(pt.q), y = c.yC(pt.r);
+    pointDot(ctx, x, y, true);
+    if(pt.label) lbl(ctx, pt.label, x - px(8), y - px(7), { align: 'right', base: 'bottom', size: 12, w: 800, bg: BG });
+  });
+  if(V.eq){
+    const x = c.xC(V.eq.q), y = c.yC(V.eq.r);
+    pointDot(ctx, x, y, false);
+    if(V.eq.label) lbl(ctx, V.eq.label, x - px(8), y - px(7), { align: 'right', base: 'bottom', size: 12, w: 800, bg: BG });
+  }
+  if(bridgeYpx != null && V.bridgeT >= 0.5){
+    lbl(ctx, 'r = ' + fmtR(V.eq.r), W - px(4), bridgeYpx - px(4), { align: 'right', base: 'bottom', bg: BG, size: 11.5, w: 800 });
+  }
+  return c;
+}
+
+/* ── IR graph ──────────────────────────────────────────────────── */
+function irYat(mp, r){ return (r + mp / 100) * 200; }   // Y where IR(mp) reaches r
+function drawIR(){
+  const s = setupCanvas(G.ir.canvas, G.ir.wrap);
+  if(!s) return null;
+  const { ctx, dpr, W, H } = s; DPR = dpr;
+  const c = makeCoords(W, H, dpr, G.ir.xMax, Y_MAX), { p } = c;
+  ctx.clearRect(0, 0, W, H);
+  drawGrid(ctx, c, G.ir);
+
+  clipPlot(ctx, c);
+  if(V.trace){
+    ctx.strokeStyle = IRC; ctx.globalAlpha = 0.22; ctx.lineWidth = px(10); ctx.lineCap = 'round';
+    seg(ctx, c.xC(V.trace.from), c.yC(model.r(V.trace.from, V.trace.mp)),
+             c.xC(V.trace.to), c.yC(model.r(V.trace.to, V.trace.mp)));
+    ctx.globalAlpha = 1; ctx.lineCap = 'butt';
+  }
+  V.irCurves.forEach(cv => {
+    const frac = cv.frac == null ? 1 : cv.frac;
+    if(frac <= 0) return;
+    styleLine(ctx, IRC, cv.ghost);
+    if(cv.alpha != null) ctx.globalAlpha *= cv.alpha;
+    const Y1 = 3000 * frac;
+    seg(ctx, c.xC(0), c.yC(model.r(0, cv.mp)), c.xC(Y1), c.yC(model.r(Y1, cv.mp)));
+    resetLine(ctx);
+  });
+  V.arrows.forEach(a => {
+    if(a.t <= 0) return;
+    const x = c.xC(a.Y), y0 = c.yC(a.r0), y1 = c.yC(lerp(a.r0, a.r1, a.t));
+    const dir = Math.sign(y1 - y0) || 1, gap = px(6);
+    if(Math.abs(y1 - y0) > gap * 2){
+      ctx.strokeStyle = IRC; ctx.lineWidth = px(2);
+      seg(ctx, x, y0 + dir * gap, x, y1 - dir * gap);
+      arrowHead(ctx, x, y0, x, y1 - dir * px(4), IRC, 7);
+    }
+  });
+  if(V.along){
+    const o = px(9), a = V.along;
+    const x0 = c.xC(a.Y0) + o, y0 = c.yC(model.r(a.Y0, a.mp)) + o;
+    const x1 = lerp(x0, c.xC(a.Y1) + o, a.t), y1 = lerp(y0, c.yC(model.r(a.Y1, a.mp)) + o, a.t);
+    if(a.t > 0.05){
+      ctx.strokeStyle = IRC; ctx.lineWidth = px(2);
+      seg(ctx, x0, y0, x1, y1);
+      arrowHead(ctx, x0, y0, x1, y1, IRC, 7);
+    }
+  }
+  ctx.restore();
+
+  // r bridge: from the left edge of this canvas to the IR point
+  let bridgeYpx = null;
+  const bridgeTo = V.irDot ? V.irDot.Y : V.bridgeY;
+  if(V.bridge && V.eq && bridgeTo != null && V.bridgeT > 0.5){
+    const y = c.yC(V.eq.r);
+    bridgeYpx = y;
+    ctx.strokeStyle = INK; ctx.lineWidth = px(2); ctx.setLineDash([px(5), px(4)]);
+    seg(ctx, 0, y, lerp(0, c.xC(bridgeTo), Math.min(1, (V.bridgeT - 0.5) * 2)), y);
+    ctx.setLineDash([]);
+  }
+  drawTicks(ctx, c, G.ir);
+
+  placeIRLabels(ctx, c);
+  if(V.arrowTag && V.arrows.length){
+    const a = V.arrows[V.arrows.length - 1];
+    if(a.t > 0.3){
+      const y = c.yC(lerp(a.r0, a.r1, a.t / 2)), o = { color: IRC, size: 12, w: 800, bg: BG };
+      const fits = lblBox(ctx, V.arrowTag, c.xC(a.Y) + px(8), y, o).x1 <= W - px(3);
+      lbl(ctx, V.arrowTag, c.xC(a.Y) + (fits ? px(8) : -px(8)), y, Object.assign(o, { align: fits ? 'left' : 'right' }));
+    }
+  }
+  if(V.along && V.along.t > 0.6 && V.along.tag){
+    const a = V.along, o = px(9);
+    const xm = (c.xC(a.Y0) + c.xC(a.Y1)) / 2 + o, ym = (c.yC(model.r(a.Y0, a.mp)) + c.yC(model.r(a.Y1, a.mp))) / 2 + o;
+    lbl(ctx, a.tag, xm + px(6), ym + px(4), { color: IRC, size: 12, w: 800, base: 'top', bg: BG });
+  }
+  V.irPts.forEach(pt => {
+    const x = c.xC(pt.Y), y = c.yC(pt.r);
+    pointDot(ctx, x, y, true);
+    if(pt.label) lbl(ctx, pt.label, x - px(8), y - px(7), { align: 'right', base: 'bottom', size: 12, w: 800, bg: BG });
+  });
+  V.irStamps.forEach(st => {
+    const x = c.xC(st.Y), y = c.yC(st.r);
+    pointDot(ctx, x, y, false);
+    const fits = !st.text || lblBox(ctx, st.text, x + px(9), y + px(5), { size: 11 }).x1 <= W - px(2);
+    if(fits){
+      if(st.label) lbl(ctx, st.label, x - px(8), y - px(7), { align: 'right', base: 'bottom', size: 12, w: 800, bg: BG });
+      if(st.text) lbl(ctx, st.text, x + px(9), y + px(5), { base: 'top', size: 11, w: 700, bg: BG });
+    } else {
+      lbl(ctx, (st.label ? st.label + ': ' : '') + st.text, x - px(8), y - px(7), { align: 'right', base: 'bottom', size: 11, w: 700, bg: BG });
+    }
+  });
+  if(V.irDot){
+    const x = c.xC(V.irDot.Y), y = c.yC(V.irDot.r);
+    pointDot(ctx, x, y, false);
+    if(V.irDot.label) lbl(ctx, V.irDot.label, x - px(8), y - px(7), { align: 'right', base: 'bottom', size: 12, w: 800, bg: BG });
+  }
+  if(bridgeYpx != null && V.bridgeT >= 1){
+    lbl(ctx, 'r = ' + fmtR(V.eq.r), p.l + px(6), bridgeYpx - px(4), { base: 'bottom', bg: BG, size: 11.5, w: 800 });
+  }
+  return c;
+}
+
+/* IR curve labels. The current curve's label goes on the side away from the
+   dashed "before" curve; each label walks along its line until it finds a spot
+   clear of the points, arrows and other labels. */
+function placeIRLabels(ctx, c){
+  const { p, W, H } = c;
+  const obst = [V.irDot].concat(V.irStamps, V.irPts).filter(Boolean).map(pt => ({ x: c.xC(pt.Y), y: c.yC(pt.r) }));
+  V.arrows.forEach(a => { for(let k = 0; k <= 4; k++) obst.push({ x: c.xC(a.Y), y: c.yC(lerp(a.r0, a.r1, k / 4)) }); });
+  V.irStamps.forEach(st => { if(st.text) obst.push({ x: c.xC(st.Y) + px(60), y: c.yC(st.r) + px(12) }); });
+  const boxes = [];
+  const ghost = V.irCurves.find(cv => cv.ghost), cur = V.irCurves.find(cv => !cv.ghost);
+  const ghostAbove = ghost && cur && ghost.mp < cur.mp;   // lower M/P → higher r
+  const place = (cv, first) => {
+    const rs = [];
+    for(let r = 9.3; r >= 0.9; r -= 0.4) rs.push(r);
+    const order = first === 'above' ? rs : rs.slice().reverse();
+    const sides = first === 'above' ? ['above', 'below'] : ['below', 'above'];
+    const clearOf = b => b.x0 >= p.l + px(2) && b.x1 <= W - p.r - px(2) && b.y0 >= p.t && b.y1 <= H - p.b &&
+      obst.every(o => o.x < b.x0 - px(10) || o.x > b.x1 + px(10) || o.y < b.y0 - px(10) || o.y > b.y1 + px(10)) &&
+      boxes.every(o => b.x1 < o.x0 - px(4) || b.x0 > o.x1 + px(4) || b.y1 < o.y0 - px(2) || b.y0 > o.y1 + px(2));
+    const opts = side => side === 'above' ? { color: IRC, align: 'right', base: 'bottom', bg: BG, size: 12 }
+                                          : { color: IRC, align: 'left', base: 'top', bg: BG, size: 12 };
+    const anchor = (Y, side) => { const x = c.xC(Y), y = c.yC(model.r(Y, cv.mp));
+      return side === 'above' ? [x - px(8), y - px(3)] : [x + px(8), y + px(3)]; };
+    for(const side of sides){
+      for(const r of order){
+        const Y = irYat(cv.mp, r);
+        if(Y < 0 || Y > 3000) continue;
+        const [x, y] = anchor(Y, side), b = lblBox(ctx, cv.label, x, y, opts(side));
+        if(clearOf(b)){ boxes.push(lbl(ctx, cv.label, x, y, opts(side))); return; }
+      }
+    }
+  };
+  V.irCurves.forEach(cv => {
+    if((cv.frac != null && cv.frac < 1) || cv.label == null) return;
+    if(cv.alpha != null && cv.alpha < 0.5) return;
+    if(cv.ghost) place(cv, ghostAbove ? 'above' : 'below');
+    else place(cv, ghostAbove ? 'below' : 'above');
+  });
+}
+
+/* The r bridge across the gap between the two canvases (side-by-side only). */
+function placeGap(){
+  const gap = $('bridgeGap'), cm = LAST.mm;
+  if(!(V.bridge && V.eq && V.bridgeT >= 0.5 && cm && LAST.ir)){ gap.style.display = 'none'; return; }
+  const row = $('canvasRow').getBoundingClientRect();
+  const a = G.mm.canvas.getBoundingClientRect(), b = G.ir.canvas.getBoundingClientRect();
+  if(b.left < a.right || Math.abs(a.top - b.top) > 1 || Math.abs(a.height - b.height) > 1){ gap.style.display = 'none'; return; }
+  const y = a.top - row.top + cm.yC(V.eq.r) / cm.dpr;
+  gap.style.display = 'block';
+  gap.style.left = (a.right - row.left) + 'px';
+  gap.style.width = (b.left - a.right) + 'px';
+  gap.style.top = (y - 1) + 'px';
+}
+
+function drawAll(){
+  LAST.mm = drawMM();
+  LAST.ir = drawIR();
+  placeGap();
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Readout and screen-reader descriptions
+   ───────────────────────────────────────────────────────────────── */
+function updateReadout(){
+  const v = V.vals, mp = mpOf(v);
+  const item = (k, val) => '<span>' + k + ' = <b>' + val + '</b></span>';
+  const sep = '<span class="sep" aria-hidden="true">·</span>';
+  $('readout').innerHTML = [
+    item('Y', fmtN(v.Y)), item('M', fmtN(v.M)), item('P', fmtP(v.P)), item('M/P', fmtN(mp)),
+    item('r', V.showR ? fmtR(rOf(v)) : '?')
+  ].join(sep);
+}
+function updateBridgeText(){
+  const el = $('bridgeText');
+  if(V.bridge && V.eq && V.irDot){
+    el.textContent = 'The money market sets r = ' + fmtR(V.eq.r) + ' → plotted at Y = ' + fmtN(V.irDot.Y) + ' on the IR graph.';
+    el.classList.remove('hidden');
+  } else el.classList.add('hidden');
+}
+function demandDesc(d, ghost){
+  return (ghost ? 'Dashed, from before the change: ' : '') + demandText(d.sub) + ' for income Y = ' + fmtN(d.Y) +
+    ' slopes down, falling 1 point of r for every 100 of real balances; it reaches r = 0 at M/P = ' + fmtN(d.Y / 2) + '.';
+}
+function updateGraphDesc(){
+  const m = ['Money market: interest rate r from 0 to 10 against real money balances M/P from 0 to 1,000.'];
+  if(V.supplyGhost) m.push('Dashed, from before the change: ' + supplyText(V.supplyGhost.sub) + ', a vertical line at M/P = ' + fmtN(V.supplyGhost.mp) + '.');
+  if(V.supply) m.push(supplyText(V.supply.sub) + ' is a vertical line at M/P = ' + fmtN(V.supply.mp) + '.');
+  if(V.demandGhost) m.push(demandDesc(V.demandGhost, true));
+  if(V.demand) m.push(demandDesc(V.demand, false));
+  V.mmPts.forEach(pt => m.push('Earlier equilibrium, point ' + pt.label + ': M/P = ' + fmtN(pt.q) + ', r = ' + fmtR(pt.r) + '.'));
+  if(V.eq) m.push('Supply and demand meet' + (V.eq.label ? ' at point ' + V.eq.label : '') + ': M/P = ' + fmtN(V.eq.q) + ', r = ' + fmtR(V.eq.r) + '.');
+  else if(V.demand && V.supply) m.push('The new equilibrium is not marked yet.');
+  if(V.change) m.push(V.change);
+  $('mmDesc').textContent = m.join(' ');
+
+  const g = ['IR graph: interest rate r from 0 to 10 against income Y from 0 to 3,000.'];
+  if(!V.irCurves.length && !V.irStamps.length && !V.irDot) g.push('Nothing is plotted yet.');
+  V.irCurves.forEach(cv => {
+    g.push((cv.ghost ? 'Dashed, from before the change: ' : '') + (cv.label ? cv.label.replace(/_(\d)/g, ' $1') : 'The IR curve') +
+      ' slopes up, rising 1 point of r for every 200 of income; at Y = 2,000 it is at r = ' + fmtR(model.r(2000, cv.mp)) + '.');
+  });
+  if(V.irPts.length) g.push('Earlier points: ' + V.irPts.map(pt => (pt.label ? pt.label + ' ' : '') + '(Y = ' + fmtN(pt.Y) + ', r = ' + fmtR(pt.r) + ')').join(', ') + '.');
+  if(V.irStamps.length) g.push('Plotted points: ' + V.irStamps.map(st => (st.label ? st.label + ' ' : '') + '(Y = ' + fmtN(st.Y) + ', r = ' + fmtR(st.r) + ')').join(', ') + '.');
+  if(V.arrows.length) g.push('Arrows show each point moving ' + (V.arrows[0].r1 > V.arrows[0].r0 ? 'up' : 'down') + ' by ' + fmtR(Math.abs(V.arrows[0].r1 - V.arrows[0].r0)) + ': the IR curve shifted.');
+  if(V.along) g.push('An arrow along the curve shows the economy moving along it.');
+  if(V.irDot) g.push('Current point: Y = ' + fmtN(V.irDot.Y) + ', r = ' + fmtR(V.irDot.r) + '. The r bridge links it to the money market.');
+  if(V.change) g.push(V.change);
+  $('irDesc').textContent = g.join(' ');
+}
+
+let _textTimer;
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5,
+    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  if(!V) return;
+  drawAll();
+  updateBridgeText();
+  clearTimeout(_textTimer);
+  _textTimer = setTimeout(() => { updateReadout(); updateGraphDesc(); }, 200);
+  syncDockPadding();
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Animation: cosine ease; reduced motion jumps to the end. A sequence
+   stops as soon as the graphs are handed to another part.
+   ───────────────────────────────────────────────────────────────── */
+let animGen = 0, running = 0;
+function ease(t){ return 0.5 - 0.5 * Math.cos(Math.PI * t); }
+function cancelAnims(){ animGen++; }
+function seq(){
+  const gen = animGen;
+  const A = (dur, step) => {
+    if(gen !== animGen) return Promise.resolve(false);
+    if(reduced() || dur <= 0){ step(1); drawAll(); return Promise.resolve(true); }
+    running++;
+    return new Promise(res => {
+      let t0 = null;
+      function frame(now){
+        if(gen !== animGen){ running--; res(false); return; }
+        if(t0 === null) t0 = now;
+        const u = Math.min(1, (now - t0) / dur);
+        step(ease(u)); drawAll();
+        if(u < 1) requestAnimationFrame(frame);
+        else { running--; res(true); }
+      }
+      requestAnimationFrame(frame);
+    });
+  };
+  A.alive = () => gen === animGen;
+  A.wait = ms => (reduced() || gen !== animGen) ? Promise.resolve(gen === animGen)
+    : new Promise(res => setTimeout(() => res(gen === animGen), ms));
+  return A;
+}
+/* Finish a sequence: rebuild the part's final scene if it still owns the graphs. */
+function settle(A, part){
+  if(A.alive() && active === part){ V = SCENES[part](); redraw(); }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Question widgets
+   ───────────────────────────────────────────────────────────────── */
+function syncPressed(btns, key){
+  btns.forEach(b => {
+    const on = b.dataset.key === key;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
+function lockChoices(btns, chosen, answer, answerTag){
+  btns.forEach(b => {
+    const on = b.dataset.key === chosen, isAns = b.dataset.key === answer;
+    b.disabled = true;
+    b.classList.toggle('is-answer', isAns);
+    if(isAns){
+      const tag = document.createElement('span');
+      tag.className = 'ans-tag';
+      tag.textContent = answerTag || (on ? '✓ Your answer, correct' : '✓ Correct answer');
+      b.appendChild(tag);
+    }
+  });
+}
+function optionButtons(opts){
+  return opts.map(o => '<button type="button" class="option-btn choice" aria-pressed="false" data-key="' +
+    o.key + '"><span>' + o.html + '</span></button>').join('');
+}
+
+/* One-shot prediction: choose, Lock in, then the answer is revealed. */
+function makeLockMC(host, cfg){
+  const box = document.createElement('div');
+  box.className = 'q-block' + (cfg.hidden ? ' hidden' : '');
+  box.innerHTML =
+    '<span class="step-tag">Predict</span>' +
+    '<p class="q-text" id="' + cfg.id + 'Q">' + cfg.q + '</p>' +
+    '<div class="mc-group" role="group" aria-labelledby="' + cfg.id + 'Q">' + optionButtons(cfg.options) + '</div>' +
+    '<div class="btn-row"><button type="button" class="primary-btn" id="' + cfg.id + 'Lock" disabled>Lock in</button></div>' +
+    '<div aria-live="polite" aria-atomic="true"><div id="' + cfg.id + 'Fb" class="feedback hidden"></div></div>';
+  host.appendChild(box);
+  const btns = Array.from(box.querySelectorAll('[data-key]')), lock = $(cfg.id + 'Lock');
+  let sel = null, locked = false;
+  btns.forEach(b => b.addEventListener('click', () => {
+    if(locked) return;
+    sel = b.dataset.key; syncPressed(btns, sel); lock.disabled = false;
+  }));
+  lock.addEventListener('click', () => {
+    if(locked || sel == null) return;
+    locked = true;
+    const ok = sel === cfg.answer;
+    lockChoices(btns, sel, cfg.answer);
+    lock.disabled = true; lock.textContent = 'Locked in';
+    const fb = $(cfg.id + 'Fb');
+    showFb(fb, ok ? 'correct' : 'incorrect', ok
+      ? SYM.correct + '<strong>Right.</strong> ' + cfg.right
+      : SYM.incorrect + '<strong>Not quite.</strong> ' + ((cfg.wrong && cfg.wrong[sel]) || cfg.wrongDefault));
+    focusFb(fb);
+    cfg.onLock(ok);
+  });
+  return box;
+}
+
+/* Choice step with retries: Check Answer, targeted feedback, Show solution after 2 wrong. */
+function makeChoiceStep(host, cfg){
+  const box = document.createElement('div');
+  box.className = 'q-block' + (cfg.hidden ? ' hidden' : '');
+  box.id = cfg.id + 'Block';
+  box.innerHTML =
+    (cfg.tag ? '<span class="step-tag">' + cfg.tag + '</span>' : '') +
+    '<p class="q-text" id="' + cfg.id + 'Q">' + cfg.q + '</p>' +
+    '<div class="' + (cfg.grid ? 'choice-grid' : 'mc-group') + '" role="group" aria-labelledby="' + cfg.id + 'Q">' + optionButtons(cfg.options) + '</div>' +
+    '<div class="btn-row">' +
+      '<button type="button" class="primary-btn" id="' + cfg.id + 'Check" disabled>Check Answer</button>' +
+      '<button type="button" class="option-btn" id="' + cfg.id + 'Sol" disabled>Show solution</button></div>' +
+    '<div aria-live="polite" aria-atomic="true"><div id="' + cfg.id + 'Fb" class="feedback hidden"></div></div>';
+  host.appendChild(box);
+  const btns = Array.from(box.querySelectorAll('[data-key]'));
+  const chk = $(cfg.id + 'Check'), sol = $(cfg.id + 'Sol'), fb = $(cfg.id + 'Fb');
+  let sel = null, wrong = 0, done = false;
+  btns.forEach(b => b.addEventListener('click', () => {
+    if(done) return;
+    sel = b.dataset.key; syncPressed(btns, sel); chk.disabled = false;
+  }));
+  function finish(){
+    done = true;
+    lockChoices(btns, sel, cfg.answer);
+    chk.disabled = true; sol.disabled = true;
+    focusFb(fb);
+  }
+  chk.addEventListener('click', () => {
+    if(done || sel == null) return;
+    const r = cfg.feedback(sel);
+    if(r.ok){
+      showFb(fb, 'correct', SYM.correct + '<strong>Correct.</strong> ' + (cfg.explain || ''));
+      const first = wrong === 0;
+      finish(); cfg.onDone(first, false);
+    } else {
+      wrong++;
+      if(wrong >= 2) sol.disabled = false;
+      showFb(fb, 'incorrect', SYM.incorrect + '<strong>Not quite.</strong> ' + r.msg + ' ' +
+        (wrong >= 2 ? 'Try again, or use Show solution.' : 'Try again.'));
+    }
+  });
+  sol.addEventListener('click', () => {
+    if(done) return;
+    showFb(fb, 'info', SYM.info + '<strong>Solution.</strong> ' + cfg.solution);
+    finish(); cfg.onDone(false, true);
+  });
+  return box;
+}
+
+/* Numeric step: Check Answer; Hint after a wrong try; Show solution after 2 wrong. */
+function makeNumeric(host, cfg){
+  const box = document.createElement('div');
+  box.className = 'q-block' + (cfg.hidden ? ' hidden' : '');
+  box.id = cfg.id + 'Block';
+  box.innerHTML =
+    (cfg.tag ? '<span class="step-tag">' + cfg.tag + '</span>' : '') +
+    '<p class="q-text" id="' + cfg.id + 'Q">' + cfg.q + '</p>' +
+    '<div class="input-row"><label for="' + cfg.id + 'In">r =</label>' +
+      '<input id="' + cfg.id + 'In" class="num-input" type="text" inputmode="decimal" autocomplete="off"' +
+      ' aria-describedby="' + cfg.id + 'Q ' + cfg.id + 'Fb"/></div>' +
+    '<div class="btn-row">' +
+      '<button type="button" class="primary-btn" id="' + cfg.id + 'Check">Check Answer</button>' +
+      '<button type="button" class="option-btn" id="' + cfg.id + 'Hint" disabled>Hint</button>' +
+      '<button type="button" class="option-btn" id="' + cfg.id + 'Sol" disabled>Show solution</button></div>' +
+    '<div aria-live="polite" aria-atomic="true"><div id="' + cfg.id + 'Fb" class="feedback hidden"></div></div>';
+  host.appendChild(box);
+  const inp = $(cfg.id + 'In'), chk = $(cfg.id + 'Check'), hint = $(cfg.id + 'Hint'),
+        sol = $(cfg.id + 'Sol'), fb = $(cfg.id + 'Fb');
+  let wrong = 0, done = false;
+  function finish(){
+    done = true; inp.disabled = true; chk.disabled = true; hint.disabled = true; sol.disabled = true;
+    focusFb(fb);
+  }
+  function check(){
+    if(done) return;
+    const v = parseNum(inp.value);
+    if(isNaN(v)){ showFb(fb, 'hint', SYM.hint + 'Enter a number, like 4 or 4.5.'); return; }
+    if(Math.abs(v - cfg.answer) <= (cfg.tol || 0.05)){
+      showFb(fb, 'correct', SYM.correct + '<strong>Correct: r = ' + fmtR(cfg.answer) + '.</strong> ' + (cfg.explain || ''));
+      const first = wrong === 0;
+      finish(); cfg.onDone(first, false);
+      return;
+    }
+    wrong++;
+    hint.disabled = false;
+    if(wrong >= 2) sol.disabled = false;
+    const extra = cfg.wrongHint ? cfg.wrongHint(v) : '';
+    showFb(fb, 'incorrect', SYM.incorrect + '<strong>Not quite.</strong> ' + (extra ? extra + ' ' : '') +
+      (wrong >= 2 ? 'The hint and the solution are now available.' : 'Try again, or use the hint.'));
+  }
+  chk.addEventListener('click', check);
+  inp.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); check(); } });
+  hint.addEventListener('click', () => showFb(fb, 'hint', SYM.hint + '<strong>Hint.</strong> ' + cfg.hint));
+  sol.addEventListener('click', () => {
+    if(done) return;
+    inp.value = fmtR(cfg.answer);
+    showFb(fb, 'info', SYM.info + '<strong>Solution.</strong> ' + cfg.solution);
+    finish(); cfg.onDone(false, true);
+  });
+  return box;
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Parts: unlocking and which part owns the graphs
+   ───────────────────────────────────────────────────────────────── */
+const PART_NAMES = {
+  1: 'Part 1 · Read the money market',
+  2: 'Part 2 · Build the IR curve',
+  3: 'Part 3 · Shift the IR curve (P)',
+  4: 'Part 4 · Shift the IR curve (M)',
+  5: 'Part 5 · Sandbox',
+  6: 'Part 6 · Practice'
+};
+const unlocked = { 1: true };
+let active = 1;
+function unlock(n){
+  if(unlocked[n]) return;
+  unlocked[n] = true;
+  $('p' + n + 'Locked').classList.add('hidden');
+  $('p' + n + 'Body').classList.remove('hidden');
+  announce('Part ' + n + ' is unlocked.');
+}
+const PIN_MQ = window.matchMedia('(min-width:1000px) and (min-height:820px)');
+function activatePart(n, anchor){
+  if(!unlocked[n] || (n === active && V)) return;
+  cancelAnims();
+  active = n;
+  V = SCENES[n]();
+  $('dockStatus').textContent = 'Graphs showing: ' + PART_NAMES[n];
+  placeDock(anchor);
+  redraw();
+}
+/* Pinned (wide and tall): the dock stays at the top. Otherwise it moves to sit
+   just above the part in use, keeping whatever the student touched in place. */
+function placeDock(anchor){
+  const dock = $('graphDock');
+  const target = PIN_MQ.matches ? $('dockHome') : $('slot' + active);
+  if(dock.parentNode === target) return;
+  const ref = anchor && anchor.getBoundingClientRect && !dock.contains(anchor) ? anchor : null;
+  const before = ref ? ref.getBoundingClientRect().top : 0;
+  target.appendChild(dock);
+  if(ref){
+    const after = ref.getBoundingClientRect().top;
+    if(Math.abs(after - before) > 0.5) window.scrollBy(0, after - before);
+  }
+}
+function syncDockPadding(){
+  const home = $('dockHome');
+  const pinned = getComputedStyle(home).position === 'sticky' && home.contains($('graphDock'));
+  document.documentElement.style.scrollPaddingTop = pinned ? (home.offsetHeight + 12) + 'px' : '';
+}
+/* When pinned, the graphs follow the part being read: once the part that owns
+   them has mostly scrolled out of view, the part under the reading line takes
+   over. A part the student is working in keeps the graphs. */
+function scrollActivate(){
+  if(!PIN_MQ.matches || running) return;
+  const top = $('graphDock').getBoundingClientRect().bottom, bot = window.innerHeight;
+  const seen = n => { const r = $('part' + n).getBoundingClientRect(); return Math.max(0, Math.min(bot, r.bottom) - Math.max(top, r.top)); };
+  if(seen(active) >= 0.35 * (bot - top)) return;
+  const line = top + 0.3 * (bot - top);
+  for(let n = 1; n <= 6; n++){
+    const r = $('part' + n).getBoundingClientRect();
+    if(unlocked[n] && n !== active && r.top <= line && r.bottom >= line){ activatePart(n); return; }
+  }
+}
+let _scrollRaf = 0;
+window.addEventListener('scroll', () => {
+  if(_scrollRaf) return;
+  _scrollRaf = requestAnimationFrame(() => { _scrollRaf = 0; scrollActivate(); });
+}, { passive: true });
+/* Focus that the browser restores when the window comes back (tab switch)
+   is not the student choosing a part, so it doesn't move the graphs. */
+let _winBlurred = false;
+window.addEventListener('blur', () => { _winBlurred = true; });
+for(let n = 1; n <= 6; n++){
+  const card = $('part' + n);
+  card.addEventListener('focusin', e => {
+    if(_winBlurred){ _winBlurred = false; return; }
+    activatePart(n, e.target);
+  });
+  card.addEventListener('pointerdown', e => { _winBlurred = false; activatePart(n, e.target); });
+}
+document.addEventListener('keydown', () => { _winBlurred = false; }, true);
+
+/* ─────────────────────────────────────────────────────────────────
+   Part 1 — Read the money market
+   ───────────────────────────────────────────────────────────────── */
+const P1 = { done: false };
+function stamp(Y, r, label, withText){
+  return { Y, r, label, text: withText ? 'Y = ' + fmtN(Y) + ' → r = ' + fmtR(r) : '' };
+}
+function scene1(){
+  const v = blank(BASE);
+  v.demand = { Y: 2000, sub: '' }; v.supply = { mp: 500, sub: '' };
+  if(P1.done){
+    v.eq = { q: 500, r: 5, label: 'A' }; v.bridge = true;
+    v.irStamps = [stamp(2000, 5, 'A', true)]; v.irDot = { Y: 2000, r: 5, label: '' };
+    v.change = 'Supply and demand meet at r = 5, and the r bridge plots that rate at Y = 2,000 on the IR graph.';
+  } else {
+    v.showR = false;
+    v.change = 'Find where the two lines meet and read the interest rate.';
+  }
+  return v;
+}
+makeNumeric($('p1Num'), {
+  id: 'p1', answer: 5,
+  q: 'Where do money supply and money demand meet? What is the interest rate?',
+  wrongHint: v => Math.abs(v - 500) < 1e-9
+    ? 'That\'s the quantity of real money balances. Read the interest rate off the vertical axis.' : '',
+  hint: 'Follow the vertical supply line M/P = 500 up until it hits the downward-sloping demand line, then read across to the r axis.',
+  solution: 'Supply is vertical at M/P = 500. Demand crosses M/P = 500 at r = 5, so the interest rate is <strong>5</strong>.',
+  onDone: async () => {
+    P1.done = true;
+    $('p1Reveal').classList.remove('hidden');
+    unlock(2);
+    activatePart(1);
+    cancelAnims();
+    const A = seq();
+    V = scene1();
+    V.irStamps = []; V.irDot = null; V.bridgeY = 2000; V.bridgeT = 0;
+    await A(1300, t => { V.bridgeT = t; });
+    if(A.alive()){ V.irDot = { Y: 2000, r: 5, label: '' }; V.irStamps = [stamp(2000, 5, 'A', true)]; }
+    settle(A, 1);
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────────
+   Part 2 — Build the IR curve (a change in Y)
+   Stages: 0 start · 2 predicted (Y 2,000 → 2,400, then demand moves to
+   Y = 1,600) · 3 read r = 3 · 4 connected · 5 traced · 6 diagnosed
+   ───────────────────────────────────────────────────────────────── */
+const P2 = { stage: 0 };
+function scene2(st){
+  if(st == null) st = P2.stage;
+  const v = blank(BASE);
+  v.demand = { Y: 2000, sub: '' }; v.supply = { mp: 500, sub: '' };
+  v.eq = { q: 500, r: 5, label: 'A' }; v.bridge = true;
+  v.irStamps = [stamp(2000, 5, 'A', true)]; v.irDot = { Y: 2000, r: 5, label: '' };
+  v.change = 'Start: Y = 2,000 and r = 5.';
+  if(st >= 1){
+    v.vals.Y = 2400;
+    v.demandGhost = { Y: 2000, sub: '1' }; v.demand = { Y: 2400, sub: '2' };
+    v.mmPts = [{ q: 500, r: 5, label: 'A' }]; v.eq = { q: 500, r: 7, label: 'B' };
+    v.irStamps.push(stamp(2400, 7, 'B', true)); v.irDot = { Y: 2400, r: 7, label: '' };
+    v.change = 'Income rose from 2,000 to 2,400: money demand shifted right, r rose from 5 to 7, and the IR graph gained the point Y = 2,400, r = 7.';
+  }
+  if(st >= 2){
+    v.vals.Y = 1600;
+    v.demandGhost = { Y: 2400, sub: '2' }; v.demand = { Y: 1600, sub: '3' };
+    v.mmPts = [{ q: 500, r: 5, label: 'A' }, { q: 500, r: 7, label: 'B' }];
+    v.eq = null; v.bridge = false; v.irDot = null; v.showR = false;
+    v.change = 'Income fell to 1,600: money demand shifted left to L(r, Y 3). The new interest rate is where it crosses real money supply.';
+  }
+  if(st >= 3){
+    v.showR = true; v.eq = { q: 500, r: 3, label: 'C' }; v.bridge = true;
+    v.irStamps.push(stamp(1600, 3, 'C', true)); v.irDot = { Y: 1600, r: 3, label: '' };
+    v.change = 'At Y = 1,600 the money market sets r = 3, giving the point Y = 1,600, r = 3 on the IR graph.';
+  }
+  if(st >= 4){
+    v.irCurves = [{ mp: 500, label: irLabel(1) }];
+    v.change = 'The three points connect into IR1, an upward-sloping line.';
+  }
+  if(st >= 5){
+    v.vals.Y = 2800;
+    v.demandGhost = null; v.demand = { Y: 2800, sub: '' }; v.mmPts = [];
+    v.eq = { q: 500, r: 9, label: '' }; v.irDot = { Y: 2800, r: 9, label: '' };
+    v.trace = { mp: 500, from: 1200, to: 2800 };
+    v.change = 'Income swept from 1,200 to 2,800. Money demand slid right and r rose from 1 to 9, while the point moved along IR1. The IR curve did not shift.';
+  }
+  return v;
+}
+makeLockMC($('p2Predict'), {
+  id: 'p2Pred', answer: 'mdR',
+  q: 'Income rises to Y = 2,400. What happens in the money market?',
+  options: [
+    { key: 'msR', html: 'Money supply shifts right' },
+    { key: 'mdR', html: 'Money demand shifts right' },
+    { key: 'mdL', html: 'Money demand shifts left' },
+    { key: 'none', html: 'Nothing shifts' }
+  ],
+  right: 'With more income, people want to hold more money at every interest rate.',
+  wrong: {
+    msR: 'Income doesn\'t change M or P, so real money supply stays put. It\'s money demand that depends on income.',
+    mdL: 'Money demand depends <em>positively</em> on income: more income, more money demand.',
+    none: 'Money demand depends on income, so a change in Y moves it.'
+  },
+  onLock: async () => {
+    P2.stage = 2;
+    cancelAnims();
+    const A = seq();
+    V = scene2(1);
+    V.irStamps = [stamp(2000, 5, 'A', true)];
+    await A(1200, t => {
+      const Y = lerp(2000, 2400, t), r = model.r(Y, 500);
+      V.demand.Y = Y; V.eq = { q: 500, r, label: t >= 1 ? 'B' : '' }; V.irDot = { Y, r, label: '' };
+    });
+    if(A.alive()){ V = scene2(1); redraw(); }
+    $('p2Reveal').classList.remove('hidden');
+    await A.wait(900);
+    num2.classList.remove('hidden');
+    if(A.alive()){
+      V = scene2(2);
+      await A(1200, t => { V.demand.Y = lerp(2400, 1600, t); });
+    }
+    settle(A, 2);
+  }
+});
+const num2 = makeNumeric($('p2Num'), {
+  id: 'p2n', answer: 3, hidden: true,
+  q: 'Now income falls to Y = 1,600. The graph shows the new money demand curve, L(r, Y<sub>3</sub>). Read the new interest rate.',
+  wrongHint: v => Math.abs(v - 7) < 1e-9 ? 'That\'s the interest rate at Y = 2,400. Use the new demand curve, L(r, Y<sub>3</sub>).'
+    : Math.abs(v - 500) < 1e-9 ? 'That\'s the quantity of real money balances. Read the interest rate off the vertical axis.'
+    : Math.abs(v - 5) < 1e-9 ? 'That\'s the starting interest rate at Y = 2,000.' : '',
+  hint: 'Find where the new curve crosses the other curve, then read across to the r axis.',
+  solution: 'L(r, Y<sub>3</sub>) crosses the vertical supply line M/P = 500 at <strong>r = 3</strong>.',
+  onDone: async () => {
+    P2.stage = 3;
+    $('p2NumReveal').classList.remove('hidden');
+    $('p2ConnectBlock').classList.remove('hidden');
+    cancelAnims();
+    const A = seq();
+    V = scene2(3);
+    V.irStamps = V.irStamps.slice(0, 2);
+    await A(1200, t => {
+      const r = lerp(7, 3, t);
+      V.eq = { q: 500, r, label: t >= 1 ? 'C' : '' };
+      V.irDot = { Y: lerp(2400, 1600, t), r, label: '' };
+    });
+    settle(A, 2);
+  }
+});
+$('p2Connect').addEventListener('click', async () => {
+  if(P2.stage !== 3) return;
+  P2.stage = 4;
+  $('p2Connect').disabled = true;
+  cancelAnims();
+  const A = seq();
+  V = scene2(4);
+  V.irCurves[0].frac = 0;
+  await A(1100, t => { V.irCurves[0].frac = t; });
+  $('p2ConnectReveal').classList.remove('hidden');
+  $('p2TraceBlock').classList.remove('hidden');
+  settle(A, 2);
+  $('p2Trace').focus();
+});
+$('p2Trace').addEventListener('click', async () => {
+  if(P2.stage !== 4) return;
+  P2.stage = 5;
+  $('p2Trace').disabled = true;
+  cancelAnims();
+  const A = seq();
+  V = scene2(5);
+  const place = Y => {
+    const r = model.r(Y, 500);
+    V.vals.Y = Y; V.demand.Y = Y; V.eq = { q: 500, r, label: '' }; V.irDot = { Y, r, label: '' };
+  };
+  V.trace = null;
+  await A(600, t => place(lerp(1600, 1200, t)));
+  V.trace = { mp: 500, from: 1200, to: 1200 };
+  await A(2600, t => { const Y = lerp(1200, 2800, t); place(Y); V.trace.to = Y; });
+  $('p2KeyBlock').classList.remove('hidden');
+  settle(A, 2);
+  focusFb($('p2KeyBlock').querySelector('.key-card'));
+});
+
+/* Diagnose: a silent poll — pick the flawed statement, then reveal. */
+(function buildDiagnose(){
+  const host = $('p2Diag');
+  const STMTS = [
+    { key: '1', text: 'When Y rises, money demand rises, so r rises.',
+      why: 'Sound: this is the chain Y↑ → L↑ → r↑.' },
+    { key: '2', text: 'When Y rises, r rises, so the IR curve shifts up.', flaw: true,
+      why: 'Flawed. The conclusion about r is right (r does rise), but the reasoning about the curve is wrong. Y is on the IR graph\'s horizontal axis, so a change in Y is a movement <em>along</em> the IR curve, not a shift.' },
+    { key: '3', text: 'The IR curve slopes up because higher income means people want to hold more money.',
+      why: 'Sound: more income raises money demand, which raises r, so higher Y goes with higher r along the curve.' }
+  ];
+  host.innerHTML =
+    '<div class="q-block"><span class="step-tag">Diagnose</span>' +
+    '<p class="q-text" id="diagQ">One of these statements is flawed. Pick it silently, then reveal.</p>' +
+    '<div class="mc-group" role="group" aria-labelledby="diagQ">' +
+      STMTS.map(s => '<button type="button" class="option-btn choice" aria-pressed="false" data-key="' + s.key +
+        '"><span class="num-tag">' + s.key + '.</span><span>' + s.text + '</span></button>').join('') + '</div>' +
+    '<div class="btn-row"><button type="button" class="primary-btn" id="diagReveal" disabled>Reveal the flaw</button></div>' +
+    '<div aria-live="polite" aria-atomic="true"><div id="diagFb" class="feedback hidden"></div></div></div>';
+  const btns = Array.from(host.querySelectorAll('[data-key]'));
+  let sel = null, shown = false;
+  btns.forEach(b => b.addEventListener('click', () => {
+    if(shown) return;
+    sel = b.dataset.key; syncPressed(btns, sel); $('diagReveal').disabled = false;
+  }));
+  $('diagReveal').addEventListener('click', () => {
+    if(shown || sel == null) return;
+    shown = true;
+    btns.forEach(b => {
+      b.disabled = true;
+      if(b.dataset.key === '2'){
+        b.classList.add('is-flaw');
+        const tag = document.createElement('span'); tag.className = 'ans-tag'; tag.textContent = '✗ Flawed';
+        b.appendChild(tag);
+      }
+    });
+    $('diagReveal').disabled = true;
+    const ok = sel === '2';
+    showFb($('diagFb'), ok ? 'correct' : 'info',
+      (ok ? SYM.correct + '<strong>You found it.</strong>' : SYM.info + '<strong>Statement 2 is the flawed one.</strong>') +
+      STMTS.map(s => '<p><strong>' + s.key + '.</strong> ' + s.why + '</p>').join(''));
+    focusFb($('diagFb'));
+    P2.stage = 6;
+    unlock(3); unlock(6);
+  });
+})();
+
+/* ─────────────────────────────────────────────────────────────────
+   Parts 3 and 4 — shift the IR curve with P, then with M
+   ───────────────────────────────────────────────────────────────── */
+const IR_YS = [1600, 2000, 2400];
+const SHIFT = {
+  3: { to: { Y: 2000, M: 500, P: 1.25 }, tag: 'P↑', done: false,
+       change: 'The price level rose from 1.00 to 1.25: M/P fell from 500 to 400 and r rose from 5 to 6. On the IR graph every point moved up by 1, so the IR curve shifted up from IR1 to IR2.' },
+  4: { to: { Y: 2000, M: 600, P: 1 }, tag: 'M↑', done: false,
+       change: 'The money supply rose from 500 to 600: M/P rose from 500 to 600 and r fell from 5 to 4. On the IR graph every point moved down by 1, so the IR curve shifted down from IR1 to IR2.' }
+};
+function sceneShift(n, done){
+  const cfg = SHIFT[n];
+  if(done == null) done = cfg.done;
+  const v = blank(BASE);
+  v.demand = { Y: 2000, sub: '' }; v.supply = { mp: 500, sub: '' };
+  v.eq = { q: 500, r: 5, label: 'A' }; v.bridge = true;
+  v.irCurves = [{ mp: 500, label: irLabel(1) }];
+  v.irStamps = IR_YS.map(Y => ({ Y, r: model.r(Y, 500), label: Y === 2000 ? 'A' : '', text: '' }));
+  v.irDot = { Y: 2000, r: 5, label: '' };
+  v.change = 'Baseline: Y = 2,000, M = 500, P = 1.00, r = 5, with IR1 through (1,600, 3), (2,000, 5) and (2,400, 7).';
+  if(done){
+    const mp1 = mpOf(cfg.to), r1 = model.r(2000, mp1);
+    v.vals = { ...cfg.to };
+    v.supplyGhost = { mp: 500, sub: '1' }; v.supply = { mp: mp1, sub: '2' };
+    v.mmPts = [{ q: 500, r: 5, label: 'A' }]; v.eq = { q: mp1, r: r1, label: 'B' };
+    v.irCurves = [{ mp: 500, label: irLabel(1), ghost: true }, { mp: mp1, label: irLabel(2) }];
+    v.irPts = IR_YS.map(Y => ({ Y, r: model.r(Y, 500), label: Y === 2000 ? 'A' : '' }));
+    v.irStamps = IR_YS.map(Y => ({ Y, r: model.r(Y, mp1), label: Y === 2000 ? 'B' : '', text: '' }));
+    v.arrows = IR_YS.map(Y => ({ Y, r0: model.r(Y, 500), r1: model.r(Y, mp1), t: 1 }));
+    v.arrowTag = cfg.tag;
+    v.irDot = { Y: 2000, r: r1, label: '' };
+    v.change = cfg.change;
+  }
+  return v;
+}
+async function playShift(n){
+  const cfg = SHIFT[n], mp1 = mpOf(cfg.to);
+  cfg.done = true;
+  cancelAnims();
+  const A = seq();
+  // Money market first: M/P moves, r changes, the IR point leaves IR1.
+  V = sceneShift(n, true);
+  const fin = sceneShift(n, true);
+  V.irCurves = [{ mp: 500, label: irLabel(1) }];
+  V.irPts = []; V.irStamps = sceneShift(n, false).irStamps; V.arrows = [];
+  await A(1200, t => {
+    const mp = lerp(500, mp1, t), r = model.r(2000, mp);
+    V.supply.mp = mp; V.eq = { q: mp, r, label: t >= 1 ? 'B' : '' }; V.irDot = { Y: 2000, r, label: '' };
+  });
+  // Then every IR point moves by the same amount, and IR2 follows.
+  if(A.alive()){
+    V.irPts = fin.irPts; V.irStamps = []; V.arrowTag = cfg.tag;
+    V.arrows = fin.arrows.map(a => ({ ...a, t: 0 }));
+  }
+  await A(800, t => { V.arrows.forEach(a => { a.t = t; }); });
+  if(A.alive()){
+    V.irStamps = fin.irStamps;
+    V.irCurves = [{ mp: 500, label: irLabel(1), ghost: true }, { mp: 500, label: irLabel(2), alpha: 0 }];
+  }
+  await A(700, t => { V.irCurves[1].mp = lerp(500, mp1, t); V.irCurves[1].alpha = t; });
+  $('p' + n + 'Reveal').classList.remove('hidden');
+  settle(A, n);
+  unlock(n + 1);
+}
+function buildShiftPart(n, p1, p2){
+  makeLockMC($('p' + n + 'Pred1'), Object.assign({ id: 'p' + n + 'a', onLock: () => {
+    $('p' + n + 'Pred2').classList.remove('hidden');
+  } }, p1));
+  $('p' + n + 'Pred2').classList.add('hidden');
+  makeLockMC($('p' + n + 'Pred2'), Object.assign({ id: 'p' + n + 'b', onLock: () => playShift(n) }, p2));
+}
+buildShiftPart(3, {
+  q: 'The price level rises from 1.00 to 1.25. In the money market…', answer: 'msL',
+  options: [
+    { key: 'msL', html: 'M/P shifts left' }, { key: 'msR', html: 'M/P shifts right' },
+    { key: 'mdR', html: 'Money demand shifts right' }, { key: 'none', html: 'Nothing shifts' }
+  ],
+  right: 'M/P = 500 / 1.25 = 400, so real money supply shifts left.',
+  wrong: {
+    msR: 'Higher prices shrink real money balances. M/P = 500 / 1.25 = 400, so M/P shifts left.',
+    mdR: 'Money demand depends on r and Y, and neither changed. P changes real money supply: M/P = 500 / 1.25 = 400.',
+    none: 'M is the same, but P is larger, so M/P = 500 / 1.25 = 400. Real money supply shifts left.'
+  }
+}, {
+  q: '…and on the IR graph?', answer: 'shiftUp',
+  options: [
+    { key: 'alongUp', html: 'Move up along IR<sub>1</sub>' }, { key: 'shiftUp', html: 'IR shifts up' },
+    { key: 'shiftDown', html: 'IR shifts down' }, { key: 'none', html: 'No change' }
+  ],
+  right: 'P isn\'t on the IR graph\'s axes, so it changes r at every Y and the curve itself shifts.',
+  wrong: {
+    alongUp: 'P and M aren\'t on the IR graph\'s axes. They change r at every Y, so the curve shifts.',
+    shiftDown: 'Less real money pushes r up, not down, so the curve shifts up.',
+    none: 'r rises at every level of income, so the curve moves.'
+  }
+});
+buildShiftPart(4, {
+  q: 'The Fed increases the money supply from 500 to 600. In the money market…', answer: 'msR',
+  options: [
+    { key: 'msR', html: 'M/P shifts right' }, { key: 'msL', html: 'M/P shifts left' },
+    { key: 'mdL', html: 'Money demand shifts left' }, { key: 'none', html: 'Nothing shifts' }
+  ],
+  right: 'M/P = 600 / 1.00 = 600, so real money supply shifts right.',
+  wrong: {
+    msL: 'More money means more real money balances. M/P shifts right and r falls.',
+    mdL: 'The Fed changes the supply of money, not the demand for it. M/P = 600 / 1.00 = 600 shifts right.',
+    none: 'M rose and P didn\'t, so M/P rose from 500 to 600.'
+  }
+}, {
+  q: '…and on the IR graph?', answer: 'shiftDown',
+  options: [
+    { key: 'alongDown', html: 'Move down along IR<sub>1</sub>' }, { key: 'shiftUp', html: 'IR shifts up' },
+    { key: 'shiftDown', html: 'IR shifts down' }, { key: 'none', html: 'No change' }
+  ],
+  right: 'M isn\'t on the IR graph\'s axes, so it lowers r at every Y and the curve shifts down.',
+  wrong: {
+    alongDown: 'P and M aren\'t on the IR graph\'s axes. They change r at every Y, so the curve shifts.',
+    shiftUp: 'More real money pushes r down, not up, so the curve shifts down.',
+    none: 'r falls at every level of income, so the curve moves.'
+  }
+});
+
+/* ─────────────────────────────────────────────────────────────────
+   Part 5 — summary table
+   ───────────────────────────────────────────────────────────────── */
+const TABLE_ROWS = [
+  { id: 'Y', head: 'Y↑', sr: 'income rises', to: { Y: 2400, M: 500, P: 1 } },
+  { id: 'P', head: 'P↑', sr: 'the price level rises', to: { Y: 2000, M: 500, P: 1.25 } },
+  { id: 'M', head: 'M↑', sr: 'the money supply rises', to: { Y: 2000, M: 600, P: 1 } }
+];
+const TABLE_COLS = [
+  { key: 'curve', label: 'Which money-market curve moves?',
+    opts: [['md', 'Money demand'], ['ms', 'Real money supply (M/P)'], ['none', 'Neither']] },
+  { key: 'dir', label: 'Direction', opts: [['right', 'Right'], ['left', 'Left']] },
+  { key: 'rDir', label: 'Equilibrium r', opts: [['up', '↑ Rises'], ['down', '↓ Falls']] },
+  { key: 'ir', label: 'IR graph',
+    opts: [['alongUp', 'Move up along IR'], ['alongDown', 'Move down along IR'], ['shiftUp', 'IR shifts up'], ['shiftDown', 'IR shifts down']] }
+];
+function tableAnswer(row, col){ return classify(BASE, row.to)[col.key]; }
+const TBL = { wrong: 0, done: false };
+$('tblBody').innerHTML = TABLE_ROWS.map(row =>
+  '<tr><th scope="row" id="row' + row.id + '">' + row.head + '<span class="sr-only"> (' + row.sr + ')</span></th>' +
+  TABLE_COLS.map(col =>
+    '<td data-label="' + col.label + '"><select id="sel' + row.id + col.key + '" aria-labelledby="row' + row.id + ' col-' + col.key + '">' +
+      '<option value="">Choose…</option>' + col.opts.map(o => '<option value="' + o[0] + '">' + o[1] + '</option>').join('') +
+    '</select><span class="cell-mark" id="mark' + row.id + col.key + '"></span></td>').join('') + '</tr>').join('');
+function tableDone(){
+  TBL.done = true;
+  $('tblCheck').disabled = true; $('tblSol').disabled = true;
+  TABLE_ROWS.forEach(row => TABLE_COLS.forEach(col => { $('sel' + row.id + col.key).disabled = true; }));
+  $('ruleCard').classList.remove('hidden');
+}
+$('tblCheck').addEventListener('click', () => {
+  if(TBL.done) return;
+  let right = 0, blank = 0;
+  TABLE_ROWS.forEach(row => TABLE_COLS.forEach(col => {
+    const v = $('sel' + row.id + col.key).value, mark = $('mark' + row.id + col.key);
+    if(!v){ blank++; mark.className = 'cell-mark'; mark.textContent = ''; return; }
+    const ok = v === tableAnswer(row, col);
+    if(ok) right++;
+    mark.className = 'cell-mark ' + (ok ? 'ok' : 'no');
+    mark.textContent = ok ? '✓ Correct' : '✗ Try again';
+  }));
+  const total = TABLE_ROWS.length * TABLE_COLS.length;
+  if(blank){ showFb($('tblFb'), 'hint', SYM.hint + 'Fill in every cell first (' + blank + ' left).'); return; }
+  if(right === total){
+    showFb($('tblFb'), 'correct', SYM.correct + '<strong>All 12 cells are right.</strong> Y is the only change that moves you along the IR curve.');
+    tableDone(); focusFb($('tblFb'));
+    return;
+  }
+  TBL.wrong++;
+  if(TBL.wrong >= 2) $('tblSol').disabled = false;
+  showFb($('tblFb'), 'incorrect', SYM.incorrect + '<strong>' + right + ' of ' + total + ' cells are right.</strong> ' +
+    'Fix the cells marked ✗. ' + (TBL.wrong >= 2 ? 'Show solution is now available.' : 'Tip: the demand for money depends on Y; the supply of real money balances is M/P.'));
+});
+$('tblSol').addEventListener('click', () => {
+  if(TBL.done) return;
+  TABLE_ROWS.forEach(row => TABLE_COLS.forEach(col => {
+    const sel = $('sel' + row.id + col.key), mark = $('mark' + row.id + col.key);
+    const ans = tableAnswer(row, col), was = sel.value === ans;
+    sel.value = ans;
+    mark.className = 'cell-mark ' + (was ? 'ok' : 'no');
+    mark.textContent = was ? '✓ Correct' : '✗ Answer shown';
+  }));
+  showFb($('tblFb'), 'info', SYM.info + '<strong>Solution.</strong> Y↑ raises money demand (right), so r rises and you move up ' +
+    'along IR. P↑ lowers M/P (left), so r rises at every Y and IR shifts up. M↑ raises M/P (right), so r falls at every Y and IR shifts down.');
+  tableDone(); focusFb($('tblFb'));
+});
+
+/* ─────────────────────────────────────────────────────────────────
+   Part 5 — sandbox and challenge
+   ───────────────────────────────────────────────────────────────── */
+const S = { start: { ...BASE }, cur: { ...BASE }, log: [], challenge: 0 };
+const SB_VARS = [
+  { key: 'Y', name: 'income Y', label: 'Income Y', set: Y_SET, fmt: fmtN },
+  { key: 'M', name: 'money supply M', label: 'Money supply M', set: M_SET, fmt: fmtN },
+  { key: 'P', name: 'price level P', label: 'Price level P', set: P_SET, fmt: fmtP }
+];
+function stepState(from, key, dir){
+  const set = SB_VARS.find(v => v.key === key).set, i = set.indexOf(from[key]), j = i + dir;
+  if(i < 0 || j < 0 || j >= set.length) return null;
+  return { ...from, [key]: set[j] };
+}
+function rOnGraph(s){ const r = rOf(s); return r >= R_LO - 1e-9 && r <= R_HI + 1e-9; }
+$('steppers').innerHTML = SB_VARS.map(v =>
+  '<div class="stepper" role="group" aria-labelledby="sb' + v.key + 'Label">' +
+    '<span class="stepper-label" id="sb' + v.key + 'Label">' + v.label + '</span>' +
+    '<div class="stepper-ctl">' +
+      '<button type="button" class="option-btn" id="sb' + v.key + 'Dn" aria-label="Lower ' + v.name + '" aria-describedby="sb' + v.key + 'Note">−</button>' +
+      '<span class="stepper-val" id="sb' + v.key + 'Val"></span>' +
+      '<button type="button" class="option-btn" id="sb' + v.key + 'Up" aria-label="Raise ' + v.name + '" aria-describedby="sb' + v.key + 'Note">+</button>' +
+    '</div><span class="step-note" id="sb' + v.key + 'Note"></span></div>').join('');
+function renderSandbox(){
+  SB_VARS.forEach(v => {
+    $('sb' + v.key + 'Val').textContent = v.fmt(S.cur[v.key]);
+    const notes = [];
+    [['Dn', -1, 'lower'], ['Up', 1, 'raise']].forEach(([id, dir, word]) => {
+      const next = stepState(S.cur, v.key, dir), btn = $('sb' + v.key + id);
+      const offGraph = next && !rOnGraph(next);
+      btn.disabled = !next || offGraph;
+      if(offGraph) notes.push('Can\'t ' + word + ' ' + v.key + ': that would push r off the graph.');
+    });
+    $('sb' + v.key + 'Note').textContent = notes.join(' ');
+  });
+  $('sbLog').innerHTML = S.log.map(l => '<li>' + l + '</li>').join('');
+}
+function arrowYs(Yc, mpA, mpB){
+  return [Yc - 400, Yc, Yc + 400].filter(Y => Y > 100 && Y < 2900 &&
+    [mpA, mpB].every(mp => { const r = model.r(Y, mp); return r > 0.3 && r < 9.7; }));
+}
+/* The sandbox view: start state A dashed, current state B solid. */
+function sceneSB(){
+  const a = S.start, b = S.cur, v = blank(b);
+  const mpA = mpOf(a), mpB = mpOf(b), rA = rOf(a), rB = rOf(b);
+  const yDiff = a.Y !== b.Y, mpDiff = Math.abs(mpA - mpB) > 1e-9;
+  v.demand = { Y: b.Y, sub: yDiff ? '2' : '' };
+  if(yDiff) v.demandGhost = { Y: a.Y, sub: '1' };
+  v.supply = { mp: mpB, sub: mpDiff ? '2' : '' };
+  if(mpDiff) v.supplyGhost = { mp: mpA, sub: '1' };
+  const moved = yDiff || mpDiff;
+  if(moved) v.mmPts = [{ q: mpA, r: rA, label: 'A' }];
+  v.eq = { q: mpB, r: rB, label: moved ? 'B' : 'A' }; v.bridge = true;
+  v.irCurves = mpDiff ? [{ mp: mpA, label: irLabel(1), ghost: true }, { mp: mpB, label: irLabel(2) }]
+                      : [{ mp: mpB, label: irLabel(1) }];
+  if(moved) v.irPts = [{ Y: a.Y, r: rA, label: 'A' }];
+  v.irDot = { Y: b.Y, r: rB, label: moved ? 'B' : 'A' };
+  if(mpDiff){
+    v.arrows = arrowYs(b.Y, mpA, mpB).map(Y => ({ Y, r0: model.r(Y, mpA), r1: model.r(Y, mpB), t: 1 }));
+    v.arrowTag = shiftTag(a, b);
+  } else if(yDiff){
+    v.along = { Y0: a.Y, Y1: b.Y, mp: mpB, t: 1, tag: 'Y' + arrowWord(b.Y - a.Y) };
+  }
+  v.change = moved ? 'From A to B: ' + chainFor(a, b).replace(' · ', ', ') + '.' : 'Start: Y = ' + fmtN(b.Y) + ', r = ' + fmtR(rB) + '.';
+  return v;
+}
+async function animateSB(prev, next){
+  cancelAnims();
+  const A = seq();
+  V = sceneSB();
+  const mpP = mpOf(prev), mpN = mpOf(next), mpS = mpOf(S.start), fin = sceneSB();
+  const irMoves = Math.abs(mpP - mpN) > 1e-9;
+  const ghostIR = Math.abs(mpS - mpP) > 1e-9 || Math.abs(mpS - mpN) > 1e-9;
+  const curLabel = irLabel(Math.abs(mpS - mpN) > 1e-9 ? 2 : 1);
+  V.irCurves = (ghostIR ? [{ mp: mpS, label: irLabel(1), ghost: true }] : []).concat([{ mp: mpP, label: curLabel }]);
+  V.arrows = []; V.along = null;
+  const cur = V.irCurves[V.irCurves.length - 1];
+  await A(1200, t => {
+    const Y = lerp(prev.Y, next.Y, t), mp = lerp(mpP, mpN, t), r = model.r(Y, mp);
+    V.demand.Y = Y; V.supply.mp = mp;
+    V.eq = { q: mp, r, label: fin.eq.label }; V.irDot = { Y, r, label: fin.irDot.label };
+  });
+  if(irMoves && A.alive()){
+    V.arrowTag = shiftTag(prev, next);
+    V.arrows = arrowYs(next.Y, mpP, mpN).map(Y => ({ Y, r0: model.r(Y, mpP), r1: model.r(Y, mpN), t: 0 }));
+    await A(800, t => { V.arrows.forEach(a => { a.t = t; }); cur.mp = lerp(mpP, mpN, t); });
+  }
+  settle(A, 5);
+}
+function sbChange(key, dir){
+  const next = stepState(S.cur, key, dir);
+  if(!next || !rOnGraph(next)) return;
+  const prev = { ...S.cur };
+  S.cur = next;
+  S.log.unshift(chainFor(prev, next));
+  if(S.log.length > 6) S.log.length = 6;
+  checkChallenge();
+  renderSandbox();
+  animateSB(prev, next);
+}
+SB_VARS.forEach(v => {
+  $('sb' + v.key + 'Dn').addEventListener('click', () => sbChange(v.key, -1));
+  $('sb' + v.key + 'Up').addEventListener('click', () => sbChange(v.key, 1));
+});
+function sbRefresh(){ cancelAnims(); renderSandbox(); V = sceneSB(); redraw(); }
+$('sbSetStart').addEventListener('click', () => {
+  S.start = { ...S.cur };
+  S.log.unshift('New start: Y = ' + fmtN(S.cur.Y) + ', M = ' + fmtN(S.cur.M) + ', P = ' + fmtP(S.cur.P) + ', r = ' + fmtR(rOf(S.cur)));
+  if(S.log.length > 6) S.log.length = 6;
+  sbRefresh();
+});
+$('sbReset').addEventListener('click', () => {
+  S.start = { ...BASE }; S.cur = { ...BASE }; S.log = []; S.challenge = 0;
+  $('chFb').className = 'feedback hidden';
+  sbRefresh();
+});
+const CH_START = { Y: 2000, M: 400, P: 0.8 };
+$('chStart').addEventListener('click', () => {
+  S.start = { ...CH_START }; S.cur = { ...CH_START }; S.log = []; S.challenge = 1;
+  showFb($('chFb'), 'info', SYM.info + '<strong>Challenge started.</strong> Y = 2,000, M = 400, P = 0.80, so ' +
+    'M/P = 500 and r = 5 on IR<sub>1</sub>. Step 1: raise P to 1.00.');
+  sbRefresh();
+});
+function checkChallenge(){
+  if(!S.challenge || S.challenge === 3) return;
+  const fb = $('chFb'), mp = mpOf(S.cur);
+  if(S.cur.P === 1 && Math.abs(mp - 500) < 1e-9){
+    S.challenge = 3;
+    showFb(fb, 'correct', SYM.correct + '<strong>Solved: M = 500.</strong> M/P = 500 / 1.00 = 500, the same as ' +
+      '400 / 0.80 at the start, so r is 5 again at Y = 2,000 and the IR curve is back where it started. ' +
+      'If M and P rise by the same percentage, M/P doesn\'t change, so neither does r or the IR curve.');
+    return;
+  }
+  if(S.challenge === 1 && S.cur.P === 1){
+    S.challenge = 2;
+    showFb(fb, 'info', SYM.info + '<strong>P rose to 1.00.</strong> M/P fell to ' + fmtN(mp) + ' and r rose to ' +
+      fmtR(rOf(S.cur)) + ': the IR curve shifted up. Step 2: find the M that puts the IR curve back on IR<sub>1</sub>.');
+    return;
+  }
+  if(S.challenge === 2 && S.cur.P !== 1){
+    showFb(fb, 'hint', SYM.hint + 'Keep P at 1.00 and change M instead.');
+  } else if(S.challenge === 2){
+    showFb(fb, 'info', SYM.info + 'Now M/P = ' + fmtN(mp) + ' and r = ' + fmtR(rOf(S.cur)) + ' at Y = ' + fmtN(S.cur.Y) +
+      '. The IR curve started with M/P = 500. Keep going.');
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Part 6 — practice problems
+   ───────────────────────────────────────────────────────────────── */
+const FB = {
+  yShift: 'Y is on the IR graph\'s axis. Changing it moves you along the curve.',
+  mpAlong: 'P and M aren\'t on the IR graph\'s axes. They change r at every Y, so the curve shifts.',
+  mUp: 'More money means more real money balances. M/P shifts right and r falls.',
+  mDown: 'Less money means fewer real money balances. M/P shifts left and r rises.',
+  pUp: 'Higher prices shrink real money balances. M/P shifts left.',
+  pDown: 'Lower prices stretch real money balances further. M/P shifts right.'
+};
+function isHalf(x){ return Math.abs(x * 2 - Math.round(x * 2)) < 1e-9; }
+function goodR(r){ return r >= 1 - 1e-9 && r <= 9 + 1e-9 && isHalf(r); }
+function inRange(s){ return Y_SET.indexOf(s.Y) >= 0 && M_SET.indexOf(s.M) >= 0 && P_SET.indexOf(s.P) >= 0; }
+function problemKey(pr){ return [pr.from.Y, pr.from.M, pr.from.P, pr.to.Y, pr.to.M, pr.to.P].join('|'); }
+/* Same-M/P pairs for "both change" problems where nothing shifts. */
+const SAME_MP = [[{ M: 400, P: 0.8 }, { M: 500, P: 1 }], [{ M: 400, P: 1 }, { M: 500, P: 1.25 }]];
+function makeProblem(prevKey){
+  // Choose the kind (and, for both-change, whether M/P stays put) before the
+  // rejection loop, so rejections can't skew the mix.
+  const kind = rng() < 0.2 ? 'MP' : pick(['Y', 'M', 'P']);
+  const keepMP = kind === 'MP' && rng() < 0.3;
+  for(;;){
+    let from = { Y: pick(Y_SET), M: pick(M_SET), P: pick(P_SET) }, to = { ...from };
+    if(kind === 'Y') to.Y = from.Y + pick([-400, -200, 200, 400]);
+    else if(kind === 'M') to.M = from.M + pick([-200, -100, 100, 200]);
+    else if(kind === 'P') to.P = pick(P_SET.filter(P => P !== from.P));
+    else if(keepMP){
+      const pair = pick(SAME_MP), flip = rng() < 0.5;
+      const a = flip ? pair[1] : pair[0], b = flip ? pair[0] : pair[1];
+      from = { Y: from.Y, M: a.M, P: a.P }; to = { Y: from.Y, M: b.M, P: b.P };
+    } else {
+      to.M = from.M + pick([-200, -100, 100, 200]);
+      to.P = pick(P_SET.filter(P => P !== from.P));
+    }
+    if(!inRange(from) || !inRange(to)) continue;
+    const r0 = rOf(from), r1 = rOf(to);
+    if(!goodR(r0) || !goodR(r1)) continue;
+    const pr = { kind, from, to, r0, r1, cls: classify(from, to) };
+    if(prevKey && problemKey(pr) === prevKey) continue;
+    return pr;
+  }
+}
+function problemText(pr){
+  const a = pr.from, b = pr.to;
+  const yT = () => 'Income ' + (b.Y > a.Y ? 'rises' : 'falls') + ' from ' + fmtN(a.Y) + ' to ' + fmtN(b.Y) + '.';
+  const mT = () => 'the Fed ' + (b.M > a.M ? 'raises' : 'cuts') + ' the money supply from ' + fmtN(a.M) + ' to ' + fmtN(b.M);
+  const pT = () => 'the price level ' + (b.P > a.P ? 'rises' : 'falls') + ' from ' + fmtP(a.P) + ' to ' + fmtP(b.P);
+  const cap = s => s[0].toUpperCase() + s.slice(1);
+  if(pr.kind === 'Y') return yT();
+  if(pr.kind === 'M') return cap(mT()) + '.';
+  if(pr.kind === 'P') return cap(pT()) + '.';
+  return cap(pT()) + ', and ' + mT() + '.';
+}
+const STEP1_OPTS = [
+  { key: 'mdR', html: 'Money demand shifts right' }, { key: 'mdL', html: 'Money demand shifts left' },
+  { key: 'msR', html: 'M/P shifts right' }, { key: 'msL', html: 'M/P shifts left' },
+  { key: 'none', html: 'Nothing moves' }
+];
+const STEP3_OPTS = [
+  { key: 'alongUp', html: 'Move up along the IR curve' }, { key: 'alongDown', html: 'Move down along the IR curve' },
+  { key: 'shiftUp', html: 'The IR curve shifts up' }, { key: 'shiftDown', html: 'The IR curve shifts down' },
+  { key: 'none', html: 'No change' }
+];
+const OPT_NAME = {};
+STEP1_OPTS.concat(STEP3_OPTS).forEach(o => { if(!OPT_NAME[o.key]) OPT_NAME[o.key] = o.html; });
+function step1Feedback(pr, choice){
+  const c = pr.cls;
+  if(choice === c.step1) return { ok: true, msg: '' };
+  const a = pr.from, b = pr.to, isMS = choice === 'msR' || choice === 'msL', isMD = choice === 'mdR' || choice === 'mdL';
+  let msg;
+  if(pr.kind === 'Y'){
+    if(isMD) msg = b.Y > a.Y ? 'Higher income means people want to hold more money at every r, so money demand shifts right.'
+                             : 'Lower income means people want to hold less money at every r, so money demand shifts left.';
+    else if(choice === 'none') msg = 'Money demand depends on income, so a change in Y moves it.';
+    else msg = 'Y isn\'t part of M/P. Income changes how much money people want to hold, so money demand moves.';
+  } else if(pr.kind === 'M'){
+    if(isMS) msg = b.M > a.M ? FB.mUp : FB.mDown;
+    else if(choice === 'none') msg = 'M changed and P didn\'t, so M/P changed.';
+    else msg = 'The Fed changes the supply of money, not the demand for it. Look at M/P.';
+  } else if(pr.kind === 'P'){
+    if(isMS) msg = b.P > a.P ? FB.pUp : FB.pDown;
+    else if(choice === 'none') msg = 'P changed and M didn\'t, so M/P changed.';
+    else msg = 'Money demand L(r, Y) depends on r and Y. A change in P changes real money supply, M/P.';
+  } else {
+    const mpA = mpOf(a), mpB = mpOf(b);
+    if(c.step1 === 'none') msg = 'M/P = ' + fmtN(a.M) + ' / ' + fmtP(a.P) + ' = ' + fmtN(mpA) + ' before and ' + fmtN(b.M) + ' / ' +
+      fmtP(b.P) + ' = ' + fmtN(mpB) + ' after. M and P changed by the same percentage, so nothing moves.';
+    else if(isMD) msg = 'Neither M nor P affects money demand. Compute M/P before and after.';
+    else msg = 'Compute M/P before and after: ' + fmtN(mpA) + ' → ' + fmtN(mpB) + ', so M/P shifts ' + c.dir + '.';
+  }
+  return { ok: false, msg };
+}
+function step3Feedback(pr, choice){
+  const c = pr.cls;
+  if(choice === c.ir) return { ok: true, msg: '' };
+  const along = choice === 'alongUp' || choice === 'alongDown', shift = choice === 'shiftUp' || choice === 'shiftDown';
+  let msg;
+  if(c.curve === 'md'){
+    if(shift) msg = FB.yShift;
+    else if(along) msg = 'Right idea, wrong direction: r ' + (c.rDir === 'up' ? 'rose' : 'fell') + ' as Y ' + (pr.to.Y > pr.from.Y ? 'rose' : 'fell') + '.';
+    else msg = 'Y and r both changed, so the point on the IR graph changed. Y is on the axis, so you move along the curve.';
+  } else if(c.curve === 'ms'){
+    if(along) msg = FB.mpAlong;
+    else if(shift) msg = 'r ' + (c.rDir === 'up' ? 'rose' : 'fell') + ' at every Y, so the IR curve shifts ' + (c.rDir === 'up' ? 'up' : 'down') + '.';
+    else msg = 'M/P changed, so r changed at every Y. The IR curve shifts.';
+  } else {
+    msg = 'M/P didn\'t change, so r is the same at every Y. The IR curve doesn\'t move' + (along ? ', and neither Y nor r changed.' : '.');
+  }
+  return { ok: false, msg };
+}
+function step1Solution(pr){
+  const c = pr.cls, a = pr.from, b = pr.to;
+  if(c.curve === 'md') return 'Income changes money demand: <strong>' + OPT_NAME[c.step1] + '</strong>. M/P stays at ' + fmtN(mpOf(a)) + '.';
+  if(c.curve === 'ms') return 'M/P = ' + fmtN(a.M) + ' / ' + fmtP(a.P) + ' = ' + fmtN(mpOf(a)) + ' before and ' + fmtN(b.M) + ' / ' + fmtP(b.P) +
+    ' = ' + fmtN(mpOf(b)) + ' after: <strong>' + OPT_NAME[c.step1] + '</strong>.';
+  return 'M/P = ' + fmtN(mpOf(a)) + ' before and after, and Y didn\'t change: <strong>nothing moves</strong>.';
+}
+function step3Solution(pr){
+  const c = pr.cls;
+  const chain = '<span class="chain">' + chainFor(pr.from, pr.to) + '</span> ';
+  if(c.curve === 'md') return chain + 'Y is on the IR graph\'s axis, so the economy <strong>' + OPT_NAME[c.ir].toLowerCase() + '</strong>.';
+  if(c.curve === 'ms') return chain + 'M/P changed, so r ' + (c.rDir === 'up' ? 'rose' : 'fell') + ' at every Y: <strong>' + OPT_NAME[c.ir].toLowerCase() + '</strong>.';
+  return chain + 'M/P and Y are unchanged, so r is unchanged at every Y: <strong>no change</strong>.';
+}
+
+const PR = { prob: null, stage: 0, firstAll: true, completed: 0, perfect: 0 };
+/* Stage 0: start · 1: curve moved · 2: new equilibrium · 3: IR result */
+function scene6(){
+  const pr = PR.prob, a = pr.from, b = pr.to, c = pr.cls, k = PR.stage;
+  const mpA = mpOf(a), mpB = mpOf(b), rA = pr.r0, rB = pr.r1;
+  const v = blank(k >= 1 ? b : a);
+  v.demand = { Y: a.Y, sub: '' }; v.supply = { mp: mpA, sub: '' };
+  v.eq = { q: mpA, r: rA, label: 'A' }; v.bridge = true;
+  v.irCurves = [{ mp: mpA, label: irLabel(1) }];
+  v.irDot = { Y: a.Y, r: rA, label: 'A' };
+  v.change = 'Start: Y = ' + fmtN(a.Y) + ', M/P = ' + fmtN(mpA) + ', r = ' + fmtR(rA) + '. ' + problemText(pr);
+  if(k >= 1){
+    if(c.curve === 'md'){ v.demandGhost = { Y: a.Y, sub: '1' }; v.demand = { Y: b.Y, sub: '2' }; }
+    if(c.curve === 'ms'){ v.supplyGhost = { mp: mpA, sub: '1' }; v.supply = { mp: mpB, sub: '2' }; }
+    v.mmPts = [{ q: mpA, r: rA, label: 'A' }]; v.eq = null; v.bridge = false; v.showR = false;
+    v.irPts = [{ Y: a.Y, r: rA, label: 'A' }]; v.irDot = null;
+    v.change = c.curve === 'md' ? 'Money demand shifted ' + c.dir + '. The new equilibrium is not marked yet.'
+      : c.curve === 'ms' ? 'Real money supply shifted ' + c.dir + ' to M/P = ' + fmtN(mpB) + '. The new equilibrium is not marked yet.'
+      : 'Neither curve moved: M/P is still ' + fmtN(mpB) + '.';
+  }
+  if(k >= 2){
+    const same = c.curve === 'none';
+    v.showR = true; v.bridge = true;
+    v.eq = { q: mpB, r: rB, label: same ? 'A = B' : 'B' }; v.irDot = { Y: b.Y, r: rB, label: same ? 'A = B' : 'B' };
+    if(same){ v.mmPts = []; v.irPts = []; }
+    v.change = 'New equilibrium: r = ' + fmtR(rB) + ' at Y = ' + fmtN(b.Y) + '.';
+  }
+  if(k >= 3){
+    if(c.curve === 'ms'){
+      v.irCurves = [{ mp: mpA, label: irLabel(1), ghost: true }, { mp: mpB, label: irLabel(2) }];
+      v.arrows = arrowYs(a.Y, mpA, mpB).map(Y => ({ Y, r0: model.r(Y, mpA), r1: model.r(Y, mpB), t: 1 }));
+      v.arrowTag = shiftTag(a, b);
+    } else if(c.curve === 'md'){
+      v.along = { Y0: a.Y, Y1: b.Y, mp: mpA, t: 1, tag: 'Y' + arrowWord(b.Y - a.Y) };
+    }
+    v.change = chainFor(a, b).replace(' · ', ', ') + '.';
+  }
+  return v;
+}
+function renderScore(){
+  $('p6Score').textContent = 'Problems completed: ' + PR.completed + ' · All steps right on the first try: ' + PR.perfect;
+}
+function newProblem(){
+  PR.prob = makeProblem(PR.prob ? problemKey(PR.prob) : null);
+  PR.stage = 0; PR.firstAll = true;
+  const pr = PR.prob;
+  $('p6Text').innerHTML = 'Start: Y = ' + fmtN(pr.from.Y) + ', M = ' + fmtN(pr.from.M) + ', P = ' + fmtP(pr.from.P) +
+    ', so M/P = ' + fmtN(mpOf(pr.from)) + ' and r = ' + fmtR(pr.r0) + ' (point A). <strong>' + problemText(pr) + '</strong>';
+  const host = $('p6Steps');
+  host.innerHTML = '';
+  makeChoiceStep(host, {
+    id: 'p6s1', tag: 'Step 1', grid: true, answer: pr.cls.step1,
+    q: 'Which curve moves in the money market, and which way?',
+    options: STEP1_OPTS, feedback: k => step1Feedback(pr, k), solution: step1Solution(pr),
+    explain: step1Solution(pr),
+    onDone: (first) => {
+      if(!first) PR.firstAll = false;
+      PR.stage = 1;
+      $('p6s2Block').classList.remove('hidden');
+      play6(1);
+    }
+  });
+  makeNumeric(host, {
+    id: 'p6s2', tag: 'Step 2', hidden: true, answer: pr.r1,
+    q: 'Read the new equilibrium interest rate.',
+    wrongHint: v => Math.abs(v - pr.r0) < 1e-9 && pr.r0 !== pr.r1
+      ? 'That\'s the starting interest rate at point A. Find where the new curve crosses the other curve.' : '',
+    hint: 'Find where the new curve crosses the other curve, then read across to the r axis.',
+    solution: 'r = Y/200 − (M/P)/100 = ' + fmtN(pr.to.Y) + '/200 − ' + fmtN(mpOf(pr.to)) + '/100 = <strong>' + fmtR(pr.r1) + '</strong>.',
+    onDone: (first) => {
+      if(!first) PR.firstAll = false;
+      PR.stage = 2;
+      $('p6s3Block').classList.remove('hidden');
+      play6(2);
+    }
+  });
+  makeChoiceStep(host, {
+    id: 'p6s3', tag: 'Step 3', grid: true, hidden: true, answer: pr.cls.ir,
+    q: 'What happens on the IR graph?',
+    options: STEP3_OPTS, feedback: k => step3Feedback(pr, k), solution: step3Solution(pr),
+    explain: step3Solution(pr),
+    onDone: (first) => {
+      if(!first) PR.firstAll = false;
+      PR.stage = 3;
+      PR.completed++;
+      if(PR.firstAll) PR.perfect++;
+      renderScore();
+      play6(3);
+    }
+  });
+  if(active === 6){ cancelAnims(); V = scene6(); redraw(); }
+}
+async function play6(k){
+  activatePart(6);
+  cancelAnims();
+  const A = seq(), pr = PR.prob, a = pr.from, b = pr.to, c = pr.cls;
+  const mpA = mpOf(a), mpB = mpOf(b);
+  V = scene6();
+  if(k === 1 && c.curve !== 'none'){
+    await A(1200, t => {
+      if(c.curve === 'md') V.demand.Y = lerp(a.Y, b.Y, t);
+      else V.supply.mp = lerp(mpA, mpB, t);
+    });
+  } else if(k === 2){
+    await A(1200, t => {
+      const r = lerp(pr.r0, pr.r1, t);
+      V.eq = { q: lerp(mpA, mpB, t), r, label: t >= 1 ? V.eq.label : '' };
+      V.irDot = { Y: lerp(a.Y, b.Y, t), r, label: t >= 1 ? V.irDot.label : '' };
+    });
+  } else if(k === 3 && c.curve === 'ms'){
+    const cur = V.irCurves[1];
+    V.arrows.forEach(ar => { ar.t = 0; });
+    await A(800, t => { V.arrows.forEach(ar => { ar.t = t; }); cur.mp = lerp(mpA, mpB, t); });
+  } else if(k === 3 && c.curve === 'md'){
+    await A(800, t => { V.along.t = t; });
+  }
+  settle(A, 6);
+}
+$('p6New').addEventListener('click', () => { newProblem(); $('p6s1Q').focus(); });
+
+/* ─────────────────────────────────────────────────────────────────
+   Check your understanding (recorded to Session)
+   ───────────────────────────────────────────────────────────────── */
+const QUESTIONS = [
+  { prompt: 'Income rises. On the IR graph, the economy:',
+    options: [
+      { text: 'moves up along the IR curve.', correct: true },
+      { text: 'stays put while the IR curve shifts up.', fb: 'Y is on the IR graph\'s horizontal axis, so a change in Y is a movement along the curve, not a shift.' },
+      { text: 'stays put while the IR curve shifts down.', fb: 'A change in Y moves you along the curve, and higher income raises r rather than lowering it.' },
+      { text: 'moves down along the IR curve.', fb: 'Right idea (a movement along), wrong direction: higher income raises money demand, so r rises.' }
+    ],
+    hint: 'Is Y on one of the IR graph\'s axes? And what does higher income do to money demand?',
+    solution: 'Y↑ → L↑ → r↑. Y is on the IR graph\'s horizontal axis, so the economy moves <strong>up along</strong> the IR curve to a point with higher Y and higher r. The curve itself doesn\'t shift.' },
+  { prompt: 'The Fed increases the money supply. Which is true?',
+    options: [
+      { text: 'M/P shifts right, r falls and the IR curve shifts down.', correct: true },
+      { text: 'M/P shifts right, r falls, and the economy moves down along the IR curve.', fb: 'M isn\'t on the IR graph\'s axes, so it changes r at every Y: the curve shifts.' },
+      { text: 'Money demand shifts left, r falls and the IR curve shifts down.', fb: 'The Fed changes supply, not demand.' },
+      { text: 'M/P shifts left, r rises and the IR curve shifts up.', fb: 'More money means more real money balances: M/P shifts right and r falls.' }
+    ],
+    hint: 'Which money-market line does the Fed control? Is M on either axis of the IR graph?',
+    solution: 'M↑ → M/P↑ → r↓. The Fed changes supply, so M/P shifts right and r falls. M isn\'t on the IR graph\'s axes, so r is lower at every Y and the IR curve <strong>shifts down</strong>.' },
+  { prompt: 'Prices rise 10% and the Fed raises the money supply 10%. What happens to the IR curve?',
+    options: [
+      { text: 'It doesn\'t move.', correct: true },
+      { text: 'It shifts up.', fb: 'That ignores the Fed\'s increase in M.' },
+      { text: 'It shifts down.', fb: 'That ignores the rise in P.' },
+      { text: 'The economy moves along it.', fb: 'Y hasn\'t changed, and neither P nor M is on the IR graph\'s axes. Check what happens to M/P.' }
+    ],
+    hint: 'What happens to M/P when M and P both rise by 10%?',
+    solution: 'M/P is unchanged: (1.1·M)/(1.1·P) = M/P. So r is unchanged at every Y, and the IR curve <strong>doesn\'t move</strong>.' }
+];
+const cyu = QUESTIONS.map(() => ({ sel: null, attempts: 0, wrong: 0, firstAns: '', firstOk: false, lastAns: '', lastOk: false, order: [] }));
+function buildCYU(){
+  const root = $('cyuRoot');
+  root.innerHTML = '';
+  QUESTIONS.forEach((q, i) => {
+    const s = cyu[i], pid = 'cyuP' + i;
+    s.order = shuffle(q.options.map((_, j) => j));
+    const wrap = document.createElement('div');
+    wrap.className = 'cyu-q';
+    wrap.innerHTML =
+      '<p class="cyu-prompt" id="' + pid + '">' + (i + 1) + '. ' + q.prompt + '</p>' +
+      '<div class="mc-group" role="group" aria-labelledby="' + pid + '">' +
+        s.order.map((j, pos) => '<button type="button" class="option-btn choice" aria-pressed="false" data-key="' + j + '">' +
+          '<span class="num-tag">' + String.fromCharCode(97 + pos) + ')</span><span>' + q.options[j].text + '</span></button>').join('') +
+      '</div><div class="btn-row">' +
+        '<button type="button" class="primary-btn" id="cyuCheck' + i + '">Check Answer</button>' +
+        '<button type="button" class="option-btn" id="cyuHint' + i + '" disabled>Show Hint</button>' +
+        '<button type="button" class="option-btn" id="cyuSol' + i + '" disabled>Show Worked Solution</button></div>' +
+      '<div aria-live="polite" aria-atomic="true"><div id="cyuFb' + i + '" class="feedback hidden"></div></div>';
+    root.appendChild(wrap);
+    const btns = Array.from(wrap.querySelectorAll('[data-key]'));
+    btns.forEach(b => b.addEventListener('click', () => { s.sel = +b.dataset.key; syncPressed(btns, b.dataset.key); }));
+    $('cyuCheck' + i).addEventListener('click', () => checkCYU(i, btns));
+    $('cyuHint' + i).addEventListener('click', () => showFb($('cyuFb' + i), 'hint', SYM.hint + '<strong>Hint.</strong> ' + q.hint));
+    $('cyuSol' + i).addEventListener('click', () => showFb($('cyuFb' + i), 'info', SYM.info + '<strong>Worked solution.</strong> ' + q.solution));
+  });
+}
+function checkCYU(i, btns){
+  const q = QUESTIONS[i], s = cyu[i], fb = $('cyuFb' + i);
+  if(s.sel == null){ showFb(fb, 'hint', SYM.hint + 'Choose an answer first.'); return; }
+  const o = q.options[s.sel], ok = !!o.correct;
+  s.attempts++;
+  if(s.attempts === 1){ s.firstAns = o.text; s.firstOk = ok; }
+  s.lastAns = o.text; s.lastOk = ok;
+  if(ok){
+    showFb(fb, 'correct', SYM.correct + '<strong>Correct.</strong> ' + q.solution);
+    $('cyuCheck' + i).disabled = true; $('cyuHint' + i).disabled = true; $('cyuSol' + i).disabled = true;
+    lockChoices(btns, String(s.sel), String(q.options.findIndex(x => x.correct)));
+    focusFb(fb);
+  } else {
+    s.wrong++;
+    $('cyuHint' + i).disabled = false;
+    if(s.wrong >= 2) $('cyuSol' + i).disabled = false;
+    showFb(fb, 'incorrect', SYM.incorrect + '<strong>Not quite.</strong> ' + (o.fb || '') + ' ' +
+      (s.wrong >= 2 ? 'The hint and the worked solution are now available.' : 'Try again, or use the hint.'));
+  }
+  recordSession(i);
+}
+function recordSession(i){
+  const q = QUESTIONS[i], s = cyu[i];
+  if(window.Session && Session.recordQuestion)
+    Session.recordQuestion(LAB_ID, i, q.prompt, s.firstAns, s.firstOk, s.lastAns, s.lastOk);
+  if(cyu.every(c => c.attempts > 0) && window.Session && Session.recordLabDone){
+    const first = cyu.filter(c => c.firstOk).length;
+    const fin = cyu.filter(c => c.lastOk).length;
+    Session.recordLabDone(LAB_ID, LAB_LABEL, first, fin, QUESTIONS.length);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Params
+   ───────────────────────────────────────────────────────────────── */
+const SCENES = { 1: scene1, 2: () => scene2(), 3: () => sceneShift(3), 4: () => sceneShift(4), 5: sceneSB, 6: scene6 };
+function generateParams(){
+  if(window.Session && Session.rngForLab) _rng = Session.rngForLab(LAB_ID);
+  buildCYU();
+  newProblem();
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Self-test (?selftest)
+   ───────────────────────────────────────────────────────────────── */
+function selfTest(){
+  const fails = [];
+  const near = (a, b) => Math.abs(a - b) < 1e-9;
+  const eq = (label, got, want) => { if(!near(got, want)) fails.push(label + ': got ' + got + ', want ' + want); };
+  const is = (label, cond) => { if(!cond) fails.push(label); };
+  // Money-market equilibrium found independently: bisection on L(r, Y) = M/P.
+  const mmR = (Y, mp) => { let lo = -50, hi = 50; for(let i = 0; i < 200; i++){ const m = (lo + hi) / 2; if(model.L(m, Y) > mp) lo = m; else hi = m; } return (lo + hi) / 2; };
+  const near6 = (a, b) => Math.abs(a - b) < 1e-6;
+
+  // Baseline and Parts 1–4
+  eq('baseline M/P', mpOf(BASE), 500); eq('baseline r', rOf(BASE), 5); is('baseline r via money market', near6(mmR(2000, 500), 5));
+  eq('Part 2: Y = 2,400', rOf({ Y: 2400, M: 500, P: 1 }), 7);
+  eq('Part 2: Y = 1,600', rOf({ Y: 1600, M: 500, P: 1 }), 3);
+  eq('Part 3: M/P at P = 1.25', mpOf({ Y: 2000, M: 500, P: 1.25 }), 400);
+  [[1600, 4], [2000, 6], [2400, 8]].forEach(([Y, r]) => eq('Part 3 IR point Y=' + Y, model.r(Y, 400), r));
+  [[1600, 2], [2000, 4], [2400, 6]].forEach(([Y, r]) => eq('Part 4 IR point Y=' + Y, model.r(Y, mpOf({ Y, M: 600, P: 1 })), r));
+  const s3 = sceneShift(3, true), s4 = sceneShift(4, true);
+  is('Part 3 scene points', s3.irStamps.map(s => s.r).join() === '4,6,8' && s3.supply.mp === 400);
+  is('Part 4 scene points', s4.irStamps.map(s => s.r).join() === '2,4,6' && s4.supply.mp === 600);
+  const s2 = scene2(3);
+  is('Part 2 scene stamps', s2.irStamps.map(s => s.Y + ':' + s.r).join() === '2000:5,2400:7,1600:3');
+
+  // Challenge: (M 400, P 0.80) and (M 500, P 1.00) give the same IR curve
+  is('challenge same M/P', near(mpOf({ Y: 0, M: 400, P: 0.8 }), mpOf({ Y: 0, M: 500, P: 1 })));
+  for(let Y = 0; Y <= 3000; Y += 100) eq('challenge IR at Y=' + Y, model.r(Y, mpOf({ M: 400, P: 0.8 })), model.r(Y, mpOf({ M: 500, P: 1 })));
+  is('challenge r after P rises', near(rOf({ Y: 2000, M: 400, P: 1 }), 6));
+
+  // 1,000 random states: bridge consistency, Y never shifts IR, constant slope
+  const saved = _rng; _rng = null;
+  for(let n = 0; n < 1000; n++){
+    const s = { Y: pick(Y_SET), M: pick(M_SET), P: pick(P_SET) }, mp = mpOf(s);
+    is('bridge ' + JSON.stringify(s), near6(mmR(s.Y, mp), model.r(s.Y, mp)));
+    const slope = (model.r(3000, mp) - model.r(0, mp)) / 3000;
+    is('slope ' + JSON.stringify(s), near(slope, model.IR_SLOPE));
+    const s2b = { ...s, Y: pick(Y_SET) };
+    is('Y change keeps IR ' + JSON.stringify(s), near(model.r(0, mpOf(s2b)), model.r(0, mp)));
+    if(s2b.Y !== s.Y) is('Y change classified as along', classify(s, s2b).curve === 'md' && classify(s, s2b).ir.indexOf('along') === 0);
+  }
+
+  // Sandbox: a stepper is disabled exactly when the step leaves the ranges or r's [0.5, 9.5]
+  Y_SET.forEach(Y => M_SET.forEach(M => P_SET.forEach(P => {
+    const s = { Y, M, P };
+    SB_VARS.forEach(v => [-1, 1].forEach(d => {
+      const nx = stepState(s, v.key, d);
+      if(nx) is('step range ' + JSON.stringify(nx), inRange(nx));
+    }));
+  })));
+
+  // 1,000 New problem draws
+  let prev = null, both = 0, same = 0;
+  const kinds = { Y: 0, M: 0, P: 0, MP: 0 };
+  for(let n = 0; n < 1000; n++){
+    const pr = makeProblem(prev ? problemKey(prev) : null), tag = 'problem ' + n + ' ' + problemKey(pr);
+    kinds[pr.kind]++;
+    is(tag + ' ranges', inRange(pr.from) && inRange(pr.to));
+    is(tag + ' r multiples of 0.5 in [1, 9]', goodR(pr.r0) && goodR(pr.r1));
+    is(tag + ' r matches model', near(pr.r0, rOf(pr.from)) && near(pr.r1, rOf(pr.to)));
+    is(tag + ' no repeat', !prev || problemKey(prev) !== problemKey(pr));
+    if(pr.kind === 'Y') is(tag + ' Y step', [200, 400].indexOf(Math.abs(pr.to.Y - pr.from.Y)) >= 0 && pr.to.M === pr.from.M && pr.to.P === pr.from.P);
+    if(pr.kind === 'M') is(tag + ' M step', [100, 200].indexOf(Math.abs(pr.to.M - pr.from.M)) >= 0 && pr.to.Y === pr.from.Y && pr.to.P === pr.from.P);
+    if(pr.kind === 'P') is(tag + ' P step', pr.to.P !== pr.from.P && pr.to.Y === pr.from.Y && pr.to.M === pr.from.M);
+    if(pr.kind === 'MP'){
+      both++;
+      is(tag + ' both step', pr.to.P !== pr.from.P && pr.to.M !== pr.from.M && pr.to.Y === pr.from.Y);
+      if(pr.cls.curve === 'none') same++;
+    }
+    is(tag + ' step 1 answer', step1Feedback(pr, pr.cls.step1).ok && STEP1_OPTS.some(o => o.key === pr.cls.step1));
+    is(tag + ' step 3 answer', step3Feedback(pr, pr.cls.ir).ok && STEP3_OPTS.some(o => o.key === pr.cls.ir));
+    STEP1_OPTS.concat(STEP3_OPTS).forEach(o => {
+      const f1 = step1Feedback(pr, o.key), f3 = step3Feedback(pr, o.key);
+      if(!f1.ok) is(tag + ' step 1 msg ' + o.key, !!f1.msg);
+      if(!f3.ok) is(tag + ' step 3 msg ' + o.key, !!f3.msg);
+    });
+    prev = pr;
+  }
+  _rng = saved;
+  is('about 20% both-change (' + both + ')', both >= 150 && both <= 250);
+  is('some, not most, both-change problems keep M/P the same (' + same + ' of ' + both + ')', same > 0 && same < both * 0.6);
+  Object.keys(kinds).forEach(k => is('kind ' + k + ' drawn', kinds[k] > 100));
+
+  // Targeted feedback fires for its intended wrong answer
+  const P = (kind, from, to) => ({ kind, from, to, r0: rOf(from), r1: rOf(to), cls: classify(from, to) });
+  const yUp = P('Y', BASE, { ...BASE, Y: 2400 }), pUp = P('P', BASE, { ...BASE, P: 1.25 }), pDn = P('P', BASE, { ...BASE, P: 0.8 });
+  const mUp = P('M', BASE, { ...BASE, M: 600 }), mDn = P('M', BASE, { ...BASE, M: 400 });
+  is('fb: Y problem, shift chosen', step3Feedback(yUp, 'shiftUp').msg === FB.yShift && step3Feedback(yUp, 'shiftDown').msg === FB.yShift);
+  is('fb: P problem, along chosen', step3Feedback(pUp, 'alongUp').msg === FB.mpAlong && step3Feedback(pUp, 'alongDown').msg === FB.mpAlong);
+  is('fb: M problem, along chosen', step3Feedback(mUp, 'alongDown').msg === FB.mpAlong);
+  is('fb: M up, direction backwards', step1Feedback(mUp, 'msL').msg === FB.mUp);
+  is('fb: M down, direction backwards', step1Feedback(mDn, 'msR').msg === FB.mDown);
+  is('fb: P up, direction backwards', step1Feedback(pUp, 'msR').msg === FB.pUp);
+  is('fb: P down, direction backwards', step1Feedback(pDn, 'msL').msg === FB.pDown);
+
+  // Part 5 table answers match the model
+  const T = { Y: ['md', 'right', 'up', 'alongUp'], P: ['ms', 'left', 'up', 'shiftUp'], M: ['ms', 'right', 'down', 'shiftDown'] };
+  TABLE_ROWS.forEach(row => TABLE_COLS.forEach((col, j) => is('table ' + row.id + ' ' + col.key, tableAnswer(row, col) === T[row.id][j])));
+
+  // CYU: one correct option each
+  QUESTIONS.forEach((q, i) => is('CYU ' + (i + 1) + ' one correct', q.options.filter(o => o.correct).length === 1));
+
+  // Formatting
+  is('fmtR', fmtR(5) === '5' && fmtR(3.75) === '3.75' && fmtR(1.2500001) === '1.25');
+  is('fmtP', fmtP(1) === '1.00' && fmtP(1.25) === '1.25' && fmtP(0.8) === '0.80');
+  is('fmtN', fmtN(2000) === '2,000' && fmtN(500) === '500');
+
+  const ok = fails.length === 0;
+  fails.slice(0, 40).forEach(f => console.error('[selftest] FAIL', f));
+  console.log(ok ? '[selftest] PASS — baseline, Parts 2–4, challenge, 1,000 states, 1,000 problems (' + both + ' both-change, ' + same + ' with M/P unchanged), feedback, table'
+                 : '[selftest] FAILED (' + fails.length + ')');
+  return { ok, fails, both, same, kinds };
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Init
+   ───────────────────────────────────────────────────────────────── */
+generateParams();
+renderSandbox();
+renderScore();
+V = scene1();
+placeDock();
+redraw();
+let _resizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => { placeDock(); redraw(); }, 80);
+});
+if(PIN_MQ.addEventListener) PIN_MQ.addEventListener('change', () => { placeDock(); redraw(); });
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(redraw);
+if(/[?&]selftest\b/.test(location.search)){
+  window.__selftest = selfTest();
+  window.__lab = {
+    view: () => V, active: () => active, running: () => running,
+    bridge(){
+      if(!V.eq || !LAST.mm || !LAST.ir) return null;
+      const a = G.mm.canvas.getBoundingClientRect(), b = G.ir.canvas.getBoundingClientRect();
+      return { mm: a.top + LAST.mm.yC(V.eq.r) / LAST.mm.dpr, ir: b.top + LAST.ir.yC(V.irDot ? V.irDot.r : V.eq.r) / LAST.ir.dpr,
+               gap: $('bridgeGap').style.display === 'block' ? $('bridgeGap').getBoundingClientRect().top + 1 : null };
+    }
+  };
+}
+
+})();
+</script>
+</body>
+</html>
