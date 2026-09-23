@@ -1,16 +1,32 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Multiplier Explorer — ECON 002</title>
-
-  <link rel="stylesheet" href="/assets/style.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
-
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>The Multiplier — ECON 002</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,sans-serif;
+      --font-serif:"Source Serif 4",ui-serif,Georgia,serif;
+      --font-mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+      --paper:#f6f2ea;
+      --panel:#ffffff;
+      --ink:#1f2937;
+      --ink-2:#374151;
+      --muted:#596878;
+      --line:#e7dfd2;
+      --line-2:#d9cfbf;
+      --accent:#2f5d7c;
+      --good:#155c38;
+      --bad:#b42318;
+      --amber:#8c4800;
+      --shadow:0 1px 2px rgba(17,24,39,.06),
+               0 10px 24px rgba(17,24,39,.06);
+    }
+
     /* ── Skip link (WCAG 2.4.1) ─────────────────────────────── */
     .skip-link{position:absolute;top:-100%;left:0;padding:8px 16px;
       background:var(--accent);color:#fff;font-weight:700;
@@ -32,154 +48,199 @@
         animation-duration:.01ms!important;
         transition-duration:.01ms!important;}}
 
-    /* ── Layout ── */
-    .app-grid {
-      display: grid;
-      grid-template-columns: 300px 1fr;
-      gap: 14px;
-      margin-top: 18px;
-      align-items: start;
-    }
-    @media (max-width: 860px) { .app-grid { grid-template-columns: 1fr; } }
+    /* ── Base ── */
+    *{box-sizing:border-box;}
+    body{margin:0;background:var(--paper);color:var(--ink);
+      font-family:var(--font-sans);line-height:1.5;}
 
-    .left-col  { display: grid; gap: 12px; }
-    .right-col { display: grid; gap: 12px; }
+    /* ── Standard header / footer ── */
+    .page-header{border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(255,255,255,.75),
+      rgba(255,255,255,0));}
+    .container{max-width:1160px;margin:0 auto;padding:18px;}
+    .crumbbar{margin:8px 0 10px;}
+    .crumb-link{color:var(--accent);text-decoration:none;
+      font-weight:800;font-size:0.8125rem;}
+    .crumb-link:hover{text-decoration:underline;}
+    .header-inner{padding:22px 0 14px;}
+    .kicker{font-size:0.75rem;letter-spacing:.08em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+    h1{font-family:var(--font-serif);font-size:2rem;
+      line-height:1.1;margin:0 0 8px;}
+    .sub{margin:0;color:var(--ink-2);line-height:1.55;
+      max-width:80ch;font-size:0.9375rem;}
+    .lab-wrap{max-width:1100px;margin:0 auto;padding:18px;}
+    .footer-inner{display:flex;justify-content:space-between;
+      flex-wrap:wrap;gap:8px;font-size:0.75rem;color:var(--muted);
+      padding-top:12px;border-top:1px solid var(--line);margin-top:24px;}
+    .hidden{display:none!important;}
 
-    /* ── Control cards ── */
-    .ctrl-card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 16px;
-      box-shadow: var(--shadow);
-    }
-    .ctrl-title {
-      font-size: 0.6875rem; text-transform: uppercase; letter-spacing: .09em;
-      color: var(--accent); font-weight: 800; margin-bottom: 12px;
-    }
+    /* ── Instructions dropdown ── */
+    .instructions-box{background:var(--panel);border:1px solid var(--line);
+      border-radius:14px;margin-top:8px;overflow:hidden;
+      box-shadow:var(--shadow);max-width:80ch;}
+    .instructions-box summary.instructions-toggle{list-style:none;
+      display:flex;align-items:center;gap:8px;padding:12px 18px;
+      cursor:pointer;font-size:0.8125rem;font-weight:700;
+      color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+      user-select:none;}
+    .instructions-box summary.instructions-toggle::-webkit-details-marker{display:none;}
+    .instructions-box summary.instructions-toggle::before{
+      content:'▶';display:inline-block;font-size:0.625rem;transition:transform .18s;}
+    .instructions-box[open] summary.instructions-toggle::before{transform:rotate(90deg);}
+    .instructions-body{padding:8px 20px 18px;border-top:1px solid var(--line);
+      font-size:0.875rem;color:var(--ink-2);line-height:1.6;}
+    .instructions-body p{margin:8px 0;}
+    .instructions-body ol{margin:8px 0;padding-left:22px;}
+    .instructions-body li{margin-bottom:6px;}
+    .instructions-body strong{color:var(--ink);}
 
-    /* Policy type tabs */
-    .type-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .type-tab {
-      padding: 9px 6px; border-radius: 12px; border: 1.5px solid #8c7f72;
-      background: rgba(255,255,255,0.7); cursor: pointer; text-align: center;
-      font-family: var(--font-sans, 'Inter', sans-serif);
-      font-size: 0.75rem; font-weight: 700; color: var(--muted);
-      transition: all .15s;
-    }
-    .type-tab:hover { border-color: rgba(47,93,124,.35); color: var(--ink); }
-    .type-tab.active {
-      background: var(--accent); border-color: var(--accent);
-      color: #fff; box-shadow: 0 3px 10px rgba(47,93,124,.30);
-    }
-    .type-tab .tab-icon { font-size: 0.9375rem; display: block; margin-bottom: 3px; }
+    /* ── Buttons ── */
+    .option-btn{padding:8px 14px;border-radius:10px;
+      border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.8125rem;font-weight:700;
+      color:var(--ink-2);cursor:pointer;transition:all .12s;}
+    .option-btn:hover:not(:disabled){border-color:var(--accent);
+      background:rgba(47,93,124,.07);color:var(--accent);}
+    .option-btn:disabled{opacity:.38;cursor:not-allowed;}
+    .option-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+    .option-btn.active:hover{background:#264d68;color:#fff;}
+    .primary-btn{padding:10px 22px;border-radius:12px;border:none;
+      background:var(--accent);color:#fff;font-family:var(--font-sans);
+      font-size:0.875rem;font-weight:700;cursor:pointer;
+      transition:background .12s;white-space:nowrap;}
+    .primary-btn:hover{background:#264d68;}
+    .primary-btn:disabled{opacity:.4;cursor:not-allowed;}
 
-    /* Sliders */
-    .slider-group { display: grid; gap: 10px; }
-    .slider-row { display: grid; gap: 4px; }
-    .slider-label {
-      display: flex; justify-content: space-between; align-items: baseline;
-      font-size: 0.75rem; font-weight: 700; color: var(--ink-2);
-    }
-    .slider-val {
-      font-size: 0.875rem; font-weight: 900; color: var(--accent);
-      font-variant-numeric: tabular-nums;
-    }
-    input[type=range] {
-      width: 100%; accent-color: var(--accent); height: 4px;
-      border-radius: 2px; cursor: pointer;
-    }
-    .slider-bounds { display: flex; justify-content: space-between; font-size: 0.625rem; color: var(--muted); margin-top: 1px; }
+    /* ── Cards ── */
+    .card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:18px;box-shadow:var(--shadow);margin-bottom:14px;}
+    .step-eyebrow{font-size:0.6875rem;font-weight:800;letter-spacing:.09em;
+      text-transform:uppercase;color:var(--muted);margin-bottom:2px;}
+    .card h2{font-family:var(--font-serif);font-size:1.25rem;margin:0 0 12px;line-height:1.25;}
+    .card p{margin:6px 0;}
 
-    /* Result pills */
-    .result-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-    .rpill {
-      flex: 1; min-width: 80px;
-      background: rgba(47,93,124,0.07); border: 1px solid rgba(47,93,124,0.20);
-      border-radius: 12px; padding: 8px 10px; text-align: center;
-    }
-    .rpill-label { font-size: 0.625rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; }
-    .rpill-val   { font-size: 1.0625rem; font-weight: 900; color: var(--accent); margin-top: 2px; font-variant-numeric: tabular-nums; }
-    .rpill-val.positive { color: var(--good, #155c38); }
-    .rpill-val.negative { color: var(--bad, #b42318); }
+    /* ── Step 1: controls ── */
+    .setup-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:18px;align-items:start;}
+    @media(max-width:860px){.setup-grid{grid-template-columns:1fr;}}
+    .ctrl-label{font-size:0.75rem;font-weight:800;color:var(--ink-2);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;display:block;}
+    .btn-group{display:flex;flex-wrap:wrap;gap:6px;}
+    .slider-row{margin-bottom:10px;}
+    .slider-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;}
+    .slider-top label{font-size:0.8125rem;font-weight:700;color:var(--ink-2);}
+    .slider-val{font-size:1rem;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;}
+    input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer;}
+    .slider-bounds{display:flex;justify-content:space-between;font-size:0.6875rem;color:var(--muted);}
+    .hint-small{font-size:0.75rem;color:var(--muted);margin-top:2px;}
 
-    /* Key insight box */
-    .insight-box {
-      background: rgba(47,93,124,0.06); border: 1px solid rgba(47,93,124,0.18);
-      border-radius: 14px; padding: 12px 14px; font-size: 0.78125rem; color: var(--ink-2);
-      line-height: 1.6; margin-top: 10px;
-    }
-    .insight-box strong { color: var(--ink); }
+    .econ-strip{margin-top:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+    @media(max-width:860px){.econ-strip{grid-template-columns:1fr;}}
+    .econ-box{border:1px solid var(--line-2);border-radius:12px;padding:10px 12px;
+      background:rgba(246,242,234,.5);font-size:0.875rem;}
+    .econ-box .eb-title{font-size:0.6875rem;font-weight:800;text-transform:uppercase;
+      letter-spacing:.07em;color:var(--muted);margin-bottom:4px;}
+    .econ-box .eq{font-family:var(--font-mono);font-size:0.875rem;color:var(--ink);}
+    .econ-box.key{border:2px solid var(--amber);background:#fdf6ee;}
+    .econ-box.key .eb-title{color:var(--amber);}
+    .econ-note{font-size:0.8125rem;color:var(--ink-2);margin-top:4px;}
 
-    /* ── Chart cards ── */
-    .chart-card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 14px;
-      box-shadow: var(--shadow);
-    }
-    .chart-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; gap: 8px; }
-    .chart-head h2 { margin: 0; font-size: 0.75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); font-weight: 800; }
-    .chart-sub { font-size: 0.6875rem; color: var(--muted); }
-    canvas { width: 100%; display: block; border-radius: 10px; background: rgba(255,255,255,0.55); }
-    #peCanvas     { height: 280px; }
-    #roundCanvas  { height: 240px; }
+    /* ── Step 2: graph + rounds ── */
+    .work-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:14px;align-items:start;}
+    @media(max-width:700px){.work-grid{grid-template-columns:1fr;}}
+    .graph-card{background:var(--panel);border:1px solid var(--line);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);}
+    .graph-title{font-size:0.75rem;font-weight:800;color:var(--accent);
+      text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+    .canvas-wrap{position:relative;width:100%;border-radius:10px;
+      overflow:hidden;background:rgba(246,242,234,.45);
+      border:1px solid var(--line);aspect-ratio:1/1;}
+    .canvas-wrap canvas{display:block;width:100%;height:100%;}
+    .legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:0.75rem;color:var(--ink-2);}
+    .legend span{display:inline-flex;align-items:center;gap:6px;}
+    .lg-line{display:inline-block;width:22px;height:0;border-top:3px solid;}
 
-    /* ── Spending rounds table ── */
-    .rounds-wrap {
-      background: var(--panel); border: 1px solid var(--line);
-      border-radius: 18px; padding: 14px; box-shadow: var(--shadow);
-    }
-    .rounds-head { font-size: 0.75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); font-weight: 800; margin-bottom: 10px; }
-    .rounds-table-wrap { overflow-x: auto; }
-    table.rtable {
-      width: 100%; border-collapse: collapse; font-size: 0.75rem;
-      font-variant-numeric: tabular-nums;
-    }
-    table.rtable th {
-      text-align: right; font-size: 0.625rem; text-transform: uppercase; letter-spacing: .06em;
-      color: var(--muted); font-weight: 700; padding: 4px 8px;
-      border-bottom: 1px solid var(--line-2);
-    }
-    table.rtable th:first-child { text-align: left; }
-    table.rtable td { padding: 5px 8px; text-align: right; border-bottom: 1px solid rgba(0,0,0,0.04); }
-    table.rtable td:first-child { text-align: left; font-weight: 700; color: var(--ink); }
-    table.rtable tr:last-child td { border-bottom: none; font-weight: 800; background: rgba(47,93,124,0.06); }
-    .bar-cell { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
-    .bar-bg { flex: 1; max-width: 80px; height: 7px; border-radius: 4px; background: rgba(0,0,0,0.07); overflow: hidden; }
-    .bar-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
+    .rounds-card{padding:16px;}
+    .round-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;}
+    .predict-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+      background:rgba(47,93,124,.06);border:1px solid rgba(47,93,124,.25);
+      border-radius:12px;padding:10px 12px;margin-bottom:12px;font-size:0.875rem;}
+    .predict-row input{width:90px;padding:6px 8px;border:1.5px solid #8c7f72;border-radius:8px;
+      font-family:var(--font-sans);font-size:0.875rem;}
+    .round-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+    .round-name{font-family:var(--font-serif);font-size:1.125rem;font-weight:700;}
+    .chain-pill{font-family:var(--font-mono);font-size:0.8125rem;background:#eef2f6;
+      border:1px solid #c9d5e0;border-radius:999px;padding:3px 10px;color:var(--ink);}
+    .chain{display:flex;flex-direction:column;align-items:stretch;}
+    .chain-step{border:1.5px solid #8c7f72;border-radius:10px;padding:8px 12px;
+      background:#fbfaf7;font-size:0.875rem;color:var(--ink);}
+    .chain-step .tag{display:inline-block;font-size:0.625rem;font-weight:800;letter-spacing:.07em;
+      text-transform:uppercase;margin-right:6px;color:var(--muted);}
+    .chain-step.shock{border-color:var(--amber);background:#fdf6ee;}
+    .chain-step.shock .tag{color:var(--amber);}
+    .chain-step.inv{border-color:var(--bad);background:#fdf2f1;}
+    .chain-step.inv .tag{color:var(--bad);}
+    .chain-step.result{border-color:var(--good);background:#eef6f1;border-width:2px;}
+    .chain-step.result .tag{color:var(--good);}
+    .chain-arrow{text-align:center;color:var(--muted);font-size:0.875rem;line-height:1.2;margin:1px 0;}
+    .chain-intro{font-size:0.875rem;color:var(--ink-2);}
+    .fade{opacity:0;animation:fadeIn .35s ease forwards;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
 
-    /* ── Tabs for the two charts ── */
-    .chart-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
-    .chart-tab {
-      padding: 6px 12px; border-radius: 10px; border: 1.5px solid #8c7f72;
-      font-size: 0.6875rem; font-weight: 700; cursor: pointer; background: transparent;
-      color: var(--muted); font-family: var(--font-sans, 'Inter', sans-serif);
-      transition: all .12s;
-    }
-    .chart-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .tally{margin-top:14px;border-top:1px solid var(--line);padding-top:12px;}
+    .tally-title{font-size:0.75rem;font-weight:800;color:var(--good);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+    .tally-track{position:relative;height:26px;border-radius:8px;background:#eceae4;
+      border:1px solid var(--line-2);display:flex;overflow:hidden;}
+    .tally-seg{height:100%;display:flex;align-items:center;justify-content:center;
+      color:#fff;font-size:0.6875rem;font-weight:700;border-right:2px solid #fff;overflow:hidden;white-space:nowrap;}
+    .tally-seg.a{background:var(--good);}
+    .tally-seg.b{background:#1f6f47;}
+    .tally-scale{display:flex;justify-content:space-between;font-size:0.6875rem;color:var(--muted);margin-top:2px;}
+    .tally-sum{font-family:var(--font-mono);font-size:0.8125rem;margin-top:8px;color:var(--ink);overflow-wrap:anywhere;}
+    .tally-note{font-size:0.8125rem;color:var(--ink-2);margin-top:6px;}
+    .finish-box{margin-top:12px;border:2px solid var(--good);background:#eef6f1;border-radius:12px;padding:10px 12px;font-size:0.875rem;}
+    .finish-box strong{color:var(--good);}
 
-    /* ── Comparison toggle ── */
-    .compare-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.75rem; color: var(--ink-2); }
-    .toggle-label { display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 600; }
-    input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+    /* ── Step 3: shortcut ── */
+    .shortcut-lines{display:grid;gap:8px;margin:6px 0 12px;}
+    .sc-line{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:0.9375rem;}
+    .sc-num{flex:0 0 auto;width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;
+      font-size:0.75rem;font-weight:800;display:inline-flex;align-items:center;justify-content:center;}
+    .mono{font-family:var(--font-mono);}
+    .frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;
+      font-family:var(--font-mono);font-size:0.875rem;line-height:1.15;margin:0 2px;}
+    .frac>span:first-child{border-bottom:1.5px solid currentColor;padding:0 4px 1px;}
+    .frac>span:last-child{padding:1px 4px 0;}
+    .key-result{border-left:5px solid var(--good);background:#eef6f1;border-radius:0 12px 12px 0;
+      padding:12px 14px;margin:10px 0;font-size:0.9375rem;}
+    .key-result .kr-title{font-size:0.6875rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--good);margin-bottom:4px;}
+    .mode-result{border-left:5px solid var(--accent);background:rgba(47,93,124,.06);border-radius:0 12px 12px 0;
+      padding:12px 14px;margin:10px 0;font-size:0.9375rem;}
+    .mode-result .kr-title{font-size:0.6875rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);margin-bottom:4px;}
+    .mode-result p{margin:6px 0;}
+    table.mpc-table{border-collapse:collapse;font-size:0.875rem;margin-top:6px;min-width:280px;}
+    table.mpc-table th,table.mpc-table td{padding:6px 12px;text-align:center;border-bottom:1px solid var(--line);}
+    table.mpc-table th{font-size:0.6875rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);}
+    table.mpc-table tr.current td{font-weight:800;background:rgba(47,93,124,.08);outline:2px solid var(--accent);outline-offset:-2px;}
+    .table-wrap{overflow-x:auto;}
+    .locked-msg{font-size:0.875rem;color:var(--muted);font-style:italic;}
 
-    /* Badges */
-    .badge {
-      display: inline-block; font-size: 0.625rem; font-weight: 800;
-      padding: 2px 7px; border-radius: 999px; letter-spacing: .04em;
-      text-transform: uppercase;
-    }
-    .badge-g  { background: rgba(47,93,124,0.12);  color: #2f5d7c;  border: 1px solid rgba(47,93,124,0.30); }
-    .badge-t  { background: rgba(140,72,0,0.10);   color: #8c4800;  border: 1px solid rgba(140,72,0,0.30); }
-    .badge-bb { background: rgba(21,92,56,0.10);   color: #155c38;  border: 1px solid rgba(21,92,56,0.30); }
-
-    @keyframes fadeSlide {
-      from { opacity: 0; transform: translateY(6px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .fade-in { animation: fadeSlide .22s ease forwards; }
+    /* ── Step 4: check ── */
+    .q{border:1px solid var(--line-2);border-radius:14px;padding:14px;margin-bottom:12px;background:#fdfcfa;}
+    .q-title{font-weight:700;margin-bottom:6px;}
+    .q-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;}
+    .q-row input{width:120px;padding:7px 9px;border:1.5px solid #8c7f72;border-radius:8px;font-family:var(--font-sans);font-size:0.9375rem;}
+    .mc-opts{display:grid;gap:6px;margin-top:8px;}
+    .mc-opt{text-align:left;padding:9px 12px;border-radius:10px;border:1.5px solid #8c7f72;background:var(--panel);
+      font-family:var(--font-sans);font-size:0.875rem;color:var(--ink-2);cursor:pointer;}
+    .mc-opt:hover:not(:disabled){border-color:var(--accent);background:rgba(47,93,124,.06);}
+    .mc-opt.picked{border-color:var(--accent);border-width:2.5px;}
+    .mc-opt:disabled{cursor:default;}
+    .feedback{margin-top:8px;font-size:0.875rem;padding:8px 10px;border-radius:10px;}
+    .feedback.ok{background:#eef6f1;border:1px solid var(--good);color:var(--good);}
+    .feedback.no{background:#fdf2f1;border:1px solid var(--bad);color:var(--bad);}
+    .feedback.info{background:rgba(47,93,124,.06);border:1px solid rgba(47,93,124,.35);color:var(--ink-2);}
+    .score-line{font-size:0.875rem;color:var(--ink-2);margin-top:4px;}
   </style>
 </head>
 <body>
@@ -192,647 +253,960 @@
       <a class="crumb-link" href="/classes/econ002/labs/">← ECON 002 Practice Labs</a>
     </nav>
     <div class="header-inner">
-      <div class="title-block">
-        <div class="kicker">Macroeconomics Practice Lab</div>
-        <h1>Multiplier Explorer</h1>
-        <p class="sub">
-          See how a change in \(G\) or \(T\) ripples through spending rounds to produce a total change in output
-          larger than the initial policy. Adjust the MPC and policy size to build intuition for
-          \(\frac{1}{1-MPC}\) and \(\frac{-MPC}{1-MPC}\).
-        </p>
-        <details class="howto">
-          <summary>How this app works</summary>
-          <div class="howto-body">
-            <ol>
-              <li>Choose a policy type: <strong>ΔG</strong> (government purchases), <strong>ΔT</strong> (taxes), or <strong>Balanced Budget</strong> (equal ΔG and ΔT).</li>
-              <li>Set the <strong>MPC</strong> and <strong>policy size</strong> using the sliders.</li>
-              <li>The <strong>Planned Expenditure diagram</strong> shows the PE line shifting and the new equilibrium.</li>
-              <li>The <strong>Spending Rounds chart</strong> breaks the total ΔY into successive waves of induced consumption — so you can see exactly <em>why</em> output changes by more than the initial policy.</li>
-              <li>The <strong>rounds table</strong> shows each wave numerically.</li>
-            </ol>
-            <p style="margin:6px 0 0"><strong>Key contrasts to notice:</strong> (1) A \(\Delta G\) of 100 raises output by more than a \(\Delta T\) of −100 of the same size — why? (2) What happens to the multiplier as MPC → 1? (3) For the balanced budget, why does output rise by exactly \(\Delta G\)?</p>
-          </div>
-        </details>
-      </div>
-      <div class="controls-card">
-        <div id="status" class="status" aria-live="polite">Adjust the sliders to explore.</div>
-      </div>
+      <div class="kicker">ECON 002 — The Goods Market &amp; Fiscal Policy</div>
+      <h1>The Multiplier</h1>
+      <p class="sub">Follow one change in spending round by round to see why output changes by <em>more</em> than the original change, and where the shortcut formula comes from.</p>
+      <details class="instructions-box">
+        <summary class="instructions-toggle">Instructions</summary>
+        <div class="instructions-body">
+          <p>This lab uses the same economy as lecture: <span class="mono">C = 100 + MPC(Y − T)</span>, <span class="mono">I = 100 − 10r</span> with <span class="mono">r = 5</span>, <span class="mono">G = 100</span>, and <span class="mono">T = 50</span>. With MPC = 0.5, equilibrium output starts at <strong>Y = 450</strong>.</p>
+          <ol>
+            <li><strong>Choose a change.</strong> Pick what changes (investment, government purchases, taxes, or G and T together), how big the change is, and the MPC.</li>
+            <li><strong>Step through the rounds.</strong> Click <strong>Next round</strong>. Each round follows the chain from lecture: spending changes → unplanned inventories change → firms change production → income changes → consumption changes → and around again. Watch the staircase on the graph and the running total of ΔY.</li>
+            <li><strong>See the shortcut.</strong> When the rounds die out, the lab shows how adding up every round gives the multiplier formula.</li>
+            <li><strong>Check your understanding.</strong> Answer three questions. Click <strong>Check Answer</strong>; if you're stuck, a hint and the worked solution are available.</li>
+          </ol>
+        </div>
+      </details>
     </div>
   </div>
 </header>
 
-<main id="main-content" class="container">
-  <div class="app-grid">
+<main id="main-content" class="lab-wrap">
 
-    <!-- ── LEFT: Controls ── -->
-    <div class="left-col">
+  <!-- ───────────── STEP 1 ───────────── -->
+  <section class="card" aria-labelledby="s1Title">
+    <div class="step-eyebrow">Step 1</div>
+    <h2 id="s1Title">Choose a change</h2>
 
-      <!-- Policy type -->
-      <div class="ctrl-card">
-        <div class="ctrl-title">Policy Type</div>
-        <div class="type-tabs" role="group" aria-label="Policy type">
-          <button class="type-tab active" id="tabG" aria-pressed="true" onclick="setType('G')">
-            <span class="tab-icon" aria-hidden="true">🏛️</span>Gov't Purchases<br><small style="font-weight:500;font-size:0.625rem">ΔG</small>
-          </button>
-          <button class="type-tab" id="tabT" aria-pressed="false" onclick="setType('T')">
-            <span class="tab-icon" aria-hidden="true">🧾</span>Taxes<br><small style="font-weight:500;font-size:0.625rem">ΔT</small>
-          </button>
-          <button class="type-tab" id="tabBB" aria-pressed="false" onclick="setType('BB')" style="grid-column:1/-1">
-            <span class="tab-icon" aria-hidden="true">⚖️</span>Balanced Budget &nbsp;<small style="font-weight:500;font-size:0.625rem">ΔG = ΔT</small>
-          </button>
+    <div class="setup-grid">
+      <div>
+        <span class="ctrl-label" id="modeLabel">What changes?</span>
+        <div class="btn-group" role="group" aria-labelledby="modeLabel">
+          <button class="option-btn" data-mode="I" aria-pressed="false">Investment (via r)</button>
+          <button class="option-btn" data-mode="G" aria-pressed="false">Government purchases</button>
+          <button class="option-btn" data-mode="T" aria-pressed="false">Taxes</button>
+          <button class="option-btn" data-mode="GT" aria-pressed="false">G and T together</button>
         </div>
       </div>
 
-      <!-- Sliders -->
-      <div class="ctrl-card">
-        <div class="ctrl-title">Parameters</div>
-        <div class="slider-group">
-
-          <div class="slider-row">
-            <div class="slider-label">
-              <span id="mpcLabel">MPC</span>
-              <span class="slider-val" id="mpcVal">0.80</span>
-            </div>
-            <input type="range" id="mpcSlider" min="0.1" max="0.95" step="0.05" value="0.80"
-                   aria-labelledby="mpcLabel" aria-describedby="mpcVal"
-                   oninput="update()" />
-            <div class="slider-bounds"><span>0.10</span><span>0.95</span></div>
-          </div>
-
-          <div class="slider-row">
-            <div class="slider-label">
-              <span id="policyLabel">ΔG</span>
-              <span class="slider-val" id="policyVal">+100</span>
-            </div>
-            <input type="range" id="policySlider" min="-200" max="200" step="10" value="100"
-                   aria-labelledby="policyLabel" aria-describedby="policyVal"
-                   oninput="update()" />
-            <div class="slider-bounds"><span>−200</span><span>+200</span></div>
-          </div>
-
+      <div id="sizeControls">
+        <div class="slider-row" id="rowR">
+          <div class="slider-top"><label for="slR">New interest rate r</label><span class="slider-val" id="valR">10</span></div>
+          <input type="range" id="slR" min="0" max="10" step="1" value="10">
+          <div class="slider-bounds"><span>0</span><span>10</span></div>
+          <div class="hint-small" id="hintR"></div>
+        </div>
+        <div class="slider-row" id="rowG">
+          <div class="slider-top"><label for="slG">Change in government purchases ΔG</label><span class="slider-val" id="valG">+100</span></div>
+          <input type="range" id="slG" min="-100" max="100" step="25" value="100">
+          <div class="slider-bounds"><span>−100</span><span>+100</span></div>
+        </div>
+        <div class="slider-row" id="rowT">
+          <div class="slider-top"><label for="slT">Change in taxes ΔT</label><span class="slider-val" id="valT">+100</span></div>
+          <input type="range" id="slT" min="-100" max="100" step="25" value="100">
+          <div class="slider-bounds"><span>−100</span><span>+100</span></div>
         </div>
       </div>
 
-      <!-- Results -->
-      <div class="ctrl-card">
-        <div class="ctrl-title">Results</div>
-        <div aria-live="polite" aria-atomic="true">
-          <div class="result-pills" id="resultPills">
-            <!-- filled by JS -->
-          </div>
-          <div class="insight-box" id="insightBox"></div>
+      <div>
+        <span class="ctrl-label" id="mpcLabel">Marginal propensity to consume (MPC)</span>
+        <div class="btn-group" role="group" aria-labelledby="mpcLabel">
+          <button class="option-btn" data-mpc="0.5" aria-pressed="false">0.5</button>
+          <button class="option-btn" data-mpc="0.6" aria-pressed="false">0.6</button>
+          <button class="option-btn" data-mpc="0.75" aria-pressed="false">0.75</button>
+          <button class="option-btn" data-mpc="0.8" aria-pressed="false">0.8</button>
         </div>
+        <div class="hint-small" style="margin-top:6px">Out of each extra $1 of income, households spend MPC and save the rest.</div>
       </div>
-
     </div>
 
-    <!-- ── RIGHT: Charts + Table ── -->
-    <div class="right-col">
-
-      <!-- PE Diagram -->
-      <div class="chart-card">
-        <div class="chart-head">
-          <h2 id="peTitle">Planned Expenditure</h2>
-          <span class="chart-sub">45° line = Y = PE equilibrium</span>
-        </div>
-        <canvas id="peCanvas" width="900" height="500"
-                role="img"
-                aria-labelledby="peTitle"
-                aria-describedby="peDesc"></canvas>
+    <div class="econ-strip" aria-live="polite" aria-atomic="true">
+      <div class="econ-box">
+        <div class="eb-title">Before (point A)</div>
+        <div class="eq" id="eqBefore"></div>
+        <div class="econ-note" id="noteBefore"></div>
       </div>
-
-      <!-- Spending rounds chart -->
-      <div class="chart-card">
-        <div class="chart-head">
-          <h2 id="roundChartTitle">Spending Rounds</h2>
-          <span class="chart-sub" id="roundSubtitle"></span>
-        </div>
-        <canvas id="roundCanvas" width="900" height="420"
-                role="img"
-                aria-labelledby="roundChartTitle"
-                aria-describedby="roundDesc"></canvas>
+      <div class="econ-box">
+        <div class="eb-title">After the change</div>
+        <div class="eq" id="eqAfter"></div>
+        <div class="econ-note" id="noteAfter"></div>
       </div>
-
-      <!-- Rounds table -->
-      <div class="rounds-wrap">
-        <div class="rounds-head" id="roundsTitle">Spending Rounds Detail</div>
-        <div class="rounds-table-wrap">
-          <table class="rtable" id="roundsTable" aria-labelledby="roundsTitle">
-            <thead>
-              <tr>
-                <th style="text-align:left">Round</th>
-                <th>Initial Injection</th>
-                <th>Induced ΔC</th>
-                <th>Cumulative ΔY</th>
-                <th style="text-align:right;width:100px">Progress</th>
-              </tr>
-            </thead>
-            <tbody id="roundsTbody"></tbody>
-          </table>
-        </div>
+      <div class="econ-box key">
+        <div class="eb-title">Round-1 change in planned expenditure</div>
+        <div class="eq" id="eqShift"></div>
+        <div class="econ-note" id="noteShift"></div>
       </div>
-
     </div>
-  </div>
+  </section>
+
+  <!-- ───────────── STEP 2 ───────────── -->
+  <section aria-labelledby="s2Title" style="margin-bottom:14px">
+    <div class="card" style="margin-bottom:10px;padding:14px 18px">
+      <div class="step-eyebrow">Step 2</div>
+      <h2 id="s2Title" style="margin:0">Watch the multiplier, one round at a time</h2>
+    </div>
+    <div class="work-grid">
+      <div class="graph-card">
+        <div class="graph-title" id="peTitle">Planned expenditure and the 45° line</div>
+        <div class="canvas-wrap" id="peWrap">
+          <canvas id="peCanvas" role="img" aria-labelledby="peTitle" aria-describedby="peDesc"></canvas>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span><i class="lg-line" style="border-color:#1f2937"></i>45° line: Y = PE</span>
+          <span><i class="lg-line" style="border-color:#2f5d7c;border-top-style:dashed"></i>PE (before)</span>
+          <span><i class="lg-line" style="border-color:#8c4800"></i>PE′ (after)</span>
+          <span><i class="lg-line" style="border-color:#b42318"></i>↕ Spending gap = unplanned inventory change</span>
+          <span><i class="lg-line" style="border-color:#155c38"></i>↔ Firms change production (ΔY)</span>
+        </div>
+      </div>
+
+      <div class="card rounds-card" style="margin-bottom:0">
+        <div class="predict-row">
+          <label for="predictIn"><strong>Predict first:</strong> the total change in output will be</label>
+          <input id="predictIn" type="text" inputmode="decimal" placeholder="ΔY = ?">
+          <span class="hint-small">(optional)</span>
+        </div>
+
+        <div class="round-controls">
+          <button class="primary-btn" id="btnNext">Next round ▸</button>
+          <button class="option-btn" id="btnSkip">Skip to the end</button>
+          <button class="option-btn" id="btnReset">Start over</button>
+        </div>
+
+        <div id="chainBox" aria-live="polite" aria-atomic="true"></div>
+
+        <div class="tally" aria-live="polite" aria-atomic="true">
+          <div class="tally-title">Running total: change in output (ΔY)</div>
+          <div class="tally-track" id="tallyTrack" aria-hidden="true"></div>
+          <div class="tally-scale" aria-hidden="true"><span>0</span><span id="tallyEnd">total = ?</span></div>
+          <div class="tally-sum" id="tallySum"></div>
+          <div class="tally-note" id="tallyNote"></div>
+          <div id="finishBox"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────── STEP 3 ───────────── -->
+  <section class="card" aria-labelledby="s3Title">
+    <div class="step-eyebrow">Step 3</div>
+    <h2 id="s3Title">The shortcut: adding up every round</h2>
+    <div id="shortcutLocked" class="locked-msg">Finish the rounds in Step 2 (or click <strong>Skip to the end</strong>) to unlock the shortcut.</div>
+    <div id="shortcutBody" class="hidden" aria-live="polite"></div>
+  </section>
+
+  <!-- ───────────── STEP 4 ───────────── -->
+  <section class="card" aria-labelledby="s4Title">
+    <div class="step-eyebrow">Step 4</div>
+    <h2 id="s4Title">Check your understanding</h2>
+    <div id="quiz"></div>
+    <div class="score-line" id="scoreLine" aria-live="polite"></div>
+  </section>
+
+  <section class="sr-only" id="graphsDesc" aria-live="polite" aria-atomic="true">
+    <p id="peDesc">Planned expenditure diagram.</p>
+  </section>
 </main>
 
-<!-- Screen-reader live descriptions for canvases (WCAG 1.1.1, 4.1.3) -->
-<section class="sr-only" aria-live="polite" aria-atomic="true">
-  <p id="peDesc">Planned expenditure diagram. Adjust sliders to explore.</p>
-  <p id="roundDesc">Spending rounds bar chart. Adjust sliders to explore.</p>
-</section>
-
-<footer style="margin-top:28px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:0.75rem;">
-  <div class="container" style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-    <div>ECON 002 — Fiscal Policy &amp; The Multiplier</div>
-    <div>interactiveecon.github.io</div>
+<footer>
+  <div class="lab-wrap">
+    <div class="footer-inner">
+      <span>ECON 002 — Principles of Macroeconomics</span>
+      <span>interactiveecon.github.io</span>
+    </div>
   </div>
 </footer>
 
+<script src="/assets/session.js"></script>
+<script src="/assets/discussion-modal.js"></script>
+<script src="/assets/discussion-pdf.js"></script>
 <script>
-// ── State ────────────────────────────────────────────────────────────────────
-let policyType = 'G';   // 'G' | 'T' | 'BB'
-const NUM_ROUNDS = 8;   // spending rounds to display
-let _fs = 1;            // font-scale factor for canvas text (WCAG 1.4.4)
+(function(){
+'use strict';
 
-function getMPC()    { return parseFloat(document.getElementById('mpcSlider').value); }
-function getPolicy() { return parseFloat(document.getElementById('policySlider').value); }
+const LAB_ID = 'multiplier';
+const LAB_LABEL = 'The Multiplier';
 
-function calcRounds(type, mpc, policyAmt) {
-  // Returns array of { roundLabel, injection, induced, cumulative }
-  // injection = the initial hit to PE in round 1; subsequent rounds are induced consumption
-  const rounds = [];
-  let total = 0;
+/* ════════════════════════════════════════════════════════════════
+   Formatting helpers
+   ════════════════════════════════════════════════════════════════ */
+const MINUS = '−';
+function fmt(v){
+  const a = Math.round(Math.abs(v) * 100 + 1e-9) / 100;
+  let s = a.toFixed(2).replace(/\.?0+$/, '');
+  if (s === '') s = '0';
+  return (v < 0 && s !== '0' ? MINUS : '') + s;
+}
+function sgn(v){ const s = fmt(v); return (v > 0 && s !== '0' ? '+' : '') + s; }
+function paren(v){ return v < 0 ? '(' + fmt(v) + ')' : fmt(v); }
+function frac(top, bot){ return `<span class="frac" role="math" aria-label="${top} over ${bot}"><span>${top}</span><span>${bot}</span></span>`; }
+function parseNum(str){
+  if (str == null) return NaN;
+  const s = String(str).replace(/[−–—]/g, '-').replace(/[,\s$]/g, '').replace(/^\+/, '');
+  if (s === '' || s === '-') return NaN;
+  return Number(s);
+}
+function arrow(v){ return v > 0 ? '↑' : '↓'; }
 
-  if (type === 'G') {
-    // Round 1: full ΔG hits PE directly
-    // Subsequent rounds: ΔC = MPC × previous ΔY
-    let prev = policyAmt;
-    for (let i = 0; i < NUM_ROUNDS; i++) {
-      const injection = i === 0 ? policyAmt : 0;
-      const induced   = i === 0 ? 0 : prev;
-      total += (i === 0) ? policyAmt : induced;
-      rounds.push({
-        label: i === 0 ? 'Round 1 (ΔG)' : `Round ${i+1}`,
-        injection,
-        induced: i === 0 ? 0 : prev,
-        step: i === 0 ? policyAmt : prev,
-        cumulative: total,
-      });
-      prev = prev * mpc;
-    }
-  } else if (type === 'T') {
-    // Round 1: initial hit = −MPC × ΔT (tax cut → ΔT < 0 → positive effect)
-    // positive ΔT = tax increase → negative effect
-    const firstHit = -mpc * policyAmt; // policyAmt is magnitude; negative sign built in
-    let prev = firstHit;
-    for (let i = 0; i < NUM_ROUNDS; i++) {
-      const injection = i === 0 ? firstHit : 0;
-      total += i === 0 ? firstHit : prev;
-      rounds.push({
-        label: i === 0 ? 'Round 1 (−MPC·ΔT)' : `Round ${i+1}`,
-        injection,
-        induced: i === 0 ? 0 : prev,
-        step: i === 0 ? firstHit : prev,
-        cumulative: total,
-      });
-      prev = prev * mpc;
-    }
-  } else {
-    // BB: ΔG = ΔT = policyAmt
-    // Net first-round = ΔG − MPC·ΔT = policyAmt(1 − MPC)
-    const firstHit = policyAmt * (1 - mpc);
-    let prev = firstHit;
-    for (let i = 0; i < NUM_ROUNDS; i++) {
-      const injection = i === 0 ? firstHit : 0;
-      total += i === 0 ? firstHit : prev;
-      rounds.push({
-        label: i === 0 ? 'Round 1 (ΔG−MPC·ΔT)' : `Round ${i+1}`,
-        injection,
-        induced: i === 0 ? 0 : prev,
-        step: i === 0 ? firstHit : prev,
-        cumulative: total,
-      });
-      prev = prev * mpc;
-    }
-  }
-  return rounds;
+/* ════════════════════════════════════════════════════════════════
+   State and model (lecture economy)
+   C = 100 + MPC(Y − T),  I = 100 − 10r,  r = 5,  G = 100,  T = 50
+   ════════════════════════════════════════════════════════════════ */
+const S = {
+  mode: 'G', mpc: 0.5,
+  r: 10, dG: 100, dT: 100,          // single-policy sliders
+  gtG: -50, gtT: -50,               // G-and-T-together sliders
+  done: 0, finished: false, anim: null
+};
+
+function model(){
+  const m = S.mpc;
+  let dI = 0, dG = 0, dT = 0, rNew = 5;
+  if (S.mode === 'I'){ rNew = S.r; dI = -10 * (S.r - 5); }
+  if (S.mode === 'G'){ dG = S.dG; }
+  if (S.mode === 'T'){ dT = S.dT; }
+  if (S.mode === 'GT'){ dG = S.gtG; dT = S.gtT; }
+  const C0 = 100, I0 = 50, G0 = 100, T0 = 50;
+  const i0 = C0 - m*T0 + I0 + G0;               // PE intercept before
+  const dC1 = -m * dT;                          // round-1 consumption response to taxes
+  const d0 = dI + dG + dC1;                     // round-1 change in PE
+  const i1 = i0 + d0;
+  const YA = i0 / (1 - m);
+  const mult = 1 / (1 - m);
+  const dY = d0 * mult;
+  return { m, dI, dG, dT, rNew, C0, I0, G0, T0, i0, i1, d0, dC1, YA, YB: YA + dY, dY, mult };
+}
+function gapAt(M, k){ return M.d0 * Math.pow(M.m, k - 1); }            // ΔPE (and ΔY) in round k
+function yStart(M, k){ return M.YA + M.d0 * (1 - Math.pow(M.m, k - 1)) / (1 - M.m); }
+function finalRounds(M){
+  if (M.d0 === 0) return 0;
+  let k = 1;
+  while (Math.abs(gapAt(M, k)) >= Math.max(0.01, Math.abs(M.d0) * 1e-4) && k < 200) k++;
+  return k;
+}
+/* A round is "worth a click" while it is at least 1% of the first round */
+function lastClickRound(M){
+  if (M.d0 === 0) return 0;
+  let k = 1;
+  while (Math.abs(gapAt(M, k + 1)) >= Math.abs(M.d0) * 0.01) k++;
+  return k;
 }
 
-function calcTotals(type, mpc, policyAmt) {
-  const mult_G  = 1 / (1 - mpc);
-  const mult_T  = -mpc / (1 - mpc);
-  let deltaY, multiplier, initialInjection;
+/* ════════════════════════════════════════════════════════════════
+   DOM refs
+   ════════════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const modeBtns = Array.from(document.querySelectorAll('[data-mode]'));
+const mpcBtns  = Array.from(document.querySelectorAll('[data-mpc]'));
+const slR = $('slR'), slG = $('slG'), slT = $('slT');
+const btnNext = $('btnNext'), btnSkip = $('btnSkip'), btnReset = $('btnReset');
+const cv = $('peCanvas'), cvWrap = $('peWrap');
+const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  if (type === 'G') {
-    multiplier = mult_G;
-    deltaY = mult_G * policyAmt;
-    initialInjection = policyAmt;
-  } else if (type === 'T') {
-    multiplier = mult_T;
-    deltaY = mult_T * policyAmt;  // policyAmt > 0 means tax increase; effect is negative
-    initialInjection = -mpc * policyAmt;
-  } else {
-    multiplier = 1; // balanced budget multiplier
-    deltaY = policyAmt;
-    initialInjection = policyAmt * (1 - mpc);
-  }
-  return { deltaY, multiplier, initialInjection };
+/* ════════════════════════════════════════════════════════════════
+   Step 1 — controls
+   ════════════════════════════════════════════════════════════════ */
+function syncButtons(){
+  modeBtns.forEach(b => {
+    const on = b.dataset.mode === S.mode;
+    b.classList.toggle('active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  mpcBtns.forEach(b => {
+    const on = parseFloat(b.dataset.mpc) === S.mpc;
+    b.classList.toggle('active', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  $('rowR').classList.toggle('hidden', S.mode !== 'I');
+  $('rowG').classList.toggle('hidden', !(S.mode === 'G' || S.mode === 'GT'));
+  $('rowT').classList.toggle('hidden', !(S.mode === 'T' || S.mode === 'GT'));
+  const gVal = S.mode === 'GT' ? S.gtG : S.dG;
+  const tVal = S.mode === 'GT' ? S.gtT : S.dT;
+  slG.value = gVal; slT.value = tVal; slR.value = S.r;
+  $('valG').textContent = sgn(gVal);
+  $('valT').textContent = sgn(tVal);
+  $('valR').textContent = S.r;
+  const dI = -10 * (S.r - 5);
+  $('hintR').textContent = `r goes from 5 to ${S.r}, so I = 100 − 10r changes by ΔI = ${dI === 0 ? '0' : sgn(dI)}.`;
 }
 
-// ── PE Canvas ────────────────────────────────────────────────────────────────
-function drawPE(type, mpc, policyAmt) {
-  const canvas = document.getElementById('peCanvas');
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  const W = rect.width * dpr, H = rect.height * dpr;
-  if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, W, H);
+function updateSetup(){
+  const M = model();
+  const mS = fmt(M.m);
+  $('eqBefore').innerHTML = `PE = ${fmt(M.i0)} + ${mS}Y`;
+  $('noteBefore').innerHTML = `C = 100 + ${mS}(Y − 50), I = 50, G = 100.<br>Equilibrium: Y = ${fmt(M.i0)} ÷ (1 − ${mS}) = <strong>${fmt(M.YA)}</strong>`;
 
-  const pad = { l: 70*dpr, r: 24*dpr, t: 20*dpr, b: 54*dpr };
-  const X0=pad.l, X1=W-pad.r, Y0=pad.t, Y1=H-pad.b;
+  $('eqAfter').innerHTML = M.d0 === 0 ? `PE′ = PE (no change)` : `PE′ = ${fmt(M.i1)} + ${mS}Y`;
+  let after = [];
+  if (S.mode === 'I') after.push(`r = ${M.rNew} → I = 100 − 10(${M.rNew}) = ${fmt(50 + M.dI)}`);
+  if (S.mode === 'G' || S.mode === 'GT') after.push(`G = 100 ${M.dG < 0 ? MINUS : '+'} ${fmt(Math.abs(M.dG))} = ${fmt(100 + M.dG)}`);
+  if (S.mode === 'T' || S.mode === 'GT') after.push(`T = 50 ${M.dT < 0 ? MINUS : '+'} ${fmt(Math.abs(M.dT))} = ${fmt(50 + M.dT)}${50 + M.dT < 0 ? ' (negative taxes = net transfers)' : ''}`);
+  $('noteAfter').innerHTML = after.join('<br>') + '<br>The slope (MPC) does not change, so PE shifts in parallel.';
 
-  // Economy: C0=100, I=75, G=200, T=50 as baseline
-  const C0 = 100, I_base = 75, G_base = 200, T_base = 50;
-  const slope_base = mpc; // PE slope = MPC
-  const intercept_base = C0 - mpc*T_base + I_base + G_base;
-
-  // Policy shifts intercept
-  let intercept_new = intercept_base;
-  if (type === 'G')  intercept_new += policyAmt;
-  if (type === 'T')  intercept_new += -mpc * policyAmt;
-  if (type === 'BB') intercept_new += policyAmt - mpc * policyAmt; // ΔG - MPC·ΔT
-
-  // Equilibrium: Y = intercept/(1-MPC)
-  const Yeq_old = intercept_base / (1 - mpc);
-  const Yeq_new = intercept_new  / (1 - mpc);
-
-  // Keep scale anchored to OLD equilibrium so A never moves visually.
-  // Give 60% headroom above Yeq_old so B has room to move right (or left).
-  const Ymin_disp = 0;
-  const Ymax_disp = Yeq_old * 1.60;
-
-  const xTo = Y  => X0 + (Y - Ymin_disp) / (Ymax_disp - Ymin_disp) * (X1-X0);
-  const yTo = PE => Y0 + (1 - (PE - Ymin_disp) / (Ymax_disp - Ymin_disp)) * (Y1-Y0);
-
-  // Grid
-  ctx.strokeStyle = 'rgba(0,0,0,0.07)'; ctx.lineWidth = 1*dpr;
-  for (let i=0; i<=5; i++) { const x=X0+i*(X1-X0)/5; ctx.beginPath(); ctx.moveTo(x,Y0); ctx.lineTo(x,Y1); ctx.stroke(); }
-  for (let i=0; i<=5; i++) { const y=Y0+i*(Y1-Y0)/5; ctx.beginPath(); ctx.moveTo(X0,y); ctx.lineTo(X1,y); ctx.stroke(); }
-
-  // Axis labels
-  ctx.fillStyle='#596878'; ctx.font=`${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
-  ctx.textAlign='center'; ctx.textBaseline='top';
-  ctx.fillText('Output  Y', (X0+X1)/2, Y1+26*dpr);
-  ctx.save(); ctx.translate(X0-52*dpr,(Y0+Y1)/2); ctx.rotate(-Math.PI/2);
-  ctx.textAlign='center'; ctx.textBaseline='top'; ctx.fillText('Planned Expenditure  PE', 0, 0); ctx.restore();
-
-  // 45° line (Y=PE)
-  ctx.strokeStyle='rgba(0,0,0,0.30)'; ctx.lineWidth=2*dpr; ctx.setLineDash([]);
-  ctx.beginPath(); ctx.moveTo(xTo(Ymin_disp), yTo(Ymin_disp)); ctx.lineTo(xTo(Ymax_disp), yTo(Ymax_disp)); ctx.stroke();
-  ctx.fillStyle='#596878'; ctx.font=`700 ${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
-  ctx.textAlign='left'; ctx.textBaseline='bottom';
-  ctx.fillText('Y = PE', xTo(Ymax_disp)-38*dpr, yTo(Ymax_disp)-2*dpr);
-
-  function drawPELine(intercept, color, dash, label) {
-    const yL = intercept + slope_base * Ymin_disp;
-    const yR = intercept + slope_base * Ymax_disp;
-    ctx.strokeStyle=color; ctx.lineWidth=2.5*dpr; ctx.setLineDash(dash.map(d=>d*dpr));
-    ctx.beginPath(); ctx.moveTo(xTo(Ymin_disp), yTo(yL)); ctx.lineTo(xTo(Ymax_disp), yTo(yR)); ctx.stroke();
-    ctx.setLineDash([]);
-    if (label) {
-      ctx.fillStyle=color; ctx.font=`700 ${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
-      ctx.textAlign='left'; ctx.textBaseline='middle';
-      ctx.fillText(label, xTo(Ymax_disp)+4*dpr, yTo(yR));
-    }
+  let shift = '', note = '';
+  if (S.mode === 'I'){ shift = `ΔPE = ΔI = ${sgn(M.dI)}`; note = 'Investment is part of PE = C + I + G, so PE shifts by the full change in I.'; }
+  if (S.mode === 'G'){ shift = `ΔPE = ΔG = ${sgn(M.dG)}`; note = 'Government purchases are part of PE = C + I + G, so PE shifts by the full change in G.'; }
+  if (S.mode === 'T'){
+    shift = `ΔPE = ΔC = −MPC × ΔT = −${mS} × ${paren(M.dT)} = ${M.d0 === 0 ? '0' : sgn(M.d0)}`;
+    note = M.dT === 0 ? 'Taxes are not in PE = C + I + G directly; they work through consumption.' :
+      `<strong>Not ${sgn(-M.dT)}!</strong> Taxes are not in PE = C + I + G. They change disposable income by ${sgn(-M.dT)}; households change consumption by only MPC of that and change saving by the rest.`;
   }
-
-  // Old PE line (grey, dashed)
-  drawPELine(intercept_base, 'rgba(0,0,0,0.28)', [5,5], 'PE');
-
-  // New PE line (accent, solid)
-  const newColor = type==='T' ? '#b45309' : type==='BB' ? '#1b7f4b' : '#2f5d7c';
-  drawPELine(intercept_new, newColor, [], "PE'");
-
-  // Equilibrium points
-  function eqDot(Yeq, intercept, color, pointLabel) {
-    const ex = xTo(Yeq), ey = yTo(Yeq);
-    // dashed projections
-    ctx.strokeStyle='rgba(0,0,0,0.18)'; ctx.lineWidth=1.5*dpr; ctx.setLineDash([4*dpr,5*dpr]);
-    ctx.beginPath(); ctx.moveTo(ex,ey); ctx.lineTo(ex,yTo(Ymin_disp)); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(ex,ey); ctx.lineTo(xTo(Ymin_disp),ey); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.beginPath(); ctx.arc(ex,ey,5*dpr,0,Math.PI*2);
-    ctx.fillStyle=color; ctx.fill();
-    ctx.strokeStyle='#fff'; ctx.lineWidth=1.5*dpr; ctx.stroke();
-    ctx.fillStyle=color; ctx.font=`900 ${Math.round(12*dpr*_fs)}px "Inter",sans-serif`;
-    ctx.textAlign='left'; ctx.textBaseline='bottom';
-    ctx.fillText(pointLabel, ex+7*dpr, ey-3*dpr);
-    // axis tick
-    ctx.fillStyle=color; ctx.font=`700 ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='top';
-    ctx.fillText(Math.round(Yeq), ex, yTo(Ymin_disp)+5*dpr);
-    ctx.textAlign='right'; ctx.textBaseline='middle';
-    ctx.fillText(Math.round(Yeq), xTo(Ymin_disp)-5*dpr, ey);
+  if (S.mode === 'GT'){
+    shift = `ΔPE = ΔG − MPC × ΔT = ${fmt(M.dG)} − ${mS} × ${paren(M.dT)} = ${M.d0 === 0 ? '0' : sgn(M.d0)}`;
+    note = 'G enters PE directly; the tax change works through consumption (−MPC × ΔT).';
   }
-
-  eqDot(Yeq_old, intercept_base, '#596878', 'A');
-  eqDot(Yeq_new, intercept_new, newColor, 'B');
-
-  // ΔY arrow
-  const arrowY = Y0 + (Y1-Y0)*0.15;
-  const x1 = xTo(Yeq_old), x2 = xTo(Yeq_new);
-  if (Math.abs(x2-x1)>5) {
-    ctx.strokeStyle=newColor; ctx.lineWidth=2*dpr; ctx.setLineDash([]);
-    ctx.beginPath(); ctx.moveTo(x1,arrowY); ctx.lineTo(x2,arrowY); ctx.stroke();
-    const dir = x2>x1 ? 1 : -1;
-    ctx.beginPath(); ctx.moveTo(x2,arrowY); ctx.lineTo(x2-dir*8*dpr,-4*dpr+arrowY); ctx.lineTo(x2-dir*8*dpr,4*dpr+arrowY); ctx.closePath();
-    ctx.fillStyle=newColor; ctx.fill();
-    ctx.fillStyle=newColor; ctx.font=`800 ${Math.round(11*dpr*_fs)}px "Inter",sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='bottom';
-    const dY = Yeq_new - Yeq_old;
-    ctx.fillText(`ΔY = ${dY>=0?'+':''}${Math.round(dY)}`, (x1+x2)/2, arrowY-4*dpr);
-  }
+  $('eqShift').innerHTML = shift;
+  $('noteShift').innerHTML = note;
 }
 
-// ── Rounds bar chart ──────────────────────────────────────────────────────────
-function drawRounds(rounds, type) {
-  const canvas = document.getElementById('roundCanvas');
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  const W = rect.width * dpr, H = rect.height * dpr;
-  if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H; }
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, W, H);
+function onSetupChange(){
+  syncButtons(); updateSetup(); resetRounds();
+}
 
-  const pad = { l: 72*dpr, r: 20*dpr, t: 20*dpr, b: 48*dpr };
-  const X0=pad.l, X1=W-pad.r, Y0=pad.t, Y1=H-pad.b;
+modeBtns.forEach(b => b.addEventListener('click', () => { S.mode = b.dataset.mode; onSetupChange(); }));
+mpcBtns.forEach(b => b.addEventListener('click', () => { S.mpc = parseFloat(b.dataset.mpc); onSetupChange(); }));
+slR.addEventListener('input', () => { S.r = parseInt(slR.value, 10); onSetupChange(); });
+slG.addEventListener('input', () => { const v = parseInt(slG.value, 10); if (S.mode === 'GT') S.gtG = v; else S.dG = v; onSetupChange(); });
+slT.addEventListener('input', () => { const v = parseInt(slT.value, 10); if (S.mode === 'GT') S.gtT = v; else S.dT = v; onSetupChange(); });
 
-  const steps = rounds.map(r => r.step);
-  const colors = { G: '#2f5d7c', T: '#b45309', BB: '#1b7f4b' };
-  const barColor = colors[type];
-  const barCount = rounds.length;
-  const gap = 8*dpr;
-  const barW = (X1-X0 - gap*(barCount-1)) / barCount;
+/* ════════════════════════════════════════════════════════════════
+   Step 2 — rounds
+   ════════════════════════════════════════════════════════════════ */
+const STAGGER = 320, SEG_MS = 480;
 
-  // Compute data range so zero line is always placed correctly and bars never clip.
-  // Add a 15% margin above/below the extremes so labels have room.
-  const dataMax = Math.max(...steps, 0);
-  const dataMin = Math.min(...steps, 0);
-  const span = Math.max(dataMax - dataMin, 1);
-  const margin = span * 0.18;
-  const rangeTop = dataMax + margin;     // value that maps to Y0 (top of chart)
-  const rangeBot = dataMin - margin;     // value that maps to Y1 (bottom of chart)
-  const rangeSpan = rangeTop - rangeBot;
-
-  // Canvas-coordinate helpers
-  const valToY = v => Y0 + (rangeTop - v) / rangeSpan * (Y1 - Y0);
-  const zeroY  = valToY(0);
-
-  // grid
-  ctx.strokeStyle='rgba(0,0,0,0.07)'; ctx.lineWidth=1*dpr;
-  for (let i=0; i<=4; i++) {
-    const y = Y0 + i*(Y1-Y0)/4;
-    ctx.beginPath(); ctx.moveTo(X0,y); ctx.lineTo(X1,y); ctx.stroke();
-  }
-
-  // axis label
-  ctx.fillStyle='#596878'; ctx.font=`${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
-  ctx.save(); ctx.translate(X0-52*dpr,(Y0+Y1)/2); ctx.rotate(-Math.PI/2);
-  ctx.textAlign='center'; ctx.textBaseline='top';
-  ctx.fillText('ΔY per round', 0, 0); ctx.restore();
-
-  rounds.forEach((r, i) => {
-    const x = X0 + i*(barW+gap);
-    const val = r.step;
-    const barTop    = val >= 0 ? valToY(val) : zeroY;
-    const barBottom = val >= 0 ? zeroY       : valToY(val);
-    const barH = barBottom - barTop;
-    const isFirst = i === 0;
-
-    // bar
-    ctx.fillStyle = isFirst ? barColor : barColor + 'aa';
-    ctx.beginPath();
-    roundRect(ctx, x, barTop, barW, barH, 4*dpr);
-    ctx.fill();
-
-    // value label — above bar for positive, below for negative
-    ctx.fillStyle = isFirst ? barColor : '#596878';
-    ctx.font = `${isFirst?'800':'700'} ${Math.round(10*dpr*_fs)}px "Inter",sans-serif`;
-    ctx.textAlign = 'center';
-    if (val >= 0) {
-      ctx.textBaseline = 'bottom';
-      ctx.fillText(Math.abs(val)<0.5 ? '≈0' : '+'+val.toFixed(1), x+barW/2, barTop-3*dpr);
+function roundSteps(M, k){
+  const g = gapAt(M, k), up = g > 0, mS = fmt(M.m);
+  const ys = yStart(M, k), ye = ys + g;
+  const steps = [];
+  if (k === 1){
+    if (S.mode === 'I'){
+      steps.push({cls:'shock', tag:'Start', html:`The interest rate ${M.rNew > 5 ? 'rises' : 'falls'} from 5 to ${M.rNew}, so investment ${M.dI > 0 ? 'rises' : 'falls'}: <strong>ΔI = ${sgn(M.dI)}</strong>`});
+      steps.push({cls:'', tag:'Spending', html:`Planned expenditure ${up ? 'rises' : 'falls'} by the same amount: <strong>ΔPE = ΔI = ${sgn(g)}</strong>`});
+    } else if (S.mode === 'G'){
+      steps.push({cls:'shock', tag:'Start', html:`Government purchases ${M.dG > 0 ? 'rise' : 'fall'}: <strong>ΔG = ${sgn(M.dG)}</strong>`});
+      steps.push({cls:'', tag:'Spending', html:`Planned expenditure ${up ? 'rises' : 'falls'} by the same amount: <strong>ΔPE = ΔG = ${sgn(g)}</strong>`});
+    } else if (S.mode === 'T'){
+      steps.push({cls:'shock', tag:'Start', html:`Taxes ${M.dT > 0 ? 'rise' : 'fall'}: <strong>ΔT = ${sgn(M.dT)}</strong>, so disposable income changes by ${sgn(-M.dT)}`});
+      steps.push({cls:'', tag:'Consumption', html:`Consumption ${M.dC1 > 0 ? 'rises' : 'falls'} by MPC of that: <strong>ΔC = −MPC × ΔT = −${mS} × ${paren(M.dT)} = ${sgn(M.dC1)}</strong>`});
+      steps.push({cls:'', tag:'Spending', html:`Planned expenditure ${up ? 'rises' : 'falls'}: <strong>ΔPE = ΔC = ${sgn(g)}</strong>`});
     } else {
-      ctx.textBaseline = 'top';
-      ctx.fillText(val.toFixed(1), x+barW/2, barBottom+3*dpr);
+      steps.push({cls:'shock', tag:'Start', html:`<strong>ΔG = ${sgn(M.dG)}</strong> and <strong>ΔT = ${sgn(M.dT)}</strong>`});
+      steps.push({cls:'', tag:'Consumption', html:`The tax change moves consumption: <strong>ΔC = −${mS} × ${paren(M.dT)} = ${M.dC1 === 0 ? '0' : sgn(M.dC1)}</strong>`});
+      steps.push({cls:'', tag:'Spending', html:`Planned expenditure changes by <strong>ΔPE = ΔG + ΔC = ${fmt(M.dG)} + ${paren(M.dC1)} = ${sgn(g)}</strong>`});
     }
-
-    // x label
-    ctx.fillStyle='#596878'; ctx.font=`${Math.round(9*dpr*_fs)}px "Inter",sans-serif`;
-    ctx.textAlign='center'; ctx.textBaseline='top';
-    ctx.fillText(i===0?r.label:`R${i+1}`, x+barW/2, Y1+5*dpr);
-  });
-
-  // zero line
-  ctx.strokeStyle='rgba(0,0,0,0.30)'; ctx.lineWidth=1.5*dpr; ctx.setLineDash([]);
-  ctx.beginPath(); ctx.moveTo(X0,zeroY); ctx.lineTo(X1,zeroY); ctx.stroke();
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-  if (h < 0) { y += h; h = -h; }
-  if (h < r*2) r = h/2;
-  ctx.beginPath();
-  ctx.moveTo(x+r, y);
-  ctx.lineTo(x+w-r, y);
-  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-  ctx.lineTo(x+w, y+h-r);
-  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-  ctx.lineTo(x+r, y+h);
-  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
-  ctx.lineTo(x, y+r);
-  ctx.quadraticCurveTo(x, y, x+r, y);
-  ctx.closePath();
-}
-
-// ── Table ─────────────────────────────────────────────────────────────────────
-function buildTable(rounds, deltaY, type) {
-  const tbody = document.getElementById('roundsTbody');
-  tbody.innerHTML = '';
-  const maxStep = Math.max(...rounds.map(r => Math.abs(r.step)), 1);
-  const colors = { G: '#2f5d7c', T: '#b45309', BB: '#1b7f4b' };
-  const c = colors[type];
-
-  rounds.forEach((r, i) => {
-    const tr = document.createElement('tr');
-    const pct = Math.abs(r.step) / maxStep * 100;
-    const sign = r.step >= 0 ? '+' : '';
-    tr.innerHTML = `
-      <td>${r.label}</td>
-      <td>${r.injection !== 0 ? (r.injection>=0?'+':'')+r.injection.toFixed(1) : '—'}</td>
-      <td>${r.induced  !== 0 ? (r.induced>=0?'+':'')+r.induced.toFixed(1)   : '—'}</td>
-      <td>${sign}${r.cumulative.toFixed(1)}</td>
-      <td>
-        <div class="bar-cell">
-          <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${c}${i>0?'99':''}"></div></div>
-        </div>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  // Total row
-  const tr = document.createElement('tr');
-  const sign = deltaY >= 0 ? '+' : '';
-  tr.innerHTML = `
-    <td>Total (∞ rounds)</td>
-    <td colspan="2" style="text-align:right;font-style:italic;color:var(--muted)">geometric sum</td>
-    <td style="color:${c}">${sign}${deltaY.toFixed(1)}</td>
-    <td></td>
-  `;
-  tbody.appendChild(tr);
-}
-
-// ── Result pills + insight ────────────────────────────────────────────────────
-function buildResults(type, mpc, policyAmt, totals) {
-  const { deltaY, multiplier } = totals;
-  const pills = document.getElementById('resultPills');
-  const insight = document.getElementById('insightBox');
-  const colors = { G: '#2f5d7c', T: '#b45309', BB: '#1b7f4b' };
-  const c = colors[type];
-  const sign = deltaY >= 0 ? '+' : '';
-  const multSign = multiplier >= 0 ? '' : '−';
-
-  const multFormula = type === 'G'
-    ? `\\(\\frac{1}{1-MPC} = \\frac{1}{${(1-mpc).toFixed(2)}} = ${multiplier.toFixed(2)}\\)`
-    : type === 'T'
-    ? `\\(\\frac{-MPC}{1-MPC} = \\frac{-${mpc}}{${(1-mpc).toFixed(2)}} = ${multiplier.toFixed(2)}\\)`
-    : `\\(1\\) (balanced budget multiplier)`;
-
-  pills.innerHTML = `
-    <div class="rpill">
-      <div class="rpill-label">Multiplier</div>
-      <div class="rpill-val" style="color:${c}">${multSign}${Math.abs(multiplier).toFixed(2)}</div>
-    </div>
-    <div class="rpill">
-      <div class="rpill-label">ΔY</div>
-      <div class="rpill-val ${deltaY>=0?'positive':'negative'}">${sign}${Math.round(deltaY)}</div>
-    </div>
-    <div class="rpill">
-      <div class="rpill-label">Policy</div>
-      <div class="rpill-val" style="color:${c}">${policyAmt>=0?'+':''}${policyAmt}</div>
-    </div>
-  `;
-
-  let text = '';
-  if (type === 'G') {
-    const dir = policyAmt >= 0 ? 'raises' : 'lowers';
-    const absAmt = Math.abs(policyAmt);
-    text = `A <strong>ΔG of ${policyAmt>=0?'+':''}${policyAmt}</strong> ${dir} planned expenditure directly by ${absAmt} in round 1. Each subsequent round, households ${policyAmt>=0?'spend':'cut spending by'} MPC of their new income, adding smaller and smaller waves. Total: ${sign}${Math.round(deltaY)}. The multiplier ${multFormula} captures the full geometric sum.`;
-  } else if (type === 'T') {
-    const firstHit = (-mpc * policyAmt);
-    const dir = policyAmt >= 0 ? 'increases' : 'decreases';
-    const dispEffect = policyAmt >= 0 ? 'reduces' : 'raises';
-    text = `A <strong>ΔT of ${policyAmt>=0?'+':''}${policyAmt}</strong> (tax ${policyAmt>=0?'increase':'cut'}) ${dispEffect} disposable income, so households ${policyAmt>=0?'cut':'raise'} consumption by |MPC × ΔT| = ${Math.abs(firstHit).toFixed(1)} in round 1 — not the full ${Math.abs(policyAmt)}. That's why the tax multiplier ${multFormula} is smaller in absolute value than the government purchases multiplier.`;
   } else {
-    const dir = policyAmt >= 0 ? 'increases' : 'decreases';
-    const absAmt = Math.abs(policyAmt);
-    text = `Equal ${dir} in G and T of <strong>${absAmt}</strong>. The ΔG ${policyAmt>=0?'raises':'lowers'} PE by ${absAmt}; the ΔT ${policyAmt>=0?'cuts':'adds'} MPC × ${absAmt} = ${(mpc*absAmt).toFixed(1)}. Net first-round effect: ${(policyAmt*(1-mpc)).toFixed(1)}. After all rounds, ΔY = <strong>${sign}${Math.round(deltaY)}</strong> — exactly equal to ΔG. This is the <em>balanced budget multiplier = 1</em>.`;
+    const prev = gapAt(M, k - 1);
+    steps.push({cls:'', tag:'Consumption', html:`Last round, income ${prev > 0 ? 'rose' : 'fell'} by ${fmt(Math.abs(prev))}, so consumption ${up ? 'rises' : 'falls'}: <strong>ΔC = MPC × ΔY = ${mS} × ${paren(prev)} = ${sgn(g)}</strong>`});
+    steps.push({cls:'', tag:'Spending', html:`Planned expenditure ${up ? 'rises' : 'falls'} again: <strong>ΔPE = ΔC = ${sgn(g)}</strong>`});
+  }
+  steps.push({cls:'inv', tag:'Inventories', inv:true, html: up
+    ? `Buyers now want more than firms are producing (PE &gt; Y), so firms sell out of inventory: <strong>U.I. = ${sgn(-g)}</strong>`
+    : `Firms are producing more than buyers want (Y &gt; PE), so goods pile up on the shelf: <strong>U.I. = ${sgn(-g)}</strong>`});
+  steps.push({cls:'result', tag:'Production', res:true, html:`Firms ${up ? 'raise' : 'cut'} production: <strong>ΔY = ${sgn(g)}</strong>, so Y goes from ${fmt(ys)} to ${fmt(ye)}`});
+  return steps;
+}
+
+function chainPill(M, k){
+  const g = gapAt(M, k);
+  const a = arrow(g), ui = arrow(-g);
+  if (k > 1) return `Y${arrow(g)} → C${a} → PE${a} → U.I.${ui} → Y${a}`;
+  if (S.mode === 'I') return `r${arrow(M.rNew - 5)} → I${a} → PE${a} → U.I.${ui} → Y${a}`;
+  if (S.mode === 'G') return `G${a} → PE${a} → U.I.${ui} → Y${a}`;
+  if (S.mode === 'T') return `T${arrow(M.dT)} → C${a} → PE${a} → U.I.${ui} → Y${a}`;
+  return `ΔG, ΔT → PE${a} → U.I.${ui} → Y${a}`;
+}
+
+function renderChain(k, animate){
+  const M = model(), box = $('chainBox');
+  if (M.d0 === 0){
+    box.innerHTML = `<p class="chain-intro">This change leaves planned expenditure where it was (ΔPE = 0), so nothing happens: no unplanned inventory change, no change in production. Try a different change in Step 1.</p>`;
+    return null;
+  }
+  if (k === 0){
+    box.innerHTML = `<div class="round-head"><span class="round-name">Starting point: A</span></div>
+      <p class="chain-intro">The economy is in equilibrium at <strong>Y = ${fmt(M.YA)}</strong>: production equals planned expenditure, so inventories are not changing unexpectedly.</p>
+      <p class="chain-intro">Now the change from Step 1 hits. Click <strong>Next round</strong> to follow it.</p>`;
+    return null;
+  }
+  const steps = roundSteps(M, k);
+  let html = `<div class="round-head"><span class="round-name">Round ${k}</span><span class="chain-pill" aria-label="Chain: ${chainPill(M,k)}">${chainPill(M, k)}</span></div><div class="chain">`;
+  let tV = 0, tH = 0;
+  steps.forEach((s, i) => {
+    const delay = animate ? i * STAGGER : 0;
+    if (s.inv) tV = delay;
+    if (s.res) tH = delay;
+    const cls = animate ? ' fade' : '';
+    if (i > 0) html += `<div class="chain-arrow${cls}" style="animation-delay:${delay}ms" aria-hidden="true">↓</div>`;
+    html += `<div class="chain-step ${s.cls}${cls}" style="animation-delay:${delay}ms"><span class="tag">${s.tag}</span>${s.html}</div>`;
+  });
+  html += '</div>';
+  if (k > 1) html += `<p class="tally-note" style="margin-top:8px">Each round is MPC = ${fmt(M.m)} times the round before, because households spend only ${fmt(M.m*100)}% of each change in income.</p>`;
+  box.innerHTML = html;
+  return { tV, tH };
+}
+
+function renderFinishedChain(){
+  const M = model();
+  $('chainBox').innerHTML = `<div class="round-head"><span class="round-name">After all rounds: B</span><span class="chain-pill">…and around again until the changes die out</span></div>
+    <p class="chain-intro">Each round is ${fmt(M.m)} times the one before, so the rounds shrink toward zero. Production stops changing when there is no longer an unplanned change in inventories, which is where PE′ crosses the 45° line: <strong>point B, Y = ${fmt(M.YB)}</strong>.</p>`;
+}
+
+function renderTally(){
+  const M = model();
+  const track = $('tallyTrack'), sumEl = $('tallySum'), note = $('tallyNote'), fin = $('finishBox');
+  if (M.d0 === 0){ track.innerHTML = ''; sumEl.textContent = 'ΔY = 0'; note.textContent = ''; fin.innerHTML = ''; $('tallyEnd').textContent = 'total = 0'; return; }
+  const total = M.dY;
+  const nShow = S.finished ? finalRounds(M) : S.done;
+  let segs = '', running = 0;
+  for (let k = 1; k <= nShow; k++){
+    const g = gapAt(M, k); running += g;
+    const w = Math.abs(g) / Math.abs(total) * 100;
+    if (w < 0.05) continue;
+    const lab = w > 7 ? (k <= 9 ? `R${k}` : '') : '';
+    segs += `<div class="tally-seg ${k % 2 ? 'a' : 'b'}" style="width:${w}%;${w < 1.2 ? 'border-right-width:0;' : ''}">${lab}</div>`;
+  }
+  track.innerHTML = segs;
+  $('tallyEnd').textContent = S.finished ? `total = ${sgn(total)}` : 'total = ?';
+
+  if (nShow === 0){
+    sumEl.textContent = 'ΔY so far = 0';
+    note.textContent = '';
+  } else {
+    const terms = [];
+    const lim = Math.min(nShow, S.finished ? 5 : 6);
+    for (let k = 1; k <= lim; k++) terms.push(k === 1 ? fmt(gapAt(M, k)) : paren(gapAt(M, k)));
+    let str = terms.join(' + ');
+    if (nShow > lim) str += ' + …';
+    if (S.finished) sumEl.textContent = `ΔY = ${str} = ${sgn(total)}`;
+    else sumEl.textContent = `ΔY so far = ${str} = ${sgn(running)}` + (nShow > lim ? `  (${nShow} rounds)` : '');
+    note.innerHTML = S.finished ? '' :
+      `Output has changed by ${fmt(Math.abs(running))} so far, already ${Math.abs(running) > Math.abs(M.d0) + 1e-9 ? '<strong>more than</strong>' : 'as much as'} the round-1 change in spending (${fmt(Math.abs(M.d0))}). Next round adds ${sgn(gapAt(M, nShow + 1))}.`;
   }
 
-  insight.innerHTML = text;
-  if (window.renderMathInElement) {
-    window.renderMathInElement(insight, {
-      delimiters: [{ left:'\\(', right:'\\)', display:false }],
-      throwOnError: false,
-    });
-  }
-}
-
-// ── Canvas screen-reader descriptions (WCAG 1.1.1) ───────────────────────────
-function updateCanvasDescs(type, mpc, policyAmt, rounds, totals) {
-  const typeName = type === 'G' ? 'government purchases (ΔG)' : type === 'T' ? 'taxes (ΔT)' : 'balanced budget (ΔG = ΔT)';
-  const { deltaY, multiplier } = totals;
-  const sign = deltaY >= 0 ? '+' : '';
-  const multSign = multiplier >= 0 ? '' : '−';
-
-  const C0 = 100, I_base = 75, G_base = 200, T_base = 50;
-  const intercept_base = C0 - mpc*T_base + I_base + G_base;
-  const Yeq_old = Math.round(intercept_base / (1 - mpc));
-  const Yeq_new = Math.round(Yeq_old + deltaY);
-
-  document.getElementById('peDesc').textContent =
-    `Planned expenditure diagram for ${typeName} policy with MPC ${mpc.toFixed(2)} and policy size ${policyAmt >= 0 ? '+' : ''}${policyAmt}. ` +
-    `Original equilibrium at Y = ${Yeq_old} (point A). ` +
-    `New equilibrium at Y = ${Yeq_new} (point B). ` +
-    `Change in output: ΔY = ${sign}${Math.round(deltaY)}. ` +
-    `Multiplier = ${multSign}${Math.abs(multiplier).toFixed(2)}.`;
-
-  const roundSummary = rounds.slice(0, 4).map((r, i) =>
-    `Round ${i+1}: ${r.step >= 0 ? '+' : ''}${r.step.toFixed(1)}`
-  ).join('; ');
-
-  document.getElementById('roundDesc').textContent =
-    `Bar chart showing spending rounds for ${typeName}. ` +
-    `${roundSummary}; remaining rounds converge to zero. ` +
-    `Total change in output after all rounds: ${sign}${deltaY.toFixed(1)}.`;
-}
-
-// ── UI state ──────────────────────────────────────────────────────────────────
-function setType(t) {
-  policyType = t;
-  ['G','T','BB'].forEach(x => {
-    const btn = document.getElementById('tab'+x);
-    btn.classList.toggle('active', x===t);
-    btn.setAttribute('aria-pressed', x===t ? 'true' : 'false');
-  });
-  const label = document.getElementById('policyLabel');
-  const status = document.getElementById('status');
-  if (t==='G')  { label.textContent='ΔG (gov\'t purchases)'; status.textContent='Showing government purchases multiplier.'; }
-  if (t==='T')  { label.textContent='ΔT (taxes)';            status.textContent='Showing tax multiplier.'; }
-  if (t==='BB') { label.textContent='ΔG = ΔT (balanced)';   status.textContent='Showing balanced budget multiplier.'; }
-  const sub = document.getElementById('roundSubtitle');
-  if (t==='G')  sub.textContent='Round 1 = full ΔG; subsequent rounds = induced ΔC';
-  if (t==='T')  sub.textContent='Round 1 = −MPC·ΔT (smaller than policy!); subsequent rounds = induced ΔC';
-  if (t==='BB') sub.textContent='Round 1 = net ΔG − MPC·ΔT; converges to exactly ΔG';
-  update();
-}
-
-function update() {
-  _fs = Math.max(0.75, Math.min(2.5,
-    parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
-
-  const mpc = getMPC();
-  const policyAmt = getPolicy();
-  document.getElementById('mpcVal').textContent = mpc.toFixed(2);
-  document.getElementById('policyVal').textContent = (policyAmt >= 0 ? '+' : '') + policyAmt;
-
-  const rounds = calcRounds(policyType, mpc, policyAmt);
-  const totals = calcTotals(policyType, mpc, policyAmt);
-
-  buildResults(policyType, mpc, policyAmt, totals);
-  buildTable(rounds, totals.deltaY, policyType);
-  updateCanvasDescs(policyType, mpc, policyAmt, rounds, totals);
-  requestAnimationFrame(() => {
-    drawPE(policyType, mpc, policyAmt);
-    drawRounds(rounds, policyType);
-  });
-}
-
-window.addEventListener('resize', () => requestAnimationFrame(update));
-window.addEventListener('load', () => {
-  setType('G');
-  setTimeout(() => {
-    update();
-    if (window.renderMathInElement) {
-      window.renderMathInElement(document.body, {
-        delimiters: [{ left:'\\(', right:'\\)', display:false }, {left:'$',right:'$',display:false}],
-        throwOnError: false,
-      });
+  if (S.finished){
+    let pred = '';
+    const p = parseNum($('predictIn').value);
+    if (!isNaN(p)){
+      const ok = Math.abs(p - total) < 0.51;
+      pred = `<br>You predicted <strong>${sgn(p)}</strong>${ok ? ' — spot on.' : '. ' + (Math.abs(p) < Math.abs(total) ? 'The extra rounds of consumption add more than it first seems.' : 'Each round is smaller than the last, so the total is limited.')}`;
     }
-  }, 80);
-});
+    fin.innerHTML = `<div class="finish-box">Total change in output: <strong>ΔY = ${sgn(total)}</strong>, from A (${fmt(M.YA)}) to B (${fmt(M.YB)}). That is <strong>${fmt(Math.abs(total / M.d0))} times</strong> the round-1 change in planned expenditure (${sgn(M.d0)}).${pred}</div>`;
+  } else fin.innerHTML = '';
+}
+
+function updateButtons(){
+  const M = model();
+  const none = M.d0 === 0;
+  btnNext.disabled = none || S.finished;
+  btnSkip.disabled = none || S.finished;
+  btnReset.disabled = S.done === 0 && !S.finished;
+  btnNext.textContent = S.done === 0 ? 'Start round 1 ▸' : 'Next round ▸';
+}
+
+function nextRound(){
+  const M = model();
+  if (M.d0 === 0 || S.finished) return;
+  if (S.anim) S.anim = null;
+  const last = lastClickRound(M);
+  if (S.done >= last){ finish(); return; }
+  S.done += 1;
+  const timing = renderChain(S.done, !reduced);
+  if (!reduced && timing){
+    S.anim = { k: S.done, start: performance.now(), tV: timing.tV, tH: timing.tH };
+    requestAnimationFrame(tick);
+  }
+  renderTally(); updateButtons(); redraw();
+  if (S.done >= last){
+    $('tallyNote').innerHTML += ` <strong>The remaining rounds are tiny (under 1% of round 1). Click “Next round” once more to finish.</strong>`;
+  }
+}
+
+function finish(){
+  S.anim = null; S.finished = true;
+  renderFinishedChain(); renderTally(); updateButtons(); renderShortcut(); redraw();
+}
+
+function resetRounds(){
+  S.done = 0; S.finished = false; S.anim = null;
+  renderChain(0, false); renderTally(); updateButtons(); renderShortcut(); redraw();
+}
+
+function tick(){
+  if (!S.anim) return;
+  redraw();
+  const t = performance.now() - S.anim.start;
+  if (t < S.anim.tH + SEG_MS + 30) requestAnimationFrame(tick);
+  else { S.anim = null; redraw(); }
+}
+
+btnNext.addEventListener('click', nextRound);
+btnSkip.addEventListener('click', finish);
+btnReset.addEventListener('click', resetRounds);
+$('predictIn').addEventListener('change', () => { if (S.finished) renderTally(); });
+
+/* ════════════════════════════════════════════════════════════════
+   Step 3 — shortcut
+   ════════════════════════════════════════════════════════════════ */
+function renderShortcut(){
+  const lock = $('shortcutLocked'), body = $('shortcutBody');
+  const M = model();
+  if (!S.finished || M.d0 === 0){ lock.classList.remove('hidden'); body.classList.add('hidden'); body.innerHTML = ''; return; }
+  lock.classList.add('hidden'); body.classList.remove('hidden');
+  const mS = fmt(M.m), d = M.d0, one = fmt(1 - M.m);
+  const g = k => gapAt(M, k);
+  const multS = fmt(M.mult);
+
+  let html = `<div class="shortcut-lines">
+    <div class="sc-line"><span class="sc-num">1</span><span>Add up every round:</span>
+      <span class="mono">ΔY = ${fmt(g(1))} + ${paren(g(2))} + ${paren(g(3))} + ${paren(g(4))} + …</span></div>
+    <div class="sc-line"><span class="sc-num">2</span><span>Each round is MPC × the one before, so pull out round 1:</span>
+      <span class="mono">ΔY = ${paren(d)} × (1 + ${mS} + ${mS}² + ${mS}³ + …)</span></div>
+    <div class="sc-line"><span class="sc-num">3</span><span>The part in parentheses adds up to</span>
+      ${frac('1', '1 − MPC')} <span class="mono">=</span> ${frac('1', '1 − ' + mS)} <span class="mono">= ${frac('1', one)} = ${multS}</span></div>
+  </div>
+  <div class="key-result"><div class="kr-title">Key result</div>
+    <span class="mono">ΔY =</span> ${frac('1', '1 − MPC')} <span class="mono">× (round-1 change in PE) = ${multS} × ${paren(d)} = ${sgn(M.dY)}</span>
+    <div style="margin-top:6px">Output changes by <em>more</em> than the first change in spending because every change in production is also a change in income, and households spend part of every change in income.</div>
+  </div>`;
+
+  let mr = '';
+  if (S.mode === 'I'){
+    mr = `<div class="kr-title">Investment multiplier</div>
+      <p>In round 1, ΔPE = ΔI, so <span class="mono">ΔY =</span> ${frac('1','1 − MPC')} <span class="mono">× ΔI = ${multS} × ${paren(M.dI)} = ${sgn(M.dY)}</span>.</p>`;
+  } else if (S.mode === 'G'){
+    mr = `<div class="kr-title">Government purchases multiplier</div>
+      <p>In round 1, ΔPE = ΔG, so <span class="mono">ΔY =</span> ${frac('1','1 − MPC')} <span class="mono">× ΔG = ${multS} × ${paren(M.dG)} = ${sgn(M.dY)}</span>.</p>`;
+  } else if (S.mode === 'T'){
+    const tm = -M.m / (1 - M.m);
+    const gTot = Math.abs(M.dT) * M.mult;
+    mr = `<div class="kr-title">Tax multiplier</div>
+      <p>In round 1, ΔPE = −MPC × ΔT, so <span class="mono">ΔY =</span> ${frac('−MPC','1 − MPC')} <span class="mono">× ΔT = ${frac('−' + mS, one)} × ${paren(M.dT)} = ${fmt(tm)} × ${paren(M.dT)} = ${sgn(M.dY)}</span>.</p>
+      <p>Two differences from the government purchases multiplier:</p>
+      <ul style="margin:4px 0 4px 18px;padding:0">
+        <li><strong>MPC on top instead of 1:</strong> only MPC of the tax change reaches planned expenditure in round 1 (households adjust saving by the rest).</li>
+        <li><strong>Negative sign:</strong> higher taxes lower consumption, so taxes and output move in opposite directions.</li>
+      </ul>
+      <p>Compare: a change in G of ${fmt(Math.abs(M.dT))} would give ${fmt(Math.abs(M.dT))} + ${fmt(Math.abs(M.dT)*M.m)} + ${fmt(Math.abs(M.dT)*M.m*M.m)} + … = ${fmt(gTot)}. A tax change of ${fmt(Math.abs(M.dT))} gives ${fmt(Math.abs(M.dT)*M.m)} + ${fmt(Math.abs(M.dT)*M.m*M.m)} + … = ${fmt(Math.abs(M.dY))}. It is the <strong>same chain with the first round missing</strong>: ${fmt(gTot)} − ${fmt(Math.abs(M.dT))} = ${fmt(Math.abs(M.dY))}.</p>`;
+  } else {
+    const yG = M.dG * M.mult, yT = -M.m / (1 - M.m) * M.dT;
+    mr = `<div class="kr-title">Changing G and T together</div>
+      <p>The total effect is the sum of the two separate effects:</p>
+      <p><span class="mono">ΔY =</span> ${frac('1','1 − MPC')}<span class="mono">ΔG +</span> ${frac('−MPC','1 − MPC')}<span class="mono">ΔT = ${multS} × ${paren(M.dG)} + ${paren(-M.m/(1-M.m))} × ${paren(M.dT)} = ${fmt(yG)} + ${paren(yT)} = ${sgn(M.dY)}</span></p>
+      ${(M.dG === M.dT && M.dG !== 0) ? `<p><strong>Notice:</strong> G and T changed by the same amount (a balanced-budget change), and output changed by exactly that amount: ΔY = ΔG = ${sgn(M.dG)}. The G part of the chain includes round 1; the tax part is the same chain without round 1, so all that is left over is round 1 itself.</p>` : `<p>Try setting ΔG equal to ΔT. What do you notice about ΔY?</p>`}`;
+  }
+  html += `<div class="mode-result">${mr}</div>`;
+
+  const rows = [0.5, 0.6, 0.75, 0.8].map(m => {
+    const cur = m === M.m;
+    return `<tr class="${cur ? 'current' : ''}"><td>${fmt(m)}${cur ? ' ← current' : ''}</td><td>${fmt(1/(1-m))}</td><td>${fmt(-m/(1-m))}</td></tr>`;
+  }).join('');
+  html += `<p style="margin-top:12px"><strong>Why a higher MPC means a bigger multiplier:</strong> each round passes on a bigger share of the last one, so the rounds shrink more slowly and add up to more. Change the MPC in Step 1 and step through again to see the longer staircase.</p>
+    <div class="table-wrap"><table class="mpc-table"><caption class="sr-only">Multipliers for each MPC</caption>
+      <thead><tr><th scope="col">MPC</th><th scope="col">1 ÷ (1 − MPC)</th><th scope="col">−MPC ÷ (1 − MPC)</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
+  body.innerHTML = html;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Canvas
+   ════════════════════════════════════════════════════════════════ */
+let _fs = 1;
+const COL = { ink:'#1f2937', muted:'#596878', accent:'#2f5d7c', amber:'#8c4800', bad:'#b42318', good:'#155c38', grid:'rgba(31,41,55,0.08)' };
+const PAD = { l:56, r:38, t:16, b:44 };
+
+function setupCanvas(canvas, wrap){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = wrap.getBoundingClientRect();
+  const W = Math.round(rect.width * dpr);
+  const H = Math.round(rect.height * dpr);
+  if(!W || !H) return null;
+  if(canvas.width !== W || canvas.height !== H){ canvas.width = W; canvas.height = H; }
+  return { ctx: canvas.getContext('2d'), dpr, W, H };
+}
+function niceAxis(raw){
+  for (const s of [50, 100, 200, 250, 500]){ if (raw / s <= 8) return { max: Math.ceil(raw / s) * s, step: s }; }
+  return { max: Math.ceil(raw / 1000) * 1000, step: 1000 };
+}
+function font(size, weight, dpr){ return `${weight || 400} ${Math.round(size * dpr * _fs)}px "Inter",sans-serif`; }
+function haloText(ctx, txt, x, y, color, dpr){
+  ctx.save(); ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(255,255,255,0.92)'; ctx.lineWidth = 4 * dpr;
+  ctx.strokeText(txt, x, y); ctx.fillStyle = color; ctx.fillText(txt, x, y); ctx.restore();
+}
+function arrowHead(ctx, x1, y1, x2, y2, size, color){
+  const a = Math.atan2(y2 - y1, x2 - x1);
+  ctx.save(); ctx.fillStyle = color; ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - size*Math.cos(a - 0.45), y2 - size*Math.sin(a - 0.45));
+  ctx.lineTo(x2 - size*Math.cos(a + 0.45), y2 - size*Math.sin(a + 0.45));
+  ctx.closePath(); ctx.fill(); ctx.restore();
+}
+function segment(ctx, x1, y1, x2, y2, color, width, head, dpr){
+  const len = Math.hypot(x2 - x1, y2 - y1);
+  if (len < 0.5) return;
+  const hs = Math.min(9 * dpr, len * 0.55);
+  let ex = x2, ey = y2;
+  if (head && len > 8 * dpr){ const f = (len - hs * 0.7) / len; ex = x1 + (x2 - x1) * f; ey = y1 + (y2 - y1) * f; }
+  ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(ex, ey); ctx.stroke(); ctx.restore();
+  if (head && len > 8 * dpr) arrowHead(ctx, x1, y1, x2, y2, hs, color);
+}
+
+function redraw(){
+  _fs = Math.max(0.75, Math.min(2.5, parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
+  drawPE();
+  updateGraphDesc();
+}
+
+function drawPE(){
+  const env = setupCanvas(cv, cvWrap); if (!env) return;
+  const { ctx, dpr, W, H } = env;
+  ctx.clearRect(0, 0, W, H);
+  const M = model();
+  const ax = niceAxis(1.12 * Math.max(M.YA, M.YB, 200));
+  const mx = ax.max;
+  const p = { l:PAD.l*dpr, r:PAD.r*dpr, t:PAD.t*dpr, b:PAD.b*dpr };
+  const PW = W - p.l - p.r, PH = H - p.t - p.b;
+  const xC = x => p.l + (x / mx) * PW;
+  const yC = y => H - p.b - (y / mx) * PH;
+
+  // grid + ticks
+  ctx.strokeStyle = COL.grid; ctx.lineWidth = 1 * dpr;
+  ctx.font = font(10.5, 400, dpr); ctx.fillStyle = COL.muted;
+  const labEvery = (PW / (mx / ax.step)) < 34 * dpr * _fs ? 2 : 1;
+  for (let v = 0, i = 0; v <= mx + 1e-9; v += ax.step, i++){
+    ctx.beginPath(); ctx.moveTo(xC(v), p.t); ctx.lineTo(xC(v), H - p.b); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p.l, yC(v)); ctx.lineTo(W - p.r, yC(v)); ctx.stroke();
+    if (i % labEvery === 0){
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(String(v), xC(v), H - p.b + 5*dpr);
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(String(v), p.l - 6*dpr, yC(v));
+    }
+  }
+  // axes
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = 1.5 * dpr;
+  ctx.beginPath(); ctx.moveTo(p.l, p.t); ctx.lineTo(p.l, H - p.b); ctx.lineTo(W - p.r, H - p.b); ctx.stroke();
+  ctx.fillStyle = COL.ink; ctx.font = font(11.5, 700, dpr);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+  ctx.fillText('Output / Income (Y)', p.l + PW/2, H - 4*dpr);
+  ctx.save(); ctx.translate(12*dpr, p.t + PH/2); ctx.rotate(-Math.PI/2);
+  ctx.textBaseline = 'top'; ctx.fillText('Planned Expenditure (PE)', 0, 0); ctx.restore();
+
+  // clipped lines
+  ctx.save(); ctx.beginPath(); ctx.rect(p.l, p.t, PW, PH); ctx.clip();
+  ctx.strokeStyle = COL.ink; ctx.lineWidth = 2 * dpr;
+  ctx.beginPath(); ctx.moveTo(xC(0), yC(0)); ctx.lineTo(xC(mx), yC(mx)); ctx.stroke();
+  const peLine = (i, color, dash, w) => {
+    ctx.strokeStyle = color; ctx.lineWidth = w * dpr; ctx.setLineDash(dash.map(d => d*dpr));
+    ctx.beginPath(); ctx.moveTo(xC(0), yC(i)); ctx.lineTo(xC(mx), yC(i + M.m*mx)); ctx.stroke(); ctx.setLineDash([]);
+  };
+  peLine(M.i0, COL.accent, [7,5], 2.5);
+  if (M.d0 !== 0) peLine(M.i1, COL.amber, [], 3);
+  ctx.restore();
+
+  // line labels (right edge)
+  ctx.font = font(11.5, 700, dpr); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  let yPE = yC(M.i0 + M.m*mx), yPE1 = yC(M.i1 + M.m*mx);
+  if (M.d0 !== 0 && Math.abs(yPE - yPE1) < 14*dpr*_fs){
+    const mid = (yPE + yPE1)/2, off = 7*dpr*_fs;
+    if (yPE1 < yPE){ yPE1 = mid - off; yPE = mid + off; } else { yPE1 = mid + off; yPE = mid - off; }
+  }
+  haloText(ctx, 'PE', W - p.r + 4*dpr, yPE, COL.accent, dpr);
+  if (M.d0 !== 0) haloText(ctx, 'PE′', W - p.r + 4*dpr, yPE1, COL.amber, dpr);
+  ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+  haloText(ctx, 'Y = PE (45°)', xC(0.93*mx) - 8*dpr, yC(0.93*mx) - 6*dpr, COL.ink, dpr);
+
+  // initial shift arrow at small Y
+  if (M.d0 !== 0){
+    const xs = 0.1 * mx, y1 = M.i0 + M.m*xs, y2 = M.i1 + M.m*xs;
+    segment(ctx, xC(xs), yC(y1), xC(xs), yC(y2), COL.amber, 2*dpr, true, dpr);
+    ctx.font = font(11, 700, dpr); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    haloText(ctx, `ΔPE = ${sgn(M.d0)}`, xC(xs) + 6*dpr, yC((y1 + y2)/2), COL.amber, dpr);
+  }
+
+  // point A guides
+  const dot = (Y, color, r) => { ctx.beginPath(); ctx.arc(xC(Y), yC(Y), r*dpr, 0, Math.PI*2); ctx.fillStyle = color; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5*dpr; ctx.stroke(); };
+  const guides = (Y, color) => {
+    ctx.save(); ctx.strokeStyle = color; ctx.globalAlpha = 0.55; ctx.lineWidth = 1.3*dpr; ctx.setLineDash([4*dpr, 4*dpr]);
+    ctx.beginPath(); ctx.moveTo(xC(Y), yC(Y)); ctx.lineTo(xC(Y), H - p.b); ctx.moveTo(xC(Y), yC(Y)); ctx.lineTo(p.l, yC(Y)); ctx.stroke(); ctx.restore();
+  };
+  guides(M.YA, COL.accent);
+
+  // staircase
+  const nFinal = finalRounds(M);
+  const nDraw = S.finished ? nFinal : S.done;
+  const now = performance.now();
+  let curY = M.YA;
+  for (let k = 1; k <= nDraw; k++){
+    const g = gapAt(M, k), ys = yStart(M, k), ye = ys + g;
+    let vP = 1, hP = 1;
+    if (S.anim && S.anim.k === k){
+      const t = now - S.anim.start;
+      vP = Math.max(0, Math.min(1, (t - S.anim.tV) / SEG_MS));
+      hP = Math.max(0, Math.min(1, (t - S.anim.tH) / SEG_MS));
+    }
+    const isCur = !S.finished && k === S.done;
+    const lw = (isCur ? 3.5 : 2.2) * dpr;
+    ctx.save(); ctx.globalAlpha = isCur || S.finished ? 1 : 0.5;
+    if (vP > 0) segment(ctx, xC(ys), yC(ys), xC(ys), yC(ys + g*vP), COL.bad, lw, true, dpr);
+    if (hP > 0) segment(ctx, xC(ys), yC(ye), xC(ys + g*hP), yC(ye), COL.good, lw, true, dpr);
+    ctx.restore();
+    if (isCur){
+      ctx.font = font(11, 700, dpr);
+      if (vP > 0.6){
+        ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+        haloText(ctx, `U.I. = ${sgn(-g)}`, xC(ys) - 7*dpr, yC(ys + g/2), COL.bad, dpr);
+      }
+      if (hP > 0.6){
+        ctx.textAlign = 'center'; ctx.textBaseline = g > 0 ? 'bottom' : 'top';
+        haloText(ctx, `ΔY = ${sgn(g)}`, (xC(ys) + xC(ye))/2, yC(ye) + (g > 0 ? -6 : 6)*dpr, COL.good, dpr);
+      }
+    }
+    curY = hP >= 1 ? ye : ys;
+  }
+
+  dot(M.YA, COL.accent, 5.5);
+  ctx.font = font(11.5, 800, dpr); ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+  if (M.d0 < 0) haloText(ctx, `A (${fmt(M.YA)})`, xC(M.YA) - 9*dpr, yC(M.YA) - 5*dpr, COL.accent, dpr);
+  else { ctx.textAlign = 'left'; ctx.textBaseline = 'top'; haloText(ctx, `A (${fmt(M.YA)})`, xC(M.YA) + 9*dpr, yC(M.YA) + 5*dpr, COL.accent, dpr); }
+
+  if (S.finished && M.d0 !== 0){
+    guides(M.YB, COL.amber);
+    dot(M.YB, COL.amber, 6);
+    ctx.font = font(11.5, 800, dpr);
+    if (M.d0 > 0){ ctx.textAlign = 'left'; ctx.textBaseline = 'top'; haloText(ctx, `B (${fmt(M.YB)})`, xC(M.YB) + 9*dpr, yC(M.YB) + 5*dpr, COL.amber, dpr); }
+    else { ctx.textAlign = 'right'; ctx.textBaseline = 'bottom'; haloText(ctx, `B (${fmt(M.YB)})`, xC(M.YB) - 9*dpr, yC(M.YB) - 5*dpr, COL.amber, dpr); }
+    // ΔY arrow along the bottom
+    const yb = H - p.b - 16*dpr;
+    segment(ctx, xC(M.YA), yb, xC(M.YB), yb, COL.good, 2.5*dpr, true, dpr);
+    ctx.font = font(11, 800, dpr); ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    haloText(ctx, `ΔY = ${sgn(M.dY)}`, (xC(M.YA) + xC(M.YB))/2, yb - 5*dpr, COL.good, dpr);
+  } else if (S.done > 0){
+    // current production marker
+    ctx.beginPath(); ctx.arc(xC(curY), yC(curY), 6*dpr, 0, Math.PI*2);
+    ctx.strokeStyle = COL.good; ctx.lineWidth = 2.5*dpr; ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke();
+    ctx.save(); ctx.strokeStyle = COL.good; ctx.globalAlpha = 0.5; ctx.setLineDash([3*dpr, 4*dpr]); ctx.lineWidth = 1.3*dpr;
+    ctx.beginPath(); ctx.moveTo(xC(curY), yC(curY)); ctx.lineTo(xC(curY), H - p.b); ctx.stroke(); ctx.restore();
+    ctx.font = font(11, 700, dpr); ctx.textAlign = M.d0 > 0 ? 'left' : 'right'; ctx.textBaseline = 'bottom';
+    haloText(ctx, `Y = ${fmt(curY)}`, xC(curY) + (M.d0 > 0 ? 5 : -5)*dpr, H - p.b - 4*dpr, COL.good, dpr);
+  }
+}
+
+function updateGraphDesc(){
+  const M = model();
+  let d = `Planned expenditure diagram with output Y on the horizontal axis and planned expenditure PE on the vertical axis. ` +
+    `The 45 degree line shows every point where Y equals PE. The original line PE = ${fmt(M.i0)} + ${fmt(M.m)}Y crosses it at point A, Y = ${fmt(M.YA)}. `;
+  if (M.d0 === 0){ d += 'The selected change does not shift planned expenditure.'; }
+  else {
+    d += `After the change, PE shifts ${M.d0 > 0 ? 'up' : 'down'} by ${fmt(Math.abs(M.d0))} to PE′ = ${fmt(M.i1)} + ${fmt(M.m)}Y. `;
+    if (S.finished) d += `A staircase of shrinking steps runs from A to point B, Y = ${fmt(M.YB)}, where PE′ crosses the 45 degree line. Total change in output ${sgn(M.dY)}.`;
+    else if (S.done > 0){
+      const ys = yStart(M, S.done), g = gapAt(M, S.done);
+      d += `Round ${S.done}: at production ${fmt(ys)}, planned expenditure differs from production by ${sgn(g)} (unplanned inventory change ${sgn(-g)}), so firms change production by ${sgn(g)} to ${fmt(ys + g)}.`;
+    } else d += 'No rounds shown yet.';
+  }
+  $('peDesc').textContent = d;
+}
+
+let _resizeTimer;
+window.addEventListener('resize', () => { clearTimeout(_resizeTimer); _resizeTimer = setTimeout(redraw, 80); });
+
+/* ════════════════════════════════════════════════════════════════
+   Step 4 — check your understanding
+   ════════════════════════════════════════════════════════════════ */
+const Q = { results: {} };
+function rng(){
+  try { if (window.Session && typeof Session.rngForLab === 'function'){ const f = Session.rngForLab(LAB_ID); if (typeof f === 'function') return f; } } catch(e){}
+  return Math.random;
+}
+function pick(arr, r){ return arr[Math.floor(r() * arr.length)]; }
+
+function generateParams(){
+  const r = rng();
+  const mpc = pick([0.5, 0.75, 0.8], r);
+  const dG = pick([40, 80, -40, -80, 60, -60], r) * (mpc === 0.75 ? 1 : 1);
+  Q.p = { mpc, dG };
+  Q.results = {};
+  buildQuiz();
+}
+
+function record(idx, text, firstAns, firstOk, finalAns, finalOk){
+  try { if (window.Session && typeof Session.recordQuestion === 'function') Session.recordQuestion(LAB_ID, idx, text, firstAns, firstOk, finalAns, finalOk); } catch(e){}
+}
+function maybeDone(){
+  const keys = Object.keys(Q.results);
+  const resolved = keys.filter(k => Q.results[k].resolved);
+  const first = keys.filter(k => Q.results[k].firstOk).length;
+  const fin = keys.filter(k => Q.results[k].finalOk).length;
+  $('scoreLine').textContent = resolved.length ? `Correct on first try: ${first} of 3. Completed: ${resolved.length} of 3.` : '';
+  if (resolved.length === 3 && !Q.reported){
+    Q.reported = true;
+    try { if (window.Session && typeof Session.recordLabDone === 'function') Session.recordLabDone(LAB_ID, LAB_LABEL, first, fin, 3); } catch(e){}
+  }
+}
+
+function numericQuestion(idx, title, text, answer, hintFn, solution){
+  const wrap = document.createElement('div'); wrap.className = 'q';
+  const id = 'q' + idx;
+  wrap.innerHTML = `<div class="q-title">${title}</div><div>${text}</div>
+    <div class="q-row"><label class="sr-only" for="${id}in">Your answer</label>
+      <input id="${id}in" type="text" inputmode="decimal" placeholder="Answer">
+      <button class="primary-btn" id="${id}chk">Check Answer</button>
+      <button class="option-btn" id="${id}hint">Hint</button>
+      <button class="option-btn" id="${id}sol">Show solution</button></div>
+    <div id="${id}fb" aria-live="polite"></div>`;
+  $('quiz').appendChild(wrap);
+  const res = Q.results[idx] = { attempts: 0, firstOk: false, finalOk: false, resolved: false, firstAns: '' };
+  const inp = $(id + 'in'), fb = $(id + 'fb');
+  const plain = text.replace(/<[^>]+>/g, '');
+  $(id + 'chk').addEventListener('click', () => {
+    const v = parseNum(inp.value);
+    if (isNaN(v)){ fb.innerHTML = `<div class="feedback info">Enter a number (use a minus sign for a decrease).</div>`; return; }
+    const ok = Math.abs(v - answer) < 0.01;
+    res.attempts++;
+    if (res.attempts === 1){ res.firstOk = ok; res.firstAns = inp.value; }
+    if (ok){
+      res.finalOk = true; res.resolved = true;
+      fb.innerHTML = `<div class="feedback ok">✓ Correct. ${solution}</div>`;
+      inp.disabled = true; $(id + 'chk').disabled = true;
+    } else {
+      fb.innerHTML = `<div class="feedback no">✗ Not quite. ${hintFn(v)}</div>`;
+    }
+    if (res.resolved) record(idx, plain, res.firstAns, res.firstOk, inp.value, res.finalOk);
+    maybeDone();
+  });
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') $(id + 'chk').click(); });
+  $(id + 'hint').addEventListener('click', () => { fb.innerHTML = `<div class="feedback info">Hint: ${hintFn(null)}</div>`; });
+  $(id + 'sol').addEventListener('click', () => {
+    if (!res.resolved){
+      if (res.attempts === 0){ res.firstOk = false; res.firstAns = '(solution shown)'; }
+      res.resolved = true; res.finalOk = false;
+      record(idx, plain, res.firstAns, res.firstOk, '(solution shown)', false);
+    }
+    fb.innerHTML = `<div class="feedback info">Answer: <strong>${sgn(answer)}</strong>. ${solution}</div>`;
+    inp.disabled = true; $(id + 'chk').disabled = true;
+    maybeDone();
+  });
+}
+
+function mcQuestion(idx, title, text, options){
+  const r = rng();
+  const opts = options.slice();
+  for (let i = opts.length - 1; i > 0; i--){ const j = Math.floor(r() * (i + 1)); [opts[i], opts[j]] = [opts[j], opts[i]]; }
+  const wrap = document.createElement('div'); wrap.className = 'q';
+  const id = 'q' + idx;
+  wrap.innerHTML = `<div class="q-title">${title}</div><div id="${id}txt">${text}</div>
+    <div class="mc-opts" role="group" aria-labelledby="${id}txt">${opts.map((o, i) => `<button class="mc-opt" data-i="${i}" aria-pressed="false">${String.fromCharCode(65 + i)}. ${o.t}</button>`).join('')}</div>
+    <div class="q-row"><button class="primary-btn" id="${id}chk">Check Answer</button><button class="option-btn" id="${id}sol">Show solution</button></div>
+    <div id="${id}fb" aria-live="polite"></div>`;
+  $('quiz').appendChild(wrap);
+  const res = Q.results[idx] = { attempts: 0, firstOk: false, finalOk: false, resolved: false, firstAns: '' };
+  let chosen = -1;
+  const btns = Array.from(wrap.querySelectorAll('.mc-opt'));
+  const fb = $(id + 'fb');
+  btns.forEach(b => b.addEventListener('click', () => {
+    chosen = parseInt(b.dataset.i, 10);
+    btns.forEach(x => { const on = x === b; x.classList.toggle('picked', on); x.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+  }));
+  const lock = () => { btns.forEach(x => x.disabled = true); $(id + 'chk').disabled = true; };
+  $(id + 'chk').addEventListener('click', () => {
+    if (chosen < 0){ fb.innerHTML = `<div class="feedback info">Pick an option first.</div>`; return; }
+    const o = opts[chosen]; res.attempts++;
+    const label = String.fromCharCode(65 + chosen) + '. ' + o.t;
+    if (res.attempts === 1){ res.firstOk = !!o.ok; res.firstAns = label; }
+    if (o.ok){ res.finalOk = true; res.resolved = true; fb.innerHTML = `<div class="feedback ok">✓ Correct. ${o.fb}</div>`; lock(); record(idx, text, res.firstAns, res.firstOk, label, true); }
+    else fb.innerHTML = `<div class="feedback no">✗ ${o.fb}</div>`;
+    maybeDone();
+  });
+  $(id + 'sol').addEventListener('click', () => {
+    const ci = opts.findIndex(o => o.ok);
+    if (!res.resolved){
+      if (res.attempts === 0){ res.firstOk = false; res.firstAns = '(solution shown)'; }
+      res.resolved = true; res.finalOk = false;
+      record(idx, text, res.firstAns, res.firstOk, '(solution shown)', false);
+    }
+    fb.innerHTML = `<div class="feedback info">Answer: <strong>${String.fromCharCode(65 + ci)}</strong>. ${opts[ci].fb}</div>`;
+    lock(); maybeDone();
+  });
+}
+
+function buildQuiz(){
+  $('quiz').innerHTML = ''; Q.reported = false;
+  const { mpc, dG } = Q.p;
+  const r2 = mpc * dG, tot = dG / (1 - mpc), mult = 1 / (1 - mpc);
+  const dir = dG > 0 ? 'rise' : 'fall';
+  numericQuestion(1, 'Question 1 · The second round',
+    `The MPC is ${fmt(mpc)}. Government purchases ${dir} by ${fmt(Math.abs(dG))}, so in round 1 output changes by ${sgn(dG)}. By how much does output change in <strong>round 2</strong>? (Use a minus sign for a decrease.)`,
+    r2,
+    v => {
+      if (v === null) return 'The round-1 change in output is also a change in income. How much of a change in income do households spend?';
+      if (Math.abs(v + r2) < 0.01) return 'Check the sign: if output ' + (dG > 0 ? 'rose' : 'fell') + ' in round 1, consumption moves the same direction in round 2.';
+      if (Math.abs(v - dG) < 0.01) return 'That is round 1. Round 2 is smaller: households spend only MPC of the change in income.';
+      if (Math.abs(v - dG * (1 - mpc)) < 0.01) return 'That is the part households save. Round 2 comes from the part they spend.';
+      return 'Round 2 = MPC × (round-1 change in income).';
+    },
+    `Round 2: ΔC = MPC × ΔY = ${fmt(mpc)} × ${paren(dG)} = ${sgn(r2)}, so planned expenditure and then output change by ${sgn(r2)}.`);
+
+  numericQuestion(2, 'Question 2 · All the rounds',
+    `Same economy (MPC = ${fmt(mpc)}, ΔG = ${sgn(dG)}). After <strong>all</strong> the rounds, what is the total change in equilibrium output?`,
+    tot,
+    v => {
+      if (v === null) return 'Multiply the round-1 change in planned expenditure by 1 ÷ (1 − MPC).';
+      if (Math.abs(v + tot) < 0.01) return 'Check the sign: output moves in the same direction as G.';
+      if (Math.abs(v - dG) < 0.01) return 'That counts only round 1. Every later round of consumption adds more.';
+      if (Math.abs(v - (dG + r2)) < 0.01) return 'That counts only rounds 1 and 2. Keep going: the rounds continue until they die out.';
+      if (Math.abs(v - (-mpc/(1-mpc))*dG) < 0.01) return 'That uses the tax multiplier. For a change in G, round 1 is the full ΔG.';
+      return `The government purchases multiplier is 1 ÷ (1 − MPC).`;
+    },
+    `ΔY = ${frac('1','1 − MPC')} × ΔG = ${frac('1', '1 − ' + fmt(mpc))} × ${paren(dG)} = ${fmt(mult)} × ${paren(dG)} = ${sgn(tot)}.`);
+
+  mcQuestion(3, 'Question 3 · Why taxes are different',
+    'The MPC is 0.5. Compare a tax cut of 100 with an increase in government purchases of 100. Why does the tax cut raise output by less?',
+    [
+      { t: 'Households save part of the tax cut, so in round 1 planned expenditure rises by only 50 instead of 100.', ok: true,
+        fb: 'The tax cut raises disposable income by 100, but households spend only MPC × 100 = 50 of it. After round 1 the chain is identical, so the tax chain is the government purchases chain with its first round (100) missing: 200 − 100 = 100.' },
+      { t: 'A tax cut does not start any further rounds of spending.',
+        fb: 'It does. Once consumption rises by 50, output and income rise, and consumption rises again: 50 + 25 + 12.5 + … = 100.' },
+      { t: 'When taxes are cut, the government must cut its purchases.',
+        fb: 'In this model G is set outside the model and does not change when T changes.' },
+      { t: 'Households have a smaller MPC when their income comes from a tax cut.',
+        fb: 'The MPC is the same (0.5) in both cases. The only difference is round 1: ΔG enters PE in full, while the tax cut enters as MPC × 100.' }
+    ]);
+  maybeDone();
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Self-test (?selftest) — checks the lecture numbers
+   ════════════════════════════════════════════════════════════════ */
+function selfTest(){
+  const saved = JSON.parse(JSON.stringify({ mode:S.mode, mpc:S.mpc, r:S.r, dG:S.dG, dT:S.dT, gtG:S.gtG, gtT:S.gtT }));
+  const cases = [
+    { set:{mode:'G', mpc:0.5, dG:100}, YA:450, d0:100, YB:650 },   // Fiscal Policy notes: G 100→200
+    { set:{mode:'I', mpc:0.5, r:10},   YA:450, d0:-50, YB:350 },   // Goods Market notes: r 5→10
+    { set:{mode:'T', mpc:0.5, dT:100}, YA:450, d0:-50, YB:350 },   // Fiscal Policy notes: T 50→150
+    { set:{mode:'GT', mpc:0.5, gtG:-50, gtT:-50}, YA:450, d0:-25, YB:400 },  // notes: ΔG=ΔT=−50
+    { set:{mode:'G', mpc:0.75, dG:100}, YA:850, d0:100, YB:1250 }, // ×4
+    { set:{mode:'T', mpc:0.75, dT:100}, YA:850, d0:-75, YB:550 }   // ×(−3)
+  ];
+  const out = cases.map(c => {
+    Object.assign(S, c.set); const M = model();
+    const ok = Math.abs(M.YA - c.YA) < 1e-9 && Math.abs(M.d0 - c.d0) < 1e-9 && Math.abs(M.YB - c.YB) < 1e-9;
+    // staircase converges to YB
+    const n = finalRounds(M); const end = yStart(M, n + 1);
+    return ok && Math.abs(end - c.YB) < 0.05;
+  });
+  Object.assign(S, saved);
+  const pass = out.every(Boolean);
+  console.log('[multiplier selftest]', pass ? 'PASS' : 'FAIL', out);
+  return pass;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Init
+   ════════════════════════════════════════════════════════════════ */
+if (/[?&]selftest/.test(location.search)) window.__selftest = selfTest();
+syncButtons(); updateSetup(); resetRounds();
+generateParams();
+redraw();
+
+})();
 </script>
 </body>
 </html>

@@ -169,7 +169,7 @@
       width: 100%; display: block; border-radius: 10px;
       background: rgba(255,255,255,0.65);
     }
-    #isfrCanvas { height: 300px; }
+    #isirCanvas { height: 300px; }
     #adCanvas   { height: 260px; }
 
     /* Reset button tweak */
@@ -203,18 +203,18 @@
         <div class="kicker">Macroeconomics Practice Lab</div>
         <h1>Deriving Aggregate Demand</h1>
         <p class="sub">
-          See how a change in the price level shifts the FR curve, changes equilibrium output, and traces out the AD curve — one point at a time.
+          See how a change in the price level shifts the IR curve, changes equilibrium output, and traces out the AD curve — one point at a time.
         </p>
         <details class="howto">
           <summary>How this app works</summary>
           <div class="howto-body">
             <ol>
-              <li>The economy starts at price level \(P_1\) (baseline). The IS–FR diagram shows equilibrium at point A.</li>
-              <li>Click <strong>\(P_2\) — Higher Price Level</strong>. Watch the FR curve shift <em>up</em> because the Fed raises rates when prices rise. Notice output falls to \(Y_2\). Point B is plotted on the AD diagram below.</li>
-              <li>Click <strong>\(P_3\) — Lower Price Level</strong>. The FR curve shifts <em>down</em>, output rises to \(Y_3\). Point C is plotted.</li>
+              <li>The economy starts at price level \(P_1\) (baseline). The IS–IR diagram shows equilibrium at point A.</li>
+              <li>Click <strong>\(P_2\) — Higher Price Level</strong>. Watch the IR curve shift <em>up</em>: a higher price level shrinks real money balances \(M/P\), so the interest rate that clears the money market rises at every level of output. Notice output falls to \(Y_2\). Point B is plotted on the AD diagram below.</li>
+              <li>Click <strong>\(P_3\) — Lower Price Level</strong>. Real money balances \(M/P\) grow, so the IR curve shifts <em>down</em> and output rises to \(Y_3\). Point C is plotted.</li>
               <li>Once all three points are plotted, the AD curve connects them — revealing why it is <strong>downward sloping</strong>.</li>
             </ol>
-            <p style="margin:8px 0 0"><strong>Key idea:</strong> The AD curve is <em>not</em> like a regular supply/demand curve. Each point on it is a full IS–FR equilibrium. Moving along AD means the price level changes and the FR curve shifts in response.</p>
+            <p style="margin:8px 0 0"><strong>Key idea:</strong> The AD curve is <em>not</em> like a regular supply/demand curve. Each point on it is a full IS–IR equilibrium. Moving along AD means the price level changes and the IR curve shifts in response.</p>
           </div>
         </details>
       </div>
@@ -282,7 +282,7 @@
       <div class="insight-card">
         <div class="insight-title">What's happening</div>
         <div class="insight-body" id="insightBody" aria-live="polite" aria-atomic="true">
-          Select a price level to see how the IS–FR equilibrium responds and how that point maps onto the AD curve.
+          Select a price level to see how the IS–IR equilibrium responds and how that point maps onto the AD curve.
         </div>
         <div class="eq-pills" id="eqPills" aria-live="polite" aria-atomic="true"></div>
       </div>
@@ -293,13 +293,13 @@
     <div class="right-col">
       <div class="chart-card">
         <div class="chart-head">
-          <h2 id="isfrTitle">IS–FR Diagram</h2>
-          <span class="chart-hint">FR shifts when P changes; IS is fixed</span>
+          <h2 id="isirTitle">IS–IR Diagram</h2>
+          <span class="chart-hint">IR shifts when P changes; IS is fixed</span>
         </div>
-        <canvas id="isfrCanvas"
+        <canvas id="isirCanvas"
                 role="img"
-                aria-labelledby="isfrTitle"
-                aria-describedby="isfrDesc"
+                aria-labelledby="isirTitle"
+                aria-describedby="isirDesc"
                 width="900" height="540"></canvas>
       </div>
 
@@ -321,7 +321,7 @@
 
 <!-- Screen-reader descriptions for canvases (WCAG 1.1.1) -->
 <section class="sr-only" aria-live="polite" aria-atomic="true">
-  <p id="isfrDesc">IS–FR diagram loading.</p>
+  <p id="isirDesc">IS–IR diagram loading.</p>
   <p id="adDesc">Aggregate demand diagram loading.</p>
 </section>
 
@@ -339,10 +339,10 @@
   // ── Model (same params as AD Curve app) ──────────────────────────────────
   const M = {
     IS:  { aIS: 16, bIS: 0.06, gG: 0.08, gT: 0.08, gC: 0.08, gI: 0.08 },
-    FR:  { aFR: 2,  bFR: 0.04, hP: 2.4,  hZ: 2.4  },
-    base:{ G: 100, T: 100, C: 100, I: 100, P: 5, Z: 5 },
-    isfr:{ Ymin: 0, Ymax: 200, rmin: 0, rmax: 20 },
-    ad:  { Ymin: 0, Ymax: 200, Pmin: 2, Pmax: 8 },
+    IR:  { aIR: 2,  bIR: 0.04, hP: 2.4  },   // r = aIR + bIR·Y + hP·(P − P₀): IR(P)
+    base:{ G: 100, T: 100, C: 100, I: 100, P: 5 },
+    isir:{ Ymin: 0, Ymax: 240, rmin: 0, rmax: 20 },
+    ad:  { Ymin: 0, Ymax: 240, Pmin: 2, Pmax: 8 },
   };
 
   // Three price levels for the derivation
@@ -353,9 +353,9 @@
   };
 
   const INSIGHTS = {
-    1: `At the <strong>baseline price level P₁ = 5</strong>, the FR curve intersects the IS curve at point A. This gives us equilibrium output Y₁ and interest rate r₁. This is our starting point on the AD curve.`,
-    2: `When the <strong>price level rises to P₂ = 6.5</strong>, the Fed responds by raising interest rates at every level of output — the FR curve shifts <em>up</em>. The new equilibrium is at point B: output falls to Y₂ and the interest rate rises to r₂. We plot (P₂, Y₂) on the AD diagram.`,
-    3: `When the <strong>price level falls to P₃ = 3.5</strong>, the Fed lowers rates — the FR curve shifts <em>down</em>. The new equilibrium is at point C: output rises to Y₃ and the interest rate falls to r₃. We plot (P₃, Y₃) on the AD diagram. Connecting A, B, C traces the downward-sloping AD curve.`,
+    1: `At the <strong>baseline price level P₁ = 5</strong>, the IR curve intersects the IS curve at point A. This gives us equilibrium output Y₁ and interest rate r₁. This is our starting point on the AD curve.`,
+    2: `When the <strong>price level rises to P₂ = 6.5</strong>, real money balances M/P fall, so the interest rate that clears the money market is higher at every level of output — the IR curve shifts <em>up</em>. The higher interest rate reduces investment. The new equilibrium is at point B: output falls to Y₂ and the interest rate rises to r₂. We plot (P₂, Y₂) on the AD diagram.`,
+    3: `When the <strong>price level falls to P₃ = 3.5</strong>, real money balances M/P rise, so the money-market interest rate is lower at every level of output — the IR curve shifts <em>down</em>. The lower interest rate stimulates investment. The new equilibrium is at point C: output rises to Y₃ and the interest rate falls to r₃. We plot (P₃, Y₃) on the AD diagram. Connecting A, B, C traces the downward-sloping AD curve.`,
   };
 
   function IS_r(Y) {
@@ -363,22 +363,22 @@
     return aIS - bIS * Y;
   }
 
-  function FR_r(Y, P) {
-    const { aFR, bFR, hP } = M.FR;
+  function IR_r(Y, P) {
+    const { aIR, bIR, hP } = M.IR;
     const { P: P0 } = M.base;
-    return aFR + bFR * Y + hP * (P - P0);
+    return aIR + bIR * Y + hP * (P - P0);
   }
 
   function equilibrium(P) {
     const { aIS, bIS } = M.IS;
-    const { aFR, bFR, hP } = M.FR;
+    const { aIR, bIR, hP } = M.IR;
     const P0 = M.base.P;
-    const denom = bIS + bFR;
-    const Y = (aIS - aFR - hP*(P - P0)) / denom;
-    const r = FR_r(Y, P);
+    const denom = bIS + bIR;
+    const Y = (aIS - aIR - hP*(P - P0)) / denom;
+    const r = IR_r(Y, P);
     return {
-      Y: Math.max(M.isfr.Ymin, Math.min(M.isfr.Ymax, Y)),
-      r: Math.max(M.isfr.rmin, Math.min(M.isfr.rmax, r)),
+      Y: Math.max(M.isir.Ymin, Math.min(M.isir.Ymax, Y)),
+      r: Math.max(M.isir.rmin, Math.min(M.isir.rmax, r)),
     };
   }
 
@@ -401,7 +401,7 @@
   let revealed = new Set([1]);
 
   // ── DOM ──────────────────────────────────────────────────────────────────
-  const isfrCanvas = document.getElementById('isfrCanvas');
+  const isirCanvas = document.getElementById('isirCanvas');
   const adCanvas   = document.getElementById('adCanvas');
   const statusEl   = document.getElementById('status');
   const insightBody = document.getElementById('insightBody');
@@ -414,7 +414,7 @@
   const stepB = document.getElementById('stepB');
   const stepC = document.getElementById('stepC');
   const resetBtn = document.getElementById('resetBtn');
-  const isfrDesc = document.getElementById('isfrDesc');
+  const isirDesc = document.getElementById('isirDesc');
   const adDesc   = document.getElementById('adDesc');
 
   const BTNS  = { 1: btnP1, 2: btnP2, 3: btnP3 };
@@ -463,6 +463,17 @@
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5*dpr; ctx.stroke();
   }
 
+  // Text with a white halo so labels stay legible over grid and curve lines
+  function haloText(ctx, text, x, y, dpr) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+    ctx.lineWidth = 4 * dpr;
+    ctx.lineJoin = 'round';
+    ctx.strokeText(text, x, y);
+    ctx.restore();
+    ctx.fillText(text, x, y);
+  }
+
   function xTick(ctx, x, Y1, text, dpr, color='rgba(0,0,0,0.60)') {
     ctx.fillStyle = color;
     ctx.font = `800 ${Math.round(11*dpr*_fs)}px "Inter", system-ui, sans-serif`;
@@ -477,14 +488,14 @@
     ctx.fillText(text, X0 - 5*dpr, y);
   }
 
-  // ── Draw IS-FR ────────────────────────────────────────────────────────────
-  function drawISFR() {
-    const { ctx, dpr, W, H } = getCtx(isfrCanvas);
+  // ── Draw IS-IR ────────────────────────────────────────────────────────────
+  function drawISIR() {
+    const { ctx, dpr, W, H } = getCtx(isirCanvas);
     ctx.clearRect(0, 0, W, H);
 
     const pad = { l:68*dpr, r:20*dpr, t:18*dpr, b:52*dpr };
     const X0=pad.l, X1=W-pad.r, Y0=pad.t, Y1=H-pad.b;
-    const { Ymin, Ymax, rmin, rmax } = M.isfr;
+    const { Ymin, Ymax, rmin, rmax } = M.isir;
 
     const xTo = Y  => X0 + (Y  - Ymin) / (Ymax - Ymin) * (X1-X0);
     const yTo = r  => Y0 + (rmax - r)  / (rmax - rmin) * (Y1-Y0);
@@ -510,10 +521,12 @@
     // IS label — use rgba(0,0,0,0.60) for ≥4.5:1 contrast on white
     ctx.fillStyle = 'rgba(0,0,0,0.60)';
     ctx.font = `700 ${Math.round(12*dpr*_fs)}px "Inter", system-ui, sans-serif`;
+    // Drawn inside the plot at the upper-left end of IS (above the line, which
+    // falls away to the right) so it is never clipped and clears the IR labels
     ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
-    ctx.fillText('IS', xTo(Ymax)+4*dpr, yTo(rIS_R)-2*dpr);
+    haloText(ctx, 'IS', X0 + 6*dpr, yTo(rIS_L) - 6*dpr, dpr);
 
-    // Draw FR curves for each revealed price level (back to front: faded first)
+    // Draw IR curves for each revealed price level (back to front: faded first)
     const order = [1,2,3].filter(p => revealed.has(p) && p !== activeP);
     order.push(activeP);
 
@@ -522,20 +535,21 @@
       const { P, colorLine, colorSolid, point } = PRICES[p];
       const isActive = p === activeP;
 
-      const rFR_L = FR_r(Ymin, P);
-      const rFR_R = FR_r(Ymax, P);
+      const rIR_L = IR_r(Ymin, P);
+      const rIR_R = IR_r(Ymax, P);
       const lw    = isActive ? 2.5 : 1.8;
 
-      // FR line
-      line(ctx, xTo(Ymin), yTo(rFR_L), xTo(Ymax), yTo(rFR_R), colorLine, lw, dpr);
+      // IR line
+      line(ctx, xTo(Ymin), yTo(rIR_L), xTo(Ymax), yTo(rIR_R), colorLine, lw, dpr);
 
-      // FR label — only render for active curve to ensure contrast (WCAG 1.4.3)
+      // IR label — only render for active curve to ensure contrast (WCAG 1.4.3)
       if (isActive) {
         ctx.fillStyle = colorSolid;
         ctx.globalAlpha = 1.0;
         ctx.font = `700 ${Math.round(11*dpr*_fs)}px "Inter", system-ui, sans-serif`;
-        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-        ctx.fillText(`FR(${PRICES[p].label})`, xTo(Ymax)+4*dpr, yTo(rFR_R));
+        // Drawn inside the plot (right-aligned, above the line) so it is never clipped
+        ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+        haloText(ctx, `IR(${PRICES[p].label})`, X1 - 6*dpr, yTo(rIR_R) - 6*dpr, dpr);
         ctx.globalAlpha = 1;
       }
 
@@ -656,17 +670,17 @@
     const pointName = activePData.point;
     const revealedCount = revealed.size;
 
-    // IS-FR description
-    const frDesc = [1,2,3]
+    // IS-IR description
+    const irDesc = [1,2,3]
       .filter(p => revealed.has(p))
       .map(p => {
         const pEq = equilibrium(PRICES[p].P);
         return `Point ${PRICES[p].point} at price ${PRICES[p].label}: output ${pEq.Y.toFixed(1)}, interest rate ${pEq.r.toFixed(2)}`;
       }).join('; ');
-    isfrDesc.textContent = `IS–FR diagram. IS curve is fixed. ` +
+    isirDesc.textContent = `IS–IR diagram. IS curve is fixed. ` +
       `Currently selected: price level ${activePData.label}, equilibrium at point ${pointName}, ` +
       `output Y = ${eq.Y.toFixed(1)}, interest rate r = ${eq.r.toFixed(2)}. ` +
-      `Plotted equilibria: ${frDesc}.`;
+      `Plotted equilibria: ${irDesc}.`;
 
     // AD description
     const adPoints = [1,2,3]
@@ -685,7 +699,7 @@
   function drawAll() {
     _fs = Math.max(0.75, Math.min(2.5,
       parseFloat(getComputedStyle(document.documentElement).fontSize) / 16));
-    drawISFR();
+    drawISIR();
     drawAD();
     updateCanvasDescs();
   }
