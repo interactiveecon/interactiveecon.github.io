@@ -110,15 +110,38 @@
       border: 1.5px solid var(--line-2); background: rgba(246,242,234,0.55);
       transition: border-color .2s, background .2s;
     }
-    .mup-box.highlight-x,
-    .mup-box.highlight-y { border-color: var(--accent); background: rgba(47,93,124,0.07); }
     .mup-label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 6px; }
+    .mup-label.math { font-size: 1.125rem; text-transform: none; letter-spacing: normal; color: var(--ink-2); margin-bottom: 10px; }
     .mup-formula { font-size: 0.75rem; color: var(--ink-2); margin-bottom: 8px; min-height: 20px; }
     .mup-value { font-size: 1.375rem; font-weight: 900; font-variant-numeric: tabular-nums; }
     .mup-vs {
       font-size: 1.125rem; font-weight: 900; color: var(--muted); text-align: center;
       display: flex; align-items: center; justify-content: center;
     }
+
+    /* ── Given MU values ── */
+    .mu-given-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .mu-given {
+      border-radius: 14px; padding: 12px 14px; text-align: center;
+      border: 1px solid var(--line-2); background: rgba(246,242,234,0.55);
+    }
+    .mu-given-val { font-size: 1rem; font-weight: 800; color: var(--ink); }
+    .step-hint { margin: 0 0 10px; font-size: 0.8125rem; color: var(--ink-2); line-height: 1.55; }
+
+    /* ── MU/P entry boxes ── */
+    .mup-input {
+      display: block; width: 100%; max-width: 140px; margin: 0 auto;
+      padding: 8px 10px; border-radius: 10px; border: 1.5px solid #8c7f72;
+      background: #fff; font-family: var(--font-sans); font-size: 1rem; font-weight: 800;
+      color: var(--ink); text-align: center; font-variant-numeric: tabular-nums;
+    }
+    .mup-input:disabled { background: rgba(246,242,234,0.65); color: var(--ink-2); }
+    .mup-box.ok  { border-color: var(--good); background: rgba(21,92,56,0.07); }
+    .mup-box.err { border-color: var(--bad);  background: rgba(180,35,24,0.05); }
+    .mup-mark { display: block; margin-top: 6px; font-size: 0.75rem; font-weight: 800; min-height: 17px; }
+    .mup-box.ok  .mup-mark { color: var(--good); }
+    .mup-box.err .mup-mark { color: var(--bad); }
+    .lock-note { margin: 0 0 12px; font-size: 0.8125rem; font-weight: 700; color: #8c4800; }
 
     /* ── Question + choices ── */
     .question-text {
@@ -156,6 +179,7 @@
     }
     .feedback-box.correct { background: rgba(21,92,56,0.08); border: 1px solid rgba(21,92,56,0.25); color: var(--good); }
     .feedback-box.wrong   { background: rgba(180,35,24,0.07); border: 1px solid rgba(180,35,24,0.22); color: var(--bad); }
+    .feedback-box.neutral { background: rgba(47,93,124,0.06); border: 1px solid rgba(47,93,124,0.22); color: var(--ink-2); }
     .feedback-box strong  { color: var(--ink); }
 
     /* ── Score + controls ── */
@@ -222,7 +246,7 @@
       <div class="kicker">ECON 104A — Consumer Behavior</div>
       <h1>Is This the Optimum?</h1>
       <p class="sub">
-        A consumer is at a specific bundle on the budget line. Compare the marginal utility per dollar for each good and decide whether the consumer should shift spending — or is already at the optimum.
+        A consumer is at a specific bundle on the budget line. Compute the marginal utility per dollar for each good, compare them, and decide whether the consumer should shift spending — or is already at the optimum.
       </p>
     </div>
   </div>
@@ -264,21 +288,50 @@
         <span style="font-size:0.75rem;color:var(--muted);">(on budget line)</span>
       </div>
 
-      <!-- MU/P comparison -->
-      <div class="card-label" style="margin-bottom:10px;">Marginal Utility per Dollar</div>
+      <!-- Step 1 — marginal utilities (given) -->
+      <div class="card-label" style="margin-bottom:10px;">Step 1 — Marginal Utilities at This Bundle</div>
+      <div class="mu-given-grid">
+        <div class="mu-given">
+          <div class="mup-label">Good X</div>
+          <div class="mu-given-val" id="muValX"></div>
+        </div>
+        <div class="mu-given">
+          <div class="mup-label">Good Y</div>
+          <div class="mu-given-val" id="muValY"></div>
+        </div>
+      </div>
+
+      <!-- Step 2 — student computes MU per dollar -->
+      <div class="card-label" style="margin:16px 0 8px;">Step 2 — Marginal Utility per Dollar</div>
+      <p class="step-hint">Divide each marginal utility by that good&rsquo;s price, enter both values, then check your entries.</p>
       <div class="mup-grid">
         <div class="mup-box" id="mupBoxX">
-          <div class="mup-label">Good X</div>
+          <div class="mup-label math" id="mupLabelX">MU<sub>X</sub> / P<sub>X</sub></div>
           <div class="mup-formula" id="mupFormulaX"></div>
-          <div class="mup-value" id="mupValX" style="color:var(--accent);">—</div>
+          <input class="mup-input" id="mupInputX" type="text" inputmode="decimal"
+                 autocomplete="off" aria-label="Marginal utility per dollar for good X"
+                 aria-describedby="entryHint" />
+          <div class="mup-value hidden" id="mupValX" style="color:var(--accent);"></div>
+          <span class="mup-mark" id="mupMarkX"></span>
         </div>
         <div class="mup-vs">vs</div>
         <div class="mup-box" id="mupBoxY">
-          <div class="mup-label">Good Y</div>
+          <div class="mup-label math" id="mupLabelY">MU<sub>Y</sub> / P<sub>Y</sub></div>
           <div class="mup-formula" id="mupFormulaY"></div>
-          <div class="mup-value" id="mupValY" style="color:var(--accent);">—</div>
+          <input class="mup-input" id="mupInputY" type="text" inputmode="decimal"
+                 autocomplete="off" aria-label="Marginal utility per dollar for good Y"
+                 aria-describedby="entryHint" />
+          <div class="mup-value hidden" id="mupValY" style="color:var(--accent);"></div>
+          <span class="mup-mark" id="mupMarkY"></span>
         </div>
       </div>
+      <p class="sr-only" id="entryHint">Enter marginal utility divided by price. Rounding to two or three decimals is accepted.</p>
+      <div class="controls-row">
+        <button class="btn primary" id="checkEntriesBtn">Check Entries</button>
+        <button class="btn" id="showValuesBtn">Show Values</button>
+      </div>
+      <div class="feedback-box" id="entryFeedback" aria-hidden="true"></div>
+      <div role="status" aria-live="polite" aria-atomic="true" class="sr-only" id="srEntry"></div>
     </div>
 
     <!-- Question -->
@@ -287,6 +340,7 @@
       <div class="question-text">
         To maximize utility, the consumer should…
       </div>
+      <p class="lock-note" id="lockNote">Locked — check your Step 2 entries above to unlock this question.</p>
       <div class="choices" id="choicesContainer"></div>
       <div class="feedback-box" id="feedbackBox" aria-hidden="true"></div>
       <div role="status" aria-live="polite" aria-atomic="true" class="sr-only" id="srFeedback"></div>
@@ -340,6 +394,7 @@
   let prob = {};
   let score = { correct: 0, total: 0 };
   let answered = false;
+  let unlocked = false;   // Step 2 entries checked/revealed → decision open
   let _fs = 1;
 
   // ── DOM ──────────────────────────────────────────────────────────
@@ -349,12 +404,25 @@
   const $incDisp     = document.getElementById('incDisplay');
   const $bundleX     = document.getElementById('bundleX');
   const $bundleY     = document.getElementById('bundleY');
+  const $muValX      = document.getElementById('muValX');
+  const $muValY      = document.getElementById('muValY');
   const $mupFormulaX = document.getElementById('mupFormulaX');
   const $mupFormulaY = document.getElementById('mupFormulaY');
   const $mupValX     = document.getElementById('mupValX');
   const $mupValY     = document.getElementById('mupValY');
   const $mupBoxX     = document.getElementById('mupBoxX');
   const $mupBoxY     = document.getElementById('mupBoxY');
+  const $mupInputX   = document.getElementById('mupInputX');
+  const $mupInputY   = document.getElementById('mupInputY');
+  const $mupLabelX   = document.getElementById('mupLabelX');
+  const $mupLabelY   = document.getElementById('mupLabelY');
+  const $mupMarkX    = document.getElementById('mupMarkX');
+  const $mupMarkY    = document.getElementById('mupMarkY');
+  const $checkBtn    = document.getElementById('checkEntriesBtn');
+  const $showBtn     = document.getElementById('showValuesBtn');
+  const $entryFb     = document.getElementById('entryFeedback');
+  const $srEntry     = document.getElementById('srEntry');
+  const $lockNote    = document.getElementById('lockNote');
   const $choices     = document.getElementById('choicesContainer');
   const $feedback    = document.getElementById('feedbackBox');
   const $srFeedback  = document.getElementById('srFeedback');
@@ -379,11 +447,41 @@
     return den===1 ? sign+num : sign+'\\frac{'+num+'}{'+den+'}';
   }
   function fracFromDecimal(d) {
-    d = roundNice(d, 0.01);
+    d = roundNice(d, 2);
     const map = {'0.25':'\\frac{1}{4}','0.75':'\\frac{3}{4}','0.5':'\\frac{1}{2}',
       '0.33':'\\frac{1}{3}','0.67':'\\frac{2}{3}','0.2':'\\frac{1}{5}','0.4':'\\frac{2}{5}',
       '0.6':'\\frac{3}{5}','0.8':'\\frac{4}{5}','1':'1','0':'0'};
     return map[String(d)] || String(d);
+  }
+
+  // ── Number formatting ────────────────────────────────────────────
+  function trimZeros(str) {
+    return str.indexOf('.') >= 0 ? str.replace(/0+$/, '').replace(/\.$/, '') : str;
+  }
+  // Values below 1 get 3 decimals so the division stays meaningful
+  function fmtNum(v) {
+    return trimZeros(Math.abs(v) < 1 ? v.toFixed(3) : v.toFixed(2));
+  }
+
+  // ── Answer entry helpers ─────────────────────────────────────────
+  // Accepts a plain decimal or a written-out division such as "0.63/7"
+  function parseEntry(raw) {
+    const str = String(raw).trim().replace(/,/g, '').replace(/\s+/g, '');
+    if (!str) return NaN;
+    const m = str.match(/^(-?\d*\.?\d+)\/(-?\d*\.?\d+)$/);
+    if (m) { const den = parseFloat(m[2]); return den ? parseFloat(m[1]) / den : NaN; }
+    return /^-?\d*\.?\d+$/.test(str) ? parseFloat(str) : NaN;
+  }
+  function closeEnough(entry, target) {
+    const tol = Math.max(Math.abs(target) < 0.1 ? 0.004 : 0.011, 0.03 * Math.abs(target));
+    return Math.abs(entry - target) <= tol;
+  }
+  // Correct if it matches the exact ratio OR the ratio computed from the
+  // displayed (rounded) marginal utility — both are legitimate student work.
+  function entryOK(entry, exactRatio, muDisplayed, price) {
+    if (!isFinite(entry)) return false;
+    return closeEnough(entry, exactRatio) ||
+           closeEnough(entry, parseFloat(fmtNum(muDisplayed)) / price);
   }
 
   // ── RNG ──────────────────────────────────────────────────────────
@@ -402,33 +500,100 @@
 
   // ── Problem generation ────────────────────────────────────────────
   function generateProblem() {
-    // Retry up to 200 times — with the fixed direction logic ~57% of
-    // attempts succeed, so 200 tries is effectively guaranteed.
-    for (let attempt = 0; attempt < 200; attempt++) {
-      const p = tryGenerate();
+    // Pick the case first so retries within a case can't bias the mix
+    const roll = Math.random();
+    const caseType = roll < 1/3 ? 'moreX' : roll < 2/3 ? 'moreY' : 'optimal';
+
+    if (caseType === 'optimal') {
+      const p = tryGenerateOptimal();
       if (p) return p;
+    } else {
+      for (let attempt = 0; attempt < 300; attempt++) {
+        const p = tryGenerate(caseType);
+        if (p) return p;
+      }
     }
-    // Absolute fallback: force an optimal case which always succeeds
-    return tryGenerateOptimal();
+    return fallbackOptimal();
   }
 
+  // Fill in the marginal utilities at the bundle plus the MU-per-dollar
+  // values. `mupXshown` is what a student gets by dividing the *displayed*
+  // (rounded) MU by the price — that is the value their entry is judged on.
+  function finishProblem(p) {
+    const mx = muX(p, p.bX, p.bY);
+    const my = muY(p, p.bX, p.bY);
+    if (!isFinite(mx) || !isFinite(my) || mx <= 0 || my <= 0) return false;
+    p.muXval = mx;
+    p.muYval = my;
+    p.mupXexact = mx / p.px;
+    p.mupYexact = my / p.py;
+    // Keep both values in a range students can divide and compare sensibly
+    if (p.mupXexact < 0.015 || p.mupYexact < 0.015) return false;
+    if (p.mupXexact > 200  || p.mupYexact > 200)  return false;
+    p.mupXshown = fmtNum(parseFloat(fmtNum(mx)) / p.px);
+    p.mupYshown = fmtNum(parseFloat(fmtNum(my)) / p.py);
+    return true;
+  }
+
+  // Optimal case: build the problem backwards from an exact tangency so the
+  // two values the student computes come out exactly equal.
   function tryGenerateOptimal() {
-    const p = { uType: 1, alpha: 0.5, px: 5, py: 5, inc: 100 };
+    for (let attempt = 0; attempt < 400; attempt++) {
+      const uType = pick([1, 2]);
+      const p = { uType, caseType: 'optimal' };
+      if (uType === 1) p.alpha = pick([0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75]);
+      else { p.b = randInt(1, 4); p.c = randInt(1, 5); p.d = randInt(1, 5); }
+      p.px = randInt(3, 12);
+      p.py = randInt(3, 12);
+
+      // Candidate X values, shuffled so one parameter draw doesn't always
+      // land on the same bundle
+      const xs = [];
+      for (let x = 2; x <= 20; x++) xs.push(x);
+      for (let i = xs.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [xs[i], xs[j]] = [xs[j], xs[i]];
+      }
+
+      for (const x0 of xs) {
+        // Solve MUX/PX = MUY/PY for Y, given X
+        const y0 = uType === 1
+          ? x0 * p.px * (1 - p.alpha) / (p.py * p.alpha)
+          : (p.px * (p.b * x0 + p.d) / p.py - p.c) / p.b;
+        if (!isFinite(y0) || y0 < 1.5 || y0 > 40) continue;
+        const y0r = Math.round(y0 * 10) / 10;
+        if (Math.abs(y0 - y0r) > 1e-9) continue;              // Y on a 0.1 grid
+        const inc = p.px * x0 + p.py * y0r;
+        if (Math.abs(inc - Math.round(inc)) > 1e-9) continue; // whole-dollar income
+        if (inc < 40 || inc > 160) continue;
+
+        p.inc = Math.round(inc);
+        p.bX  = x0;
+        p.bY  = y0r;
+        solveOptimal(p);
+        if (!finishProblem(p)) continue;
+        if (Math.abs(p.mupXexact - p.mupYexact) > 1e-9) continue;
+        // The two values must also be identical once rounded for display,
+        // or the student's own arithmetic would suggest a gap that isn't there
+        if (p.mupXshown !== p.mupYshown) continue;
+        return p;
+      }
+    }
+    return null;
+  }
+
+  function fallbackOptimal() {
+    const p = { uType: 1, alpha: 0.5, px: 5, py: 5, inc: 100, caseType: 'optimal' };
     solveOptimal(p);
-    p.caseType = 'optimal';
-    p.bX = roundNice(p.optX, 1);
-    p.bY = roundNice((p.inc - p.px * p.bX) / p.py, 1);
-    const rawMup = muX(p, p.optX, p.optY) / p.px;
-    p.mupXval = roundNice(rawMup, 2);
-    p.mupYval = roundNice(rawMup, 2);
-    p.muXformula = muXFormula(p, p.bX, p.bY);
-    p.muYformula = muYFormula(p, p.bX, p.bY);
+    p.bX = 10;
+    p.bY = 10;
+    finishProblem(p);
     return p;
   }
 
-  function tryGenerate() {
+  function tryGenerate(caseType) {
     const uType = pick([1, 2]);  // 1=Cobb-Douglas, 2=bXY+cX+dY
-    let p = { uType };
+    const p = { uType, caseType };
 
     if (uType === 1) {
       const alphaChoices = [0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75];
@@ -447,35 +612,13 @@
     solveOptimal(p);
     if (!isFinite(p.optX) || !isFinite(p.optY) || p.optX < 1 || p.optY < 1) return null;
 
-    // Pick case type with equal probability (1/3 each)
-    // Use explicit random draw so retries within a case don't bias toward 'optimal'
-    const caseRoll = Math.random();
-    const caseType = caseRoll < 1/3 ? 'moreX' : caseRoll < 2/3 ? 'moreY' : 'optimal';
-    p.caseType = caseType;
-
-    if (caseType === 'optimal') {
-      // Place bundle exactly at optimum.
-      // Use the exact optX and recompute bY from budget to avoid rounding residuals.
-      p.bX = roundNice(p.optX, 1);
-      p.bY = roundNice((p.inc - p.px * p.bX) / p.py, 1);
-      if (p.bY <= 0) return null;
-      // For the optimal case, show MU/P as equal — compute at exact optimum, not rounded bundle
-      // to avoid display showing slightly different values.
-      const rawMup = muX(p, p.optX, p.optY) / p.px;
-      p.mupXval = roundNice(rawMup, 2);
-      p.mupYval = roundNice(rawMup, 2);  // by definition equal at optimum
-      p.muXformula = muXFormula(p, p.bX, p.bY);
-      p.muYformula = muYFormula(p, p.bX, p.bY);
-      return p;
-    }
-
-    // Off-optimum: place bundle well away from optimum to guarantee a large,
-    // unambiguous MU/P gap.
+    // Off-optimum: place the bundle well away from the optimum to guarantee a
+    // large, unambiguous MU/P gap.
     //
     // Key insight: when bX > optX (too much X, too little Y on budget line),
     // diminishing MU means MUX/PX < MUY/PY → consumer should shift toward Y.
     // When bX < optX (too little X), MUX/PX > MUY/PY → shift toward X.
-    // So 'moreX' case needs bX < optX, and 'moreY' case needs bX > optX.
+    // So 'moreX' needs bX < optX, and 'moreY' needs bX > optX.
     const xiMax = p.inc / p.px;
     let bX;
     if (caseType === 'moreX') {
@@ -495,24 +638,21 @@
     p.bY = roundNice((p.inc - p.px * p.bX) / p.py, 1);
     if (p.bX <= 0.5 || p.bY <= 0.5) return null;
 
-    // Compute MU/P at the rounded bundle and verify direction is unambiguous.
-    // Require a gap of at least 0.05 so display rounding can never mask the difference.
-    const rawMupX = muX(p, p.bX, p.bY) / p.px;
-    const rawMupY = muY(p, p.bX, p.bY) / p.py;
-    const gap = Math.abs(rawMupX - rawMupY);
-    if (gap < 0.05) return null;  // too close — retry
-    if (caseType === 'moreX' && rawMupX <= rawMupY) return null;
-    if (caseType === 'moreY' && rawMupY <= rawMupX) return null;
+    if (!finishProblem(p)) return null;
 
-    // Display values rounded to 2dp — gap >= 0.05 ensures they differ at 2dp
-    p.mupXval = roundNice(rawMupX, 2);
-    p.mupYval = roundNice(rawMupY, 2);
-    // Safety: if they still round the same, reject
-    if (p.mupXval === p.mupYval) return null;
+    // Require a gap that survives display rounding in both absolute and
+    // relative terms, so the comparison is never a coin flip.
+    const gap   = Math.abs(p.mupXexact - p.mupYexact);
+    const scale = Math.max(p.mupXexact, p.mupYexact);
+    if (gap < Math.max(0.05, 0.12 * scale)) return null;
 
-    // Compute MU formulas at bundle for display
-    p.muXformula = muXFormula(p, p.bX, p.bY);
-    p.muYformula = muYFormula(p, p.bX, p.bY);
+    // Direction must be unambiguous on the exact values …
+    if (caseType === 'moreX' && p.mupXexact <= p.mupYexact) return null;
+    if (caseType === 'moreY' && p.mupYexact <= p.mupXexact) return null;
+    // … and on the values the student actually computes from the display
+    const shownX = parseFloat(p.mupXshown), shownY = parseFloat(p.mupYshown);
+    if (caseType === 'moreX' && !(shownX > shownY)) return null;
+    if (caseType === 'moreY' && !(shownY > shownX)) return null;
 
     return p;
   }
@@ -540,22 +680,24 @@
     return p.b * x + p.d;
   }
 
-  // Human-readable MU/P formulas evaluated at bundle (x, y)
-  function muXFormula(p, x, y) {
-    if (p.uType === 1) {
-      const muVal = roundNice(muX(p, x, y), 2);
-      return '\\frac{MU_X}{P_X} = \\frac{' + muVal + '}{1} = ' + muVal;
-    }
-    const muVal = roundNice(p.b * y + p.c, 2);
-    return '\\frac{' + p.b + '(' + y + ')+' + p.c + '}{' + p.px + '} = \\frac{' + muVal + '}{' + p.px + '}';
+  // Marginal utility at the bundle, shown to the student in Step 1
+  function muXDisplayTex(p) {
+    const val = fmtNum(p.muXval);
+    if (p.uType === 1) return 'MU_X = ' + val;
+    return 'MU_X = ' + p.b + '(' + p.bY + ') + ' + p.c + ' = ' + val;
   }
-  function muYFormula(p, x, y) {
-    if (p.uType === 1) {
-      const muVal = roundNice(muY(p, x, y), 2);
-      return '\\frac{MU_Y}{P_Y} = \\frac{' + muVal + '}{1} = ' + muVal;
-    }
-    const muVal = roundNice(p.b * x + p.d, 2);
-    return '\\frac{' + p.b + '(' + x + ')+' + p.d + '}{' + p.py + '} = \\frac{' + muVal + '}{' + p.py + '}';
+  function muYDisplayTex(p) {
+    const val = fmtNum(p.muYval);
+    if (p.uType === 1) return 'MU_Y = ' + val;
+    return 'MU_Y = ' + p.b + '(' + p.bX + ') + ' + p.d + ' = ' + val;
+  }
+
+  // Worked division, revealed after the student checks Step 2
+  function mupWorkedTex(p, which) {
+    const mu    = which === 'X' ? fmtNum(p.muXval)  : fmtNum(p.muYval);
+    const price = which === 'X' ? p.px              : p.py;
+    const ratio = which === 'X' ? p.mupXshown       : p.mupYshown;
+    return '\\frac{' + mu + '}{' + price + '} = ' + ratio;
   }
 
   // ── Correct answer logic ──────────────────────────────────────────
@@ -573,7 +715,7 @@
     // Utility function
     let utilTex;
     if (p.uType === 1) {
-      utilTex = 'U = X^{' + fracFromDecimal(p.alpha) + '} Y^{' + fracFromDecimal(roundNice(1 - p.alpha, 0.01)) + '}';
+      utilTex = 'U = X^{' + fracFromDecimal(p.alpha) + '} Y^{' + fracFromDecimal(roundNice(1 - p.alpha, 2)) + '}';
     } else {
       const parts = [];
       parts.push(p.b === 1 ? 'XY' : p.b + 'XY');
@@ -590,17 +732,14 @@
     $bundleX.textContent = 'X = ' + p.bX;
     $bundleY.textContent = 'Y = ' + p.bY;
 
-    // MU/P values
-    renderKatex($mupFormulaX, p.muXformula);
-    renderKatex($mupFormulaY, p.muYformula);
-    $mupValX.textContent = p.mupXval;
-    $mupValY.textContent = p.mupYval;
+    // Step 1 — marginal utilities at the bundle (given)
+    renderKatex($muValX, muXDisplayTex(p));
+    renderKatex($muValY, muYDisplayTex(p));
 
-    // Highlight the higher MU/P
-    $mupBoxX.classList.remove('highlight-x');
-    $mupBoxY.classList.remove('highlight-y');
-    if (p.mupXval > p.mupYval)      $mupBoxX.classList.add('highlight-x');
-    else if (p.mupYval > p.mupXval) $mupBoxY.classList.add('highlight-y');
+    // Step 2 — fraction labels, blank entry boxes, decision locked
+    renderKatex($mupLabelX, '\\frac{MU_X}{P_X}');
+    renderKatex($mupLabelY, '\\frac{MU_Y}{P_Y}');
+    resetStep2();
 
     // Build choices
     $choices.innerHTML = '';
@@ -621,6 +760,7 @@
       const btn = document.createElement('button');
       btn.className = 'choice-btn';
       btn.innerHTML = `<span class="choice-icon" aria-hidden="true">${letters[i]}</span><span>${ch.label}</span>`;
+      btn.disabled = !unlocked;
       btn.addEventListener('click', () => handleAnswer(ch.key, i, choiceData));
       $choices.appendChild(btn);
     });
@@ -630,6 +770,114 @@
     $legend.style.display = 'none';
     drawGraph(false);
   }
+
+  // ── Step 2: MU-per-dollar entries ─────────────────────────────────
+  function resetStep2() {
+    unlocked = false;
+    [$mupInputX, $mupInputY].forEach(inp => {
+      inp.value = ''; inp.disabled = false; inp.classList.remove('hidden');
+    });
+    [$mupBoxX, $mupBoxY].forEach(box => box.classList.remove('ok', 'err'));
+    $mupMarkX.textContent = '';
+    $mupMarkY.textContent = '';
+    $mupFormulaX.innerHTML = '';
+    $mupFormulaY.innerHTML = '';
+    $mupValX.textContent = '';
+    $mupValY.textContent = '';
+    $mupValX.classList.add('hidden');
+    $mupValY.classList.add('hidden');
+    $checkBtn.disabled = false;
+    $showBtn.disabled  = false;
+    $entryFb.style.display = 'none';
+    $entryFb.className = 'feedback-box';
+    $entryFb.innerHTML = '';
+    $entryFb.setAttribute('aria-hidden', 'true');
+    $srEntry.textContent = '';
+    $lockNote.classList.remove('hidden');
+  }
+
+  function showEntryFeedback(kind, html) {
+    $entryFb.className = 'feedback-box ' + kind;
+    $entryFb.innerHTML = html;
+    $entryFb.style.display = 'block';
+    $entryFb.removeAttribute('aria-hidden');
+    $srEntry.textContent = $entryFb.textContent;
+  }
+
+  // Show the worked division, lock the entries, open the decision question
+  function revealStep2() {
+    const p = prob;
+    unlocked = true;
+    [$mupInputX, $mupInputY].forEach(inp => { inp.disabled = true; inp.classList.add('hidden'); });
+    renderKatex($mupFormulaX, mupWorkedTex(p, 'X'));
+    renderKatex($mupFormulaY, mupWorkedTex(p, 'Y'));
+    $mupValX.textContent = p.mupXshown;
+    $mupValY.textContent = p.mupYshown;
+    $mupValX.classList.remove('hidden');
+    $mupValY.classList.remove('hidden');
+    $checkBtn.disabled = true;
+    $showBtn.disabled  = true;
+    $lockNote.classList.add('hidden');
+    if (!answered) {
+      $choices.querySelectorAll('.choice-btn').forEach(b => { b.disabled = false; });
+    }
+  }
+
+  function checkEntries() {
+    if (unlocked) return;
+    const p  = prob;
+    const ex = parseEntry($mupInputX.value);
+    const ey = parseEntry($mupInputY.value);
+
+    if (!isFinite(ex) || !isFinite(ey)) {
+      showEntryFeedback('wrong',
+        'Enter a number in both boxes before checking — each marginal utility divided by that good&rsquo;s price.');
+      return;
+    }
+
+    const okX = entryOK(ex, p.mupXexact, p.muXval, p.px);
+    const okY = entryOK(ey, p.mupYexact, p.muYval, p.py);
+
+    $mupBoxX.classList.toggle('ok',  okX);
+    $mupBoxX.classList.toggle('err', !okX);
+    $mupBoxY.classList.toggle('ok',  okY);
+    $mupBoxY.classList.toggle('err', !okY);
+    $mupMarkX.textContent = okX ? '\u2713 correct' : '\u2717 not yet';
+    $mupMarkY.textContent = okY ? '\u2713 correct' : '\u2717 not yet';
+
+    if (okX && okY) {
+      revealStep2();
+      showEntryFeedback('correct',
+        '\u2713 Both entries are correct: <strong>MU<sub>X</sub>/P<sub>X</sub> = ' + p.mupXshown +
+        '</strong> and <strong>MU<sub>Y</sub>/P<sub>Y</sub> = ' + p.mupYshown +
+        '</strong>. Now compare them and answer the question below.');
+      return;
+    }
+
+    const which = (!okX && !okY) ? 'Both entries are off'
+                : (!okX ? 'The X entry is off' : 'The Y entry is off');
+    showEntryFeedback('wrong',
+      '\u2717 ' + which + '. Marginal utility per dollar is MU &divide; price — divide MU<sub>X</sub> by ' +
+      p.px + ' and MU<sub>Y</sub> by ' + p.py +
+      '. Try again, or press <strong>Show Values</strong> to move on.');
+  }
+
+  $checkBtn.addEventListener('click', checkEntries);
+
+  $showBtn.addEventListener('click', () => {
+    if (unlocked) return;
+    revealStep2();
+    showEntryFeedback('neutral',
+      'MU<sub>X</sub>/P<sub>X</sub> = <strong>' + prob.mupXshown +
+      '</strong> and MU<sub>Y</sub>/P<sub>Y</sub> = <strong>' + prob.mupYshown +
+      '</strong>. Compare them, then answer the question below.');
+  });
+
+  [$mupInputX, $mupInputY].forEach(inp => {
+    inp.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') { ev.preventDefault(); checkEntries(); }
+    });
+  });
 
   // ── Answer handling ───────────────────────────────────────────────
   function handleAnswer(key, idx, choiceData) {
@@ -666,7 +914,7 @@
   }
 
   function buildFeedback(isRight, correct, p) {
-    const mupX = p.mupXval, mupY = p.mupYval;
+    const mupX = p.mupXshown, mupY = p.mupYshown;
     if (correct === 2) {
       return (isRight ? '✓ Correct! ' : '✗ Not quite. ') +
         `<strong>MU<sub>X</sub>/P<sub>X</sub> = MU<sub>Y</sub>/P<sub>Y</sub> = ${mupX}</strong>, so the consumer is already getting equal bang per buck from both goods. This is the optimum — no reallocation can increase utility.`;

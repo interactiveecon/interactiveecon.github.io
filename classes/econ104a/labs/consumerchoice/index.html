@@ -223,6 +223,27 @@
       color: var(--good); font-weight: 600; font-size: 0.8125rem;
     }
 
+    /* ── Graph diagnostic (read-the-graph check) ────────────── */
+    .gd-intro { font-size: 0.875rem; font-weight: 700; color: var(--ink); margin-bottom: 12px; }
+    .pick-row { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; margin-top: 12px; }
+    .pick-field label {
+      display: block; font-size: 0.6875rem; font-weight: 700; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;
+    }
+    .pick-field input {
+      width: 104px; padding: 8px 10px; border: 1.5px solid #8c7f72; border-radius: 12px;
+      font-size: 0.9375rem; font-family: var(--font-sans); color: var(--ink); background: #fafaf8;
+      transition: border-color 0.12s;
+    }
+    .pick-field input:focus { border-color: var(--accent); background: #fff; }
+    .pick-hint {
+      margin-top: 10px; padding: 9px 13px; border-radius: 10px; font-size: 0.75rem;
+      line-height: 1.55; color: #8c4800; background: rgba(140,72,0,0.07);
+      border: 1px solid rgba(140,72,0,0.25);
+    }
+    #graphCanvas.picking { cursor: crosshair; }
+    .gd-continue { margin-top: 12px; }
+
     /* KaTeX */
     .katex { font-size: 1.0em; }
     .hidden { display: none !important; }
@@ -299,6 +320,51 @@
                role="status" aria-live="polite" aria-atomic="true"></div>
         </div>
 
+        <!-- Graph diagnostic: read the graph before solving -->
+        <div id="graphDiag" class="diagnostic hidden">
+          <div class="gd-intro">First, diagnose it on the graph.</div>
+
+          <div class="diag-step" id="gdStep1">
+            <div class="diag-step-header">Diagnostic A: What is wrong with your bundle?</div>
+            <div class="diag-question">
+              Your bundle is plotted in <strong>orange</strong>, together with the orange
+              indifference curve running through it. Compare it with the blue budget line and
+              the shaded affordable region, then pick the statement that describes it.
+            </div>
+            <div class="mc-options" id="gdOpts" role="group"
+                 aria-label="Why your bundle is not optimal"></div>
+            <div id="gdExplain" class="explanation-box hidden"></div>
+          </div>
+
+          <div class="diag-step hidden" id="gdStep2">
+            <div class="diag-step-header">Diagnostic B: Find a better bundle</div>
+            <div class="diag-question" id="gdPickQ"></div>
+            <div class="pick-row">
+              <div class="pick-field">
+                <label for="pickX">Bundle X</label>
+                <input type="text" id="pickX" inputmode="decimal" autocomplete="off" />
+              </div>
+              <div class="pick-field">
+                <label for="pickY">Bundle Y</label>
+                <input type="text" id="pickY" inputmode="decimal" autocomplete="off" />
+              </div>
+              <button class="btn primary" id="pickBtn" style="height:40px;">Check bundle</button>
+              <button class="btn hidden" id="pickHelpBtn" style="height:40px;">Show me one</button>
+            </div>
+            <div class="pick-hint">
+              Click anywhere on the graph to drop a bundle there, or type its coordinates and
+              press <strong>Check bundle</strong>.
+            </div>
+            <div id="gdPickMsg" class="result-msg hidden" role="status"
+                 aria-live="polite" aria-atomic="true"></div>
+          </div>
+
+          <div id="gdComplete" class="diag-complete hidden" aria-live="polite" aria-atomic="true"></div>
+          <div class="gd-continue">
+            <button class="btn primary hidden" id="gdContinueBtn">Continue to the step-by-step solution &rarr;</button>
+          </div>
+        </div>
+
         <!-- Diagnostic -->
         <div id="diagnostic" class="diagnostic hidden">
           <div style="font-size:0.875rem;font-weight:700;color:var(--ink);margin-bottom:12px;">
@@ -348,6 +414,10 @@
             <div class="legend-dot" style="background:#b47200;"></div>
             <span>Your bundle</span>
           </div>
+          <div class="legend-row" id="legendPickRow" style="display:none;">
+            <div class="legend-dot" style="background:#6b2d8f;"></div>
+            <span>Bundle you picked</span>
+          </div>
         </div>
 
         <div class="graph-annotation" id="graphAnnotation"
@@ -394,6 +464,19 @@
   let studentY    = null;
   let showOptimal = false;
 
+  // Graph-diagnostic state (the "read the graph" check shown before the
+  // step-by-step solution). pickedX/Y is the bundle the student clicked or
+  // typed; pickedOk means it satisfied the task, so its IC is also drawn.
+  let gdCase      = null;   // 'infeasible' | 'interior' | 'online'
+  let gdAttempts  = 0;
+  let pickActive  = false;
+  let pickedX     = null;
+  let pickedY     = null;
+  let pickedOk    = false;
+
+  // Plot geometry from the last draw, so canvas clicks can be mapped to data
+  let _view = null;
+
   const LAB_ID    = 'optimal-choice';
   const LAB_LABEL = 'Optimal Consumer Choice';
   const TOTAL_Q   = 6;
@@ -414,6 +497,18 @@
   const $canvas      = document.getElementById('graphCanvas');
   const $annotation  = document.getElementById('graphAnnotation');
   const $graphDesc   = document.getElementById('graphCanvasDesc');
+  const $graphDiag   = document.getElementById('graphDiag');
+  const $gdOpts      = document.getElementById('gdOpts');
+  const $gdExplain   = document.getElementById('gdExplain');
+  const $gdStep2     = document.getElementById('gdStep2');
+  const $gdPickQ     = document.getElementById('gdPickQ');
+  const $pickX       = document.getElementById('pickX');
+  const $pickY       = document.getElementById('pickY');
+  const $pickBtn     = document.getElementById('pickBtn');
+  const $pickHelpBtn = document.getElementById('pickHelpBtn');
+  const $gdPickMsg   = document.getElementById('gdPickMsg');
+  const $gdComplete  = document.getElementById('gdComplete');
+  const $gdContinue  = document.getElementById('gdContinueBtn');
 
   // ── Math helpers ─────────────────────────────────────────────────────────
   function gcd(a, b) {
@@ -578,6 +673,7 @@
     $diagnostic.classList.add('hidden');
     $diagSteps.innerHTML = '';
     $diagComplete.classList.add('hidden');
+    resetGraphDiag();
     $checkBtn.disabled = false;
     diagStep = 0; firstScore = null;
 
@@ -621,6 +717,17 @@
     if (studentX !== null && studentY !== null && studentX > 0 && studentY > 0) {
       desc += 'Your bundle is at X=' + roundNice(studentX, 2) + ', Y=' + roundNice(studentY, 2) + '. ';
     }
+    if (pickedX !== null && pickedY !== null) {
+      desc += 'The bundle you picked is at X=' + roundNice(pickedX, 2) +
+              ', Y=' + roundNice(pickedY, 2) + ', which costs ' +
+              roundNice(bundleCost(pickedX, pickedY), 2) + ' out of an income of ' + p.inc +
+              (pickedOk ? ' and lies on a higher indifference curve than your bundle. '
+                        : '. ');
+    }
+    if (pickActive) {
+      desc += 'You are being asked to pick a bundle on this graph; you can also type its ' +
+              'X and Y coordinates in the Diagnostic B fields instead of clicking. ';
+    }
     if (showOptimal) {
       desc += 'Optimal bundle at X*=' + roundNice(p.optX, 2) + ', Y*=' + roundNice(p.optY, 2) +
         '. The optimal indifference curve is tangent to the budget line at this point.';
@@ -653,6 +760,10 @@
 
     const xToC = x => X0 + (x / xMax_data) * PW;
     const yToC = y => Y1 - (y / yMax_data) * PH;
+
+    // Remember the mapping so a canvas click can be read back as (X, Y)
+    _view = { X0: X0, Y1: Y1, PW: PW, PH: PH,
+              xMax: xMax_data, yMax: yMax_data, dpr: dpr };
 
     // ── Feasible region fill ─────────────────────────────────────────────────
     ctx.beginPath();
@@ -806,6 +917,19 @@
       }
     }
 
+    // Bundle picked during the graph diagnostic
+    if (pickedX !== null && pickedY !== null && pickedX > 0 && pickedY > 0) {
+      if (pickedOk) {
+        const U_pick = utilityAt(pickedX, pickedY);
+        if (isFinite(U_pick) && U_pick > 0) {
+          drawIC(U_pick, '#6b2d8f', 2 * dpr, [7 * dpr, 4 * dpr]);
+        }
+      }
+      drawPoint(pickedX, pickedY, '#6b2d8f',
+        '(' + roundNice(pickedX, 0.01) + ', ' + roundNice(pickedY, 0.01) + ')',
+        false);
+    }
+
     // Optimal IC + point (shown after correct answer or diagnostic complete)
     if (showOptimal) {
       const U_opt = utilityAt(p.optX, p.optY);
@@ -876,14 +1000,15 @@
     } else {
       $ansX.classList.add(xOk ? 'correct' : 'wrong');
       $ansY.classList.add(yOk ? 'correct' : 'wrong');
-      $resultMsg.innerHTML = '✗ Not quite. Notice how your indifference curve doesn\'t touch the budget line at its tangent point. Let\'s work through the solution step by step.';
+      $resultMsg.innerHTML = '✗ Not quite. Your bundle is plotted in orange on the graph, with the indifference curve that runs through it. Before we solve the problem, read the graph and work out what is wrong with it.';
       $resultMsg.className = 'result-msg wrong';
       firstScore = 0;
       // Show student IC + point in legend
       document.getElementById('legendStudentRow').style.display    = 'flex';
-      document.getElementById('legendStudentLabel').textContent     = 'Your bundle';
+      document.getElementById('legendStudentLabel').textContent     = 'Your indifference curve';
       document.getElementById('legendStudentPtRow').style.display   = 'flex';
-      startDiagnostic();
+      if (studentX > 0 && studentY > 0) startGraphDiag();
+      else startDiagnostic();
     }
 
     drawGraph();
@@ -914,6 +1039,308 @@
         'The <strong>green</strong> curve is tangent to the budget line at the true optimum, where ' +
         'MRS = ' + katexHTML('\\frac{P_X}{P_Y} = ' + prRound) + '.';
     }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GRAPH DIAGNOSTIC  —  read the graph before being shown the algebra
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Two questions, both answered off the picture:
+  //   A. Why is the bundle you entered not optimal? (infeasible / leaves
+  //      income unspent / on the line but the IC crosses it)
+  //   B. Put a bundle on the graph that proves it — one you can afford
+  //      (if theirs was infeasible), or an affordable one on a higher
+  //      indifference curve (if theirs was feasible).
+
+  function bundleCost(x, y) { return prob.px * x + prob.py * y; }
+
+  // Slack allowed when deciding whether a bundle sits "on" the budget line,
+  // so a student who rounds to two decimals is not called infeasible.
+  function costTol() { return Math.max(0.25, 0.005 * prob.inc); }
+
+  function classifyBundle(x, y) {
+    const c = bundleCost(x, y), tol = costTol();
+    if (c > prob.inc + tol) return 'infeasible';
+    if (c < prob.inc - tol) return 'interior';
+    return 'online';
+  }
+
+  function ceil2(v) { return Math.ceil(v * 100) / 100; }
+
+  const GD_CHOICES = [
+    { key: 'infeasible',
+      html: 'It lies <strong>above</strong> the budget line. The bundle costs more than ' +
+            'the income, so it cannot be bought at all.' },
+    { key: 'interior',
+      html: 'It lies <strong>below</strong> the budget line. It is affordable, but it ' +
+            'leaves part of the income unspent, so more of both goods could be bought.' },
+    { key: 'online',
+      html: 'It lies <strong>on</strong> the budget line, but the indifference curve ' +
+            'through it <strong>crosses</strong> the line instead of just touching it, so ' +
+            'other affordable bundles sit on a higher indifference curve.' },
+    { key: 'optimal',
+      html: 'Nothing is wrong with it. It spends the whole income and its indifference ' +
+            'curve is tangent to the budget line.' }
+  ];
+
+  function gdExplanation(c) {
+    const p    = prob;
+    const sx   = roundNice(studentX, 0.01), sy = roundNice(studentY, 0.01);
+    const cost = roundNice(bundleCost(studentX, studentY), 0.01);
+    const costTeX = katexHTML(p.px + '(' + sx + ') + ' + p.py + '(' + sy + ') = ' + cost);
+
+    if (c === 'infeasible') {
+      return 'Your bundle costs ' + costTeX + ', which is more than the income of ' + p.inc +
+        '. That is why the orange dot sits outside the shaded triangle, above the blue ' +
+        'line. A bundle you cannot buy can never be the optimum, however much utility it ' +
+        'would deliver — so the first thing to check on any answer is whether it satisfies ' +
+        katexHTML('P_X X + P_Y Y = I') + '.';
+    }
+    if (c === 'interior') {
+      return 'Your bundle costs ' + costTeX + ', leaving ' + roundNice(p.inc - cost, 0.01) +
+        ' of the income unspent — the orange dot sits strictly inside the shaded region. ' +
+        'Because more of either good raises utility, you can always spend what is left over ' +
+        'and move out to a higher indifference curve. An interior bundle is therefore never ' +
+        'optimal: the optimum uses the entire budget.';
+    }
+    return 'Your bundle costs ' + costTeX + ', so it does use the whole budget — the orange ' +
+      'dot is on the blue line. The problem is the shape: the orange indifference curve ' +
+      '<strong>crosses</strong> the budget line instead of touching it at a single point. ' +
+      'Wherever an indifference curve cuts the budget line, a stretch of that line lies ' +
+      'above the curve, and every bundle on that stretch is both affordable and preferred. ' +
+      'Only at a point of <strong>tangency</strong> does no such stretch exist.';
+  }
+
+  function gdPickQuestion(c) {
+    if (c === 'infeasible') {
+      return 'Show a bundle you could actually buy: put a point <strong>on or inside</strong> ' +
+             'the blue budget line. It will be drawn in purple so you can compare it with yours.';
+    }
+    return 'Now prove your bundle can be beaten: put a point that is <strong>affordable</strong> ' +
+           '(on or inside the blue budget line) and sits on a <strong>higher</strong> ' +
+           'indifference curve than your orange one.';
+  }
+
+  function startGraphDiag() {
+    gdCase     = classifyBundle(studentX, studentY);
+    gdAttempts = 0;
+    $graphDiag.classList.remove('hidden');
+    $gdOpts.innerHTML = '';
+
+    // Shuffle the four readings (UI shuffle only — Math.random intentional)
+    const opts = GD_CHOICES.slice();
+    for (let i = opts.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [opts[i], opts[j]] = [opts[j], opts[i]];
+    }
+    const correctIdx = opts.findIndex(o => o.key === gdCase);
+    const letters    = ['A', 'B', 'C', 'D'];
+
+    opts.forEach((opt, oi) => {
+      const btn = document.createElement('button');
+      btn.type      = 'button';
+      btn.className = 'mc-option';
+      btn.innerHTML = '<span class="mc-letter" aria-hidden="true">' + letters[oi] + '</span>' +
+                      '<span>' + opt.html + '</span>';
+      btn.addEventListener('click', () => gdSelect(oi, correctIdx));
+      $gdOpts.appendChild(btn);
+    });
+
+    $graphDiag.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function gdSelect(optIdx, correctIdx) {
+    const opts = $gdOpts.querySelectorAll('.mc-option');
+    opts.forEach(o => { o.disabled = true; });
+
+    if (optIdx === correctIdx) {
+      opts[optIdx].classList.add('selected-correct');
+      opts[optIdx].querySelector('.mc-letter').textContent = '✓';
+    } else {
+      opts[optIdx].classList.add('selected-wrong');
+      opts[optIdx].querySelector('.mc-letter').textContent = '✗';
+      opts[correctIdx].classList.add('revealed-correct');
+      opts[correctIdx].querySelector('.mc-letter').textContent = '✓';
+    }
+
+    $gdExplain.innerHTML = '<strong>What the graph shows:</strong><br>' + gdExplanation(gdCase);
+    $gdExplain.classList.remove('hidden');
+
+    // A bundle that is already almost optimal leaves a sliver of a region to
+    // click in, so skip the picking task in that case.
+    const Us = utilityAt(studentX, studentY);
+    const Uo = utilityAt(prob.optX, prob.optY);
+    const tooClose = (gdCase === 'online') && isFinite(Us) && Us > 0 && Us >= 0.995 * Uo;
+
+    setTimeout(() => {
+      if (tooClose) {
+        gdFinish('✓ Your bundle is very close to the tangency point — close enough that the ' +
+          'better affordable bundles are hard to see on the graph, but they are there. ' +
+          'Now find the exact tangency.');
+      } else {
+        startPicking();
+      }
+    }, 700);
+  }
+
+  function startPicking() {
+    pickActive = true;
+    $gdPickQ.innerHTML = gdPickQuestion(gdCase);
+    $gdStep2.classList.remove('hidden');
+    $canvas.classList.add('picking');
+    $gdStep2.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    drawGraph();
+  }
+
+  function evaluatePick(x, y) {
+    const p    = prob;
+    const cost = bundleCost(x, y);
+    const tol  = costTol();
+
+    if (!isFinite(x) || !isFinite(y) || x <= 0 || y <= 0) {
+      return { ok: false, msg: 'A bundle needs a positive amount of both goods — pick a ' +
+        'point inside the graph area, above the X axis and right of the Y axis.' };
+    }
+    if (cost > p.inc + tol) {
+      return { ok: false, msg: '✗ That bundle costs ' + roundNice(cost, 0.01) + ', more than ' +
+        'the income of ' + p.inc + '. It is above the blue line, so it is not affordable. ' +
+        'Try a point on or inside the budget line.' };
+    }
+    if (gdCase === 'infeasible') {
+      return { ok: true, msg: '✓ That bundle costs ' + roundNice(cost, 0.01) + ', which the ' +
+        'income of ' + p.inc + ' covers — it is inside the feasible region, unlike yours. ' +
+        'Everything the consumer can choose lies in that triangle.' };
+    }
+
+    const Us = utilityAt(studentX, studentY);
+    const Up = utilityAt(x, y);
+    if (!(Up > Us * (1 + 1e-6))) {
+      return { ok: false, msg: '✗ That bundle is affordable, but it gives utility ' +
+        roundNice(Up, 0.01) + ', which is not more than the ' + roundNice(Us, 0.01) +
+        ' your own bundle gives — it sits on or inside your orange curve. Look for a point ' +
+        'beyond the orange curve that is still on or inside the blue line.' };
+    }
+    return { ok: true, msg: '✓ That bundle costs ' + roundNice(cost, 0.01) + ', which the ' +
+      'income of ' + p.inc + ' covers, and it gives utility ' + roundNice(Up, 0.01) +
+      ' against ' + roundNice(Us, 0.01) + ' at your bundle. An affordable bundle you prefer ' +
+      'exists, so yours cannot be optimal.' };
+  }
+
+  function submitPick(x, y) {
+    if (!pickActive) return;
+    pickedX = x; pickedY = y; pickedOk = false;
+    $pickX.value = isFinite(x) ? roundNice(x, 0.01) : '';
+    $pickY.value = isFinite(y) ? roundNice(y, 0.01) : '';
+    document.getElementById('legendPickRow').style.display = 'flex';
+
+    const res = evaluatePick(x, y);
+    pickedOk  = res.ok;
+    $gdPickMsg.innerHTML = res.msg;
+    $gdPickMsg.className = 'result-msg ' + (res.ok ? 'correct' : 'wrong');
+    drawGraph();
+
+    if (res.ok) {
+      pickActive = false;
+      $canvas.classList.remove('picking');
+      $pickBtn.disabled = true; $pickX.disabled = true; $pickY.disabled = true;
+      $pickHelpBtn.classList.add('hidden');
+      gdFinish(gdCompleteText());
+    } else {
+      gdAttempts++;
+      if (gdAttempts >= 2) $pickHelpBtn.classList.remove('hidden');
+    }
+  }
+
+  function gdCompleteText() {
+    if (gdCase === 'infeasible') {
+      return '✓ Diagnosis: the bundle you entered was not affordable. The optimum has to lie ' +
+        '<em>on</em> the budget line — and on the highest indifference curve that still ' +
+        'reaches it. Now work out where that is.';
+    }
+    if (gdCase === 'interior') {
+      return '✓ Diagnosis: the bundle you entered left income unspent, so an affordable ' +
+        'bundle you prefer was available. The optimum spends the whole income <em>and</em> ' +
+        'is tangent to the budget line. Now work out where that is.';
+    }
+    return '✓ Diagnosis: the bundle you entered spent the whole income, but its indifference ' +
+      'curve crossed the budget line, so affordable bundles you prefer were available. The ' +
+      'optimum is the one point where the curve only touches the line — tangency, ' +
+      'MRS = P_X/P_Y. Now work out where that is.';
+  }
+
+  function gdFinish(text) {
+    pickActive = false;
+    $canvas.classList.remove('picking');
+    $gdComplete.innerHTML = text;
+    $gdComplete.classList.remove('hidden');
+    $gdContinue.classList.remove('hidden');
+    drawGraph();
+  }
+
+  // Reveal an example of a bundle that does the job, after two misses
+  $pickHelpBtn.addEventListener('click', function () {
+    const p = prob;
+    let x, y;
+    if (gdCase === 'infeasible') {
+      x = roundNice(p.inc / (2 * p.px), 0.01);
+      y = roundNice((p.inc - p.px * x) / p.py, 0.01);
+    } else if (gdCase === 'interior') {
+      // Push the bundle partway out along the same ray: more of both goods,
+      // still inside the budget, and it does not give the optimum away.
+      const s = 1 + 0.6 * (p.inc / bundleCost(studentX, studentY) - 1);
+      x = ceil2(studentX * s);
+      y = ceil2(studentY * s);
+    } else {
+      // Halfway along the budget line towards the tangency point
+      x = roundNice((studentX + p.optX) / 2, 0.01);
+      y = roundNice((p.inc - p.px * x) / p.py, 0.01);
+    }
+    submitPick(x, y);
+  });
+
+  // Typed bundle
+  $pickBtn.addEventListener('click', function () {
+    submitPick(parseFloat($pickX.value), parseFloat($pickY.value));
+  });
+  $pickX.addEventListener('keydown', e => { if (e.key === 'Enter') $pickBtn.click(); });
+  $pickY.addEventListener('keydown', e => { if (e.key === 'Enter') $pickBtn.click(); });
+
+  // Clicked bundle — the canvas is a convenience; the inputs above are the
+  // keyboard-operable equivalent (WCAG 2.1.1)
+  $canvas.addEventListener('click', function (e) {
+    if (!pickActive || !_view) return;
+    const rect = $canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const cx = (e.clientX - rect.left) * ($canvas.width  / rect.width);
+    const cy = (e.clientY - rect.top)  * ($canvas.height / rect.height);
+    const x  = ((cx - _view.X0) / _view.PW) * _view.xMax;
+    const y  = ((_view.Y1 - cy) / _view.PH) * _view.yMax;
+    submitPick(roundNice(x, 0.01), roundNice(y, 0.01));
+  });
+
+  // Move on to the algebra
+  $gdContinue.addEventListener('click', function () {
+    $gdContinue.disabled = true;
+    $pickBtn.disabled = true; $pickX.disabled = true; $pickY.disabled = true;
+    $pickHelpBtn.classList.add('hidden');
+    startDiagnostic();
+  });
+
+  function resetGraphDiag() {
+    gdCase = null; gdAttempts = 0; pickActive = false;
+    pickedX = null; pickedY = null; pickedOk = false;
+    $graphDiag.classList.add('hidden');
+    $gdOpts.innerHTML = '';
+    $gdExplain.classList.add('hidden'); $gdExplain.innerHTML = '';
+    $gdStep2.classList.add('hidden');
+    $gdPickQ.innerHTML = '';
+    $pickX.value = ''; $pickY.value = '';
+    $pickX.disabled = false; $pickY.disabled = false; $pickBtn.disabled = false;
+    $pickHelpBtn.classList.add('hidden');
+    $gdPickMsg.className = 'result-msg hidden'; $gdPickMsg.innerHTML = '';
+    $gdComplete.classList.add('hidden'); $gdComplete.innerHTML = '';
+    $gdContinue.classList.add('hidden'); $gdContinue.disabled = false;
+    $canvas.classList.remove('picking');
+    document.getElementById('legendPickRow').style.display = 'none';
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
